@@ -23,6 +23,7 @@
   import FunnelIcon from "@lucide/svelte/icons/funnel";
   import { tick } from "svelte";
   import { floatingPopoverStyle } from "./floatingPosition.js";
+  import SearchInput from "./SearchInput.svelte";
 
   interface Props {
     label: string;
@@ -226,12 +227,14 @@
       style:min-width={minWidth}
     >
       {#if searchable}
-        <input
-          class="kit-filter-dropdown__search"
-          type="text"
-          placeholder={searchPlaceholder}
-          bind:value={search}
-        />
+        <div class="kit-filter-dropdown__search">
+          <SearchInput
+            bind:value={search}
+            size="sm"
+            block
+            placeholder={searchPlaceholder}
+          />
+        </div>
       {/if}
       {#if hasBulkActions}
         <div class="kit-filter-dropdown__bulk-actions">
@@ -376,26 +379,7 @@
   }
 
   .kit-filter-dropdown__search {
-    display: block;
-    width: calc(100% - 16px);
     margin: 2px 8px 4px;
-    padding: 4px 8px;
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg-inset);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: var(--font-size-xs);
-    outline: none;
-    box-sizing: border-box;
-  }
-
-  .kit-filter-dropdown__search::placeholder {
-    color: var(--text-muted);
-  }
-
-  .kit-filter-dropdown__search:focus {
-    border-color: var(--accent-blue);
   }
 
   .kit-filter-dropdown__bulk-actions {

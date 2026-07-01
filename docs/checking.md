@@ -92,6 +92,7 @@ everything and aren't repeated per row.
 | StatusDot, ColorLabel, DiffStats | no rule — small display primitives with no detectable marker; found in review |
 | RefreshControl, FindBar, RangePicker, SettingsLayout/Section | no rule — composite widgets; no stable class/aria signature that wouldn't false-positive. Revisit if either app regrows one |
 | Calendar | no rule — covered indirectly: hand-rolled month grids read as generic tables/buttons; found in review |
+| TextInput, SearchInput | no rule — bare `<input>` markup is too generic to flag without drowning in false positives; found in review |
 | FitStages | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags |
 | Theme store, formatters, `debounce`, `hashColor` | no rule — plain functions; duplication isn't detectable from markup |
 

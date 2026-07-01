@@ -29,6 +29,7 @@
   import StatusBarDemo from "./pages/StatusBarDemo.svelte";
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
+  import TextInputDemo from "./pages/TextInputDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
   import ThemeModeDemo from "./pages/ThemeModeDemo.svelte";
   import TooltipDemo from "./pages/TooltipDemo.svelte";
@@ -74,6 +75,7 @@
     { id: "status-bar", label: "StatusBar", component: StatusBarDemo },
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
     { id: "table", label: "Table", component: TableDemo },
+    { id: "text-input", label: "TextInput", component: TextInputDemo },
     { id: "theme-mode", label: "Theme mode", component: ThemeModeDemo },
     { id: "tooltip", label: "Tooltip", component: TooltipDemo },
     { id: "top-bar", label: "TopBar", component: TopBarDemo },

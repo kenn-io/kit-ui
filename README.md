@@ -61,6 +61,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Modal](docs/components/modal.md) | both (consolidated) | Dialog primitive: overlay, header, body, footer snippet |
 | [RangePicker](docs/components/range-picker.md) | agentsview | Relative / calendar / custom date-range popover with `resolveRange()` |
 | [RefreshControl](docs/components/refresh-control.md) | agentsview | Refresh button + "Updated Xm ago" label with auto-refresh |
+| [SearchInput](docs/components/text-input.md) | new (TextInput preset) | Filter field: search icon, clear button, optional ⌘K hint |
 | [SegmentedControl](docs/components/segmented-control.md) | middleman (inline pattern) | "All / PRs / Issues" style value selector |
 | [SelectDropdown](docs/components/select-dropdown.md) | middleman | Accessible single-select combobox |
 | [SettingsLayout](docs/components/settings-layout.md) | middleman `SettingsPage` | Categorized settings shell: category sidebar + panel + pinned footer |
@@ -70,6 +71,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [StatusBar](docs/components/status-bar.md) | both (consolidated) | Fixed-height bottom bar with left/center/right regions |
 | [StatusDot](docs/components/status-dot.md) | agentsview | Session/presence indicator (working/waiting/stale/…) |
 | [Table](docs/components/table.md) | both (consolidated) | Table shell + sortable `TableHeaderCell` with aria-sort |
+| [TextInput](docs/components/text-input.md) | both (hand-rolled) | Bordered field primitive: sizes, invalid state, prefix/suffix snippets |
 | [Tooltip](docs/components/tooltip.md) | middleman `DiffSummaryChip` popover | Hover/focus tooltip with arrow, delays, viewport-aware flipping |
 | [TopBar](docs/components/top-bar.md) | both `AppHeader` (consolidated) | App header: reserved left/right regions, search slot, tabs that auto-collapse into a dropdown |
 | [Typeahead](docs/components/typeahead.md) | agentsview `OptionTypeahead` | Filterable select with match highlighting |

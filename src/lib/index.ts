@@ -48,6 +48,7 @@ export {
   type RelativeSelection,
 } from "./components/range-picker.js";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
+export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";
 export type { SegmentedControlOption } from "./components/SegmentedControl.svelte";
 export { default as SelectDropdown } from "./components/SelectDropdown.svelte";
@@ -66,6 +67,8 @@ export type { StatusDotStatus } from "./components/StatusDot.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export type { SortDirection } from "./components/TableHeaderCell.svelte";
+export { default as TextInput } from "./components/TextInput.svelte";
+export type { TextInputSize } from "./components/TextInput.svelte";
 export { default as Tooltip } from "./components/Tooltip.svelte";
 export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab } from "./components/TopBar.svelte";
