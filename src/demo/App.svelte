@@ -29,6 +29,7 @@
   import ThemeDemo from "./pages/ThemeDemo.svelte";
   import ThemeModeDemo from "./pages/ThemeModeDemo.svelte";
   import TooltipDemo from "./pages/TooltipDemo.svelte";
+  import TopBarDemo from "./pages/TopBarDemo.svelte";
   import TypeaheadDemo from "./pages/TypeaheadDemo.svelte";
 
   interface Page {
@@ -69,6 +70,7 @@
     { id: "table", label: "Table", component: TableDemo },
     { id: "theme-mode", label: "Theme mode", component: ThemeModeDemo },
     { id: "tooltip", label: "Tooltip", component: TooltipDemo },
+    { id: "top-bar", label: "TopBar", component: TopBarDemo },
     { id: "typeahead", label: "Typeahead", component: TypeaheadDemo },
   ];
 

@@ -269,6 +269,25 @@ export function checkHandRolledStatusBar(source) {
   return findings;
 }
 
+/** Hand-rolled app header bars duplicate TopBar. Matches the class names
+ * both apps' AppHeaders converged on (app-header / header-left /
+ * header-right); kit-top-bar is exempt. */
+export function checkHandRolledTopBar(source) {
+  const findings = [];
+  const re =
+    /class="[^"]*\b(?:app-header|header-left|header-right)\b|\.(?:app-header|header-left|header-right)\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-top-bar",
+      line: lineOfIndex(source, match.index),
+      message:
+        "app-header markup — use TopBar from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled empty/placeholder states duplicate EmptyState. */
 export function checkHandRolledEmptyState(source) {
   const findings = [];
@@ -396,6 +415,7 @@ export const ALL_RULES = {
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
   "hand-rolled-empty-state": checkHandRolledEmptyState,
+  "hand-rolled-top-bar": checkHandRolledTopBar,
   "pinned-root-font-size": checkPinnedRootFontSize,
   "legacy-mobile-type": checkLegacyMobileType,
   "nonstandard-spacing": checkNonstandardSpacing,

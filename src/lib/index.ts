@@ -61,6 +61,8 @@ export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export type { SortDirection } from "./components/TableHeaderCell.svelte";
 export { default as Tooltip } from "./components/Tooltip.svelte";
+export { default as TopBar } from "./components/TopBar.svelte";
+export type { TopBarTab } from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadOption } from "./components/typeahead.js";
 

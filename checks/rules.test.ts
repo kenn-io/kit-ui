@@ -182,6 +182,19 @@ describe("hand-rolled components", () => {
     const src = `<script>// the empty-state pattern</script>\n<div class="kit-empty-state"></div>`;
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
   });
+
+  test("top bar: app-header class and region selectors", () => {
+    const src = svelte(
+      `.header-left { display: flex; }`,
+      `<header class="app-header"><div class="header-left"></div></header>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-top-bar"])).toHaveLength(3);
+  });
+
+  test("top bar: does not match kit-top-bar or prose", () => {
+    const src = `<script>// the app-header pattern</script>\n<div class="kit-top-bar"></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-top-bar"])).toHaveLength(0);
+  });
 });
 
 describe("typography rules", () => {
