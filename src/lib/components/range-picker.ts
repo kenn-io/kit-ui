@@ -1,0 +1,203 @@
+/*
+ * Types and pure date helpers for RangePicker.
+ *
+ * Ported from agentsview's `rangeSelection.ts` / `dateRangeSelector.ts`,
+ * decoupled from its stores and i18n. All dates are local-timezone
+ * YYYY-MM-DD strings; ranges are inclusive on both ends.
+ */
+
+/**
+ * The three ways a user can pick a range with RangePicker. Consumers keep one
+ * of these; resolveRange() turns any of them into a concrete {from, to}.
+ *
+ * - relative: a rolling window ending today (last N days; days === 0 means
+ *   "all", anchored to `earliestDate`).
+ * - calendar: a single day/week/month period the user can step through.
+ * - custom: an explicit from/to span.
+ */
+export type RangeMode = "relative" | "calendar" | "custom";
+export type CalendarUnit = "day" | "week" | "month";
+
+export interface RelativeSelection {
+  mode: "relative";
+  days: number;
+}
+
+export interface CalendarSelection {
+  mode: "calendar";
+  unit: CalendarUnit;
+  /** Any YYYY-MM-DD inside the period; bounds derive from it. */
+  anchor: string;
+}
+
+export interface CustomSelection {
+  mode: "custom";
+  from: string;
+  to: string;
+}
+
+export type RangeSelection =
+  | RelativeSelection
+  | CalendarSelection
+  | CustomSelection;
+
+export interface DateRange {
+  from: string;
+  to: string;
+}
+
+export interface RangePreset {
+  /** Compact pill label. */
+  label: string;
+  /** Trigger-button label. */
+  longLabel: string;
+  /** Days back from today; 0 means all-time. */
+  days: number;
+}
+
+export const DEFAULT_RANGE_PRESETS: RangePreset[] = [
+  { label: "7d", longLabel: "Last 7 days", days: 7 },
+  { label: "30d", longLabel: "Last 30 days", days: 30 },
+  { label: "90d", longLabel: "Last 90 days", days: 90 },
+  { label: "1y", longLabel: "Last year", days: 365 },
+  { label: "All", longLabel: "All time", days: 0 },
+];
+
+/** Parse a YYYY-MM-DD date string as local midnight. */
+function parseLocal(date: string): Date {
+  return new Date(date + "T00:00:00");
+}
+
+/** Format a Date as a local-timezone YYYY-MM-DD string. */
+export function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Local date string for `n` days before today. */
+export function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return localDateStr(d);
+}
+
+/** Today as a local YYYY-MM-DD string. */
+export function todayStr(): string {
+  return localDateStr(new Date());
+}
+
+/**
+ * The "from" bound of an all-time range: `earliestDate` when known,
+ * otherwise one year back.
+ */
+export function allFromDate(earliestDate: string | null | undefined): string {
+  if (earliestDate && earliestDate.length >= 10) {
+    return earliestDate.slice(0, 10);
+  }
+  return daysAgo(365);
+}
+
+/** The concrete bounds of a relative preset (days === 0 means all-time). */
+export function presetRange(
+  days: number,
+  earliestDate?: string | null,
+): DateRange {
+  return {
+    from: days === 0 ? allFromDate(earliestDate) : daysAgo(days),
+    to: todayStr(),
+  };
+}
+
+/**
+ * The inclusive from/to bounds of a calendar period containing `anchor`.
+ * Day is a single date; week is the Monday-Sunday ISO week; month is the
+ * calendar month.
+ */
+export function periodBounds(unit: CalendarUnit, anchor: string): DateRange {
+  const d = parseLocal(anchor);
+  if (unit === "day") {
+    return { from: anchor, to: anchor };
+  }
+  if (unit === "week") {
+    // getDay(): 0=Sun..6=Sat. Days since Monday = (day + 6) % 7.
+    const sinceMonday = (d.getDay() + 6) % 7;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - sinceMonday);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { from: localDateStr(monday), to: localDateStr(sunday) };
+  }
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { from: localDateStr(first), to: localDateStr(last) };
+}
+
+/**
+ * Move a calendar anchor one period in `dir`: one day, seven days, or one
+ * calendar month (clamping the day so Jan 31 -> Feb 28 rather than
+ * overflowing into March).
+ */
+export function stepAnchor(
+  unit: CalendarUnit,
+  anchor: string,
+  dir: -1 | 1,
+): string {
+  const d = parseLocal(anchor);
+  if (unit === "day") {
+    d.setDate(d.getDate() + dir);
+  } else if (unit === "week") {
+    d.setDate(d.getDate() + 7 * dir);
+  } else {
+    const target = new Date(d.getFullYear(), d.getMonth() + dir, 1);
+    const lastDay = new Date(
+      target.getFullYear(),
+      target.getMonth() + 1,
+      0,
+    ).getDate();
+    target.setDate(Math.min(d.getDate(), lastDay));
+    d.setTime(target.getTime());
+  }
+  return localDateStr(d);
+}
+
+/** Turn any selection into concrete inclusive {from, to} bounds. */
+export function resolveRange(
+  sel: RangeSelection,
+  earliestDate?: string | null,
+): DateRange {
+  switch (sel.mode) {
+    case "relative":
+      return presetRange(sel.days, earliestDate);
+    case "calendar":
+      return periodBounds(sel.unit, sel.anchor);
+    case "custom":
+      return { from: sel.from, to: sel.to };
+  }
+}
+
+/** "Jun 29" style short label (browser locale). */
+export function formatShortDate(date: string): string {
+  return parseLocal(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** "Jun 29, 2026" style label for a day anchor (browser locale). */
+export function formatDayLabel(anchor: string): string {
+  return parseLocal(anchor).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** "June 2026" style label for a month anchor (browser locale). */
+export function formatMonthLabel(anchor: string): string {
+  return parseLocal(anchor).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+  });
+}

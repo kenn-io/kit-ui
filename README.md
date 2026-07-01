@@ -46,23 +46,36 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Chip](docs/components/chip.md) | middleman `Chip` | Status/label badge, optionally interactive |
 | [ChipStack](docs/components/chip-stack.md) | new (middleman mobile-view pattern) | Collapsing chip/button row with "+N" expansion |
 | [CollapsibleSidebar](docs/components/collapsible-sidebar.md) | middleman | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`) |
+| [ColorLabel](docs/components/color-label.md) | middleman `GitHubLabels` | Hex-colored pill with WCAG contrast-picked text |
 | [CopyButton](docs/components/copy-button.md) | agentsview | Copy-to-clipboard icon button with success feedback |
+| [DetailDrawer](docs/components/detail-drawer.md) | middleman | Right-side slide-in detail panel over an overlay |
+| [DiffStats](docs/components/diff-stats.md) | middleman | `+added −removed` diff counters with compact formatting |
+| [EmptyState](docs/components/empty-state.md) | both (hand-rolled) | Centered muted placeholder: icon, title, description, action |
 | [FilterDropdown](docs/components/filter-dropdown.md) | both (consolidated) | Sectioned multi-select filter menu with search, counts, bulk actions |
+| [FindBar](docs/components/find-bar.md) | agentsview `SessionFindBar` | In-content find bar with N-of-M counter and match navigation |
 | [FlashBanner](docs/components/flash-banner.md) | middleman | Transient toast banner driven by the `showFlash` store |
 | [KbdBadge](docs/components/kbd-badge.md) | middleman | Keyboard-shortcut badge, hidden on touch devices |
 | [Modal](docs/components/modal.md) | both (consolidated) | Dialog primitive: overlay, header, body, footer snippet |
+| [RangePicker](docs/components/range-picker.md) | agentsview | Relative / calendar / custom date-range popover with `resolveRange()` |
 | [RefreshControl](docs/components/refresh-control.md) | agentsview | Refresh button + "Updated Xm ago" label with auto-refresh |
 | [SegmentedControl](docs/components/segmented-control.md) | middleman (inline pattern) | "All / PRs / Issues" style value selector |
 | [SelectDropdown](docs/components/select-dropdown.md) | middleman | Accessible single-select combobox |
+| [SettingsLayout](docs/components/settings-layout.md) | middleman `SettingsPage` | Categorized settings shell: category sidebar + panel + pinned footer |
+| [SettingsSection](docs/components/settings-layout.md) | middleman | Bordered settings card: title, optional description, rows |
 | [Spinner](docs/components/spinner.md) | agentsview | Loading spinner |
 | [SplitResizeHandle](docs/components/split-resize-handle.md) | middleman | Keyboard-accessible pane divider |
+| [StatusBar](docs/components/status-bar.md) | both (consolidated) | Fixed-height bottom bar with left/center/right regions |
 | [StatusDot](docs/components/status-dot.md) | agentsview | Session/presence indicator (working/waiting/stale/…) |
 | [Table](docs/components/table.md) | both (consolidated) | Table shell + sortable `TableHeaderCell` with aria-sort |
+| [Tooltip](docs/components/tooltip.md) | middleman `DiffSummaryChip` popover | Hover/focus tooltip with arrow, delays, viewport-aware flipping |
 | [Typeahead](docs/components/typeahead.md) | agentsview `OptionTypeahead` | Filterable select with match highlighting |
 
 Also exported: [utilities](docs/utilities.md) (`copyToClipboard`,
 `formatRelativeTime`, `formatTimestamp`, `truncate`, `createRefreshScheduler`,
-`floatingPopoverStyle`), shared breakpoints (`BREAKPOINTS`/`MEDIA` — see the
+`floatingPopoverStyle`, `formatDuration`/`formatTokenCount`/`formatCost`,
+`debounce`, `hashColor`), the [theme store](docs/theming.md#theme-store)
+(`initTheme`/`setThemeMode`/`setHighContrast`), shared breakpoints
+(`BREAKPOINTS`/`MEDIA` — see the
 [theming guide](docs/theming.md#breakpoints)), and the design tokens
 ([theming guide](docs/theming.md)).
 

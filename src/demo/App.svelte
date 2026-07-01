@@ -4,22 +4,30 @@
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
+  import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
+  import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
+  import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
   import FilterDropdownDemo from "./pages/FilterDropdownDemo.svelte";
+  import FindBarDemo from "./pages/FindBarDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
+  import RangePickerDemo from "./pages/RangePickerDemo.svelte";
   import RefreshControlDemo from "./pages/RefreshControlDemo.svelte";
   import SegmentedControlDemo from "./pages/SegmentedControlDemo.svelte";
   import SelectDropdownDemo from "./pages/SelectDropdownDemo.svelte";
+  import SettingsLayoutDemo from "./pages/SettingsLayoutDemo.svelte";
   import SidebarDemo from "./pages/SidebarDemo.svelte";
   import SpinnerDemo from "./pages/SpinnerDemo.svelte";
   import SplitResizeHandleDemo from "./pages/SplitResizeHandleDemo.svelte";
+  import StatusBarDemo from "./pages/StatusBarDemo.svelte";
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
+  import ThemeModeDemo from "./pages/ThemeModeDemo.svelte";
   import TooltipDemo from "./pages/TooltipDemo.svelte";
   import TypeaheadDemo from "./pages/TypeaheadDemo.svelte";
 
@@ -39,19 +47,27 @@
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
+    { id: "color-label", label: "ColorLabel", component: ColorLabelDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },
+    { id: "detail-drawer", label: "DetailDrawer", component: DetailDrawerDemo },
+    { id: "empty-state", label: "EmptyState", component: EmptyStateDemo },
     { id: "filter-dropdown", label: "FilterDropdown", component: FilterDropdownDemo },
+    { id: "find-bar", label: "FindBar", component: FindBarDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
+    { id: "range-picker", label: "RangePicker", component: RangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
     { id: "segmented-control", label: "SegmentedControl", component: SegmentedControlDemo },
     { id: "select-dropdown", label: "SelectDropdown", component: SelectDropdownDemo },
+    { id: "settings-layout", label: "SettingsLayout", component: SettingsLayoutDemo },
     { id: "sidebar", label: "CollapsibleSidebar", component: SidebarDemo },
     { id: "spinner", label: "Spinner", component: SpinnerDemo },
     { id: "split-resize", label: "SplitResizeHandle", component: SplitResizeHandleDemo },
+    { id: "status-bar", label: "StatusBar", component: StatusBarDemo },
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
     { id: "table", label: "Table", component: TableDemo },
+    { id: "theme-mode", label: "Theme mode", component: ThemeModeDemo },
     { id: "tooltip", label: "Tooltip", component: TooltipDemo },
     { id: "typeahead", label: "Typeahead", component: TypeaheadDemo },
   ];

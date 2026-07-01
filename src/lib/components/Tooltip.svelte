@@ -122,6 +122,10 @@
   });
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_static_element_interactions -->
+<!-- WAI-ARIA tooltip pattern: the wrapper is not itself interactive — it only
+     mirrors hover/focus of the described content, and `focusable` adds
+     tabindex precisely when the wrapped child has no focusable element. -->
 <span
   class="kit-tooltip-trigger"
   bind:this={triggerEl}

@@ -59,7 +59,7 @@
   role="presentation"
   onmousedown={handleOverlayMousedown}
 >
-  <aside
+  <div
     class="kit-detail-drawer"
     role="dialog"
     aria-modal="true"
@@ -98,7 +98,7 @@
         {@render footer()}
       </div>
     {/if}
-  </aside>
+  </div>
 </div>
 
 <style>
