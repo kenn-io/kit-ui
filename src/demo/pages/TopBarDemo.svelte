@@ -6,6 +6,7 @@
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import {
     FitStages,
+    IconButton,
     KbdBadge,
     SelectDropdown,
     showFlash,
@@ -55,14 +56,12 @@
 
 {#snippet searchCompact()}
   <span class="centered">
-    <button
-      class="icon-btn"
-      title="Search sessions"
-      aria-label="Search sessions"
+    <IconButton
+      ariaLabel="Search sessions"
       onclick={() => showFlash("Command palette would open")}
     >
       <SearchIcon size="14" strokeWidth="2" aria-hidden="true" />
-    </button>
+    </IconButton>
   </span>
 {/snippet}
 
@@ -71,7 +70,7 @@
   description="Reserved left/right regions never shrink; the tab group collapses into a SelectDropdown the moment the full row stops fitting (measured, not a breakpoint). Drag the slider."
   code={`<TopBar tabs={TABS} bind:active bind:collapsed centerTabs>
   {#snippet left()}<span class="brand">middleman</span><SelectDropdown … />{/snippet}
-  {#snippet right()}<button …><Search /></button><button …><Moon /></button>{/snippet}
+  {#snippet right()}<IconButton ariaLabel="Search"><Search /></IconButton>…{/snippet}
 </TopBar>`}
 >
   <div class="controls">
@@ -106,18 +105,18 @@
         />
       {/snippet}
       {#snippet right()}
-        <button class="icon-btn" title="Search" aria-label="Search" onclick={() => showFlash("Palette would open")}>
+        <IconButton ariaLabel="Search" onclick={() => showFlash("Palette would open")}>
           <SearchIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
-        <button class="icon-btn" title="Sync" aria-label="Sync" onclick={() => showFlash("Syncing…", 1500)}>
+        </IconButton>
+        <IconButton ariaLabel="Sync" onclick={() => showFlash("Syncing…", 1500)}>
           <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
-        <button class="icon-btn" title="Theme" aria-label="Toggle theme">
+        </IconButton>
+        <IconButton ariaLabel="Toggle theme">
           <MoonIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
-        <button class="icon-btn" title="Settings" aria-label="Settings">
+        </IconButton>
+        <IconButton ariaLabel="Settings">
           <SettingsIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
+        </IconButton>
       {/snippet}
     </TopBar>
   </div>
@@ -156,9 +155,9 @@
       ariaLabel="AgentsView pages"
     >
       {#snippet left()}
-        <button class="icon-btn" title="Toggle sidebar" aria-label="Toggle sidebar">
+        <IconButton ariaLabel="Toggle sidebar">
           <MenuIcon size="16" strokeWidth="2" aria-hidden="true" />
-        </button>
+        </IconButton>
         <span class="brand">
           <span class="brand-dot brand-dot--blue"></span>
           AgentsView
@@ -172,16 +171,16 @@
         />
       {/snippet}
       {#snippet right()}
-        <button class="icon-btn" title="Sync" aria-label="Sync" onclick={() => showFlash("Syncing…", 1500)}>
+        <IconButton ariaLabel="Sync" onclick={() => showFlash("Syncing…", 1500)}>
           <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
+        </IconButton>
         <span class="divider"></span>
-        <button class="icon-btn" title="Theme" aria-label="Toggle theme">
+        <IconButton ariaLabel="Toggle theme">
           <MoonIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
-        <button class="icon-btn" title="Settings" aria-label="Settings">
+        </IconButton>
+        <IconButton ariaLabel="Settings">
           <SettingsIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
+        </IconButton>
       {/snippet}
     </TopBar>
   </div>
@@ -243,27 +242,6 @@
     background: var(--accent-blue);
   }
 
-  .icon-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: transparent;
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition:
-      background 0.12s,
-      color 0.12s;
-  }
-
-  .icon-btn:hover {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-  }
 
   .search-hint {
     height: 26px;

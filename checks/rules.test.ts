@@ -205,6 +205,19 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
   });
 
+  test("icon button: class and CSS selector, both spellings", () => {
+    const src = svelte(
+      `.icon-btn { width: 28px; } .icon-button:hover { color: red; }`,
+      `<button class="icon-btn"></button>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(3);
+  });
+
+  test("icon button: does not match kit-icon-button or unrelated names", () => {
+    const src = `<button class="kit-icon-button"></button>\n<div class="lexicon-btn"></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(0);
+  });
+
   test("top bar: app-header class and region selectors", () => {
     const src = svelte(
       `.header-left { display: flex; }`,

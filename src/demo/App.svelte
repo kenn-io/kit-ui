@@ -13,6 +13,7 @@
   import FindBarDemo from "./pages/FindBarDemo.svelte";
   import FitStagesDemo from "./pages/FitStagesDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
+  import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
@@ -59,6 +60,7 @@
     { id: "find-bar", label: "FindBar", component: FindBarDemo },
     { id: "fit-stages", label: "FitStages", component: FitStagesDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
+    { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "range-picker", label: "RangePicker", component: RangePickerDemo },

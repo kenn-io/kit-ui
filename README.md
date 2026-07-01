@@ -56,6 +56,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [FindBar](docs/components/find-bar.md) | agentsview `SessionFindBar` | In-content find bar with N-of-M counter and match navigation |
 | [FitStages](docs/components/fit-stages.md) | new (TopBar collapse pattern) | Multi-breakpoint wrapper: renders the richest of N stage snippets that fits, by measurement |
 | [FlashBanner](docs/components/flash-banner.md) | middleman | Transient toast banner driven by the `showFlash` store |
+| [IconButton](docs/components/icon-button.md) | both (hand-rolled `.icon-btn`) | Square ghost button for a lone icon, required aria-label |
 | [KbdBadge](docs/components/kbd-badge.md) | middleman | Keyboard-shortcut badge, hidden on touch devices |
 | [Modal](docs/components/modal.md) | both (consolidated) | Dialog primitive: overlay, header, body, footer snippet |
 | [RangePicker](docs/components/range-picker.md) | agentsview | Relative / calendar / custom date-range popover with `resolveRange()` |

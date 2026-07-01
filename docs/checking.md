@@ -35,6 +35,7 @@ Scans `.svelte` and `.css` files; skips `node_modules`, `dist`, `build`,
 | `hand-rolled-tooltip` | `role="tooltip"` markup | `Tooltip` |
 | `hand-rolled-status-bar` | `status-bar` classes/selectors (`kit-status-bar` exempt) | `StatusBar` |
 | `hand-rolled-empty-state` | `empty-state` classes/selectors (`kit-empty-state` exempt) | `EmptyState` |
+| `hand-rolled-icon-button` | `icon-btn` / `icon-button` classes/selectors | `IconButton` |
 | `hand-rolled-top-bar` | `app-header` / `header-left` / `header-right` classes/selectors | `TopBar` |
 | `nonstandard-spacing` | `gap` values off the spacing ladder (0/1px hairlines exempt) | `var(--space-1…8)` ([theming](theming.md#spacing)) |
 | `pinned-root-font-size` | px `font-size` on `html`/`:root` | leave the root at 100% — it defeats the rem type scale ([theming](theming.md#typography)) |
@@ -85,6 +86,7 @@ everything and aren't repeated per row.
 | Tooltip | `hand-rolled-tooltip` |
 | StatusBar | `hand-rolled-status-bar` |
 | EmptyState | `hand-rolled-empty-state` |
+| IconButton | `hand-rolled-icon-button` |
 | TopBar | `hand-rolled-top-bar` |
 | Button, Chip, ChipStack | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift |
 | StatusDot, ColorLabel, DiffStats | no rule — small display primitives with no detectable marker; found in review |

@@ -289,6 +289,25 @@ export function checkHandRolledTopBar(source) {
   return findings;
 }
 
+/** Hand-rolled square icon buttons duplicate IconButton. Matches the
+ * icon-btn / icon-button class names both apps converged on;
+ * kit-icon-button is exempt. */
+export function checkHandRolledIconButton(source) {
+  const findings = [];
+  const re =
+    /class="[^"]*(?<!kit-)\bicon-(?:btn|button)\b|\.(?<!kit-)icon-(?:btn|button)\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-icon-button",
+      line: lineOfIndex(source, match.index),
+      message:
+        "icon-button markup — use IconButton from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled empty/placeholder states duplicate EmptyState. */
 export function checkHandRolledEmptyState(source) {
   const findings = [];
@@ -416,6 +435,7 @@ export const ALL_RULES = {
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
   "hand-rolled-empty-state": checkHandRolledEmptyState,
+  "hand-rolled-icon-button": checkHandRolledIconButton,
   "hand-rolled-top-bar": checkHandRolledTopBar,
   "pinned-root-font-size": checkPinnedRootFontSize,
   "legacy-mobile-type": checkLegacyMobileType,
