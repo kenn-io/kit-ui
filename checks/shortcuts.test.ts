@@ -27,6 +27,13 @@ describe("parseShortcut", () => {
     expect(parseShortcut("shift+space").key).toBe(" ");
     expect(parseShortcut("option+up")).toMatchObject({ alt: true, key: "arrowup" });
   });
+
+  test("malformed combos throw", () => {
+    expect(() => parseShortcut("mod+")).toThrow();
+    expect(() => parseShortcut("")).toThrow();
+    expect(() => parseShortcut("shift")).toThrow();
+    expect(() => parseShortcut("mood+k")).toThrow();
+  });
 });
 
 describe("shortcutMatches", () => {
@@ -53,6 +60,24 @@ describe("shortcutMatches", () => {
 
   test("case-insensitive key", () => {
     expect(shortcutMatches(parseShortcut("mod+shift+p"), ev("P", { meta: true, shift: true }), true)).toBe(true);
+  });
+
+  test("shift+symbol matches the produced shifted character", () => {
+    // Shift+/ reports key "?" on US layouts.
+    const parsed = parseShortcut("shift+/");
+    expect(shortcutMatches(parsed, ev("?", { shift: true }), true)).toBe(true);
+    // Layouts where "/" survives Shift still match.
+    expect(shortcutMatches(parsed, ev("/", { shift: true }), true)).toBe(true);
+    // Plain "/" without shift is a different shortcut.
+    expect(shortcutMatches(parsed, ev("/"), true)).toBe(false);
+  });
+
+  test("mod+plus matches regardless of the shiftKey the layout needs", () => {
+    const parsed = parseShortcut("mod+plus");
+    // US layout: + lives on Shift+=, so shiftKey arrives set.
+    expect(shortcutMatches(parsed, ev("+", { meta: true, shift: true }), true)).toBe(true);
+    // Numpad or layouts with a dedicated + key.
+    expect(shortcutMatches(parsed, ev("+", { meta: true }), true)).toBe(true);
   });
 });
 
@@ -119,6 +144,24 @@ describe("createShortcutManager", () => {
     expect(m.handleKeydown(kbd("g", {}, input as unknown as EventTarget))).toBe(false);
     expect(m.handleKeydown(kbd("k", { meta: true }, input as unknown as EventTarget))).toBe(true);
     expect([plain, combo]).toEqual([0, 1]);
+  });
+
+  test("duplicate combo in a scope warns and the first registration wins", () => {
+    const m = createShortcutManager(true);
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (msg: string) => { warnings.push(msg); };
+    try {
+      let first = 0;
+      let second = 0;
+      m.register("mod+k", () => { first += 1; });
+      m.register("mod+k", () => { second += 1; });
+      expect(warnings.length).toBe(1);
+      m.handleKeydown(kbd("k", { meta: true }));
+      expect([first, second]).toEqual([1, 0]);
+    } finally {
+      console.warn = origWarn;
+    }
   });
 
   test("allowInInput opts a plain key back in", () => {

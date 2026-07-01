@@ -36,6 +36,9 @@
     "./utils/refresh": {
       "default": "./src/lib/utils/refresh.ts"
     },
+    "./utils/shortcuts": {
+      "default": "./src/lib/utils/shortcuts.ts"
+    },
     "./utils/time": {
       "default": "./src/lib/utils/time.ts"
     }

@@ -20,7 +20,16 @@ const off = appShortcuts.register("mod+k", openPalette, {
   `"mod+shift+p"`. `mod` = ⌘ on Apple platforms, Ctrl elsewhere; `ctrl` is
   always Ctrl. Aliases: `esc`, `space`, `up/down/left/right`, `plus`,
   `option`, `cmd`. Matching is **strict** — modifiers the combo doesn't
-  name must not be pressed.
+  name must not be pressed. Shifted symbols are normalized: `"shift+/"`
+  matches the `?` the browser actually reports, and `"mod+plus"` matches
+  `+` whether or not the layout needs Shift to produce it (US layout
+  pairs).
+- **Validation**: malformed combos (`"mod+"`, unknown modifiers) throw at
+  parse/registration time, so typos fail fast instead of silently never
+  firing. Write the literal `+` key as `"plus"`.
+- **Conflicts**: within a scope, the **first registration wins** —
+  `handleKeydown` fires the first match and stops. Registering a combo
+  already present in the same scope logs a `console.warn`.
 - **Inputs**: plain-key shortcuts don't fire while an
   input/textarea/select/contenteditable has focus; modifier combos do.
   Opt a plain key back in with `allowInInput: true` (e.g. `escape`).
@@ -32,7 +41,10 @@ const off = appShortcuts.register("mod+k", openPalette, {
   "K"]` for [KbdBadge](kbd-badge.md).
 - `createShortcutManager()` builds an isolated manager (embedded surfaces,
   tests); `appShortcuts` is the app-level singleton `initShortcuts()`
-  wires to `window`.
+  wires to `window`. `initShortcuts()` is idempotent — repeat calls while
+  wired return a no-op detach instead of stacking listeners.
+- Importable from the root export or the `@kenn-io/kit-ui/utils/shortcuts`
+  subpath (same granular pattern as the other utils).
 - Parsing/matching/scoping are pure and unit-tested
   (`checks/shortcuts.test.ts`).
 
@@ -71,13 +83,35 @@ const off = appShortcuts.register("mod+k", openPalette, {
 ### Behavior
 
 - Filtering ranks label **prefix** over label **substring** over
-  **keyword** matches; sections keep first-seen order.
+  **keyword** matches. Each section then appears **once**, ordered by its
+  best-ranked match, with ranking preserved within the section — a
+  section never repeats across rank buckets.
 - ↑/↓ move (skipping disabled), Enter runs, pointer hover highlights,
-  click runs. Escape follows SearchInput semantics: clears the query
-  first, closes when already empty.
+  click runs. When results change, the highlight lands on the **first
+  enabled** command (disabled leading results are skipped so Enter always
+  has a runnable target). Escape follows SearchInput semantics: clears
+  the query first, closes when already empty.
 - While open it pushes an `appShortcuts` scope, so page-level shortcuts
   are suspended (registry-driven ones — its own keys are DOM handlers).
 - Overlay + `trapFocus` + `aria-modal`; the query field autofocuses.
 - `combo` values render as platform-correct KbdBadges via
   `formatShortcutKeys` — the palette does **not** register them; the app
   owns actual shortcut registration.
+- The palette closes **before** `onrun` fires; exceptions thrown by
+  `onrun` propagate to the caller (the palette stays closed).
+- Recents are app-owned (`recentIds` in, updated by your `onrun`) — the
+  palette persists nothing itself, so what's stored and where is a
+  consumer privacy decision.
+
+### Accessibility pattern
+
+The query field is wired as a **combobox**: `role="combobox"` with
+`aria-controls` pointing at the results listbox and
+`aria-activedescendant` following the highlighted `role="option"` row, so
+arrow navigation is announced while focus stays in the input. Disabled
+commands use `aria-disabled` (perceivable, not focusable-skipped) and
+activation is guarded in code. Acceptance (automated coverage tracked
+under the browser test infra work): open announces the dialog and field;
+typing filters and re-announces the active option; ↑/↓ announce; Enter
+runs only enabled commands; Escape clears then closes; all-disabled and
+empty result sets leave Enter inert.

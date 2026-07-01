@@ -32,16 +32,58 @@ const KEY_ALIASES: Record<string, string> = {
   plus: "+",
 };
 
+const MODIFIER_NAMES = new Set([
+  "mod",
+  "cmdorctrl",
+  "shift",
+  "alt",
+  "option",
+  "ctrl",
+  "control",
+  "meta",
+  "cmd",
+  "command",
+]);
+
+// US-layout Shift pairs. KeyboardEvent.key reports the *produced*
+// character for printable keys, so `shift+/` arrives as key "?" and
+// `mod+plus` as "+" (Shift held on layouts where + lives on =). Combos
+// written with the base character still have to match those events.
+const SHIFTED_KEYS: Record<string, string> = {
+  "`": "~",
+  "1": "!",
+  "2": "@",
+  "3": "#",
+  "4": "$",
+  "5": "%",
+  "6": "^",
+  "7": "&",
+  "8": "*",
+  "9": "(",
+  "0": ")",
+  "-": "_",
+  "=": "+",
+  "[": "{",
+  "]": "}",
+  "\\": "|",
+  ";": ":",
+  "'": '"',
+  ",": "<",
+  ".": ">",
+  "/": "?",
+};
+
 export function isMacPlatform(): boolean {
   if (typeof navigator === "undefined") return false;
   const platform = navigator.platform ?? navigator.userAgent ?? "";
   return /Mac|iPhone|iPad|iPod/.test(platform);
 }
 
+/** Parse a combo string. Throws on malformed combos (missing key,
+ * unknown modifier) so typos fail at registration instead of silently
+ * never firing — write the literal `+` key as `"plus"`. */
 export function parseShortcut(combo: string): ParsedShortcut {
   const parts = combo.toLowerCase().split("+");
-  // "shift+/" style trailing "+" collapses to an empty token; "plus" names
-  // the literal + key.
   const rawKey = parts.pop() ?? "";
   const parsed: ParsedShortcut = {
     key: KEY_ALIASES[rawKey] ?? rawKey,
@@ -51,6 +93,11 @@ export function parseShortcut(combo: string): ParsedShortcut {
     ctrl: false,
     meta: false,
   };
+  if (!parsed.key || MODIFIER_NAMES.has(parsed.key)) {
+    throw new Error(
+      `Invalid shortcut "${combo}": missing key (write the literal + key as "plus")`,
+    );
+  }
   for (const part of parts) {
     if (part === "mod" || part === "cmdorctrl") parsed.mod = true;
     else if (part === "shift") parsed.shift = true;
@@ -58,6 +105,7 @@ export function parseShortcut(combo: string): ParsedShortcut {
     else if (part === "ctrl" || part === "control") parsed.ctrl = true;
     else if (part === "meta" || part === "cmd" || part === "command")
       parsed.meta = true;
+    else throw new Error(`Invalid shortcut "${combo}": unknown modifier "${part}"`);
   }
   return parsed;
 }
@@ -77,14 +125,33 @@ export function shortcutMatches(
   event: ShortcutKeyEvent,
   isMac: boolean,
 ): boolean {
-  if (event.key.toLowerCase() !== parsed.key) return false;
+  const eventKey = event.key.toLowerCase();
+  let keyMatches = eventKey === parsed.key;
+  let shiftMatches = event.shiftKey === parsed.shift;
+  // Printable symbol keys encode Shift in the produced character: Shift+/
+  // reports key "?", and "+" arrives with shiftKey set on layouts where it
+  // lives on =. Match through the shifted pair and trust the character
+  // over the shiftKey flag for these keys.
+  const isSymbolKey =
+    parsed.key.length === 1 && !/[a-z ]/.test(parsed.key);
+  if (isSymbolKey) {
+    if (!keyMatches && parsed.shift && SHIFTED_KEYS[parsed.key] === event.key) {
+      // The produced character is the shifted counterpart — Shift proven.
+      keyMatches = true;
+      shiftMatches = true;
+    } else if (keyMatches && !parsed.shift && event.shiftKey) {
+      // The layout needed Shift to produce this character (e.g. + on =).
+      shiftMatches = true;
+    }
+  }
+  if (!keyMatches) return false;
   const wantMeta = parsed.meta || (parsed.mod && isMac);
   const wantCtrl = parsed.ctrl || (parsed.mod && !isMac);
   return (
     event.metaKey === wantMeta &&
     event.ctrlKey === wantCtrl &&
     event.altKey === parsed.alt &&
-    event.shiftKey === parsed.shift
+    shiftMatches
   );
 }
 
@@ -210,6 +277,20 @@ export function createShortcutManager(
         allowInInput: options.allowInInput ?? false,
         description: options.description,
       };
+      // Conflict policy: first registered wins (handleKeydown fires the
+      // first match and stops). Duplicates are almost always an app bug,
+      // so surface them.
+      for (const existing of entries) {
+        if (
+          existing.scope === entry.scope &&
+          existing.combo.toLowerCase() === combo.toLowerCase()
+        ) {
+          console.warn(
+            `[kit-ui shortcuts] "${combo}" is already registered in scope "${entry.scope}"; the first registration wins`,
+          );
+          break;
+        }
+      }
       entries.add(entry);
       return () => entries.delete(entry);
     },
@@ -255,13 +336,22 @@ export function createShortcutManager(
 /** App-level singleton most apps should use. */
 export const appShortcuts: ShortcutManager = createShortcutManager();
 
+let appShortcutsDetach: (() => void) | undefined;
+
 /** Wire the singleton to `window` keydown. Call once at app startup (like
- * `initTheme`); returns the detach function. SSR-safe no-op. */
+ * `initTheme`); returns the detach function. SSR-safe no-op. Idempotent:
+ * while already wired, repeat calls return a no-op detach instead of
+ * stacking listeners (only the wiring call's detach unwires). */
 export function initShortcuts(): () => void {
   if (typeof window === "undefined") return () => {};
+  if (appShortcutsDetach) return () => {};
   const listener = (event: KeyboardEvent): void => {
     appShortcuts.handleKeydown(event);
   };
   window.addEventListener("keydown", listener);
-  return () => window.removeEventListener("keydown", listener);
+  appShortcutsDetach = () => {
+    window.removeEventListener("keydown", listener);
+    appShortcutsDetach = undefined;
+  };
+  return appShortcutsDetach;
 }

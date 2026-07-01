@@ -19,6 +19,12 @@
     id?: string;
     name?: string;
     ariaLabel?: string;
+    /** Combobox wiring, forwarded to TextInput (see its docs). */
+    role?: "combobox";
+    ariaExpanded?: boolean;
+    ariaControls?: string;
+    ariaActivedescendant?: string;
+    ariaAutocomplete?: "list" | "inline" | "both" | "none";
     /** Shortcut hint rendered as a KbdBadge while the field is empty,
      * e.g. ["⌘", "K"]. */
     keys?: string[];
@@ -46,6 +52,11 @@
     id = undefined,
     name = undefined,
     ariaLabel = "Search",
+    role = undefined,
+    ariaExpanded = undefined,
+    ariaControls = undefined,
+    ariaActivedescendant = undefined,
+    ariaAutocomplete = undefined,
     keys = undefined,
     oninput = undefined,
     onchange = undefined,
@@ -92,6 +103,11 @@
   {id}
   {name}
   {ariaLabel}
+  {role}
+  {ariaExpanded}
+  {ariaControls}
+  {ariaActivedescendant}
+  {ariaAutocomplete}
   {oninput}
   {onchange}
   onkeydown={handleKeydown}

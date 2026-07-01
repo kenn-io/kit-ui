@@ -42,7 +42,7 @@ custom virtualized surfaces (LogViewer-style scrollback, virtual tables).
 | `activeIndex` | `number` (bindable) | `-1` | Keyboard-highlighted row; −1 = none |
 | `onactivate` | `(item: T, index: number) => void` | — | Enter / double-click on the active row |
 | `onrangechange` | `(start: number, end: number) => void` | — | Rendered range `[start, end)` changed |
-| `ariaLabel` | `string` | — | Label for the `role="listbox"` container |
+| `ariaLabel` | `string` | required | Label for the `role="listbox"` container — it's the focusable keyboard target and must be announced with a name |
 | `row` | `Snippet<[T, number, boolean]>` | required | `(item, index, isActive)` |
 | `empty` | `Snippet` | — | Rendered instead of the list when `items` is empty |
 | `class` | `string` | `""` | |
@@ -61,9 +61,32 @@ view), Enter fires `onactivate`; keys are only handled while the container
 itself has focus, so typing in interactive row content is untouched.
 Pointer-down on a row sets the active row and double-click activates —
 except when the press lands on interactive content (buttons, links,
-fields), which keeps its own behavior. Prefer the activate handler over
-tabbable row content for primary actions: a row that scrolls out of the
-window takes its tab stops with it.
+fields), which keeps its own behavior.
+
+**Rows must not contain tabbable interactive content** (buttons, links,
+fields). `role="option"` doesn't support nested interactive semantics —
+screen readers flatten or misannounce it — and virtualization unmounts
+off-screen rows, silently removing their tab stops mid-Tab-cycle. Route
+actions through `onactivate` (open a detail view, a context menu, a
+toolbar acting on the active row) instead. The pointer/keyboard guards
+that skip interactive content exist as a defensive fallback for rows that
+break this contract, not as support for it.
+
+State contracts:
+
+- `activeIndex` is clamped when `items` shrinks past it (to the last row,
+  or −1 when the list empties), so the bound value, the visual highlight,
+  and Enter's target never disagree after filtering.
+- Setting `activeIndex` from outside (controlled selection, initial
+  focus) scrolls the row into view, keeping `aria-activedescendant`
+  pointing at a rendered option.
+
+Acceptance checklist (automated coverage tracked under the browser test
+infra work): container announces its name and the active option;
+↑/↓/Home/End move and announce; Enter activates only the highlighted row;
+filtering that shrinks the list clamps the active row; an externally set
+active row scrolls into view; empty list renders the `empty` snippet with
+no keyboard errors.
 
 ## Sizing contract
 

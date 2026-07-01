@@ -55,9 +55,8 @@
     commands: PaletteCommand[];
   }
 
-  // Rank: label prefix > label substring > keyword substring. Sections keep
-  // their first-seen order within each rank pass.
-  const flat = $derived.by(() => {
+  // Rank: label prefix > label substring > keyword substring.
+  const ranked = $derived.by(() => {
     const q = query.trim().toLowerCase();
     if (!q) {
       const recent = recentIds
@@ -79,15 +78,28 @@
     return [...prefix, ...substring, ...keyword];
   });
 
+  // Each section appears once, ordered by its best-ranked match; ranking
+  // is preserved within a section. (Grouping only adjacent ranks would
+  // repeat section headers across rank buckets.)
   const groups = $derived.by(() => {
     const out: Group[] = [];
-    for (const c of flat) {
-      const last = out[out.length - 1];
-      if (last && last.section === c.section) last.commands.push(c);
-      else out.push({ section: c.section, commands: [c] });
+    const bySection = new Map<string | undefined, Group>();
+    for (const c of ranked) {
+      let group = bySection.get(c.section);
+      if (!group) {
+        group = { section: c.section, commands: [] };
+        bySection.set(c.section, group);
+        out.push(group);
+      }
+      group.commands.push(c);
     }
     return out;
   });
+
+  // Visual order — highlight/keyboard navigation indexes into this.
+  const flat = $derived(groups.flatMap((g) => g.commands));
+
+  const firstEnabled = (): number => flat.findIndex((c) => !c.disabled);
 
   const flatIndexOf = (command: PaletteCommand): number =>
     flat.indexOf(command);
@@ -97,14 +109,14 @@
   $effect(() => {
     if (!open) return;
     query = "";
-    highlighted = 0;
     const pop = appShortcuts.pushScope(`kit-command-palette-${uid}`);
     return pop;
   });
 
+  // Re-highlight whenever the result set changes; skip disabled leading
+  // results so Enter always has a runnable target (−1 when nothing is).
   $effect(() => {
-    void query;
-    highlighted = 0;
+    highlighted = firstEnabled();
   });
 
   function close(): void {
@@ -118,8 +130,8 @@
   }
 
   function move(delta: number): void {
-    if (flat.length === 0) return;
-    let next = highlighted;
+    if (flat.length === 0 || firstEnabled() === -1) return;
+    let next = highlighted >= 0 ? highlighted : delta > 0 ? -1 : flat.length;
     for (let i = 0; i < flat.length; i += 1) {
       next = (next + delta + flat.length) % flat.length;
       if (!flat[next]?.disabled) break;
@@ -167,6 +179,8 @@
       onkeydown={handleKeydown}
       {@attach trapFocus}
     >
+      <!-- Focus stays in the field; combobox wiring announces the
+           highlighted option to assistive tech as arrows move it. -->
       <div class="kit-command-palette__search">
         <SearchInput
           bind:value={query}
@@ -174,6 +188,13 @@
           block
           autofocus
           ariaLabel={ariaLabel}
+          role="combobox"
+          ariaExpanded={true}
+          ariaControls="{uid}-listbox"
+          ariaAutocomplete="list"
+          ariaActivedescendant={highlighted >= 0 && highlighted < flat.length
+            ? `${uid}-option-${highlighted}`
+            : undefined}
         />
       </div>
       <div
@@ -193,6 +214,8 @@
           {/if}
           {#each group.commands as command (command.id)}
             {@const index = flatIndexOf(command)}
+            <!-- aria-disabled (not disabled) keeps disabled commands
+                 perceivable to screen readers; run() guards activation. -->
             <button
               type="button"
               class="kit-command-palette__option"
@@ -200,7 +223,7 @@
               id="{uid}-option-{index}"
               role="option"
               aria-selected={index === highlighted}
-              disabled={command.disabled}
+              aria-disabled={command.disabled ? "true" : undefined}
               tabindex="-1"
               onpointerenter={() => {
                 if (!command.disabled) highlighted = index;
@@ -282,7 +305,7 @@
     background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
   }
 
-  .kit-command-palette__option:disabled {
+  .kit-command-palette__option[aria-disabled="true"] {
     opacity: var(--opacity-disabled);
     cursor: default;
   }

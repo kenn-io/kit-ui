@@ -33,6 +33,7 @@ with content, and an optional shortcut hint while empty.
 | `ariaLabel` | `string` | — | Required in spirit when no `<label>` is associated |
 | `autofocus` | `boolean` | `false` | Focus on mount |
 | `autocomplete` | `string` | — | |
+| `role` / `ariaExpanded` / `ariaControls` / `ariaActivedescendant` / `ariaAutocomplete` | combobox wiring | — | For fields that drive a listbox (CommandPalette): `role="combobox"` plus pointers at the list and highlighted option |
 | `oninput` / `onchange` | `(value: string) => void` | — | Called with the new value |
 | `onkeydown` | `(event: KeyboardEvent) => void` | — | |
 | `prefix` / `suffix` | `Snippet` | — | Adornments inside the border (icon, unit, kbd, button). Interactive suffix actions must handle `disabled` themselves — the wrapper only dims |
@@ -48,8 +49,10 @@ wrapper owns the clear affordance.
 
 Forwarded from TextInput: `value`, `placeholder`, `size`, `invalid`,
 `disabled`, `readonly`, `block`, `autofocus`, `id`, `name`, `ariaLabel`
-(default `"Search"`), `oninput`, `onchange`, `onkeydown`. (`type`,
-`prefix`, and `suffix` are owned by SearchInput.) Plus:
+(default `"Search"`), the combobox wiring props (`role`, `ariaExpanded`,
+`ariaControls`, `ariaActivedescendant`, `ariaAutocomplete`), `oninput`,
+`onchange`, `onkeydown`. (`type`, `prefix`, and `suffix` are owned by
+SearchInput.) Plus:
 
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |

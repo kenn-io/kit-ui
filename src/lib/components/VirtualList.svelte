@@ -1,6 +1,6 @@
 <script lang="ts" generics="T">
   import type { Snippet } from "svelte";
-  import { tick } from "svelte";
+  import { tick, untrack } from "svelte";
   import { offsetOfIndex, virtualSlice } from "./virtual.js";
 
   interface Props {
@@ -20,7 +20,9 @@
     onactivate?: (item: T, index: number) => void;
     /** Fires when the rendered range changes: [start, end). */
     onrangechange?: (start: number, end: number) => void;
-    ariaLabel?: string;
+    /** Accessible name for the listbox — required: the container is the
+     * focusable keyboard target and must be announced with a name. */
+    ariaLabel: string;
     row: Snippet<[T, number, boolean]>;
     empty?: Snippet;
     class?: string;
@@ -35,7 +37,7 @@
     activeIndex = $bindable(-1),
     onactivate = undefined,
     onrangechange = undefined,
-    ariaLabel = undefined,
+    ariaLabel,
     row,
     empty = undefined,
     class: className = "",
@@ -65,8 +67,12 @@
     measuredFor = items;
   });
 
-  const heightOf = (index: number): number =>
-    itemHeight ?? measured.get(index) ?? estimateHeight;
+  // Guard against nonsensical sizing props: zero/negative heights would
+  // degenerate the windowing math, fractional/negative overscan the loops.
+  const heightOf = (index: number): number => {
+    const h = itemHeight ?? measured.get(index) ?? estimateHeight;
+    return h > 0 ? h : 1;
+  };
 
   const slice = $derived.by(() => {
     void measureVersion;
@@ -75,13 +81,37 @@
       scrollTop,
       viewport,
       count: items.length,
-      overscan,
+      overscan: Math.max(0, Math.floor(overscan)),
       heightOf,
     });
   });
 
   $effect(() => {
     onrangechange?.(slice.start, slice.end);
+  });
+
+  // Item-change policy: when the list shrinks past the active row, clamp
+  // to the last row (−1 when empty) so the bound activeIndex, the visual
+  // highlight, and Enter's target never disagree.
+  $effect(() => {
+    if (activeIndex >= items.length) {
+      activeIndex = items.length - 1;
+    }
+  });
+
+  // aria-activedescendant can only reference a rendered row, so an
+  // activeIndex set from outside the rendered slice (controlled usage,
+  // initial selection) is scrolled back into view.
+  let lastActive = -1;
+  $effect(() => {
+    const index = activeIndex;
+    untrack(() => {
+      if (index === lastActive) return;
+      lastActive = index;
+      if (index >= 0 && index < items.length && (index < slice.start || index >= slice.end)) {
+        void scrollToIndex(index);
+      }
+    });
   });
 
   $effect(() => {

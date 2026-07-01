@@ -24,6 +24,14 @@
     name?: string;
     /** Accessible name when there is no associated `<label for>`. */
     ariaLabel?: string;
+    /** Combobox wiring for fields that drive a listbox (CommandPalette):
+     * set `role="combobox"` and point these at the list and the
+     * highlighted option so keyboard navigation is announced. */
+    role?: "combobox";
+    ariaExpanded?: boolean;
+    ariaControls?: string;
+    ariaActivedescendant?: string;
+    ariaAutocomplete?: "list" | "inline" | "both" | "none";
     /** Focus the input when it mounts. */
     autofocus?: boolean;
     autocomplete?: HTMLInputElement["autocomplete"];
@@ -51,6 +59,11 @@
     id = undefined,
     name = undefined,
     ariaLabel = undefined,
+    role = undefined,
+    ariaExpanded = undefined,
+    ariaControls = undefined,
+    ariaActivedescendant = undefined,
+    ariaAutocomplete = undefined,
     autofocus = false,
     autocomplete = undefined,
     oninput = undefined,
@@ -102,6 +115,11 @@
     {autocomplete}
     aria-label={ariaLabel}
     aria-invalid={invalid ? "true" : undefined}
+    {role}
+    aria-expanded={ariaExpanded}
+    aria-controls={ariaControls}
+    aria-activedescendant={ariaActivedescendant}
+    aria-autocomplete={ariaAutocomplete}
     oninput={handleInput}
     onchange={(event) =>
       onchange?.((event.currentTarget as HTMLInputElement).value)}
