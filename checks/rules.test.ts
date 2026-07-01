@@ -132,6 +132,42 @@ describe("hand-rolled components", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("TableHeaderCell");
   });
+
+  test("tooltip: role=tooltip markup", () => {
+    const src = svelte(``, `<div class="hint" role="tooltip">Adds 3, removes 1</div>`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-tooltip"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("Tooltip");
+  });
+
+  test("status bar: class and CSS selector", () => {
+    const src = svelte(
+      `.status-bar { height: var(--status-bar-height); }`,
+      `<footer class="status-bar">3 sessions</footer>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-status-bar"])).toHaveLength(2);
+  });
+
+  test("status bar: does not match kit-status-bar retheming", () => {
+    const src = svelte(
+      `.kit-status-bar { background: var(--bg-inset); }`,
+      `<div class="kit-status-bar"></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-status-bar"])).toHaveLength(0);
+  });
+
+  test("empty state: class and CSS selector", () => {
+    const src = svelte(
+      `.empty-state { color: var(--text-muted); }`,
+      `<div class="empty-state">No sessions yet</div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(2);
+  });
+
+  test("empty state: does not match kit-empty-state or prose", () => {
+    const src = `<script>// the empty-state pattern</script>\n<div class="kit-empty-state"></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
+  });
 });
 
 describe("typography rules", () => {

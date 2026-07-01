@@ -99,13 +99,17 @@ export function allFromDate(earliestDate: string | null | undefined): string {
   return daysAgo(365);
 }
 
-/** The concrete bounds of a relative preset (days === 0 means all-time). */
+/**
+ * The concrete bounds of a relative preset (days === 0 means all-time).
+ * "Last N days" means N calendar days inclusive of today — today plus the
+ * N−1 preceding dates — so with inclusive bounds `from` is daysAgo(N−1).
+ */
 export function presetRange(
   days: number,
   earliestDate?: string | null,
 ): DateRange {
   return {
-    from: days === 0 ? allFromDate(earliestDate) : daysAgo(days),
+    from: days === 0 ? allFromDate(earliestDate) : daysAgo(days - 1),
     to: todayStr(),
   };
 }

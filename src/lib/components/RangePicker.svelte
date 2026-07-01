@@ -129,9 +129,14 @@
   });
 
   const stepLabel = $derived(calendarLabelFor(calUnit, calAnchor));
-  // Conservative guard: disable Next once the anchor is at or past the max
-  // date. Only consumers that pass maxDate are guarded.
-  const nextDisabled = $derived(maxDate != null && calAnchor >= maxDate);
+  // Disable Next when the entire next period lies beyond maxDate (a period
+  // that merely contains maxDate is still reachable). Only consumers that
+  // pass maxDate are guarded.
+  const nextDisabled = $derived.by(() => {
+    if (maxDate == null) return false;
+    const next = stepAnchor(calUnit, calAnchor, 1);
+    return periodBounds(calUnit, next).from > maxDate;
+  });
 
   function seed(): void {
     tab = selection.mode;
@@ -182,7 +187,12 @@
   }
 
   function step(dir: -1 | 1): void {
-    applyCalendar(calUnit, stepAnchor(calUnit, calAnchor, dir));
+    if (dir === 1 && nextDisabled) return;
+    let next = stepAnchor(calUnit, calAnchor, dir);
+    // Clamp so the anchor itself never lands past maxDate even when the
+    // next period straddles it.
+    if (dir === 1 && maxDate != null && next > maxDate) next = maxDate;
+    applyCalendar(calUnit, next);
   }
 
   function commitCustom(): void {

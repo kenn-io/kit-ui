@@ -90,6 +90,7 @@ export {
 export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
+export { trapFocus } from "./utils/focus-trap.js";
 export {
   formatCost,
   formatDuration,

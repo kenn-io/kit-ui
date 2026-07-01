@@ -227,6 +227,57 @@ export function checkHandRolledSegmented(source) {
   return findings;
 }
 
+/** Hand-rolled hover tooltips duplicate Tooltip. role="tooltip" is the
+ * reliable marker: any conformant custom tooltip must carry it. */
+export function checkHandRolledTooltip(source) {
+  const findings = [];
+  const re = /role="tooltip"/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-tooltip",
+      line: lineOfIndex(source, match.index),
+      message:
+        'role="tooltip" markup — use Tooltip from @kenn-io/kit-ui',
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled bottom status bars duplicate StatusBar. Matches the class
+ * name both apps converged on; kit-status-bar (the library's own class,
+ * e.g. in retheming CSS) is exempt. */
+export function checkHandRolledStatusBar(source) {
+  const findings = [];
+  const re = /class="[^"]*(?<!kit-)\bstatus-bar\b|\.(?<!kit-)status-bar\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-status-bar",
+      line: lineOfIndex(source, match.index),
+      message:
+        "status-bar markup — use StatusBar from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled empty/placeholder states duplicate EmptyState. */
+export function checkHandRolledEmptyState(source) {
+  const findings = [];
+  const re = /class="[^"]*(?<!kit-)\bempty-state\b|\.(?<!kit-)empty-state\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-empty-state",
+      line: lineOfIndex(source, match.index),
+      message:
+        "empty-state markup — use EmptyState from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Custom sortable table headers duplicate TableHeaderCell. */
 export function checkHandRolledTableSort(source) {
   const findings = [];
@@ -266,7 +317,7 @@ export function checkPinnedRootFontSize(source, filename) {
 }
 
 /** The retired parallel mobile type scale; the single token ladder is
- * redefined at the compact breakpoint instead. */
+ * redefined on coarse-pointer (touch) devices instead — never by width. */
 export function checkLegacyMobileType(source) {
   const findings = [];
   const re = /--font-size-mobile-[a-z]+/g;
@@ -335,6 +386,9 @@ export const ALL_RULES = {
   "hand-rolled-splitter": checkHandRolledSplitter,
   "hand-rolled-segmented": checkHandRolledSegmented,
   "hand-rolled-table-sort": checkHandRolledTableSort,
+  "hand-rolled-tooltip": checkHandRolledTooltip,
+  "hand-rolled-status-bar": checkHandRolledStatusBar,
+  "hand-rolled-empty-state": checkHandRolledEmptyState,
   "pinned-root-font-size": checkPinnedRootFontSize,
   "legacy-mobile-type": checkLegacyMobileType,
   "nonstandard-spacing": checkNonstandardSpacing,

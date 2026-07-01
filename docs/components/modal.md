@@ -25,6 +25,23 @@ Render it conditionally — the parent owns the open state:
 
 `onclose` fires on Escape, overlay click (unless disabled), and the X button.
 
+## Accessibility
+
+The panel is `role="dialog"` + `aria-modal="true"`, named by `ariaLabel`
+(falling back to `title`). While open, the shared `trapFocus` behavior
+(exported from the package root for custom overlays) provides:
+
+- **Initial focus**: the first `[autofocus]` descendant, else the panel
+  itself — add `autofocus` to the primary control when it helps.
+- **Focus trap**: Tab / Shift+Tab cycle inside the panel.
+- **Focus restoration**: the previously focused element regains focus on
+  close.
+- **Scroll lock**: body scrolling is locked while any modal surface is open
+  (re-entrant across stacked surfaces).
+
+The overlay does not use `inert` on the rest of the page; screen-reader
+virtual cursors rely on `aria-modal` support (all evergreen browsers).
+
 ## Props
 
 | Prop | Type | Default | Notes |

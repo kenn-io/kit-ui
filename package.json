@@ -21,6 +21,18 @@
     "./utils/clipboard": {
       "default": "./src/lib/utils/clipboard.ts"
     },
+    "./utils/color-hash": {
+      "default": "./src/lib/utils/color-hash.ts"
+    },
+    "./utils/debounce": {
+      "default": "./src/lib/utils/debounce.ts"
+    },
+    "./utils/format": {
+      "default": "./src/lib/utils/format.ts"
+    },
+    "./utils/refresh": {
+      "default": "./src/lib/utils/refresh.ts"
+    },
     "./utils/time": {
       "default": "./src/lib/utils/time.ts"
     }

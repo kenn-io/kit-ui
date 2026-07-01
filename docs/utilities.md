@@ -61,6 +61,17 @@ clamps to the viewport horizontally and flips above the trigger when there is
 no room below. This is what `FilterDropdown` uses; reuse it for custom
 popovers so they behave consistently.
 
+## Focus trap
+
+```svelte
+<div class="my-overlay-panel" role="dialog" aria-modal="true" tabindex="-1" {@attach trapFocus}>
+```
+
+The modal-surface behavior `Modal` and `DetailDrawer` use, exported for
+custom overlays: moves focus in (first `[autofocus]` descendant, else the
+surface — hence `tabindex="-1"`), traps Tab/Shift+Tab, locks body scroll
+(re-entrant), and restores focus on teardown.
+
 ## Formatters
 
 ```ts

@@ -109,9 +109,13 @@ appear in `@media` rules (`kit-ui-check` enforces this):
 
 | Name | Width | Meaning |
 | --- | --- | --- |
-| `compact` | ≤ 640px | phones — single column, mobile type scale |
+| `compact` | ≤ 640px | phones — single-column layout |
 | `medium` | ≤ 760px | small tablets — split panels collapse |
 | `wide` | ≤ 900px | narrow desktop — secondary sidebars collapse |
+
+Width breakpoints are **layout-only**. Type never changes with viewport
+width — the scale is keyed to coarse pointers (see Typography above), so a
+narrowed desktop window reflows but keeps desktop type.
 
 Non-width queries: `MEDIA.touch` (`(hover: none), (pointer: coarse)`) for
 touch affordances, `MEDIA.reducedMotion` to guard animation.
@@ -139,8 +143,9 @@ strings:
 {#if compact.current}<MobileNav />{:else}<Sidebar />{/if}
 ```
 
-On touch devices, keep hit targets ≥ 32px; the type scale resizes itself at
-the compact breakpoint, and `KbdBadge` hides itself on coarse pointers.
+On touch devices, keep hit targets ≥ 32px; the type scale resizes itself on
+coarse-pointer devices (not at any width), and `KbdBadge` hides itself on
+coarse pointers.
 
 ## Overriding
 

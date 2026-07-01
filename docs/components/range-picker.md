@@ -10,6 +10,13 @@ The component is controlled: you hold a `RangeSelection` and it calls
 into concrete inclusive `{from, to}` bounds (local-timezone `YYYY-MM-DD`
 strings). Escape and outside clicks dismiss the popover.
 
+**Semantics**: bounds are inclusive on both ends, and "Last N days" means N
+calendar days including today (so `from` is N−1 days back). All date math is
+local-timezone, day-granular — the consumer decides how a `YYYY-MM-DD` bound
+maps to instants (e.g. `to` + one day, exclusive, in its own timezone
+handling). Date strings are trusted input: feed the helpers valid
+`YYYY-MM-DD` only.
+
 ```svelte
 <script lang="ts">
   import { RangePicker, resolveRange, type RangeSelection } from "@kenn-io/kit-ui";
@@ -34,7 +41,7 @@ strings). Escape and outside clicks dismiss the popover.
 | `busy` | `boolean` | `false` | Dims the trigger while data reloads |
 | `earliestDate` | `string \| null` | `null` | Earliest data date; anchors the "All" preset |
 | `align` | `"left" \| "right"` | `"left"` | Popover edge alignment |
-| `maxDate` | `string \| null` | `null` | Disables stepping the calendar past this date |
+| `maxDate` | `string \| null` | `null` | Calendar can't step into periods wholly past this date; a stepped anchor clamps to it |
 | `block` | `boolean` | `false` | Trigger/panel stretch to the container width |
 | `presets` | `RangePreset[]` | `DEFAULT_RANGE_PRESETS` | Relative pills (`{ label, longLabel, days }`; `days: 0` = all-time) |
 | `relativeTabLabel` / `calendarTabLabel` / `customTabLabel` | `string` | `"Relative"` / `"Calendar"` / `"Custom"` | Tab labels |

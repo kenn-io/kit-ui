@@ -32,7 +32,7 @@ conditionally — rendering it means it is open:
 | `width` | `string` | `"min(560px, 100vw)"` | Panel width (any CSS length) |
 | `closable` | `boolean` | `true` | Render the X button in the default header |
 | `closeOnOverlayClick` | `boolean` | `true` | Dismiss on backdrop click |
-| `ariaLabel` | `string` | `title` | Dialog label when there is no title |
+| `ariaLabel` | `string` | `title` | Dialog name. **Required with a custom `header`** — `title` isn't rendered then, so without `ariaLabel` the dialog has no accessible name |
 | `closeTitle` | `string` | `"Close (Esc)"` | Close button tooltip |
 | `closeAriaLabel` | `string` | `"Close"` | Close button `aria-label` |
 | `children` | `Snippet` | — | Body content (scrolls; bring your own padding) |
@@ -47,3 +47,6 @@ Notes:
 - When you pass a `header` snippet there is no default close button — keep
   `onclose` reachable via your own control (Escape/overlay still work).
 - The slide-in animation is disabled under `prefers-reduced-motion`.
+- Focus management matches `Modal` (shared `trapFocus` behavior): initial
+  focus on the first `[autofocus]` descendant (else the panel), Tab cycling
+  trapped inside, focus restored on close, body scroll locked while open.

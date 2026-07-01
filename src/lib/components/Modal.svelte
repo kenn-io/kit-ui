@@ -1,6 +1,7 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
+  import { trapFocus } from "../utils/focus-trap.js";
 
   interface Props {
     title?: string;
@@ -57,8 +58,10 @@
     role="dialog"
     aria-modal="true"
     aria-label={ariaLabel ?? title}
+    tabindex="-1"
     style:width
     style:max-width={maxWidth}
+    {@attach trapFocus}
   >
     {#if title || closable}
       <div class="kit-modal-header">

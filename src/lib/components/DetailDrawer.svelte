@@ -1,6 +1,7 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
+  import { trapFocus } from "../utils/focus-trap.js";
 
   interface Props {
     title?: string;
@@ -12,6 +13,8 @@
     closable?: boolean;
     /** Dismiss when the overlay backdrop is clicked (default true). */
     closeOnOverlayClick?: boolean;
+    /** Accessible dialog name. Required when `header` replaces the default
+     * title row — without it (or `title`) the dialog has no name. */
     ariaLabel?: string;
     /** Tooltip on the close button. */
     closeTitle?: string;
@@ -63,8 +66,10 @@
     class="kit-detail-drawer"
     role="dialog"
     aria-modal="true"
-    aria-label={ariaLabel ?? title}
+    aria-label={ariaLabel ?? (header ? undefined : title)}
+    tabindex="-1"
     style:width
+    {@attach trapFocus}
   >
     {#if header}
       <div class="kit-detail-drawer__header">
