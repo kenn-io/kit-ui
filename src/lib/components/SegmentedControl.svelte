@@ -103,7 +103,7 @@
     color: var(--text-muted);
     border-radius: calc(var(--radius-sm) - 1px);
     cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+    transition: background var(--transition-fast), color var(--transition-fast);
     white-space: nowrap;
   }
 
@@ -123,12 +123,12 @@
   }
 
   .kit-segmented__btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-blue) 42%, transparent);
+    outline: var(--focus-ring);
+    outline-offset: -2px;
   }
 
   .kit-segmented__btn:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: not-allowed;
   }
 </style>

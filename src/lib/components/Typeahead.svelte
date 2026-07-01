@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
+  import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { TypeaheadOption } from "./typeahead.js";
 
   interface Props {
@@ -30,6 +31,37 @@
   let highlightIndex = $state(0);
   let inputEl = $state<HTMLInputElement>();
   let containerEl = $state<HTMLDivElement>();
+  let listEl = $state<HTMLUListElement>();
+  let listStyle = $state("");
+
+  // Fixed positioning (same contract as SelectDropdown) so the list is
+  // never clipped by an overflow-hidden ancestor; width pins to the
+  // trigger so long labels keep truncating instead of widening the menu.
+  function positionList(): void {
+    if (!containerEl || !listEl) return;
+    const trigger = containerEl.getBoundingClientRect();
+    listStyle = `${floatingPopoverStyle({
+      trigger,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      popoverWidth: trigger.width,
+      popoverHeight: listEl.offsetHeight,
+      triggerGap: 2,
+    })}; width: ${Math.round(trigger.width)}px`;
+  }
+
+  $effect(() => {
+    if (!open) return;
+    function reposition(): void {
+      positionList();
+    }
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  });
 
   const filtered = $derived.by(() => {
     if (!query) return options;
@@ -49,6 +81,7 @@
     open = true;
     highlightIndex = 0;
     await tick();
+    positionList();
     inputEl?.focus();
   }
 
@@ -130,7 +163,13 @@
       aria-label={placeholder}
       autocomplete="off"
     />
-    <ul class="kit-typeahead__list" role="listbox" onmousedown={preventBlur}>
+    <ul
+      class="kit-typeahead__list"
+      style={listStyle}
+      bind:this={listEl}
+      role="listbox"
+      onmousedown={preventBlur}
+    >
       {#each filtered as option, i (option.name)}
         <li
           class="kit-typeahead__option"
@@ -190,7 +229,7 @@
     font-size: var(--typeahead-control-font-size, var(--font-size-xs));
     color: var(--text-secondary);
     cursor: pointer;
-    transition: border-color 0.15s;
+    transition: border-color var(--transition-fast);
     text-align: left;
   }
 
@@ -204,7 +243,7 @@
   }
 
   .kit-typeahead__trigger:disabled {
-    opacity: 0.55;
+    opacity: var(--opacity-disabled);
     cursor: default;
   }
 
@@ -239,18 +278,14 @@
   }
 
   .kit-typeahead__list {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    min-width: var(--typeahead-list-min-width, 100%);
-    margin-top: 2px;
+    position: fixed;
+    box-sizing: border-box;
     max-height: 50vh;
     overflow-y: auto;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
     z-index: 100;
     list-style: none;
     padding: 2px;
@@ -290,5 +325,10 @@
     font-size: var(--font-size-xs);
     color: var(--text-muted);
     font-style: italic;
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-typeahead__trigger:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

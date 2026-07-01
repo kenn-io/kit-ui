@@ -106,6 +106,41 @@ but gaps and chrome shouldn't inflate with it (the same reasoning as borders
 and radii). `kit-ui-check` flags `gap` values off the ladder
 (`nonstandard-spacing`); 0/1px hairlines are exempt.
 
+## Interaction conventions
+
+Three tokens keep interactive states uniform across the library (added in
+the gyp8 normalization pass):
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| `--focus-ring` | `2px solid var(--accent-blue)` | THE keyboard focus indicator |
+| `--transition-fast` | `0.12s` | hover/press color+background transitions |
+| `--opacity-disabled` | `0.5` | disabled controls |
+
+**Focus**: every interactive element shows
+`outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or
+−2px inset where the element sits flush inside a group). It must be a real
+`outline`, never a `box-shadow` ring — the high-contrast theme globally
+widens outlines (`:root.high-contrast :focus-visible { outline-width: 3px }`)
+and box-shadows would miss that. Text-entry fields are the one exception:
+their *wrapper* signals focus with an `--accent-blue` border via
+`:focus-within` (TextInput, FindBar) since a ring around a chromeless inner
+input reads as double chrome.
+
+**Popover chrome**: every transient floating surface (dropdown menus,
+typeahead lists, filter panels, the range-picker panel, tooltips, toasts,
+FindBar) uses the same card: `border: 1px solid var(--border-default);
+border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+background: var(--bg-surface)` — and positions with `position: fixed` via
+`floatingPopoverStyle` so it can never be clipped by an overflow-hidden
+ancestor. (Caveat as always: a transformed/filtered ancestor re-parents
+fixed descendants.)
+
+**Disabled**: controls set `opacity: var(--opacity-disabled)`. Two
+deliberate exceptions: Calendar's disabled day *cells* stay lighter (0.35 —
+a month of them at 0.5 is heavy) and RefreshControl's busy button stays at
+0.75 so the spinner remains visible.
+
 ## Breakpoints
 
 CSS custom properties can't parameterize media queries, so the shared

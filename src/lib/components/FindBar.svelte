@@ -162,7 +162,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     animation: kit-find-bar-slide-down 0.12s ease-out;
   }
 
@@ -249,8 +249,8 @@
     cursor: pointer;
     flex-shrink: 0;
     transition:
-      background 0.12s,
-      color 0.12s;
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-find-bar__nav-btn {
@@ -258,7 +258,7 @@
   }
 
   .kit-find-bar__nav-btn:disabled {
-    opacity: 0.4;
+    opacity: var(--opacity-disabled);
     cursor: default;
   }
 
@@ -290,5 +290,11 @@
 
   .kit-find-bar__close:active {
     transform: scale(0.9);
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-find-bar__nav-btn:focus-visible,
+  .kit-find-bar__close:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

@@ -126,7 +126,7 @@
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     color: var(--text-primary);
-    transition: border-color 0.12s;
+    transition: border-color var(--transition-fast);
   }
 
   .kit-text-input--sm {
@@ -154,7 +154,7 @@
   }
 
   .kit-text-input--disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
   }
 
   .kit-text-input__control {

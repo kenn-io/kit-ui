@@ -139,8 +139,8 @@
     color: var(--text-secondary);
     cursor: pointer;
     transition:
-      background 0.12s,
-      color 0.12s;
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-calendar__nav:hover:not(:disabled) {
@@ -149,7 +149,7 @@
   }
 
   .kit-calendar__nav:disabled {
-    opacity: 0.4;
+    opacity: var(--opacity-disabled);
     cursor: default;
   }
 
@@ -189,8 +189,8 @@
     color: var(--text-secondary);
     cursor: pointer;
     transition:
-      background 0.1s,
-      color 0.1s;
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-calendar__day:hover:not(:disabled) {
@@ -231,5 +231,11 @@
   .kit-calendar__day:disabled {
     opacity: 0.35;
     cursor: default;
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-calendar__nav:focus-visible,
+  .kit-calendar__day:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

@@ -99,19 +99,21 @@
     color: var(--text-secondary);
     border: 1px solid var(--border-default);
     transition:
-      background-color 0.12s ease,
-      border-color 0.12s ease,
-      color 0.12s ease,
-      box-shadow 0.12s ease,
-      transform 0.08s ease,
-      opacity 0.1s ease;
+      background-color var(--transition-fast) ease,
+      border-color var(--transition-fast) ease,
+      color var(--transition-fast) ease,
+      box-shadow var(--transition-fast) ease,
+      transform var(--transition-fast) ease,
+      opacity var(--transition-fast) ease;
     white-space: nowrap;
     line-height: 1;
   }
 
+  /* A real outline (not box-shadow) so the high-contrast theme's global
+   * outline-width override applies — one ring for every tone. */
   .kit-button:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-blue) 42%, transparent);
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 
   .kit-button:active:not(:disabled) {
@@ -119,7 +121,7 @@
   }
 
   .kit-button:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: not-allowed;
   }
 
@@ -183,9 +185,6 @@
     background: color-mix(in srgb, var(--accent-red) 88%, #000);
     border-color: color-mix(in srgb, var(--accent-red) 88%, #000);
   }
-  .kit-button--solid.kit-button--danger:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-red) 42%, transparent);
-  }
 
   /* Success solid — merge, confirm. The green is deepened relative to the
    * raw accent: #059669 with light ink sits just below AA for 13px text,
@@ -198,9 +197,6 @@
   .kit-button--solid.kit-button--success:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-green) 72%, #000);
     border-color: color-mix(in srgb, var(--accent-green) 72%, #000);
-  }
-  .kit-button--solid.kit-button--success:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-green) 48%, transparent);
   }
   .kit-button--solid.kit-button--success:active:not(:disabled),
   .kit-button--solid.kit-button--success[aria-expanded="true"] {
@@ -229,9 +225,6 @@
     background: color-mix(in srgb, var(--accent-purple) 88%, #000);
     border-color: color-mix(in srgb, var(--accent-purple) 88%, #000);
   }
-  .kit-button--solid.kit-button--workflow:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-purple) 42%, transparent);
-  }
 
   /* Info solid — primary submit / save */
   .kit-button--solid.kit-button--info {
@@ -242,9 +235,6 @@
   .kit-button--solid.kit-button--info:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-blue) 88%, #000);
     border-color: color-mix(in srgb, var(--accent-blue) 88%, #000);
-  }
-  .kit-button--solid.kit-button--info:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-blue) 42%, transparent);
   }
   .kit-button--solid.kit-button--info:active:not(:disabled),
   .kit-button--solid.kit-button--info[aria-expanded="true"] {
@@ -260,9 +250,6 @@
   }
   .kit-button--soft.kit-button--success:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-green) 20%, transparent);
-  }
-  .kit-button--soft.kit-button--success:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-green) 38%, transparent);
   }
   .kit-button--soft.kit-button--success:active:not(:disabled),
   .kit-button--soft.kit-button--success[aria-expanded="true"] {
@@ -298,9 +285,6 @@
   }
   .kit-button--soft.kit-button--danger:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-red) 18%, transparent);
-  }
-  .kit-button--soft.kit-button--danger:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-red) 38%, transparent);
   }
 
   /* Accent outlines — accent ink on the surface, tint on hover */

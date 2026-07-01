@@ -333,8 +333,8 @@
     cursor: pointer;
     white-space: nowrap;
     transition:
-      background 0.15s,
-      color 0.15s;
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-top-bar__tab:hover:not(:disabled) {
@@ -349,7 +349,7 @@
   }
 
   .kit-top-bar__tab:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: default;
   }
 
@@ -363,5 +363,10 @@
     padding: 2px;
     visibility: hidden;
     pointer-events: none;
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-top-bar__tab:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

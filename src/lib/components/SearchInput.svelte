@@ -138,7 +138,7 @@
   }
 
   .kit-search-input__clear:focus-visible {
-    outline: 2px solid var(--accent-blue);
+    outline: var(--focus-ring);
     outline-offset: 1px;
   }
 </style>

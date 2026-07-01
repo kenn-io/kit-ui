@@ -60,7 +60,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     overflow-x: hidden;
   }
 
@@ -144,5 +144,10 @@
       animation: none;
       transform: scaleX(1);
     }
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-flash-banner__dismiss:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

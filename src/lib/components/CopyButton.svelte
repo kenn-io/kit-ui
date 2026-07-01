@@ -79,7 +79,7 @@
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
-    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
     flex-shrink: 0;
   }
 

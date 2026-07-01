@@ -87,8 +87,8 @@
     color: var(--text-muted);
     cursor: pointer;
     transition:
-      background 0.12s,
-      color 0.12s;
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-icon-button--sm {
@@ -112,12 +112,12 @@
   }
 
   .kit-icon-button:focus-visible {
-    outline: 2px solid var(--accent-blue);
+    outline: var(--focus-ring);
     outline-offset: 1px;
   }
 
   .kit-icon-button:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: default;
   }
 

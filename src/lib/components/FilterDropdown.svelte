@@ -332,7 +332,7 @@
     border: 1px solid var(--border-muted);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: border-color 0.12s, color 0.12s;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
     position: relative;
     min-height: 24px;
   }
@@ -344,7 +344,7 @@
 
   .kit-filter-dropdown__btn:disabled {
     cursor: default;
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
   }
 
   .kit-filter-dropdown__btn--active {
@@ -372,8 +372,8 @@
     position: fixed;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
     z-index: 1000;
     padding: 4px 0;
   }
@@ -431,7 +431,7 @@
     color: var(--text-secondary);
     text-align: left;
     cursor: pointer;
-    transition: background 0.08s;
+    transition: background var(--transition-fast);
     background: transparent;
     border: 0;
   }
@@ -453,7 +453,7 @@
     height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
-    transition: background 0.1s;
+    transition: background var(--transition-fast);
   }
 
   .kit-filter-dropdown__label {
@@ -509,10 +509,21 @@
     background: transparent;
     padding-top: 8px;
     cursor: pointer;
-    transition: color 0.1s;
+    transition: color var(--transition-fast);
   }
 
   .kit-filter-dropdown__reset:hover {
     color: var(--text-primary);
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-filter-dropdown__btn:focus-visible,
+  .kit-filter-dropdown__bulk-btn:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .kit-filter-dropdown__item:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
   }
 </style>

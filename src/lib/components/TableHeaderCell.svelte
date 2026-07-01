@@ -96,7 +96,7 @@
   }
 
   .kit-th__sort-btn:focus-visible {
-    outline: 2px solid var(--accent-blue);
+    outline: var(--focus-ring);
     outline-offset: 1px;
     border-radius: 2px;
   }
