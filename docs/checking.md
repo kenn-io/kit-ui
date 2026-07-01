@@ -95,6 +95,7 @@ everything and aren't repeated per row.
 | TextInput, SearchInput | no rule — bare `<input>` markup is too generic to flag without drowning in false positives; found in review |
 | ThemeToggle | no rule — a theme button has no stable signature; the theme *store* swap is stage 5 of the adoption path |
 | VirtualList | no rule — hand-rolled virtualization has no stable markup signature; unvirtualized long lists are a perf review concern, not a lint |
+| CommandPalette, shortcut system | no rule — ad-hoc `keydown` listeners are legitimate in components; app-level shortcut sprawl is found in review |
 | FitStages | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags |
 | Theme store, formatters, `debounce`, `hashColor` | no rule — plain functions; duplication isn't detectable from markup |
 

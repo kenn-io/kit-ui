@@ -6,6 +6,7 @@
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
   import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
+  import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
   import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
   import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
@@ -56,6 +57,7 @@
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
     { id: "color-label", label: "ColorLabel", component: ColorLabelDemo },
+    { id: "command-palette", label: "CommandPalette", component: CommandPaletteDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },
     { id: "detail-drawer", label: "DetailDrawer", component: DetailDrawerDemo },
     { id: "empty-state", label: "EmptyState", component: EmptyStateDemo },

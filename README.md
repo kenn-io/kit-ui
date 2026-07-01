@@ -48,6 +48,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [ChipStack](docs/components/chip-stack.md) | new (middleman mobile-view pattern) | Collapsing chip/button row with "+N" expansion |
 | [CollapsibleSidebar](docs/components/collapsible-sidebar.md) | middleman | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`) |
 | [ColorLabel](docs/components/color-label.md) | middleman `GitHubLabels` | Hex-colored pill with WCAG contrast-picked text |
+| [CommandPalette](docs/components/command-palette.md) | new | ⌘K overlay: filtered commands, sections, recents; pairs with the shortcut system |
 | [CopyButton](docs/components/copy-button.md) | agentsview | Copy-to-clipboard icon button with success feedback |
 | [DetailDrawer](docs/components/detail-drawer.md) | middleman | Right-side slide-in detail panel over an overlay |
 | [DiffStats](docs/components/diff-stats.md) | middleman | `+added −removed` diff counters with compact formatting |
@@ -78,7 +79,9 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Typeahead](docs/components/typeahead.md) | agentsview `OptionTypeahead` | Filterable select with match highlighting |
 | [VirtualList](docs/components/virtual-list.md) | new | Windowed list for long datasets: fixed/measured row heights, container-owned keyboard nav |
 
-Also exported: [utilities](docs/utilities.md) (`copyToClipboard`,
+Also exported: the [keyboard shortcut system](docs/components/command-palette.md#shortcut-system-utilsshortcuts)
+(`appShortcuts`/`initShortcuts`/`formatShortcutKeys` — combo parsing,
+platform `mod`, scope stacking), [utilities](docs/utilities.md) (`copyToClipboard`,
 `formatRelativeTime`, `formatTimestamp`, `truncate`, `createRefreshScheduler`,
 `floatingPopoverStyle`, `formatDuration`/`formatTokenCount`/`formatCost`,
 `debounce`, `hashColor`), the [theme store](docs/theming.md#theme-store)

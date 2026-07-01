@@ -8,6 +8,8 @@ export { default as ChipStack } from "./components/ChipStack.svelte";
 export { default as CollapsibleSidebar } from "./components/CollapsibleSidebar.svelte";
 export { default as ColorLabel } from "./components/ColorLabel.svelte";
 export type { ColorLabelSize } from "./components/ColorLabel.svelte";
+export { default as CommandPalette } from "./components/CommandPalette.svelte";
+export type { PaletteCommand } from "./components/CommandPalette.svelte";
 export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
@@ -124,6 +126,20 @@ export {
   formatRefreshAge,
   type RefreshScheduler,
 } from "./utils/refresh.js";
+export {
+  appShortcuts,
+  createShortcutManager,
+  formatShortcutKeys,
+  initShortcuts,
+  isMacPlatform,
+  parseShortcut,
+  ROOT_SCOPE,
+  shortcutMatches,
+  type ParsedShortcut,
+  type RegisteredShortcut,
+  type ShortcutManager,
+  type ShortcutOptions,
+} from "./utils/shortcuts.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export {
   floatingPopoverStyle,
