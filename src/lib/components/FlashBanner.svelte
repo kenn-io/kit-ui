@@ -70,6 +70,12 @@
     color: var(--text-primary);
   }
 
+  /* The countdown bar shrinks away, so it can't separate rows on its own —
+   * a muted hairline keeps adjacent rows legible. */
+  .kit-flash-banner + .kit-flash-banner {
+    border-top: 1px solid var(--border-muted);
+  }
+
   .kit-flash-banner__text {
     flex: 1;
     min-width: 0;
