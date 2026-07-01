@@ -41,6 +41,7 @@
     class: className = "",
   }: Props = $props();
 
+  const uid = $props.id();
   let containerEl = $state<HTMLDivElement>();
   let scrollTop = $state(0);
   let viewport = $state(0);
@@ -50,6 +51,19 @@
   // reactive signal that a measurement changed.
   const measured = new Map<number, number>();
   let measureVersion = $state(0);
+  let measuredFor: T[] | undefined;
+
+  // Index-keyed measurements are only valid for the array they were taken
+  // from — filtering/sorting/replacing items reuses indexes for different
+  // rows, so a new array identity invalidates the cache (rows re-measure
+  // as they render).
+  $effect(() => {
+    if (measuredFor !== undefined && items !== measuredFor) {
+      measured.clear();
+      measureVersion += 1;
+    }
+    measuredFor = items;
+  });
 
   const heightOf = (index: number): number =>
     itemHeight ?? measured.get(index) ?? estimateHeight;
@@ -111,15 +125,19 @@
   // Keyboard navigation lives on the container, so focus never sits on a
   // row that virtualization might unmount (focus retention by design).
   async function handleKeydown(event: KeyboardEvent): Promise<void> {
+    // Only navigate while the container itself has focus — keys typed into
+    // interactive row content (inputs, buttons) are none of our business.
+    if (event.target !== containerEl) return;
     if (items.length === 0) return;
-    let next = activeIndex;
-    if (event.key === "ArrowDown") next = Math.min(items.length - 1, activeIndex + 1);
-    else if (event.key === "ArrowUp") next = Math.max(0, activeIndex - 1);
+    const current = Math.min(Math.max(-1, activeIndex), items.length - 1);
+    let next = current;
+    if (event.key === "ArrowDown") next = Math.min(items.length - 1, current + 1);
+    else if (event.key === "ArrowUp") next = Math.max(0, current - 1);
     else if (event.key === "Home") next = 0;
     else if (event.key === "End") next = items.length - 1;
-    else if (event.key === "Enter" && activeIndex >= 0) {
-      const item = items[activeIndex];
-      if (item !== undefined) onactivate?.(item, activeIndex);
+    else if (event.key === "Enter" && current >= 0) {
+      const item = items[current];
+      if (item !== undefined) onactivate?.(item, current);
       return;
     } else {
       return;
@@ -127,6 +145,17 @@
     event.preventDefault();
     activeIndex = next;
     await scrollToIndex(next);
+  }
+
+  // Clicks that land on interactive row content (buttons, links, fields)
+  // belong to that content, not to row selection/activation.
+  function onInteractiveContent(event: Event): boolean {
+    const el = event.target as HTMLElement | null;
+    return (
+      el?.closest(
+        "button, a[href], input, textarea, select, [contenteditable], [role='button'], [role='link']",
+      ) != null
+    );
   }
 
   function handleScroll(): void {
@@ -145,8 +174,11 @@
     bind:this={containerEl}
     style:height
     tabindex="0"
-    role="list"
+    role="listbox"
     aria-label={ariaLabel}
+    aria-activedescendant={activeIndex >= slice.start && activeIndex < slice.end
+      ? `${uid}-row-${activeIndex}`
+      : undefined}
     onscroll={handleScroll}
     onkeydown={handleKeydown}
   >
@@ -165,9 +197,16 @@
           <div
             class="kit-virtual-list__row"
             class:kit-virtual-list__row--active={index === activeIndex}
-            role="listitem"
-            onpointerdown={() => (activeIndex = index)}
-            ondblclick={() => onactivate?.(item, index)}
+            role="option"
+            id="{uid}-row-{index}"
+            aria-selected={index === activeIndex}
+            tabindex="-1"
+            onpointerdown={(event) => {
+              if (!onInteractiveContent(event)) activeIndex = index;
+            }}
+            ondblclick={(event) => {
+              if (!onInteractiveContent(event)) onactivate?.(item, index);
+            }}
             {@attach measureRow(index)}
           >
             {@render row(item, index, index === activeIndex)}

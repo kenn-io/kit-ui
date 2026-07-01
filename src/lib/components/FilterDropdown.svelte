@@ -124,11 +124,16 @@
       }
     }
 
+    // Searching filters the item list and resizes the panel — reposition.
+    const observer = new ResizeObserver(() => updatePosition());
+    if (dropdownRef) observer.observe(dropdownRef);
+
     document.addEventListener("mousedown", handleMousedown);
     document.addEventListener("keydown", handleKeydown);
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
     return () => {
+      observer.disconnect();
       document.removeEventListener("mousedown", handleMousedown);
       document.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("resize", updatePosition);

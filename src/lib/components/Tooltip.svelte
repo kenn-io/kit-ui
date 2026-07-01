@@ -110,10 +110,15 @@
       void position();
     }
 
+    // Dynamic tooltip content resizes the bubble — reposition.
+    const observer = new ResizeObserver(() => reposition());
+    if (popoverEl) observer.observe(popoverEl);
+
     document.addEventListener("keydown", handleKeydown);
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     return () => {
+      observer.disconnect();
       document.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", reposition);

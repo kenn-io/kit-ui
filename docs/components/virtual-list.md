@@ -42,7 +42,7 @@ custom virtualized surfaces (LogViewer-style scrollback, virtual tables).
 | `activeIndex` | `number` (bindable) | `-1` | Keyboard-highlighted row; −1 = none |
 | `onactivate` | `(item: T, index: number) => void` | — | Enter / double-click on the active row |
 | `onrangechange` | `(start: number, end: number) => void` | — | Rendered range `[start, end)` changed |
-| `ariaLabel` | `string` | — | Label for the `role="list"` container |
+| `ariaLabel` | `string` | — | Label for the `role="listbox"` container |
 | `row` | `Snippet<[T, number, boolean]>` | required | `(item, index, isActive)` |
 | `empty` | `Snippet` | — | Rendered instead of the list when `items` is empty |
 | `class` | `string` | `""` | |
@@ -53,12 +53,16 @@ the nearest edge (`bind:this` to call it).
 ## Keyboard and focus
 
 Focus lives on the **container** (tab stop), never on rows — so
-virtualization unmounting a row can never drop focus. ↑/↓/Home/End move
-`activeIndex` (kept in view), Enter fires `onactivate`. Rows are plain
-`role="listitem"` wrappers; pointer-down sets the active row and
-double-click activates. Interactive content *inside* rows (buttons, links)
-works normally but should be reachable through other means too (e.g. the
-activate handler opening a detail view) — a row that scrolls out of the
+virtualization unmounting a row can never drop focus. The ARIA pattern is
+`role="listbox"` with `aria-activedescendant` pointing at the active
+`role="option"` row (stable per-index ids), so screen readers announce the
+active row as arrows move it. ↑/↓/Home/End move `activeIndex` (kept in
+view), Enter fires `onactivate`; keys are only handled while the container
+itself has focus, so typing in interactive row content is untouched.
+Pointer-down on a row sets the active row and double-click activates —
+except when the press lands on interactive content (buttons, links,
+fields), which keeps its own behavior. Prefer the activate handler over
+tabbable row content for primary actions: a row that scrolls out of the
 window takes its tab stops with it.
 
 ## Sizing contract
@@ -71,6 +75,11 @@ window takes its tab stops with it.
   transformed, so `position: sticky` inside rows won't stick.
 - Row snippets in variable mode may wrap/resize freely — each rendered row
   is observed and the window recomputes on real heights.
+- Measurements are keyed by index **for the current `items` array** — a new
+  array identity (filter/sort/replace) drops the cache and rows re-measure
+  as they render. Appending by replacing the array therefore re-estimates
+  scrolled-away rows; mutate-and-reassign the same array only if you know
+  indexes are stable.
 
 ## Low-level API
 

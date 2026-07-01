@@ -80,11 +80,16 @@
       positionList();
     }
 
+    // Async option changes resize the list — keep the flip/clamp current.
+    const observer = new ResizeObserver(reposition);
+    if (listEl) observer.observe(listEl);
+
     document.addEventListener("mousedown", handleMousedown);
     document.addEventListener("keydown", handleKeydown);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
     return () => {
+      observer.disconnect();
       document.removeEventListener("mousedown", handleMousedown);
       document.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("resize", reposition);
