@@ -5,10 +5,12 @@ slot, and primary-nav tab buttons that **auto-collapse into a
 `SelectDropdown` by measurement** — a hidden probe always renders the full
 tab row, and the tabs collapse the moment that row would no longer fit next
 to the side regions. No app-specific breakpoints. Snippets may legitimately
-shrink when `collapsed` flips (hide labels, etc.); the bar records the width
-the expanded content needed at the moment it collapsed and only re-expands
-once the bar actually reaches it, so adaptive snippets can't set up a
-collapse/expand loop.
+shrink when `collapsed` flips (hide labels, etc.); the bar freezes the
+side-region footprint the expanded content needed at the moment it
+collapsed and only re-expands once the bar fits that footprint **plus the
+current probe width** — the probe never changes with collapse state, so
+adaptive snippets can't set up a collapse/expand loop, while adding or
+removing tabs still moves the re-expand threshold in both directions.
 
 Consolidated from middleman's `AppHeader` (centered tab group, tabs →
 dropdown when narrow) and agentsview's `AppHeader` (nav next to the brand,
@@ -47,7 +49,7 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `tabs` | `TopBarTab[]` | `[]` | `{ id, label, disabled? }`; omit for a tabless bar |
-| `active` | `string` (bindable) | `""` | Active tab id. Unset/unknown values render as the first **enabled** tab in both expanded and collapsed modes |
+| `active` | `string` (bindable) | `""` | Active tab id. A disabled tab is never rendered as current — unset, unknown, or disabled values fall back to the first **enabled** tab in both modes; with every tab disabled there is no current tab |
 | `onchange` | `(id: string) => void` | — | Fires on tab/dropdown selection |
 | `collapsed` | `boolean` (bindable) | `false` | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label) |
 | `centerTabs` | `boolean` | `false` | Center the expanded tab group **in the free space between the reserved regions** (middleman style; not viewport-centered). Ignored when a `search` snippet is present — search owns the flexible middle. The collapsed dropdown always packs after `left` |
@@ -95,9 +97,23 @@ fitting:
 ```svelte
 <TopBar {tabs} bind:active bind:collapsed searchMinWidth={collapsed ? 48 : 220}>
   {#snippet search()}
-    <FitStages stages={[searchField, searchIcon]} />
+    <FitStages class="search-fit" stages={[searchField, searchIcon]} />
   {/snippet}
 </TopBar>
+
+{#snippet searchField()}
+  <!-- declares its floor: min-width: 220px; width: 100% -->
+  <button class="search-field">…</button>
+{/snippet}
+
+<style>
+  /* FitStages' sizing contract: the host is sized by the region, never by
+   * its own content — without this, downgrading to the icon would shrink
+   * the host and the full field could never fit again. */
+  :global(.search-fit) {
+    width: 100%;
+  }
+</style>
 ```
 
 ## Accessibility

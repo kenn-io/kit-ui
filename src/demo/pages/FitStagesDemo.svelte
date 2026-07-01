@@ -85,7 +85,7 @@
   <div class="controls">
     <label class="control">
       Width {paneWidth}px
-      <input type="range" min="230" max="920" bind:value={paneWidth} />
+      <input type="range" min="330" max="920" bind:value={paneWidth} />
     </label>
     <span class="control-note">stage: <code>{paneStage}</code> ({stageNames[paneStage]})</span>
   </div>

@@ -54,6 +54,14 @@
     class: className = "",
   }: Props = $props();
 
+  // Garbage-in guard: non-finite or negative minimums behave like the
+  // default shrink-wrapped slot instead of poisoning the collapse math.
+  const searchMin = $derived(
+    searchMinWidth != null && Number.isFinite(searchMinWidth)
+      ? Math.max(0, searchMinWidth)
+      : undefined,
+  );
+
   let barEl = $state<HTMLElement>();
   let leftEl = $state<HTMLDivElement>();
   let rightEl = $state<HTMLDivElement>();
@@ -68,16 +76,15 @@
     })),
   );
 
-  // Rendered active id: an unset/unknown `active` falls back to the first
-  // enabled tab in BOTH modes (SelectDropdown already displays a fallback
-  // for unmatched values — the expanded buttons match that instead of
-  // showing no active tab, and a disabled tab is never presented as
-  // current).
-  const effectiveActive = $derived(
-    tabs.some((tab) => tab.id === active)
-      ? active
-      : (tabs.find((tab) => !tab.disabled)?.id ?? tabs[0]?.id ?? ""),
-  );
+  // Rendered active id: a disabled tab is never presented as current, even
+  // when `active` explicitly names one. Unset/unknown/disabled values fall
+  // back to the first enabled tab in BOTH modes; if every tab is disabled
+  // there is no current tab ("").
+  const effectiveActive = $derived.by(() => {
+    const match = tabs.find((tab) => tab.id === active);
+    if (match && !match.disabled) return active;
+    return tabs.find((tab) => !tab.disabled)?.id ?? "";
+  });
 
   function select(id: string): void {
     active = id;
@@ -116,7 +123,7 @@
       // A flexible search region's rendered width is whatever slack it
       // absorbed — charging that would collapse the tabs unconditionally.
       // Charge its declared minimum instead: the width it must keep.
-      used += searchMinWidth ?? searchEl.offsetWidth;
+      used += searchMin ?? searchEl.offsetWidth;
       regions += 1;
     }
     used += gap * (regions - 1);
@@ -133,7 +140,7 @@
   // A searchMinWidth change (e.g. lowered on collapse) shifts the collapse
   // math without necessarily resizing anything the observer watches.
   $effect(() => {
-    void searchMinWidth;
+    void searchMin;
     untrack(() => measure());
   });
 
@@ -201,10 +208,8 @@
   {#if search}
     <div
       class="kit-top-bar__search"
-      class:kit-top-bar__search--flexible={searchMinWidth != null}
-      style:min-width={searchMinWidth != null
-        ? `${searchMinWidth}px`
-        : undefined}
+      class:kit-top-bar__search--flexible={searchMin != null}
+      style:min-width={searchMin != null ? `${searchMin}px` : undefined}
       bind:this={searchEl}
     >
       {@render search()}
@@ -249,6 +254,13 @@
     gap: var(--space-1);
     margin-left: auto;
     flex-shrink: 0;
+  }
+
+  /* With a search region present its own auto margins center it; right's
+   * auto margin would otherwise compete for the same slack and pull the
+   * search off-center. */
+  .kit-top-bar:has(.kit-top-bar__search) .kit-top-bar__right {
+    margin-left: 0;
   }
 
   .kit-top-bar__nav {

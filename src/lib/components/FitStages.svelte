@@ -67,16 +67,15 @@
   {#if stages[active]}
     {@render stages[active]!()}
   {/if}
-  {#each stages as probeStage, i (i)}
-    <div
-      class="kit-fit-stages__probe"
-      bind:this={probeEls[i]}
-      aria-hidden="true"
-      inert
-    >
-      {@render probeStage()}
-    </div>
-  {/each}
+  <!-- Zero-size clipped layer: probes lay out at natural width inside it
+       but never contribute to any ancestor's scrollable overflow. -->
+  <div class="kit-fit-stages__probes" aria-hidden="true" inert>
+    {#each stages as probeStage, i (i)}
+      <div class="kit-fit-stages__probe" bind:this={probeEls[i]}>
+        {@render probeStage()}
+      </div>
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -85,15 +84,21 @@
     min-width: 0;
   }
 
+  .kit-fit-stages__probes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   /* Probes shrink-wrap so they report each stage's natural width; stage
    * content that flexes should declare its floor via min-width, which is
    * what the probe ends up measuring. */
   .kit-fit-stages__probe {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: max-content;
-    visibility: hidden;
-    pointer-events: none;
   }
 </style>
