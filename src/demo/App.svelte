@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Component } from "svelte";
-  import { FlashBanner } from "../lib/index.js";
+  import { FlashBanner, initTheme, ThemeToggle } from "../lib/index.js";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
@@ -32,6 +32,7 @@
   import TextInputDemo from "./pages/TextInputDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
   import ThemeModeDemo from "./pages/ThemeModeDemo.svelte";
+  import ThemeToggleDemo from "./pages/ThemeToggleDemo.svelte";
   import TooltipDemo from "./pages/TooltipDemo.svelte";
   import TopBarDemo from "./pages/TopBarDemo.svelte";
   import TypeaheadDemo from "./pages/TypeaheadDemo.svelte";
@@ -77,6 +78,7 @@
     { id: "table", label: "Table", component: TableDemo },
     { id: "text-input", label: "TextInput", component: TextInputDemo },
     { id: "theme-mode", label: "Theme mode", component: ThemeModeDemo },
+    { id: "theme-toggle", label: "ThemeToggle", component: ThemeToggleDemo },
     { id: "tooltip", label: "Tooltip", component: TooltipDemo },
     { id: "top-bar", label: "TopBar", component: TopBarDemo },
     { id: "typeahead", label: "Typeahead", component: TypeaheadDemo },
@@ -85,7 +87,8 @@
   let activeId = $state(
     (typeof location !== "undefined" && location.hash.slice(1)) || "theme",
   );
-  let dark = $state(false);
+
+  initTheme();
 
   const activePage = $derived(
     pages.find((p) => p.id === activeId) ?? pages[0]!,
@@ -95,11 +98,6 @@
   function navigate(id: string) {
     activeId = id;
     location.hash = id;
-  }
-
-  function toggleTheme() {
-    dark = !dark;
-    document.documentElement.classList.toggle("dark", dark);
   }
 </script>
 
@@ -132,9 +130,9 @@
         </button>
       {/each}
     </nav>
-    <button class="sidebar__theme-toggle" type="button" onclick={toggleTheme}>
-      {dark ? "☀ Light mode" : "☾ Dark mode"}
-    </button>
+    <div class="sidebar__theme">
+      <ThemeToggle variant="segmented" block />
+    </div>
   </aside>
 
   <main class="content">
@@ -209,21 +207,8 @@
     font-weight: 600;
   }
 
-  .sidebar__theme-toggle {
+  .sidebar__theme {
     margin-top: 12px;
-    padding: 6px 8px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--bg-inset);
-    color: var(--text-secondary);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-  }
-
-  .sidebar__theme-toggle:hover {
-    color: var(--text-primary);
-    background: var(--bg-surface-hover);
   }
 
   .content {

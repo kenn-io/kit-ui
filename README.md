@@ -72,6 +72,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [StatusDot](docs/components/status-dot.md) | agentsview | Session/presence indicator (working/waiting/stale/…) |
 | [Table](docs/components/table.md) | both (consolidated) | Table shell + sortable `TableHeaderCell` with aria-sort |
 | [TextInput](docs/components/text-input.md) | both (hand-rolled) | Bordered field primitive: sizes, invalid state, prefix/suffix snippets |
+| [ThemeToggle](docs/components/theme-toggle.md) | new (theme store control) | Light/dark/system control: cycle icon-button or segmented variants |
 | [Tooltip](docs/components/tooltip.md) | middleman `DiffSummaryChip` popover | Hover/focus tooltip with arrow, delays, viewport-aware flipping |
 | [TopBar](docs/components/top-bar.md) | both `AppHeader` (consolidated) | App header: reserved left/right regions, search slot, tabs that auto-collapse into a dropdown |
 | [Typeahead](docs/components/typeahead.md) | agentsview `OptionTypeahead` | Filterable select with match highlighting |

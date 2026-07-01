@@ -69,6 +69,7 @@ export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte"
 export type { SortDirection } from "./components/TableHeaderCell.svelte";
 export { default as TextInput } from "./components/TextInput.svelte";
 export type { TextInputSize } from "./components/TextInput.svelte";
+export { default as ThemeToggle } from "./components/ThemeToggle.svelte";
 export { default as Tooltip } from "./components/Tooltip.svelte";
 export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab } from "./components/TopBar.svelte";
