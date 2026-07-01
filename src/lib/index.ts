@@ -71,6 +71,7 @@ export { BREAKPOINTS, MEDIA, type BreakpointName } from "./breakpoints.js";
 export {
   dismissFlash,
   getFlash,
+  getFlashes,
   getFlashMessage,
   showFlash,
   type FlashState,

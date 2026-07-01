@@ -33,13 +33,15 @@ dismissFlash();                          // programmatic dismiss
 
 | Function | Notes |
 | --- | --- |
-| `showFlash(msg, durationMs = 4000)` | Replaces the current message and resets the timer |
-| `getFlash(): FlashState \| null` | Reactive read: `{ message, durationMs, id }` |
-| `getFlashMessage(): string \| null` | Reactive read of just the text |
-| `dismissFlash()` | Clears message and timer |
+| `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer |
+| `getFlashes(): FlashState[]` | Reactive read of all visible flashes, oldest first |
+| `getFlash(): FlashState \| null` | Reactive read of the most recent flash |
+| `getFlashMessage(): string \| null` | Reactive read of just the latest text |
+| `dismissFlash(id?)` | Dismiss one flash by id, or all of them with no argument |
 
-One message at a time by design — a new `showFlash` replaces the old one.
+Concurrent flashes stack below each other in show order; the widest message
+sets the width for the whole stack (capped at 480px / the viewport). Each
+banner has its own X and its own countdown.
 
-The banner shows a thin countdown bar along its bottom edge indicating time
-until auto-dismiss; it restarts when a message is replaced and freezes (full)
-under `prefers-reduced-motion`.
+Every banner shows a thin countdown bar along its bottom edge indicating time
+until auto-dismiss; it freezes (full) under `prefers-reduced-motion`.

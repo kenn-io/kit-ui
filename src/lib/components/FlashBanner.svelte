@@ -1,6 +1,6 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
-  import { dismissFlash, getFlash } from "../stores/flash.svelte.js";
+  import { dismissFlash, getFlashes } from "../stores/flash.svelte.js";
 
   interface Props {
     /** Distance from the top of the viewport, e.g. below an app header. */
@@ -9,40 +9,55 @@
 
   let { top = "44px" }: Props = $props();
 
-  const flash = $derived(getFlash());
+  const flashes = $derived(getFlashes());
 </script>
 
-{#if flash}
-  <div class="kit-flash-banner" style:top role="status">
-    <span class="kit-flash-banner__text">{flash.message}</span>
-    <button
-      class="kit-flash-banner__dismiss"
-      type="button"
-      onclick={dismissFlash}
-      title="Dismiss"
-      aria-label="Dismiss"
-    >
-      <XIcon size="14" strokeWidth="2" aria-hidden="true" />
-    </button>
-    {#key flash.id}
-      <div
-        class="kit-flash-banner__progress"
-        style:animation-duration="{flash.durationMs}ms"
-        aria-hidden="true"
-      ></div>
-    {/key}
+{#if flashes.length > 0}
+  <!-- width: max-content on the stack + width: 100% on each banner makes
+       the widest message set the width for all of them. -->
+  <div class="kit-flash-stack" style:top>
+    {#each flashes as flash (flash.id)}
+      <div class="kit-flash-banner" role="status">
+        <span class="kit-flash-banner__text">{flash.message}</span>
+        <button
+          class="kit-flash-banner__dismiss"
+          type="button"
+          onclick={() => dismissFlash(flash.id)}
+          title="Dismiss"
+          aria-label="Dismiss"
+        >
+          <XIcon size="14" strokeWidth="2" aria-hidden="true" />
+        </button>
+        <div
+          class="kit-flash-banner__progress"
+          style:animation-duration="{flash.durationMs}ms"
+          aria-hidden="true"
+        ></div>
+      </div>
+    {/each}
   </div>
 {/if}
 
 <style>
-  .kit-flash-banner {
+  .kit-flash-stack {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    width: max-content;
+    max-width: min(480px, calc(100vw - 32px));
+  }
+
+  .kit-flash-banner {
+    position: relative;
+    display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
     padding: 8px 16px;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
@@ -50,7 +65,6 @@
     box-shadow: var(--shadow-md);
     font-size: var(--font-size-md);
     color: var(--text-primary);
-    max-width: 480px;
     overflow: hidden;
   }
 
@@ -76,7 +90,8 @@
   }
 
   /* Countdown to auto-dismiss: full width at show time, empty when the
-   * timer fires. Keyed by message id so replacing a message restarts it. */
+   * timer fires. Each banner is keyed by flash id, so the animation runs
+   * once per flash. */
   .kit-flash-banner__progress {
     position: absolute;
     left: 0;

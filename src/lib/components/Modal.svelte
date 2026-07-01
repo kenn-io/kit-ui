@@ -143,37 +143,38 @@
     color: var(--text-primary);
   }
 
-  /* Tinted header bands for semantic tones; the title takes the accent ink. */
+  /* Tinted header bands for semantic tones: each tone sets one accent
+   * variable and the band, border, title, and close button all derive
+   * from it. */
   .kit-modal-header[data-tone="info"] {
-    background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-surface));
-    border-bottom-color: color-mix(in srgb, var(--accent-blue) 30%, var(--border-default));
+    --kit-modal-tone: var(--accent-blue);
   }
-  .kit-modal-header[data-tone="info"] .kit-modal-title {
-    color: var(--accent-blue);
-  }
-
   .kit-modal-header[data-tone="success"] {
-    background: color-mix(in srgb, var(--accent-green) 9%, var(--bg-surface));
-    border-bottom-color: color-mix(in srgb, var(--accent-green) 30%, var(--border-default));
+    --kit-modal-tone: var(--accent-green);
   }
-  .kit-modal-header[data-tone="success"] .kit-modal-title {
-    color: var(--accent-green);
-  }
-
   .kit-modal-header[data-tone="warning"] {
-    background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-surface));
-    border-bottom-color: color-mix(in srgb, var(--accent-amber) 32%, var(--border-default));
+    --kit-modal-tone: var(--accent-amber);
   }
-  .kit-modal-header[data-tone="warning"] .kit-modal-title {
-    color: var(--accent-amber);
+  .kit-modal-header[data-tone="danger"] {
+    --kit-modal-tone: var(--accent-red);
   }
 
-  .kit-modal-header[data-tone="danger"] {
-    background: color-mix(in srgb, var(--accent-red) 9%, var(--bg-surface));
-    border-bottom-color: color-mix(in srgb, var(--accent-red) 30%, var(--border-default));
+  .kit-modal-header:not([data-tone="neutral"]) {
+    background: color-mix(in srgb, var(--kit-modal-tone) 9%, var(--bg-surface));
+    border-bottom-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
   }
-  .kit-modal-header[data-tone="danger"] .kit-modal-title {
-    color: var(--accent-red);
+
+  .kit-modal-header:not([data-tone="neutral"]) .kit-modal-title {
+    color: var(--kit-modal-tone);
+  }
+
+  .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close {
+    color: color-mix(in srgb, var(--kit-modal-tone) 78%, var(--text-muted));
+  }
+
+  .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close:hover {
+    color: var(--kit-modal-tone);
+    background: color-mix(in srgb, var(--kit-modal-tone) 14%, transparent);
   }
 
   .kit-modal-close {
