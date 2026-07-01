@@ -5,6 +5,7 @@
   import SearchIcon from "@lucide/svelte/icons/search";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import {
+    FitStages,
     KbdBadge,
     SelectDropdown,
     showFlash,
@@ -38,7 +39,32 @@
   let avActive = $state("sessions");
   let avCollapsed = $state(false);
   let avWidth = $state(920);
+  let avSearchStage = $state(0);
 </script>
+
+{#snippet searchFull()}
+  <button
+    class="search-hint search-hint--span"
+    onclick={() => showFlash("Command palette would open")}
+  >
+    <SearchIcon size="12" strokeWidth="2" aria-hidden="true" />
+    <span>Search sessions</span>
+    <span class="search-hint__kbd"><KbdBadge keys={["⌘", "K"]} /></span>
+  </button>
+{/snippet}
+
+{#snippet searchCompact()}
+  <span class="centered">
+    <button
+      class="icon-btn"
+      title="Search sessions"
+      aria-label="Search sessions"
+      onclick={() => showFlash("Command palette would open")}
+    >
+      <SearchIcon size="14" strokeWidth="2" aria-hidden="true" />
+    </button>
+  </span>
+{/snippet}
 
 <DemoSection
   title="middleman-style: brand + centered tabs + actions"
@@ -98,16 +124,15 @@
 </DemoSection>
 
 <DemoSection
-  title="agentsview-style: nav tabs + centered search + actions"
-  description="The search snippet takes the flexible middle. Tab collapse frees enough room that the search trigger and the reserved right region survive narrow widths."
-  code={`<TopBar tabs={TABS} bind:active>
-  {#snippet left()}<button class="hamburger" …/><span class="brand">AgentsView</span>{/snippet}
+  title="agentsview-style: two breakpoints via searchMinWidth + FitStages"
+  description="With searchMinWidth the search region owns the flexible middle. First breakpoint: the tabs collapse into the dropdown and the (now full-width) search field spans the freed space. Second breakpoint: FitStages swaps the field for the compact icon form once even the field's minimum stops fitting."
+  code={`<TopBar tabs={TABS} bind:active bind:collapsed
+  searchMinWidth={collapsed ? 48 : 220}>
   {#snippet search()}
-    <button class="search-hint" onclick={openPalette}>
-      <SearchIcon size="12" /> Search sessions <KbdBadge keys={["⌘", "K"]} />
-    </button>
+    <FitStages stages={[searchField, searchIcon]} />
+    <!-- searchField declares min-width: 220px and width: 100% -->
   {/snippet}
-  {#snippet right()}…icon buttons…{/snippet}
+  …left/right snippets…
 </TopBar>`}
 >
   <div class="controls">
@@ -115,13 +140,14 @@
       Width {avWidth}px
       <input type="range" min="360" max="920" bind:value={avWidth} />
     </label>
-    <span class="control-note">collapsed: <code>{avCollapsed}</code>, active: <code>{avActive}</code></span>
+    <span class="control-note">collapsed: <code>{avCollapsed}</code>, search stage: <code>{avSearchStage === 0 ? "field" : "icon"}</code></span>
   </div>
   <div class="bar-host" style:width="{avWidth}px">
     <TopBar
       tabs={agentsviewTabs}
       bind:active={avActive}
       bind:collapsed={avCollapsed}
+      searchMinWidth={avCollapsed ? 48 : 220}
       ariaLabel="AgentsView pages"
     >
       {#snippet left()}
@@ -134,14 +160,11 @@
         </span>
       {/snippet}
       {#snippet search()}
-        <button
-          class="search-hint"
-          onclick={() => showFlash("Command palette would open")}
-        >
-          <SearchIcon size="12" strokeWidth="2" aria-hidden="true" />
-          {#if !avCollapsed}<span>Search sessions</span>{/if}
-          <KbdBadge keys={["⌘", "K"]} />
-        </button>
+        <FitStages
+          class="search-fit"
+          bind:stage={avSearchStage}
+          stages={[searchFull, searchCompact]}
+        />
       {/snippet}
       {#snippet right()}
         <button class="icon-btn" title="Sync" aria-label="Sync" onclick={() => showFlash("Syncing…", 1500)}>
@@ -259,6 +282,30 @@
   .search-hint:hover {
     border-color: var(--border-default);
     box-shadow: var(--shadow-sm);
+  }
+
+  /* FitStages hosts must be sized by their container, never their content —
+   * inside the flexible search region that means spanning it. */
+  .bar-host :global(.search-fit) {
+    width: 100%;
+  }
+
+  .search-hint--span {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 220px;
+    max-width: 480px;
+    margin-inline: auto;
+  }
+
+  .search-hint__kbd {
+    margin-left: auto;
+    display: inline-flex;
+  }
+
+  .centered {
+    display: flex;
+    justify-content: center;
   }
 
   .divider {

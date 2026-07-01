@@ -54,6 +54,7 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | `ariaLabel` | `string` | `"Primary"` | Label for the nav / collapsed dropdown |
 | `left` | `Snippet` | — | Reserved leading region: brand, sidebar toggle, context pickers |
 | `search` | `Snippet` | — | Centered flexible slot, e.g. a command-palette trigger |
+| `searchMinWidth` | `number` | — | Opt the search region into the flexible middle (grows to absorb all slack); this value is what tab-collapse measurement charges the region. See below |
 | `right` | `Snippet` | — | Reserved trailing region: actions, theme, settings |
 | `class` | `string` | `""` | |
 
@@ -69,6 +70,35 @@ centered ⌘K search trigger, icon-button cluster on the right).
   present (`margin-inline: auto`), otherwise the tab group when
   `centerTabs` is set. Combining both would fight over the slack, so
   `centerTabs` is ignored while a `search` snippet exists.
+
+## Flexible search (`searchMinWidth`)
+
+By default the search region shrink-wraps its content and the collapse math
+charges its rendered width. Pass `searchMinWidth` for the agentsview-style
+multi-breakpoint header, where the search control itself degrades:
+
+- The region becomes the flexible middle (`flex: 1 1 0`) — full-width
+  search content actually spans, and when the tabs collapse it absorbs the
+  freed space.
+- Tab-collapse measurement charges the region `searchMinWidth` px instead
+  of its grown width (a grown region would otherwise read as "no room" and
+  collapse the tabs unconditionally).
+- Set it to the narrowest width your search content can take, and lower it
+  when `collapsed` flips to sequence the breakpoints.
+
+The canonical pairing is a [FitStages](fit-stages.md) inside the slot
+(styled `width: 100%`): tabs collapse first (TopBar's breakpoint, with
+`searchMinWidth` holding room for the full field), then the field drops to
+an icon (FitStages' breakpoint) once even the field's `min-width` stops
+fitting:
+
+```svelte
+<TopBar {tabs} bind:active bind:collapsed searchMinWidth={collapsed ? 48 : 220}>
+  {#snippet search()}
+    <FitStages stages={[searchField, searchIcon]} />
+  {/snippet}
+</TopBar>
+```
 
 ## Accessibility
 

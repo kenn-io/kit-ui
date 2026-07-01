@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import { untrack, type Snippet } from "svelte";
   import SelectDropdown from "./SelectDropdown.svelte";
 
   interface Props {
@@ -28,6 +28,13 @@
     left?: Snippet;
     /** Optional search slot, centered in the remaining space. */
     search?: Snippet;
+    /** Opt the search region into the flexible middle: it grows to absorb
+     * all slack (so its content can span, e.g. a FitStages search field)
+     * and this value — not its grown width — is what tab-collapse
+     * measurement charges it. Set it to the narrowest width the search
+     * content can take; lower it via `bind:collapsed` for staged
+     * degradation. Omit for a shrink-wrapped centered slot. */
+    searchMinWidth?: number;
     /** Reserved trailing region: actions, theme toggle, settings. */
     right?: Snippet;
     class?: string;
@@ -42,6 +49,7 @@
     ariaLabel = "Primary",
     left = undefined,
     search = undefined,
+    searchMinWidth = undefined,
     right = undefined,
     class: className = "",
   }: Props = $props();
@@ -98,11 +106,18 @@
       Number.parseFloat(styles.paddingLeft) +
       Number.parseFloat(styles.paddingRight);
     let regions = 1;
-    for (const el of [leftEl, searchEl, rightEl]) {
+    for (const el of [leftEl, rightEl]) {
       if (el) {
         used += el.offsetWidth;
         regions += 1;
       }
+    }
+    if (searchEl) {
+      // A flexible search region's rendered width is whatever slack it
+      // absorbed — charging that would collapse the tabs unconditionally.
+      // Charge its declared minimum instead: the width it must keep.
+      used += searchMinWidth ?? searchEl.offsetWidth;
+      regions += 1;
     }
     used += gap * (regions - 1);
     if (!collapsed) {
@@ -114,6 +129,13 @@
       collapsed = false;
     }
   }
+
+  // A searchMinWidth change (e.g. lowered on collapse) shifts the collapse
+  // math without necessarily resizing anything the observer watches.
+  $effect(() => {
+    void searchMinWidth;
+    untrack(() => measure());
+  });
 
   $effect(() => {
     if (!barEl || tabs.length === 0) return;
@@ -177,7 +199,14 @@
   {/if}
 
   {#if search}
-    <div class="kit-top-bar__search" bind:this={searchEl}>
+    <div
+      class="kit-top-bar__search"
+      class:kit-top-bar__search--flexible={searchMinWidth != null}
+      style:min-width={searchMinWidth != null
+        ? `${searchMinWidth}px`
+        : undefined}
+      bind:this={searchEl}
+    >
       {@render search()}
     </div>
   {/if}
@@ -243,6 +272,14 @@
     flex: 0 1 auto;
     margin-inline: auto;
     min-width: 0;
+  }
+
+  /* searchMinWidth mode: the region itself is the flexible middle, so
+   * full-width search content (FitStages etc.) has a definite width to
+   * fill. min-width comes from the prop via inline style. */
+  .kit-top-bar__search--flexible {
+    flex: 1 1 0;
+    margin-inline: 0;
   }
 
   .kit-top-bar__tabs {

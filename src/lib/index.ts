@@ -18,6 +18,7 @@ export type {
   FilterDropdownSection,
 } from "./components/FilterDropdown.svelte";
 export { default as FindBar } from "./components/FindBar.svelte";
+export { default as FitStages } from "./components/FitStages.svelte";
 export { default as FlashBanner } from "./components/FlashBanner.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Modal } from "./components/Modal.svelte";

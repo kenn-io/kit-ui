@@ -11,6 +11,7 @@
   import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
   import FilterDropdownDemo from "./pages/FilterDropdownDemo.svelte";
   import FindBarDemo from "./pages/FindBarDemo.svelte";
+  import FitStagesDemo from "./pages/FitStagesDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
@@ -56,6 +57,7 @@
     { id: "empty-state", label: "EmptyState", component: EmptyStateDemo },
     { id: "filter-dropdown", label: "FilterDropdown", component: FilterDropdownDemo },
     { id: "find-bar", label: "FindBar", component: FindBarDemo },
+    { id: "fit-stages", label: "FitStages", component: FitStagesDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "modal", label: "Modal", component: ModalDemo },

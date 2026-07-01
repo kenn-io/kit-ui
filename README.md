@@ -54,6 +54,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [EmptyState](docs/components/empty-state.md) | both (hand-rolled) | Centered muted placeholder: icon, title, description, action |
 | [FilterDropdown](docs/components/filter-dropdown.md) | both (consolidated) | Sectioned multi-select filter menu with search, counts, bulk actions |
 | [FindBar](docs/components/find-bar.md) | agentsview `SessionFindBar` | In-content find bar with N-of-M counter and match navigation |
+| [FitStages](docs/components/fit-stages.md) | new (TopBar collapse pattern) | Multi-breakpoint wrapper: renders the richest of N stage snippets that fits, by measurement |
 | [FlashBanner](docs/components/flash-banner.md) | middleman | Transient toast banner driven by the `showFlash` store |
 | [KbdBadge](docs/components/kbd-badge.md) | middleman | Keyboard-shortcut badge, hidden on touch devices |
 | [Modal](docs/components/modal.md) | both (consolidated) | Dialog primitive: overlay, header, body, footer snippet |

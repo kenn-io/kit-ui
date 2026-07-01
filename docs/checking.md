@@ -89,6 +89,8 @@ everything and aren't repeated per row.
 | Button, Chip, ChipStack | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift |
 | StatusDot, ColorLabel, DiffStats | no rule — small display primitives with no detectable marker; found in review |
 | RefreshControl, FindBar, RangePicker, SettingsLayout/Section | no rule — composite widgets; no stable class/aria signature that wouldn't false-positive. Revisit if either app regrows one |
+| Calendar | no rule — covered indirectly: hand-rolled month grids read as generic tables/buttons; found in review |
+| FitStages | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags |
 | Theme store, formatters, `debounce`, `hashColor` | no rule — plain functions; duplication isn't detectable from markup |
 
 ## Adoption path
