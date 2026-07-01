@@ -17,8 +17,14 @@ anything not covered here.
   `bunx kit-ui-check --warn` and confirm the finding count went down, never
   up.
 - Do not keep a local copy of a component "just in case" — delete the old
-  file in the same PR that swaps its call sites, or `kit-ui-check` treats it
-  as a hand-rolled equivalent forever.
+  file in the same PR that swaps its call sites.
+- **`kit-ui-check` coverage is partial.** Many mapped components have no
+  detection rule (Button, Chip, StatusDot, ColorLabel, DiffStats,
+  RefreshControl, FindBar, RangePicker, SettingsLayout — see the
+  [coverage table](checking.md#checker-coverage-per-component)). A clean
+  checker run does **not** prove the migration is complete: keep a manual
+  inventory of the app's local components and tick them off against the
+  mapping tables below.
 
 ## 1. Install
 
@@ -55,10 +61,12 @@ Requirements the app must satisfy:
    pin). kit-ui's type scale is rem-based and redefines itself on handheld
    touch devices (pointer-keyed, not width-keyed). Force the compact scale
    in tests/storybook with the `kit-type-touch` class on `<html>`.
-4. Dark mode: replace the app's mechanism with the theme store —
-   `initTheme()` at startup, `setThemeMode("light" | "dark" | "system")`,
-   `setHighContrast(bool)`. It toggles the `dark` / high-contrast classes
-   on `<html>` itself.
+4. Dark mode: keep the app's existing toggle mechanism working against the
+   kit-ui class names for now (`dark` on `<html>`). Swapping the mechanism
+   itself for the theme store (`initTheme()` / `setThemeMode` /
+   `setHighContrast`) belongs to the **utilities and theme store** stage
+   (stage 5 in checking.md), not the token PR — don't mix a behavior change
+   into the token swap.
 5. Media queries: only the shared breakpoints 640 / 760 / 900px are allowed
    (`BREAKPOINTS` / `MEDIA` from kit-ui), and **only for layout** — never
    for type sizes. `kit-ui-check` flags anything else.
@@ -72,7 +80,7 @@ Requirements the app must satisfy:
 | `GitHubLabels` | `ColorLabel` | One pill per label; contrast-picked text color is built in |
 | `AppHeader` | `TopBar` | Tabs auto-collapse by measurement — delete the app's width breakpoint. Use `centerTabs` for middleman's centered group; `bind:collapsed` to adapt snippets. Unknown `active` falls back to first enabled tab |
 | `SettingsPage` | `SettingsLayout` + `SettingsSection` | Categories are data (`SettingsCategory[]`); footer is a pinned snippet |
-| flash store + banner | `showFlash` / `FlashBanner` | Stack caps at 5 and renders as one card; `dismissFlash()` with no args dismisses **all** (with an id, just that one — safe to pass as an event handler). Mount `<FlashBanner top="…" />` once; `top` should clear the app header |
+| flash store + banner | `showFlash` / `FlashBanner` | Stack caps at 5 and renders as one card. `dismissFlash(id)` dismisses one flash; `dismissFlash()` — **or passing the function directly as an event handler**, which receives the event object — dismisses all. Per-flash close buttons must use `onclick={() => dismissFlash(id)}`. Mount `<FlashBanner top="…" />` once; `top` should clear the app header |
 | `Modal` | `Modal` | New `tone` prop tints the header (default is a neutral inset header distinct from the body); focus trap + scroll lock built in — remove app-side body-overflow hacks |
 | `DetailDrawer` | `DetailDrawer` | Full-viewport overlay + right panel; if the app's drawer coexisted with a visible sidebar, re-check layering |
 | `CollapsibleSidebar`, `SidebarToggle` | same names | — |
@@ -141,16 +149,20 @@ Requirements the app must satisfy:
 
 ## 7. Rollout and verification
 
-Follow the staged adoption path in [checking.md](checking.md#adoption-path)
-(tokens → primitives → popovers → composites → layout → enforcement),
-using:
+Follow the staged adoption path in
+[checking.md](checking.md#adoption-path) — the six stages defined there
+(**tokens → low-risk display primitives → stateful primitives → overlays
+and layout → utilities and theme store → enforce**) are the authoritative
+PR sequence; this guide only adds what to verify at each stage:
 
-```bash
-bunx kit-ui-check --warn   # burndown while migrating (never let count rise)
-bunx kit-ui-check          # flip to failing in CI at the final stage
-```
+| Stage (checking.md) | Acceptance — in addition to app gates + `kit-ui-check --warn` count not rising |
+| --- | --- |
+| 1. Tokens | No pinned `html { font-size }` remains; mobile type sizes match the old app on a touch device (pointer-keyed scale); dark mode still switches |
+| 2. Display primitives | Chip sizes visually match call-site intent (xs/sm/md ladder changed); StatusDot call sites map session → status string |
+| 3. Stateful primitives | Button call sites map old kinds onto tone×surface; Tooltip flips at viewport edges where the old popover clipped |
+| 4. Overlays and layout | Dropdown menus escape `overflow: hidden` ancestors (and no transformed ancestor breaks them); Modal scroll-lock hacks removed; per-flash dismiss buttons still dismiss one flash, not all; FindBar has an explicit positioned mount; DetailDrawer layering decision made |
+| 5. Utilities and theme store | `hashColor` color shifts reviewed on real data; theme persists across reload; relative times match old formatting closely enough |
+| 6. Enforce | `bunx kit-ui-check` (no `--warn`) green in CI; every `kit-ui-check-ignore` has a reason; the manual component inventory (Ground rules) fully ticked |
 
-Suppress a deliberate exception with a `kit-ui-check-ignore` comment plus a
-reason, and per-stage run the app's own gates (`check`, `build`, tests) plus
-a manual pass of the affected screens in light, dark, and high-contrast
-modes.
+Each stage also gets a manual pass of its affected screens in light, dark,
+and high-contrast modes.

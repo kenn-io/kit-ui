@@ -57,8 +57,10 @@
   // Garbage-in guard: non-finite or negative minimums behave like the
   // default shrink-wrapped slot instead of poisoning the collapse math.
   const searchMin = $derived(
-    searchMinWidth != null && Number.isFinite(searchMinWidth)
-      ? Math.max(0, searchMinWidth)
+    searchMinWidth != null &&
+      Number.isFinite(searchMinWidth) &&
+      searchMinWidth >= 0
+      ? searchMinWidth
       : undefined,
   );
 
@@ -68,13 +70,22 @@
   let searchEl = $state<HTMLDivElement>();
   let probeEl = $state<HTMLDivElement>();
 
-  const options = $derived(
-    tabs.map((tab) => ({
+  const allDisabled = $derived(
+    tabs.length > 0 && tabs.every((tab) => tab.disabled),
+  );
+
+  // With every tab disabled the collapsed dropdown gets a synthetic empty
+  // option: SelectDropdown displays options[0] for unmatched values, which
+  // would otherwise present the first disabled tab as the current page.
+  const options = $derived.by(() => {
+    const opts = tabs.map((tab) => ({
       value: tab.id,
       label: tab.label,
       disabled: tab.disabled,
-    })),
-  );
+    }));
+    if (allDisabled) opts.unshift({ value: "", label: "—", disabled: true });
+    return opts;
+  });
 
   // Rendered active id: a disabled tab is never presented as current, even
   // when `active` explicitly names one. Unset/unknown/disabled values fall
@@ -179,6 +190,7 @@
           {options}
           onchange={select}
           title={ariaLabel}
+          disabled={allDisabled}
         />
       {:else}
         <div class="kit-top-bar__tabs">
@@ -217,7 +229,11 @@
   {/if}
 
   {#if right}
-    <div class="kit-top-bar__right" bind:this={rightEl}>
+    <div
+      class="kit-top-bar__right"
+      class:kit-top-bar__right--after-search={search != null}
+      bind:this={rightEl}
+    >
       {@render right()}
     </div>
   {/if}
@@ -258,8 +274,9 @@
 
   /* With a search region present its own auto margins center it; right's
    * auto margin would otherwise compete for the same slack and pull the
-   * search off-center. */
-  .kit-top-bar:has(.kit-top-bar__search) .kit-top-bar__right {
+   * search off-center. (Class toggle rather than :has() so the rule works
+   * in older embedded WebViews too.) */
+  .kit-top-bar__right--after-search {
     margin-left: 0;
   }
 

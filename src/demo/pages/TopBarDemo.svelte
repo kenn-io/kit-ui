@@ -129,11 +129,16 @@
   code={`<TopBar tabs={TABS} bind:active bind:collapsed
   searchMinWidth={collapsed ? 48 : 220}>
   {#snippet search()}
-    <FitStages stages={[searchField, searchIcon]} />
-    <!-- searchField declares min-width: 220px and width: 100% -->
+    <FitStages class="search-fit" stages={[searchField, searchIcon]} />
   {/snippet}
   …left/right snippets…
-</TopBar>`}
+</TopBar>
+
+<style>
+  /* FitStages sizing contract: host sized by the region, not its content */
+  :global(.search-fit) { width: 100%; }
+  /* searchField declares its floor: min-width: 220px; width: 100% */
+</style>`}
 >
   <div class="controls">
     <label class="control">
