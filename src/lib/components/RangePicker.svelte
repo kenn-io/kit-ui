@@ -1,8 +1,7 @@
 <script lang="ts">
   import CalendarIcon from "@lucide/svelte/icons/calendar";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
-  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import Calendar from "./Calendar.svelte";
   import {
     DEFAULT_RANGE_PRESETS,
     formatDayLabel,
@@ -10,7 +9,6 @@
     formatShortDate,
     periodBounds,
     resolveRange,
-    stepAnchor,
     todayStr,
     type CalendarUnit,
     type RangeMode,
@@ -50,8 +48,8 @@
     dialogLabel?: string;
     relativeGroupLabel?: string;
     calendarGroupLabel?: string;
-    previousPeriodLabel?: string;
-    nextPeriodLabel?: string;
+    previousMonthLabel?: string;
+    nextMonthLabel?: string;
   }
 
   let {
@@ -77,8 +75,8 @@
     dialogLabel = "Select date range",
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
-    previousPeriodLabel = "Previous period",
-    nextPeriodLabel = "Next period",
+    previousMonthLabel = "Previous month",
+    nextMonthLabel = "Next month",
   }: Props = $props();
 
   let open = $state(false);
@@ -92,6 +90,7 @@
   let tab = $state<RangeMode>("relative");
   let calUnit = $state<CalendarUnit>("week");
   let calAnchor = $state<string>(todayStr());
+  let calMonth = $state<string>(todayStr());
   let customFrom = $state<string>("");
   let customTo = $state<string>("");
 
@@ -128,15 +127,9 @@
     return `${formatShortDate(selection.from)} - ${formatShortDate(selection.to)}`;
   });
 
-  const stepLabel = $derived(calendarLabelFor(calUnit, calAnchor));
-  // Disable Next when the entire next period lies beyond maxDate (a period
-  // that merely contains maxDate is still reachable). Only consumers that
-  // pass maxDate are guarded.
-  const nextDisabled = $derived.by(() => {
-    if (maxDate == null) return false;
-    const next = stepAnchor(calUnit, calAnchor, 1);
-    return periodBounds(calUnit, next).from > maxDate;
-  });
+  // The period the calendar highlights: the day/week/month around the
+  // current anchor.
+  const calSelected = $derived(periodBounds(calUnit, calAnchor));
 
   function seed(): void {
     tab = selection.mode;
@@ -151,6 +144,7 @@
     const resolved = resolveRange(selection, earliestDate);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
+    calMonth = calAnchor;
   }
 
   function toggleOpen(): void {
@@ -181,18 +175,10 @@
   function applyCalendar(unit: CalendarUnit, anchor: string): void {
     calUnit = unit;
     calAnchor = anchor;
+    calMonth = anchor;
     const sel: RangeSelection = { mode: "calendar", unit, anchor };
     syncCustomFields(sel);
     onSelect(sel);
-  }
-
-  function step(dir: -1 | 1): void {
-    if (dir === 1 && nextDisabled) return;
-    let next = stepAnchor(calUnit, calAnchor, dir);
-    // Clamp so the anchor itself never lands past maxDate even when the
-    // next period straddles it.
-    if (dir === 1 && maxDate != null && next > maxDate) next = maxDate;
-    applyCalendar(calUnit, next);
   }
 
   function commitCustom(): void {
@@ -303,25 +289,15 @@
             </button>
           {/each}
         </div>
-        <div class="kit-range-picker__stepper">
-          <button
-            class="kit-range-picker__arrow"
-            type="button"
-            onclick={() => step(-1)}
-            aria-label={previousPeriodLabel}
-          >
-            <ChevronLeftIcon size="15" strokeWidth="2" aria-hidden="true" />
-          </button>
-          <span class="kit-range-picker__step-label">{stepLabel}</span>
-          <button
-            class="kit-range-picker__arrow"
-            type="button"
-            onclick={() => step(1)}
-            disabled={nextDisabled}
-            aria-label={nextPeriodLabel}
-          >
-            <ChevronRightIcon size="15" strokeWidth="2" aria-hidden="true" />
-          </button>
+        <div class="kit-range-picker__calendar">
+          <Calendar
+            bind:month={calMonth}
+            selected={calSelected}
+            {maxDate}
+            {previousMonthLabel}
+            {nextMonthLabel}
+            onpick={(date) => applyCalendar(calUnit, date)}
+          />
         </div>
       {:else}
         <div class="kit-range-picker__fields">
@@ -505,43 +481,10 @@
     color: var(--accent-blue-foreground, #fff);
   }
 
-  .kit-range-picker__stepper {
+  .kit-range-picker__calendar {
     display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    margin-top: var(--space-4);
-  }
-
-  .kit-range-picker__arrow {
-    width: 30px;
-    height: 30px;
-    display: inline-flex;
-    align-items: center;
     justify-content: center;
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-md);
-    background: var(--bg-inset);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: background 0.1s, color 0.1s, opacity 0.1s;
-  }
-
-  .kit-range-picker__arrow:hover:not(:disabled) {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-  }
-
-  .kit-range-picker__arrow:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-
-  .kit-range-picker__step-label {
-    flex: 1;
-    text-align: center;
-    font-size: var(--font-size-sm);
-    color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
+    margin-top: var(--space-4);
   }
 
   .kit-range-picker__fields {

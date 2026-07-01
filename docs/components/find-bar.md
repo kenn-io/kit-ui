@@ -7,7 +7,7 @@ input and navigation chrome; you compute the matches and move the highlight.
 
 Keyboard: **Enter** → `onnext`, **Shift+Enter** → `onprev`, **Escape** →
 `onclose`. When the query has no matches the counter shows the
-"No matches" state and the focused input border turns red. Mount it
+"No matches" state and the focused card border turns red. Mount it
 conditionally; it autofocuses on mount by default.
 
 ```svelte
@@ -52,6 +52,8 @@ conditionally; it autofocuses on mount by default.
 | `previousLabel` / `nextLabel` | `string` | `"Previous match"` / `"Next match"` | Arrow tooltips + `aria-label`s |
 | `closeLabel` | `string` | `"Close"` | |
 
-The prev/next buttons disable while there are no matches. The bar draws a
-`border-bottom` so it sits flush above the content it searches; the slide-down
-animation is disabled under `prefers-reduced-motion`.
+The prev/next buttons disable while there are no matches. The bar renders as
+a floating card (border + radius + shadow, browser cmd-F style) that the app
+positions — typically `position: absolute` in the top-right corner of the
+searched region. The card border carries focus (blue) and no-match (red)
+states; the slide-down animation is disabled under `prefers-reduced-motion`.

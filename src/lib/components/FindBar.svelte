@@ -78,14 +78,18 @@
   }
 </script>
 
-<div class="kit-find-bar" role="search" aria-label={ariaLabel}>
+<div
+  class="kit-find-bar"
+  class:kit-find-bar--no-results={noResults}
+  role="search"
+  aria-label={ariaLabel}
+>
   <span class="kit-find-bar__icon" aria-hidden="true">
     <SearchIcon size="13" strokeWidth="2" />
   </span>
 
   <input
     class="kit-find-bar__input"
-    class:no-results={noResults}
     type="text"
     {placeholder}
     spellcheck="false"
@@ -142,15 +146,32 @@
 </div>
 
 <style>
+  /* A floating find widget (browser cmd-F style), matching the library's
+   * popover chrome — the app positions it (typically absolute, top-right
+   * of the searched region). The card carries the focus/error border; the
+   * input inside is chromeless. */
   .kit-find-bar {
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-6);
-    border-bottom: 1px solid var(--border-muted);
+    width: max-content;
+    min-width: 300px;
+    max-width: 100%;
+    padding: var(--space-2) var(--space-4);
     background: var(--bg-surface);
-    flex-shrink: 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
     animation: kit-find-bar-slide-down 0.12s ease-out;
+  }
+
+  .kit-find-bar:focus-within {
+    border-color: var(--accent-blue);
+  }
+
+  .kit-find-bar--no-results:focus-within {
+    border-color: var(--accent-red);
   }
 
   @keyframes kit-find-bar-slide-down {
@@ -179,27 +200,18 @@
   .kit-find-bar__input {
     flex: 1;
     min-width: 0;
-    height: 26px;
-    padding: 0 var(--space-4);
+    height: 24px;
+    padding: 0;
     font-size: var(--font-size-md);
     font-family: inherit;
     color: var(--text-primary);
-    background: var(--bg-inset);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 0;
     outline: none;
-    transition:
-      border-color 0.15s,
-      background 0.15s;
   }
 
-  .kit-find-bar__input:focus {
-    border-color: var(--accent-blue);
-    background: var(--bg-surface);
-  }
-
-  .kit-find-bar__input.no-results:focus {
-    border-color: var(--accent-red);
+  .kit-find-bar__input::placeholder {
+    color: var(--text-muted);
   }
 
   .kit-find-bar__counter {

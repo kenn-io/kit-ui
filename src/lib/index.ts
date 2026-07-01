@@ -1,6 +1,7 @@
 // Components
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
+export { default as Calendar } from "./components/Calendar.svelte";
 export { default as Chip } from "./components/Chip.svelte";
 export type { ChipSize, ChipTone } from "./components/Chip.svelte";
 export { default as ChipStack } from "./components/ChipStack.svelte";
@@ -27,11 +28,13 @@ export {
   daysAgo,
   DEFAULT_RANGE_PRESETS,
   localDateStr,
+  monthGridDates,
   periodBounds,
   presetRange,
   resolveRange,
   stepAnchor,
   todayStr,
+  weekdayLabels,
   type CalendarSelection,
   type CalendarUnit,
   type CustomSelection,

@@ -167,6 +167,34 @@ export function stepAnchor(
   return localDateStr(d);
 }
 
+/**
+ * The 42 dates (six Monday-first weeks) covering `anchor`'s month — the
+ * cells of a fixed-height month grid. Leading/trailing dates belong to the
+ * adjacent months.
+ */
+export function monthGridDates(anchor: string): string[] {
+  const d = parseLocal(anchor);
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const sinceMonday = (first.getDay() + 6) % 7;
+  const start = new Date(first);
+  start.setDate(first.getDate() - sinceMonday);
+  return Array.from({ length: 42 }, (_, i) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    return localDateStr(day);
+  });
+}
+
+/** Monday-first weekday column labels in the browser locale ("Mon", …). */
+export function weekdayLabels(): string[] {
+  // 2024-01-01 is a Monday.
+  return Array.from({ length: 7 }, (_, i) =>
+    new Date(2024, 0, 1 + i).toLocaleDateString(undefined, {
+      weekday: "short",
+    }),
+  );
+}
+
 /** Turn any selection into concrete inclusive {from, to} bounds. */
 export function resolveRange(
   sel: RangeSelection,

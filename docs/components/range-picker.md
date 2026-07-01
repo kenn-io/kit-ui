@@ -1,9 +1,11 @@
 # RangePicker
 
 Date-range trigger + popover with three tabs: **Relative** (rolling "last N
-days" pills), **Calendar** (a day/week/month period you can step through), and
-**Custom** (explicit from/to date inputs). Ported from agentsview's shared
-`RangePicker`, decoupled from its stores and i18n.
+days" pills), **Calendar** (a day/week/month period picked on an embedded
+[Calendar](calendar.md) month grid — clicking a day selects the day/ISO
+week/month containing it), and **Custom** (explicit from/to date inputs).
+Ported from agentsview's shared `RangePicker`, decoupled from its stores and
+i18n.
 
 The component is controlled: you hold a `RangeSelection` and it calls
 `onSelect` with a new one on every edit. `resolveRange()` turns any selection
@@ -41,7 +43,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `busy` | `boolean` | `false` | Dims the trigger while data reloads |
 | `earliestDate` | `string \| null` | `null` | Earliest data date; anchors the "All" preset |
 | `align` | `"left" \| "right"` | `"left"` | Popover edge alignment |
-| `maxDate` | `string \| null` | `null` | Calendar can't step into periods wholly past this date; a stepped anchor clamps to it |
+| `maxDate` | `string \| null` | `null` | Later dates disabled in the calendar grid; month paging into fully-later months blocked |
 | `block` | `boolean` | `false` | Trigger/panel stretch to the container width |
 | `presets` | `RangePreset[]` | `DEFAULT_RANGE_PRESETS` | Relative pills (`{ label, longLabel, days }`; `days <= 0` = all-time) |
 | `relativeTabLabel` / `calendarTabLabel` / `customTabLabel` | `string` | `"Relative"` / `"Calendar"` / `"Custom"` | Tab labels |
@@ -52,7 +54,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `fromLabel` / `toLabel` | `string` | `"From"` / `"To"` | Custom tab field labels |
 | `dialogLabel` | `string` | `"Select date range"` | Popover `aria-label` |
 | `relativeGroupLabel` / `calendarGroupLabel` | `string` | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s |
-| `previousPeriodLabel` / `nextPeriodLabel` | `string` | `"Previous period"` / `"Next period"` | Stepper arrow `aria-label`s |
+| `previousMonthLabel` / `nextMonthLabel` | `string` | `"Previous month"` / `"Next month"` | Calendar month-arrow `aria-label`s |
 
 Date labels on the trigger/stepper format with the browser locale via
 `toLocaleDateString`.

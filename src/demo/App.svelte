@@ -2,6 +2,7 @@
   import type { Component } from "svelte";
   import { FlashBanner } from "../lib/index.js";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
+  import CalendarDemo from "./pages/CalendarDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
   import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
@@ -46,6 +47,7 @@
     { id: "theme", label: "Theme tokens", component: ThemeDemo },
     { id: "mobile", label: "Mobile preview", component: MobileDemo },
     { id: "button", label: "Button", component: ButtonDemo },
+    { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
     { id: "color-label", label: "ColorLabel", component: ColorLabelDemo },

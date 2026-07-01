@@ -43,6 +43,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | Component | Origin | Purpose |
 | --- | --- | --- |
 | [Button](docs/components/button.md) | middleman `ActionButton` | Action button with tone × surface × size variants |
+| [Calendar](docs/components/calendar.md) | new (RangePicker's month grid) | Single-month date grid with range highlight and month paging |
 | [Chip](docs/components/chip.md) | middleman `Chip` | Status/label badge, optionally interactive |
 | [ChipStack](docs/components/chip-stack.md) | new (middleman mobile-view pattern) | Collapsing chip/button row with "+N" expansion |
 | [CollapsibleSidebar](docs/components/collapsible-sidebar.md) | middleman | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`) |
