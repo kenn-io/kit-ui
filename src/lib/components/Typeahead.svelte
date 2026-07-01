@@ -55,9 +55,13 @@
     function reposition(): void {
       positionList();
     }
+    // Filtering changes the list's height — keep the flip/clamp current.
+    const observer = new ResizeObserver(reposition);
+    if (listEl) observer.observe(listEl);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
     return () => {
+      observer.disconnect();
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };

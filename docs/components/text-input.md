@@ -60,9 +60,11 @@ Forwarded from TextInput: `value`, `placeholder`, `size`, `invalid`,
 Clearing behavior: the clear button only renders with content on an
 enabled, non-readonly field (disabled fields can't be mutated through it),
 and clearing — by click or Escape — returns focus to the input so keyboard
-users aren't dropped when the button unmounts. Escape with content clears
-and **stops propagation** — a search-in-modal clears before the modal's
-Escape-to-close fires; a second Escape reaches the modal.
+users aren't dropped when the button unmounts. Escape **stops propagation
+only when it actually clears** — a search-in-modal clears before the
+modal's Escape-to-close fires and a second Escape reaches the modal, while
+a readonly/disabled/empty field passes Escape straight through. `inputEl`
+is bindable for app shortcut handlers that focus the field.
 
 ## Where NOT to use it
 

@@ -28,6 +28,9 @@
     /** Fires after the clear button or Escape empties the field. */
     onclear?: () => void;
     clearLabel?: string;
+    /** The underlying input element (bindable) — e.g. for app shortcut
+     * handlers that focus the search field. */
+    inputEl?: HTMLInputElement;
     class?: string;
   }
 
@@ -49,10 +52,9 @@
     onkeydown = undefined,
     onclear = undefined,
     clearLabel = "Clear search",
+    inputEl = $bindable(undefined),
     class: className = "",
   }: Props = $props();
-
-  let inputEl = $state<HTMLInputElement>();
 
   function clear(): void {
     if (disabled || readonly) return;
@@ -65,7 +67,9 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape" && value !== "") {
+    // Only swallow Escape when a clear will actually happen — a readonly/
+    // disabled field passes Escape through to its owner (modal, popover).
+    if (event.key === "Escape" && value !== "" && !disabled && !readonly) {
       event.stopPropagation();
       clear();
       return;

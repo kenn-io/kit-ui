@@ -106,6 +106,10 @@
   .kit-split-resize-handle:hover,
   .kit-split-resize-handle:focus-visible {
     background: var(--accent-blue);
-    outline: none;
+  }
+
+  .kit-split-resize-handle:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

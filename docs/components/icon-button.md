@@ -38,6 +38,8 @@ kept hand-rolling (`.icon-btn`). Transparent at rest, surface tint on hover,
 - Use `Button` (with a `label`) when the action has text; IconButton is only
   for icon-only affordances where space is constrained and the meaning is
   conventional (settings gear, close X, sync arrows).
+- When wrapping in [Tooltip](tooltip.md), pass `title=""` to suppress the
+  native title so hover doesn't show both.
 - Focus is a 2px `--accent-blue` outline on `:focus-visible` only.
 - For a labelled action that degrades to icon-only under pressure, prefer
   [FitStages](fit-stages.md) with a `Button` stage and an `IconButton`

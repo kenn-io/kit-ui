@@ -131,10 +131,17 @@ input reads as double chrome.
 typeahead lists, filter panels, the range-picker panel, tooltips, toasts,
 FindBar) uses the same card: `border: 1px solid var(--border-default);
 border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
-background: var(--bg-surface)` — and positions with `position: fixed` via
-`floatingPopoverStyle` so it can never be clipped by an overflow-hidden
-ancestor. (Caveat as always: a transformed/filtered ancestor re-parents
-fixed descendants.)
+background: var(--bg-surface)`.
+
+Chrome and positioning are separate contracts. *Trigger-anchored* popovers
+(SelectDropdown, Typeahead, FilterDropdown, RangePicker, Tooltip)
+additionally position with `position: fixed` via `floatingPopoverStyle` —
+repositioning on scroll, resize, and their own content resizing — so they
+can never be clipped by an overflow-hidden ancestor. Two surfaces share the
+chrome but not the anchoring: **FindBar** is app-positioned (see its
+placement contract) and **FlashBanner** is a viewport-centered fixed stack.
+(Caveat as always: a transformed/filtered ancestor re-parents fixed
+descendants.)
 
 **Disabled**: controls set `opacity: var(--opacity-disabled)`. Two
 deliberate exceptions: Calendar's disabled day *cells* stay lighter (0.35 —

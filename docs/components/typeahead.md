@@ -53,3 +53,12 @@ interface TypeaheadOption {
 `--typeahead-min-width` (180px), `--typeahead-max-width` (300px),
 `--typeahead-control-height` (26px), `--typeahead-control-padding` (0 8px),
 `--typeahead-control-font-size` (var(--font-size-xs)).
+
+## Positioning
+
+The option list is `position: fixed` via `floatingPopoverStyle` (shared
+popover contract): it escapes overflow-hidden ancestors, repositions on
+scroll/resize/filter changes, and flips above the trigger near the viewport
+bottom. Its width pins to the trigger width so long labels truncate instead
+of widening the menu — the old `--typeahead-list-min-width` knob is retired
+(size the trigger instead).

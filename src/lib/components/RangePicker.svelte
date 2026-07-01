@@ -246,11 +246,17 @@
       positionPanel();
     }
 
+    // Tab switches / calendar paging change the panel's height — track it
+    // so a picker opened near the viewport bottom doesn't keep a stale top.
+    const observer = new ResizeObserver(reposition);
+    if (panelEl) observer.observe(panelEl);
+
     document.addEventListener("click", handleClickOutside);
     document.addEventListener("keydown", handleKeydown);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
     return () => {
+      observer.disconnect();
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("resize", reposition);
