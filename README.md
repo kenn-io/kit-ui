@@ -94,7 +94,9 @@ bunx kit-ui-check --warn       # adoption mode
 ```
 
 See [docs/checking.md](docs/checking.md) for rules, suppression, and the
-programmatic API.
+programmatic API, and [docs/migration.md](docs/migration.md) for the
+step-by-step middleman/agentsview migration guide (component mappings, prop
+deltas, gotchas).
 
 ## Demo gallery
 
