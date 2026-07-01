@@ -187,6 +187,9 @@
     align-items: center;
     justify-content: center;
     margin-left: auto;
+    /* The header's 16px side padding is for text; pull the button's box
+     * back out so its edge gap matches the 6px vertical padding. */
+    margin-right: calc(var(--space-3) - var(--space-6));
     padding: 0;
     border: 0;
     background: transparent;
