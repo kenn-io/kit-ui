@@ -13,8 +13,9 @@
     closable?: boolean;
     /** Dismiss when the overlay backdrop is clicked (default true). */
     closeOnOverlayClick?: boolean;
-    /** Accessible dialog name. Required when `header` replaces the default
-     * title row — without it (or `title`) the dialog has no name. */
+    /** Accessible dialog name. With a custom `header` and no ariaLabel, the
+     * dialog falls back to aria-labelledby on the header container (its full
+     * text content becomes the name) — pass ariaLabel for a concise name. */
     ariaLabel?: string;
     /** Tooltip on the close button. */
     closeTitle?: string;
@@ -39,6 +40,9 @@
     header,
     footer,
   }: Props = $props();
+
+  const uid = $props.id();
+  const headerId = `kit-detail-drawer-header-${uid}`;
 
   function handleOverlayMousedown(event: MouseEvent): void {
     if (!closeOnOverlayClick) return;
@@ -67,12 +71,13 @@
     role="dialog"
     aria-modal="true"
     aria-label={ariaLabel ?? (header ? undefined : title)}
+    aria-labelledby={!ariaLabel && header ? headerId : undefined}
     tabindex="-1"
     style:width
     {@attach trapFocus}
   >
     {#if header}
-      <div class="kit-detail-drawer__header">
+      <div class="kit-detail-drawer__header" id={!ariaLabel ? headerId : undefined}>
         {@render header()}
       </div>
     {:else if title || closable}

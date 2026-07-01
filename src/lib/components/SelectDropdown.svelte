@@ -137,6 +137,11 @@
       next = (next + delta + options.length) % options.length;
       if (!options[next]?.disabled) {
         highlightedIndex = next;
+        // The list scrolls internally when it caps out; keep the
+        // highlighted option in view during keyboard navigation.
+        document
+          .getElementById(optionID(next))
+          ?.scrollIntoView({ block: "nearest" });
         return;
       }
     }
@@ -297,6 +302,8 @@
     z-index: 1000;
     width: max-content;
     max-width: min(280px, calc(100vw - 16px));
+    max-height: min(320px, calc(100vh - 16px));
+    overflow-y: auto;
     padding: 2px;
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);

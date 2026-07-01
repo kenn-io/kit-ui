@@ -43,7 +43,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `align` | `"left" \| "right"` | `"left"` | Popover edge alignment |
 | `maxDate` | `string \| null` | `null` | Calendar can't step into periods wholly past this date; a stepped anchor clamps to it |
 | `block` | `boolean` | `false` | Trigger/panel stretch to the container width |
-| `presets` | `RangePreset[]` | `DEFAULT_RANGE_PRESETS` | Relative pills (`{ label, longLabel, days }`; `days: 0` = all-time) |
+| `presets` | `RangePreset[]` | `DEFAULT_RANGE_PRESETS` | Relative pills (`{ label, longLabel, days }`; `days <= 0` = all-time) |
 | `relativeTabLabel` / `calendarTabLabel` / `customTabLabel` | `string` | `"Relative"` / `"Calendar"` / `"Custom"` | Tab labels |
 | `dayLabel` / `weekLabel` / `monthLabel` | `string` | `"Day"` / `"Week"` / `"Month"` | Calendar unit pills |
 | `weekOfLabel` | `string` | `"Week of"` | Prefix for the week step label |

@@ -35,6 +35,12 @@ document.documentElement.classList.toggle("dark", prefersDark);
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, purple = merged/workflow, teal = workspace.
 
+One deliberate exception to "tokens only": pure `#000`/`#fff` **inside
+`color-mix()`** are permitted as shade math (darken-on-hover, derive an ink
+from an accent) — they are arithmetic constants, not palette entries, and the
+`raw-color` checker rule allows them. Standalone hex palette colors are still
+off-limits outside `theme.css`.
+
 ## Typography
 
 One semantic scale for every form factor. Tokens are **rem** ("px-thinking,

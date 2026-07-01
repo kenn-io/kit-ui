@@ -64,6 +64,10 @@ popovers so they behave consistently.
 ## Focus trap
 
 ```svelte
+<script lang="ts">
+  import { trapFocus } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/focus-trap"
+</script>
+
 <div class="my-overlay-panel" role="dialog" aria-modal="true" tabindex="-1" {@attach trapFocus}>
 ```
 

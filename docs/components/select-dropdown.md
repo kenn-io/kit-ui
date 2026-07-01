@@ -32,7 +32,12 @@ closes and refocuses the trigger. Extracted from middleman.
 | `class` | `string` | `""` | |
 
 The menu is `position: fixed` and positioned per open (and on scroll/resize),
-so it is never clipped by an overflow-hidden ancestor.
+so normal `overflow: hidden`/`auto` ancestors can't clip it, and long option
+lists cap at 320px with internal scrolling (keyboard navigation keeps the
+highlighted option in view). One CSS caveat: an ancestor with `transform`,
+`filter`, or `contain: paint` becomes the containing block for fixed
+descendants — don't put the dropdown inside animated/transformed containers
+(or drop the transform once the animation settles).
 
 ## Option shape
 

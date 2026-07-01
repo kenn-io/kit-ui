@@ -187,23 +187,25 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-red) 42%, transparent);
   }
 
-  /* Success solid — merge, confirm */
+  /* Success solid — merge, confirm. The green is deepened relative to the
+   * raw accent: #059669 with light ink sits just below AA for 13px text,
+   * and the darker mix clears it in both themes. */
   .kit-button--solid.kit-button--success {
-    background: var(--accent-green);
+    background: color-mix(in srgb, var(--accent-green) 82%, #000);
     color: var(--bg-surface);
-    border: 1px solid var(--accent-green);
+    border: 1px solid color-mix(in srgb, var(--accent-green) 82%, #000);
   }
   .kit-button--solid.kit-button--success:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent-green) 88%, #000);
-    border-color: color-mix(in srgb, var(--accent-green) 88%, #000);
+    background: color-mix(in srgb, var(--accent-green) 72%, #000);
+    border-color: color-mix(in srgb, var(--accent-green) 72%, #000);
   }
   .kit-button--solid.kit-button--success:focus-visible {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-green) 48%, transparent);
   }
   .kit-button--solid.kit-button--success:active:not(:disabled),
   .kit-button--solid.kit-button--success[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent-green) 78%, #000);
-    border-color: color-mix(in srgb, var(--accent-green) 78%, #000);
+    background: color-mix(in srgb, var(--accent-green) 62%, #000);
+    border-color: color-mix(in srgb, var(--accent-green) 62%, #000);
   }
 
   /* Neutral solid — strong monochrome emphasis (inverse surface) */

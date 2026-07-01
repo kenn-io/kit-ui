@@ -20,16 +20,24 @@ const TABBABLE_SELECTOR = [
 ].join(", ");
 
 let scrollLocks = 0;
+let previousBodyOverflow = "";
 
 function lockBodyScroll(): () => void {
   scrollLocks += 1;
   if (scrollLocks === 1) {
+    // Remember any inline overflow the app set itself so the final unlock
+    // restores it instead of wiping it.
+    previousBodyOverflow = document.body.style.overflow;
     document.body.style.setProperty("overflow", "hidden");
   }
   return () => {
     scrollLocks -= 1;
     if (scrollLocks === 0) {
-      document.body.style.removeProperty("overflow");
+      if (previousBodyOverflow) {
+        document.body.style.setProperty("overflow", previousBodyOverflow);
+      } else {
+        document.body.style.removeProperty("overflow");
+      }
     }
   };
 }
@@ -50,8 +58,21 @@ export function trapFocus(surface: HTMLElement): () => void {
       ? document.activeElement
       : null;
 
-  const initial = surface.querySelector<HTMLElement>("[autofocus]") ?? surface;
-  initial.focus();
+  // Initial focus: the first [autofocus] descendant that can actually take
+  // focus (visible, not disabled). Verify focus really moved into the
+  // surface — a hidden/disabled autofocus target would otherwise leave
+  // focus behind the overlay, outside the trap.
+  const autofocusTarget = Array.from(
+    surface.querySelectorAll<HTMLElement>("[autofocus]"),
+  ).find(
+    (el) =>
+      el.offsetParent !== null &&
+      !(el as HTMLElement & { disabled?: boolean }).disabled,
+  );
+  autofocusTarget?.focus();
+  if (!surface.contains(document.activeElement)) {
+    surface.focus();
+  }
 
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key !== "Tab") return;

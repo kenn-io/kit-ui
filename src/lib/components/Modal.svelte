@@ -164,12 +164,15 @@
     border-bottom-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
   }
 
+  /* Title/close ink mixes the tone toward --text-primary: darker than the
+   * raw accent in the light theme, lighter in dark — keeps 13px text at AA
+   * on the tinted band in both (raw --accent-amber/green fall short). */
   .kit-modal-header:not([data-tone="neutral"]) .kit-modal-title {
-    color: var(--kit-modal-tone);
+    color: color-mix(in srgb, var(--kit-modal-tone) 72%, var(--text-primary));
   }
 
   .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close {
-    color: color-mix(in srgb, var(--kit-modal-tone) 78%, var(--text-muted));
+    color: color-mix(in srgb, var(--kit-modal-tone) 72%, var(--text-primary));
   }
 
   .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close:hover {
