@@ -1,6 +1,14 @@
 <script lang="ts">
-  import { Button, showFlash } from "../../lib/index.js";
+  import {
+    Button,
+    showFlash,
+    type ButtonSurface,
+    type ButtonTone,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
+
+  const tones: ButtonTone[] = ["neutral", "info", "success", "danger", "workflow"];
+  const surfaces: ButtonSurface[] = ["outline", "soft", "solid"];
 </script>
 
 <DemoSection
@@ -21,6 +29,20 @@
   <Button label="Close" tone="danger" surface="outline" />
   <Button label="Delete" tone="danger" surface="solid" />
   <Button label="Run workflow" tone="workflow" surface="soft" />
+</DemoSection>
+
+<DemoSection
+  title="Full matrix"
+  description="Every tone × surface combination is styled; see the variant guide in the docs for intended pairings."
+  code={`<Button label="…" tone={tone} surface={surface} />`}
+>
+  <div class="button-matrix">
+    {#each surfaces as surface (surface)}
+      {#each tones as tone (tone)}
+        <Button label={`${tone} ${surface}`} {tone} {surface} size="sm" />
+      {/each}
+    {/each}
+  </div>
 </DemoSection>
 
 <DemoSection
@@ -45,3 +67,18 @@
     {#snippet trailing()}→{/snippet}
   </Button>
 </DemoSection>
+
+<style>
+  .button-matrix {
+    display: grid;
+    grid-template-columns: repeat(5, max-content);
+    gap: var(--space-4);
+    align-items: center;
+  }
+
+  @media (max-width: 640px) {
+    .button-matrix {
+      grid-template-columns: repeat(2, max-content);
+    }
+  }
+</style>

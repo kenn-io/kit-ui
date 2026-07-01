@@ -20,6 +20,7 @@ export { default as FindBar } from "./components/FindBar.svelte";
 export { default as FlashBanner } from "./components/FlashBanner.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Modal } from "./components/Modal.svelte";
+export type { ModalTone } from "./components/Modal.svelte";
 export { default as RangePicker } from "./components/RangePicker.svelte";
 export {
   allFromDate,

@@ -92,6 +92,12 @@
     padding: 6px 14px;
     border-radius: var(--radius-sm);
     cursor: pointer;
+    /* Neutral-outline appearance as the base so every tone × surface combo
+     * has a sane look — without this, a combo missing a rule below renders
+     * with UA button chrome (black border, platform background). */
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
     transition:
       background-color 0.12s ease,
       border-color 0.12s ease,
@@ -163,14 +169,14 @@
   }
   .kit-button--outline.kit-button--danger:hover:not(:disabled) {
     background: var(--accent-red, #d73a49);
-    color: #fff;
+    color: var(--bg-surface);
     border-color: var(--accent-red, #d73a49);
   }
 
   /* Danger solid — destructive confirm */
   .kit-button--solid.kit-button--danger {
     background: var(--accent-red);
-    color: #fff;
+    color: var(--bg-surface);
     border: 1px solid var(--accent-red);
   }
   .kit-button--solid.kit-button--danger:hover:not(:disabled) {
@@ -183,27 +189,52 @@
 
   /* Success solid — merge, confirm */
   .kit-button--solid.kit-button--success {
-    background: #1a7f37;
-    color: #e6ffe6;
-    border: 1px solid #1a7f37;
+    background: var(--accent-green);
+    color: var(--bg-surface);
+    border: 1px solid var(--accent-green);
   }
   .kit-button--solid.kit-button--success:hover:not(:disabled) {
-    background: #176b2e;
-    border-color: #176b2e;
+    background: color-mix(in srgb, var(--accent-green) 88%, #000);
+    border-color: color-mix(in srgb, var(--accent-green) 88%, #000);
   }
   .kit-button--solid.kit-button--success:focus-visible {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-green) 48%, transparent);
   }
   .kit-button--solid.kit-button--success:active:not(:disabled),
   .kit-button--solid.kit-button--success[aria-expanded="true"] {
-    background: #145c27;
-    border-color: #145c27;
+    background: color-mix(in srgb, var(--accent-green) 78%, #000);
+    border-color: color-mix(in srgb, var(--accent-green) 78%, #000);
+  }
+
+  /* Neutral solid — strong monochrome emphasis (inverse surface) */
+  .kit-button--solid.kit-button--neutral {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: 1px solid var(--text-primary);
+  }
+  .kit-button--solid.kit-button--neutral:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--text-primary) 82%, var(--bg-primary));
+    border-color: color-mix(in srgb, var(--text-primary) 82%, var(--bg-primary));
+  }
+
+  /* Workflow solid — purple emphasis */
+  .kit-button--solid.kit-button--workflow {
+    background: var(--accent-purple);
+    color: var(--bg-surface);
+    border: 1px solid var(--accent-purple);
+  }
+  .kit-button--solid.kit-button--workflow:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-purple) 88%, #000);
+    border-color: color-mix(in srgb, var(--accent-purple) 88%, #000);
+  }
+  .kit-button--solid.kit-button--workflow:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-purple) 42%, transparent);
   }
 
   /* Info solid — primary submit / save */
   .kit-button--solid.kit-button--info {
     background: var(--accent-blue);
-    color: #fff;
+    color: var(--bg-surface);
     border: 1px solid var(--accent-blue);
   }
   .kit-button--solid.kit-button--info:hover:not(:disabled) {
@@ -255,5 +286,46 @@
   }
   .kit-button--soft.kit-button--workflow:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
+  }
+
+  /* Danger soft — request changes, low-emphasis destructive */
+  .kit-button--soft.kit-button--danger {
+    background: color-mix(in srgb, var(--accent-red) 10%, transparent);
+    color: var(--accent-red);
+    border: 1px solid color-mix(in srgb, var(--accent-red) 30%, transparent);
+  }
+  .kit-button--soft.kit-button--danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-red) 18%, transparent);
+  }
+  .kit-button--soft.kit-button--danger:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-red) 38%, transparent);
+  }
+
+  /* Accent outlines — accent ink on the surface, tint on hover */
+  .kit-button--outline.kit-button--success {
+    background: var(--bg-surface);
+    color: var(--accent-green);
+    border: 1px solid color-mix(in srgb, var(--accent-green) 40%, var(--border-default));
+  }
+  .kit-button--outline.kit-button--success:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-green) 8%, var(--bg-surface));
+  }
+
+  .kit-button--outline.kit-button--info {
+    background: var(--bg-surface);
+    color: var(--accent-blue);
+    border: 1px solid color-mix(in srgb, var(--accent-blue) 40%, var(--border-default));
+  }
+  .kit-button--outline.kit-button--info:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-surface));
+  }
+
+  .kit-button--outline.kit-button--workflow {
+    background: var(--bg-surface);
+    color: var(--accent-purple);
+    border: 1px solid color-mix(in srgb, var(--accent-purple) 40%, var(--border-default));
+  }
+  .kit-button--outline.kit-button--workflow:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-purple) 8%, var(--bg-surface));
   }
 </style>

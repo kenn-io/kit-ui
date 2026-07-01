@@ -10,6 +10,8 @@
 <script lang="ts">
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import { tick } from "svelte";
+  import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { SelectDropdownOption } from "./select-dropdown.js";
 
   interface Props {
@@ -18,6 +20,9 @@
     onchange: (value: string) => void;
     title?: string;
     disabled?: boolean;
+    /** Menu edge to align with the trigger. Keep the default `start` —
+     * the menu clamps/flips itself when the viewport runs out of room. */
+    align?: "start" | "end";
     class?: string;
   }
 
@@ -27,6 +32,7 @@
     onchange,
     title,
     disabled = false,
+    align = "start",
     class: className = "",
   }: Props = $props();
 
@@ -34,6 +40,8 @@
   let highlightedIndex = $state(0);
   let containerEl = $state<HTMLDivElement>();
   let buttonEl = $state<HTMLButtonElement>();
+  let listEl = $state<HTMLDivElement>();
+  let listStyle = $state("");
 
   const dropdownID = allocateSelectDropdownID();
   const listboxID = `${dropdownID}-listbox`;
@@ -68,21 +76,51 @@
       }
     }
 
+    function reposition(): void {
+      positionList();
+    }
+
     document.addEventListener("mousedown", handleMousedown);
     document.addEventListener("keydown", handleKeydown);
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
     return () => {
       document.removeEventListener("mousedown", handleMousedown);
       document.removeEventListener("keydown", handleKeydown);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
     };
   });
 
-  function openDropdown(): void {
+  // Fixed positioning so the menu is never clipped by an overflow-hidden
+  // ancestor: aligned to the trigger's start edge, clamped to the viewport,
+  // flipped above when there is no room below.
+  function positionList(): void {
+    if (!buttonEl || !listEl) return;
+    const trigger = buttonEl.getBoundingClientRect();
+    const width = Math.max(listEl.offsetWidth, trigger.width);
+    listStyle = `${floatingPopoverStyle({
+      trigger,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      popoverWidth: width,
+      popoverHeight: listEl.offsetHeight,
+      align,
+      triggerGap: 2,
+    })}; min-width: ${Math.round(trigger.width)}px`;
+  }
+
+  async function openDropdown(): Promise<void> {
     if (disabled) return;
     open = !open;
     highlightedIndex = Math.max(
       0,
       options.findIndex((option) => option.value === value),
     );
+    if (open) {
+      await tick();
+      positionList();
+    }
   }
 
   function selectOption(option: SelectDropdownOption): void {
@@ -171,7 +209,13 @@
   </button>
 
   {#if open}
-    <div id={listboxID} class="kit-select-dropdown__list" role="listbox">
+    <div
+      id={listboxID}
+      class="kit-select-dropdown__list"
+      role="listbox"
+      style={listStyle}
+      bind:this={listEl}
+    >
       {#each options as option, index (option.value)}
         <button
           id={optionID(index)}
@@ -249,14 +293,10 @@
   }
 
   .kit-select-dropdown__list {
-    position: absolute;
-    z-index: 100;
-    top: 100%;
-    right: 0;
-    min-width: 100%;
+    position: fixed;
+    z-index: 1000;
     width: max-content;
-    max-width: min(280px, 90vw);
-    margin-top: 2px;
+    max-width: min(280px, calc(100vw - 16px));
     padding: 2px;
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);

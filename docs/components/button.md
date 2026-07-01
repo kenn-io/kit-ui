@@ -32,13 +32,23 @@ variants. Extracted from middleman's `ActionButton`.
 
 ## Variant guide
 
+Every tone × surface combination is styled (the base falls back to the
+neutral-outline look, so nothing ever renders with browser-default chrome).
+The intended pairings:
+
 | Combination | Use for |
 | --- | --- |
 | `info` + `solid` | Primary submit / save |
 | `neutral` + `outline` | Cancel / secondary (default) |
 | `neutral` + `soft` | Low-emphasis secondary |
+| `neutral` + `solid` | Strong monochrome emphasis (inverse surface) |
 | `success` + `solid` | Merge / confirm |
 | `success` + `soft` | Approve |
 | `danger` + `outline` | Close (neutral at rest, red on hover) |
+| `danger` + `soft` | Request changes / low-emphasis destructive |
 | `danger` + `solid` | Destructive confirm |
-| `workflow` + `soft` | Purple emphasis (approve workflows) |
+| `info` / `success` / `workflow` + `outline` | Accent ink on the surface, tint on hover |
+| `workflow` + `soft` / `solid` | Purple emphasis (approve workflows) |
+
+Solid surfaces use `var(--bg-surface)` as ink, so dark mode gets dark text on
+the brighter dark-theme accents instead of low-contrast white.

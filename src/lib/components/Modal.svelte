@@ -1,3 +1,7 @@
+<script module lang="ts">
+  export type ModalTone = "neutral" | "info" | "success" | "warning" | "danger";
+</script>
+
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
@@ -5,6 +9,9 @@
 
   interface Props {
     title?: string;
+    /** Header accent. `neutral` is a plain inset header; the others tint the
+     * header and title with the matching semantic accent. */
+    tone?: ModalTone;
     /** Called when the user dismisses via Escape, overlay click, or the close button. */
     onclose?: () => void;
     /** Render the X button in the header. */
@@ -21,6 +28,7 @@
 
   let {
     title = undefined,
+    tone = "neutral",
     onclose = undefined,
     closable = true,
     closeOnOverlayClick = true,
@@ -64,7 +72,7 @@
     {@attach trapFocus}
   >
     {#if title || closable}
-      <div class="kit-modal-header">
+      <div class="kit-modal-header" data-tone={tone}>
         {#if title}
           <span class="kit-modal-title">{title}</span>
         {/if}
@@ -119,8 +127,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--space-5);
+    padding: var(--space-3) var(--space-6);
+    /* Distinct from the body surface by default so the header reads as a
+     * separate band, not just bolder body text. */
+    background: var(--bg-inset);
     border-bottom: 1px solid var(--border-default);
     flex-shrink: 0;
   }
@@ -128,7 +139,41 @@
   .kit-modal-title {
     font-size: var(--font-size-md);
     font-weight: 600;
+    line-height: 1.3;
     color: var(--text-primary);
+  }
+
+  /* Tinted header bands for semantic tones; the title takes the accent ink. */
+  .kit-modal-header[data-tone="info"] {
+    background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-surface));
+    border-bottom-color: color-mix(in srgb, var(--accent-blue) 30%, var(--border-default));
+  }
+  .kit-modal-header[data-tone="info"] .kit-modal-title {
+    color: var(--accent-blue);
+  }
+
+  .kit-modal-header[data-tone="success"] {
+    background: color-mix(in srgb, var(--accent-green) 9%, var(--bg-surface));
+    border-bottom-color: color-mix(in srgb, var(--accent-green) 30%, var(--border-default));
+  }
+  .kit-modal-header[data-tone="success"] .kit-modal-title {
+    color: var(--accent-green);
+  }
+
+  .kit-modal-header[data-tone="warning"] {
+    background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-surface));
+    border-bottom-color: color-mix(in srgb, var(--accent-amber) 32%, var(--border-default));
+  }
+  .kit-modal-header[data-tone="warning"] .kit-modal-title {
+    color: var(--accent-amber);
+  }
+
+  .kit-modal-header[data-tone="danger"] {
+    background: color-mix(in srgb, var(--accent-red) 9%, var(--bg-surface));
+    border-bottom-color: color-mix(in srgb, var(--accent-red) 30%, var(--border-default));
+  }
+  .kit-modal-header[data-tone="danger"] .kit-modal-title {
+    color: var(--accent-red);
   }
 
   .kit-modal-close {

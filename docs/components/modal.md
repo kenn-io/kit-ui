@@ -47,6 +47,7 @@ virtual cursors rely on `aria-modal` support (all evergreen browsers).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `title` | `string` | — | Header text; header renders if `title` or `closable` |
+| `tone` | `"neutral" \| "info" \| "success" \| "warning" \| "danger"` | `"neutral"` | Header accent: neutral is a plain inset band; the others tint the band and title with the semantic accent (pick the tone matching the primary action — e.g. `danger` for destructive confirms) |
 | `onclose` | `() => void` | — | Dismiss callback |
 | `closable` | `boolean` | `true` | Show the X button |
 | `closeOnOverlayClick` | `boolean` | `true` | |
