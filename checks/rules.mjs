@@ -73,8 +73,9 @@ export function checkBreakpoints(source, filename) {
   return findings;
 }
 
-/** Raw colors in styles should be theme tokens. Colors inside var() fallbacks
- * and color-mix() shading idioms are allowed. */
+/** Raw colors in styles should be theme tokens. Colors inside var()
+ * fallbacks are allowed; inside color-mix() only the pure #000/#fff shade
+ * constants are (mixing arbitrary palette hex would dodge the contract). */
 export function checkRawColors(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
@@ -83,22 +84,28 @@ export function checkRawColors(source, filename) {
     while ((match = colorRe.exec(css)) !== null) {
       const lineStart = css.lastIndexOf("\n", match.index) + 1;
       const prefix = css.slice(lineStart, match.index);
-      // Allowed when still inside an unclosed var() or color-mix() — check
-      // every occurrence, since an inner var() may have closed while the
-      // outer color-mix() is still open.
+      // Find the innermost still-unclosed var()/color-mix() — check every
+      // occurrence, since an inner var() may have closed while the outer
+      // color-mix() is still open, and vice versa.
       const fnRe = /(?:var|color-mix)\(/g;
       let fn;
-      let insideAllowedFn = false;
+      let innermostOpenFn = null;
       while ((fn = fnRe.exec(prefix)) !== null) {
         const between = prefix.slice(fn.index);
         const open = (between.match(/\(/g) ?? []).length;
         const close = (between.match(/\)/g) ?? []).length;
-        if (open > close) {
-          insideAllowedFn = true;
-          break;
-        }
+        if (open > close) innermostOpenFn = fn[0];
       }
-      if (insideAllowedFn) continue;
+      if (innermostOpenFn === "var(") continue;
+      if (innermostOpenFn === "color-mix(") {
+        if (/^#(?:000|000000|fff|ffffff)$/i.test(match[0])) continue;
+        findings.push({
+          rule: "raw-color",
+          line: lineOfIndex(source, offset + match.index),
+          message: `raw color ${match[0].replace("(", "(…)")} inside color-mix() — only #000/#fff shade constants are allowed there; mix a theme token instead`,
+        });
+        continue;
+      }
       findings.push({
         rule: "raw-color",
         line: lineOfIndex(source, offset + match.index),

@@ -23,7 +23,7 @@ Scans `.svelte` and `.css` files; skips `node_modules`, `dist`, `build`,
 | Rule | Flags | Use instead |
 | --- | --- | --- |
 | `nonstandard-breakpoint` | `@media` widths that aren't 640/760/900px (±1px complements allowed) | `BREAKPOINTS` / `MEDIA` from kit-ui ([theming](theming.md#breakpoints)) |
-| `raw-color` | hex/rgb() colors in styles (allowed inside `var()` fallbacks and `color-mix()`) | theme tokens (`--accent-*`, `--bg-*`, `--text-*`, `--border-*`) |
+| `raw-color` | hex/rgb() colors in styles (allowed inside `var()` fallbacks; inside `color-mix()` only the `#000`/`#fff` shade constants) | theme tokens (`--accent-*`, `--bg-*`, `--text-*`, `--border-*`) |
 | `hand-rolled-modal` | `position: fixed` + `inset: 0` overlays | `Modal`, `FlashBanner` |
 | `hand-rolled-spinner` | `@keyframes` rotating to 360deg | `Spinner` |
 | `hand-rolled-clipboard` | `navigator.clipboard.writeText`, `execCommand("copy")` | `copyToClipboard`, `CopyButton` |

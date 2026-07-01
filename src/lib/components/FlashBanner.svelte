@@ -59,6 +59,7 @@
   }
 
   .kit-flash-banner {
+    box-sizing: border-box;
     position: relative;
     display: flex;
     align-items: center;
@@ -71,6 +72,10 @@
 
   .kit-flash-banner__text {
     flex: 1;
+    min-width: 0;
+    /* Long messages wrap at the stack's max-width; unbroken tokens
+     * (URLs, ids) break rather than overflowing the card. */
+    overflow-wrap: anywhere;
   }
 
   .kit-flash-banner__dismiss {

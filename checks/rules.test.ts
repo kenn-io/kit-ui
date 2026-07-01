@@ -51,8 +51,22 @@ describe("raw-color", () => {
     expect(checkSource(src, "A.svelte", ["raw-color"])).toHaveLength(0);
   });
 
-  test("allows color-mix shading", () => {
-    const src = svelte(`.x { background: color-mix(in srgb, var(--accent-blue) 88%, #000); }`);
+  test("allows color-mix shading with #000/#fff", () => {
+    const src = svelte(
+      `.x { background: color-mix(in srgb, var(--accent-blue) 88%, #000); color: color-mix(in srgb, var(--accent-red) 20%, #ffffff); }`,
+    );
+    expect(checkSource(src, "A.svelte", ["raw-color"])).toHaveLength(0);
+  });
+
+  test("flags palette hex smuggled through color-mix", () => {
+    const src = svelte(`.x { background: color-mix(in srgb, #22c55e 50%, #000); }`);
+    const findings = checkSource(src, "A.svelte", ["raw-color"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("color-mix");
+  });
+
+  test("allows var() fallback nested inside color-mix", () => {
+    const src = svelte(`.x { background: color-mix(in srgb, var(--accent-green, #22c55e) 50%, #000); }`);
     expect(checkSource(src, "A.svelte", ["raw-color"])).toHaveLength(0);
   });
 

@@ -120,6 +120,10 @@
     if (open) {
       await tick();
       positionList();
+      // Long lists scroll internally — bring the selected option into view.
+      document
+        .getElementById(optionID(highlightedIndex))
+        ?.scrollIntoView({ block: "nearest" });
     }
   }
 

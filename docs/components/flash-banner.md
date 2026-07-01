@@ -33,11 +33,15 @@ dismissFlash();                          // programmatic dismiss
 
 | Function | Notes |
 | --- | --- |
-| `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer |
+| `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer. Non-finite or `<= 0` durations fall back to the 4s default |
 | `getFlashes(): FlashState[]` | Reactive read of all visible flashes, oldest first |
 | `getFlash(): FlashState \| null` | Reactive read of the most recent flash |
 | `getFlashMessage(): string \| null` | Reactive read of just the latest text |
-| `dismissFlash(id?)` | Dismiss one flash by id, or all of them with no argument |
+| `dismissFlash(id?)` | Dismiss one flash by id; with no argument (or a non-number, so `onclick={dismissFlash}` works) dismisses all |
+
+At most **5** flashes show at once — bursts drop the oldest so the stack
+can't run off-screen. Long messages wrap at the stack's max-width; unbroken
+tokens break rather than overflow.
 
 Concurrent flashes stack below each other in show order and read as a single
 card — no gap between rows, each row's countdown bar doubling as the divider.

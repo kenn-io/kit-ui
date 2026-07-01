@@ -176,7 +176,9 @@
   }
 
   .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close:hover {
-    color: var(--kit-modal-tone);
+    /* Keep the contrast-safe mixed ink on hover too — raw amber/green on
+     * the tinted band would dip below AA. Only the background changes. */
+    color: color-mix(in srgb, var(--kit-modal-tone) 72%, var(--text-primary));
     background: color-mix(in srgb, var(--kit-modal-tone) 14%, transparent);
   }
 

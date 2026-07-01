@@ -32,7 +32,7 @@ conditionally — rendering it means it is open:
 | `width` | `string` | `"min(560px, 100vw)"` | Panel width (any CSS length) |
 | `closable` | `boolean` | `true` | Render the X button in the default header |
 | `closeOnOverlayClick` | `boolean` | `true` | Dismiss on backdrop click |
-| `ariaLabel` | `string` | `title` | Dialog name. **Required with a custom `header`** — `title` isn't rendered then, so without `ariaLabel` the dialog has no accessible name |
+| `ariaLabel` | `string` | `title` | Dialog name. With a custom `header` and no `ariaLabel`, the dialog is named via `aria-labelledby` on the header container (its full text content) — pass `ariaLabel` for a concise name, and always when the header has no descriptive text |
 | `closeTitle` | `string` | `"Close (Esc)"` | Close button tooltip |
 | `closeAriaLabel` | `string` | `"Close"` | Close button `aria-label` |
 | `children` | `Snippet` | — | Body content (scrolls; bring your own padding) |
