@@ -106,8 +106,8 @@
 
   /* Pill radius on every size — a large fixed value clamps to half the
    * rendered height, so the shape stays consistent across sizes. Font sizes
-   * are fixed tokens (not em-relative) so the xs ≤ sm ≤ md ladder holds
-   * regardless of the surrounding text size. */
+   * are fixed tokens (not em-relative), one ladder step apart, so xs < sm <
+   * md is visible regardless of the surrounding text size. */
   .kit-chip--xs {
     min-height: 16px;
     padding: 1px 6px;
@@ -120,14 +120,14 @@
     min-height: 18px;
     padding: 0 6px;
     border-radius: 999px;
-    font-size: var(--font-size-2xs);
+    font-size: var(--font-size-xs);
   }
 
   .kit-chip--md {
     min-height: 22px;
     padding: 0 8px;
     border-radius: 999px;
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-sm);
   }
 
   .kit-chip--interactive {

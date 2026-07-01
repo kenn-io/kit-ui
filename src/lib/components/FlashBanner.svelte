@@ -89,16 +89,23 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    width: 24px;
+    height: 24px;
     background: none;
     border: none;
-    padding: 0 2px;
+    padding: 0;
+    /* Pull the button's box back out of the 16px text padding so its edge
+     * gap matches the 8px vertical padding (same trick as Modal's close). */
+    margin-right: calc(var(--space-4) - var(--space-6));
     color: var(--text-muted);
     cursor: pointer;
     line-height: 1;
+    border-radius: var(--radius-sm);
   }
 
   .kit-flash-banner__dismiss:hover {
     color: var(--text-primary);
+    background: var(--bg-surface-hover);
   }
 
   /* Countdown to auto-dismiss: full width at show time, empty when the
