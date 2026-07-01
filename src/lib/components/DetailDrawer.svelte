@@ -1,0 +1,196 @@
+<script lang="ts">
+  import XIcon from "@lucide/svelte/icons/x";
+  import type { Snippet } from "svelte";
+
+  interface Props {
+    title?: string;
+    /** Called when the user dismisses via Escape, overlay click, or the close button. */
+    onclose?: () => void;
+    /** Panel width; clamped to the viewport. */
+    width?: string;
+    /** Render the X button in the header (default true). */
+    closable?: boolean;
+    /** Dismiss when the overlay backdrop is clicked (default true). */
+    closeOnOverlayClick?: boolean;
+    ariaLabel?: string;
+    /** Tooltip on the close button. */
+    closeTitle?: string;
+    closeAriaLabel?: string;
+    children?: Snippet;
+    /** Replaces the default title + close header entirely. */
+    header?: Snippet;
+    /** Optional footer row, typically action buttons. */
+    footer?: Snippet;
+  }
+
+  let {
+    title = undefined,
+    onclose = undefined,
+    width = "min(560px, 100vw)",
+    closable = true,
+    closeOnOverlayClick = true,
+    ariaLabel = undefined,
+    closeTitle = "Close (Esc)",
+    closeAriaLabel = "Close",
+    children,
+    header,
+    footer,
+  }: Props = $props();
+
+  function handleOverlayMousedown(event: MouseEvent): void {
+    if (!closeOnOverlayClick) return;
+    if (event.target === event.currentTarget) {
+      onclose?.();
+    }
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape" && !event.defaultPrevented) {
+      event.preventDefault();
+      onclose?.();
+    }
+  }
+</script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<div
+  class="kit-detail-drawer-overlay"
+  role="presentation"
+  onmousedown={handleOverlayMousedown}
+>
+  <aside
+    class="kit-detail-drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-label={ariaLabel ?? title}
+    style:width
+  >
+    {#if header}
+      <div class="kit-detail-drawer__header">
+        {@render header()}
+      </div>
+    {:else if title || closable}
+      <div class="kit-detail-drawer__header">
+        {#if closable}
+          <button
+            class="kit-detail-drawer__close"
+            type="button"
+            title={closeTitle}
+            aria-label={closeAriaLabel}
+            onclick={() => onclose?.()}
+          >
+            <XIcon size="14" strokeWidth="2" aria-hidden="true" />
+          </button>
+        {/if}
+        {#if title}
+          <span class="kit-detail-drawer__title">{title}</span>
+        {/if}
+      </div>
+    {/if}
+    <div class="kit-detail-drawer__body">
+      {#if children}
+        {@render children()}
+      {/if}
+    </div>
+    {#if footer}
+      <div class="kit-detail-drawer__footer">
+        {@render footer()}
+      </div>
+    {/if}
+  </aside>
+</div>
+
+<style>
+  .kit-detail-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg, rgba(0, 0, 0, 0.3));
+    z-index: 1000;
+  }
+
+  .kit-detail-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 100vw;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-default);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: kit-detail-drawer-slide-in 0.18s ease-out;
+  }
+
+  @keyframes kit-detail-drawer-slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kit-detail-drawer {
+      animation: none;
+    }
+  }
+
+  .kit-detail-drawer__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--border-default);
+    flex-shrink: 0;
+  }
+
+  .kit-detail-drawer__close {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .kit-detail-drawer__close:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
+  .kit-detail-drawer__title {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kit-detail-drawer__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kit-detail-drawer__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-6);
+    border-top: 1px solid var(--border-default);
+    flex-shrink: 0;
+  }
+</style>

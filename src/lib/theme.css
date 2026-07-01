@@ -1,0 +1,177 @@
+/*
+ * kit-ui design tokens.
+ *
+ * Consolidated from the middleman and agentsview frontends, which share the
+ * same palette. Import once at the app entry point:
+ *
+ *   import "@kenn-io/kit-ui/theme.css";
+ *
+ * Dark mode: add the `dark` class to <html> (i.e. `:root.dark`).
+ * Every component in this library reads only these variables, so a consuming
+ * app can retheme by overriding them.
+ */
+
+/* Light theme */
+:root {
+  --bg-primary: #f5f6f8;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f0f1f4;
+  --bg-inset: #ecedf2;
+  --border-default: #d8dae2;
+  --border-muted: #e4e6ec;
+
+  --text-primary: #181b24;
+  --text-secondary: #555b6e;
+  --text-muted: #878ea0;
+
+  --accent-blue: #2563eb;
+  --accent-amber: #d97706;
+  --accent-purple: #7c3aed;
+  --accent-green: #059669;
+  --accent-red: #dc2626;
+  /* Cyan-leaning so it reads as a distinct hue next to --accent-green. */
+  --accent-teal: #0891b2;
+
+  /* Warm gold used by StatusDot's "waiting for user" bubble; chosen so it
+   * doesn't clash with the action accents above. */
+  --status-waiting: #a48a55;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* Typography — one semantic scale for every form factor. Values are rem
+   * (px-thinking, rem-shipping: ÷16) so text follows the user's browser
+   * font-size preference in addition to zoom. Do NOT pin `html { font-size }`
+   * in a consuming app — that defeats the preference and kit-ui-check flags
+   * it. The touch media query below redefines these same tokens, so
+   * components never write their own type media queries. */
+  --font-size-2xs: 0.625rem; /* 10px */
+  --font-size-xs: 0.6875rem; /* 11px */
+  --font-size-sm: 0.75rem; /* 12px */
+  --font-size-md: 0.8125rem; /* 13px — UI base */
+  --font-size-lg: 0.875rem; /* 14px */
+  --font-size-xl: 1.125rem; /* 18px */
+  --font-size-2xl: 1.5rem; /* 24px — display / metric tier */
+  --font-size-root: var(--font-size-md);
+
+  /* Spacing — the ladder middleman's hand-written gaps converge on.
+   * Deliberately px (not rem): text scales with the user's font preference,
+   * but gaps, padding, and chrome should not inflate with it. kit-ui-check
+   * flags off-ladder `gap` values (1px hairlines excepted). */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+
+  /* App chrome */
+  --header-height: 44px;
+  --status-bar-height: 24px;
+
+  color-scheme: light;
+}
+
+/* Dark theme */
+:root.dark {
+  --bg-primary: #0d0d12;
+  --bg-surface: #16161e;
+  --bg-surface-hover: #1f1f2a;
+  --bg-inset: #111116;
+  --border-default: #333345;
+  --border-muted: #2a2a3a;
+
+  --text-primary: #ececf1;
+  --text-secondary: #b4bcd0;
+  --text-muted: #8b93a8;
+
+  --accent-blue: #60a5fa;
+  --accent-amber: #fbbf24;
+  --accent-purple: #a78bfa;
+  --accent-green: #4ade80;
+  --accent-red: #f87171;
+  /* Cyan-leaning so it reads as a distinct hue next to --accent-green. */
+  --accent-teal: #22d3ee;
+
+  --status-waiting: #c4a76a;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* Touch scale: the same tokens at handheld sizes, following platform
+ * convention (Apple HIG: 13pt desktop body vs 17pt mobile; Material body
+ * 16sp). Keyed to the input modality — a handheld touch device — NOT to
+ * viewport width, so narrowing a desktop window never resizes text (Adobe
+ * Spectrum's platform-scale reasoning: reading distance and touch targets,
+ * not window size). `md` reaching 16px also stops iOS Safari from
+ * auto-zooming focused inputs. Largest per-token jump is ~1.23×, comfortably
+ * inside the 2.5× WCAG resize-text ceiling.
+ *
+ * Keep the two blocks below identical. `:root.kit-type-touch` forces the
+ * scale for demos/tests/emulation. */
+@media (hover: none) and (pointer: coarse) {
+  :root {
+    --font-size-2xs: 0.75rem; /* 12px */
+    --font-size-xs: 0.875rem; /* 14px */
+    --font-size-sm: 0.9375rem; /* 15px */
+    --font-size-md: 1rem; /* 16px */
+    --font-size-lg: 1.0625rem; /* 17px */
+    --font-size-xl: 1.25rem; /* 20px */
+    --font-size-2xl: 1.75rem; /* 28px */
+  }
+}
+
+:root.kit-type-touch {
+  --font-size-2xs: 0.75rem; /* 12px */
+  --font-size-xs: 0.875rem; /* 14px */
+  --font-size-sm: 0.9375rem; /* 15px */
+  --font-size-md: 1rem; /* 16px */
+  --font-size-lg: 1.0625rem; /* 17px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.75rem; /* 28px */
+}
+
+/* High contrast — add the `high-contrast` class to <html> (stacks with
+ * `dark`). Overrides the neutral text/border tokens (and --accent-blue,
+ * which colors links, focus rings, and filled accents) to clear WCAG AA.
+ * The remaining accents and --status-waiting are semantic/identity colors
+ * and are intentionally left unchanged so meaning is preserved. Raw hex is
+ * correct here: these are palette definitions, like the blocks above. */
+:root.high-contrast {
+  --text-primary: #000000;
+  --text-secondary: #2a2f3a;
+  --text-muted: #44495a;
+  --border-default: #6b7080;
+  --border-muted: #7d8290;
+  --accent-blue: #0a47c2;
+}
+
+:root.dark.high-contrast {
+  --text-primary: #ffffff;
+  --text-secondary: #d4d8e0;
+  --text-muted: #b8bdc9;
+  --border-default: #8a8f9e;
+  --border-muted: #6e7282;
+  --accent-blue: #8ab8ff;
+}
+
+:root.high-contrast :focus-visible {
+  outline-width: 3px;
+  outline-offset: 2px;
+}

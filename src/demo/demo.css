@@ -1,0 +1,31 @@
+/* Demo-app-only base styles. The library itself ships no global CSS besides
+ * theme.css tokens. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* The root stays at 100% (never set font-size on html — rem tokens would
+ * compound); the UI base size goes on body. */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-root);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+}
