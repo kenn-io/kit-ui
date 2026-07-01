@@ -75,6 +75,13 @@ export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab } from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadOption } from "./components/typeahead.js";
+export { default as VirtualList } from "./components/VirtualList.svelte";
+export {
+  offsetOfIndex,
+  virtualSlice,
+  type VirtualSlice,
+  type VirtualSliceInput,
+} from "./components/virtual.js";
 
 // Breakpoints
 export { BREAKPOINTS, MEDIA, type BreakpointName } from "./breakpoints.js";
