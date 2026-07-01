@@ -70,6 +70,28 @@ describe("raw-color", () => {
     expect(checkSource(src, "A.svelte", ["raw-color"])).toHaveLength(0);
   });
 
+  test("handles multiline color-mix formatting", () => {
+    const ok = svelte(`.x {
+    background: color-mix(
+      in srgb,
+      var(--accent-blue, #2563eb) 88%,
+      #000
+    );
+  }`);
+    expect(checkSource(ok, "A.svelte", ["raw-color"])).toHaveLength(0);
+
+    const bad = svelte(`.x {
+    background: color-mix(
+      in srgb,
+      #22c55e 50%,
+      #fff
+    );
+  }`);
+    const findings = checkSource(bad, "A.svelte", ["raw-color"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("color-mix");
+  });
+
   test("does not scan markup or script", () => {
     const src = svelte(`.x { color: var(--text-primary); }`, `<div data-color="#fff"></div>`);
     expect(checkSource(src, "A.svelte", ["raw-color"])).toHaveLength(0);

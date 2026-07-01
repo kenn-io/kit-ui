@@ -82,11 +82,12 @@ export function checkRawColors(source, filename) {
     const colorRe = /#[0-9a-fA-F]{3,8}\b|\brgba?\(/g;
     let match;
     while ((match = colorRe.exec(css)) !== null) {
-      const lineStart = css.lastIndexOf("\n", match.index) + 1;
-      const prefix = css.slice(lineStart, match.index);
-      // Find the innermost still-unclosed var()/color-mix() — check every
-      // occurrence, since an inner var() may have closed while the outer
-      // color-mix() is still open, and vice versa.
+      // Scan the whole prefix (not just the current line) so multiline
+      // color-mix()/var() formatting is handled. Find the innermost
+      // still-unclosed var()/color-mix() — check every occurrence, since an
+      // inner var() may have closed while the outer color-mix() is still
+      // open, and vice versa.
+      const prefix = css.slice(0, match.index);
       const fnRe = /(?:var|color-mix)\(/g;
       let fn;
       let innermostOpenFn = null;

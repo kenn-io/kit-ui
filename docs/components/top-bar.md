@@ -4,9 +4,11 @@ App header bar: reserved left/right regions, an optional centered search
 slot, and primary-nav tab buttons that **auto-collapse into a
 `SelectDropdown` by measurement** — a hidden probe always renders the full
 tab row, and the tabs collapse the moment that row would no longer fit next
-to the side regions. No app-specific breakpoints; because the probe never
-collapses, the decision depends only on available width and cannot
-oscillate.
+to the side regions. No app-specific breakpoints. Snippets may legitimately
+shrink when `collapsed` flips (hide labels, etc.); the bar records the width
+the expanded content needed at the moment it collapsed and only re-expands
+once the bar actually reaches it, so adaptive snippets can't set up a
+collapse/expand loop.
 
 Consolidated from middleman's `AppHeader` (centered tab group, tabs →
 dropdown when narrow) and agentsview's `AppHeader` (nav next to the brand,
@@ -45,10 +47,10 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `tabs` | `TopBarTab[]` | `[]` | `{ id, label, disabled? }`; omit for a tabless bar |
-| `active` | `string` (bindable) | `""` | Active tab id |
+| `active` | `string` (bindable) | `""` | Active tab id. Unset/unknown values render as the first tab in both expanded and collapsed modes |
 | `onchange` | `(id: string) => void` | — | Fires on tab/dropdown selection |
 | `collapsed` | `boolean` (bindable) | `false` | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label) |
-| `centerTabs` | `boolean` | `false` | Center the tab group between the regions (middleman style) instead of packing after `left` |
+| `centerTabs` | `boolean` | `false` | Center the expanded tab group **in the free space between the reserved regions** (middleman style; not viewport-centered). The collapsed dropdown always packs after `left` |
 | `ariaLabel` | `string` | `"Primary"` | Label for the nav / collapsed dropdown |
 | `left` | `Snippet` | — | Reserved leading region: brand, sidebar toggle, context pickers |
 | `search` | `Snippet` | — | Centered flexible slot, e.g. a command-palette trigger |

@@ -47,8 +47,11 @@ export function getFlashMessage(): string | null {
 
 /** Dismiss one flash by id, or every flash when called without one.
  * Non-number arguments dismiss everything too, so the pre-stacking usage
- * `onclick={dismissFlash}` (which passes the event) keeps working. */
-export function dismissFlash(id?: number): void {
+ * `onclick={dismissFlash}` (which passes the event) keeps working — the
+ * unknown overload makes that legal under strict TypeScript as well. */
+export function dismissFlash(id?: number): void;
+export function dismissFlash(event: unknown): void;
+export function dismissFlash(id?: unknown): void {
   if (typeof id !== "number") {
     for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();

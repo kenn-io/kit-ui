@@ -39,8 +39,10 @@ dismissFlash();                          // programmatic dismiss
 | `getFlashMessage(): string \| null` | Reactive read of just the latest text |
 | `dismissFlash(id?)` | Dismiss one flash by id; with no argument (or a non-number, so `onclick={dismissFlash}` works) dismisses all |
 
-At most **5** flashes show at once — bursts drop the oldest so the stack
-can't run off-screen. Long messages wrap at the stack's max-width; unbroken
+At most **5** flashes show at once — bursts drop the oldest to bound stack
+growth — and the stack itself caps at the viewport height and scrolls
+internally, so dismiss buttons stay reachable even when long wrapped
+messages exceed that. Long messages wrap at the stack's max-width; unbroken
 tokens break rather than overflow.
 
 Concurrent flashes stack below each other in show order and read as a single

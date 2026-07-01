@@ -51,11 +51,15 @@
     align-items: stretch;
     width: max-content;
     max-width: min(480px, calc(100vw - 32px));
+    /* Long wrapped messages can outgrow the count cap — scroll inside the
+     * card rather than pushing dismiss buttons off-screen. */
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
-    overflow: hidden;
+    overflow-x: hidden;
   }
 
   .kit-flash-banner {

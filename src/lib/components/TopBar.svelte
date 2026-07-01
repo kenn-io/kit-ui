@@ -60,6 +60,14 @@
     })),
   );
 
+  // Rendered active id: an unset/unknown `active` falls back to the first
+  // tab in BOTH modes (SelectDropdown already displays the first option for
+  // unmatched values — the expanded buttons match that instead of showing
+  // no active tab).
+  const effectiveActive = $derived(
+    tabs.some((tab) => tab.id === active) ? active : (tabs[0]?.id ?? ""),
+  );
+
   function select(id: string): void {
     active = id;
     onchange?.(id);
@@ -67,9 +75,17 @@
 
   // Auto-collapse by measurement, not by breakpoint: a hidden probe always
   // renders the full tab row, and the tabs collapse into a SelectDropdown
-  // whenever that row would not fit next to the side regions. Because the
-  // probe never collapses, the decision only depends on available width —
-  // it cannot oscillate.
+  // whenever that row would not fit next to the side regions.
+  //
+  // Snippets are allowed to shrink when `collapsed` flips (the documented
+  // bind:collapsed pattern), which could otherwise oscillate: collapsing
+  // frees width, the shrunken bar measures as fitting, re-expands, and so
+  // on. `expandThreshold` breaks the loop — it records the bar width the
+  // *expanded* content needed at the moment of collapse, and re-expansion
+  // requires the bar to actually reach it. A repeated collapse can only
+  // raise the threshold, so the state settles.
+  let expandThreshold = 0;
+
   function measure(): void {
     if (!barEl || !probeEl || tabs.length === 0) return;
     const styles = getComputedStyle(barEl);
@@ -85,8 +101,15 @@
       }
     }
     used += gap * (regions - 1);
-    const next = probeEl.offsetWidth > barEl.clientWidth - used;
-    if (next !== collapsed) collapsed = next;
+    const needed = used + probeEl.offsetWidth;
+    if (!collapsed) {
+      if (needed > barEl.clientWidth) {
+        expandThreshold = needed;
+        collapsed = true;
+      }
+    } else if (barEl.clientWidth >= Math.max(expandThreshold, needed)) {
+      collapsed = false;
+    }
   }
 
   $effect(() => {
@@ -108,15 +131,18 @@
   {/if}
 
   {#if tabs.length > 0}
+    <!-- Centering only applies to the expanded tab group; the collapsed
+         dropdown packs next to the left region (a lone centered select
+         floats oddly in the empty middle). -->
     <nav
       class="kit-top-bar__nav"
-      class:kit-top-bar__nav--center={centerTabs}
+      class:kit-top-bar__nav--center={centerTabs && !collapsed}
       aria-label={ariaLabel}
     >
       {#if collapsed}
         <SelectDropdown
           class="kit-top-bar__nav-select"
-          value={active}
+          value={effectiveActive}
           {options}
           onchange={select}
           title={ariaLabel}
@@ -127,9 +153,9 @@
             <button
               type="button"
               class="kit-top-bar__tab"
-              class:active={tab.id === active}
+              class:active={tab.id === effectiveActive}
               disabled={tab.disabled}
-              aria-current={tab.id === active ? "page" : undefined}
+              aria-current={tab.id === effectiveActive ? "page" : undefined}
               onclick={() => select(tab.id)}
             >
               {tab.label}
@@ -198,8 +224,12 @@
     min-width: 0;
   }
 
+  /* "Centered" means centered in the free space between the reserved
+   * regions: the nav takes all remaining width and centers its content.
+   * (Competing auto margins would split the space unevenly instead.) */
   .kit-top-bar__nav--center {
-    margin-inline: auto;
+    flex: 1 1 0;
+    justify-content: center;
   }
 
   /* Centered search slot; wins the flexible space when present. */
