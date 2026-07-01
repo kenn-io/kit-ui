@@ -9,16 +9,21 @@
     value?: string;
     placeholder?: string;
     size?: TextInputSize;
+    invalid?: boolean;
     disabled?: boolean;
+    readonly?: boolean;
     /** Stretch to the container width. */
     block?: boolean;
     /** Focus the input when it mounts. */
     autofocus?: boolean;
+    id?: string;
+    name?: string;
     ariaLabel?: string;
     /** Shortcut hint rendered as a KbdBadge while the field is empty,
      * e.g. ["⌘", "K"]. */
     keys?: string[];
     oninput?: (value: string) => void;
+    onchange?: (value: string) => void;
     onkeydown?: (event: KeyboardEvent) => void;
     /** Fires after the clear button or Escape empties the field. */
     onclear?: () => void;
@@ -30,22 +35,33 @@
     value = $bindable(""),
     placeholder = "Search…",
     size = "md",
+    invalid = false,
     disabled = false,
+    readonly = false,
     block = false,
     autofocus = false,
+    id = undefined,
+    name = undefined,
     ariaLabel = "Search",
     keys = undefined,
     oninput = undefined,
+    onchange = undefined,
     onkeydown = undefined,
     onclear = undefined,
     clearLabel = "Clear search",
     class: className = "",
   }: Props = $props();
 
+  let inputEl = $state<HTMLInputElement>();
+
   function clear(): void {
+    if (disabled || readonly) return;
     value = "";
     oninput?.("");
     onclear?.();
+    // The clear button unmounts once the value empties — return focus to
+    // the field so keyboard users don't get dropped.
+    inputEl?.focus();
   }
 
   function handleKeydown(event: KeyboardEvent): void {
@@ -60,14 +76,20 @@
 
 <TextInput
   bind:value
+  bind:inputEl
   type="search"
   {placeholder}
   {size}
+  {invalid}
   {disabled}
+  {readonly}
   {block}
   {autofocus}
+  {id}
+  {name}
   {ariaLabel}
   {oninput}
+  {onchange}
   onkeydown={handleKeydown}
   class={["kit-search-input", className].filter(Boolean).join(" ")}
 >
@@ -79,7 +101,7 @@
     />
   {/snippet}
   {#snippet suffix()}
-    {#if value !== ""}
+    {#if value !== "" && !disabled && !readonly}
       <button
         class="kit-search-input__clear"
         type="button"

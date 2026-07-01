@@ -218,6 +218,11 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(0);
   });
 
+  test("icon button: single quotes match, suffixed names don't", () => {
+    const src = `<button class='icon-btn'></button>\n<style>.icon-button-group { display: flex; }</style>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(1);
+  });
+
   test("top bar: app-header class and region selectors", () => {
     const src = svelte(
       `.header-left { display: flex; }`,

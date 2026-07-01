@@ -23,6 +23,11 @@
     disabled?: boolean;
     /** For menu/popover triggers. */
     ariaExpanded?: boolean;
+    /** For menu/popover triggers: the kind of popup (e.g. "menu", "dialog",
+     * true). */
+    ariaHaspopup?: "menu" | "listbox" | "dialog" | "grid" | "tree" | boolean;
+    /** id of the element this button controls (pairs with ariaExpanded). */
+    ariaControls?: string;
     /** For toggle buttons — `true` renders the pressed (inset) look. */
     ariaPressed?: boolean;
     type?: "button" | "submit" | "reset";
@@ -39,6 +44,8 @@
     tone = "neutral",
     disabled = false,
     ariaExpanded = undefined,
+    ariaHaspopup = undefined,
+    ariaControls = undefined,
     ariaPressed = undefined,
     type = "button",
     onclick = undefined,
@@ -59,6 +66,8 @@
   title={title ?? ariaLabel}
   aria-label={ariaLabel}
   aria-expanded={ariaExpanded}
+  aria-haspopup={ariaHaspopup}
+  aria-controls={ariaControls}
   aria-pressed={ariaPressed}
   {onclick}
 >

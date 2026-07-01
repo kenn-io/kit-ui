@@ -34,6 +34,8 @@
     prefix?: Snippet;
     /** Trailing adornment inside the border (icon, clear button, kbd). */
     suffix?: Snippet;
+    /** The underlying input element (bindable) — for focus management. */
+    inputEl?: HTMLInputElement;
     class?: string;
   }
 
@@ -56,6 +58,7 @@
     onkeydown = undefined,
     prefix = undefined,
     suffix = undefined,
+    inputEl = $bindable(undefined),
     class: className = "",
   }: Props = $props();
 
@@ -87,6 +90,7 @@
     <span class="kit-text-input__adornment">{@render prefix()}</span>
   {/if}
   <input
+    bind:this={inputEl}
     class="kit-text-input__control"
     {type}
     {value}

@@ -30,7 +30,7 @@
 
 <DemoSection
   title="Mode"
-  description="Persisted light/dark/system preference. System mode follows the OS via matchMedia and updates live. This demo drives the real <html> class, so the whole gallery retints (the sidebar toggle flips the same class directly)."
+  description="Persisted light/dark/system preference. System mode follows the OS via matchMedia and updates live. This demo drives the real <html> class through the store, so the whole gallery retints — the sidebar's ThemeToggle reads the same store and stays in sync."
   code={`import { initTheme, getThemeMode, setThemeMode } from "@kenn-io/kit-ui";
 
 initTheme(); // once, at app startup

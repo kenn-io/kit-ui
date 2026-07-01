@@ -35,7 +35,8 @@ with content, and an optional shortcut hint while empty.
 | `autocomplete` | `string` | — | |
 | `oninput` / `onchange` | `(value: string) => void` | — | Called with the new value |
 | `onkeydown` | `(event: KeyboardEvent) => void` | — | |
-| `prefix` / `suffix` | `Snippet` | — | Adornments inside the border (icon, unit, kbd, button) |
+| `prefix` / `suffix` | `Snippet` | — | Adornments inside the border (icon, unit, kbd, button). Interactive suffix actions must handle `disabled` themselves — the wrapper only dims |
+| `inputEl` | `HTMLInputElement` (bindable) | — | The underlying input, for focus management |
 | `class` | `string` | `""` | |
 
 Focus renders as an `--accent-blue` border on the wrapper
@@ -45,7 +46,10 @@ wrapper owns the clear affordance.
 
 ## SearchInput props
 
-Everything sizing/state-related above, plus:
+Forwarded from TextInput: `value`, `placeholder`, `size`, `invalid`,
+`disabled`, `readonly`, `block`, `autofocus`, `id`, `name`, `ariaLabel`
+(default `"Search"`), `oninput`, `onchange`, `onkeydown`. (`type`,
+`prefix`, and `suffix` are owned by SearchInput.) Plus:
 
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
@@ -53,9 +57,12 @@ Everything sizing/state-related above, plus:
 | `onclear` | `() => void` | — | After the clear button or Escape empties the field |
 | `clearLabel` | `string` | `"Clear search"` | Clear button label |
 
-Escape with content clears the field and **stops propagation** — so a
-search-in-modal clears before the modal's own Escape-to-close fires; a
-second Escape reaches the modal.
+Clearing behavior: the clear button only renders with content on an
+enabled, non-readonly field (disabled fields can't be mutated through it),
+and clearing — by click or Escape — returns focus to the input so keyboard
+users aren't dropped when the button unmounts. Escape with content clears
+and **stops propagation** — a search-in-modal clears before the modal's
+Escape-to-close fires; a second Escape reaches the modal.
 
 ## Where NOT to use it
 

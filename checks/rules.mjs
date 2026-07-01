@@ -294,8 +294,9 @@ export function checkHandRolledTopBar(source) {
  * kit-icon-button is exempt. */
 export function checkHandRolledIconButton(source) {
   const findings = [];
+  // (?!-) keeps suffixed names like .icon-button-group from matching.
   const re =
-    /class="[^"]*(?<!kit-)\bicon-(?:btn|button)\b|\.(?<!kit-)icon-(?:btn|button)\b/g;
+    /class=["'][^"']*(?<!kit-)\bicon-(?:btn|button)(?!-)\b|\.(?<!kit-)icon-(?:btn|button)(?!-)\b/g;
   let match;
   while ((match = re.exec(source)) !== null) {
     findings.push({

@@ -19,12 +19,14 @@ kept hand-rolling (`.icon-btn`). Transparent at rest, surface tint on hover,
 
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `ariaLabel` | `string` | required | Accessible name; also the tooltip unless `title` is set |
-| `title` | `string` | `ariaLabel` | Hover tooltip override |
+| `ariaLabel` | `string` | required | Accessible name; also the native `title` unless overridden |
+| `title` | `string` | `ariaLabel` | Native title — **mouse-hover only** (no keyboard/touch affordance). Wrap in [Tooltip](tooltip.md) or use visible text when the icon's meaning isn't conventional |
 | `size` | `"sm" \| "md"` | `"md"` | 24px / 28px square (a size-13/14 icon fits both) |
 | `tone` | `"neutral" \| "success" \| "danger" \| "info" \| "workflow"` | `"neutral"` | Accent applied on hover + pressed; rest state stays muted |
 | `disabled` | `boolean` | `false` | |
-| `ariaExpanded` | `boolean` | — | For menu/popover triggers |
+| `ariaExpanded` | `boolean` | — | Expanded state for menu/popover triggers |
+| `ariaHaspopup` | `"menu" \| "listbox" \| "dialog" \| "grid" \| "tree" \| boolean` | — | Popup kind for menu/popover triggers |
+| `ariaControls` | `string` | — | id of the controlled element (pairs with `ariaExpanded`) |
 | `ariaPressed` | `boolean` | — | For toggles; `true` renders the inset pressed look |
 | `type` | `"button" \| "submit" \| "reset"` | `"button"` | |
 | `onclick` | `(event: MouseEvent) => void` | — | |

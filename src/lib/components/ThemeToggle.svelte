@@ -18,9 +18,12 @@
     lightLabel?: string;
     darkLabel?: string;
     systemLabel?: string;
-    /** aria-label template for the cycle button; `{mode}` is replaced with
-     * the current mode's label. */
+    /** aria-label template for the cycle button; `{mode}` and `{nextMode}`
+     * are replaced with the current/next mode's labels. Action-oriented by
+     * default so users know pressing it changes the theme. */
     cycleLabel?: string;
+    /** Group label for the segmented variant's radiogroup. */
+    ariaLabel?: string;
     /** Segmented variant only: stretch to the container width. */
     block?: boolean;
     class?: string;
@@ -32,7 +35,8 @@
     lightLabel = "Light",
     darkLabel = "Dark",
     systemLabel = "System",
-    cycleLabel = "Theme: {mode}",
+    cycleLabel = "Change theme (current: {mode})",
+    ariaLabel = "Theme mode",
     block = false,
     class: className = "",
   }: Props = $props();
@@ -41,15 +45,25 @@
   // sync however the mode changes (another toggle instance, app code).
   const mode = $derived(getThemeMode());
 
-  const modeLabel = $derived(
-    mode === "light" ? lightLabel : mode === "dark" ? darkLabel : systemLabel,
-  );
-
   const CYCLE: Record<ThemeMode, ThemeMode> = {
     light: "dark",
     dark: "system",
     system: "light",
   };
+
+  function labelOf(themeMode: ThemeMode): string {
+    return themeMode === "light"
+      ? lightLabel
+      : themeMode === "dark"
+        ? darkLabel
+        : systemLabel;
+  }
+
+  const cycleAriaLabel = $derived(
+    cycleLabel
+      .replace("{mode}", labelOf(mode))
+      .replace("{nextMode}", labelOf(CYCLE[mode])),
+  );
 
   const options = $derived([
     { value: "light", label: lightLabel },
@@ -63,6 +77,7 @@
     class={className}
     {options}
     {block}
+    {ariaLabel}
     value={mode}
     onchange={(value) => setThemeMode(value as ThemeMode)}
   />
@@ -70,7 +85,7 @@
   <IconButton
     class={className}
     {size}
-    ariaLabel={cycleLabel.replace("{mode}", modeLabel)}
+    ariaLabel={cycleAriaLabel}
     onclick={() => setThemeMode(CYCLE[mode])}
   >
     {#if mode === "light"}

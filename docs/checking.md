@@ -35,7 +35,7 @@ Scans `.svelte` and `.css` files; skips `node_modules`, `dist`, `build`,
 | `hand-rolled-tooltip` | `role="tooltip"` markup | `Tooltip` |
 | `hand-rolled-status-bar` | `status-bar` classes/selectors (`kit-status-bar` exempt) | `StatusBar` |
 | `hand-rolled-empty-state` | `empty-state` classes/selectors (`kit-empty-state` exempt) | `EmptyState` |
-| `hand-rolled-icon-button` | `icon-btn` / `icon-button` classes/selectors | `IconButton` |
+| `hand-rolled-icon-button` | `icon-btn` / `icon-button` classes/selectors (single/double-quoted `class=` and CSS selectors; suffixed names like `icon-button-group` are exempt; dynamic `class:` directives aren't seen) | `IconButton` |
 | `hand-rolled-top-bar` | `app-header` / `header-left` / `header-right` classes/selectors | `TopBar` |
 | `nonstandard-spacing` | `gap` values off the spacing ladder (0/1px hairlines exempt) | `var(--space-1…8)` ([theming](theming.md#spacing)) |
 | `pinned-root-font-size` | px `font-size` on `html`/`:root` | leave the root at 100% — it defeats the rem type scale ([theming](theming.md#typography)) |
