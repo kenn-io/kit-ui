@@ -309,6 +309,26 @@ export function checkHandRolledIconButton(source) {
   return findings;
 }
 
+/** Hand-rolled code-block cards duplicate CodeBlock. Matches the
+ * .code-block class both apps converged on (a pre wrapper with copy
+ * button + language label); kit-code-block is exempt. */
+export function checkHandRolledCodeBlock(source) {
+  const findings = [];
+  // (?!-) keeps suffixed names like .code-block-list from matching.
+  const re =
+    /class=["'][^"']*(?<!kit-)\bcode-block(?!-)\b|\.(?<!kit-)code-block(?!-)\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-code-block",
+      line: lineOfIndex(source, match.index),
+      message:
+        "code-block markup — use CodeBlock from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled empty/placeholder states duplicate EmptyState. */
 export function checkHandRolledEmptyState(source) {
   const findings = [];
@@ -435,6 +455,7 @@ export const ALL_RULES = {
   "hand-rolled-table-sort": checkHandRolledTableSort,
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
+  "hand-rolled-code-block": checkHandRolledCodeBlock,
   "hand-rolled-empty-state": checkHandRolledEmptyState,
   "hand-rolled-icon-button": checkHandRolledIconButton,
   "hand-rolled-top-bar": checkHandRolledTopBar,

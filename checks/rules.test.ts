@@ -223,6 +223,19 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(1);
   });
 
+  test("code block: class and CSS selector", () => {
+    const src = svelte(
+      `.code-block { position: relative; }`,
+      `<div class="code-block"><pre>x</pre></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-code-block"])).toHaveLength(2);
+  });
+
+  test("code block: does not match kit-code-block or suffixed names", () => {
+    const src = `<div class="kit-code-block"></div>\n<style>.code-block-list { gap: 4px; }</style>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-code-block"])).toHaveLength(0);
+  });
+
   test("top bar: app-header class and region selectors", () => {
     const src = svelte(
       `.header-left { display: flex; }`,

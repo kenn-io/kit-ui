@@ -5,6 +5,7 @@ export { default as Calendar } from "./components/Calendar.svelte";
 export { default as Chip } from "./components/Chip.svelte";
 export type { ChipSize, ChipTone } from "./components/Chip.svelte";
 export { default as ChipStack } from "./components/ChipStack.svelte";
+export { default as CodeBlock } from "./components/CodeBlock.svelte";
 export { default as CollapsibleSidebar } from "./components/CollapsibleSidebar.svelte";
 export { default as ColorLabel } from "./components/ColorLabel.svelte";
 export type { ColorLabelSize } from "./components/ColorLabel.svelte";
@@ -25,6 +26,7 @@ export { default as FlashBanner } from "./components/FlashBanner.svelte";
 export { default as IconButton } from "./components/IconButton.svelte";
 export type { IconButtonSize, IconButtonTone } from "./components/IconButton.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
+export { default as Markdown } from "./components/Markdown.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
 export { default as RangePicker } from "./components/RangePicker.svelte";
@@ -140,6 +142,15 @@ export {
   type ShortcutManager,
   type ShortcutOptions,
 } from "./utils/shortcuts.js";
+export {
+  codeFenceLanguage,
+  createMarkdownRenderer,
+  highlightCode,
+  renderMarkdown,
+  renderMarkdownSync,
+  type MarkdownRenderer,
+  type MarkdownRendererOptions,
+} from "./utils/markdown.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export {
   floatingPopoverStyle,

@@ -46,6 +46,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Calendar](docs/components/calendar.md) | new (RangePicker's month grid) | Single-month date grid with range highlight and month paging |
 | [Chip](docs/components/chip.md) | middleman `Chip` | Status/label badge, optionally interactive |
 | [ChipStack](docs/components/chip-stack.md) | new (middleman mobile-view pattern) | Collapsing chip/button row with "+N" expansion |
+| [CodeBlock](docs/components/code-block.md) | both (consolidated) | Standalone code card: shiki dual-theme highlighting, line numbers, wrap toggle, copy |
 | [CollapsibleSidebar](docs/components/collapsible-sidebar.md) | middleman | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`) |
 | [ColorLabel](docs/components/color-label.md) | middleman `GitHubLabels` | Hex-colored pill with WCAG contrast-picked text |
 | [CommandPalette](docs/components/command-palette.md) | new | ⌘K overlay: filtered commands, sections, recents; pairs with the shortcut system |
@@ -59,6 +60,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [FlashBanner](docs/components/flash-banner.md) | middleman | Transient toast banner driven by the `showFlash` store |
 | [IconButton](docs/components/icon-button.md) | both (hand-rolled `.icon-btn`) | Square ghost button for a lone icon, required aria-label |
 | [KbdBadge](docs/components/kbd-badge.md) | middleman | Keyboard-shortcut badge, hidden on touch devices |
+| [Markdown](docs/components/code-block.md) | both (consolidated) | Sanitized GFM rendering with highlighted fences and app-extension hooks |
 | [Modal](docs/components/modal.md) | both (consolidated) | Dialog primitive: overlay, header, body, footer snippet |
 | [RangePicker](docs/components/range-picker.md) | agentsview | Relative / calendar / custom date-range popover with `resolveRange()` |
 | [RefreshControl](docs/components/refresh-control.md) | agentsview | Refresh button + "Updated Xm ago" label with auto-refresh |
@@ -81,7 +83,11 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 
 Also exported: the [keyboard shortcut system](docs/components/command-palette.md#shortcut-system-utilsshortcuts)
 (`appShortcuts`/`initShortcuts`/`formatShortcutKeys` — combo parsing,
-platform `mod`, scope stacking), [utilities](docs/utilities.md) (`copyToClipboard`,
+platform `mod`, scope stacking), the
+[markdown pipeline](docs/components/code-block.md#pipeline-utilsmarkdown)
+(`renderMarkdown`/`createMarkdownRenderer`/`highlightCode` — marked →
+shiki → DOMPurify; peers `marked@^18`/`shiki@^4`/`dompurify@^3`),
+[utilities](docs/utilities.md) (`copyToClipboard`,
 `formatRelativeTime`, `formatTimestamp`, `truncate`, `createRefreshScheduler`,
 `floatingPopoverStyle`, `formatDuration`/`formatTokenCount`/`formatCost`,
 `debounce`, `hashColor`), the [theme store](docs/theming.md#theme-store)

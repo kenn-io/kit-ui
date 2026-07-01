@@ -34,6 +34,7 @@ Scans `.svelte` and `.css` files; skips `node_modules`, `dist`, `build`,
 | `hand-rolled-table-sort` | `aria-sort=` on custom headers | `Table` + `TableHeaderCell` |
 | `hand-rolled-tooltip` | `role="tooltip"` markup | `Tooltip` |
 | `hand-rolled-status-bar` | `status-bar` classes/selectors (`kit-status-bar` exempt) | `StatusBar` |
+| `hand-rolled-code-block` | `code-block` classes/selectors (`kit-code-block` exempt; suffixed names like `code-block-list` too) | `CodeBlock` |
 | `hand-rolled-empty-state` | `empty-state` classes/selectors (`kit-empty-state` exempt) | `EmptyState` |
 | `hand-rolled-icon-button` | `icon-btn` / `icon-button` classes/selectors (single/double-quoted `class=` and CSS selectors; suffixed names like `icon-button-group` are exempt; dynamic `class:` directives aren't seen) | `IconButton` |
 | `hand-rolled-top-bar` | `app-header` / `header-left` / `header-right` classes/selectors | `TopBar` |
@@ -86,6 +87,8 @@ everything and aren't repeated per row.
 | Tooltip | `hand-rolled-tooltip` |
 | StatusBar | `hand-rolled-status-bar` |
 | EmptyState | `hand-rolled-empty-state` |
+| CodeBlock | `hand-rolled-code-block` |
+| Markdown / markdown pipeline | no rule — markdown rendering call sites have no stable markup signature; direct `marked`/`DOMPurify` imports in app code are found in review (the dependency is the tell) |
 | IconButton | `hand-rolled-icon-button` |
 | TopBar | `hand-rolled-top-bar` |
 | Button, Chip, ChipStack | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift |

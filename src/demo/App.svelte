@@ -5,6 +5,7 @@
   import CalendarDemo from "./pages/CalendarDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
+  import CodeBlockDemo from "./pages/CodeBlockDemo.svelte";
   import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
   import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
@@ -16,6 +17,7 @@
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
   import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
+  import MarkdownDemo from "./pages/MarkdownDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
@@ -56,6 +58,7 @@
     { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
+    { id: "code-block", label: "CodeBlock", component: CodeBlockDemo },
     { id: "color-label", label: "ColorLabel", component: ColorLabelDemo },
     { id: "command-palette", label: "CommandPalette", component: CommandPaletteDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },
@@ -67,6 +70,7 @@
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
     { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
+    { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "range-picker", label: "RangePicker", component: RangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
