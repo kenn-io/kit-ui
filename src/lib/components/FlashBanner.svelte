@@ -15,7 +15,7 @@
 {#if flashes.length > 0}
   <!-- width: max-content on the stack + width: 100% on each banner makes
        the widest message set the width for all of them. -->
-  <div class="kit-flash-stack" style:top>
+  <div class="kit-flash-stack" style:top style:--kit-flash-top={top}>
     {#each flashes as flash (flash.id)}
       <div class="kit-flash-banner" role="status">
         <span class="kit-flash-banner__text">{flash.message}</span>
@@ -52,8 +52,10 @@
     width: max-content;
     max-width: min(480px, calc(100vw - 32px));
     /* Long wrapped messages can outgrow the count cap — scroll inside the
-     * card rather than pushing dismiss buttons off-screen. */
-    max-height: calc(100vh - 96px);
+     * card rather than pushing dismiss buttons off-screen. Sized from the
+     * actual `top` offset (mirrored into the custom property) plus a
+     * matching bottom margin. */
+    max-height: calc(100vh - var(--kit-flash-top, 44px) - 52px);
     overflow-y: auto;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);

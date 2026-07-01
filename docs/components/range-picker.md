@@ -43,7 +43,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `busy` | `boolean` | `false` | Dims the trigger while data reloads |
 | `earliestDate` | `string \| null` | `null` | Earliest data date; anchors the "All" preset |
 | `align` | `"left" \| "right"` | `"left"` | Popover edge alignment |
-| `maxDate` | `string \| null` | `null` | Later dates disabled in the calendar grid; month paging into fully-later months blocked |
+| `maxDate` | `string \| null` | `null` | Later dates disabled in the calendar grid; month paging into fully-later months blocked. Note: a week/month period *containing* `maxDate` still resolves to its full bounds, so `to` can exceed `maxDate` — clamp on the consumer side if your backend rejects future bounds |
 | `block` | `boolean` | `false` | Trigger/panel stretch to the container width |
 | `presets` | `RangePreset[]` | `DEFAULT_RANGE_PRESETS` | Relative pills (`{ label, longLabel, days }`; `days <= 0` = all-time) |
 | `relativeTabLabel` / `calendarTabLabel` / `customTabLabel` | `string` | `"Relative"` / `"Calendar"` / `"Custom"` | Tab labels |
@@ -54,7 +54,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `fromLabel` / `toLabel` | `string` | `"From"` / `"To"` | Custom tab field labels |
 | `dialogLabel` | `string` | `"Select date range"` | Popover `aria-label` |
 | `relativeGroupLabel` / `calendarGroupLabel` | `string` | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s |
-| `previousMonthLabel` / `nextMonthLabel` | `string` | `"Previous month"` / `"Next month"` | Calendar month-arrow `aria-label`s |
+| `previousMonthLabel` / `nextMonthLabel` | `string` | `"Previous month"` / `"Next month"` | Calendar month-arrow `aria-label`s. The pre-Calendar names `previousPeriodLabel` / `nextPeriodLabel` still work as deprecated aliases |
 
 Date labels on the trigger/stepper format with the browser locale via
 `toLocaleDateString`.

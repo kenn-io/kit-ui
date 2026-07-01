@@ -156,7 +156,7 @@
     align-items: center;
     gap: var(--space-3);
     width: max-content;
-    min-width: 300px;
+    min-width: min(300px, 100%);
     max-width: 100%;
     padding: var(--space-2) var(--space-4);
     background: var(--bg-surface);

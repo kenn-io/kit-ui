@@ -50,6 +50,11 @@
     calendarGroupLabel?: string;
     previousMonthLabel?: string;
     nextMonthLabel?: string;
+    /** @deprecated Use `previousMonthLabel` (renamed when the day stepper
+     * became a month-paged Calendar). */
+    previousPeriodLabel?: string;
+    /** @deprecated Use `nextMonthLabel`. */
+    nextPeriodLabel?: string;
   }
 
   let {
@@ -75,8 +80,10 @@
     dialogLabel = "Select date range",
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
-    previousMonthLabel = "Previous month",
-    nextMonthLabel = "Next month",
+    previousPeriodLabel = undefined,
+    nextPeriodLabel = undefined,
+    previousMonthLabel = previousPeriodLabel ?? "Previous month",
+    nextMonthLabel = nextPeriodLabel ?? "Next month",
   }: Props = $props();
 
   let open = $state(false);

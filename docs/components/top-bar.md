@@ -26,7 +26,7 @@ centered ⌘K search trigger, icon-button cluster on the right).
   let active = $state("activity");
 </script>
 
-<TopBar {tabs} bind:active centerTabs onchange={(id) => navigate(id)}>
+<TopBar {tabs} bind:active onchange={(id) => navigate(id)}>
   {#snippet left()}
     <Brand />
     <SelectDropdown value={repo} options={repoOptions} onchange={setRepo} />
@@ -47,10 +47,10 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `tabs` | `TopBarTab[]` | `[]` | `{ id, label, disabled? }`; omit for a tabless bar |
-| `active` | `string` (bindable) | `""` | Active tab id. Unset/unknown values render as the first tab in both expanded and collapsed modes |
+| `active` | `string` (bindable) | `""` | Active tab id. Unset/unknown values render as the first **enabled** tab in both expanded and collapsed modes |
 | `onchange` | `(id: string) => void` | — | Fires on tab/dropdown selection |
 | `collapsed` | `boolean` (bindable) | `false` | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label) |
-| `centerTabs` | `boolean` | `false` | Center the expanded tab group **in the free space between the reserved regions** (middleman style; not viewport-centered). The collapsed dropdown always packs after `left` |
+| `centerTabs` | `boolean` | `false` | Center the expanded tab group **in the free space between the reserved regions** (middleman style; not viewport-centered). Ignored when a `search` snippet is present — search owns the flexible middle. The collapsed dropdown always packs after `left` |
 | `ariaLabel` | `string` | `"Primary"` | Label for the nav / collapsed dropdown |
 | `left` | `Snippet` | — | Reserved leading region: brand, sidebar toggle, context pickers |
 | `search` | `Snippet` | — | Centered flexible slot, e.g. a command-palette trigger |
@@ -65,8 +65,10 @@ centered ⌘K search trigger, icon-button cluster on the right).
   out, the tabs collapse first, so whatever the app reserves left/right
   keeps its footprint. Keep those regions lean at small widths (icon
   buttons); use `bind:collapsed` to drop labels when the bar is tight.
-- The `search` slot takes the flexible middle (`margin-inline: auto`); with
-  `centerTabs` and no search, the tab group centers instead.
+- Exactly one region owns the flexible middle: the `search` slot when
+  present (`margin-inline: auto`), otherwise the tab group when
+  `centerTabs` is set. Combining both would fight over the slack, so
+  `centerTabs` is ignored while a `search` snippet exists.
 
 ## Accessibility
 

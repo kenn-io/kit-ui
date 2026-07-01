@@ -52,8 +52,27 @@ conditionally; it autofocuses on mount by default.
 | `previousLabel` / `nextLabel` | `string` | `"Previous match"` / `"Next match"` | Arrow tooltips + `aria-label`s |
 | `closeLabel` | `string` | `"Close"` | |
 
-The prev/next buttons disable while there are no matches. The bar renders as
-a floating card (border + radius + shadow, browser cmd-F style) that the app
-positions — typically `position: absolute` in the top-right corner of the
-searched region. The card border carries focus (blue) and no-match (red)
-states; the slide-down animation is disabled under `prefers-reduced-motion`.
+The prev/next buttons disable while there are no matches. The card border
+carries focus (blue) and no-match (red) states; the slide-down animation is
+disabled under `prefers-reduced-motion`.
+
+## Placement contract
+
+The bar renders as a floating card (border + radius + shadow, browser cmd-F
+style) but does **not** position itself — the app owns placement and
+stacking:
+
+```svelte
+<div class="pane">          <!-- position: relative -->
+  {#if findOpen}
+    <div class="pane__find"> <!-- position: absolute; top: 8px; right: 8px; z-index: … -->
+      <FindBar … />
+    </div>
+  {/if}
+  …searched content…
+</div>
+```
+
+Pick a `z-index` above the searched content but below app overlays
+(modals/drawers). The card is `min-width: min(300px, 100%)` — in containers
+narrower than 300px it shrinks to fit instead of overflowing.

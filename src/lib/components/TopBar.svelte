@@ -61,11 +61,14 @@
   );
 
   // Rendered active id: an unset/unknown `active` falls back to the first
-  // tab in BOTH modes (SelectDropdown already displays the first option for
-  // unmatched values — the expanded buttons match that instead of showing
-  // no active tab).
+  // enabled tab in BOTH modes (SelectDropdown already displays a fallback
+  // for unmatched values — the expanded buttons match that instead of
+  // showing no active tab, and a disabled tab is never presented as
+  // current).
   const effectiveActive = $derived(
-    tabs.some((tab) => tab.id === active) ? active : (tabs[0]?.id ?? ""),
+    tabs.some((tab) => tab.id === active)
+      ? active
+      : (tabs.find((tab) => !tab.disabled)?.id ?? tabs[0]?.id ?? ""),
   );
 
   function select(id: string): void {
@@ -80,11 +83,12 @@
   // Snippets are allowed to shrink when `collapsed` flips (the documented
   // bind:collapsed pattern), which could otherwise oscillate: collapsing
   // frees width, the shrunken bar measures as fitting, re-expands, and so
-  // on. `expandThreshold` breaks the loop — it records the bar width the
-  // *expanded* content needed at the moment of collapse, and re-expansion
-  // requires the bar to actually reach it. A repeated collapse can only
-  // raise the threshold, so the state settles.
-  let expandThreshold = 0;
+  // on. `expandUsed` breaks the loop — it freezes the side-region footprint
+  // the *expanded* content needed at the moment of collapse, and
+  // re-expansion requires the bar to fit that plus the CURRENT probe width.
+  // The probe never changes with collapse state, so tab/label changes made
+  // while collapsed still raise or lower the requirement correctly.
+  let expandUsed = 0;
 
   function measure(): void {
     if (!barEl || !probeEl || tabs.length === 0) return;
@@ -101,13 +105,12 @@
       }
     }
     used += gap * (regions - 1);
-    const needed = used + probeEl.offsetWidth;
     if (!collapsed) {
-      if (needed > barEl.clientWidth) {
-        expandThreshold = needed;
+      if (used + probeEl.offsetWidth > barEl.clientWidth) {
+        expandUsed = used;
         collapsed = true;
       }
-    } else if (barEl.clientWidth >= Math.max(expandThreshold, needed)) {
+    } else if (barEl.clientWidth >= expandUsed + probeEl.offsetWidth) {
       collapsed = false;
     }
   }
@@ -131,12 +134,13 @@
   {/if}
 
   {#if tabs.length > 0}
-    <!-- Centering only applies to the expanded tab group; the collapsed
-         dropdown packs next to the left region (a lone centered select
-         floats oddly in the empty middle). -->
+    <!-- Centering only applies to the expanded tab group, and only when the
+         search slot isn't the flexible middle (search owns the slack when
+         present). The collapsed dropdown packs next to the left region — a
+         lone centered select floats oddly in the empty middle. -->
     <nav
       class="kit-top-bar__nav"
-      class:kit-top-bar__nav--center={centerTabs && !collapsed}
+      class:kit-top-bar__nav--center={centerTabs && !collapsed && !search}
       aria-label={ariaLabel}
     >
       {#if collapsed}
