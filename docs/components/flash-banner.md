@@ -39,9 +39,10 @@ dismissFlash();                          // programmatic dismiss
 | `getFlashMessage(): string \| null` | Reactive read of just the latest text |
 | `dismissFlash(id?)` | Dismiss one flash by id, or all of them with no argument |
 
-Concurrent flashes stack below each other in show order; the widest message
-sets the width for the whole stack (capped at 480px / the viewport). Each
-banner has its own X and its own countdown.
+Concurrent flashes stack below each other in show order and read as a single
+card — no gap between rows, each row's countdown bar doubling as the divider.
+The widest message sets the width for the whole stack (capped at 480px / the
+viewport), and each row has its own X and its own countdown.
 
 Every banner shows a thin countdown bar along its bottom edge indicating time
 until auto-dismiss; it freezes (full) under `prefers-reduced-motion`.

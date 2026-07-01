@@ -39,6 +39,8 @@
 {/if}
 
 <style>
+  /* The stack reads as one card: the container owns border/radius/shadow
+   * and each banner's countdown bar doubles as the row divider. */
   .kit-flash-stack {
     position: fixed;
     left: 50%;
@@ -47,9 +49,13 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-3);
     width: max-content;
     max-width: min(480px, calc(100vw - 32px));
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
   }
 
   .kit-flash-banner {
@@ -59,13 +65,8 @@
     gap: 10px;
     width: 100%;
     padding: 8px 16px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
     font-size: var(--font-size-md);
     color: var(--text-primary);
-    overflow: hidden;
   }
 
   .kit-flash-banner__text {
