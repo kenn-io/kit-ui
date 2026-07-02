@@ -106,6 +106,26 @@ test("browsing zoomed grids never mutates the bound month", async ({ page }) => 
   await expect(readout).toHaveText(prefix);
 });
 
+test("two-click day range completes, swaps reversed picks, and restarts", async ({ page }) => {
+  // The day-range demo renders the fourth calendar on the page.
+  const cal = page.locator(".kit-calendar").nth(3);
+  const day = (n: number) =>
+    cal.locator(".kit-calendar__day:not(.outside)").filter({ hasText: new RegExp(`^${n}$`) });
+  const mm = String(thisMonth + 1).padStart(2, "0");
+
+  // Reversed picks swap into an ordered range.
+  await day(10).click();
+  await day(5).click();
+  await expect(
+    page.locator("code", { hasText: `${thisYear}-${mm}-05 → ${thisYear}-${mm}-10` }),
+  ).toBeVisible();
+  await expect(cal.locator(".kit-calendar__day.selected")).toHaveCount(6);
+
+  // A third pick starts a fresh range.
+  await day(20).click();
+  await expect(cal.locator(".kit-calendar__day.selected")).toHaveCount(1);
+});
+
 test("zooming out and back preserves the selected range highlight", async ({ page }) => {
   // The range-highlight demo calendar (third on the page) has a selected week.
   const cal = page.locator(".kit-calendar").nth(2);

@@ -9,6 +9,27 @@
   let weekAnchor = $state(todayStr());
   let weekMonth = $state(todayStr());
   const week = $derived<DateRange>(periodBounds("week", weekAnchor));
+
+  // Two-click day range: first pick starts a range, second completes it
+  // (an earlier second click swaps the ends), a third starts over.
+  let rangeFrom = $state<string | null>(null);
+  let rangeTo = $state<string | null>(null);
+  let rangeMonth = $state(todayStr());
+  const dayRange = $derived<DateRange | null>(
+    rangeFrom ? { from: rangeFrom, to: rangeTo ?? rangeFrom } : null,
+  );
+
+  function pickRangeDay(d: string) {
+    if (!rangeFrom || rangeTo) {
+      rangeFrom = d;
+      rangeTo = null;
+    } else if (d < rangeFrom) {
+      rangeTo = rangeFrom;
+      rangeFrom = d;
+    } else {
+      rangeTo = d;
+    }
+  }
 </script>
 
 <DemoSection
@@ -51,6 +72,31 @@
   <div class="calendar-demo">
     <Calendar bind:month={weekMonth} selected={week} onpick={(d) => (weekAnchor = d)} />
     <span class="readout">week: <code>{week.from} → {week.to}</code></span>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Day → day range"
+  description="The classic two-click range: the first pick starts the range, the second completes it (picking an earlier day swaps the ends), and a third pick starts a new one. The component stays controlled — the consumer owns this state machine and feeds the result back through selected."
+  code={`<Calendar bind:month selected={dayRange} onpick={pickRangeDay} />
+
+function pickRangeDay(d: string) {
+  if (!rangeFrom || rangeTo) { rangeFrom = d; rangeTo = null; }
+  else if (d < rangeFrom) { rangeTo = rangeFrom; rangeFrom = d; }
+  else { rangeTo = d; }
+}`}
+>
+  <div class="calendar-demo">
+    <Calendar bind:month={rangeMonth} selected={dayRange} onpick={pickRangeDay} />
+    <span class="readout">
+      {#if rangeFrom && rangeTo}
+        range: <code>{rangeFrom} → {rangeTo}</code>
+      {:else if rangeFrom}
+        start: <code>{rangeFrom}</code> — pick an end date
+      {:else}
+        pick a start date
+      {/if}
+    </span>
   </div>
 </DemoSection>
 
