@@ -2,7 +2,7 @@
 
 A single-month date grid: Monday-first weeks, month paging, an optional
 highlighted range, and a `maxDate` guard. This is the calendar surface
-`RangePicker` embeds in its Calendar tab; use it standalone for any
+`DateRangePicker` embeds in its Calendar tab; use it standalone for any
 pick-a-date UI.
 
 ```svelte

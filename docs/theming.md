@@ -134,7 +134,7 @@ border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
 background: var(--bg-surface)`.
 
 Chrome and positioning are separate contracts. _Trigger-anchored_ popovers
-(SelectDropdown, Typeahead, FilterDropdown, RangePicker, Tooltip)
+(SelectDropdown, Typeahead, FilterDropdown, DateRangePicker, Tooltip)
 additionally position with `position: fixed` via `floatingPopoverStyle` —
 repositioning on scroll, resize, and their own content resizing — so they
 can never be clipped by an overflow-hidden ancestor. Two surfaces share the

@@ -66,7 +66,7 @@
 
 <DemoSection
   title="Range highlight"
-  description="selected takes any inclusive range — here the ISO week containing the clicked day, the same wiring RangePicker's Calendar tab uses."
+  description="selected takes any inclusive range — here the ISO week containing the clicked day, the same wiring DateRangePicker's Calendar tab uses."
   code={`<Calendar bind:month selected={periodBounds("week", anchor)} onpick={(d) => (anchor = d)} />`}
 >
   <div class="calendar-demo">

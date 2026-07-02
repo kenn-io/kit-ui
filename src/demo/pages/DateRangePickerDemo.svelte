@@ -1,11 +1,11 @@
 <script lang="ts">
-  import RangePicker from "../../lib/components/RangePicker.svelte";
+  import DateRangePicker from "../../lib/components/DateRangePicker.svelte";
   import {
     daysAgo,
     resolveRange,
     todayStr,
     type RangeSelection,
-  } from "../../lib/components/range-picker.js";
+  } from "../../lib/components/date-range.js";
   import DemoSection from "../DemoSection.svelte";
 
   const earliestDate = daysAgo(500);
@@ -25,13 +25,13 @@
 <DemoSection
   title="Relative / Calendar / Custom"
   description="One trigger, three tabs: rolling presets, steppable day/week/month periods, and an explicit from/to span. The demo readout shows the selection object plus the concrete bounds resolveRange() derives from it."
-  code={`<RangePicker
+  code={`<DateRangePicker
   {selection}
   onSelect={(sel) => (selection = sel)}
   earliestDate="2025-02-16"
 />`}
 >
-  <RangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
+  <DateRangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
   <span class="readout">
     <code>{JSON.stringify(selection)}</code>
     <code>resolved: {resolved.from} → {resolved.to}</code>
@@ -41,10 +41,10 @@
 <DemoSection
   title="Right-aligned with a max date"
   description="align='right' hangs the panel off the trigger's right edge (for toolbar corners); maxDate disables stepping the calendar past today."
-  code={`<RangePicker {selection} onSelect={...} align="right" maxDate={todayStr()} />`}
+  code={`<DateRangePicker {selection} onSelect={...} align="right" maxDate={todayStr()} />`}
 >
   <div class="right-rail">
-    <RangePicker
+    <DateRangePicker
       selection={pinnedSelection}
       onSelect={(sel) => (pinnedSelection = sel)}
       {earliestDate}
@@ -57,10 +57,10 @@
 <DemoSection
   title="Block trigger"
   description="block stretches the trigger and panel to the container width, for vertical sidebars."
-  code={`<RangePicker {selection} onSelect={...} block />`}
+  code={`<DateRangePicker {selection} onSelect={...} block />`}
 >
   <div class="sidebar-slot">
-    <RangePicker
+    <DateRangePicker
       selection={blockSelection}
       onSelect={(sel) => (blockSelection = sel)}
       {earliestDate}

@@ -1,10 +1,10 @@
-# RangePicker
+# DateRangePicker
 
 Date-range trigger + popover with three tabs: **Relative** (rolling "last N
 days" pills), **Calendar** (a day/week/month period picked on an embedded
 [Calendar](calendar.md) month grid — clicking a day selects the day/ISO
 week/month containing it), and **Custom** (explicit from/to date inputs).
-Ported from agentsview's shared `RangePicker`, decoupled from its stores and
+Ported from agentsview's shared `DateRangePicker`, decoupled from its stores and
 i18n.
 
 The component is controlled: you hold a `RangeSelection` and it calls
@@ -21,13 +21,13 @@ handling). Date strings are trusted input: feed the helpers valid
 
 ```svelte
 <script lang="ts">
-  import { RangePicker, resolveRange, type RangeSelection } from "@kenn-io/kit-ui";
+  import { DateRangePicker, resolveRange, type RangeSelection } from "@kenn-io/kit-ui";
 
   let selection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
   const range = $derived(resolveRange(selection, earliestDate));
 </script>
 
-<RangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
+<DateRangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
 ```
 
 ## Props
@@ -50,7 +50,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `fromLabel` / `toLabel`                                                                                                  | `string`                        | `"From"` / `"To"`                         | Custom tab field labels                                                                                                                                                                                                                                                      |
 | `dialogLabel`                                                                                                            | `string`                        | `"Select date range"`                     | Popover `aria-label`                                                                                                                                                                                                                                                         |
 | `relativeGroupLabel` / `calendarGroupLabel`                                                                              | `string`                        | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s                                                                                                                                                                                                                                                     |
-| `previousMonthLabel` / `nextMonthLabel`                                                                                  | `string`                        | `"Previous month"` / `"Next month"`       | Calendar month-arrow `aria-label`s. The pre-Calendar names `previousPeriodLabel` / `nextPeriodLabel` still work as deprecated aliases                                                                                                                                        |
+| `previousMonthLabel` / `nextMonthLabel`                                                                                  | `string`                        | `"Previous month"` / `"Next month"`       | Calendar month-arrow `aria-label`s.                                                                                                                                                                                                                                          |
 | `previousYearLabel` / `nextYearLabel` / `previousYearsLabel` / `nextYearsLabel` / `chooseMonthLabel` / `chooseYearLabel` | `string`                        | Calendar defaults                         | Forwarded to the embedded [Calendar](calendar.md)'s month/year drill-down                                                                                                                                                                                                    |
 
 Date labels on the trigger/stepper format with the browser locale via

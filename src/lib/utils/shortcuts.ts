@@ -211,7 +211,9 @@ export interface ShortcutOptions {
 export interface RegisteredShortcut {
   combo: string;
   scope: string;
-  description?: string;
+  /* `| undefined` keeps consumers with exactOptionalPropertyTypes happy:
+   * list() and register() forward optional values explicitly. */
+  description?: string | undefined;
 }
 
 export const ROOT_SCOPE = "root";
@@ -240,7 +242,7 @@ interface Entry {
   handler: (event: KeyboardEvent) => void;
   scope: string;
   allowInInput: boolean;
-  description?: string;
+  description?: string | undefined;
 }
 
 // Duck-typed (no HTMLElement reference) so the manager stays SSR-safe and

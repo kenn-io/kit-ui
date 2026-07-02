@@ -26,7 +26,7 @@ export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Markdown } from "./components/Markdown.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
-export { default as RangePicker } from "./components/RangePicker.svelte";
+export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export {
   allFromDate,
   daysAgo,
@@ -47,7 +47,7 @@ export {
   type RangePreset,
   type RangeSelection,
   type RelativeSelection,
-} from "./components/range-picker.js";
+} from "./components/date-range.js";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";

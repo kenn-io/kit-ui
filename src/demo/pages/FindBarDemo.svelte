@@ -5,9 +5,9 @@
 
   const lines = [
     "Read src/lib/stores/session.svelte.ts",
-    "Edit src/lib/components/RangePicker.svelte",
+    "Edit src/lib/components/DateRangePicker.svelte",
     "Bash bun run check",
-    "Read docs/components/range-picker.md",
+    "Read docs/components/date-range-picker.md",
     "Edit src/lib/components/FindBar.svelte",
     "Bash bun test checks/rules.test.ts",
     "Write docs/components/find-bar.md",
