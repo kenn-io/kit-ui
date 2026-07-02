@@ -204,8 +204,10 @@ export interface ShortcutOptions {
   /** Fire even when a text input/textarea/contenteditable has focus.
    * Modifier combos (mod/ctrl/alt/meta) always fire in inputs. */
   allowInInput?: boolean;
-  /** Human-readable action, e.g. for a shortcut-help dialog. */
-  description?: string;
+  /** Human-readable action, e.g. for a shortcut-help dialog. `| undefined`
+   * so exactOptionalPropertyTypes consumers can forward a possibly-undefined
+   * value (same contract as RegisteredShortcut below). */
+  description?: string | undefined;
 }
 
 export interface RegisteredShortcut {
