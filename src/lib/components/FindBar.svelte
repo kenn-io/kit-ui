@@ -21,6 +21,12 @@
     oninput?: (query: string) => void;
     /** Focus the input when the bar mounts (default true). */
     autofocus?: boolean;
+    /** pinned (default): full-width strip flush with the top edge of the
+     * find-target container — square corners, bottom border only, no
+     * shadow. floating: IDE-style card inset at the container's top-right
+     * (the container needs position: relative); this is where the
+     * popover shadow treatment lives. */
+    variant?: "pinned" | "floating";
     placeholder?: string;
     /** Counter template; `{current}` and `{total}` are replaced. */
     matchCountLabel?: string;
@@ -41,6 +47,7 @@
     onclose = undefined,
     oninput = undefined,
     autofocus = true,
+    variant = "pinned",
     placeholder = "Find…",
     matchCountLabel = "{current} of {total}",
     noMatchesLabel = "No matches",
@@ -79,7 +86,7 @@
 </script>
 
 <div
-  class="kit-find-bar"
+  class="kit-find-bar kit-find-bar--{variant}"
   class:kit-find-bar--no-results={noResults}
   role="search"
   aria-label={ariaLabel}
@@ -146,31 +153,52 @@
 </div>
 
 <style>
-  /* A floating find widget (browser cmd-F style), matching the library's
-   * popover chrome — the app positions it (typically absolute, top-right
-   * of the searched region). The card carries the focus/error border; the
-   * input inside is chromeless. */
+  /* The bar carries the focus/error border; the input inside is
+   * chromeless. Two presentations: pinned (default) is a browser-style
+   * strip flush with the container's top edge; floating is an IDE-style
+   * card the component insets at the container's top-right (container
+   * must be positioned). */
   .kit-find-bar {
     box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    width: max-content;
-    min-width: min(300px, 100%);
-    max-width: 100%;
     padding: var(--space-2) var(--space-4);
     background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
     animation: kit-find-bar-slide-down 0.12s ease-out;
   }
 
-  .kit-find-bar:focus-within {
+  .kit-find-bar--pinned {
+    width: 100%;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .kit-find-bar--pinned:focus-within {
+    border-bottom-color: var(--accent-blue);
+  }
+
+  .kit-find-bar--pinned.kit-find-bar--no-results:focus-within {
+    border-bottom-color: var(--accent-red);
+  }
+
+  .kit-find-bar--floating {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: 10;
+    width: max-content;
+    min-width: min(300px, calc(100% - 2 * var(--space-4)));
+    max-width: calc(100% - 2 * var(--space-4));
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .kit-find-bar--floating:focus-within {
     border-color: var(--accent-blue);
   }
 
-  .kit-find-bar--no-results:focus-within {
+  .kit-find-bar--floating.kit-find-bar--no-results:focus-within {
     border-color: var(--accent-red);
   }
 

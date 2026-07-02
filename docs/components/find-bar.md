@@ -44,6 +44,7 @@ conditionally; it autofocuses on mount by default.
 | `onclose` | `() => void` | — | Escape / close button |
 | `oninput` | `(query: string) => void` | — | Every keystroke (e.g. reset `currentIndex`) |
 | `autofocus` | `boolean` | `true` | Focus the input when the bar mounts |
+| `variant` | `"pinned" \| "floating"` | `"pinned"` | pinned = full-width strip flush with the container's top edge (square corners, bottom border only, no shadow). floating = IDE-style shadowed card inset at the container's top-right |
 | `placeholder` | `string` | `"Find…"` | |
 | `matchCountLabel` | `string` | `"{current} of {total}"` | Counter template |
 | `noMatchesLabel` | `string` | `"No matches"` | |
@@ -52,27 +53,44 @@ conditionally; it autofocuses on mount by default.
 | `previousLabel` / `nextLabel` | `string` | `"Previous match"` / `"Next match"` | Arrow tooltips + `aria-label`s |
 | `closeLabel` | `string` | `"Close"` | |
 
-The prev/next buttons disable while there are no matches. The card border
-carries focus (blue) and no-match (red) states; the slide-down animation is
-disabled under `prefers-reduced-motion`.
+The prev/next buttons disable while there are no matches. The bar's border
+carries focus (blue) and no-match (red) states — the bottom border on the
+pinned strip, the full card border on the floating variant; the slide-down
+animation is disabled under `prefers-reduced-motion`.
 
 ## Placement contract
 
-The bar renders as a floating card (border + radius + shadow, browser cmd-F
-style) but does **not** position itself — the app owns placement and
-stacking:
+Two presentations, chosen by `variant`:
 
-```svelte
-<div class="pane">          <!-- position: relative -->
-  {#if findOpen}
-    <div class="pane__find"> <!-- position: absolute; top: 8px; right: 8px; z-index: … -->
-      <FindBar … />
-    </div>
-  {/if}
-  …searched content…
-</div>
-```
+- **`pinned` (default)** — a browser-find-style strip that spans the full
+  width of the find-target container, flush with its top edge: square
+  corners, a bottom border only, no shadow. Render it as the first child
+  of the container (above the searched content); it participates in
+  normal flow, so content below shifts down while the bar is open.
 
-Pick a `z-index` above the searched content but below app overlays
-(modals/drawers). The card is `min-width: min(300px, 100%)` — in containers
-narrower than 300px it shrinks to fit instead of overflowing.
+  ```svelte
+  <div class="pane">
+    {#if findOpen}<FindBar … />{/if}
+    …searched content…
+  </div>
+  ```
+
+- **`floating`** — an IDE-find-style shadowed card the component insets
+  at the container's top-right (`position: absolute; top/right:
+  --space-4; z-index: 10`). The container must be `position: relative`.
+  Content does not shift; the card overlays it. Override the position
+  with a `.kit-find-bar--floating` rule if an app needs different
+  insets or stacking (keep it below app overlays like modals/drawers).
+
+  ```svelte
+  <div class="pane" style="position: relative">
+    {#if findOpen}<FindBar variant="floating" … />{/if}
+    …searched content…
+  </div>
+  ```
+
+The floating card is `min-width: min(300px, 100% - insets)` — in
+containers narrower than 300px it shrinks to fit instead of overflowing.
+The shadow treatment lives on the floating variant only; the pinned strip
+is part of the container chrome, matching the popover conventions in
+[theming](../theming.md).
