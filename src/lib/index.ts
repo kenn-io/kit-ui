@@ -27,8 +27,6 @@ export { default as Markdown } from "./components/Markdown.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
-/** @deprecated Renamed — use `DateRangePicker`. */
-export { default as RangePicker } from "./components/DateRangePicker.svelte";
 export {
   allFromDate,
   daysAgo,
