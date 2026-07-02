@@ -2,8 +2,10 @@
   import CalendarIcon from "@lucide/svelte/icons/calendar";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
+  import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
+  import SegmentedControl, { type SegmentedControlOption } from "./SegmentedControl.svelte";
   import {
     DEFAULT_RANGE_PRESETS,
     formatDayLabel,
@@ -12,13 +14,14 @@
     periodBounds,
     resolveRange,
     todayStr,
+    type CalendarNavLabels,
     type CalendarUnit,
     type RangeMode,
     type RangePreset,
     type RangeSelection,
   } from "./date-range.js";
 
-  interface Props {
+  interface Props extends CalendarNavLabels {
     selection: RangeSelection;
     onSelect: (selection: RangeSelection) => void;
     /** Dim the trigger while the consumer reloads data. */
@@ -50,15 +53,6 @@
     dialogLabel?: string;
     relativeGroupLabel?: string;
     calendarGroupLabel?: string;
-    previousMonthLabel?: string;
-    nextMonthLabel?: string;
-    /** Forwarded to the embedded Calendar's month/year drill-down. */
-    previousYearLabel?: string;
-    nextYearLabel?: string;
-    previousYearsLabel?: string;
-    nextYearsLabel?: string;
-    chooseMonthLabel?: string;
-    chooseYearLabel?: string;
   }
 
   let {
@@ -84,18 +78,14 @@
     dialogLabel = "Select date range",
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
-    previousMonthLabel = "Previous month",
-    nextMonthLabel = "Next month",
-    previousYearLabel = "Previous year",
-    nextYearLabel = "Next year",
-    previousYearsLabel = "Previous years",
-    nextYearsLabel = "Next years",
-    chooseMonthLabel = "Choose month",
-    chooseYearLabel = "Choose year",
+    // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
+    // own English defaults stay the single source.
+    ...calendarLabels
   }: Props = $props();
 
   let open = $state(false);
   let containerEl: HTMLDivElement | undefined = $state();
+  let triggerEl: HTMLButtonElement | undefined = $state();
 
   // Working state for the panel, seeded from `selection` by seed() each time
   // it opens so switching tabs never loses the current range. Edits emit
@@ -109,10 +99,10 @@
   let customFrom = $state<string>("");
   let customTo = $state<string>("");
 
-  const tabs = $derived<{ mode: RangeMode; label: string }[]>([
-    { mode: "relative", label: relativeTabLabel },
-    { mode: "calendar", label: calendarTabLabel },
-    { mode: "custom", label: customTabLabel },
+  const tabs = $derived<SegmentedControlOption[]>([
+    { value: "relative", label: relativeTabLabel },
+    { value: "calendar", label: calendarTabLabel },
+    { value: "custom", label: customTabLabel },
   ]);
 
   const calendarUnits = $derived<{ unit: CalendarUnit; label: string }[]>([
@@ -225,50 +215,44 @@
     // Normalize a reversed range so consumers always get ordered bounds;
     // reflect it in the inputs.
     if (customFrom > customTo) {
-      const earlier = customTo;
-      customTo = customFrom;
-      customFrom = earlier;
+      [customFrom, customTo] = [customTo, customFrom];
     }
     onSelect({ mode: "custom", from: customFrom, to: customTo });
   }
 
   $effect(() => {
     if (!open) return;
-
-    function handleClickOutside(e: MouseEvent): void {
-      if (containerEl && !containerEl.contains(e.target as Node)) {
-        open = false;
-      }
-    }
-
-    function handleKeydown(e: KeyboardEvent): void {
-      if (e.key === "Escape") {
-        open = false;
-      }
-    }
-
-    function reposition(): void {
-      positionPanel();
-    }
-
-    // Tab switches / calendar paging change the panel's height — track it
-    // so a picker opened near the viewport bottom doesn't keep a stale top.
-    const observer = new ResizeObserver(reposition);
-    if (panelEl) observer.observe(panelEl);
-
-    document.addEventListener("click", handleClickOutside);
-    document.addEventListener("keydown", handleKeydown);
-    window.addEventListener("resize", reposition);
-    window.addEventListener("scroll", reposition, true);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("click", handleClickOutside);
-      document.removeEventListener("keydown", handleKeydown);
-      window.removeEventListener("resize", reposition);
-      window.removeEventListener("scroll", reposition, true);
-    };
+    const cleanups = [
+      dismissable({
+        owners: () => [containerEl],
+        dismiss: () => (open = false),
+        escapeFocus: () => triggerEl,
+      }),
+      // Tab switches / calendar paging change the panel's height — track it
+      // so a picker opened near the viewport bottom doesn't keep a stale top.
+      autoReposition(() => panelEl, positionPanel),
+    ];
+    return () => cleanups.forEach((cleanup) => cleanup());
   });
 </script>
+
+{#snippet pillGroup(
+  groupLabel: string,
+  items: { key: string | number; label: string; active: boolean; pick: () => void }[],
+)}
+  <div class="kit-date-range-picker__pills" role="group" aria-label={groupLabel}>
+    {#each items as item (item.key)}
+      <button
+        class="kit-date-range-picker__pill"
+        class:active={item.active}
+        type="button"
+        onclick={item.pick}
+      >
+        {item.label}
+      </button>
+    {/each}
+  </div>
+{/snippet}
 
 <div
   class="kit-date-range-picker"
@@ -281,6 +265,7 @@
     class="kit-date-range-picker__trigger"
     class:open
     type="button"
+    bind:this={triggerEl}
     onclick={toggleOpen}
     aria-haspopup="dialog"
     aria-expanded={open}
@@ -302,60 +287,41 @@
       role="dialog"
       aria-label={dialogLabel}
     >
-      <div class="kit-date-range-picker__tabs" role="tablist">
-        {#each tabs as t (t.mode)}
-          <button
-            class="kit-date-range-picker__tab"
-            class:active={tab === t.mode}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.mode}
-            onclick={() => (tab = t.mode)}
-          >
-            {t.label}
-          </button>
-        {/each}
+      <div class="kit-date-range-picker__tabs">
+        <SegmentedControl
+          block
+          options={tabs}
+          value={tab}
+          onchange={(v) => (tab = v as RangeMode)}
+        />
       </div>
 
       {#if tab === "relative"}
-        <div class="kit-date-range-picker__pills" role="group" aria-label={relativeGroupLabel}>
-          {#each presets as preset (preset.days)}
-            <button
-              class="kit-date-range-picker__pill"
-              class:active={isRelativeActive(preset.days)}
-              type="button"
-              onclick={() => applyRelative(preset.days)}
-            >
-              {preset.label}
-            </button>
-          {/each}
-        </div>
+        {@render pillGroup(
+          relativeGroupLabel,
+          presets.map((preset) => ({
+            key: preset.days,
+            label: preset.label,
+            active: isRelativeActive(preset.days),
+            pick: () => applyRelative(preset.days),
+          })),
+        )}
       {:else if tab === "calendar"}
-        <div class="kit-date-range-picker__pills" role="group" aria-label={calendarGroupLabel}>
-          {#each calendarUnits as u (u.unit)}
-            <button
-              class="kit-date-range-picker__pill"
-              class:active={calUnit === u.unit}
-              type="button"
-              onclick={() => applyCalendar(u.unit, calAnchor)}
-            >
-              {u.label}
-            </button>
-          {/each}
-        </div>
+        {@render pillGroup(
+          calendarGroupLabel,
+          calendarUnits.map((u) => ({
+            key: u.unit,
+            label: u.label,
+            active: calUnit === u.unit,
+            pick: () => applyCalendar(u.unit, calAnchor),
+          })),
+        )}
         <div class="kit-date-range-picker__calendar">
           <Calendar
             bind:month={calMonth}
             selected={calSelected}
             {maxDate}
-            {previousMonthLabel}
-            {nextMonthLabel}
-            {previousYearLabel}
-            {nextYearLabel}
-            {previousYearsLabel}
-            {nextYearsLabel}
-            {chooseMonthLabel}
-            {chooseYearLabel}
+            {...calendarLabels}
             onpick={(date) => applyCalendar(calUnit, date)}
           />
         </div>
@@ -469,40 +435,10 @@
     padding: var(--space-4);
   }
 
+  /* The mode switch is a stock SegmentedControl; only the panel spacing
+   * lives here. */
   .kit-date-range-picker__tabs {
-    display: flex;
-    gap: var(--space-1);
-    padding: var(--space-1);
-    background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-md);
     margin-bottom: var(--space-4);
-  }
-
-  .kit-date-range-picker__tab {
-    flex: 1;
-    height: 26px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-muted);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
-  }
-
-  .kit-date-range-picker__tab:hover {
-    color: var(--text-secondary);
-  }
-
-  .kit-date-range-picker__tab.active {
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
   }
 
   .kit-date-range-picker__pills {
@@ -576,12 +512,5 @@
   .kit-date-range-picker__date-input:focus {
     outline: none;
     border-color: var(--accent-blue);
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-date-range-picker__trigger:focus-visible,
-  .kit-date-range-picker__tab:focus-visible,
-  .kit-date-range-picker__pill:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

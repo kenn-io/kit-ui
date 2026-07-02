@@ -5,14 +5,16 @@
     formatDayLabel,
     formatMonthLabel,
     monthGridDates,
+    monthLabels,
     periodBounds,
     stepAnchor,
     todayStr,
     weekdayLabels,
+    type CalendarNavLabels,
     type DateRange,
   } from "./date-range.js";
 
-  interface Props {
+  interface Props extends CalendarNavLabels {
     /** Any date inside the visible month (YYYY-MM-DD, bindable). */
     month?: string;
     /** Inclusive range to highlight (e.g. the current selection). */
@@ -21,16 +23,6 @@
     onpick?: (date: string) => void;
     /** Dates after this are disabled; paging into fully-later months too. */
     maxDate?: string | null;
-    previousMonthLabel?: string;
-    nextMonthLabel?: string;
-    /** Nav labels while zoomed out to the month / year grids. */
-    previousYearLabel?: string;
-    nextYearLabel?: string;
-    previousYearsLabel?: string;
-    nextYearsLabel?: string;
-    /** Appended to the header button's accessible name to hint at the drill-down. */
-    chooseMonthLabel?: string;
-    chooseYearLabel?: string;
     class?: string;
   }
 
@@ -78,29 +70,48 @@
   const maxMonthPrefix = $derived(maxDate?.slice(0, 7) ?? null);
   const maxYear = $derived(maxDate == null ? null : Number.parseInt(maxDate.slice(0, 4), 10));
 
-  const monthNames: string[] = Array.from({ length: 12 }, (_, i) =>
-    new Date(2000, i, 1).toLocaleString(undefined, { month: "short" }),
-  );
-  const monthFullNames: string[] = Array.from({ length: 12 }, (_, i) =>
-    new Date(2000, i, 1).toLocaleString(undefined, { month: "long" }),
-  );
-
-  function monthAnchor(y: number, monthIndex: number): string {
-    return `${y}-${String(monthIndex + 1).padStart(2, "0")}-01`;
+  function monthKey(y: number, monthIndex: number): string {
+    return `${y}-${String(monthIndex + 1).padStart(2, "0")}`;
   }
 
-  function monthCellDisabled(monthIndex: number): boolean {
-    return maxMonthPrefix != null && monthAnchor(zoomYear, monthIndex).slice(0, 7) > maxMonthPrefix;
+  // The month and year grids are the same 12-slot picker over different
+  // units; each cell carries what the shared markup needs.
+  interface UnitCell {
+    label: string;
+    value: number;
+    current: boolean;
+    disabled: boolean;
+    aria: string | undefined;
   }
 
-  function pickMonth(monthIndex: number): void {
-    month = monthAnchor(zoomYear, monthIndex);
-    view = "days";
-  }
+  const unitCells = $derived.by((): UnitCell[] => {
+    if (view === "months") {
+      const long = monthLabels("long");
+      return monthLabels("short").map((label, i) => ({
+        label,
+        value: i,
+        current: monthKey(zoomYear, i) === monthPrefix,
+        disabled: maxMonthPrefix != null && monthKey(zoomYear, i) > maxMonthPrefix,
+        aria: `${long[i]} ${zoomYear}`,
+      }));
+    }
+    return yearCells.map((y) => ({
+      label: String(y),
+      value: y,
+      current: y === year,
+      disabled: maxYear != null && y > maxYear,
+      aria: undefined,
+    }));
+  });
 
-  function pickYear(y: number): void {
-    zoomYear = y;
-    view = "months";
+  function pickUnit(value: number): void {
+    if (view === "months") {
+      month = `${monthKey(zoomYear, value)}-01`;
+      view = "days";
+    } else {
+      zoomYear = value;
+      view = "months";
+    }
   }
 
   function headerZoomOut(): void {
@@ -122,21 +133,33 @@
     }
   }
 
-  const prevNavLabel = $derived(
-    view === "days"
-      ? previousMonthLabel
-      : view === "months"
-        ? previousYearLabel
-        : previousYearsLabel,
-  );
-  const nextNavLabel = $derived(
-    view === "days" ? nextMonthLabel : view === "months" ? nextYearLabel : nextYearsLabel,
-  );
-  const nextNavDisabled = $derived.by(() => {
-    if (view === "days") return nextMonthDisabled;
-    if (maxYear == null) return false;
-    if (view === "months") return zoomYear + 1 > maxYear;
-    return yearBlockStart + 12 > maxYear;
+  // Per-view header/nav facts in one place instead of parallel ternaries.
+  const nav = $derived.by(() => {
+    if (view === "days") {
+      return {
+        prevLabel: previousMonthLabel,
+        nextLabel: nextMonthLabel,
+        nextDisabled: nextMonthDisabled,
+        headerLabel: formatMonthLabel(month),
+        headerHint: chooseMonthLabel,
+      };
+    }
+    if (view === "months") {
+      return {
+        prevLabel: previousYearLabel,
+        nextLabel: nextYearLabel,
+        nextDisabled: maxYear != null && zoomYear + 1 > maxYear,
+        headerLabel: String(zoomYear),
+        headerHint: chooseYearLabel,
+      };
+    }
+    return {
+      prevLabel: previousYearsLabel,
+      nextLabel: nextYearsLabel,
+      nextDisabled: maxYear != null && yearBlockStart + 12 > maxYear,
+      headerLabel: `${yearBlockStart}–${yearBlockStart + 11}`,
+      headerHint: null,
+    };
   });
 
   function inRange(date: string): boolean {
@@ -150,34 +173,32 @@
       class="kit-calendar__nav"
       type="button"
       onclick={() => navStep(-1)}
-      aria-label={prevNavLabel}
+      aria-label={nav.prevLabel}
     >
       <ChevronLeftIcon size="14" strokeWidth="2" aria-hidden="true" />
     </button>
-    {#if view === "years"}
+    {#if nav.headerHint == null}
       <!-- Nothing to zoom out to — a plain label, not a button. -->
       <span class="kit-calendar__month" aria-live="polite">
-        {yearBlockStart}–{yearBlockStart + 11}
+        {nav.headerLabel}
       </span>
     {:else}
       <button
         class="kit-calendar__month kit-calendar__month--button"
         type="button"
         aria-live="polite"
-        aria-label="{view === 'days' ? formatMonthLabel(month) : zoomYear}. {view === 'days'
-          ? chooseMonthLabel
-          : chooseYearLabel}"
+        aria-label="{nav.headerLabel}. {nav.headerHint}"
         onclick={headerZoomOut}
       >
-        {view === "days" ? formatMonthLabel(month) : zoomYear}
+        {nav.headerLabel}
       </button>
     {/if}
     <button
       class="kit-calendar__nav"
       type="button"
-      disabled={nextNavDisabled}
+      disabled={nav.nextDisabled}
       onclick={() => navStep(1)}
-      aria-label={nextNavLabel}
+      aria-label={nav.nextLabel}
     >
       <ChevronRightIcon size="14" strokeWidth="2" aria-hidden="true" />
     </button>
@@ -211,32 +232,18 @@
         </button>
       {/each}
     </div>
-  {:else if view === "months"}
-    <div class="kit-calendar__unit-grid">
-      {#each monthNames as name, i (name)}
-        <button
-          class="kit-calendar__unit"
-          class:current={monthAnchor(zoomYear, i).slice(0, 7) === monthPrefix}
-          type="button"
-          disabled={monthCellDisabled(i)}
-          aria-label="{monthFullNames[i]} {zoomYear}"
-          onclick={() => pickMonth(i)}
-        >
-          {name}
-        </button>
-      {/each}
-    </div>
   {:else}
     <div class="kit-calendar__unit-grid">
-      {#each yearCells as y (y)}
+      {#each unitCells as cell (cell.label)}
         <button
           class="kit-calendar__unit"
-          class:current={y === year}
+          class:current={cell.current}
           type="button"
-          disabled={maxYear != null && y > maxYear}
-          onclick={() => pickYear(y)}
+          disabled={cell.disabled}
+          aria-label={cell.aria}
+          onclick={() => pickUnit(cell.value)}
         >
-          {y}
+          {cell.label}
         </button>
       {/each}
     </div>
@@ -329,10 +336,11 @@
     white-space: nowrap;
   }
 
-  .kit-calendar__day {
+  /* Day cells and the drill-down month/year cells are the same button
+   * recipe at different sizes. */
+  .kit-calendar__day,
+  .kit-calendar__unit {
     box-sizing: border-box;
-    width: 30px;
-    height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -350,7 +358,13 @@
       color var(--transition-fast);
   }
 
-  .kit-calendar__day:hover:not(:disabled) {
+  .kit-calendar__day {
+    width: 30px;
+    height: 26px;
+  }
+
+  .kit-calendar__day:hover:not(:disabled),
+  .kit-calendar__unit:hover:not(:disabled) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }
@@ -440,11 +454,6 @@
     border-radius: var(--radius-sm);
   }
 
-  .kit-calendar__day:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-
   /* Month / year drill-down grids: 3 columns spanning the same width as
    * the 7-column day grid (7×30px columns + 6×1px gaps = 216px) so the
    * calendar doesn't jump horizontally when zooming. */
@@ -456,28 +465,7 @@
   }
 
   .kit-calendar__unit {
-    box-sizing: border-box;
     height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: var(--font-size-xs);
-    font-variant-numeric: tabular-nums;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
-  }
-
-  .kit-calendar__unit:hover:not(:disabled) {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
   }
 
   /* The currently-anchored month/year gets the same inset ring as today
@@ -487,16 +475,10 @@
     color: var(--text-primary);
   }
 
+  /* Last so it outranks the equal-specificity .outside/.selected rules. */
+  .kit-calendar__day:disabled,
   .kit-calendar__unit:disabled {
     opacity: 0.35;
     cursor: default;
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-calendar__nav:focus-visible,
-  .kit-calendar__month--button:focus-visible,
-  .kit-calendar__day:focus-visible,
-  .kit-calendar__unit:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

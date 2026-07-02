@@ -358,9 +358,4 @@
     visibility: hidden;
     pointer-events: none;
   }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-top-bar__tab:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
 </style>

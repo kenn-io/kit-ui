@@ -1,16 +1,8 @@
-<script module lang="ts">
-  let nextSelectDropdownID = 0;
-
-  function allocateSelectDropdownID(): string {
-    nextSelectDropdownID += 1;
-    return `kit-select-dropdown-${nextSelectDropdownID}`;
-  }
-</script>
-
 <script lang="ts">
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
+  import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { SelectDropdownOption } from "./select-dropdown.js";
 
@@ -43,7 +35,7 @@
   let listEl = $state<HTMLDivElement>();
   let listStyle = $state("");
 
-  const dropdownID = allocateSelectDropdownID();
+  const dropdownID = $props.id();
   const listboxID = `${dropdownID}-listbox`;
 
   // Unlike a native select element, an unmatched `value` does not render blank:
@@ -60,39 +52,16 @@
 
   $effect(() => {
     if (!open) return;
-
-    function handleMousedown(event: MouseEvent): void {
-      const target = event.target as Node;
-      if (containerEl?.contains(target)) return;
-      open = false;
-    }
-
-    function handleKeydown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        open = false;
-        buttonEl?.focus();
-      }
-    }
-
-    function reposition(): void {
-      positionList();
-    }
-
-    // Async option changes resize the list — keep the flip/clamp current.
-    const observer = new ResizeObserver(reposition);
-    if (listEl) observer.observe(listEl);
-
-    document.addEventListener("mousedown", handleMousedown);
-    document.addEventListener("keydown", handleKeydown);
-    window.addEventListener("resize", reposition);
-    window.addEventListener("scroll", reposition, true);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("mousedown", handleMousedown);
-      document.removeEventListener("keydown", handleKeydown);
-      window.removeEventListener("resize", reposition);
-      window.removeEventListener("scroll", reposition, true);
-    };
+    const cleanups = [
+      dismissable({
+        owners: () => [containerEl],
+        dismiss: () => (open = false),
+        escapeFocus: () => buttonEl,
+      }),
+      // Async option changes resize the list — keep the flip/clamp current.
+      autoReposition(() => listEl, positionList),
+    ];
+    return () => cleanups.forEach((cleanup) => cleanup());
   });
 
   // Fixed positioning so the menu is never clipped by an overflow-hidden
@@ -358,10 +327,5 @@
     display: inline-flex;
     width: 12px;
     color: currentColor;
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-select-dropdown__trigger:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

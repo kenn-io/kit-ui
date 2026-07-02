@@ -1,15 +1,7 @@
-<script module lang="ts">
-  let nextTooltipID = 0;
-
-  function allocateTooltipID(): string {
-    nextTooltipID += 1;
-    return `kit-tooltip-${nextTooltipID}`;
-  }
-</script>
-
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { tick } from "svelte";
+  import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
 
   interface Props {
@@ -40,7 +32,7 @@
     class: className = "",
   }: Props = $props();
 
-  const tooltipID = allocateTooltipID();
+  const tooltipID = $props.id();
 
   let open = $state(false);
   let side = $state<"top" | "bottom">("bottom");
@@ -102,26 +94,22 @@
   $effect(() => {
     if (!open) return;
 
+    // No outside-dismiss — tooltips close by leaving the trigger; Escape
+    // and the show/hide timers stay tooltip-specific.
     function handleKeydown(event: KeyboardEvent): void {
       if (event.key === "Escape") hide(true);
     }
 
-    function reposition(): void {
-      void position();
-    }
-
     // Dynamic tooltip content resizes the bubble — reposition.
-    const observer = new ResizeObserver(() => reposition());
-    if (popoverEl) observer.observe(popoverEl);
+    const stopRepositioning = autoReposition(
+      () => popoverEl,
+      () => void position(),
+    );
 
     document.addEventListener("keydown", handleKeydown);
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
     return () => {
-      observer.disconnect();
+      stopRepositioning();
       document.removeEventListener("keydown", handleKeydown);
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
       clearTimer();
     };
   });

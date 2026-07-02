@@ -2,6 +2,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
+  import IconButton from "./IconButton.svelte";
 
   interface Props {
     title?: string;
@@ -79,15 +80,15 @@
     {:else if title || closable}
       <div class="kit-detail-drawer__header">
         {#if closable}
-          <button
+          <IconButton
+            size="sm"
             class="kit-detail-drawer__close"
-            type="button"
             title={closeTitle}
-            aria-label={closeAriaLabel}
+            ariaLabel={closeAriaLabel}
             onclick={() => onclose?.()}
           >
             <XIcon size="14" strokeWidth="2" aria-hidden="true" />
-          </button>
+          </IconButton>
         {/if}
         {#if title}
           <span class="kit-detail-drawer__title">{title}</span>
@@ -154,26 +155,6 @@
     flex-shrink: 0;
   }
 
-  .kit-detail-drawer__close {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--text-muted);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
-  .kit-detail-drawer__close:hover {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-  }
-
   .kit-detail-drawer__title {
     font-size: var(--font-size-sm);
     color: var(--text-muted);
@@ -198,10 +179,5 @@
     padding: var(--space-5) var(--space-6);
     border-top: 1px solid var(--border-default);
     flex-shrink: 0;
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-detail-drawer__close:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

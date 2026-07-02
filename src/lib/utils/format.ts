@@ -19,9 +19,15 @@ export function formatDuration(ms: number): string {
   return `${h}h ${m}m`;
 }
 
+/* Memoized at module scope: n.toLocaleString() constructs a fresh
+ * Intl.NumberFormat per call and this runs per table cell. Lazy so
+ * importing this module stays side-effect free. */
+let numberFormat: Intl.NumberFormat | undefined;
+
 /** Formats a number with locale thousands separators (e.g. "1,234,567"). */
 export function formatNumber(n: number): string {
-  return n.toLocaleString();
+  numberFormat ??= new Intl.NumberFormat(undefined);
+  return numberFormat.format(n);
 }
 
 /** Formats a token count as a compact string (e.g. "850", "1.2k", "3.5M"). */

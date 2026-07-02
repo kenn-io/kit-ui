@@ -1,6 +1,7 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import { onMount, untrack } from "svelte";
+  import IconButton from "./IconButton.svelte";
   import {
     createRefreshScheduler,
     DEFAULT_REFRESH_INTERVAL_MS,
@@ -70,17 +71,15 @@
 </script>
 
 <div class="kit-refresh-control">
-  <button
-    class="kit-refresh-control__btn"
-    class:querying={busy}
-    type="button"
+  <IconButton
+    class={busy ? "kit-refresh-control__btn querying" : "kit-refresh-control__btn"}
     onclick={() => scheduler.refreshNow()}
     disabled={busy}
     title={title ?? label}
-    aria-label={label}
+    ariaLabel={label}
   >
     <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
-  </button>
+  </IconButton>
   <div class="kit-refresh-control__status">
     <span title={lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString()}>
       {ageLabel}
@@ -96,36 +95,16 @@
     gap: 8px;
   }
 
-  .kit-refresh-control__btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast),
-      opacity var(--transition-fast);
-  }
-
-  .kit-refresh-control__btn:hover:not(:disabled) {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-  }
-
-  .kit-refresh-control__btn:disabled {
-    cursor: default;
+  /* The button chrome is a stock IconButton (md = 28px); only the busy
+   * spin lives here (kit-spin comes from theme.css). Busy keeps a lighter
+   * dim than the standard disabled opacity so the spinner stays visible
+   * (documented exception in docs/theming.md). */
+  .kit-refresh-control :global(.kit-refresh-control__btn:disabled) {
     opacity: 0.75;
   }
 
-  .kit-refresh-control__btn.querying :global(svg) {
-    animation: kit-refresh-spin 0.8s linear infinite;
+  .kit-refresh-control :global(.kit-refresh-control__btn.querying svg) {
+    animation: kit-spin 0.8s linear infinite;
   }
 
   .kit-refresh-control__status {
@@ -136,19 +115,5 @@
     color: var(--text-muted);
     font-size: var(--font-size-xs);
     white-space: nowrap;
-  }
-
-  @keyframes kit-refresh-spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-refresh-control__btn:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

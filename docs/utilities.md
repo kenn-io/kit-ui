@@ -61,7 +61,34 @@ clamps to the viewport horizontally and flips above the trigger when there is
 no room below. This is what `FilterDropdown` uses; reuse it for custom
 popovers so they behave consistently.
 
-## Focus trap
+## Popover wiring
+
+```ts
+import { dismissable, autoReposition } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/popover"
+
+$effect(() => {
+  if (!open) return;
+  const cleanups = [
+    dismissable({
+      owners: () => [containerEl], // pointer-down outside all of these dismisses
+      dismiss: () => (open = false),
+      escapeFocus: () => triggerEl, // focused after an Escape dismiss
+    }),
+    autoReposition(() => panelEl, positionPanel),
+  ];
+  return () => cleanups.forEach((cleanup) => cleanup());
+});
+```
+
+The event plumbing around `floatingPopoverStyle`, shared by every floating
+component (SelectDropdown, FilterDropdown, DateRangePicker, Tooltip,
+Typeahead). `dismissable` closes on `mousedown` outside the owners
+(mousedown, not click — the popover yields at press, and a
+press-inside-release-outside drag doesn't dismiss) or on Escape, optionally
+restoring focus to the trigger. `autoReposition` re-runs your positioning
+on window resize, any ancestor scroll (capture phase), and panel size
+changes (ResizeObserver), coalesced to one call per animation frame. Both
+return their cleanup function.
 
 ```svelte
 <script lang="ts">

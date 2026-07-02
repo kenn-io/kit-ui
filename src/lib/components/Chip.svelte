@@ -224,9 +224,4 @@
     background: color-mix(in srgb, var(--accent-teal, var(--accent-green)) 15%, transparent);
     color: var(--accent-teal, var(--accent-green));
   }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-chip--interactive:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
 </style>

@@ -317,6 +317,11 @@ const linkRelHardener = (node: Element): void => {
   }
 };
 
+// The nonce value differs per render but the attribute shape doesn't, so
+// the stripper is built once. Sharing a `g`-flagged regex is safe with
+// replaceAll: Symbol.replace resets lastIndex before matching.
+const SHIKI_GENERATED_ATTR_STRIPPER = new RegExp(`\\s${SHIKI_GENERATED_ATTR}="[^"]*"`, "g");
+
 function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string {
   DOMPurify.addHook("uponSanitizeAttribute", shikiStyleSanitizer);
   DOMPurify.addHook("afterSanitizeAttributes", linkRelHardener);
@@ -328,7 +333,7 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
       FORBID_TAGS: ["style"],
       ADD_ATTR: ["target", "rel", SHIKI_GENERATED_ATTR, ...allowedAttributes],
     });
-    return sanitized.replaceAll(new RegExp(`\\s${SHIKI_GENERATED_ATTR}="[^"]*"`, "g"), "");
+    return sanitized.replaceAll(SHIKI_GENERATED_ATTR_STRIPPER, "");
   } finally {
     DOMPurify.removeHook("uponSanitizeAttribute", shikiStyleSanitizer);
     DOMPurify.removeHook("afterSanitizeAttributes", linkRelHardener);
