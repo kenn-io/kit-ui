@@ -4,8 +4,8 @@
     {
       "name": "demo",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "dev", "--port", "5183"],
-      "port": 5183
+      "runtimeArgs": ["run", "dev"],
+      "autoPort": true
     }
   ]
 }

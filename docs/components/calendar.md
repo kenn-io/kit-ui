@@ -23,17 +23,18 @@ pick-a-date UI.
 
 ## Props
 
-| Prop                                    | Type                     | Default                             | Notes                                                                              |
-| --------------------------------------- | ------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------- |
-| `month`                                 | `string` (bindable)      | today                               | Any `YYYY-MM-DD` inside the visible month                                          |
-| `selected`                              | `DateRange \| null`      | `null`                              | Inclusive range to highlight; a single day is `{ from: d, to: d }`                 |
-| `onpick`                                | `(date: string) => void` | —                                   | Clicked date (`YYYY-MM-DD`); leading/trailing days of adjacent months are pickable |
-| `maxDate`                               | `string \| null`         | `null`                              | Later dates disabled; paging into fully-later months blocked                       |
-| `previousMonthLabel` / `nextMonthLabel` | `string`                 | `"Previous month"` / `"Next month"` | Arrow `aria-label`s in the day view                                                |
-| `previousYearLabel` / `nextYearLabel`   | `string`                 | `"Previous year"` / `"Next year"`   | Arrow `aria-label`s in the month grid                                              |
-| `previousYearsLabel` / `nextYearsLabel` | `string`                 | `"Previous years"` / `"Next years"` | Arrow `aria-label`s in the year grid                                               |
-| `chooseMonthLabel` / `chooseYearLabel`  | `string`                 | `"Choose month"` / `"Choose year"`  | Appended to the header button's accessible name to hint at the drill-down          |
-| `class`                                 | `string`                 | `""`                                |                                                                                    |
+| Prop                                    | Type                     | Default                             | Notes                                                                                                                                                                                     |
+| --------------------------------------- | ------------------------ | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `month`                                 | `string` (bindable)      | today                               | Any `YYYY-MM-DD` inside the visible month                                                                                                                                                 |
+| `selected`                              | `DateRange \| null`      | `null`                              | Inclusive range to highlight; a single day is `{ from: d, to: d }`                                                                                                                        |
+| `onpick`                                | `(date: string) => void` | —                                   | Clicked date (`YYYY-MM-DD`); leading/trailing days of adjacent months are pickable                                                                                                        |
+| `maxDate`                               | `string \| null`         | `null`                              | Later dates disabled; paging into fully-later months blocked                                                                                                                              |
+| `previousMonthLabel` / `nextMonthLabel` | `string`                 | `"Previous month"` / `"Next month"` | Arrow `aria-label`s in the day view                                                                                                                                                       |
+| `previousYearLabel` / `nextYearLabel`   | `string`                 | `"Previous year"` / `"Next year"`   | Arrow `aria-label`s in the month grid                                                                                                                                                     |
+| `previousYearsLabel` / `nextYearsLabel` | `string`                 | `"Previous years"` / `"Next years"` | Arrow `aria-label`s in the year grid                                                                                                                                                      |
+| `chooseMonthLabel` / `chooseYearLabel`  | `string`                 | `"Choose month"` / `"Choose year"`  | Appended to the header button's accessible name to hint at the drill-down                                                                                                                 |
+| `locale`                                | `string`                 | browser locale                      | BCP 47 tag for month/weekday/day names, for apps whose language setting can diverge from the browser locale. Trusted input: `Intl` throws on malformed tags, so validate persisted values |
+| `class`                                 | `string`                 | `""`                                |                                                                                                                                                                                           |
 
 ## Behavior
 
@@ -46,8 +47,9 @@ pick-a-date UI.
   a one-day range is a single solid pill.
 - Weekday/month labels use the browser locale (via memoized
   `Intl.DateTimeFormat` instances — `weekdayLabels()` / `monthLabels()` are
-  exported); the grid itself is Monday-first regardless of locale, matching
-  `periodBounds("week", …)`'s ISO weeks.
+  exported), or the `locale` prop when the app's language setting can
+  diverge from it; the grid itself is Monday-first regardless of locale,
+  matching `periodBounds("week", …)`'s ISO weeks.
 - The eight nav/drill-down label props are the shared `CalendarNavLabels`
   interface (exported); `DateRangePicker` accepts the same keys and
   forwards them verbatim.

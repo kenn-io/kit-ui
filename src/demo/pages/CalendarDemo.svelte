@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { Calendar, periodBounds, todayStr, type DateRange } from "../../lib/index.js";
+  import {
+    Calendar,
+    periodBounds,
+    SegmentedControl,
+    todayStr,
+    type DateRange,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let picked = $state(todayStr());
@@ -30,6 +36,10 @@
       rangeTo = d;
     }
   }
+
+  let localeChoice = $state("browser");
+  let localeMonth = $state(todayStr());
+  const demoLocale = $derived(localeChoice === "browser" ? undefined : localeChoice);
 </script>
 
 <DemoSection
@@ -100,7 +110,38 @@ function pickRangeDay(d: string) {
   </div>
 </DemoSection>
 
+<DemoSection
+  title="App locale"
+  description="Month, weekday, and day-cell labels follow the browser locale by default; pass locale (a BCP 47 tag) when the app's language setting can diverge from it. The grid stays Monday-first regardless."
+  code={`<Calendar bind:month locale="zh-CN" />`}
+>
+  <div class="calendar-demo">
+    <Calendar bind:month={localeMonth} locale={demoLocale} />
+    <div class="locale-controls">
+      <SegmentedControl
+        options={[
+          { value: "browser", label: "Browser" },
+          { value: "zh-CN", label: "zh-CN" },
+          { value: "fr", label: "fr" },
+          { value: "de", label: "de" },
+        ]}
+        value={localeChoice}
+        onchange={(v) => (localeChoice = v)}
+        ariaLabel="Calendar locale"
+      />
+      <span class="readout">locale: <code>{demoLocale ?? "(browser)"}</code></span>
+    </div>
+  </div>
+</DemoSection>
+
 <style>
+  .locale-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
   .calendar-demo {
     display: flex;
     align-items: flex-start;

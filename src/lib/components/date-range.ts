@@ -48,17 +48,20 @@ export interface DateRange {
  * same keys and forwards them verbatim, so the set (and Calendar's English
  * defaults) live in one place.
  */
+/* `| undefined` on the optional labels keeps wrapper consumers with
+ * exactOptionalPropertyTypes happy: they forward possibly-undefined values
+ * explicitly, and omission/undefined both mean "use Calendar's default". */
 export interface CalendarNavLabels {
-  previousMonthLabel?: string;
-  nextMonthLabel?: string;
+  previousMonthLabel?: string | undefined;
+  nextMonthLabel?: string | undefined;
   /** Nav labels while zoomed out to the month / year grids. */
-  previousYearLabel?: string;
-  nextYearLabel?: string;
-  previousYearsLabel?: string;
-  nextYearsLabel?: string;
+  previousYearLabel?: string | undefined;
+  nextYearLabel?: string | undefined;
+  previousYearsLabel?: string | undefined;
+  nextYearsLabel?: string | undefined;
   /** Appended to the header button's accessible name to hint at the drill-down. */
-  chooseMonthLabel?: string;
-  chooseYearLabel?: string;
+  chooseMonthLabel?: string | undefined;
+  chooseYearLabel?: string | undefined;
 }
 
 export interface RangePreset {
@@ -191,16 +194,21 @@ export function monthGridDates(anchor: string): string[] {
 
 /* Locale label tables and formatters are memoized at module scope:
  * every toLocaleDateString call constructs a fresh Intl.DateTimeFormat
- * (locale resolution + ICU setup), and the browser locale can't change
- * within a page load. Lazy so importing this module stays side-effect
- * free (and SSR-safe). */
+ * (locale resolution + ICU setup). Keyed by (locale, options) — the browser
+ * locale can't change within a page load, and an app-provided `locale` gets
+ * its own entry, so a language switch just fills a new slot. Lazy so
+ * importing this module stays side-effect free (and SSR-safe).
+ *
+ * Like date strings, `locale` is trusted input: Intl throws a RangeError on
+ * malformed BCP 47 tags, so validate app-provided values (e.g. persisted
+ * settings) before passing them down. */
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
-function formatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const key = JSON.stringify(options);
+function formatter(options: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
+  const key = `${locale ?? ""}|${JSON.stringify(options)}`;
   let fmt = formatters.get(key);
   if (!fmt) {
-    fmt = new Intl.DateTimeFormat(undefined, options);
+    fmt = new Intl.DateTimeFormat(locale, options);
     formatters.set(key, fmt);
   }
   return fmt;
@@ -217,21 +225,24 @@ function labelTable(key: string, build: () => string[]): string[] {
   return table;
 }
 
-/** Monday-first weekday column labels in the browser locale ("Mon", …). */
-export function weekdayLabels(): string[] {
-  // 2024-01-01 is a Monday.
-  return labelTable("weekdays", () => {
-    const fmt = formatter({ weekday: "short" });
+/** Monday-first weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
+ * omitted = the browser locale. */
+export function weekdayLabels(locale?: string): string[] {
+  // 2024-01-01 is a Monday. Sliced so callers can't mutate the shared cache.
+  return labelTable(`weekdays|${locale ?? ""}`, () => {
+    const fmt = formatter({ weekday: "short" }, locale);
     return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
-  });
+  }).slice();
 }
 
-/** January-first month labels in the browser locale ("Jan"/"January", …). */
-export function monthLabels(style: "short" | "long"): string[] {
-  return labelTable(`months-${style}`, () => {
-    const fmt = formatter({ month: style });
+/** January-first month labels ("Jan"/"January", …). `locale` omitted = the
+ * browser locale. */
+export function monthLabels(style: "short" | "long", locale?: string): string[] {
+  // Sliced so callers can't mutate the shared cache.
+  return labelTable(`months-${style}|${locale ?? ""}`, () => {
+    const fmt = formatter({ month: style }, locale);
     return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2024, i, 1)));
-  });
+  }).slice();
 }
 
 /** Turn any selection into concrete inclusive {from, to} bounds. */
@@ -246,17 +257,32 @@ export function resolveRange(sel: RangeSelection, earliestDate?: string | null):
   }
 }
 
-/** "Jun 29" style short label (browser locale). */
-export function formatShortDate(date: string): string {
-  return formatter({ month: "short", day: "numeric" }).format(parseLocal(date));
+/** "Jun 29" style short label. `locale` omitted = the browser locale. */
+export function formatShortDate(date: string, locale?: string): string {
+  return formatter({ month: "short", day: "numeric" }, locale).format(parseLocal(date));
 }
 
-/** "Jun 29, 2026" style label for a day anchor (browser locale). */
-export function formatDayLabel(anchor: string): string {
-  return formatter({ year: "numeric", month: "short", day: "numeric" }).format(parseLocal(anchor));
+/**
+ * Apply a week trigger label template to a formatted week-start date.
+ * A "{date}" placeholder is substituted, so date-first locales can put the
+ * date anywhere ("{date}所在周"); a template without one is treated as a
+ * prefix ("Week of" → "Week of Jun 29", the pre-template behavior).
+ */
+export function formatWeekOfLabel(template: string, dateLabel: string): string {
+  if (template.includes("{date}")) return template.replace("{date}", dateLabel);
+  return `${template} ${dateLabel}`;
 }
 
-/** "June 2026" style label for a month anchor (browser locale). */
-export function formatMonthLabel(anchor: string): string {
-  return formatter({ year: "numeric", month: "long" }).format(parseLocal(anchor));
+/** "Jun 29, 2026" style label for a day anchor. `locale` omitted = the
+ * browser locale. */
+export function formatDayLabel(anchor: string, locale?: string): string {
+  return formatter({ year: "numeric", month: "short", day: "numeric" }, locale).format(
+    parseLocal(anchor),
+  );
+}
+
+/** "June 2026" style label for a month anchor. `locale` omitted = the
+ * browser locale. */
+export function formatMonthLabel(anchor: string, locale?: string): string {
+  return formatter({ year: "numeric", month: "long" }, locale).format(parseLocal(anchor));
 }

@@ -23,6 +23,11 @@
     onpick?: (date: string) => void;
     /** Dates after this are disabled; paging into fully-later months too. */
     maxDate?: string | null;
+    /** BCP 47 tag for month/weekday/day names, for apps whose language
+     * setting can diverge from the browser locale. Omitted = browser locale.
+     * (`| undefined` keeps forwarding consumers with
+     * exactOptionalPropertyTypes happy.) */
+    locale?: string | undefined;
     class?: string;
   }
 
@@ -39,6 +44,7 @@
     nextYearsLabel = "Next years",
     chooseMonthLabel = "Choose month",
     chooseYearLabel = "Choose year",
+    locale = undefined,
     class: className = "",
   }: Props = $props();
 
@@ -52,7 +58,7 @@
   let view = $state<"days" | "months" | "years">("days");
   let zoomYear = $state(0);
 
-  const weekdays = weekdayLabels();
+  const weekdays = $derived(weekdayLabels(locale));
   const today = todayStr();
 
   const cells = $derived(monthGridDates(month));
@@ -86,13 +92,14 @@
 
   const unitCells = $derived.by((): UnitCell[] => {
     if (view === "months") {
-      const long = monthLabels("long");
-      return monthLabels("short").map((label, i) => ({
+      return monthLabels("short", locale).map((label, i) => ({
         label,
         value: i,
         current: monthKey(zoomYear, i) === monthPrefix,
         disabled: maxMonthPrefix != null && monthKey(zoomYear, i) > maxMonthPrefix,
-        aria: `${long[i]} ${zoomYear}`,
+        // Full "January 2026" via the locale's own month/year order ("2026年
+        // 1月") rather than concatenating name + year English-style.
+        aria: formatMonthLabel(`${monthKey(zoomYear, i)}-01`, locale),
       }));
     }
     return yearCells.map((y) => ({
@@ -140,7 +147,7 @@
         prevLabel: previousMonthLabel,
         nextLabel: nextMonthLabel,
         nextDisabled: nextMonthDisabled,
-        headerLabel: formatMonthLabel(month),
+        headerLabel: formatMonthLabel(month, locale),
         headerHint: chooseMonthLabel,
       };
     }
@@ -224,7 +231,7 @@
           class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
           type="button"
           disabled={maxDate != null && date > maxDate}
-          aria-label={formatDayLabel(date)}
+          aria-label={formatDayLabel(date, locale)}
           aria-pressed={selectedDay}
           onclick={() => onpick?.(date)}
         >

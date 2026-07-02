@@ -11,6 +11,7 @@
     formatDayLabel,
     formatMonthLabel,
     formatShortDate,
+    formatWeekOfLabel,
     periodBounds,
     resolveRange,
     todayStr,
@@ -42,7 +43,9 @@
     dayLabel?: string;
     weekLabel?: string;
     monthLabel?: string;
-    /** Prefix for the week step label, e.g. "Week of Jun 29". */
+    /** Week trigger label. A "{date}" placeholder is substituted with the
+     * week-start date ("{date}所在周"); without one the label is a prefix
+     * ("Week of" → "Week of Jun 29"). */
     weekOfLabel?: string;
     /** Trigger label template for non-preset relative windows. */
     lastDaysLabel?: string;
@@ -53,6 +56,11 @@
     dialogLabel?: string;
     relativeGroupLabel?: string;
     calendarGroupLabel?: string;
+    /** BCP 47 tag for the date labels on the trigger and calendar, for apps
+     * whose language setting can diverge from the browser locale. Omitted =
+     * browser locale. (`| undefined` keeps forwarding consumers with
+     * exactOptionalPropertyTypes happy.) */
+    locale?: string | undefined;
   }
 
   let {
@@ -78,6 +86,7 @@
     dialogLabel = "Select date range",
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
+    locale = undefined,
     // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
     // own English defaults stay the single source.
     ...calendarLabels
@@ -112,9 +121,12 @@
   ]);
 
   function calendarLabelFor(unit: CalendarUnit, anchor: string): string {
-    if (unit === "day") return formatDayLabel(anchor);
-    if (unit === "month") return formatMonthLabel(anchor);
-    return `${weekOfLabel} ${formatShortDate(periodBounds("week", anchor).from)}`;
+    if (unit === "day") return formatDayLabel(anchor, locale);
+    if (unit === "month") return formatMonthLabel(anchor, locale);
+    return formatWeekOfLabel(
+      weekOfLabel,
+      formatShortDate(periodBounds("week", anchor).from, locale),
+    );
   }
 
   /** Short label for the trigger button reflecting the current selection. */
@@ -128,8 +140,8 @@
       return calendarLabelFor(selection.unit, selection.anchor);
     }
     if (!selection.from || !selection.to) return customRangeLabel;
-    if (selection.from === selection.to) return formatShortDate(selection.from);
-    return `${formatShortDate(selection.from)} - ${formatShortDate(selection.to)}`;
+    if (selection.from === selection.to) return formatShortDate(selection.from, locale);
+    return `${formatShortDate(selection.from, locale)} - ${formatShortDate(selection.to, locale)}`;
   });
 
   // The period the calendar highlights: the day/week/month around the
@@ -322,6 +334,7 @@
             selected={calSelected}
             {maxDate}
             {...calendarLabels}
+            {locale}
             onpick={(date) => applyCalendar(calUnit, date)}
           />
         </div>
