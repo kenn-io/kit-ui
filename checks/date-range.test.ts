@@ -47,6 +47,20 @@ describe("date label locale", () => {
     expect(weekdayLabels("en-US")).toHaveLength(7);
   });
 
+  test("caches are size-capped — many distinct locales still format correctly", () => {
+    // Flood the caches past the FIFO cap with valid private-use variants
+    // (what an SSR server sees with request-derived locales), then confirm
+    // evicted entries rebuild correctly instead of erroring or going stale.
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    for (let i = 0; i < 100; i++) {
+      weekdayLabels(`en-x-v${i}`);
+      monthLabels("short", `en-x-v${i}`);
+    }
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    expect(monthLabels("short", "en-US")[0]).toBe("Jan");
+    expect(formatShortDate("2026-06-29", "zh-CN")).toBe("6月29日");
+  });
+
   test("label helpers return copies — mutation can't corrupt the cache", () => {
     const a = weekdayLabels("en-US");
     a[0] = "corrupted";

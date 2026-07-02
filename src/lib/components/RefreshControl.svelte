@@ -27,8 +27,10 @@
     intervalMs?: number;
     /** Renders the age label; override to localize the default English
      * `formatRefreshAge` strings ("Updated 3m ago", …). `now` is the
-     * component's minute clock tick. (`| undefined` keeps forwarding
-     * consumers with exactOptionalPropertyTypes happy.) */
+     * component's minute clock tick, clamped so it is never earlier than
+     * `lastUpdatedAt` — formatters can assume a non-negative age.
+     * (`| undefined` keeps forwarding consumers with
+     * exactOptionalPropertyTypes happy.) */
     formatAge?: ((lastUpdatedAt: number | null, now: number) => string) | undefined;
     /** BCP 47 tag for the timestamp tooltip on the age label, for apps whose
      * language setting can diverge from the browser locale. Omitted =
@@ -61,9 +63,13 @@
   );
 
   // Local clock that ticks once a minute so the age label re-derives without
-  // a data fetch. Seeded once at mount.
+  // a data fetch. Seeded once at mount. A fresh lastUpdatedAt can outrun the
+  // clock by up to a tick, so clamp `now` to it — otherwise formatAge would
+  // see a negative age right after a refresh.
   let tick = $state(Date.now());
-  const ageLabel = $derived(formatAge(lastUpdatedAt, tick));
+  const ageLabel = $derived(
+    formatAge(lastUpdatedAt, lastUpdatedAt === null ? tick : Math.max(tick, lastUpdatedAt)),
+  );
 
   onMount(() => {
     scheduler.scheduleNext();

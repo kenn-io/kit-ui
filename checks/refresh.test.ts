@@ -33,4 +33,11 @@ describe("formatRefreshAge", () => {
     expect(formatRefreshAge(NOW - DAY, NOW)).toBe("Updated 1d ago");
     expect(formatRefreshAge(NOW - 10 * DAY, NOW)).toBe("Updated 10d ago");
   });
+
+  test("a now earlier than lastUpdatedAt still reads 'just now'", () => {
+    // RefreshControl clamps its clock so formatAge never sees a negative
+    // age, but the default formatter tolerates one anyway (defense in depth
+    // for direct callers with skewed clocks).
+    expect(formatRefreshAge(NOW + 30 * MINUTE, NOW)).toBe("Updated just now");
+  });
 });
