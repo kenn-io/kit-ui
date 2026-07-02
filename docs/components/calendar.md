@@ -29,7 +29,10 @@ pick-a-date UI.
 | `selected` | `DateRange \| null` | `null` | Inclusive range to highlight; a single day is `{ from: d, to: d }` |
 | `onpick` | `(date: string) => void` | — | Clicked date (`YYYY-MM-DD`); leading/trailing days of adjacent months are pickable |
 | `maxDate` | `string \| null` | `null` | Later dates disabled; paging into fully-later months blocked |
-| `previousMonthLabel` / `nextMonthLabel` | `string` | `"Previous month"` / `"Next month"` | Month-arrow `aria-label`s |
+| `previousMonthLabel` / `nextMonthLabel` | `string` | `"Previous month"` / `"Next month"` | Arrow `aria-label`s in the day view |
+| `previousYearLabel` / `nextYearLabel` | `string` | `"Previous year"` / `"Next year"` | Arrow `aria-label`s in the month grid |
+| `previousYearsLabel` / `nextYearsLabel` | `string` | `"Previous years"` / `"Next years"` | Arrow `aria-label`s in the year grid |
+| `chooseMonthLabel` / `chooseYearLabel` | `string` | `"Choose month"` / `"Choose year"` | Appended to the header button's accessible name to hint at the drill-down |
 | `class` | `string` | `""` | |
 
 ## Behavior
@@ -44,3 +47,21 @@ pick-a-date UI.
   `periodBounds("week", …)`'s ISO weeks.
 - Day cells are plain focusable buttons with full-date `aria-label`s (no
   roving-tabindex grid navigation yet).
+
+## Month / year drill-down
+
+The header label is a button (standard date-component pattern): clicking
+it zooms out from days to a 12-month grid, and clicking again to a 12-year
+grid; picking an entry drills back down (year → months → days). Notes:
+
+- Zooming is view-only — `month` and any `selected` range are untouched
+  until an entry is picked, so cancelling out (picking the same month)
+  returns to the same day view with the highlight intact.
+- The arrows page by month, year, or 12 years to match the view; the year
+  grid uses fixed 12-slot blocks (e.g. 2016–2027) so paging is stable.
+- `maxDate` applies in the zoomed grids too: months/years entirely after
+  it are disabled, as is paging past it.
+- The currently-anchored month/year carries the same inset ring as
+  "today" in the day grid — a position marker, not a selection.
+- In the year grid there is nothing further to zoom out to, so the header
+  reverts to a static label showing the visible block.

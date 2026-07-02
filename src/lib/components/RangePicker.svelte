@@ -52,6 +52,13 @@
     calendarGroupLabel?: string;
     previousMonthLabel?: string;
     nextMonthLabel?: string;
+    /** Forwarded to the embedded Calendar's month/year drill-down. */
+    previousYearLabel?: string;
+    nextYearLabel?: string;
+    previousYearsLabel?: string;
+    nextYearsLabel?: string;
+    chooseMonthLabel?: string;
+    chooseYearLabel?: string;
     /** @deprecated Use `previousMonthLabel` (renamed when the day stepper
      * became a month-paged Calendar). */
     previousPeriodLabel?: string;
@@ -86,6 +93,12 @@
     nextPeriodLabel = undefined,
     previousMonthLabel = previousPeriodLabel ?? "Previous month",
     nextMonthLabel = nextPeriodLabel ?? "Next month",
+    previousYearLabel = "Previous year",
+    nextYearLabel = "Next year",
+    previousYearsLabel = "Previous years",
+    nextYearsLabel = "Next years",
+    chooseMonthLabel = "Choose month",
+    chooseYearLabel = "Choose year",
   }: Props = $props();
 
   let open = $state(false);
@@ -345,6 +358,12 @@
             {maxDate}
             {previousMonthLabel}
             {nextMonthLabel}
+            {previousYearLabel}
+            {nextYearLabel}
+            {previousYearsLabel}
+            {nextYearsLabel}
+            {chooseMonthLabel}
+            {chooseYearLabel}
             onpick={(date) => applyCalendar(calUnit, date)}
           />
         </div>
