@@ -354,6 +354,19 @@
     color: var(--text-primary);
   }
 
+  /* Hovering a selected day deepens the band instead of swapping it for
+   * the grey hover surface — the selection must stay legible under the
+   * pointer (it sits there right after a pick). */
+  .kit-calendar__day.selected:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-blue) 24%, transparent);
+    color: var(--accent-blue);
+  }
+
+  .kit-calendar__day.range-start.range-end:hover:not(:disabled) {
+    background: var(--accent-blue);
+    color: var(--bg-surface);
+  }
+
   .kit-calendar__day.outside {
     color: var(--text-muted);
     opacity: 0.55;
