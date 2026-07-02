@@ -13,11 +13,11 @@ async function centerOffset(chip: Locator, svg: Locator): Promise<number> {
   return Math.abs(chipBox.y + chipBox.height / 2 - (svgBox.y + svgBox.height / 2));
 }
 
-// The label fix (vertical-align: middle + negative block margin) was tuned
-// optically in middleman before being upstreamed; box-center deviation from
-// x-height keying is under 2px and varies with platform font metrics, so
-// these are guard rails against gross regressions (baseline sag, line-box
-// growth), not sub-pixel assertions.
+// The label fix: vertical-align: middle for layout, a negative block margin
+// so tall icons can't grow the line box, and an ex/cap transform correcting
+// x-height keying to the cap-height midline (uppercase optical center).
+// Measured offsets are ~0.6px; the tolerance leaves headroom for platform
+// font-metric differences while still catching baseline sag (~2px+).
 for (const [name, testid, maxHeight] of [
   ["md", "chip-label-icon", 23],
   ["sm", "chip-label-icon-sm", 19],
@@ -25,7 +25,9 @@ for (const [name, testid, maxHeight] of [
   test(`svg composed into the ${name} label centers without growing the chip`, async ({ page }) => {
     await gotoPage(page, "chip");
     const chip = page.getByTestId(testid);
-    expect(await centerOffset(chip, chip.locator(".kit-chip__label svg"))).toBeLessThanOrEqual(2);
+    expect(await centerOffset(chip, chip.locator(".kit-chip__label svg"))).toBeLessThanOrEqual(
+      1.25,
+    );
     const box = await chip.boundingBox();
     expect(box!.height).toBeLessThanOrEqual(maxHeight);
   });

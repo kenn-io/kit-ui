@@ -178,13 +178,17 @@
   }
 
   /* Icons composed into the label would otherwise sit on the text baseline
-   * and sag below uppercase labels. The label span must stay inline (flex
-   * would break the ellipsis above), so center via vertical-align; the
+   * and misalign against uppercase labels. The label span must stay inline
+   * (flex would break the ellipsis above), so center via vertical-align; the
    * negative block margin keeps an icon taller than the 1-unit line-height
-   * from growing the line box and thus the chip. */
+   * from growing the line box and thus the chip. `middle` keys off the
+   * x-height, which reads ~0.1em low next to uppercase text — the transform
+   * nudges the icon from the x-height midline to the cap-height midline
+   * (font-adaptive via ex/cap units) without touching layout. */
   .kit-chip__label :global(svg) {
     vertical-align: middle;
     margin-block: -0.2em;
+    transform: translateY(calc((1ex - 1cap) / 2));
   }
 
   /* Trailing indicator (e.g. a dropdown chevron) — a flex child outside the
