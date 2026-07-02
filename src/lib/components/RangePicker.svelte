@@ -1,6 +1,8 @@
 <script lang="ts">
   import CalendarIcon from "@lucide/svelte/icons/calendar";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import { tick } from "svelte";
+  import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
   import {
     DEFAULT_RANGE_PRESETS,
@@ -50,6 +52,13 @@
     calendarGroupLabel?: string;
     previousMonthLabel?: string;
     nextMonthLabel?: string;
+    /** Forwarded to the embedded Calendar's month/year drill-down. */
+    previousYearLabel?: string;
+    nextYearLabel?: string;
+    previousYearsLabel?: string;
+    nextYearsLabel?: string;
+    chooseMonthLabel?: string;
+    chooseYearLabel?: string;
     /** @deprecated Use `previousMonthLabel` (renamed when the day stepper
      * became a month-paged Calendar). */
     previousPeriodLabel?: string;
@@ -84,6 +93,12 @@
     nextPeriodLabel = undefined,
     previousMonthLabel = previousPeriodLabel ?? "Previous month",
     nextMonthLabel = nextPeriodLabel ?? "Next month",
+    previousYearLabel = "Previous year",
+    nextYearLabel = "Next year",
+    previousYearsLabel = "Previous years",
+    nextYearsLabel = "Next years",
+    chooseMonthLabel = "Choose month",
+    chooseYearLabel = "Choose year",
   }: Props = $props();
 
   let open = $state(false);
@@ -154,9 +169,34 @@
     calMonth = calAnchor;
   }
 
-  function toggleOpen(): void {
+  let panelEl = $state<HTMLDivElement>();
+  let panelStyle = $state("");
+
+  // Fixed positioning (shared popover contract) so the panel escapes
+  // overflow-hidden ancestors; align maps left/right onto the trigger's
+  // start/end edge and block mode pins the panel to the trigger width.
+  function positionPanel(): void {
+    if (!containerEl || !panelEl) return;
+    const trigger = containerEl.getBoundingClientRect();
+    const width = block ? Math.max(240, trigger.width) : 264;
+    panelStyle = `${floatingPopoverStyle({
+      trigger,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      popoverWidth: width,
+      popoverHeight: panelEl.offsetHeight,
+      align: align === "right" ? "end" : "start",
+      triggerGap: 6,
+    })}; width: ${Math.round(width)}px`;
+  }
+
+  async function toggleOpen(): Promise<void> {
     open = !open;
-    if (open) seed();
+    if (open) {
+      seed();
+      await tick();
+      positionPanel();
+    }
   }
 
   function isRelativeActive(days: number): boolean {
@@ -215,11 +255,25 @@
       }
     }
 
+    function reposition(): void {
+      positionPanel();
+    }
+
+    // Tab switches / calendar paging change the panel's height — track it
+    // so a picker opened near the viewport bottom doesn't keep a stale top.
+    const observer = new ResizeObserver(reposition);
+    if (panelEl) observer.observe(panelEl);
+
     document.addEventListener("click", handleClickOutside);
     document.addEventListener("keydown", handleKeydown);
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
     return () => {
+      observer.disconnect();
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleKeydown);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
     };
   });
 </script>
@@ -251,7 +305,8 @@
   {#if open}
     <div
       class="kit-range-picker__panel"
-      class:kit-range-picker__panel--right={align === "right"}
+      style={panelStyle}
+      bind:this={panelEl}
       role="dialog"
       aria-label={dialogLabel}
     >
@@ -303,6 +358,12 @@
             {maxDate}
             {previousMonthLabel}
             {nextMonthLabel}
+            {previousYearLabel}
+            {nextYearLabel}
+            {previousYearsLabel}
+            {nextYearsLabel}
+            {chooseMonthLabel}
+            {chooseYearLabel}
             onpick={(date) => applyCalendar(calUnit, date)}
           />
         </div>
@@ -348,11 +409,6 @@
     justify-content: space-between;
   }
 
-  .kit-range-picker--block .kit-range-picker__panel {
-    width: 100%;
-    min-width: 240px;
-  }
-
   .kit-range-picker__trigger {
     height: 28px;
     /* Hold a stable width so the label changing (e.g. "Jun 19" vs
@@ -370,7 +426,7 @@
     font-size: var(--font-size-sm);
     cursor: pointer;
     white-space: nowrap;
-    transition: border-color 0.12s, background 0.12s;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
   }
 
   .kit-range-picker__trigger:hover {
@@ -401,7 +457,7 @@
     display: inline-flex;
     color: var(--text-muted);
     flex-shrink: 0;
-    transition: transform 0.15s;
+    transition: transform var(--transition-fast);
   }
 
   .kit-range-picker__trigger-chevron.open {
@@ -409,21 +465,14 @@
   }
 
   .kit-range-picker__panel {
-    position: absolute;
-    top: calc(100% + var(--space-3));
-    left: 0;
+    position: fixed;
+    box-sizing: border-box;
     z-index: 100;
-    width: 264px;
     background: var(--bg-surface);
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     padding: var(--space-4);
-  }
-
-  .kit-range-picker__panel--right {
-    left: auto;
-    right: 0;
   }
 
   .kit-range-picker__tabs {
@@ -447,7 +496,7 @@
     font-size: var(--font-size-sm);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   .kit-range-picker__tab:hover {
@@ -476,7 +525,7 @@
     font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   .kit-range-picker__pill:hover {
@@ -523,11 +572,18 @@
     color: var(--text-secondary);
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
-    transition: border-color 0.12s;
+    transition: border-color var(--transition-fast);
   }
 
   .kit-range-picker__date-input:focus {
     outline: none;
     border-color: var(--accent-blue);
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-range-picker__trigger:focus-visible,
+  .kit-range-picker__tab:focus-visible,
+  .kit-range-picker__pill:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

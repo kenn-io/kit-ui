@@ -57,7 +57,7 @@
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     cursor: pointer;
-    transition: color 0.1s, background 0.1s;
+    transition: color var(--transition-fast), background var(--transition-fast);
   }
 
   .kit-sidebar-toggle:hover {
@@ -72,5 +72,10 @@
 
   :global(.kit-sidebar-toggle--push) {
     margin-left: auto;
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  :global(.kit-sidebar-toggle):focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

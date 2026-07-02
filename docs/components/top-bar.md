@@ -49,14 +49,14 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `tabs` | `TopBarTab[]` | `[]` | `{ id, label, disabled? }`; omit for a tabless bar |
-| `active` | `string` (bindable) | `""` | Active tab id. A disabled tab is never rendered as current — unset, unknown, or disabled values fall back to the first **enabled** tab in both modes; with every tab disabled there is no current tab |
+| `active` | `string` (bindable) | `""` | Active tab id. A disabled tab is never rendered as current — unset, unknown, or disabled values fall back to the first **enabled** tab in both modes. With every tab disabled there is no current tab: expanded buttons show none active, and the collapsed dropdown renders disabled showing "—" |
 | `onchange` | `(id: string) => void` | — | Fires on tab/dropdown selection |
 | `collapsed` | `boolean` (bindable) | `false` | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label) |
 | `centerTabs` | `boolean` | `false` | Center the expanded tab group **in the free space between the reserved regions** (middleman style; not viewport-centered). Ignored when a `search` snippet is present — search owns the flexible middle. The collapsed dropdown always packs after `left` |
 | `ariaLabel` | `string` | `"Primary"` | Label for the nav / collapsed dropdown |
 | `left` | `Snippet` | — | Reserved leading region: brand, sidebar toggle, context pickers |
 | `search` | `Snippet` | — | Centered flexible slot, e.g. a command-palette trigger |
-| `searchMinWidth` | `number` | — | Opt the search region into the flexible middle (grows to absorb all slack); this value is what tab-collapse measurement charges the region. See below |
+| `searchMinWidth` | `number` | — | Opt the search region into the flexible middle (grows to absorb all slack); this value is what tab-collapse measurement charges the region. Non-finite or negative values behave like unset (default shrink-wrapped slot). See below |
 | `right` | `Snippet` | — | Reserved trailing region: actions, theme, settings |
 | `class` | `string` | `""` | |
 

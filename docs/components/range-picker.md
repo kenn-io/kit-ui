@@ -55,6 +55,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `dialogLabel` | `string` | `"Select date range"` | Popover `aria-label` |
 | `relativeGroupLabel` / `calendarGroupLabel` | `string` | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s |
 | `previousMonthLabel` / `nextMonthLabel` | `string` | `"Previous month"` / `"Next month"` | Calendar month-arrow `aria-label`s. The pre-Calendar names `previousPeriodLabel` / `nextPeriodLabel` still work as deprecated aliases |
+| `previousYearLabel` / `nextYearLabel` / `previousYearsLabel` / `nextYearsLabel` / `chooseMonthLabel` / `chooseYearLabel` | `string` | Calendar defaults | Forwarded to the embedded [Calendar](calendar.md)'s month/year drill-down |
 
 Date labels on the trigger/stepper format with the browser locale via
 `toLocaleDateString`.

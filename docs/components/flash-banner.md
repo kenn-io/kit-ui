@@ -20,6 +20,8 @@ import { showFlash, dismissFlash } from "@kenn-io/kit-ui";
 
 showFlash("Copied to clipboard");        // auto-dismiss after 4s
 showFlash("Still working…", 10_000);     // custom duration
+showFlash("Merge complete", { tone: "success" });            // semantic accent
+showFlash("Deploy failed", { tone: "danger", durationMs: 8000 });
 dismissFlash();                          // programmatic dismiss
 ```
 
@@ -34,6 +36,7 @@ dismissFlash();                          // programmatic dismiss
 | Function | Notes |
 | --- | --- |
 | `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer. Non-finite or `<= 0` durations fall back to the 4s default |
+| `showFlash(msg, { tone?, durationMs? })` | Options form. `tone` (`"neutral" \| "info" \| "success" \| "warning" \| "danger"`, neutral default) tints the banner — band, ink, and countdown bar — with the semantic accent, following the Modal header recipe. No per-tone icons — but tone is never color-only: banners prepend a visually-hidden severity prefix ("Success:", "Error:", …) for screen readers, localizable via FlashBanner's `toneLabels` prop. The prefix cannot be suppressed for semantic tones — an empty/blank override falls back to the English default (only `neutral` is prefix-less), so the contract can't be silently broken. Unknown tone strings from untyped callers normalize to neutral. Note `FlashState.tone` is optional on the public type (read it as `tone ?? "neutral"`) |
 | `getFlashes(): FlashState[]` | Reactive read of all visible flashes, oldest first |
 | `getFlash(): FlashState \| null` | Reactive read of the most recent flash |
 | `getFlashMessage(): string \| null` | Reactive read of just the latest text |
@@ -46,10 +49,12 @@ messages exceed that. Long messages wrap at the stack's max-width; unbroken
 tokens break rather than overflow.
 
 Concurrent flashes stack below each other in show order and read as a single
-card — rows sit flush, separated by a muted hairline (the shrinking countdown
-bar alone can't keep rows legible). The widest message sets the width for the
-whole stack (capped at 480px / the viewport), and each row has its own X and
-its own countdown.
+card. Each banner draws its own border (the Modal band principle: a toned
+region's border area takes its tone, so toned banners get the 30% tone-mixed
+edge instead of sitting inside a grey frame); on the shared edge between two
+stacked banners the upper banner's bottom border wins. The widest message
+sets the width for the whole stack (capped at 480px / the viewport), and
+each row has its own X and its own countdown.
 
 Every banner shows a thin countdown bar along its bottom edge indicating time
 until auto-dismiss; it freezes (full) under `prefers-reduced-motion`.

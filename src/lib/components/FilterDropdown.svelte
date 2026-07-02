@@ -23,6 +23,7 @@
   import FunnelIcon from "@lucide/svelte/icons/funnel";
   import { tick } from "svelte";
   import { floatingPopoverStyle } from "./floatingPosition.js";
+  import SearchInput from "./SearchInput.svelte";
 
   interface Props {
     label: string;
@@ -123,11 +124,16 @@
       }
     }
 
+    // Searching filters the item list and resizes the panel — reposition.
+    const observer = new ResizeObserver(() => updatePosition());
+    if (dropdownRef) observer.observe(dropdownRef);
+
     document.addEventListener("mousedown", handleMousedown);
     document.addEventListener("keydown", handleKeydown);
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
     return () => {
+      observer.disconnect();
       document.removeEventListener("mousedown", handleMousedown);
       document.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("resize", updatePosition);
@@ -226,12 +232,14 @@
       style:min-width={minWidth}
     >
       {#if searchable}
-        <input
-          class="kit-filter-dropdown__search"
-          type="text"
-          placeholder={searchPlaceholder}
-          bind:value={search}
-        />
+        <div class="kit-filter-dropdown__search">
+          <SearchInput
+            bind:value={search}
+            size="sm"
+            block
+            placeholder={searchPlaceholder}
+          />
+        </div>
       {/if}
       {#if hasBulkActions}
         <div class="kit-filter-dropdown__bulk-actions">
@@ -329,7 +337,7 @@
     border: 1px solid var(--border-muted);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: border-color 0.12s, color 0.12s;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
     position: relative;
     min-height: 24px;
   }
@@ -341,7 +349,7 @@
 
   .kit-filter-dropdown__btn:disabled {
     cursor: default;
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
   }
 
   .kit-filter-dropdown__btn--active {
@@ -369,33 +377,14 @@
     position: fixed;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
     z-index: 1000;
     padding: 4px 0;
   }
 
   .kit-filter-dropdown__search {
-    display: block;
-    width: calc(100% - 16px);
     margin: 2px 8px 4px;
-    padding: 4px 8px;
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg-inset);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: var(--font-size-xs);
-    outline: none;
-    box-sizing: border-box;
-  }
-
-  .kit-filter-dropdown__search::placeholder {
-    color: var(--text-muted);
-  }
-
-  .kit-filter-dropdown__search:focus {
-    border-color: var(--accent-blue);
   }
 
   .kit-filter-dropdown__bulk-actions {
@@ -447,7 +436,7 @@
     color: var(--text-secondary);
     text-align: left;
     cursor: pointer;
-    transition: background 0.08s;
+    transition: background var(--transition-fast);
     background: transparent;
     border: 0;
   }
@@ -469,7 +458,7 @@
     height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
-    transition: background 0.1s;
+    transition: background var(--transition-fast);
   }
 
   .kit-filter-dropdown__label {
@@ -525,10 +514,21 @@
     background: transparent;
     padding-top: 8px;
     cursor: pointer;
-    transition: color 0.1s;
+    transition: color var(--transition-fast);
   }
 
   .kit-filter-dropdown__reset:hover {
     color: var(--text-primary);
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-filter-dropdown__btn:focus-visible,
+  .kit-filter-dropdown__bulk-btn:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .kit-filter-dropdown__item:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
   }
 </style>

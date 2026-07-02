@@ -1,11 +1,13 @@
 <script lang="ts">
   import type { Component } from "svelte";
-  import { FlashBanner } from "../lib/index.js";
+  import { FlashBanner, initTheme, ThemeToggle } from "../lib/index.js";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
+  import CodeBlockDemo from "./pages/CodeBlockDemo.svelte";
   import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
+  import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
   import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
   import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
@@ -13,7 +15,9 @@
   import FindBarDemo from "./pages/FindBarDemo.svelte";
   import FitStagesDemo from "./pages/FitStagesDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
+  import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
+  import MarkdownDemo from "./pages/MarkdownDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
@@ -28,11 +32,14 @@
   import StatusBarDemo from "./pages/StatusBarDemo.svelte";
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
+  import TextInputDemo from "./pages/TextInputDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
   import ThemeModeDemo from "./pages/ThemeModeDemo.svelte";
+  import ThemeToggleDemo from "./pages/ThemeToggleDemo.svelte";
   import TooltipDemo from "./pages/TooltipDemo.svelte";
   import TopBarDemo from "./pages/TopBarDemo.svelte";
   import TypeaheadDemo from "./pages/TypeaheadDemo.svelte";
+  import VirtualListDemo from "./pages/VirtualListDemo.svelte";
 
   interface Page {
     id: string;
@@ -51,7 +58,9 @@
     { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
+    { id: "code-block", label: "CodeBlock", component: CodeBlockDemo },
     { id: "color-label", label: "ColorLabel", component: ColorLabelDemo },
+    { id: "command-palette", label: "CommandPalette", component: CommandPaletteDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },
     { id: "detail-drawer", label: "DetailDrawer", component: DetailDrawerDemo },
     { id: "empty-state", label: "EmptyState", component: EmptyStateDemo },
@@ -59,7 +68,9 @@
     { id: "find-bar", label: "FindBar", component: FindBarDemo },
     { id: "fit-stages", label: "FitStages", component: FitStagesDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
+    { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
+    { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "range-picker", label: "RangePicker", component: RangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
@@ -72,16 +83,20 @@
     { id: "status-bar", label: "StatusBar", component: StatusBarDemo },
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
     { id: "table", label: "Table", component: TableDemo },
+    { id: "text-input", label: "TextInput", component: TextInputDemo },
     { id: "theme-mode", label: "Theme mode", component: ThemeModeDemo },
+    { id: "theme-toggle", label: "ThemeToggle", component: ThemeToggleDemo },
     { id: "tooltip", label: "Tooltip", component: TooltipDemo },
     { id: "top-bar", label: "TopBar", component: TopBarDemo },
     { id: "typeahead", label: "Typeahead", component: TypeaheadDemo },
+    { id: "virtual-list", label: "VirtualList", component: VirtualListDemo },
   ];
 
   let activeId = $state(
     (typeof location !== "undefined" && location.hash.slice(1)) || "theme",
   );
-  let dark = $state(false);
+
+  initTheme();
 
   const activePage = $derived(
     pages.find((p) => p.id === activeId) ?? pages[0]!,
@@ -91,11 +106,6 @@
   function navigate(id: string) {
     activeId = id;
     location.hash = id;
-  }
-
-  function toggleTheme() {
-    dark = !dark;
-    document.documentElement.classList.toggle("dark", dark);
   }
 </script>
 
@@ -128,9 +138,9 @@
         </button>
       {/each}
     </nav>
-    <button class="sidebar__theme-toggle" type="button" onclick={toggleTheme}>
-      {dark ? "☀ Light mode" : "☾ Dark mode"}
-    </button>
+    <div class="sidebar__theme">
+      <ThemeToggle variant="segmented" block />
+    </div>
   </aside>
 
   <main class="content">
@@ -205,21 +215,8 @@
     font-weight: 600;
   }
 
-  .sidebar__theme-toggle {
+  .sidebar__theme {
     margin-top: 12px;
-    padding: 6px 8px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--bg-inset);
-    color: var(--text-secondary);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-  }
-
-  .sidebar__theme-toggle:hover {
-    color: var(--text-primary);
-    background: var(--bg-surface-hover);
   }
 
   .content {

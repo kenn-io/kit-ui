@@ -112,7 +112,7 @@
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     cursor: pointer;
-    transition: background 0.1s, color 0.1s, opacity 0.1s;
+    transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
   }
 
   .kit-refresh-control__btn:hover:not(:disabled) {
@@ -146,5 +146,10 @@
     to {
       transform: rotate(360deg);
     }
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-refresh-control__btn:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

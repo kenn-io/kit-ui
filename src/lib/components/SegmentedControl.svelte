@@ -16,6 +16,13 @@
     ariaLabel?: string;
     /** Stretch to the container width, segments sharing space equally. */
     block?: boolean;
+    /** boxed (default): inset pad with a floating surface pill.
+     * borderless: flat strip of flush segments, the active one tinted
+     * with the accent. Segments draw their own borders, so the border
+     * around the active segment takes the accent-tinted color (the Modal
+     * tone-border fixup) instead of a uniform outer line fighting the
+     * selection. */
+    variant?: "boxed" | "borderless";
     disabled?: boolean;
     class?: string;
   }
@@ -26,6 +33,7 @@
     onchange,
     ariaLabel = undefined,
     block = false,
+    variant = "boxed",
     disabled = false,
     class: className = "",
   }: Props = $props();
@@ -55,7 +63,12 @@
 </script>
 
 <div
-  class={["kit-segmented", { "kit-segmented--block": block }, className]}
+  class={[
+    "kit-segmented",
+    `kit-segmented--${variant}`,
+    { "kit-segmented--block": block },
+    className,
+  ]}
   role="radiogroup"
   aria-label={ariaLabel}
   bind:this={groupEl}
@@ -103,7 +116,7 @@
     color: var(--text-muted);
     border-radius: calc(var(--radius-sm) - 1px);
     cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+    transition: background var(--transition-fast), color var(--transition-fast);
     white-space: nowrap;
   }
 
@@ -123,12 +136,59 @@
   }
 
   .kit-segmented__btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-blue) 42%, transparent);
+    outline: var(--focus-ring);
+    outline-offset: -2px;
   }
 
   .kit-segmented__btn:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: not-allowed;
+  }
+
+  /* Borderless (flat strip) variant: flush segments sharing hairline
+   * borders. Each segment owns its border (collapsed with -1px margins)
+   * so the active segment's accent-tinted border wins the shared edges —
+   * the outer border is never one uniform color around a tinted pill. */
+  .kit-segmented--borderless {
+    gap: 0;
+    padding: 0;
+    background: transparent;
+  }
+
+  .kit-segmented--borderless .kit-segmented__btn {
+    position: relative;
+    padding: 4px 10px;
+    border: 1px solid var(--border-default);
+    border-radius: 0;
+    margin-left: -1px;
+  }
+
+  .kit-segmented--borderless .kit-segmented__btn:first-child {
+    margin-left: 0;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+
+  .kit-segmented--borderless .kit-segmented__btn:last-child {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  /* A lone segment matches first- and last-child; last-child's radius
+   * would square the left corners without this. */
+  .kit-segmented--borderless .kit-segmented__btn:only-child {
+    border-radius: var(--radius-sm);
+  }
+
+  .kit-segmented--borderless .kit-segmented__btn.active {
+    background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+    color: var(--accent-blue);
+    font-weight: 600;
+    border-color: color-mix(in srgb, var(--accent-blue) 30%, var(--border-default));
+    box-shadow: none;
+    z-index: 1;
+  }
+
+  .kit-segmented--borderless .kit-segmented__btn:hover:not(.active):not(:disabled) {
+    background: var(--bg-surface-hover);
+    color: var(--text-secondary);
   }
 </style>

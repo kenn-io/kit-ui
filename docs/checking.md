@@ -34,7 +34,9 @@ Scans `.svelte` and `.css` files; skips `node_modules`, `dist`, `build`,
 | `hand-rolled-table-sort` | `aria-sort=` on custom headers | `Table` + `TableHeaderCell` |
 | `hand-rolled-tooltip` | `role="tooltip"` markup | `Tooltip` |
 | `hand-rolled-status-bar` | `status-bar` classes/selectors (`kit-status-bar` exempt) | `StatusBar` |
+| `hand-rolled-code-block` | `code-block` classes/selectors (`kit-code-block` and suffixed names like `code-block-list` are both exempt) | `CodeBlock` |
 | `hand-rolled-empty-state` | `empty-state` classes/selectors (`kit-empty-state` exempt) | `EmptyState` |
+| `hand-rolled-icon-button` | `icon-btn` / `icon-button` classes/selectors (single/double-quoted `class=` and CSS selectors; suffixed names like `icon-button-group` are exempt; dynamic `class:` directives aren't seen) | `IconButton` |
 | `hand-rolled-top-bar` | `app-header` / `header-left` / `header-right` classes/selectors | `TopBar` |
 | `nonstandard-spacing` | `gap` values off the spacing ladder (0/1px hairlines exempt) | `var(--space-1…8)` ([theming](theming.md#spacing)) |
 | `pinned-root-font-size` | px `font-size` on `html`/`:root` | leave the root at 100% — it defeats the rem type scale ([theming](theming.md#typography)) |
@@ -85,11 +87,18 @@ everything and aren't repeated per row.
 | Tooltip | `hand-rolled-tooltip` |
 | StatusBar | `hand-rolled-status-bar` |
 | EmptyState | `hand-rolled-empty-state` |
+| CodeBlock | `hand-rolled-code-block` |
+| Markdown / markdown pipeline | no rule — markdown rendering call sites have no stable markup signature; direct `marked`/`DOMPurify` imports in app code are found in review (the dependency is the tell) |
+| IconButton | `hand-rolled-icon-button` |
 | TopBar | `hand-rolled-top-bar` |
 | Button, Chip, ChipStack | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift |
 | StatusDot, ColorLabel, DiffStats | no rule — small display primitives with no detectable marker; found in review |
 | RefreshControl, FindBar, RangePicker, SettingsLayout/Section | no rule — composite widgets; no stable class/aria signature that wouldn't false-positive. Revisit if either app regrows one |
 | Calendar | no rule — covered indirectly: hand-rolled month grids read as generic tables/buttons; found in review |
+| TextInput, SearchInput | no rule — bare `<input>` markup is too generic to flag without drowning in false positives; found in review |
+| ThemeToggle | no rule — a theme button has no stable signature; the theme *store* swap is stage 5 of the adoption path |
+| VirtualList | no rule — hand-rolled virtualization has no stable markup signature; unvirtualized long lists are a perf review concern, not a lint |
+| CommandPalette, shortcut system | no rule — ad-hoc `keydown` listeners are legitimate in components; app-level shortcut sprawl is found in review |
 | FitStages | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags |
 | Theme store, formatters, `debounce`, `hashColor` | no rule — plain functions; duplication isn't detectable from markup |
 

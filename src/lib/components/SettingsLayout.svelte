@@ -189,4 +189,9 @@
       flex-direction: row;
     }
   }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-settings__nav-item:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
+  }
 </style>

@@ -67,6 +67,8 @@
     aria-modal="true"
     aria-label={ariaLabel ?? title}
     tabindex="-1"
+    data-tone={tone}
+    class:kit-modal-panel--headered={!!title || closable}
     style:width
     style:max-width={maxWidth}
     {@attach trapFocus}
@@ -117,7 +119,9 @@
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    overflow: hidden;
+    /* No overflow: hidden — the header must be able to overlay the
+     * panel's border (see the band comment below); children clip their
+     * own corners instead. */
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 64px);
@@ -132,7 +136,14 @@
     /* Distinct from the body surface by default so the header reads as a
      * separate band, not just bolder body text. */
     background: var(--bg-inset);
-    border-bottom: 1px solid var(--border-default);
+    /* The band owns every border segment it touches: it pulls out over
+     * the panel's border and draws its own, so a toned band can tint its
+     * top AND side edges — a grey side edge beside the tinted band reads
+     * as a bug (the tone applies to the toned region's whole border
+     * area, same principle as the borderless SegmentedControl). */
+    margin: -1px -1px 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     flex-shrink: 0;
   }
 
@@ -144,24 +155,28 @@
   }
 
   /* Tinted header bands for semantic tones: each tone sets one accent
-   * variable and the band, border, title, and close button all derive
-   * from it. */
-  .kit-modal-header[data-tone="info"] {
+   * variable (on the panel, so both the panel edge and the header band
+   * derive from it) and the band, borders, title, and close button all
+   * follow. */
+  .kit-modal-panel[data-tone="info"] {
     --kit-modal-tone: var(--accent-blue);
   }
-  .kit-modal-header[data-tone="success"] {
+  .kit-modal-panel[data-tone="success"] {
     --kit-modal-tone: var(--accent-green);
   }
-  .kit-modal-header[data-tone="warning"] {
+  .kit-modal-panel[data-tone="warning"] {
     --kit-modal-tone: var(--accent-amber);
   }
-  .kit-modal-header[data-tone="danger"] {
+  .kit-modal-panel[data-tone="danger"] {
     --kit-modal-tone: var(--accent-red);
   }
 
+  /* Tone reaches the band's full border area (top, sides, and the
+   * divider below) via the header's own border. Headerless toned modals
+   * render no header element, so no stray colored edge. */
   .kit-modal-header:not([data-tone="neutral"]) {
     background: color-mix(in srgb, var(--kit-modal-tone) 9%, var(--bg-surface));
-    border-bottom-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
+    border-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
   }
 
   /* Title/close ink mixes the tone toward --text-primary: darker than the
@@ -212,6 +227,19 @@
     font-size: var(--font-size-md);
   }
 
+  /* Without an overflow clip on the panel, the scrollable body rounds
+   * its own corners (scrollbar included) where it meets the panel's
+   * rounded edge. */
+  .kit-modal-body:first-child {
+    border-top-left-radius: calc(var(--radius-lg) - 1px);
+    border-top-right-radius: calc(var(--radius-lg) - 1px);
+  }
+
+  .kit-modal-body:last-child {
+    border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+    border-bottom-right-radius: calc(var(--radius-lg) - 1px);
+  }
+
   .kit-modal-footer {
     display: flex;
     align-items: center;
@@ -220,5 +248,10 @@
     padding: 12px 16px;
     border-top: 1px solid var(--border-default);
     flex-shrink: 0;
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-modal-close:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

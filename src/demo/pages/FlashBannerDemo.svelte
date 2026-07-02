@@ -1,6 +1,14 @@
 <script lang="ts">
-  import { Button, showFlash } from "../../lib/index.js";
+  import { Button, showFlash, type FlashTone } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
+
+  const tones: FlashTone[] = ["info", "success", "warning", "danger"];
+  const toneMessages: Record<string, string> = {
+    info: "Rebase started in the background",
+    success: "Merge complete",
+    warning: "2 sessions need your attention",
+    danger: "Deploy failed — rolling back",
+  };
 </script>
 
 <DemoSection
@@ -36,4 +44,18 @@ showFlash("2 sessions need your attention", 6000);`}
       showFlash("2 sessions need your attention", 6000);
     }}
   />
+</DemoSection>
+
+<DemoSection
+  title="Tones"
+  description="tone tints the banner with a semantic accent (band, ink, and countdown bar) following the Modal header recipe; neutral stays the plain surface. The duration-only second argument still works."
+  code={`showFlash("Merge complete", { tone: "success" });
+showFlash("Deploy failed — rolling back", { tone: "danger", durationMs: 8000 });`}
+>
+  {#each tones as tone (tone)}
+    <Button
+      label={tone}
+      onclick={() => showFlash(toneMessages[tone] ?? tone, { tone })}
+    />
+  {/each}
 </DemoSection>

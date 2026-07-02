@@ -135,7 +135,7 @@
     border: none;
     cursor: pointer;
     font-family: inherit;
-    transition: opacity 0.1s;
+    transition: opacity var(--transition-fast);
   }
 
   .kit-chip--interactive:hover:not(:disabled) {
@@ -143,7 +143,7 @@
   }
 
   .kit-chip--interactive:disabled {
-    opacity: 0.6;
+    opacity: var(--opacity-disabled);
     cursor: not-allowed;
   }
 
@@ -221,5 +221,10 @@
       transparent
     );
     color: var(--accent-teal, var(--accent-green));
+  }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-chip--interactive:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 </style>

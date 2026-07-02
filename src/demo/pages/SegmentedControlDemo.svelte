@@ -4,6 +4,7 @@
 
   let filter = $state("all");
   let range = $state("7d");
+  let mode = $state("normal");
 </script>
 
 <DemoSection
@@ -31,6 +32,35 @@
     ariaLabel="Item filter"
   />
   <span>value: <code>{filter}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Borderless (flat strip) variant"
+  description="The agentsview transcript-strip style: flush segments sharing hairline borders, the active one tinted with the accent. Each segment owns its border, so the accent-tinted border of the selection applies to its stretch of the control's edge — the outer border is never one uniform grey line fighting the tinted pill (same fixup as the Modal tone header)."
+  code={`<SegmentedControl
+  variant="borderless"
+  options={[
+    { value: "normal", label: "Normal" },
+    { value: "focused", label: "Focused" },
+    { value: "raw", label: "Raw" },
+  ]}
+  value={mode}
+  onchange={(v) => (mode = v)}
+  ariaLabel="Transcript mode"
+/>`}
+>
+  <SegmentedControl
+    variant="borderless"
+    options={[
+      { value: "normal", label: "Normal" },
+      { value: "focused", label: "Focused" },
+      { value: "raw", label: "Raw" },
+    ]}
+    value={mode}
+    onchange={(v) => (mode = v)}
+    ariaLabel="Transcript mode"
+  />
+  <span>value: <code>{mode}</code></span>
 </DemoSection>
 
 <DemoSection

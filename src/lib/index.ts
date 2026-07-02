@@ -5,9 +5,12 @@ export { default as Calendar } from "./components/Calendar.svelte";
 export { default as Chip } from "./components/Chip.svelte";
 export type { ChipSize, ChipTone } from "./components/Chip.svelte";
 export { default as ChipStack } from "./components/ChipStack.svelte";
+export { default as CodeBlock } from "./components/CodeBlock.svelte";
 export { default as CollapsibleSidebar } from "./components/CollapsibleSidebar.svelte";
 export { default as ColorLabel } from "./components/ColorLabel.svelte";
 export type { ColorLabelSize } from "./components/ColorLabel.svelte";
+export { default as CommandPalette } from "./components/CommandPalette.svelte";
+export type { PaletteCommand } from "./components/CommandPalette.svelte";
 export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
@@ -20,7 +23,10 @@ export type {
 export { default as FindBar } from "./components/FindBar.svelte";
 export { default as FitStages } from "./components/FitStages.svelte";
 export { default as FlashBanner } from "./components/FlashBanner.svelte";
+export { default as IconButton } from "./components/IconButton.svelte";
+export type { IconButtonSize, IconButtonTone } from "./components/IconButton.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
+export { default as Markdown } from "./components/Markdown.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
 export { default as RangePicker } from "./components/RangePicker.svelte";
@@ -46,6 +52,7 @@ export {
   type RelativeSelection,
 } from "./components/range-picker.js";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
+export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";
 export type { SegmentedControlOption } from "./components/SegmentedControl.svelte";
 export { default as SelectDropdown } from "./components/SelectDropdown.svelte";
@@ -64,11 +71,21 @@ export type { StatusDotStatus } from "./components/StatusDot.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export type { SortDirection } from "./components/TableHeaderCell.svelte";
+export { default as TextInput } from "./components/TextInput.svelte";
+export type { TextInputSize } from "./components/TextInput.svelte";
+export { default as ThemeToggle } from "./components/ThemeToggle.svelte";
 export { default as Tooltip } from "./components/Tooltip.svelte";
 export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab } from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadOption } from "./components/typeahead.js";
+export { default as VirtualList } from "./components/VirtualList.svelte";
+export {
+  offsetOfIndex,
+  virtualSlice,
+  type VirtualSlice,
+  type VirtualSliceInput,
+} from "./components/virtual.js";
 
 // Breakpoints
 export { BREAKPOINTS, MEDIA, type BreakpointName } from "./breakpoints.js";
@@ -80,7 +97,9 @@ export {
   getFlashes,
   getFlashMessage,
   showFlash,
+  type FlashOptions,
   type FlashState,
+  type FlashTone,
 } from "./stores/flash.svelte.js";
 export {
   cleanupTheme,
@@ -111,6 +130,30 @@ export {
   formatRefreshAge,
   type RefreshScheduler,
 } from "./utils/refresh.js";
+export {
+  appShortcuts,
+  createShortcutManager,
+  formatShortcutKeys,
+  initShortcuts,
+  isMacPlatform,
+  parseShortcut,
+  ROOT_SCOPE,
+  shortcutMatches,
+  type ParsedShortcut,
+  type RegisteredShortcut,
+  type ShortcutManager,
+  type ShortcutOptions,
+} from "./utils/shortcuts.js";
+export {
+  codeFenceLanguage,
+  createMarkdownRenderer,
+  escapeHtml,
+  highlightCode,
+  renderMarkdown,
+  renderMarkdownSync,
+  type MarkdownRenderer,
+  type MarkdownRendererOptions,
+} from "./utils/markdown.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export {
   floatingPopoverStyle,

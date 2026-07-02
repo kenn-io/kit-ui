@@ -203,4 +203,9 @@
     border-top: 1px solid var(--border-default);
     flex-shrink: 0;
   }
+  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
+  .kit-detail-drawer__close:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+  }
 </style>

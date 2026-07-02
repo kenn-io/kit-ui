@@ -205,6 +205,37 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
   });
 
+  test("icon button: class and CSS selector, both spellings", () => {
+    const src = svelte(
+      `.icon-btn { width: 28px; } .icon-button:hover { color: red; }`,
+      `<button class="icon-btn"></button>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(3);
+  });
+
+  test("icon button: does not match kit-icon-button or unrelated names", () => {
+    const src = `<button class="kit-icon-button"></button>\n<div class="lexicon-btn"></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(0);
+  });
+
+  test("icon button: single quotes match, suffixed names don't", () => {
+    const src = `<button class='icon-btn'></button>\n<style>.icon-button-group { display: flex; }</style>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-icon-button"])).toHaveLength(1);
+  });
+
+  test("code block: class and CSS selector", () => {
+    const src = svelte(
+      `.code-block { position: relative; }`,
+      `<div class="code-block"><pre>x</pre></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-code-block"])).toHaveLength(2);
+  });
+
+  test("code block: does not match kit-code-block or suffixed names", () => {
+    const src = `<div class="kit-code-block"></div>\n<style>.code-block-list { gap: 4px; }</style>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-code-block"])).toHaveLength(0);
+  });
+
   test("top bar: app-header class and region selectors", () => {
     const src = svelte(
       `.header-left { display: flex; }`,

@@ -9,6 +9,7 @@
 
   let picked = $state(todayStr());
   let pickedMonth = $state(todayStr());
+  let drillMonth = $state(todayStr());
 
   let weekAnchor = $state(todayStr());
   let weekMonth = $state(todayStr());
@@ -33,6 +34,17 @@
       maxDate={todayStr()}
     />
     <span class="readout">picked: <code>{picked}</code></span>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Month / year drill-down"
+  description="Clicking the header label zooms out to a month grid, clicking again to a 12-year grid; picking an entry drills back down (year → months → days). The arrows page by month, year, or 12 years to match the view, and maxDate disables future months/years in the zoomed grids too."
+  code={`<Calendar bind:month maxDate={todayStr()} />`}
+>
+  <div class="calendar-demo">
+    <Calendar bind:month={drillMonth} maxDate={todayStr()} />
+    <span class="readout">month: <code>{drillMonth.slice(0, 7)}</code></span>
   </div>
 </DemoSection>
 
