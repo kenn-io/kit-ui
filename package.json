@@ -1,7 +1,7 @@
 {
   "name": "@kenn-io/kit-ui",
   "version": "0.0.1",
-  "license": "Elastic-2.0",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "src/lib/index.ts",
   "types": "src/lib/index.ts",
