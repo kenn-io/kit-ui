@@ -138,8 +138,12 @@ Chrome and positioning are separate contracts. *Trigger-anchored* popovers
 additionally position with `position: fixed` via `floatingPopoverStyle` —
 repositioning on scroll, resize, and their own content resizing — so they
 can never be clipped by an overflow-hidden ancestor. Two surfaces share the
-chrome but not the anchoring: **FindBar** is app-positioned (see its
-placement contract) and **FlashBanner** is a viewport-centered fixed stack.
+chrome but not the anchoring: **FindBar**'s floating variant positions
+itself absolutely inside a `position: relative` container (insets/stacking
+customized via its `--kit-find-bar-*` custom properties — no app-side
+positioning wrapper), while its pinned default is normal-flow container
+chrome and carries no popover card at all; **FlashBanner** is a
+viewport-centered fixed stack.
 (Caveat as always: a transformed/filtered ancestor re-parents fixed
 descendants.)
 
