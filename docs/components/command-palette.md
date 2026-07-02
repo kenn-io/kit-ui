@@ -33,9 +33,10 @@ const off = appShortcuts.register("mod+k", openPalette, {
 - **Conflicts**: within a scope, the **first registration wins** —
   `handleKeydown` fires the first match and stops. Registering a combo
   that resolves to the same physical keys as one already in the scope
-  logs a `console.warn` — compared after alias and platform resolution,
-  so `cmd+k` vs `meta+k`, `option+up` vs `alt+arrowup`, and `mod+k` vs
-  `ctrl+k`-on-PC are all caught.
+  logs a `console.warn` — compared after alias, platform, and
+  shifted-symbol resolution, so `cmd+k` vs `meta+k`, `option+up` vs
+  `alt+arrowup`, `mod+k` vs `ctrl+k`-on-PC, and `shift+/` vs `?` are all
+  caught.
 - **Inputs**: plain-key shortcuts don't fire while an
   input/textarea/select/contenteditable has focus; modifier combos do.
   Opt a plain key back in with `allowInInput: true` (e.g. `escape`).

@@ -272,11 +272,23 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 /** Platform-resolved identity of a combo — what actually has to be
- * pressed. Used for duplicate detection. */
+ * pressed. Used for duplicate detection. Shifted-symbol forms
+ * canonicalize to the produced character ("shift+/" ≡ "?",
+ * "shift+=" ≡ "plus") since shortcutMatches treats them as the same
+ * physical keys. */
 function resolvedComboKey(parsed: ParsedShortcut, isMac: boolean): string {
   const meta = parsed.meta || (parsed.mod && isMac);
   const ctrl = parsed.ctrl || (parsed.mod && !isMac);
-  return `${parsed.key}|${meta}|${ctrl}|${parsed.alt}|${parsed.shift}`;
+  let key = parsed.key;
+  let shift = parsed.shift;
+  const shifted = SHIFTED_KEYS[key];
+  if (shift && shifted !== undefined) {
+    key = shifted;
+    shift = false;
+  }
+  // Shifted-output keys ("+", "?") already treat shiftKey as don't-care
+  // in matching, so shift never distinguishes them here.
+  return `${key}|${meta}|${ctrl}|${parsed.alt}|${shift}`;
 }
 
 export function createShortcutManager(

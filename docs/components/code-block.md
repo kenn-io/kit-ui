@@ -95,13 +95,15 @@ const renderer = createMarkdownRenderer({
 
 `codeFence` contract: the returned string is **markup**, so the
 interceptor must escape the user-authored fence text itself
-(`escapeHtml` is exported for exactly this) — sanitization strips
-dangerous nodes but can't know that `<img>` inside a fence was meant as
-source text. It must also be pure and deterministic: it runs once during
-highlight planning and once during rendering. `allowedAttributes` is for
-inert data (`data-*`) attributes your extensions emit — never add
-URL-bearing (`src`, `href` variants) or style attributes through it;
-event handlers are stripped by DOMPurify regardless.
+(`escapeHtml` is exported for exactly this; it escapes quotes too, so
+it's safe in attribute values as well as text content) — sanitization
+strips dangerous nodes but can't know that `<img>` inside a fence was
+meant as source text. It must also be pure and deterministic: it runs
+once during highlight planning and once during rendering.
+`allowedAttributes` accepts **only `data-*` names** — anything else is
+ignored with a `console.warn`, since URL-bearing or style attributes
+would reopen the holes sanitization closes (event handlers are stripped
+by DOMPurify regardless).
 
 ### Security model
 

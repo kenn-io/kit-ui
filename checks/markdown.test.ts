@@ -26,9 +26,11 @@ describe("codeFenceLanguage", () => {
 });
 
 describe("escapeHtml", () => {
-  test("escapes markup-significant characters", () => {
-    expect(escapeHtml(`<a href="x">&</a>`)).toBe(
-      `&lt;a href="x"&gt;&amp;&lt;/a&gt;`,
+  test("escapes markup-significant characters, quotes included", () => {
+    // Quotes are escaped so the helper is safe inside attribute values,
+    // not just text content — codeFence interceptors use it for both.
+    expect(escapeHtml(`<a href="x" title='y'>&</a>`)).toBe(
+      `&lt;a href=&quot;x&quot; title=&#39;y&#39;&gt;&amp;&lt;/a&gt;`,
     );
   });
 });

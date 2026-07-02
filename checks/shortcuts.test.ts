@@ -197,6 +197,33 @@ describe("createShortcutManager", () => {
     }
   });
 
+  test("duplicate detection canonicalizes shifted-symbol pairs", () => {
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (msg: string) => { warnings.push(msg); };
+    try {
+      // "shift+/" and "?" both match a US Shift+/ event — must collide.
+      const q = createShortcutManager(true);
+      q.register("shift+/", () => {});
+      q.register("?", () => {});
+      expect(warnings.length).toBe(1);
+
+      // "plus" and "shift+=" are the same produced character.
+      const plus = createShortcutManager(true);
+      plus.register("plus", () => {});
+      plus.register("shift+=", () => {});
+      expect(warnings.length).toBe(2);
+
+      // Distinct symbols stay distinct: "/" vs "shift+/".
+      const slash = createShortcutManager(true);
+      slash.register("/", () => {});
+      slash.register("shift+/", () => {});
+      expect(warnings.length).toBe(2);
+    } finally {
+      console.warn = origWarn;
+    }
+  });
+
   test("allowInInput opts a plain key back in", () => {
     const m = createShortcutManager(true);
     let fired = 0;

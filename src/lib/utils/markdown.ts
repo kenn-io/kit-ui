@@ -74,8 +74,16 @@ export function codeFenceLanguage(lang: string | undefined): string {
   return (lang ?? "").trim().split(/\s+/, 1)[0]?.toLowerCase() || SHIKI_PLAINTEXT_LANG;
 }
 
+/** Escape a string for embedding in HTML — safe for both text content
+ * and (double- or single-quoted) attribute values, so `codeFence`
+ * interceptors can use it anywhere they place fence text. */
 export function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function plainCodeBlock(text: string): string {
@@ -348,7 +356,16 @@ export function createMarkdownRenderer(
     marked.use({ extensions: options.extensions });
   }
   marked.use({ renderer: codeRenderer });
-  const allowedAttributes = options.allowedAttributes ?? [];
+  // Enforce the documented constraint: only inert data-* attributes may
+  // widen the sanitizer. URL-bearing or style attributes here would
+  // reopen exactly the holes sanitization exists to close.
+  const allowedAttributes = (options.allowedAttributes ?? []).filter((name) => {
+    if (/^data-[\w-]+$/.test(name)) return true;
+    console.warn(
+      `[kit-ui markdown] ignoring allowedAttributes entry "${name}" — only data-* attributes may be allowlisted`,
+    );
+    return false;
+  });
   const cache = new Map<string, Promise<string>>();
 
   function renderTokens(
