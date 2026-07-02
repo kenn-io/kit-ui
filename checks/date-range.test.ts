@@ -4,6 +4,7 @@ import {
   formatMonthLabel,
   formatShortDate,
   formatWeekOfLabel,
+  monthLabels,
   weekdayLabels,
 } from "../src/lib/components/date-range.js";
 
@@ -44,5 +45,14 @@ describe("date label locale", () => {
     expect(weekdayLabels("en-US")[0]).toBe("Mon");
     expect(weekdayLabels("zh-CN")[0]).toBe("周一");
     expect(weekdayLabels("en-US")).toHaveLength(7);
+  });
+
+  test("label helpers return copies — mutation can't corrupt the cache", () => {
+    const a = weekdayLabels("en-US");
+    a[0] = "corrupted";
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    const m = monthLabels("short", "en-US");
+    m[0] = "corrupted";
+    expect(monthLabels("short", "en-US")[0]).toBe("Jan");
   });
 });

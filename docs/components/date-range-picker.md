@@ -52,10 +52,11 @@ handling). Date strings are trusted input: feed the helpers valid
 | `relativeGroupLabel` / `calendarGroupLabel`                                                                              | `string`                        | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s                                                                                                                                                                                                                                                     |
 | `previousMonthLabel` / `nextMonthLabel`                                                                                  | `string`                        | `"Previous month"` / `"Next month"`       | Calendar month-arrow `aria-label`s.                                                                                                                                                                                                                                          |
 | `previousYearLabel` / `nextYearLabel` / `previousYearsLabel` / `nextYearsLabel` / `chooseMonthLabel` / `chooseYearLabel` | `string`                        | Calendar defaults                         | With the month arrows above, the shared `CalendarNavLabels` set — forwarded verbatim to the embedded [Calendar](calendar.md), whose own defaults apply                                                                                                                       |
-| `locale`                                                                                                                 | `string`                        | browser locale                            | BCP 47 tag for the date labels on the trigger and calendar, for apps whose language setting can diverge from the browser locale                                                                                                                                              |
+| `locale`                                                                                                                 | `string`                        | browser locale                            | BCP 47 tag for the date labels on the trigger and calendar, for apps whose language setting can diverge from the browser locale. Trusted input: `Intl` throws on malformed tags, so validate persisted values                                                                |
 
-Date labels on the trigger/stepper format with the browser locale (memoized
-`Intl.DateTimeFormat` instances), or the `locale` prop when set.
+Date labels on the trigger and embedded Calendar format with the browser
+locale (memoized `Intl.DateTimeFormat` instances), or the `locale` prop when
+set.
 
 ## Types and helpers (`date-range.ts`)
 

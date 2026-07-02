@@ -92,13 +92,14 @@
 
   const unitCells = $derived.by((): UnitCell[] => {
     if (view === "months") {
-      const long = monthLabels("long", locale);
       return monthLabels("short", locale).map((label, i) => ({
         label,
         value: i,
         current: monthKey(zoomYear, i) === monthPrefix,
         disabled: maxMonthPrefix != null && monthKey(zoomYear, i) > maxMonthPrefix,
-        aria: `${long[i]} ${zoomYear}`,
+        // Full "January 2026" via the locale's own month/year order ("2026年
+        // 1月") rather than concatenating name + year English-style.
+        aria: formatMonthLabel(`${monthKey(zoomYear, i)}-01`, locale),
       }));
     }
     return yearCells.map((y) => ({

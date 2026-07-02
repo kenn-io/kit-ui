@@ -48,17 +48,20 @@ export interface DateRange {
  * same keys and forwards them verbatim, so the set (and Calendar's English
  * defaults) live in one place.
  */
+/* `| undefined` on the optional labels keeps wrapper consumers with
+ * exactOptionalPropertyTypes happy: they forward possibly-undefined values
+ * explicitly, and omission/undefined both mean "use Calendar's default". */
 export interface CalendarNavLabels {
-  previousMonthLabel?: string;
-  nextMonthLabel?: string;
+  previousMonthLabel?: string | undefined;
+  nextMonthLabel?: string | undefined;
   /** Nav labels while zoomed out to the month / year grids. */
-  previousYearLabel?: string;
-  nextYearLabel?: string;
-  previousYearsLabel?: string;
-  nextYearsLabel?: string;
+  previousYearLabel?: string | undefined;
+  nextYearLabel?: string | undefined;
+  previousYearsLabel?: string | undefined;
+  nextYearsLabel?: string | undefined;
   /** Appended to the header button's accessible name to hint at the drill-down. */
-  chooseMonthLabel?: string;
-  chooseYearLabel?: string;
+  chooseMonthLabel?: string | undefined;
+  chooseYearLabel?: string | undefined;
 }
 
 export interface RangePreset {
@@ -194,7 +197,11 @@ export function monthGridDates(anchor: string): string[] {
  * (locale resolution + ICU setup). Keyed by (locale, options) — the browser
  * locale can't change within a page load, and an app-provided `locale` gets
  * its own entry, so a language switch just fills a new slot. Lazy so
- * importing this module stays side-effect free (and SSR-safe). */
+ * importing this module stays side-effect free (and SSR-safe).
+ *
+ * Like date strings, `locale` is trusted input: Intl throws a RangeError on
+ * malformed BCP 47 tags, so validate app-provided values (e.g. persisted
+ * settings) before passing them down. */
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatter(options: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
@@ -221,20 +228,21 @@ function labelTable(key: string, build: () => string[]): string[] {
 /** Monday-first weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
  * omitted = the browser locale. */
 export function weekdayLabels(locale?: string): string[] {
-  // 2024-01-01 is a Monday.
+  // 2024-01-01 is a Monday. Sliced so callers can't mutate the shared cache.
   return labelTable(`weekdays|${locale ?? ""}`, () => {
     const fmt = formatter({ weekday: "short" }, locale);
     return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
-  });
+  }).slice();
 }
 
 /** January-first month labels ("Jan"/"January", …). `locale` omitted = the
  * browser locale. */
 export function monthLabels(style: "short" | "long", locale?: string): string[] {
+  // Sliced so callers can't mutate the shared cache.
   return labelTable(`months-${style}|${locale ?? ""}`, () => {
     const fmt = formatter({ month: style }, locale);
     return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2024, i, 1)));
-  });
+  }).slice();
 }
 
 /** Turn any selection into concrete inclusive {from, to} bounds. */

@@ -28,15 +28,16 @@ refetching.
 
 ## Props
 
-| Prop            | Type                                                     | Default            | Notes                               |
-| --------------- | -------------------------------------------------------- | ------------------ | ----------------------------------- |
-| `lastUpdatedAt` | `number \| null`                                         | required           | Epoch ms of last successful fetch   |
-| `onRefresh`     | `() => void`                                             | required           | Called on click and on the interval |
-| `busy`          | `boolean`                                                | `false`            | Spins the icon, disables the button |
-| `label`         | `string`                                                 | `"Refresh"`        | aria-label                          |
-| `title`         | `string`                                                 | `label`            | Tooltip                             |
-| `intervalMs`    | `number`                                                 | `300000` (5 min)   | Read once at mount                  |
-| `formatAge`     | `(lastUpdatedAt: number \| null, now: number) => string` | `formatRefreshAge` | Renders the age label; see below    |
+| Prop            | Type                                                     | Default            | Notes                                                 |
+| --------------- | -------------------------------------------------------- | ------------------ | ----------------------------------------------------- |
+| `lastUpdatedAt` | `number \| null`                                         | required           | Epoch ms of last successful fetch                     |
+| `onRefresh`     | `() => void`                                             | required           | Called on click and on the interval                   |
+| `busy`          | `boolean`                                                | `false`            | Spins the icon, disables the button                   |
+| `label`         | `string`                                                 | `"Refresh"`        | aria-label                                            |
+| `title`         | `string`                                                 | `label`            | Tooltip                                               |
+| `intervalMs`    | `number`                                                 | `300000` (5 min)   | Read once at mount                                    |
+| `formatAge`     | `(lastUpdatedAt: number \| null, now: number) => string` | `formatRefreshAge` | Renders the age label; see below                      |
+| `locale`        | `string`                                                 | browser locale     | BCP 47 tag for the timestamp tooltip on the age label |
 
 ## Localization
 
@@ -54,6 +55,10 @@ without a refetch:
     at === null ? m.not_updated() : m.minutes_ago({ count: minutesBetween(at, now) })}
 />
 ```
+
+The age label's hover tooltip (the full timestamp) formats with the browser
+locale, or `locale` when set — pass both `formatAge` and `locale` for a fully
+localized control.
 
 The underlying `createRefreshScheduler` / `formatRefreshAge` utilities are also
 exported — see [utilities](../utilities.md).

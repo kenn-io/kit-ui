@@ -27,8 +27,14 @@
     intervalMs?: number;
     /** Renders the age label; override to localize the default English
      * `formatRefreshAge` strings ("Updated 3m ago", …). `now` is the
-     * component's minute clock tick. */
-    formatAge?: (lastUpdatedAt: number | null, now: number) => string;
+     * component's minute clock tick. (`| undefined` keeps forwarding
+     * consumers with exactOptionalPropertyTypes happy.) */
+    formatAge?: ((lastUpdatedAt: number | null, now: number) => string) | undefined;
+    /** BCP 47 tag for the timestamp tooltip on the age label, for apps whose
+     * language setting can diverge from the browser locale. Omitted =
+     * browser locale. Must be a valid tag — `toLocaleString` throws on
+     * malformed input. */
+    locale?: string | undefined;
   }
 
   let {
@@ -39,6 +45,7 @@
     title,
     intervalMs = DEFAULT_REFRESH_INTERVAL_MS,
     formatAge = formatRefreshAge,
+    locale = undefined,
   }: Props = $props();
 
   // The page owns the initial load — it alone knows when its URL/filter state
@@ -86,7 +93,9 @@
     <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
   </IconButton>
   <div class="kit-refresh-control__status">
-    <span title={lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString()}>
+    <span
+      title={lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString(locale)}
+    >
       {ageLabel}
     </span>
   </div>
