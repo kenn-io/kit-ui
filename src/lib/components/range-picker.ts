@@ -171,11 +171,12 @@ export function monthGridDates(anchor: string): string[] {
   });
 }
 
-/** Monday-first weekday column labels in the browser locale ("Mon", …). */
-export function weekdayLabels(): string[] {
+/** Monday-first weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
+ * omitted = the browser locale. */
+export function weekdayLabels(locale?: string): string[] {
   // 2024-01-01 is a Monday.
   return Array.from({ length: 7 }, (_, i) =>
-    new Date(2024, 0, 1 + i).toLocaleDateString(undefined, {
+    new Date(2024, 0, 1 + i).toLocaleDateString(locale, {
       weekday: "short",
     }),
   );
@@ -193,26 +194,39 @@ export function resolveRange(sel: RangeSelection, earliestDate?: string | null):
   }
 }
 
-/** "Jun 29" style short label (browser locale). */
-export function formatShortDate(date: string): string {
-  return parseLocal(date).toLocaleDateString(undefined, {
+/** "Jun 29" style short label. `locale` omitted = the browser locale. */
+export function formatShortDate(date: string, locale?: string): string {
+  return parseLocal(date).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
   });
 }
 
-/** "Jun 29, 2026" style label for a day anchor (browser locale). */
-export function formatDayLabel(anchor: string): string {
-  return parseLocal(anchor).toLocaleDateString(undefined, {
+/**
+ * Apply a week trigger label template to a formatted week-start date.
+ * A "{date}" placeholder is substituted, so date-first locales can put the
+ * date anywhere ("{date}所在周"); a template without one is treated as a
+ * prefix ("Week of" → "Week of Jun 29", the pre-template behavior).
+ */
+export function formatWeekOfLabel(template: string, dateLabel: string): string {
+  if (template.includes("{date}")) return template.replace("{date}", dateLabel);
+  return `${template} ${dateLabel}`;
+}
+
+/** "Jun 29, 2026" style label for a day anchor. `locale` omitted = the
+ * browser locale. */
+export function formatDayLabel(anchor: string, locale?: string): string {
+  return parseLocal(anchor).toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
 }
 
-/** "June 2026" style label for a month anchor (browser locale). */
-export function formatMonthLabel(anchor: string): string {
-  return parseLocal(anchor).toLocaleDateString(undefined, {
+/** "June 2026" style label for a month anchor. `locale` omitted = the
+ * browser locale. */
+export function formatMonthLabel(anchor: string, locale?: string): string {
+  return parseLocal(anchor).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
   });

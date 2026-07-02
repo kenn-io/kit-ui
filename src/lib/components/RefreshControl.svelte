@@ -24,6 +24,10 @@
     title?: string;
     /** Auto-refresh cadence in ms; defaults to 5 minutes. */
     intervalMs?: number;
+    /** Renders the age label; override to localize the default English
+     * `formatRefreshAge` strings ("Updated 3m ago", …). `now` is the
+     * component's minute clock tick. */
+    formatAge?: (lastUpdatedAt: number | null, now: number) => string;
   }
 
   let {
@@ -33,6 +37,7 @@
     label = "Refresh",
     title,
     intervalMs = DEFAULT_REFRESH_INTERVAL_MS,
+    formatAge = formatRefreshAge,
   }: Props = $props();
 
   // The page owns the initial load — it alone knows when its URL/filter state
@@ -50,7 +55,7 @@
   // Local clock that ticks once a minute so the age label re-derives without
   // a data fetch. Seeded once at mount.
   let tick = $state(Date.now());
-  const ageLabel = $derived(formatRefreshAge(lastUpdatedAt, tick));
+  const ageLabel = $derived(formatAge(lastUpdatedAt, tick));
 
   onMount(() => {
     scheduler.scheduleNext();

@@ -31,6 +31,11 @@
     /** Appended to the header button's accessible name to hint at the drill-down. */
     chooseMonthLabel?: string;
     chooseYearLabel?: string;
+    /** BCP 47 tag for month/weekday/day names, for apps whose language
+     * setting can diverge from the browser locale. Omitted = browser locale.
+     * (`| undefined` keeps forwarding consumers with
+     * exactOptionalPropertyTypes happy.) */
+    locale?: string | undefined;
     class?: string;
   }
 
@@ -47,6 +52,7 @@
     nextYearsLabel = "Next years",
     chooseMonthLabel = "Choose month",
     chooseYearLabel = "Choose year",
+    locale = undefined,
     class: className = "",
   }: Props = $props();
 
@@ -60,7 +66,7 @@
   let view = $state<"days" | "months" | "years">("days");
   let zoomYear = $state(0);
 
-  const weekdays = weekdayLabels();
+  const weekdays = $derived(weekdayLabels(locale));
   const today = todayStr();
 
   const cells = $derived(monthGridDates(month));
@@ -78,11 +84,15 @@
   const maxMonthPrefix = $derived(maxDate?.slice(0, 7) ?? null);
   const maxYear = $derived(maxDate == null ? null : Number.parseInt(maxDate.slice(0, 4), 10));
 
-  const monthNames: string[] = Array.from({ length: 12 }, (_, i) =>
-    new Date(2000, i, 1).toLocaleString(undefined, { month: "short" }),
+  const monthNames = $derived(
+    Array.from({ length: 12 }, (_, i) =>
+      new Date(2000, i, 1).toLocaleString(locale, { month: "short" }),
+    ),
   );
-  const monthFullNames: string[] = Array.from({ length: 12 }, (_, i) =>
-    new Date(2000, i, 1).toLocaleString(undefined, { month: "long" }),
+  const monthFullNames = $derived(
+    Array.from({ length: 12 }, (_, i) =>
+      new Date(2000, i, 1).toLocaleString(locale, { month: "long" }),
+    ),
   );
 
   function monthAnchor(y: number, monthIndex: number): string {
@@ -164,12 +174,12 @@
         class="kit-calendar__month kit-calendar__month--button"
         type="button"
         aria-live="polite"
-        aria-label="{view === 'days' ? formatMonthLabel(month) : zoomYear}. {view === 'days'
+        aria-label="{view === 'days' ? formatMonthLabel(month, locale) : zoomYear}. {view === 'days'
           ? chooseMonthLabel
           : chooseYearLabel}"
         onclick={headerZoomOut}
       >
-        {view === "days" ? formatMonthLabel(month) : zoomYear}
+        {view === "days" ? formatMonthLabel(month, locale) : zoomYear}
       </button>
     {/if}
     <button
@@ -203,7 +213,7 @@
           class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
           type="button"
           disabled={maxDate != null && date > maxDate}
-          aria-label={formatDayLabel(date)}
+          aria-label={formatDayLabel(date, locale)}
           aria-pressed={selectedDay}
           onclick={() => onpick?.(date)}
         >
