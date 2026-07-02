@@ -33,30 +33,13 @@ function keyOf(className: string): string {
 // JSON before committing) and must be REMOVED when a tone reaches AA —
 // the suite fails on stale entries so a fixed tone can't silently
 // regress behind an old baseline.
+// Empty since kata y1v0: the light-mode chip/button tone inks were retuned
+// to the band-ink principle (accent mixed toward --text-primary — 72% for
+// buttons, 65% for chips over their stronger 15% tint) and every mode now
+// measures clean. Any entry appearing here again is a regression.
 const KNOWN_FAILURES: Record<string, Record<string, number>> = {
-  light: {
-    "kit-chip--tone-muted": 2.8,
-    "kit-chip--tone-success": 3.14,
-    "kit-chip--tone-warning": 2.71,
-    "kit-chip--tone-danger": 3.82,
-    "kit-chip--tone-info": 4.19,
-    "kit-chip--tone-canceled": 2.83,
-    "kit-chip--tone-workspace": 3.08,
-    "kit-chip--interactive.kit-chip--tone-info": 4.19,
-    "kit-button--soft.kit-button--success": 3.26,
-    "kit-button--outline.kit-button--success": 3.77,
-    "kit-button--info.kit-button--soft": 4.5,
-    "kit-button--danger.kit-button--soft": 4.14,
-  },
-  "light-hc": {
-    "kit-chip--tone-success": 3.14,
-    "kit-chip--tone-warning": 2.71,
-    "kit-chip--tone-danger": 3.82,
-    "kit-chip--tone-workspace": 3.08,
-    "kit-button--soft.kit-button--success": 3.26,
-    "kit-button--outline.kit-button--success": 3.77,
-    "kit-button--danger.kit-button--soft": 4.14,
-  },
+  light: {},
+  "light-hc": {},
   dark: {},
   "dark-hc": {},
 };

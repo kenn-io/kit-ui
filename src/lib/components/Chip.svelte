@@ -180,39 +180,47 @@
     height: 5px;
   }
 
+  /* Tone ink mixes 65% toward --text-primary — the band-ink principle
+   * from theme.css, one step deeper than the band's 72% because chips run
+   * a 15% tint (their pill identity) instead of the 9-12% band tints;
+   * amber is the binding constraint for AA at 13px (kata y1v0). Raw
+   * light-theme accents measure 2.7-4.2 : 1 on the tint. */
   .kit-chip--tone-success {
     background: color-mix(in srgb, var(--accent-green) 15%, transparent);
-    color: var(--accent-green);
+    color: color-mix(in srgb, var(--accent-green) 65%, var(--text-primary));
   }
 
   .kit-chip--tone-danger {
     background: color-mix(in srgb, var(--accent-red) 15%, transparent);
-    color: var(--accent-red);
+    color: color-mix(in srgb, var(--accent-red) 65%, var(--text-primary));
   }
 
   .kit-chip--tone-warning {
     background: color-mix(in srgb, var(--accent-amber) 15%, transparent);
-    color: var(--accent-amber);
+    color: color-mix(in srgb, var(--accent-amber) 65%, var(--text-primary));
   }
 
   .kit-chip--tone-merged {
     background: color-mix(in srgb, var(--accent-purple) 15%, transparent);
-    color: var(--accent-purple);
+    color: color-mix(in srgb, var(--accent-purple) 65%, var(--text-primary));
   }
 
   .kit-chip--tone-info {
     background: color-mix(in srgb, var(--accent-blue) 15%, transparent);
-    color: var(--accent-blue);
+    color: color-mix(in srgb, var(--accent-blue) 65%, var(--text-primary));
   }
 
+  /* Muted/canceled keep a greyer voice than neutral's --text-secondary:
+   * the same 65% mix over --text-muted lands just above AA on the inset
+   * and tint surfaces. */
   .kit-chip--tone-muted {
     background: var(--bg-inset);
-    color: var(--text-muted);
+    color: color-mix(in srgb, var(--text-muted) 65%, var(--text-primary));
   }
 
   .kit-chip--tone-canceled {
     background: color-mix(in srgb, var(--text-muted) 15%, transparent);
-    color: var(--text-muted);
+    color: color-mix(in srgb, var(--text-muted) 65%, var(--text-primary));
   }
 
   .kit-chip--tone-neutral {
@@ -222,6 +230,6 @@
 
   .kit-chip--tone-workspace {
     background: color-mix(in srgb, var(--accent-teal, var(--accent-green)) 15%, transparent);
-    color: var(--accent-teal, var(--accent-green));
+    color: color-mix(in srgb, var(--accent-teal, var(--accent-green)) 65%, var(--text-primary));
   }
 </style>

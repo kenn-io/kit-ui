@@ -237,10 +237,13 @@
     border-color: color-mix(in srgb, var(--accent-blue) 78%, #000);
   }
 
-  /* Success soft — approve */
+  /* Success soft — approve. Toned soft/outline ink mixes 72% toward
+   * --text-primary (the shared band-ink recipe from theme.css): the raw
+   * light-theme accents sit below AA for 13px text on white and tinted
+   * surfaces (kata y1v0), same reasoning as the deepened solid green. */
   .kit-button--soft.kit-button--success {
     background: color-mix(in srgb, var(--accent-green) 12%, transparent);
-    color: var(--accent-green);
+    color: color-mix(in srgb, var(--accent-green) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-green) 30%, transparent);
   }
   .kit-button--soft.kit-button--success:hover:not(:disabled) {
@@ -255,7 +258,7 @@
   /* Info soft — ready for review */
   .kit-button--soft.kit-button--info {
     background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
-    color: var(--accent-blue);
+    color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
   }
   .kit-button--soft.kit-button--info:hover:not(:disabled) {
@@ -265,7 +268,7 @@
   /* Workflow soft — purple emphasis */
   .kit-button--soft.kit-button--workflow {
     background: color-mix(in srgb, var(--accent-purple) 12%, transparent);
-    color: var(--accent-purple);
+    color: color-mix(in srgb, var(--accent-purple) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-purple) 30%, transparent);
   }
   .kit-button--soft.kit-button--workflow:hover:not(:disabled) {
@@ -275,7 +278,7 @@
   /* Danger soft — request changes, low-emphasis destructive */
   .kit-button--soft.kit-button--danger {
     background: color-mix(in srgb, var(--accent-red) 10%, transparent);
-    color: var(--accent-red);
+    color: color-mix(in srgb, var(--accent-red) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-red) 30%, transparent);
   }
   .kit-button--soft.kit-button--danger:hover:not(:disabled) {
@@ -285,7 +288,7 @@
   /* Accent outlines — accent ink on the surface, tint on hover */
   .kit-button--outline.kit-button--success {
     background: var(--bg-surface);
-    color: var(--accent-green);
+    color: color-mix(in srgb, var(--accent-green) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-green) 40%, var(--border-default));
   }
   .kit-button--outline.kit-button--success:hover:not(:disabled) {
@@ -294,7 +297,7 @@
 
   .kit-button--outline.kit-button--info {
     background: var(--bg-surface);
-    color: var(--accent-blue);
+    color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-blue) 40%, var(--border-default));
   }
   .kit-button--outline.kit-button--info:hover:not(:disabled) {
@@ -303,7 +306,7 @@
 
   .kit-button--outline.kit-button--workflow {
     background: var(--bg-surface);
-    color: var(--accent-purple);
+    color: color-mix(in srgb, var(--accent-purple) 72%, var(--text-primary));
     border: 1px solid color-mix(in srgb, var(--accent-purple) 40%, var(--border-default));
   }
   .kit-button--outline.kit-button--workflow:hover:not(:disabled) {
