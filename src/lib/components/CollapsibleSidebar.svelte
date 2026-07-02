@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { MediaQuery } from "svelte/reactivity";
+  import { MEDIA } from "../breakpoints.js";
   import SidebarToggle from "./SidebarToggle.svelte";
   import SplitResizeHandle from "./SplitResizeHandle.svelte";
   import type { SplitResizeEvent } from "./split-resize.js";
@@ -25,6 +27,12 @@
     /** Below the `wide` breakpoint (900px), float the expanded sidebar over
      * the main area instead of squeezing it. */
     overlayOnNarrow?: boolean;
+    /** Host-driven overlay: when set, floats (or doesn't float) the expanded
+     * sidebar regardless of viewport width — for hosts whose narrow signal is
+     * a measured container width rather than the viewport (embedded panes,
+     * split-pane layouts). Leave unset to let `overlayOnNarrow`'s media query
+     * drive. */
+    overlay?: boolean | undefined;
     onSidebarResize?: ((width: number) => void) | undefined;
     onExpand?: (() => void) | undefined;
   }
@@ -44,9 +52,15 @@
     minSidebarWidth = 200,
     maxSidebarWidth = 600,
     overlayOnNarrow = false,
+    overlay = undefined,
     onSidebarResize = undefined,
     onExpand = undefined,
   }: Props = $props();
+
+  // One class (kit-sidebar-layout--overlay) carries the overlay styles for
+  // both drivers, so the presentation can't drift between them.
+  const narrowViewport = new MediaQuery(MEDIA.wide);
+  const overlayActive = $derived(overlay ?? (overlayOnNarrow && narrowViewport.current));
 
   // Writable derived: tracks the prop until a drag commits a new width.
   let committedWidth = $derived(sidebarWidth);
@@ -74,7 +88,7 @@
   }
 </script>
 
-<div class="kit-sidebar-layout" class:kit-sidebar-layout--overlay-narrow={overlayOnNarrow}>
+<div class="kit-sidebar-layout" class:kit-sidebar-layout--overlay={overlayActive}>
   {#if !isCollapsed && !hideSidebar}
     <aside
       class="kit-sidebar-layout__sidebar"
@@ -166,27 +180,25 @@
     overflow: hidden;
   }
 
-  /* Narrow viewports: the expanded sidebar floats over the main area rather
-   * than squeezing it (opt-in via overlayOnNarrow). Width matches the shared
-   * `wide` breakpoint in src/lib/breakpoints.ts. */
-  @media (max-width: 900px) {
-    .kit-sidebar-layout--overlay-narrow {
-      position: relative;
-    }
+  /* The expanded sidebar floats over the main area rather than squeezing it.
+   * Applied below the shared `wide` breakpoint (via overlayOnNarrow and the
+   * MediaQuery in the script) or whenever the host forces `overlay`. */
+  .kit-sidebar-layout--overlay {
+    position: relative;
+  }
 
-    .kit-sidebar-layout--overlay-narrow
-      .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
-      position: absolute;
-      inset: 0 auto 0 0;
-      z-index: 20;
-      width: min(100%, 390px) !important;
-      max-width: 100%;
-      box-shadow: var(--shadow-lg);
-    }
+  .kit-sidebar-layout--overlay
+    .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 20;
+    width: min(100%, 390px) !important;
+    max-width: 100%;
+    box-shadow: var(--shadow-lg);
+  }
 
-    .kit-sidebar-layout--overlay-narrow .kit-sidebar-layout__sidebar--collapsed {
-      width: 36px;
-      padding-top: 8px;
-    }
+  .kit-sidebar-layout--overlay .kit-sidebar-layout__sidebar--collapsed {
+    width: 36px;
+    padding-top: 8px;
   }
 </style>

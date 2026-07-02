@@ -47,8 +47,28 @@ collapse state and the persisted width.
 | `mainEmpty`                           | `boolean`                 | `false`       | Center placeholder content                                                                                         |
 | `mainOverflow`                        | `"auto" \| "hidden"`      | `"auto"`      |                                                                                                                    |
 | `overlayOnNarrow`                     | `boolean`                 | `false`       | Below the shared `wide` breakpoint (900px), the expanded sidebar floats over the main area instead of squeezing it |
+| `overlay`                             | `boolean \| undefined`    | `undefined`   | Host-driven overlay override; when set it wins over `overlayOnNarrow`'s media query (see below)                    |
 | `onSidebarResize`                     | `(width: number) => void` | —             | Fires on drag end / arrow-key resize; persist this                                                                 |
 | `onExpand`                            | `() => void`              | —             | Collapsed-strip toggle clicked                                                                                     |
+
+### Overlay drivers
+
+The floating-overlay presentation (expanded sidebar absolutely positioned over
+the main area, `min(100%, 390px)` wide, elevated with `--shadow-lg`) is carried
+by one modifier class, `kit-sidebar-layout--overlay`, with two drivers:
+
+- **Viewport (default):** `overlayOnNarrow` applies it below the shared `wide`
+  breakpoint (900px).
+- **Host signal:** pass `overlay` when the app's narrow signal is something
+  other than the viewport — e.g. a measured container width in an embedded
+  pane or split-pane layout. `overlay={true}` forces the overlay at any
+  viewport width, `overlay={false}` suppresses it, and `undefined` falls back
+  to the media query. Do not re-implement the overlay styles app-side against
+  kit's BEM classes; derive a boolean and pass it in.
+
+```svelte
+<CollapsibleSidebar overlay={containerWidth < 500} isCollapsed={collapsed} …></CollapsibleSidebar>
+```
 
 ## SidebarToggle props
 
