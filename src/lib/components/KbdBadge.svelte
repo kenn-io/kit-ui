@@ -16,7 +16,7 @@
 
 <kbd class="kit-kbd-badge" data-joiner={joiner} aria-label={aria}>
   {glyph}
-  <span class="sr-only">{aria}</span>
+  <span class="kit-sr-only">{aria}</span>
 </kbd>
 
 <style>
@@ -36,14 +36,6 @@
   .kit-kbd-badge[data-joiner="compact"] {
     font-family: var(--font-sans);
     letter-spacing: 0.07em;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
   }
 
   @media (pointer: coarse) {

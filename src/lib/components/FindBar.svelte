@@ -332,10 +332,4 @@
   .kit-find-bar__close:active {
     transform: scale(0.9);
   }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-find-bar__nav-btn:focus-visible,
-  .kit-find-bar__close:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
 </style>

@@ -43,6 +43,24 @@ export interface DateRange {
   to: string;
 }
 
+/**
+ * Calendar's i18n-able nav/drill-down labels. DateRangePicker accepts the
+ * same keys and forwards them verbatim, so the set (and Calendar's English
+ * defaults) live in one place.
+ */
+export interface CalendarNavLabels {
+  previousMonthLabel?: string;
+  nextMonthLabel?: string;
+  /** Nav labels while zoomed out to the month / year grids. */
+  previousYearLabel?: string;
+  nextYearLabel?: string;
+  previousYearsLabel?: string;
+  nextYearsLabel?: string;
+  /** Appended to the header button's accessible name to hint at the drill-down. */
+  chooseMonthLabel?: string;
+  chooseYearLabel?: string;
+}
+
 export interface RangePreset {
   /** Compact pill label. */
   label: string;
@@ -171,14 +189,49 @@ export function monthGridDates(anchor: string): string[] {
   });
 }
 
+/* Locale label tables and formatters are memoized at module scope:
+ * every toLocaleDateString call constructs a fresh Intl.DateTimeFormat
+ * (locale resolution + ICU setup), and the browser locale can't change
+ * within a page load. Lazy so importing this module stays side-effect
+ * free (and SSR-safe). */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = JSON.stringify(options);
+  let fmt = formatters.get(key);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(undefined, options);
+    formatters.set(key, fmt);
+  }
+  return fmt;
+}
+
+const labelTables = new Map<string, string[]>();
+
+function labelTable(key: string, build: () => string[]): string[] {
+  let table = labelTables.get(key);
+  if (!table) {
+    table = build();
+    labelTables.set(key, table);
+  }
+  return table;
+}
+
 /** Monday-first weekday column labels in the browser locale ("Mon", …). */
 export function weekdayLabels(): string[] {
   // 2024-01-01 is a Monday.
-  return Array.from({ length: 7 }, (_, i) =>
-    new Date(2024, 0, 1 + i).toLocaleDateString(undefined, {
-      weekday: "short",
-    }),
-  );
+  return labelTable("weekdays", () => {
+    const fmt = formatter({ weekday: "short" });
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
+  });
+}
+
+/** January-first month labels in the browser locale ("Jan"/"January", …). */
+export function monthLabels(style: "short" | "long"): string[] {
+  return labelTable(`months-${style}`, () => {
+    const fmt = formatter({ month: style });
+    return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2024, i, 1)));
+  });
 }
 
 /** Turn any selection into concrete inclusive {from, to} bounds. */
@@ -195,25 +248,15 @@ export function resolveRange(sel: RangeSelection, earliestDate?: string | null):
 
 /** "Jun 29" style short label (browser locale). */
 export function formatShortDate(date: string): string {
-  return parseLocal(date).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  return formatter({ month: "short", day: "numeric" }).format(parseLocal(date));
 }
 
 /** "Jun 29, 2026" style label for a day anchor (browser locale). */
 export function formatDayLabel(anchor: string): string {
-  return parseLocal(anchor).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatter({ year: "numeric", month: "short", day: "numeric" }).format(parseLocal(anchor));
 }
 
 /** "June 2026" style label for a month anchor (browser locale). */
 export function formatMonthLabel(anchor: string): string {
-  return parseLocal(anchor).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-  });
+  return formatter({ year: "numeric", month: "long" }).format(parseLocal(anchor));
 }

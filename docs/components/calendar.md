@@ -44,9 +44,13 @@ pick-a-date UI.
   between selected cells are filled), with the range start and end as
   solid accent pills rounded outward so the endpoints read at a glance —
   a one-day range is a single solid pill.
-- Weekday/month labels use the browser locale (`toLocaleDateString`); the
-  grid itself is Monday-first regardless of locale, matching
+- Weekday/month labels use the browser locale (via memoized
+  `Intl.DateTimeFormat` instances — `weekdayLabels()` / `monthLabels()` are
+  exported); the grid itself is Monday-first regardless of locale, matching
   `periodBounds("week", …)`'s ISO weeks.
+- The eight nav/drill-down label props are the shared `CalendarNavLabels`
+  interface (exported); `DateRangePicker` accepts the same keys and
+  forwards them verbatim.
 - Day cells are plain focusable buttons with full-date `aria-label`s (no
   roving-tabindex grid navigation yet).
 

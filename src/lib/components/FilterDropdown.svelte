@@ -22,6 +22,7 @@
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
   import { tick } from "svelte";
+  import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import SearchInput from "./SearchInput.svelte";
 
@@ -100,39 +101,16 @@
 
   $effect(() => {
     if (!isOpen) return;
-
-    function updatePosition(): void {
-      positionDropdown();
-    }
-
-    function handleMousedown(event: MouseEvent): void {
-      const target = event.target as Node;
-      if (dropdownRef?.contains(target)) return;
-      if (buttonRef?.contains(target)) return;
-      closeDropdown();
-    }
-
-    function handleKeydown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        closeDropdown();
-      }
-    }
-
-    // Searching filters the item list and resizes the panel — reposition.
-    const observer = new ResizeObserver(() => updatePosition());
-    if (dropdownRef) observer.observe(dropdownRef);
-
-    document.addEventListener("mousedown", handleMousedown);
-    document.addEventListener("keydown", handleKeydown);
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("mousedown", handleMousedown);
-      document.removeEventListener("keydown", handleKeydown);
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
+    const cleanups = [
+      dismissable({
+        owners: () => [dropdownRef, buttonRef],
+        dismiss: closeDropdown,
+        escapeFocus: () => buttonRef,
+      }),
+      // Searching filters the item list and resizes the panel — reposition.
+      autoReposition(() => dropdownRef, positionDropdown),
+    ];
+    return () => cleanups.forEach((cleanup) => cleanup());
   });
 
   function positionDropdown(): void {
@@ -292,7 +270,7 @@
             </span>
           </button>
           {#if item.description}
-            <span id={itemDescriptionId(item)} class="sr-only">
+            <span id={itemDescriptionId(item)} class="kit-sr-only">
               {item.description}
             </span>
           {/if}
@@ -480,18 +458,6 @@
     font-size: var(--font-size-xs);
   }
 
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
   .kit-filter-dropdown__reset {
     display: block;
     width: calc(100% - 16px);
@@ -511,12 +477,6 @@
 
   .kit-filter-dropdown__reset:hover {
     color: var(--text-primary);
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-filter-dropdown__btn:focus-visible,
-  .kit-filter-dropdown__bulk-btn:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 
   .kit-filter-dropdown__item:focus-visible {

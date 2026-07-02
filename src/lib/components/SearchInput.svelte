@@ -152,9 +152,4 @@
     color: var(--text-primary);
     background: var(--bg-surface-hover);
   }
-
-  .kit-search-input__clear:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
 </style>

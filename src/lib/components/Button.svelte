@@ -111,13 +111,6 @@
     line-height: 1;
   }
 
-  /* A real outline (not box-shadow) so the high-contrast theme's global
-   * outline-width override applies — one ring for every tone. */
-  .kit-button:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
-
   .kit-button:active:not(:disabled) {
     transform: translateY(1px);
   }
