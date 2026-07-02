@@ -49,10 +49,12 @@ messages exceed that. Long messages wrap at the stack's max-width; unbroken
 tokens break rather than overflow.
 
 Concurrent flashes stack below each other in show order and read as a single
-card — rows sit flush, separated by a muted hairline (the shrinking countdown
-bar alone can't keep rows legible). The widest message sets the width for the
-whole stack (capped at 480px / the viewport), and each row has its own X and
-its own countdown.
+card. Each banner draws its own border (the Modal band principle: a toned
+region's border area takes its tone, so toned banners get the 30% tone-mixed
+edge instead of sitting inside a grey frame); on the shared edge between two
+stacked banners the upper banner's bottom border wins. The widest message
+sets the width for the whole stack (capped at 480px / the viewport), and
+each row has its own X and its own countdown.
 
 Every banner shows a thin countdown bar along its bottom edge indicating time
 until auto-dismiss; it freezes (full) under `prefers-reduced-motion`.

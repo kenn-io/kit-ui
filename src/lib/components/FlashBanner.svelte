@@ -68,8 +68,10 @@
 {/if}
 
 <style>
-  /* The stack reads as one card: the container owns border/radius/shadow
-   * and each banner's countdown bar doubles as the row divider. */
+  /* The stack reads as one card: the container owns radius/shadow, but
+   * each banner draws its OWN border (Modal band principle: a toned
+   * region's border area takes its tone; a single grey stack border
+   * would leave toned banners with grey edges). */
   .kit-flash-stack {
     position: fixed;
     left: 50%;
@@ -87,7 +89,6 @@
     max-height: calc(100vh - var(--kit-flash-top, 44px) - 52px);
     overflow-y: auto;
     background: var(--bg-surface);
-    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     overflow-x: hidden;
@@ -103,12 +104,24 @@
     padding: 8px 16px;
     font-size: var(--font-size-md);
     color: var(--text-primary);
+    border: 1px solid var(--border-default);
   }
 
-  /* The countdown bar shrinks away, so it can't separate rows on its own —
-   * a muted hairline keeps adjacent rows legible. */
+  .kit-flash-banner:first-child {
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+  }
+
+  .kit-flash-banner:last-child {
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+  }
+
+  /* Stacked banners share one edge: the upper banner's bottom border
+   * wins it (its tone bleeds down), so the lower banner drops its top
+   * border instead of doubling up. */
   .kit-flash-banner + .kit-flash-banner {
-    border-top: 1px solid var(--border-muted);
+    border-top: 0;
   }
 
   /* Semantic tones follow the Modal header-band recipe: one accent
@@ -130,6 +143,8 @@
   .kit-flash-banner:not(.kit-flash-banner--neutral) {
     background: color-mix(in srgb, var(--kit-flash-tone) 9%, var(--bg-surface));
     color: color-mix(in srgb, var(--kit-flash-tone) 72%, var(--text-primary));
+    /* Same 30% mix as the Modal band border. */
+    border-color: color-mix(in srgb, var(--kit-flash-tone) 30%, var(--border-default));
   }
 
   /* Non-color tone signal for assistive tech (tone must never be

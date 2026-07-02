@@ -119,7 +119,9 @@
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    overflow: hidden;
+    /* No overflow: hidden — the header must be able to overlay the
+     * panel's border (see the band comment below); children clip their
+     * own corners instead. */
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 64px);
@@ -134,7 +136,14 @@
     /* Distinct from the body surface by default so the header reads as a
      * separate band, not just bolder body text. */
     background: var(--bg-inset);
-    border-bottom: 1px solid var(--border-default);
+    /* The band owns every border segment it touches: it pulls out over
+     * the panel's border and draws its own, so a toned band can tint its
+     * top AND side edges — a grey side edge beside the tinted band reads
+     * as a bug (the tone applies to the toned region's whole border
+     * area, same principle as the borderless SegmentedControl). */
+    margin: -1px -1px 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     flex-shrink: 0;
   }
 
@@ -162,18 +171,12 @@
     --kit-modal-tone: var(--accent-red);
   }
 
-  /* The panel's top edge borders the tinted band, so it takes the tone
-   * border too — a grey edge against the tinted header reads as a bug.
-   * The rounded corners blend tone into the grey side borders, which is
-   * where the band visually ends. Gated on a header actually rendering:
-   * a headerless toned modal has no band, so no stray colored edge. */
-  .kit-modal-panel--headered:not([data-tone="neutral"]) {
-    border-top-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
-  }
-
+  /* Tone reaches the band's full border area (top, sides, and the
+   * divider below) via the header's own border. Headerless toned modals
+   * render no header element, so no stray colored edge. */
   .kit-modal-header:not([data-tone="neutral"]) {
     background: color-mix(in srgb, var(--kit-modal-tone) 9%, var(--bg-surface));
-    border-bottom-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
+    border-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
   }
 
   /* Title/close ink mixes the tone toward --text-primary: darker than the
@@ -222,6 +225,19 @@
     overflow-y: auto;
     color: var(--text-secondary);
     font-size: var(--font-size-md);
+  }
+
+  /* Without an overflow clip on the panel, the scrollable body rounds
+   * its own corners (scrollbar included) where it meets the panel's
+   * rounded edge. */
+  .kit-modal-body:first-child {
+    border-top-left-radius: calc(var(--radius-lg) - 1px);
+    border-top-right-radius: calc(var(--radius-lg) - 1px);
+  }
+
+  .kit-modal-body:last-child {
+    border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+    border-bottom-right-radius: calc(var(--radius-lg) - 1px);
   }
 
   .kit-modal-footer {
