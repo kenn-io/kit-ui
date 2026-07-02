@@ -251,6 +251,9 @@
 
 <style>
   .kit-calendar {
+    /* Range-interior tint, shared by the cell background and the seam
+     * fill between adjacent selected cells. */
+    --kit-calendar-range-bg: color-mix(in srgb, var(--accent-blue) 14%, transparent);
     display: inline-flex;
     flex-direction: column;
     gap: var(--space-2);
@@ -368,10 +371,25 @@
   }
 
   .kit-calendar__day.selected {
-    background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+    position: relative;
+    background: var(--kit-calendar-range-bg);
     color: var(--accent-blue);
     border-radius: 0;
     opacity: 1;
+  }
+
+  /* The range must read as one connected band per week row: fill the
+   * grid's 1px column gap to the left of every selected cell that has a
+   * selected neighbor there. range-start owns the band's left edge, and
+   * first-column cells have the grid edge to their left, not a cell. */
+  .kit-calendar__day.selected:not(.range-start):not(:nth-child(7n + 1))::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--kit-calendar-range-bg);
   }
 
   .kit-calendar__day.range-start {
