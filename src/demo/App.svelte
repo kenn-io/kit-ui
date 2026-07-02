@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Component } from "svelte";
-  import { FlashBanner, initTheme, ThemeToggle } from "../lib/index.js";
+  import { FlashBanner, initTheme, SearchInput, ThemeToggle } from "../lib/index.js";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
@@ -51,9 +51,14 @@
   // instead of the gallery shell.
   const isMobileFrame = new URLSearchParams(location.search).has("mobile-frame");
 
-  const pages: Page[] = [
+  // Gallery meta-pages stay pinned at the top; component pages below are
+  // sorted alphabetically by label regardless of declaration order.
+  const metaPages: Page[] = [
     { id: "theme", label: "Theme tokens", component: ThemeDemo },
     { id: "mobile", label: "Mobile preview", component: MobileDemo },
+  ];
+
+  const componentPages: Page[] = [
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
@@ -90,11 +95,23 @@
     { id: "top-bar", label: "TopBar", component: TopBarDemo },
     { id: "typeahead", label: "Typeahead", component: TypeaheadDemo },
     { id: "virtual-list", label: "VirtualList", component: VirtualListDemo },
-  ];
+  ].sort((a, b) => a.label.localeCompare(b.label));
+
+  const pages: Page[] = [...metaPages, ...componentPages];
 
   let activeId = $state((typeof location !== "undefined" && location.hash.slice(1)) || "theme");
+  let filter = $state("");
 
   initTheme();
+
+  function matches(page: Page): boolean {
+    const q = filter.trim().toLowerCase();
+    if (!q) return true;
+    return page.label.toLowerCase().includes(q) || page.id.includes(q);
+  }
+
+  const visibleMeta = $derived(metaPages.filter(matches));
+  const visibleComponents = $derived(componentPages.filter(matches));
 
   const activePage = $derived(pages.find((p) => p.id === activeId) ?? pages[0]!);
   const ActiveComponent = $derived(activePage.component);
@@ -113,6 +130,17 @@
   {@render gallery()}
 {/if}
 
+{#snippet navLink(page: Page)}
+  <button
+    class="sidebar__link"
+    class:active={page.id === activeId}
+    type="button"
+    onclick={() => navigate(page.id)}
+  >
+    {page.label}
+  </button>
+{/snippet}
+
 {#snippet gallery()}
   <FlashBanner top="16px" />
 
@@ -122,17 +150,28 @@
         <span class="sidebar__title">kit-ui</span>
         <span class="sidebar__subtitle">component gallery</span>
       </div>
+      <div class="sidebar__filter">
+        <SearchInput
+          bind:value={filter}
+          placeholder="Filter components…"
+          ariaLabel="Filter components"
+          size="sm"
+          block
+        />
+      </div>
       <nav class="sidebar__nav">
-        {#each pages as page (page.id)}
-          <button
-            class="sidebar__link"
-            class:active={page.id === activeId}
-            type="button"
-            onclick={() => navigate(page.id)}
-          >
-            {page.label}
-          </button>
+        {#each visibleMeta as page (page.id)}
+          {@render navLink(page)}
         {/each}
+        {#if visibleMeta.length > 0 && visibleComponents.length > 0}
+          <div class="sidebar__divider" aria-hidden="true"></div>
+        {/if}
+        {#each visibleComponents as page (page.id)}
+          {@render navLink(page)}
+        {/each}
+        {#if visibleMeta.length === 0 && visibleComponents.length === 0}
+          <span class="sidebar__empty">No matches</span>
+        {/if}
       </nav>
       <div class="sidebar__theme">
         <ThemeToggle variant="segmented" block />
@@ -179,11 +218,28 @@
     color: var(--text-muted);
   }
 
+  .sidebar__filter {
+    padding: 0 0 10px;
+  }
+
   .sidebar__nav {
     display: flex;
     flex-direction: column;
     gap: 1px;
     flex: 1;
+  }
+
+  .sidebar__divider {
+    height: 1px;
+    margin: 6px 8px;
+    background: var(--border-muted);
+    flex-shrink: 0;
+  }
+
+  .sidebar__empty {
+    padding: 5px 8px;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
   }
 
   .sidebar__link {
