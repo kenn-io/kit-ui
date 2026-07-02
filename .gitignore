@@ -5,3 +5,6 @@ dist/
 .kata.local.toml
 # roborev snapshots
 /.roborev/
+# playwright
+/test-results/
+/playwright-report/

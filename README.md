@@ -124,8 +124,10 @@ Every component has a live page with usage snippets and a light/dark toggle.
 ## Development
 
 ```bash
-bun run check   # svelte-check (must stay at 0 errors/warnings)
-bun run build   # builds the demo gallery
+bun run check          # svelte-check (must stay at 0 errors/warnings)
+bun run build          # builds the demo gallery
+bun test               # unit tests (checker rules, windowing, shortcuts, markdown planner)
+bun run test:browser   # Playwright suite against the gallery (docs/testing.md)
 bun run svelte-mcp list-sections   # Svelte 5 docs lookup (see skills/)
 ```
 

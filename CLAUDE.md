@@ -12,7 +12,8 @@ bun install
 bun run dev      # demo gallery (Vite dev server)
 bun run check    # svelte-check — must stay at 0 errors / 0 warnings
 bun run build    # builds the demo gallery
-bun test         # checker rule tests (checks/rules.test.ts)
+bun test         # unit tests (checks/*.test.ts — rules, windowing, shortcuts, markdown)
+bun run test:browser       # Playwright suite against the demo gallery (docs/testing.md)
 bun run check:usage        # dogfood kit-ui-check against src/demo (must be clean)
 bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
 ```
@@ -27,6 +28,9 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
   functions in `checks/rules.mjs` with tests alongside
 - `src/demo/` — gallery app (`App.svelte` shell + `pages/*Demo.svelte`, one per
   component)
+- `tests/browser/` — Playwright specs driving the demo gallery
+  (docs/testing.md); specs depend on demo hooks, so a demo change may need
+  its spec updated in the same commit
 - `docs/` — per-component reference (`docs/components/*.md`), `theming.md`,
   `utilities.md`
 - `skills/` — Svelte 5 skills replicated from middleman, symlinked into
