@@ -28,7 +28,11 @@ function keyOf(className: string): string {
 }
 
 // Worst measured ratio per failing tone combination per mode.
-// Regenerate with: CAPTURE_CONTRAST=1 bunx playwright test contrast
+// Lifecycle: entries are ADDED only from capture output
+// (CAPTURE_CONTRAST=1 bunx playwright test contrast — review the printed
+// JSON before committing) and must be REMOVED when a tone reaches AA —
+// the suite fails on stale entries so a fixed tone can't silently
+// regress behind an old baseline.
 const KNOWN_FAILURES: Record<string, Record<string, number>> = {
   light: {
     "kit-chip--tone-muted": 2.8,
@@ -119,6 +123,15 @@ for (const mode of MODES) {
     expect(
       degraded.map(([k, r]) => `${k}: ${r.toFixed(2)} (baseline ${baseline[k]})`),
       "known failures degraded beyond tolerance",
+    ).toEqual([]);
+
+    // A baseline entry that no longer fails is stale: the tone reached
+    // AA and the entry must go, or a later drop back below 4.5 would
+    // hide behind the old baseline.
+    const stale = Object.keys(baseline).filter((key) => !all.has(key));
+    expect(
+      stale,
+      "stale KNOWN_FAILURES entries — these tones now pass AA; remove them",
     ).toEqual([]);
   });
 }

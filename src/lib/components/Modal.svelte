@@ -68,6 +68,7 @@
     aria-label={ariaLabel ?? title}
     tabindex="-1"
     data-tone={tone}
+    class:kit-modal-panel--headered={!!title || closable}
     style:width
     style:max-width={maxWidth}
     {@attach trapFocus}
@@ -164,8 +165,9 @@
   /* The panel's top edge borders the tinted band, so it takes the tone
    * border too — a grey edge against the tinted header reads as a bug.
    * The rounded corners blend tone into the grey side borders, which is
-   * where the band visually ends. */
-  .kit-modal-panel:not([data-tone="neutral"]) {
+   * where the band visually ends. Gated on a header actually rendering:
+   * a headerless toned modal has no band, so no stray colored edge. */
+  .kit-modal-panel--headered:not([data-tone="neutral"]) {
     border-top-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
   }
 

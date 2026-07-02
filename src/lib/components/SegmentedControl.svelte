@@ -172,6 +172,12 @@
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   }
 
+  /* A lone segment matches first- and last-child; last-child's radius
+   * would square the left corners without this. */
+  .kit-segmented--borderless .kit-segmented__btn:only-child {
+    border-radius: var(--radius-sm);
+  }
+
   .kit-segmented--borderless .kit-segmented__btn.active {
     background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
     color: var(--accent-blue);

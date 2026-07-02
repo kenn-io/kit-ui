@@ -9,10 +9,20 @@ export interface FlashOptions {
 export interface FlashState {
   message: string;
   durationMs: number;
-  tone: FlashTone;
+  /** Optional on the public shape (external mocks/wrappers predate it);
+   * consumers should read it as `tone ?? "neutral"`. */
+  tone?: FlashTone;
   /** Increments per showFlash call; keys each banner and its countdown. */
   id: number;
 }
+
+const FLASH_TONES: ReadonlySet<string> = new Set([
+  "neutral",
+  "info",
+  "success",
+  "warning",
+  "danger",
+]);
 
 /** Backpressure for event bursts: beyond this, the oldest flash is dropped
  * so the fixed-position stack can't grow off-screen. */
@@ -34,6 +44,9 @@ export function showFlash(msg: string, opts: number | FlashOptions = {}): void {
   if (!Number.isFinite(durationMs) || durationMs <= 0) {
     durationMs = DEFAULT_DURATION_MS;
   }
+  // Untyped callers can pass anything; unknown tones render neutral
+  // rather than producing an unstyled kit-flash-banner--<garbage> class.
+  if (!FLASH_TONES.has(tone)) tone = "neutral";
   nextId += 1;
   const id = nextId;
   const overflow = flashes.length - (MAX_FLASHES - 1);

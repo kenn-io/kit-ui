@@ -1,13 +1,32 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
-  import { dismissFlash, getFlashes } from "../stores/flash.svelte.js";
+  import {
+    dismissFlash,
+    getFlashes,
+    type FlashTone,
+  } from "../stores/flash.svelte.js";
 
   interface Props {
     /** Distance from the top of the viewport, e.g. below an app header. */
     top?: string;
+    /** Screen-reader severity prefixes per tone — tone must not be
+     * color-only. Empty string suppresses the prefix (neutral default). */
+    toneLabels?: Partial<Record<FlashTone, string>>;
   }
 
-  let { top = "44px" }: Props = $props();
+  const DEFAULT_TONE_LABELS: Record<FlashTone, string> = {
+    neutral: "",
+    info: "Info",
+    success: "Success",
+    warning: "Warning",
+    danger: "Error",
+  };
+
+  let { top = "44px", toneLabels = {} }: Props = $props();
+
+  function toneLabel(tone: FlashTone): string {
+    return toneLabels[tone] ?? DEFAULT_TONE_LABELS[tone];
+  }
 
   const flashes = $derived(getFlashes());
 </script>
@@ -17,11 +36,13 @@
        the widest message set the width for all of them. -->
   <div class="kit-flash-stack" style:top style:--kit-flash-top={top}>
     {#each flashes as flash (flash.id)}
-      <div
-        class="kit-flash-banner kit-flash-banner--{flash.tone}"
-        role="status"
-      >
-        <span class="kit-flash-banner__text">{flash.message}</span>
+      {@const tone = flash.tone ?? "neutral"}
+      <div class="kit-flash-banner kit-flash-banner--{tone}" role="status">
+        <span class="kit-flash-banner__text">
+          {#if toneLabel(tone)}<span class="kit-flash-banner__sr-tone"
+              >{toneLabel(tone)}:
+            </span>{/if}{flash.message}</span
+        >
         <button
           class="kit-flash-banner__dismiss"
           type="button"
@@ -104,6 +125,20 @@
   .kit-flash-banner:not(.kit-flash-banner--neutral) {
     background: color-mix(in srgb, var(--kit-flash-tone) 9%, var(--bg-surface));
     color: color-mix(in srgb, var(--kit-flash-tone) 72%, var(--text-primary));
+  }
+
+  /* Non-color tone signal for assistive tech (tone must never be
+   * color-only); visually hidden, announced as a severity prefix. */
+  .kit-flash-banner__sr-tone {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   .kit-flash-banner__text {

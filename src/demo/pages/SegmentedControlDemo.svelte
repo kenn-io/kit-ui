@@ -42,6 +42,7 @@
   options={[
     { value: "normal", label: "Normal" },
     { value: "focused", label: "Focused" },
+    { value: "raw", label: "Raw" },
   ]}
   value={mode}
   onchange={(v) => (mode = v)}

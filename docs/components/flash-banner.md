@@ -36,7 +36,7 @@ dismissFlash();                          // programmatic dismiss
 | Function | Notes |
 | --- | --- |
 | `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer. Non-finite or `<= 0` durations fall back to the 4s default |
-| `showFlash(msg, { tone?, durationMs? })` | Options form. `tone` (`"neutral" \| "info" \| "success" \| "warning" \| "danger"`, neutral default) tints the banner — band, ink, and countdown bar — with the semantic accent, following the Modal header recipe. No per-tone icons: like Modal, tone is carried by color alone |
+| `showFlash(msg, { tone?, durationMs? })` | Options form. `tone` (`"neutral" \| "info" \| "success" \| "warning" \| "danger"`, neutral default) tints the banner — band, ink, and countdown bar — with the semantic accent, following the Modal header recipe. No per-tone icons — but tone is never color-only: banners prepend a visually-hidden severity prefix ("Success:", "Error:", …) for screen readers, overridable/localizable via FlashBanner's `toneLabels` prop. Unknown tone strings from untyped callers normalize to neutral. Note `FlashState.tone` is optional on the public type (read it as `tone ?? "neutral"`) |
 | `getFlashes(): FlashState[]` | Reactive read of all visible flashes, oldest first |
 | `getFlash(): FlashState \| null` | Reactive read of the most recent flash |
 | `getFlashMessage(): string \| null` | Reactive read of just the latest text |
