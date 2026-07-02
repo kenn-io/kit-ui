@@ -54,7 +54,10 @@ export {
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";
-export type { SegmentedControlOption } from "./components/SegmentedControl.svelte";
+export type {
+  SegmentedControlOption,
+  SegmentedControlTone,
+} from "./components/SegmentedControl.svelte";
 export { default as SelectDropdown } from "./components/SelectDropdown.svelte";
 export type { SelectDropdownOption } from "./components/select-dropdown.js";
 export { default as SettingsLayout } from "./components/SettingsLayout.svelte";

@@ -1,9 +1,16 @@
 <script module lang="ts">
+  export type SegmentedControlTone = "info" | "success" | "warning" | "danger";
+
   export interface SegmentedControlOption {
     value: string;
     label: string;
     title?: string;
     disabled?: boolean;
+    /** Per-segment semantic accent. In the borderless variant a toned
+     * segment tints its ink and border even while inactive; when active
+     * it takes the full tone band. Untoned segments keep the default
+     * accent when active. */
+    tone?: SegmentedControlTone;
   }
 </script>
 
@@ -77,6 +84,7 @@
     <button
       class="kit-segmented__btn"
       class:active={option.value === value}
+      data-tone={option.tone}
       type="button"
       role="radio"
       aria-checked={option.value === value}
@@ -107,6 +115,9 @@
   }
 
   .kit-segmented__btn {
+    /* Per-segment accent: the default matches the historical active
+     * tint; option.tone remaps it below. */
+    --kit-segmented-tone: var(--accent-blue);
     padding: 3px 10px;
     border: 0;
     background: transparent;
@@ -118,6 +129,26 @@
     cursor: pointer;
     transition: background var(--transition-fast), color var(--transition-fast);
     white-space: nowrap;
+  }
+
+  .kit-segmented__btn[data-tone="info"] {
+    --kit-segmented-tone: var(--accent-blue);
+  }
+  .kit-segmented__btn[data-tone="success"] {
+    --kit-segmented-tone: var(--accent-green);
+  }
+  .kit-segmented__btn[data-tone="warning"] {
+    --kit-segmented-tone: var(--accent-amber);
+  }
+  .kit-segmented__btn[data-tone="danger"] {
+    --kit-segmented-tone: var(--accent-red);
+  }
+
+  /* Toned active ink follows the Modal band recipe (72% toward
+   * --text-primary keeps small text at AA on the tint) — applies to the
+   * boxed pill too so a toned option reads consistently across variants. */
+  .kit-segmented__btn[data-tone].active {
+    color: color-mix(in srgb, var(--kit-segmented-tone) 72%, var(--text-primary));
   }
 
   .kit-segmented--block .kit-segmented__btn {
@@ -146,9 +177,13 @@
   }
 
   /* Borderless (flat strip) variant: flush segments sharing hairline
-   * borders. Each segment owns its border (collapsed with -1px margins)
-   * so the active segment's accent-tinted border wins the shared edges —
-   * the outer border is never one uniform color around a tinted pill. */
+   * borders. Each segment owns its border so a segment's border area can
+   * take its own tone (the Modal band principle) — the outer border is
+   * never one uniform color around a tinted pill. Shared-edge precedence:
+   * the ACTIVE segment's border wins its edges; between inactive
+   * neighbors the LEFTMOST segment's right border owns the shared edge
+   * (segments after the first drop their left border, so nothing
+   * overlaps by default). */
   .kit-segmented--borderless {
     gap: 0;
     padding: 0;
@@ -160,11 +195,20 @@
     padding: 4px 10px;
     border: 1px solid var(--border-default);
     border-radius: 0;
+  }
+
+  .kit-segmented--borderless .kit-segmented__btn + .kit-segmented__btn {
+    border-left-width: 0;
+  }
+
+  /* Active trumps leftmost: it restores its left border and pulls over
+   * the left neighbor's right border, its z-index winning the overlap. */
+  .kit-segmented--borderless .kit-segmented__btn + .kit-segmented__btn.active {
+    border-left-width: 1px;
     margin-left: -1px;
   }
 
   .kit-segmented--borderless .kit-segmented__btn:first-child {
-    margin-left: 0;
     border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   }
 
@@ -178,11 +222,18 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Toned segments carry their color while inactive too: tinted border
+   * (30% mix, same as the active edge) and tinted ink. */
+  .kit-segmented--borderless .kit-segmented__btn[data-tone]:not(.active) {
+    border-color: color-mix(in srgb, var(--kit-segmented-tone) 30%, var(--border-default));
+    color: color-mix(in srgb, var(--kit-segmented-tone) 72%, var(--text-secondary));
+  }
+
   .kit-segmented--borderless .kit-segmented__btn.active {
-    background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
-    color: var(--accent-blue);
+    background: color-mix(in srgb, var(--kit-segmented-tone) 12%, transparent);
+    color: color-mix(in srgb, var(--kit-segmented-tone) 72%, var(--text-primary));
     font-weight: 600;
-    border-color: color-mix(in srgb, var(--accent-blue) 30%, var(--border-default));
+    border-color: color-mix(in srgb, var(--kit-segmented-tone) 30%, var(--border-default));
     box-shadow: none;
     z-index: 1;
   }
@@ -190,5 +241,10 @@
   .kit-segmented--borderless .kit-segmented__btn:hover:not(.active):not(:disabled) {
     background: var(--bg-surface-hover);
     color: var(--text-secondary);
+  }
+
+  .kit-segmented--borderless
+    .kit-segmented__btn[data-tone]:hover:not(.active):not(:disabled) {
+    color: color-mix(in srgb, var(--kit-segmented-tone) 82%, var(--text-primary));
   }
 </style>

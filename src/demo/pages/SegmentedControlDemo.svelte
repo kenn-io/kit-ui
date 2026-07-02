@@ -5,6 +5,7 @@
   let filter = $state("all");
   let range = $state("7d");
   let mode = $state("normal");
+  let status = $state("passing");
 </script>
 
 <DemoSection
@@ -61,6 +62,37 @@
     ariaLabel="Transcript mode"
   />
   <span>value: <code>{mode}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Per-segment tones (borderless)"
+  description="option.tone gives a segment its own semantic accent: tinted ink and border even while inactive, the full tone band when active. Shared-edge precedence: the active segment's border wins its edges; between inactive neighbors the leftmost segment's right border owns the shared edge. Untoned segments keep the default accent when active."
+  code={`<SegmentedControl
+  variant="borderless"
+  options={[
+    { value: "all", label: "All" },
+    { value: "passing", label: "Passing", tone: "success" },
+    { value: "flaky", label: "Flaky", tone: "warning" },
+    { value: "failing", label: "Failing", tone: "danger" },
+  ]}
+  value={status}
+  onchange={(v) => (status = v)}
+  ariaLabel="Status filter"
+/>`}
+>
+  <SegmentedControl
+    variant="borderless"
+    options={[
+      { value: "all", label: "All" },
+      { value: "passing", label: "Passing", tone: "success" },
+      { value: "flaky", label: "Flaky", tone: "warning" },
+      { value: "failing", label: "Failing", tone: "danger" },
+    ]}
+    value={status}
+    onchange={(v) => (status = v)}
+    ariaLabel="Status filter"
+  />
+  <span>value: <code>{status}</code></span>
 </DemoSection>
 
 <DemoSection
