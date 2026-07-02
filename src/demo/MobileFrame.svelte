@@ -3,7 +3,7 @@
   // keys on the device's pointer, which an iframe inherits from the host, so
   // the phone frame passes ?touch to force the scale via the kit-type-touch
   // root class — exactly how a test or device emulator would.
-  import { Button, Chip, SegmentedControl, StatusDot } from "../lib/index.js";
+  import { Button, Chip, SearchInput, SegmentedControl, StatusDot } from "../lib/index.js";
 
   if (new URLSearchParams(location.search).has("touch")) {
     document.documentElement.classList.add("kit-type-touch");
@@ -37,7 +37,7 @@
     ariaLabel="Session filter"
   />
 
-  <input class="screen__search" type="search" placeholder="Search sessions…" />
+  <SearchInput block placeholder="Search sessions…" ariaLabel="Search sessions" />
 
   <ul class="screen__list">
     {#each sessions as s (s.name)}
@@ -81,20 +81,6 @@
   .screen__title {
     font-size: var(--font-size-xl);
     font-weight: 700;
-  }
-
-  .screen__search {
-    padding: 6px 10px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: var(--font-size-md);
-  }
-
-  .screen__search::placeholder {
-    color: var(--text-muted);
   }
 
   .screen__list {
