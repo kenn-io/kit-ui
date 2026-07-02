@@ -15,12 +15,19 @@
 </script>
 
 <script lang="ts">
+  import type { Snippet } from "svelte";
+
   interface Props {
     options: SegmentedControlOption[];
     value: string;
     onchange: (value: string) => void;
     /** Accessible name for the group. */
     ariaLabel?: string;
+    /** Custom segment content (icons, counts, icon+text) rendered in
+     * place of the label text. `option.label` stays the accessible name
+     * — it becomes the button's aria-label — so icon-only segments keep
+     * a readable name for assistive tech. */
+    segment?: Snippet<[SegmentedControlOption, boolean]>;
     /** Stretch to the container width, segments sharing space equally. */
     block?: boolean;
     /** boxed (default): inset pad with a floating surface pill.
@@ -39,6 +46,7 @@
     value,
     onchange,
     ariaLabel = undefined,
+    segment = undefined,
     block = false,
     variant = "boxed",
     disabled = false,
@@ -88,13 +96,18 @@
       type="button"
       role="radio"
       aria-checked={option.value === value}
+      aria-label={segment ? option.label : undefined}
       tabindex={option.value === value ? 0 : -1}
       title={option.title}
       disabled={disabled || option.disabled}
       onclick={() => select(option)}
       onkeydown={handleKeydown}
     >
-      {option.label}
+      {#if segment}
+        {@render segment(option, option.value === value)}
+      {:else}
+        {option.label}
+      {/if}
     </button>
   {/each}
 </div>
@@ -118,6 +131,12 @@
     /* Per-segment accent: the default matches the historical active
      * tint; option.tone remaps it below. */
     --kit-segmented-tone: var(--accent-blue);
+    /* Flex so snippet content (icon + text) aligns and gaps cleanly;
+     * inherited line-height keeps text-only segments unchanged. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
     padding: 3px 10px;
     border: 0;
     background: transparent;

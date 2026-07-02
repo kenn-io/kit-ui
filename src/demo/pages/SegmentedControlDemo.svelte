@@ -1,4 +1,7 @@
 <script lang="ts">
+  import LayoutGridIcon from "@lucide/svelte/icons/layout-grid";
+  import ListIcon from "@lucide/svelte/icons/list";
+  import Table2Icon from "@lucide/svelte/icons/table-2";
   import { SegmentedControl } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
@@ -6,6 +9,18 @@
   let range = $state("7d");
   let mode = $state("normal");
   let status = $state("passing");
+  let view = $state("list");
+
+  const viewIcons: Record<string, typeof ListIcon> = {
+    list: ListIcon,
+    grid: LayoutGridIcon,
+    table: Table2Icon,
+  };
+  const viewOptions = [
+    { value: "list", label: "List" },
+    { value: "grid", label: "Grid" },
+    { value: "table", label: "Table" },
+  ];
 </script>
 
 <DemoSection
@@ -96,6 +111,46 @@
 </DemoSection>
 
 <DemoSection
+  title="Snippet segments (icons)"
+  description="The segment snippet renders custom content — icons, counts, icon+text — in place of the label text; it receives the option and whether it is active. option.label stays the accessible name (applied as the button's aria-label), so icon-only segments still read properly to assistive tech. Works in both variants."
+  code={`<SegmentedControl options={viewOptions} value={view} onchange={…} ariaLabel="View">
+  {#snippet segment(option)}
+    {@const Icon = viewIcons[option.value]}
+    <Icon size="12" strokeWidth="2" aria-hidden="true" />
+    {option.label}
+  {/snippet}
+</SegmentedControl>`}
+>
+  <div class="snippet-row">
+    <SegmentedControl
+      variant="borderless"
+      options={viewOptions}
+      value={view}
+      onchange={(v) => (view = v)}
+      ariaLabel="View"
+    >
+      {#snippet segment(option)}
+        {@const Icon = viewIcons[option.value]}
+        <Icon size="12" strokeWidth="2" aria-hidden="true" />
+        {option.label}
+      {/snippet}
+    </SegmentedControl>
+    <SegmentedControl
+      options={viewOptions.map((o) => ({ ...o, title: o.label }))}
+      value={view}
+      onchange={(v) => (view = v)}
+      ariaLabel="View (icon-only)"
+    >
+      {#snippet segment(option)}
+        {@const Icon = viewIcons[option.value]}
+        <Icon size="13" strokeWidth="2" aria-hidden="true" />
+      {/snippet}
+    </SegmentedControl>
+    <span>value: <code>{view}</code></span>
+  </div>
+</DemoSection>
+
+<DemoSection
   title="Block width and disabled options"
   description="block stretches the group to its container, segments sharing space equally (middleman's compact/mobile treatment)."
   code={`<SegmentedControl block options={ranges} value={range} onchange={...} />`}
@@ -115,3 +170,12 @@
     />
   </div>
 </DemoSection>
+
+<style>
+  .snippet-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+</style>
