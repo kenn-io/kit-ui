@@ -73,6 +73,8 @@ const SHIFTED_KEYS: Record<string, string> = {
   "/": "?",
 };
 
+const SHIFTED_OUTPUTS = new Set(Object.values(SHIFTED_KEYS));
+
 export function isMacPlatform(): boolean {
   if (typeof navigator === "undefined") return false;
   const platform = navigator.platform ?? navigator.userAgent ?? "";
@@ -139,8 +141,16 @@ export function shortcutMatches(
       // The produced character is the shifted counterpart — Shift proven.
       keyMatches = true;
       shiftMatches = true;
-    } else if (keyMatches && !parsed.shift && event.shiftKey) {
-      // The layout needed Shift to produce this character (e.g. + on =).
+    } else if (
+      keyMatches &&
+      !parsed.shift &&
+      event.shiftKey &&
+      SHIFTED_OUTPUTS.has(parsed.key)
+    ) {
+      // Only characters that are themselves shifted outputs ("+", "?")
+      // may arrive with shiftKey set on layouts that need Shift to
+      // produce them. Base characters ("/", ",") keep strict matching —
+      // plain "/" must not shadow "shift+/".
       shiftMatches = true;
     }
   }
@@ -261,6 +271,14 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
+/** Platform-resolved identity of a combo — what actually has to be
+ * pressed. Used for duplicate detection. */
+function resolvedComboKey(parsed: ParsedShortcut, isMac: boolean): string {
+  const meta = parsed.meta || (parsed.mod && isMac);
+  const ctrl = parsed.ctrl || (parsed.mod && !isMac);
+  return `${parsed.key}|${meta}|${ctrl}|${parsed.alt}|${parsed.shift}`;
+}
+
 export function createShortcutManager(
   isMac: boolean = isMacPlatform(),
 ): ShortcutManager {
@@ -279,14 +297,16 @@ export function createShortcutManager(
       };
       // Conflict policy: first registered wins (handleKeydown fires the
       // first match and stops). Duplicates are almost always an app bug,
-      // so surface them.
+      // so surface them — compared after alias and platform resolution,
+      // so "cmd+k"/"meta+k" or "mod+k"/"ctrl+k"-on-PC collide too.
+      const resolved = resolvedComboKey(entry.parsed, isMac);
       for (const existing of entries) {
         if (
           existing.scope === entry.scope &&
-          existing.combo.toLowerCase() === combo.toLowerCase()
+          resolvedComboKey(existing.parsed, isMac) === resolved
         ) {
           console.warn(
-            `[kit-ui shortcuts] "${combo}" is already registered in scope "${entry.scope}"; the first registration wins`,
+            `[kit-ui shortcuts] "${combo}" resolves to the same keys as the already-registered "${existing.combo}" in scope "${entry.scope}"; the first registration wins`,
           );
           break;
         }

@@ -79,7 +79,15 @@ State contracts:
   and Enter's target never disagree after filtering.
 - Setting `activeIndex` from outside (controlled selection, initial
   focus) scrolls the row into view, keeping `aria-activedescendant`
-  pointing at a rendered option.
+  pointing at a rendered option. A selection set before the container
+  has been measured (mount-time initial `activeIndex`) is deferred and
+  performed once the viewport lands.
+
+Adopting VirtualList in an app: `ariaLabel` is required (TS enforces it;
+plain-JS callers get an unnamed listbox — don't), audit row snippets for
+tabbable content and move those actions to `onactivate` or an external
+toolbar, and reset or re-derive `activeIndex` when swapping datasets
+(shrinking lists clamp automatically).
 
 Acceptance checklist (automated coverage tracked under the browser test
 infra work): container announces its name and the active option;

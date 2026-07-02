@@ -145,6 +145,7 @@ export {
 export {
   codeFenceLanguage,
   createMarkdownRenderer,
+  escapeHtml,
   highlightCode,
   renderMarkdown,
   renderMarkdownSync,

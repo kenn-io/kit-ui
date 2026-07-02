@@ -20,16 +20,22 @@ const off = appShortcuts.register("mod+k", openPalette, {
   `"mod+shift+p"`. `mod` = ⌘ on Apple platforms, Ctrl elsewhere; `ctrl` is
   always Ctrl. Aliases: `esc`, `space`, `up/down/left/right`, `plus`,
   `option`, `cmd`. Matching is **strict** — modifiers the combo doesn't
-  name must not be pressed. Shifted symbols are normalized: `"shift+/"`
-  matches the `?` the browser actually reports, and `"mod+plus"` matches
-  `+` whether or not the layout needs Shift to produce it (US layout
-  pairs).
+  name must not be pressed. Shifted symbols are normalized narrowly (US
+  layout pairs): `"shift+/"` matches the `?` the browser actually
+  reports, and combos naming a shifted-output character (`"mod+plus"`)
+  tolerate the `shiftKey` a layout needs to produce it. Base symbols stay
+  strict — plain `"/"` never matches while Shift is held, so it can't
+  shadow `"shift+/"`. Non-US layouts beyond these pairs match on the
+  produced character only.
 - **Validation**: malformed combos (`"mod+"`, unknown modifiers) throw at
   parse/registration time, so typos fail fast instead of silently never
   firing. Write the literal `+` key as `"plus"`.
 - **Conflicts**: within a scope, the **first registration wins** —
   `handleKeydown` fires the first match and stops. Registering a combo
-  already present in the same scope logs a `console.warn`.
+  that resolves to the same physical keys as one already in the scope
+  logs a `console.warn` — compared after alias and platform resolution,
+  so `cmd+k` vs `meta+k`, `option+up` vs `alt+arrowup`, and `mod+k` vs
+  `ctrl+k`-on-PC are all caught.
 - **Inputs**: plain-key shortcuts don't fire while an
   input/textarea/select/contenteditable has focus; modifier combos do.
   Opt a plain key back in with `allowInInput: true` (e.g. `escape`).

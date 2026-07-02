@@ -34,7 +34,7 @@ Scans `.svelte` and `.css` files; skips `node_modules`, `dist`, `build`,
 | `hand-rolled-table-sort` | `aria-sort=` on custom headers | `Table` + `TableHeaderCell` |
 | `hand-rolled-tooltip` | `role="tooltip"` markup | `Tooltip` |
 | `hand-rolled-status-bar` | `status-bar` classes/selectors (`kit-status-bar` exempt) | `StatusBar` |
-| `hand-rolled-code-block` | `code-block` classes/selectors (`kit-code-block` exempt; suffixed names like `code-block-list` too) | `CodeBlock` |
+| `hand-rolled-code-block` | `code-block` classes/selectors (`kit-code-block` and suffixed names like `code-block-list` are both exempt) | `CodeBlock` |
 | `hand-rolled-empty-state` | `empty-state` classes/selectors (`kit-empty-state` exempt) | `EmptyState` |
 | `hand-rolled-icon-button` | `icon-btn` / `icon-button` classes/selectors (single/double-quoted `class=` and CSS selectors; suffixed names like `icon-button-group` are exempt; dynamic `class:` directives aren't seen) | `IconButton` |
 | `hand-rolled-top-bar` | `app-header` / `header-left` / `header-right` classes/selectors | `TopBar` |

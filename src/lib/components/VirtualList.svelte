@@ -101,15 +101,21 @@
 
   // aria-activedescendant can only reference a rendered row, so an
   // activeIndex set from outside the rendered slice (controlled usage,
-  // initial selection) is scrolled back into view.
+  // initial selection) is scrolled back into view. `viewport` is tracked
+  // so a scroll requested before ResizeObserver has measured (mount-time
+  // initial selection → viewport 0) retries once real geometry exists.
   let lastActive = -1;
   $effect(() => {
     const index = activeIndex;
+    const measured = viewport > 0;
     untrack(() => {
       if (index === lastActive) return;
-      lastActive = index;
       if (index >= 0 && index < items.length && (index < slice.start || index >= slice.end)) {
+        if (!measured) return; // leave unhandled — retry when viewport lands
+        lastActive = index;
         void scrollToIndex(index);
+      } else {
+        lastActive = index;
       }
     });
   });

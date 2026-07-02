@@ -9,7 +9,10 @@ util and agentsview's renderer; the app-specific parts those carried
 stay app-side, injected through options.
 
 Peer dependencies: `marked@^18`, `shiki@^4`, `dompurify@^3` (the versions
-both apps already ship). Browser-only — DOMPurify needs a DOM.
+both apps already ship). **Browser-only**: DOMPurify needs a DOM, and
+unsanitized output must never escape, so rendering **throws** with a
+clear message when `window` is undefined (SSR, node tests) — render on
+the client. The pure planner/validator exports are environment-agnostic.
 
 ## CodeBlock
 
@@ -90,19 +93,44 @@ const renderer = createMarkdownRenderer({
 });
 ```
 
+`codeFence` contract: the returned string is **markup**, so the
+interceptor must escape the user-authored fence text itself
+(`escapeHtml` is exported for exactly this) — sanitization strips
+dangerous nodes but can't know that `<img>` inside a fence was meant as
+source text. It must also be pure and deterministic: it runs once during
+highlight planning and once during rendering. `allowedAttributes` is for
+inert data (`data-*`) attributes your extensions emit — never add
+URL-bearing (`src`, `href` variants) or style attributes through it;
+event handlers are stripped by DOMPurify regardless.
+
 ### Security model
 
 - Output is always DOMPurify-sanitized — script/event-handler/URL attacks
   in the source markdown (or produced by an extension) are stripped.
   `codeFence` HTML goes through the same pass.
+- `<style>` elements are forbidden (`FORBID_TAGS`) — DOMPurify's defaults
+  would let untrusted markdown inject document-wide CSS.
 - Inline `style` attributes are stripped everywhere **except** on
   shiki-generated nodes: those are tagged with a per-render nonce and may
   only carry `--shiki-*: #hex` declarations. A crafted document that
   fakes `<pre class="shiki">` markup can't smuggle CSS — it lacks the
   nonce.
+- Any `<a>` that keeps a `target` attribute gets
+  `rel="noopener noreferrer"` forced after sanitization.
 - `highlightCode` output is shiki-generated from a plain string (shiki
   escapes the code text), so CodeBlock renders it without a DOMPurify
   pass.
+
+### Failure behavior
+
+Highlighting failures never reject: a failed shiki/theme chunk load
+(offline, CDN error) degrades that render to escaped plain fences — the
+failed init isn't cached, so a later render retries. `highlightCode`
+resolves `null` on any failure. The `Markdown` component keeps the
+previous document and logs a `console.error` if rendering itself throws.
+The per-renderer cache holds raw→HTML promises and clears wholesale past
+500 entries; documents are typically small, but byte-bound your own layer
+if you render huge sources.
 
 ### Highlighting budgets
 

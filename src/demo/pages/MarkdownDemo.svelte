@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createMarkdownRenderer, Markdown } from "../../lib/index.js";
+  import { createMarkdownRenderer, escapeHtml, Markdown } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const sample = `# Release notes
@@ -30,11 +30,13 @@ export function greet(name: string): string {
 `;
 
   // App-specific syntax goes in through a custom renderer — here a fence
-  // interceptor that turns \`\`\`callout fences into a styled block.
+  // interceptor that turns ```callout fences into a styled block. The
+  // interceptor owns escaping: fence text is user-authored source, not
+  // markup.
   const renderer = createMarkdownRenderer({
     codeFence: (code, lang) =>
       lang === "callout"
-        ? `<blockquote class="demo-callout">${code}</blockquote>`
+        ? `<blockquote class="demo-callout">${escapeHtml(code)}</blockquote>`
         : undefined,
   });
 
@@ -60,8 +62,9 @@ Deploys freeze Friday 5pm — see the runbook.
   title="Custom renderer (app extensions)"
   description="createMarkdownRenderer() is the injection point for app-specific syntax: marked extensions (issue refs, wrapper tags) and codeFence interceptors (mermaid, custom viewers). The intercepted HTML still goes through sanitization."
   code={`const renderer = createMarkdownRenderer({
+  // the interceptor owns escaping — fence text is source, not markup
   codeFence: (code, lang) =>
-    lang === "callout" ? \`<blockquote class="demo-callout">\${code}</blockquote>\` : undefined,
+    lang === "callout" ? \`<blockquote class="demo-callout">\${escapeHtml(code)}</blockquote>\` : undefined,
 });
 
 <Markdown source={text} {renderer} />`}

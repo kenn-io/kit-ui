@@ -79,6 +79,14 @@ describe("shortcutMatches", () => {
     // Numpad or layouts with a dedicated + key.
     expect(shortcutMatches(parsed, ev("+", { meta: true }), true)).toBe(true);
   });
+
+  test("base symbols stay strict: plain / does not shadow shift+/", () => {
+    // "/" is not a shifted output, so an event with Shift held must not
+    // match the unshifted combo (it belongs to "shift+/").
+    expect(shortcutMatches(parseShortcut("/"), ev("/", { shift: true }), true)).toBe(false);
+    expect(shortcutMatches(parseShortcut("/"), ev("/"), true)).toBe(true);
+    expect(shortcutMatches(parseShortcut("mod+/"), ev("/", { meta: true, shift: true }), true)).toBe(false);
+  });
 });
 
 describe("formatShortcutKeys", () => {
@@ -159,6 +167,31 @@ describe("createShortcutManager", () => {
       expect(warnings.length).toBe(1);
       m.handleKeydown(kbd("k", { meta: true }));
       expect([first, second]).toEqual([1, 0]);
+    } finally {
+      console.warn = origWarn;
+    }
+  });
+
+  test("duplicate detection resolves aliases and platform mod", () => {
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (msg: string) => { warnings.push(msg); };
+    try {
+      const mac = createShortcutManager(true);
+      mac.register("mod+k", () => {});
+      mac.register("cmd+k", () => {}); // meta on mac == mod on mac
+      mac.register("ctrl+k", () => {}); // distinct on mac — no warning
+      expect(warnings.length).toBe(1);
+
+      const pc = createShortcutManager(false);
+      pc.register("mod+k", () => {});
+      pc.register("ctrl+k", () => {}); // ctrl on pc == mod on pc
+      expect(warnings.length).toBe(2);
+
+      const alias = createShortcutManager(true);
+      alias.register("alt+up", () => {});
+      alias.register("option+arrowup", () => {}); // alias-equal
+      expect(warnings.length).toBe(3);
     } finally {
       console.warn = origWarn;
     }

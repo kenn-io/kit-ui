@@ -54,10 +54,18 @@ function getShikiHighlighter(): Promise<Highlighter> {
   shikiHighlighterPromise ??= getSingletonHighlighter({
     themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
     langs: [],
-  }).then((highlighter) => {
-    shikiHighlighter = highlighter;
-    return highlighter;
-  });
+  }).then(
+    (highlighter) => {
+      shikiHighlighter = highlighter;
+      return highlighter;
+    },
+    (error: unknown) => {
+      // Don't cache a rejection — a later render may retry (transient
+      // network failure loading the theme chunks).
+      shikiHighlighterPromise = undefined;
+      throw error;
+    },
+  );
   return shikiHighlighterPromise;
 }
 
@@ -172,7 +180,14 @@ export function codeHighlightPlan(
 
 async function loadCodeFenceLanguages(languages: string[]): Promise<void> {
   if (languages.length === 0) return;
-  const highlighter = shikiHighlighter ?? (await getShikiHighlighter());
+  let highlighter: Highlighter;
+  try {
+    highlighter = shikiHighlighter ?? (await getShikiHighlighter());
+  } catch {
+    // Highlighter init failed (offline, failed theme chunk) — the render
+    // proceeds with every fence as escaped plain text.
+    return;
+  }
   for (const lang of languages) {
     if (lang === SHIKI_PLAINTEXT_LANG) continue;
     try {
@@ -199,20 +214,23 @@ export async function highlightCode(
   const language = codeFenceLanguage(lang);
   if (language === SHIKI_PLAINTEXT_LANG) return null;
   if (utf8ByteLength(code) > SHIKI_MAX_HIGHLIGHTED_BYTES) return null;
-  const highlighter = await getShikiHighlighter();
+  // Never rejects: highlighter/theme init failures (offline, failed
+  // chunk) degrade to the caller's plain rendering, same as unknown
+  // languages.
   try {
+    const highlighter = await getShikiHighlighter();
     const resolved = highlighter.resolveLangAlias(language);
     if (!highlighter.getLoadedLanguages().includes(resolved)) {
       await highlighter.loadLanguage(language as BundledLanguage);
     }
+    return highlighter.codeToHtml(code, {
+      lang: language,
+      themes: SHIKI_THEMES,
+      defaultColor: false,
+    });
   } catch {
     return null;
   }
-  return highlighter.codeToHtml(code, {
-    lang: language,
-    themes: SHIKI_THEMES,
-    defaultColor: false,
-  });
 }
 
 export interface MarkdownRendererOptions {
@@ -220,8 +238,13 @@ export interface MarkdownRendererOptions {
    * for app-specific syntax (issue references, wrapper tags). */
   extensions?: TokenizerAndRendererExtension[];
   /** Intercept specific fences (mermaid diagrams, custom viewers):
-   * return HTML for the block (it goes through sanitization with the
-   * rest of the document) or undefined to fall through to highlighting. */
+   * return HTML for the block or undefined to fall through to
+   * highlighting. Contract: the returned string is markup, so the
+   * interceptor MUST escape the user-authored fence text itself (use
+   * `escapeHtml`) — sanitization strips dangerous nodes but cannot know
+   * that `<img>` in a fence was meant as source text. Must be pure and
+   * deterministic: it's called once during highlight planning and once
+   * during rendering. */
   codeFence?: (code: string, lang: string) => string | undefined;
   /** Extra attributes sanitization should keep (e.g. `data-*` attributes
    * your extensions emit). `target` is always allowed. */
@@ -285,11 +308,24 @@ const shikiStyleSanitizer: UponSanitizeAttributeHook = (node, data) => {
   }
 };
 
+// Any element that keeps a target (e.g. target="_blank" emitted by an
+// extension) must not leak an opener reference to the linked page.
+const linkRelHardener = (node: Element): void => {
+  if (node.tagName === "A" && node.hasAttribute("target")) {
+    node.setAttribute("rel", "noopener noreferrer");
+  }
+};
+
 function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string {
   DOMPurify.addHook("uponSanitizeAttribute", shikiStyleSanitizer);
+  DOMPurify.addHook("afterSanitizeAttributes", linkRelHardener);
   try {
     const sanitized = DOMPurify.sanitize(html, {
-      ADD_ATTR: ["target", SHIKI_GENERATED_ATTR, ...allowedAttributes],
+      // <style> elements pass DOMPurify defaults but would let untrusted
+      // markdown inject document-wide CSS; the only sanctioned style
+      // channel is the nonce-gated --shiki-* attribute allowlist.
+      FORBID_TAGS: ["style"],
+      ADD_ATTR: ["target", "rel", SHIKI_GENERATED_ATTR, ...allowedAttributes],
     });
     return sanitized.replaceAll(
       new RegExp(`\\s${SHIKI_GENERATED_ATTR}="[^"]*"`, "g"),
@@ -297,6 +333,7 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
     );
   } finally {
     DOMPurify.removeHook("uponSanitizeAttribute", shikiStyleSanitizer);
+    DOMPurify.removeHook("afterSanitizeAttributes", linkRelHardener);
   }
 }
 
@@ -318,6 +355,13 @@ export function createMarkdownRenderer(
     tokens: Tokens.Generic[],
     highlightedCodeTokens?: WeakSet<Tokens.Code>,
   ): string {
+    if (typeof window === "undefined") {
+      // DOMPurify needs a DOM and unsanitized output must never escape —
+      // fail loudly instead of returning unsafe HTML in SSR/tests.
+      throw new Error(
+        "kit-ui markdown rendering is browser-only (DOMPurify needs a DOM); render on the client",
+      );
+    }
     renderState = {
       highlightedCodeTokens,
       nonce: shikiNonce(),

@@ -24,9 +24,17 @@
     const effectSource = source;
     const render = renderer?.render ?? renderMarkdown;
     let cancelled = false;
-    void render(effectSource).then((result) => {
-      if (!cancelled) html = result;
-    });
+    void render(effectSource).then(
+      (result) => {
+        if (!cancelled) html = result;
+      },
+      (error: unknown) => {
+        // Rendering failed outright (not a highlight fallback — those
+        // resolve with plain fences). Keep the previous document rather
+        // than going blank, but make the failure visible.
+        console.error("[kit-ui] markdown render failed", error);
+      },
+    );
     return () => {
       cancelled = true;
     };
