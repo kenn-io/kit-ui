@@ -54,21 +54,30 @@ collapse state and the persisted width.
 ### Overlay drivers
 
 The floating-overlay presentation (expanded sidebar absolutely positioned over
-the main area, `min(100%, 390px)` wide, elevated with `--shadow-lg`) is carried
-by one modifier class, `kit-sidebar-layout--overlay`, with two drivers:
+the main area, `min(100%, 390px)` wide, elevated with `--shadow-lg`) has two
+drivers:
 
-- **Viewport (default):** `overlayOnNarrow` applies it below the shared `wide`
-  breakpoint (900px).
+- **Viewport (default):** `overlayOnNarrow` emits `kit-sidebar-layout--overlay-narrow`,
+  whose styles sit behind a pure `@media (max-width: 900px)` query (the shared
+  `wide` breakpoint) — no JS involved, so it applies before hydration.
 - **Host signal:** pass `overlay` when the app's narrow signal is something
   other than the viewport — e.g. a measured container width in an embedded
-  pane or split-pane layout. `overlay={true}` forces the overlay at any
-  viewport width, `overlay={false}` suppresses it, and `undefined` falls back
-  to the media query. Do not re-implement the overlay styles app-side against
-  kit's BEM classes; derive a boolean and pass it in.
+  pane or split-pane layout. `overlay={true}` emits `kit-sidebar-layout--overlay`
+  (same presentation, any viewport width), `overlay={false}` suppresses the
+  overlay entirely (including `overlayOnNarrow`'s media query), and
+  `undefined` leaves the media query in charge. Do not re-implement the
+  overlay styles app-side against kit's BEM classes; derive a boolean and
+  pass it in.
 
 ```svelte
 <CollapsibleSidebar overlay={containerWidth < 500} isCollapsed={collapsed} …></CollapsibleSidebar>
 ```
+
+While overlaying, the resize handle is hidden: the overlay forces the sidebar
+to `min(100%, 390px)`, so dragging could change only the persisted width,
+invisibly. The overlay also only engages when there is a main area to float
+over — with `sidebarOnly` or `hasMain={false}` the sidebar fills the layout
+and both drivers are ignored.
 
 ## SidebarToggle props
 

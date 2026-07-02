@@ -1,7 +1,5 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { MediaQuery } from "svelte/reactivity";
-  import { MEDIA } from "../breakpoints.js";
   import SidebarToggle from "./SidebarToggle.svelte";
   import SplitResizeHandle from "./SplitResizeHandle.svelte";
   import type { SplitResizeEvent } from "./split-resize.js";
@@ -57,10 +55,15 @@
     onExpand = undefined,
   }: Props = $props();
 
-  // One class (kit-sidebar-layout--overlay) carries the overlay styles for
-  // both drivers, so the presentation can't drift between them.
-  const narrowViewport = new MediaQuery(MEDIA.wide);
-  const overlayActive = $derived(overlay ?? (overlayOnNarrow && narrowViewport.current));
+  // Overlaying only means something when a main area exists to float over;
+  // with sidebarOnly / hasMain={false} the sidebar already fills the layout.
+  const canOverlay = $derived(hasMain && !sidebarOnly);
+  // Host-driven overlay (kit-sidebar-layout--overlay, any viewport width).
+  const overlayForced = $derived(overlay === true && canOverlay);
+  // Viewport-driven overlay stays pure CSS (kit-sidebar-layout--overlay-narrow
+  // under a 900px media query) so it applies before hydration / without JS;
+  // a defined `overlay` takes the driver's seat and suppresses it.
+  const overlayNarrow = $derived(overlayOnNarrow && overlay === undefined && canOverlay);
 
   // Writable derived: tracks the prop until a drag commits a new width.
   let committedWidth = $derived(sidebarWidth);
@@ -88,7 +91,11 @@
   }
 </script>
 
-<div class="kit-sidebar-layout" class:kit-sidebar-layout--overlay={overlayActive}>
+<div
+  class="kit-sidebar-layout"
+  class:kit-sidebar-layout--overlay={overlayForced}
+  class:kit-sidebar-layout--overlay-narrow={overlayNarrow}
+>
   {#if !isCollapsed && !hideSidebar}
     <aside
       class="kit-sidebar-layout__sidebar"
@@ -181,8 +188,12 @@
   }
 
   /* The expanded sidebar floats over the main area rather than squeezing it.
-   * Applied below the shared `wide` breakpoint (via overlayOnNarrow and the
-   * MediaQuery in the script) or whenever the host forces `overlay`. */
+   * Two drivers share this presentation — keep the two blocks below in sync:
+   * `overlay` (host signal, kit-sidebar-layout--overlay, any width) and
+   * `overlayOnNarrow` (kit-sidebar-layout--overlay-narrow under the shared
+   * `wide` breakpoint from src/lib/breakpoints.ts, kept as a pure media
+   * query so it applies before hydration / without JS). Dragging can't
+   * change the forced overlay width, so the resize handle hides. */
   .kit-sidebar-layout--overlay {
     position: relative;
   }
@@ -200,5 +211,34 @@
   .kit-sidebar-layout--overlay .kit-sidebar-layout__sidebar--collapsed {
     width: 36px;
     padding-top: 8px;
+  }
+
+  .kit-sidebar-layout--overlay > :global(.kit-split-resize-handle) {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .kit-sidebar-layout--overlay-narrow {
+      position: relative;
+    }
+
+    .kit-sidebar-layout--overlay-narrow
+      .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
+      position: absolute;
+      inset: 0 auto 0 0;
+      z-index: 20;
+      width: min(100%, 390px) !important;
+      max-width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .kit-sidebar-layout--overlay-narrow .kit-sidebar-layout__sidebar--collapsed {
+      width: 36px;
+      padding-top: 8px;
+    }
+
+    .kit-sidebar-layout--overlay-narrow > :global(.kit-split-resize-handle) {
+      display: none;
+    }
   }
 </style>

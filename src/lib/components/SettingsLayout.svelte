@@ -46,6 +46,14 @@
     items: SettingsCategory[];
   }
 
+  // Display-level fallback: if the bound `active` id is absent from
+  // `categories` (e.g. a transient host-side filter), show the first category
+  // instead of a stale panel. `active` itself is left untouched so clearing
+  // the filter restores the selection; clicking commits a new one.
+  const resolvedActive = $derived(
+    categories.some((category) => category.id === active) ? active : (categories[0]?.id ?? ""),
+  );
+
   const runs = $derived.by(() => {
     const result: CategoryRun[] = [];
     for (const category of categories) {
