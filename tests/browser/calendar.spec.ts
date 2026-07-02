@@ -45,9 +45,7 @@ test("header click zooms days → months → years; year click has nothing above
   );
 });
 
-test("picking a year drills to its months, picking a month lands on its days", async ({
-  page,
-}) => {
+test("picking a year drills to its months, picking a month lands on its days", async ({ page }) => {
   const cal = drillCalendar(page);
   await cal.locator(".kit-calendar__month--button").click();
   await cal.locator(".kit-calendar__month--button").click();
@@ -67,9 +65,7 @@ test("picking a year drills to its months, picking a month lands on its days", a
   await expect(page.locator("code", { hasText: `${pastYear}-03` })).toBeVisible();
 });
 
-test("maxDate disables future months, future years, and paging past them", async ({
-  page,
-}) => {
+test("maxDate disables future months, future years, and paging past them", async ({ page }) => {
   const cal = drillCalendar(page);
   await cal.locator(".kit-calendar__month--button").click();
 
@@ -82,9 +78,7 @@ test("maxDate disables future months, future years, and paging past them", async
   await expect(cal.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
 
   await cal.locator(".kit-calendar__month--button").click();
-  await expect(
-    cal.locator(".kit-calendar__unit", { hasText: String(thisYear) }),
-  ).toBeEnabled();
+  await expect(cal.locator(".kit-calendar__unit", { hasText: String(thisYear) })).toBeEnabled();
   if (thisYear < blockStart + 11) {
     await expect(
       cal.locator(".kit-calendar__unit", { hasText: String(thisYear + 1) }),

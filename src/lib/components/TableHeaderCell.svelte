@@ -39,11 +39,7 @@
   );
 </script>
 
-<th
-  class={["kit-th", { "kit-th--numeric": numeric }, className]}
-  scope="col"
-  aria-sort={ariaSort}
->
+<th class={["kit-th", { "kit-th--numeric": numeric }, className]} scope="col" aria-sort={ariaSort}>
   {#if sortable}
     <button class="kit-th__sort-btn" type="button" onclick={() => onsort?.()}>
       {#if label}{label}{/if}

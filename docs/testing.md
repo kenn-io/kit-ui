@@ -19,16 +19,16 @@ squats on that port). Chromium comes from
 
 ## What's covered (`tests/browser/`)
 
-| Spec | Covers |
-| --- | --- |
-| `focus-trap.spec.ts` | Modal + DetailDrawer: initial focus, Tab/Shift+Tab containment, Escape close, focus restore to trigger |
-| `flash.spec.ts` | Flash stack cap (5) and per-banner dismiss |
-| `top-bar.spec.ts` | Tab collapse into the nav dropdown and back across width sweeps; selection preserved through collapse |
-| `fit-stages.spec.ts` | Stage transitions across widths, full recovery to the richest stage |
-| `contrast.spec.ts` | WCAG AA (4.5:1) for chip tones and button surfaces in light/dark/high-contrast, alpha-composited from real rendered colors. Measured pre-existing failures are baselined in `KNOWN_FAILURES` (remediation: kata y1v0); the suite fails on new failures or degradation |
-| `command-palette.spec.ts` | Combobox ARIA state, disabled-skip highlight, Escape clear-then-close, shortcut scope suspension, empty-result inertness |
-| `virtual-list.spec.ts` | Windowed DOM, container keyboard nav + `aria-activedescendant`, Enter activation, `scrollToIndex`, nested-control key isolation |
-| `markdown.spec.ts` | Sanitizer against real DOMPurify (script/style/inline-style vectors, faked-shiki nonce check, `rel` hardening), dual-theme code colors, CodeBlock line numbers / wrap toggle / clipboard copy |
+| Spec                      | Covers                                                                                                                                                                                                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `focus-trap.spec.ts`      | Modal + DetailDrawer: initial focus, Tab/Shift+Tab containment, Escape close, focus restore to trigger                                                                                                                                                                |
+| `flash.spec.ts`           | Flash stack cap (5) and per-banner dismiss                                                                                                                                                                                                                            |
+| `top-bar.spec.ts`         | Tab collapse into the nav dropdown and back across width sweeps; selection preserved through collapse                                                                                                                                                                 |
+| `fit-stages.spec.ts`      | Stage transitions across widths, full recovery to the richest stage                                                                                                                                                                                                   |
+| `contrast.spec.ts`        | WCAG AA (4.5:1) for chip tones and button surfaces in light/dark/high-contrast, alpha-composited from real rendered colors. Measured pre-existing failures are baselined in `KNOWN_FAILURES` (remediation: kata y1v0); the suite fails on new failures or degradation |
+| `command-palette.spec.ts` | Combobox ARIA state, disabled-skip highlight, Escape clear-then-close, shortcut scope suspension, empty-result inertness                                                                                                                                              |
+| `virtual-list.spec.ts`    | Windowed DOM, container keyboard nav + `aria-activedescendant`, Enter activation, `scrollToIndex`, nested-control key isolation                                                                                                                                       |
+| `markdown.spec.ts`        | Sanitizer against real DOMPurify (script/style/inline-style vectors, faked-shiki nonce check, `rel` hardening), dual-theme code colors, CodeBlock line numbers / wrap toggle / clipboard copy                                                                         |
 
 Conventions: specs drive the gallery pages (`/#page-id`) through
 `helpers.ts` (`gotoPage`, `setSlider`, `setTheme`, `contrastOf`) —

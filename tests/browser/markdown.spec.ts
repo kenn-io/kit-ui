@@ -23,7 +23,7 @@ test.describe("sanitization", () => {
         '<img src=x onerror="alert(1)">',
         "<style>body{display:none}</style>",
         '<div style="position:fixed">styled</div>',
-        '<script>alert(2)</script>',
+        "<script>alert(2)</script>",
       ].join("\n\n"),
     );
     expect(html).not.toContain("onerror");

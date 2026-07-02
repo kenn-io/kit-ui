@@ -34,16 +34,10 @@
   class="kit-diff-stats"
   aria-label={`${lineLabel(additions, "addition")}, ${lineLabel(deletions, "deletion")}`}
 >
-  <span
-    class="kit-diff-stats__add"
-    class:kit-diff-stats__value--dim={dimZeros && additions === 0}
-  >
+  <span class="kit-diff-stats__add" class:kit-diff-stats__value--dim={dimZeros && additions === 0}>
     +{formatDiffStat(additions)}
   </span>
-  <span
-    class="kit-diff-stats__del"
-    class:kit-diff-stats__value--dim={dimZeros && deletions === 0}
-  >
+  <span class="kit-diff-stats__del" class:kit-diff-stats__value--dim={dimZeros && deletions === 0}>
     −{formatDiffStat(deletions)}
   </span>
 </span>

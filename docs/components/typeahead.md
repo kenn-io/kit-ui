@@ -26,23 +26,23 @@ selects, Escape closes. Extracted from agentsview's `OptionTypeahead`.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `options` | `TypeaheadOption[]` | required | |
-| `value` | `string` | required | Matches `option.name`; unmatched shows `fallbackLabel` |
-| `fallbackLabel` | `string` | required | Trigger text when nothing is selected |
-| `placeholder` | `string` | required | Search input placeholder + aria-label |
-| `onselect` | `(name: string) => void` | required | |
-| `title` | `string` | — | Trigger tooltip |
-| `emptyLabel` | `string` | `"No matches"` | |
-| `disabled` | `boolean` | `false` | |
+| Prop            | Type                     | Default        | Notes                                                  |
+| --------------- | ------------------------ | -------------- | ------------------------------------------------------ |
+| `options`       | `TypeaheadOption[]`      | required       |                                                        |
+| `value`         | `string`                 | required       | Matches `option.name`; unmatched shows `fallbackLabel` |
+| `fallbackLabel` | `string`                 | required       | Trigger text when nothing is selected                  |
+| `placeholder`   | `string`                 | required       | Search input placeholder + aria-label                  |
+| `onselect`      | `(name: string) => void` | required       |                                                        |
+| `title`         | `string`                 | —              | Trigger tooltip                                        |
+| `emptyLabel`    | `string`                 | `"No matches"` |                                                        |
+| `disabled`      | `boolean`                | `false`        |                                                        |
 
 ## Option shape
 
 ```ts
 interface TypeaheadOption {
-  name: string;          // stable value
-  label: string;         // shown + searched in the list
+  name: string; // stable value
+  label: string; // shown + searched in the list
   displayLabel?: string; // shorter text for the closed trigger
   count?: number;
 }

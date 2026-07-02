@@ -11,6 +11,8 @@ demo gallery only.
 bun install
 bun run dev      # demo gallery (Vite dev server)
 bun run check    # svelte-check — must stay at 0 errors / 0 warnings
+bun run fmt      # vp fmt (oxfmt, .oxfmtrc.json) — same Vite+ setup as middleman
+bun run fmt:check && bun run lint   # CI-enforced format + lint (vite-plus)
 bun run build    # builds the demo gallery
 bun test         # unit tests (checks/*.test.ts — rules, windowing, shortcuts, markdown)
 bun run test:browser       # Playwright suite against the demo gallery (docs/testing.md)

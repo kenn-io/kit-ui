@@ -8,9 +8,7 @@
   let query = $state("");
   let filtered = $state("");
 
-  const emailInvalid = $derived(
-    email.length > 0 && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email),
-  );
+  const emailInvalid = $derived(email.length > 0 && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email));
 </script>
 
 <DemoSection

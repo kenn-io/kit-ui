@@ -7,10 +7,22 @@
   let toneOpen = $state<ModalTone | null>(null);
 
   const tones: { tone: ModalTone; title: string; body: string }[] = [
-    { tone: "info", title: "Session details", body: "Informational header — the default choice for detail dialogs." },
+    {
+      tone: "info",
+      title: "Session details",
+      body: "Informational header — the default choice for detail dialogs.",
+    },
     { tone: "success", title: "Merge complete", body: "Confirmation of a completed action." },
-    { tone: "warning", title: "Unsaved changes", body: "You have unsaved changes that will be lost." },
-    { tone: "danger", title: "Delete repository", body: "Destructive confirmation — pair with a solid danger button." },
+    {
+      tone: "warning",
+      title: "Unsaved changes",
+      body: "You have unsaved changes that will be lost.",
+    },
+    {
+      tone: "danger",
+      title: "Delete repository",
+      body: "Destructive confirmation — pair with a solid danger button.",
+    },
   ];
 </script>
 
@@ -26,10 +38,7 @@
   <Button label="Open modal" onclick={() => (basicOpen = true)} />
   {#if basicOpen}
     <Modal title="About kit-ui" onclose={() => (basicOpen = false)}>
-      <p>
-        Shared Svelte 5 components consolidated from the middleman and
-        agentsview frontends.
-      </p>
+      <p>Shared Svelte 5 components consolidated from the middleman and agentsview frontends.</p>
     </Modal>
   {/if}
 </DemoSection>

@@ -30,16 +30,16 @@ focus.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `children` | `Snippet` | required | The trigger |
-| `text` | `string` | — | Simple tooltip body |
-| `content` | `Snippet` | — | Rich tooltip body (wins over `text`) |
-| `focusable` | `boolean` | `false` | Adds `tabindex="0"` to the trigger wrapper — set when the child isn't focusable itself |
-| `align` | `"start" \| "end"` | `"start"` | Horizontal alignment against the trigger |
-| `openDelayMs` | `number` | `250` | Hover intent; focus opens immediately |
-| `closeDelayMs` | `number` | `100` | Lets the pointer cross into the tooltip (rich content stays open while hovered) |
-| `class` | `string` | `""` | Extra classes on the panel |
+| Prop           | Type               | Default   | Notes                                                                                  |
+| -------------- | ------------------ | --------- | -------------------------------------------------------------------------------------- |
+| `children`     | `Snippet`          | required  | The trigger                                                                            |
+| `text`         | `string`           | —         | Simple tooltip body                                                                    |
+| `content`      | `Snippet`          | —         | Rich tooltip body (wins over `text`)                                                   |
+| `focusable`    | `boolean`          | `false`   | Adds `tabindex="0"` to the trigger wrapper — set when the child isn't focusable itself |
+| `align`        | `"start" \| "end"` | `"start"` | Horizontal alignment against the trigger                                               |
+| `openDelayMs`  | `number`           | `250`     | Hover intent; focus opens immediately                                                  |
+| `closeDelayMs` | `number`           | `100`     | Lets the pointer cross into the tooltip (rich content stays open while hovered)        |
+| `class`        | `string`           | `""`      | Extra classes on the panel                                                             |
 
 Reach for `Tooltip` when a plain `title=` attribute isn't enough (formatted
 content, guaranteed timing, keyboard visibility). `title=` remains fine for

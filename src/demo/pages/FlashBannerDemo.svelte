@@ -53,9 +53,6 @@ showFlash("2 sessions need your attention", 6000);`}
 showFlash("Deploy failed — rolling back", { tone: "danger", durationMs: 8000 });`}
 >
   {#each tones as tone (tone)}
-    <Button
-      label={tone}
-      onclick={() => showFlash(toneMessages[tone] ?? tone, { tone })}
-    />
+    <Button label={tone} onclick={() => showFlash(toneMessages[tone] ?? tone, { tone })} />
   {/each}
 </DemoSection>

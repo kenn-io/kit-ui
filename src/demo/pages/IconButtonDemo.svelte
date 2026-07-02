@@ -77,11 +77,7 @@
 </IconButton>`}
 >
   <div class="row">
-    <IconButton
-      ariaLabel="Pin"
-      ariaPressed={pinned}
-      onclick={() => (pinned = !pinned)}
-    >
+    <IconButton ariaLabel="Pin" ariaPressed={pinned} onclick={() => (pinned = !pinned)}>
       <PinIcon size="14" strokeWidth="2" aria-hidden="true" />
     </IconButton>
     <span class="readout">pinned: <code>{pinned}</code></span>

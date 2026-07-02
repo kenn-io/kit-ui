@@ -73,8 +73,5 @@ test("keys typed into nested demo controls are not stolen", async ({ page }) => 
   await jump.fill("123");
   // Arrow keys in the number input must not move the list's active row.
   await jump.press("ArrowDown");
-  await expect(page.locator(".kit-virtual-list")).not.toHaveAttribute(
-    "aria-activedescendant",
-    /./,
-  );
+  await expect(page.locator(".kit-virtual-list")).not.toHaveAttribute("aria-activedescendant", /./);
 });

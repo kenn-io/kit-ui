@@ -36,10 +36,7 @@ export interface CustomSelection {
   to: string;
 }
 
-export type RangeSelection =
-  | RelativeSelection
-  | CalendarSelection
-  | CustomSelection;
+export type RangeSelection = RelativeSelection | CalendarSelection | CustomSelection;
 
 export interface DateRange {
   from: string;
@@ -105,10 +102,7 @@ export function allFromDate(earliestDate: string | null | undefined): string {
  * "Last N days" means N calendar days inclusive of today — today plus the
  * N−1 preceding dates — so with inclusive bounds `from` is daysAgo(N−1).
  */
-export function presetRange(
-  days: number,
-  earliestDate?: string | null,
-): DateRange {
+export function presetRange(days: number, earliestDate?: string | null): DateRange {
   return {
     from: days <= 0 ? allFromDate(earliestDate) : daysAgo(days - 1),
     to: todayStr(),
@@ -144,11 +138,7 @@ export function periodBounds(unit: CalendarUnit, anchor: string): DateRange {
  * calendar month (clamping the day so Jan 31 -> Feb 28 rather than
  * overflowing into March).
  */
-export function stepAnchor(
-  unit: CalendarUnit,
-  anchor: string,
-  dir: -1 | 1,
-): string {
+export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): string {
   const d = parseLocal(anchor);
   if (unit === "day") {
     d.setDate(d.getDate() + dir);
@@ -156,11 +146,7 @@ export function stepAnchor(
     d.setDate(d.getDate() + 7 * dir);
   } else {
     const target = new Date(d.getFullYear(), d.getMonth() + dir, 1);
-    const lastDay = new Date(
-      target.getFullYear(),
-      target.getMonth() + 1,
-      0,
-    ).getDate();
+    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
     target.setDate(Math.min(d.getDate(), lastDay));
     d.setTime(target.getTime());
   }
@@ -196,10 +182,7 @@ export function weekdayLabels(): string[] {
 }
 
 /** Turn any selection into concrete inclusive {from, to} bounds. */
-export function resolveRange(
-  sel: RangeSelection,
-  earliestDate?: string | null,
-): DateRange {
+export function resolveRange(sel: RangeSelection, earliestDate?: string | null): DateRange {
   switch (sel.mode) {
     case "relative":
       return presetRange(sel.days, earliestDate);

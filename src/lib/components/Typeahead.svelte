@@ -115,10 +115,7 @@
     }
   }
 
-  function highlightSegments(
-    label: string,
-    q: string,
-  ): { text: string; match: boolean }[] {
+  function highlightSegments(label: string, q: string): { text: string; match: boolean }[] {
     if (!q) return [{ text: label, match: false }];
     const idx = label.toLowerCase().indexOf(q.toLowerCase());
     if (idx === -1) return [{ text: label, match: false }];
@@ -185,7 +182,8 @@
           onmouseenter={() => (highlightIndex = i)}
         >
           {#each highlightSegments(option.label, query) as seg, segIndex (segIndex)}
-            {#if seg.match}<mark class="kit-typeahead__match">{seg.text}</mark>{:else}{seg.text}{/if}
+            {#if seg.match}<mark class="kit-typeahead__match">{seg.text}</mark
+              >{:else}{seg.text}{/if}
           {/each}
         </li>
       {:else}

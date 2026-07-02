@@ -22,9 +22,8 @@
   ];
 
   const rootClasses = $derived(
-    [isDark() && "dark", getHighContrast() && "high-contrast"]
-      .filter(Boolean)
-      .join(" ") || "(none)",
+    [isDark() && "dark", getHighContrast() && "high-contrast"].filter(Boolean).join(" ") ||
+      "(none)",
   );
 </script>
 

@@ -14,8 +14,7 @@ internally; reach for it directly when building custom split layouts.
   let startWidth = 0;
   const width = $derived(drag ?? committed);
 
-  const clamp = (e: SplitResizeEvent) =>
-    Math.max(200, Math.min(600, startWidth + e.deltaX));
+  const clamp = (e: SplitResizeEvent) => Math.max(200, Math.min(600, startWidth + e.deltaX));
 </script>
 
 <div class="split">
@@ -24,7 +23,10 @@ internally; reach for it directly when building custom split layouts.
     ariaLabel="Resize left pane"
     onResizeStart={() => (startWidth = width)}
     onResize={(e) => (drag = clamp(e))}
-    onResizeEnd={(e) => { committed = clamp(e); drag = null; }}
+    onResizeEnd={(e) => {
+      committed = clamp(e);
+      drag = null;
+    }}
   />
   <div class="pane pane--rest">…</div>
 </div>
@@ -32,14 +34,14 @@ internally; reach for it directly when building custom split layouts.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `ariaLabel` | `string` | required | e.g. "Resize sidebar" |
-| `keyboardStep` | `number` | `24` | Pixels per arrow-key press |
-| `onResizeStart` | `(event) => void` | — | Snapshot the starting width here |
-| `onResize` | `(event: SplitResizeEvent) => void` | — | Fires on every mousemove; apply as transient width |
-| `onResizeEnd` | `(event: SplitResizeEvent) => void` | — | Commit/persist the final width |
-| `class` | `string` | `""` | |
+| Prop            | Type                                | Default  | Notes                                              |
+| --------------- | ----------------------------------- | -------- | -------------------------------------------------- |
+| `ariaLabel`     | `string`                            | required | e.g. "Resize sidebar"                              |
+| `keyboardStep`  | `number`                            | `24`     | Pixels per arrow-key press                         |
+| `onResizeStart` | `(event) => void`                   | —        | Snapshot the starting width here                   |
+| `onResize`      | `(event: SplitResizeEvent) => void` | —        | Fires on every mousemove; apply as transient width |
+| `onResizeEnd`   | `(event: SplitResizeEvent) => void` | —        | Commit/persist the final width                     |
+| `class`         | `string`                            | `""`     |                                                    |
 
 `SplitResizeEvent` carries `deltaX`, `startX`, `currentX`, and the raw `event`.
 Keyboard presses fire start/resize/end as one atomic step.

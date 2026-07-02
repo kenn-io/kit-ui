@@ -146,7 +146,9 @@
     color: var(--text-muted);
     border-radius: calc(var(--radius-sm) - 1px);
     cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
     white-space: nowrap;
   }
 
@@ -262,8 +264,7 @@
     color: var(--text-secondary);
   }
 
-  .kit-segmented--borderless
-    .kit-segmented__btn[data-tone]:hover:not(.active):not(:disabled) {
+  .kit-segmented--borderless .kit-segmented__btn[data-tone]:hover:not(.active):not(:disabled) {
     color: color-mix(in srgb, var(--kit-segmented-tone) 82%, var(--text-primary));
   }
 </style>

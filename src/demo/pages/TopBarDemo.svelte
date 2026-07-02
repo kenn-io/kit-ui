@@ -56,10 +56,7 @@
 
 {#snippet searchCompact()}
   <span class="centered">
-    <IconButton
-      ariaLabel="Search sessions"
-      onclick={() => showFlash("Command palette would open")}
-    >
+    <IconButton ariaLabel="Search sessions" onclick={() => showFlash("Command palette would open")}>
       <SearchIcon size="14" strokeWidth="2" aria-hidden="true" />
     </IconButton>
   </span>
@@ -78,7 +75,9 @@
       Width {mmWidth}px
       <input type="range" min="360" max="920" bind:value={mmWidth} />
     </label>
-    <span class="control-note">collapsed: <code>{mmCollapsed}</code>, active: <code>{mmActive}</code></span>
+    <span class="control-note"
+      >collapsed: <code>{mmCollapsed}</code>, active: <code>{mmActive}</code></span
+    >
   </div>
   <div class="bar-host" style:width="{mmWidth}px">
     <TopBar
@@ -144,7 +143,10 @@
       Width {avWidth}px
       <input type="range" min="360" max="920" bind:value={avWidth} />
     </label>
-    <span class="control-note">collapsed: <code>{avCollapsed}</code>, search stage: <code>{avSearchStage === 0 ? "field" : "icon"}</code></span>
+    <span class="control-note"
+      >collapsed: <code>{avCollapsed}</code>, search stage:
+      <code>{avSearchStage === 0 ? "field" : "icon"}</code></span
+    >
   </div>
   <div class="bar-host" style:width="{avWidth}px">
     <TopBar
@@ -241,7 +243,6 @@
   .brand-dot--blue {
     background: var(--accent-blue);
   }
-
 
   .search-hint {
     height: 26px;

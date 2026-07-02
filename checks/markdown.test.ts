@@ -56,9 +56,7 @@ describe("codeHighlightPlan", () => {
   function plan(md: string, skip?: (code: string, lang: string) => boolean) {
     const tokens = marked.lexer(md) as Tokens.Generic[];
     const result = codeHighlightPlan(marked, tokens, skip);
-    const planned = tokens.filter(
-      (t) => t.type === "code" && result.tokens.has(t as Tokens.Code),
-    );
+    const planned = tokens.filter((t) => t.type === "code" && result.tokens.has(t as Tokens.Code));
     return { ...result, plannedCount: planned.length };
   }
 
@@ -71,9 +69,9 @@ describe("codeHighlightPlan", () => {
   });
 
   test("fence budget caps the number of highlighted blocks", () => {
-    const md = Array.from({ length: SHIKI_MAX_HIGHLIGHTED_FENCES + 5 }, () =>
-      fence("ts"),
-    ).join("\n\n");
+    const md = Array.from({ length: SHIKI_MAX_HIGHLIGHTED_FENCES + 5 }, () => fence("ts")).join(
+      "\n\n",
+    );
     expect(plan(md).plannedCount).toBe(SHIKI_MAX_HIGHLIGHTED_FENCES);
   });
 

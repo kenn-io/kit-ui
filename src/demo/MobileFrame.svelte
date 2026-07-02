@@ -3,12 +3,7 @@
   // keys on the device's pointer, which an iframe inherits from the host, so
   // the phone frame passes ?touch to force the scale via the kit-type-touch
   // root class — exactly how a test or device emulator would.
-  import {
-    Button,
-    Chip,
-    SegmentedControl,
-    StatusDot,
-  } from "../lib/index.js";
+  import { Button, Chip, SegmentedControl, StatusDot } from "../lib/index.js";
 
   if (new URLSearchParams(location.search).has("touch")) {
     document.documentElement.classList.add("kit-type-touch");

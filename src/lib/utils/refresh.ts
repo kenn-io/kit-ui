@@ -44,10 +44,7 @@ export function createRefreshScheduler(
 
 /** "Updated Xm ago" label for a refresh control. `now` is passed in so the
  * caller can drive re-evaluation from its own clock tick. */
-export function formatRefreshAge(
-  lastUpdatedAt: number | null,
-  now: number,
-): string {
+export function formatRefreshAge(lastUpdatedAt: number | null, now: number): string {
   if (lastUpdatedAt === null) return "—";
   const diffMin = Math.floor((now - lastUpdatedAt) / 60_000);
   if (diffMin < 1) return "Updated just now";

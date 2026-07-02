@@ -45,7 +45,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
   function pops it (out-of-order pops are safe). Modal-like components
   should push a scope while open — CommandPalette does.
 - **Display**: `formatShortcutKeys("mod+k")` → `["⌘", "K"]` / `["Ctrl",
-  "K"]` for [KbdBadge](kbd-badge.md).
+"K"]` for [KbdBadge](kbd-badge.md).
 - `createShortcutManager()` builds an isolated manager (embedded surfaces,
   tests); `appShortcuts` is the app-level singleton `initShortcuts()`
   wires to `window`. `initShortcuts()` is idempotent — repeat calls while
@@ -75,17 +75,17 @@ const off = appShortcuts.register("mod+k", openPalette, {
 
 ### Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `open` | `boolean` (bindable) | `false` | |
-| `commands` | `PaletteCommand[]` | required | `{ id, label, section?, keywords?, combo?, disabled? }` |
-| `onrun` | `(command: PaletteCommand) => void` | required | Palette closes, then runs |
-| `recentIds` | `string[]` | `[]` | Shown under `recentLabel` while the query is empty (app owns recency) |
-| `placeholder` | `string` | `"Type a command…"` | |
-| `emptyLabel` | `string` | `"No matching commands"` | |
-| `recentLabel` | `string` | `"Recent"` | |
-| `ariaLabel` | `string` | `"Command palette"` | Dialog + listbox label |
-| `class` | `string` | `""` | |
+| Prop          | Type                                | Default                  | Notes                                                                 |
+| ------------- | ----------------------------------- | ------------------------ | --------------------------------------------------------------------- |
+| `open`        | `boolean` (bindable)                | `false`                  |                                                                       |
+| `commands`    | `PaletteCommand[]`                  | required                 | `{ id, label, section?, keywords?, combo?, disabled? }`               |
+| `onrun`       | `(command: PaletteCommand) => void` | required                 | Palette closes, then runs                                             |
+| `recentIds`   | `string[]`                          | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency) |
+| `placeholder` | `string`                            | `"Type a command…"`      |                                                                       |
+| `emptyLabel`  | `string`                            | `"No matching commands"` |                                                                       |
+| `recentLabel` | `string`                            | `"Recent"`               |                                                                       |
+| `ariaLabel`   | `string`                            | `"Command palette"`      | Dialog + listbox label                                                |
+| `class`       | `string`                            | `""`                     |                                                                       |
 
 ### Behavior
 

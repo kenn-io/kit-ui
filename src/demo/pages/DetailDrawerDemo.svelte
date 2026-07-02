@@ -22,14 +22,12 @@
       <div class="drawer-demo-body">
         <h4>Fix flaky range picker test</h4>
         <p>
-          The calendar stepper test assumed the local week starts on Sunday.
-          Pin the anchor date instead of deriving it from the wall clock so CI
-          in other timezones stops flaking.
+          The calendar stepper test assumed the local week starts on Sunday. Pin the anchor date
+          instead of deriving it from the wall clock so CI in other timezones stops flaking.
         </p>
         <p>
-          The body scrolls independently while the header and footer stay
-          pinned, so long detail views (diffs, timelines, comment threads)
-          work without extra wiring.
+          The body scrolls independently while the header and footer stay pinned, so long detail
+          views (diffs, timelines, comment threads) work without extra wiring.
         </p>
       </div>
     </DetailDrawer>
@@ -50,24 +48,25 @@
 >
   <Button label="Open custom drawer" onclick={() => (customOpen = true)} />
   {#if customOpen}
-    <DetailDrawer
-      width="420px"
-      ariaLabel="Review session"
-      onclose={() => (customOpen = false)}
-    >
+    <DetailDrawer width="420px" ariaLabel="Review session" onclose={() => (customOpen = false)}>
       {#snippet header()}
         <strong class="drawer-demo-title">Review session</strong>
         <span class="drawer-demo-meta">updated 4m ago</span>
       {/snippet}
       <div class="drawer-demo-body">
         <p>
-          This drawer has no default close button — the header snippet owns
-          the whole row — but Escape and the overlay click still dismiss it.
+          This drawer has no default close button — the header snippet owns the whole row — but
+          Escape and the overlay click still dismiss it.
         </p>
       </div>
       {#snippet footer()}
         <Button label="Close" onclick={() => (customOpen = false)} />
-        <Button label="Approve" tone="success" surface="soft" onclick={() => (customOpen = false)} />
+        <Button
+          label="Approve"
+          tone="success"
+          surface="soft"
+          onclick={() => (customOpen = false)}
+        />
       {/snippet}
     </DetailDrawer>
   {/if}

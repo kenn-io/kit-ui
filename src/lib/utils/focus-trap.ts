@@ -43,9 +43,7 @@ function lockBodyScroll(): () => void {
 }
 
 function tabbables(surface: HTMLElement): HTMLElement[] {
-  return Array.from(
-    surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR),
-  ).filter(
+  return Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
     // offsetParent is null for display:none subtrees (e.g. collapsed
     // sections) — skip those, they can't actually take focus.
     (el) => el.offsetParent !== null || el === document.activeElement,
@@ -53,21 +51,14 @@ function tabbables(surface: HTMLElement): HTMLElement[] {
 }
 
 export function trapFocus(surface: HTMLElement): () => void {
-  const previous =
-    document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
+  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
   // Initial focus: the first [autofocus] descendant that can actually take
   // focus (visible, not disabled). Verify focus really moved into the
   // surface — a hidden/disabled autofocus target would otherwise leave
   // focus behind the overlay, outside the trap.
-  const autofocusTarget = Array.from(
-    surface.querySelectorAll<HTMLElement>("[autofocus]"),
-  ).find(
-    (el) =>
-      el.offsetParent !== null &&
-      !(el as HTMLElement & { disabled?: boolean }).disabled,
+  const autofocusTarget = Array.from(surface.querySelectorAll<HTMLElement>("[autofocus]")).find(
+    (el) => el.offsetParent !== null && !(el as HTMLElement & { disabled?: boolean }).disabled,
   );
   autofocusTarget?.focus();
   if (!surface.contains(document.activeElement)) {

@@ -6,7 +6,10 @@ import {
   shortcutMatches,
 } from "../src/lib/utils/shortcuts.js";
 
-const ev = (key: string, mods: Partial<Record<"meta" | "ctrl" | "alt" | "shift", boolean>> = {}) => ({
+const ev = (
+  key: string,
+  mods: Partial<Record<"meta" | "ctrl" | "alt" | "shift", boolean>> = {},
+) => ({
   key,
   metaKey: mods.meta ?? false,
   ctrlKey: mods.ctrl ?? false,
@@ -17,7 +20,12 @@ const ev = (key: string, mods: Partial<Record<"meta" | "ctrl" | "alt" | "shift",
 describe("parseShortcut", () => {
   test("mod+k", () => {
     expect(parseShortcut("mod+k")).toEqual({
-      key: "k", mod: true, shift: false, alt: false, ctrl: false, meta: false,
+      key: "k",
+      mod: true,
+      shift: false,
+      alt: false,
+      ctrl: false,
+      meta: false,
     });
   });
 
@@ -59,7 +67,9 @@ describe("shortcutMatches", () => {
   });
 
   test("case-insensitive key", () => {
-    expect(shortcutMatches(parseShortcut("mod+shift+p"), ev("P", { meta: true, shift: true }), true)).toBe(true);
+    expect(
+      shortcutMatches(parseShortcut("mod+shift+p"), ev("P", { meta: true, shift: true }), true),
+    ).toBe(true);
   });
 
   test("shift+symbol matches the produced shifted character", () => {
@@ -85,7 +95,9 @@ describe("shortcutMatches", () => {
     // match the unshifted combo (it belongs to "shift+/").
     expect(shortcutMatches(parseShortcut("/"), ev("/", { shift: true }), true)).toBe(false);
     expect(shortcutMatches(parseShortcut("/"), ev("/"), true)).toBe(true);
-    expect(shortcutMatches(parseShortcut("mod+/"), ev("/", { meta: true, shift: true }), true)).toBe(false);
+    expect(
+      shortcutMatches(parseShortcut("mod+/"), ev("/", { meta: true, shift: true }), true),
+    ).toBe(false);
   });
 });
 
@@ -106,7 +118,9 @@ describe("createShortcutManager", () => {
   test("registers, fires, unregisters", () => {
     const m = createShortcutManager(true);
     let fired = 0;
-    const off = m.register("mod+k", () => { fired += 1; });
+    const off = m.register("mod+k", () => {
+      fired += 1;
+    });
     expect(m.handleKeydown(kbd("k", { meta: true }))).toBe(true);
     expect(fired).toBe(1);
     off();
@@ -117,8 +131,16 @@ describe("createShortcutManager", () => {
     const m = createShortcutManager(true);
     let root = 0;
     let modal = 0;
-    m.register("g", () => { root += 1; });
-    m.register("g", () => { modal += 1; }, { scope: "modal" });
+    m.register("g", () => {
+      root += 1;
+    });
+    m.register(
+      "g",
+      () => {
+        modal += 1;
+      },
+      { scope: "modal" },
+    );
 
     m.handleKeydown(kbd("g"));
     expect([root, modal]).toEqual([1, 0]);
@@ -146,8 +168,12 @@ describe("createShortcutManager", () => {
     const m = createShortcutManager(true);
     let plain = 0;
     let combo = 0;
-    m.register("g", () => { plain += 1; });
-    m.register("mod+k", () => { combo += 1; });
+    m.register("g", () => {
+      plain += 1;
+    });
+    m.register("mod+k", () => {
+      combo += 1;
+    });
     const input = { tagName: "INPUT", isContentEditable: false };
     expect(m.handleKeydown(kbd("g", {}, input as unknown as EventTarget))).toBe(false);
     expect(m.handleKeydown(kbd("k", { meta: true }, input as unknown as EventTarget))).toBe(true);
@@ -158,12 +184,18 @@ describe("createShortcutManager", () => {
     const m = createShortcutManager(true);
     const warnings: string[] = [];
     const origWarn = console.warn;
-    console.warn = (msg: string) => { warnings.push(msg); };
+    console.warn = (msg: string) => {
+      warnings.push(msg);
+    };
     try {
       let first = 0;
       let second = 0;
-      m.register("mod+k", () => { first += 1; });
-      m.register("mod+k", () => { second += 1; });
+      m.register("mod+k", () => {
+        first += 1;
+      });
+      m.register("mod+k", () => {
+        second += 1;
+      });
       expect(warnings.length).toBe(1);
       m.handleKeydown(kbd("k", { meta: true }));
       expect([first, second]).toEqual([1, 0]);
@@ -175,7 +207,9 @@ describe("createShortcutManager", () => {
   test("duplicate detection resolves aliases and platform mod", () => {
     const warnings: string[] = [];
     const origWarn = console.warn;
-    console.warn = (msg: string) => { warnings.push(msg); };
+    console.warn = (msg: string) => {
+      warnings.push(msg);
+    };
     try {
       const mac = createShortcutManager(true);
       mac.register("mod+k", () => {});
@@ -200,7 +234,9 @@ describe("createShortcutManager", () => {
   test("duplicate detection canonicalizes shifted-symbol pairs", () => {
     const warnings: string[] = [];
     const origWarn = console.warn;
-    console.warn = (msg: string) => { warnings.push(msg); };
+    console.warn = (msg: string) => {
+      warnings.push(msg);
+    };
     try {
       // "shift+/" and "?" both match a US Shift+/ event — must collide.
       const q = createShortcutManager(true);
@@ -239,7 +275,13 @@ describe("createShortcutManager", () => {
   test("allowInInput opts a plain key back in", () => {
     const m = createShortcutManager(true);
     let fired = 0;
-    m.register("escape", () => { fired += 1; }, { allowInInput: true });
+    m.register(
+      "escape",
+      () => {
+        fired += 1;
+      },
+      { allowInInput: true },
+    );
     const input = { tagName: "INPUT", isContentEditable: false };
     expect(m.handleKeydown(kbd("Escape", {}, input as unknown as EventTarget))).toBe(true);
     expect(fired).toBe(1);

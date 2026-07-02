@@ -32,12 +32,12 @@ button rows next to a resizable sidebar.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `stages` | `Snippet[]` | required | Ordered richest → most compact; the last stage is the unconditional fallback |
-| `stage` | `number` (bindable) | `0` | Rendered stage index (read-only in spirit) — react to downgrades, e.g. move actions into a menu |
-| `onstagechange` | `(stage: number) => void` | — | Fires when measurement switches stages |
-| `class` | `string` | `""` | |
+| Prop            | Type                      | Default  | Notes                                                                                           |
+| --------------- | ------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `stages`        | `Snippet[]`               | required | Ordered richest → most compact; the last stage is the unconditional fallback                    |
+| `stage`         | `number` (bindable)       | `0`      | Rendered stage index (read-only in spirit) — react to downgrades, e.g. move actions into a menu |
+| `onstagechange` | `(stage: number) => void` | —        | Fires when measurement switches stages                                                          |
+| `class`         | `string`                  | `""`     |                                                                                                 |
 
 ## Sizing contract (the one rule)
 
@@ -91,7 +91,7 @@ renderings of the same actions**, not stateful widgets:
 ## Composition with TopBar
 
 TopBar keeps its own tab-collapse machinery (it must tolerate snippets that
-*change* when collapse flips, which needs a latch FitStages deliberately
+_change_ when collapse flips, which needs a latch FitStages deliberately
 doesn't have). The two compose for multi-breakpoint headers: TopBar's
 `searchMinWidth` prop makes the search region the flexible middle, and a
 FitStages inside it owns the search field → icon downgrade. See

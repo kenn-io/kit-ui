@@ -10,11 +10,11 @@ compact formatting past 1k (`+12.3k`). From middleman.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `additions` | `number` | required | |
-| `deletions` | `number` | required | |
-| `dimZeros` | `boolean` | `false` | Fade a side when it's 0 |
+| Prop        | Type      | Default  | Notes                   |
+| ----------- | --------- | -------- | ----------------------- |
+| `additions` | `number`  | required |                         |
+| `deletions` | `number`  | required |                         |
+| `dimZeros`  | `boolean` | `false`  | Fade a side when it's 0 |
 
 The compact formatter is exported as `formatDiffStat(value)` from the module.
 Pairs with `Tooltip` for the PR diff-summary pattern (see the Tooltip docs).

@@ -23,7 +23,7 @@ conditionally; it autofocuses on mount by default.
   <FindBar
     bind:query
     matchCount={matches.length}
-    currentIndex={currentIndex}
+    {currentIndex}
     onnext={() => (currentIndex = (currentIndex + 1) % matches.length)}
     onprev={() => (currentIndex = (currentIndex - 1 + matches.length) % matches.length)}
     onclose={() => (findOpen = false)}
@@ -34,24 +34,24 @@ conditionally; it autofocuses on mount by default.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `query` | `string` (bindable) | `""` | Current search text |
-| `matchCount` | `number` | required | Total matches for `query` |
-| `currentIndex` | `number` | required | 0-based current match; displayed 1-based |
-| `onnext` | `() => void` | — | Enter / down arrow button |
-| `onprev` | `() => void` | — | Shift+Enter / up arrow button |
-| `onclose` | `() => void` | — | Escape / close button |
-| `oninput` | `(query: string) => void` | — | Every keystroke (e.g. reset `currentIndex`) |
-| `autofocus` | `boolean` | `true` | Focus the input when the bar mounts |
-| `variant` | `"pinned" \| "floating"` | `"pinned"` | pinned = full-width strip flush with the container's top edge (square corners, bottom border only, no shadow). floating = IDE-style shadowed card inset at the container's top-right |
-| `placeholder` | `string` | `"Find…"` | |
-| `matchCountLabel` | `string` | `"{current} of {total}"` | Counter template |
-| `noMatchesLabel` | `string` | `"No matches"` | |
-| `ariaLabel` | `string` | `"Find"` | `role="search"` label |
-| `inputAriaLabel` | `string` | `"Search query"` | |
-| `previousLabel` / `nextLabel` | `string` | `"Previous match"` / `"Next match"` | Arrow tooltips + `aria-label`s |
-| `closeLabel` | `string` | `"Close"` | |
+| Prop                          | Type                      | Default                             | Notes                                                                                                                                                                                |
+| ----------------------------- | ------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `query`                       | `string` (bindable)       | `""`                                | Current search text                                                                                                                                                                  |
+| `matchCount`                  | `number`                  | required                            | Total matches for `query`                                                                                                                                                            |
+| `currentIndex`                | `number`                  | required                            | 0-based current match; displayed 1-based                                                                                                                                             |
+| `onnext`                      | `() => void`              | —                                   | Enter / down arrow button                                                                                                                                                            |
+| `onprev`                      | `() => void`              | —                                   | Shift+Enter / up arrow button                                                                                                                                                        |
+| `onclose`                     | `() => void`              | —                                   | Escape / close button                                                                                                                                                                |
+| `oninput`                     | `(query: string) => void` | —                                   | Every keystroke (e.g. reset `currentIndex`)                                                                                                                                          |
+| `autofocus`                   | `boolean`                 | `true`                              | Focus the input when the bar mounts                                                                                                                                                  |
+| `variant`                     | `"pinned" \| "floating"`  | `"pinned"`                          | pinned = full-width strip flush with the container's top edge (square corners, bottom border only, no shadow). floating = IDE-style shadowed card inset at the container's top-right |
+| `placeholder`                 | `string`                  | `"Find…"`                           |                                                                                                                                                                                      |
+| `matchCountLabel`             | `string`                  | `"{current} of {total}"`            | Counter template                                                                                                                                                                     |
+| `noMatchesLabel`              | `string`                  | `"No matches"`                      |                                                                                                                                                                                      |
+| `ariaLabel`                   | `string`                  | `"Find"`                            | `role="search"` label                                                                                                                                                                |
+| `inputAriaLabel`              | `string`                  | `"Search query"`                    |                                                                                                                                                                                      |
+| `previousLabel` / `nextLabel` | `string`                  | `"Previous match"` / `"Next match"` | Arrow tooltips + `aria-label`s                                                                                                                                                       |
+| `closeLabel`                  | `string`                  | `"Close"`                           |                                                                                                                                                                                      |
 
 The prev/next buttons disable while there are no matches. The bar's border
 carries focus (blue) and no-match (red) states — the bottom border on the
@@ -77,18 +77,18 @@ Two presentations, chosen by `variant`:
 
 - **`floating`** — an IDE-find-style shadowed card the component insets
   at the container's top-right (`position: absolute; top/right:
-  --space-4; z-index: 10`). The container must be `position: relative`.
+--space-4; z-index: 10`). The container must be `position: relative`.
   Content does not shift; the card overlays it (reserve top padding in
   the container only if covering the first lines is unacceptable — see
   the demo). Placement is themeable via custom properties on the
   container — the component's scoped rules out-specify a plain class
   selector, so overrides go through these instead:
 
-  | Custom property | Default | Controls |
-  | --- | --- | --- |
-  | `--kit-find-bar-inset-top` | `var(--space-4)` | Top inset |
+  | Custom property              | Default          | Controls                                                         |
+  | ---------------------------- | ---------------- | ---------------------------------------------------------------- |
+  | `--kit-find-bar-inset-top`   | `var(--space-4)` | Top inset                                                        |
   | `--kit-find-bar-inset-right` | `var(--space-4)` | Right inset; also mirrored into the narrow-container width guard |
-  | `--kit-find-bar-z` | `10` | Stacking (keep below app overlays like modals/drawers) |
+  | `--kit-find-bar-z`           | `10`             | Stacking (keep below app overlays like modals/drawers)           |
 
   ```svelte
   <div class="pane" style="position: relative">

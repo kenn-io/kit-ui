@@ -32,20 +32,20 @@ custom virtualized surfaces (LogViewer-style scrollback, virtual tables).
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `items` | `T[]` | required | |
-| `itemHeight` | `number` | — | Fixed row height in px (fast path, no measuring). The windowing math trusts it: rendered rows must actually be this tall (border-box), or offsets drift over long lists — use measured mode if content decides the height |
-| `estimateHeight` | `number` | `32` | Height guess for unmeasured variable rows |
-| `overscan` | `number` | `4` | Rows rendered beyond each viewport edge |
-| `height` | `string` | `"100%"` | CSS height of the scroll container |
-| `activeIndex` | `number` (bindable) | `-1` | Keyboard-highlighted row; −1 = none |
-| `onactivate` | `(item: T, index: number) => void` | — | Enter / double-click on the active row |
-| `onrangechange` | `(start: number, end: number) => void` | — | Rendered range `[start, end)` changed |
-| `ariaLabel` | `string` | required | Label for the `role="listbox"` container — it's the focusable keyboard target and must be announced with a name |
-| `row` | `Snippet<[T, number, boolean]>` | required | `(item, index, isActive)` |
-| `empty` | `Snippet` | — | Rendered instead of the list when `items` is empty |
-| `class` | `string` | `""` | |
+| Prop             | Type                                   | Default  | Notes                                                                                                                                                                                                                     |
+| ---------------- | -------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`          | `T[]`                                  | required |                                                                                                                                                                                                                           |
+| `itemHeight`     | `number`                               | —        | Fixed row height in px (fast path, no measuring). The windowing math trusts it: rendered rows must actually be this tall (border-box), or offsets drift over long lists — use measured mode if content decides the height |
+| `estimateHeight` | `number`                               | `32`     | Height guess for unmeasured variable rows                                                                                                                                                                                 |
+| `overscan`       | `number`                               | `4`      | Rows rendered beyond each viewport edge                                                                                                                                                                                   |
+| `height`         | `string`                               | `"100%"` | CSS height of the scroll container                                                                                                                                                                                        |
+| `activeIndex`    | `number` (bindable)                    | `-1`     | Keyboard-highlighted row; −1 = none                                                                                                                                                                                       |
+| `onactivate`     | `(item: T, index: number) => void`     | —        | Enter / double-click on the active row                                                                                                                                                                                    |
+| `onrangechange`  | `(start: number, end: number) => void` | —        | Rendered range `[start, end)` changed                                                                                                                                                                                     |
+| `ariaLabel`      | `string`                               | required | Label for the `role="listbox"` container — it's the focusable keyboard target and must be announced with a name                                                                                                           |
+| `row`            | `Snippet<[T, number, boolean]>`        | required | `(item, index, isActive)`                                                                                                                                                                                                 |
+| `empty`          | `Snippet`                              | —        | Rendered instead of the list when `items` is empty                                                                                                                                                                        |
+| `class`          | `string`                               | `""`     |                                                                                                                                                                                                                           |
 
 Also exported on the instance: `scrollToIndex(index)` — scrolls the row to
 the nearest edge (`bind:this` to call it).
@@ -101,7 +101,7 @@ no keyboard errors.
 - The container needs a bounded height (`height` prop, a flex parent with
   `min-height: 0`, or an absolute fill) — with unbounded height nothing
   virtualizes.
-- Sticky headers: render the header *outside* the VirtualList (the classic
+- Sticky headers: render the header _outside_ the VirtualList (the classic
   table-header-over-scroll-body layout). Content inside the window is
   transformed, so `position: sticky` inside rows won't stick.
 - Row snippets in variable mode may wrap/resize freely — each rendered row
@@ -118,7 +118,10 @@ no keyboard errors.
 import { virtualSlice, offsetOfIndex } from "@kenn-io/kit-ui";
 
 const { start, end, topPad, totalHeight } = virtualSlice({
-  scrollTop, viewport, count, overscan: 4,
+  scrollTop,
+  viewport,
+  count,
+  overscan: 4,
   heightOf: (i) => heights[i] ?? 32,
 });
 ```

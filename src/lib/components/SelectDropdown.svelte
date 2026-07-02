@@ -51,9 +51,7 @@
   // filtered or async list must keep `value` consistent with the visible
   // options (or derive anything used for submission with the same fallback),
   // otherwise the trigger can show one option while submit acts on a stale value.
-  const selectedOption = $derived(
-    options.find((option) => option.value === value) ?? options[0],
-  );
+  const selectedOption = $derived(options.find((option) => option.value === value) ?? options[0]);
   const triggerLabel = $derived(
     title
       ? `${title}: ${selectedOption?.triggerLabel ?? selectedOption?.label ?? value}`
@@ -126,9 +124,7 @@
       await tick();
       positionList();
       // Long lists scroll internally — bring the selected option into view.
-      document
-        .getElementById(optionID(highlightedIndex))
-        ?.scrollIntoView({ block: "nearest" });
+      document.getElementById(optionID(highlightedIndex))?.scrollIntoView({ block: "nearest" });
     }
   }
 
@@ -148,9 +144,7 @@
         highlightedIndex = next;
         // The list scrolls internally when it caps out; keep the
         // highlighted option in view during keyboard navigation.
-        document
-          .getElementById(optionID(next))
-          ?.scrollIntoView({ block: "nearest" });
+        document.getElementById(optionID(next))?.scrollIntoView({ block: "nearest" });
         return;
       }
     }
@@ -193,11 +187,7 @@
   }
 </script>
 
-<div
-  class={["kit-select-dropdown", className]}
-  bind:this={containerEl}
-  onfocusout={onFocusout}
->
+<div class={["kit-select-dropdown", className]} bind:this={containerEl} onfocusout={onFocusout}>
   <button
     bind:this={buttonEl}
     class="kit-select-dropdown__trigger"
@@ -213,7 +203,9 @@
     {title}
     {disabled}
   >
-    <span class="kit-select-dropdown__value">{selectedOption?.triggerLabel ?? selectedOption?.label ?? value}</span>
+    <span class="kit-select-dropdown__value"
+      >{selectedOption?.triggerLabel ?? selectedOption?.label ?? value}</span
+    >
     <ChevronDownIcon
       class="kit-select-dropdown__chevron"
       size="12"
@@ -242,7 +234,9 @@
           aria-selected={option.value === value}
           disabled={disabled || option.disabled}
           onclick={() => selectOption(option)}
-          onmouseenter={() => { highlightedIndex = index; }}
+          onmouseenter={() => {
+            highlightedIndex = index;
+          }}
         >
           <span class="kit-select-dropdown__option-label">{option.label}</span>
           <span class="kit-select-dropdown__check">
@@ -279,7 +273,10 @@
     font-size: var(--font-size-xs);
     font-weight: 600;
     text-align: left;
-    transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+    transition:
+      border-color var(--transition-fast),
+      color var(--transition-fast),
+      background var(--transition-fast);
   }
 
   .kit-select-dropdown__trigger:hover:not(:disabled),

@@ -38,20 +38,20 @@ button group with overflow:
 
 Generic over the item type `T`.
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `items` | `T[]` | required | |
-| `chip` | `Snippet<[item: T, index: number]>` | required | Renders one item |
-| `maxVisible` | `number` | `5` | Items shown while collapsed |
-| `expanded` | `boolean` (bindable) | `false` | Toggle state; bind to control or observe |
-| `key` | `(item: T) => unknown` | item identity | Stable key for keyed rendering |
-| `gap` | `1–8` | `2` | Spacing-scale step (`--space-N`) between items |
-| `wrap` | `boolean` | `true` | `false` clips to one row (`overflow: hidden`) |
-| `size` | `ChipSize` | `"md"` | Size of the expander chip — match your items |
-| `ariaLabel` | `string` | — | Labels the `role="group"` container |
-| `moreLabel` | `(hidden: number) => string` | `` (n) => `+${n}` `` | Collapsed expander text |
-| `lessLabel` | `string` | `"less"` | Expanded expander text |
-| `class` | `string` | `""` | |
+| Prop         | Type                                | Default              | Notes                                          |
+| ------------ | ----------------------------------- | -------------------- | ---------------------------------------------- |
+| `items`      | `T[]`                               | required             |                                                |
+| `chip`       | `Snippet<[item: T, index: number]>` | required             | Renders one item                               |
+| `maxVisible` | `number`                            | `5`                  | Items shown while collapsed                    |
+| `expanded`   | `boolean` (bindable)                | `false`              | Toggle state; bind to control or observe       |
+| `key`        | `(item: T) => unknown`              | item identity        | Stable key for keyed rendering                 |
+| `gap`        | `1–8`                               | `2`                  | Spacing-scale step (`--space-N`) between items |
+| `wrap`       | `boolean`                           | `true`               | `false` clips to one row (`overflow: hidden`)  |
+| `size`       | `ChipSize`                          | `"md"`               | Size of the expander chip — match your items   |
+| `ariaLabel`  | `string`                            | —                    | Labels the `role="group"` container            |
+| `moreLabel`  | `(hidden: number) => string`        | `` (n) => `+${n}` `` | Collapsed expander text                        |
+| `lessLabel`  | `string`                            | `"less"`             | Expanded expander text                         |
+| `class`      | `string`                            | `""`                 |                                                |
 
 The expander is a muted interactive `Chip` with `aria-expanded` and an
 accessible "Show N more" / "Show fewer" label. When `items.length ≤

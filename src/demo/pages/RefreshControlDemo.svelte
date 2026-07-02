@@ -24,10 +24,5 @@
   label="Refresh usage data"
 />`}
 >
-  <RefreshControl
-    {lastUpdatedAt}
-    {busy}
-    onRefresh={refresh}
-    label="Refresh usage data"
-  />
+  <RefreshControl {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh usage data" />
 </DemoSection>

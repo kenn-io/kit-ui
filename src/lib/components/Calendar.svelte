@@ -74,13 +74,9 @@
   // Years page in fixed 12-slot blocks so paging is stable regardless of
   // which year inside the block is anchored.
   const yearBlockStart = $derived(zoomYear - (zoomYear % 12));
-  const yearCells = $derived(
-    Array.from({ length: 12 }, (_, i) => yearBlockStart + i),
-  );
+  const yearCells = $derived(Array.from({ length: 12 }, (_, i) => yearBlockStart + i));
   const maxMonthPrefix = $derived(maxDate?.slice(0, 7) ?? null);
-  const maxYear = $derived(
-    maxDate == null ? null : Number.parseInt(maxDate.slice(0, 4), 10),
-  );
+  const maxYear = $derived(maxDate == null ? null : Number.parseInt(maxDate.slice(0, 4), 10));
 
   const monthNames: string[] = Array.from({ length: 12 }, (_, i) =>
     new Date(2000, i, 1).toLocaleString(undefined, { month: "short" }),
@@ -94,10 +90,7 @@
   }
 
   function monthCellDisabled(monthIndex: number): boolean {
-    return (
-      maxMonthPrefix != null &&
-      monthAnchor(zoomYear, monthIndex).slice(0, 7) > maxMonthPrefix
-    );
+    return maxMonthPrefix != null && monthAnchor(zoomYear, monthIndex).slice(0, 7) > maxMonthPrefix;
   }
 
   function pickMonth(monthIndex: number): void {
@@ -171,9 +164,9 @@
         class="kit-calendar__month kit-calendar__month--button"
         type="button"
         aria-live="polite"
-        aria-label="{view === 'days'
-          ? formatMonthLabel(month)
-          : zoomYear}. {view === 'days' ? chooseMonthLabel : chooseYearLabel}"
+        aria-label="{view === 'days' ? formatMonthLabel(month) : zoomYear}. {view === 'days'
+          ? chooseMonthLabel
+          : chooseYearLabel}"
         onclick={headerZoomOut}
       >
         {view === "days" ? formatMonthLabel(month) : zoomYear}

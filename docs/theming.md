@@ -18,19 +18,19 @@ document.documentElement.classList.toggle("dark", prefersDark);
 
 ## Tokens
 
-| Group | Variables |
-| --- | --- |
-| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset` |
-| Borders | `--border-default`, `--border-muted` |
-| Text | `--text-primary`, `--text-secondary`, `--text-muted` |
-| Accents | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal` |
-| Status | `--status-waiting` (StatusDot "your turn" bubble) |
-| Shadows | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg` |
-| Spacing | `--space-1` … `--space-8` (see Spacing) |
-| Radii | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px) |
-| Fonts | `--font-sans`, `--font-mono` |
-| Font sizes | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root` |
-| Chrome | `--header-height` (44px), `--status-bar-height` (24px) |
+| Group       | Variables                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                      |
+| Borders     | `--border-default`, `--border-muted`                                                                    |
+| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                    |
+| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal` |
+| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                       |
+| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                             |
+| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                 |
+| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                           |
+| Fonts       | `--font-sans`, `--font-mono`                                                                            |
+| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                        |
+| Chrome      | `--header-height` (44px), `--status-bar-height` (24px)                                                  |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, purple = merged/workflow, teal = workspace.
@@ -52,15 +52,15 @@ width, per Adobe Spectrum's platform-scale reasoning), so **components never
 write their own type media queries** and narrowing a desktop window never
 resizes text:
 
-| Token | Desktop | Touch |
-| --- | --- | --- |
-| `--font-size-2xs` | 0.625rem / 10px | 0.75rem / 12px |
-| `--font-size-xs` | 0.6875rem / 11px | 0.875rem / 14px |
-| `--font-size-sm` | 0.75rem / 12px | 0.9375rem / 15px |
-| `--font-size-md` | 0.8125rem / 13px | 1rem / 16px |
-| `--font-size-lg` | 0.875rem / 14px | 1.0625rem / 17px |
-| `--font-size-xl` | 1.125rem / 18px | 1.25rem / 20px |
-| `--font-size-2xl` | 1.5rem / 24px | 1.75rem / 28px |
+| Token             | Desktop          | Touch            |
+| ----------------- | ---------------- | ---------------- |
+| `--font-size-2xs` | 0.625rem / 10px  | 0.75rem / 12px   |
+| `--font-size-xs`  | 0.6875rem / 11px | 0.875rem / 14px  |
+| `--font-size-sm`  | 0.75rem / 12px   | 0.9375rem / 15px |
+| `--font-size-md`  | 0.8125rem / 13px | 1rem / 16px      |
+| `--font-size-lg`  | 0.875rem / 14px  | 1.0625rem / 17px |
+| `--font-size-xl`  | 1.125rem / 18px  | 1.25rem / 20px   |
+| `--font-size-2xl` | 1.5rem / 24px    | 1.75rem / 28px   |
 
 The touch bump follows platform convention (Apple HIG: 13pt desktop body vs
 17pt mobile; Material body 16sp), and `md` reaching 16px stops iOS Safari from
@@ -82,24 +82,24 @@ is retired; `kit-ui-check` flags it as `legacy-mobile-type`): delete the
 media-query swap and use the standard token —
 
 | Old (inside `@media (max-width: 640px)`) | New (no media query) |
-| --- | --- |
-| `--font-size-mobile-xs` | `--font-size-xs` |
-| `--font-size-mobile-sm` | `--font-size-sm` |
-| `--font-size-mobile-body` | `--font-size-md` |
-| `--font-size-mobile-title` | `--font-size-xl` |
-| `--font-size-mobile-metric` / `-display` | `--font-size-2xl` |
+| ---------------------------------------- | -------------------- |
+| `--font-size-mobile-xs`                  | `--font-size-xs`     |
+| `--font-size-mobile-sm`                  | `--font-size-sm`     |
+| `--font-size-mobile-body`                | `--font-size-md`     |
+| `--font-size-mobile-title`               | `--font-size-xl`     |
+| `--font-size-mobile-metric` / `-display` | `--font-size-2xl`    |
 
 ## Spacing
 
 A small ladder for flex/grid gaps and padding — the values middleman's
 hand-written gaps already converge on:
 
-| Token | Value | Token | Value |
-| --- | --- | --- | --- |
-| `--space-1` | 2px | `--space-5` | 12px |
-| `--space-2` | 4px | `--space-6` | 16px |
-| `--space-3` | 6px | `--space-7` | 24px |
-| `--space-4` | 8px | `--space-8` | 32px |
+| Token       | Value | Token       | Value |
+| ----------- | ----- | ----------- | ----- |
+| `--space-1` | 2px   | `--space-5` | 12px  |
+| `--space-2` | 4px   | `--space-6` | 16px  |
+| `--space-3` | 6px   | `--space-7` | 24px  |
+| `--space-4` | 8px   | `--space-8` | 32px  |
 
 Deliberately **px**, not rem: text scales with the user's font-size preference,
 but gaps and chrome shouldn't inflate with it (the same reasoning as borders
@@ -111,11 +111,11 @@ and radii). `kit-ui-check` flags `gap` values off the ladder
 Three tokens keep interactive states uniform across the library (added in
 the gyp8 normalization pass):
 
-| Token | Value | Used for |
-| --- | --- | --- |
-| `--focus-ring` | `2px solid var(--accent-blue)` | THE keyboard focus indicator |
-| `--transition-fast` | `0.12s` | hover/press color+background transitions |
-| `--opacity-disabled` | `0.5` | disabled controls |
+| Token                | Value                          | Used for                                 |
+| -------------------- | ------------------------------ | ---------------------------------------- |
+| `--focus-ring`       | `2px solid var(--accent-blue)` | THE keyboard focus indicator             |
+| `--transition-fast`  | `0.12s`                        | hover/press color+background transitions |
+| `--opacity-disabled` | `0.5`                          | disabled controls                        |
 
 **Focus**: every interactive element shows
 `outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or
@@ -123,7 +123,7 @@ the gyp8 normalization pass):
 `outline`, never a `box-shadow` ring — the high-contrast theme globally
 widens outlines (`:root.high-contrast :focus-visible { outline-width: 3px }`)
 and box-shadows would miss that. Text-entry fields are the one exception:
-their *wrapper* signals focus with an `--accent-blue` border via
+their _wrapper_ signals focus with an `--accent-blue` border via
 `:focus-within` (TextInput, FindBar) since a ring around a chromeless inner
 input reads as double chrome.
 
@@ -133,7 +133,7 @@ FindBar) uses the same card: `border: 1px solid var(--border-default);
 border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
 background: var(--bg-surface)`.
 
-Chrome and positioning are separate contracts. *Trigger-anchored* popovers
+Chrome and positioning are separate contracts. _Trigger-anchored_ popovers
 (SelectDropdown, Typeahead, FilterDropdown, RangePicker, Tooltip)
 additionally position with `position: fixed` via `floatingPopoverStyle` —
 repositioning on scroll, resize, and their own content resizing — so they
@@ -148,7 +148,7 @@ viewport-centered fixed stack.
 descendants.)
 
 **Disabled**: controls set `opacity: var(--opacity-disabled)`. Two
-deliberate exceptions: Calendar's disabled day *cells* stay lighter (0.35 —
+deliberate exceptions: Calendar's disabled day _cells_ stay lighter (0.35 —
 a month of them at 0.5 is heavy) and RefreshControl's busy button stays at
 0.75 so the spinner remains visible.
 
@@ -159,11 +159,11 @@ breakpoints live in code (`src/lib/breakpoints.ts`) and by convention in CSS.
 These come from middleman's mobile work and are the **only** widths that should
 appear in `@media` rules (`kit-ui-check` enforces this):
 
-| Name | Width | Meaning |
-| --- | --- | --- |
-| `compact` | ≤ 640px | phones — single-column layout |
-| `medium` | ≤ 760px | small tablets — split panels collapse |
-| `wide` | ≤ 900px | narrow desktop — secondary sidebars collapse |
+| Name      | Width   | Meaning                                      |
+| --------- | ------- | -------------------------------------------- |
+| `compact` | ≤ 640px | phones — single-column layout                |
+| `medium`  | ≤ 760px | small tablets — split panels collapse        |
+| `wide`    | ≤ 900px | narrow desktop — secondary sidebars collapse |
 
 Width breakpoints are **layout-only**. Type never changes with viewport
 width — the scale is keyed to coarse pointers (see Typography above), so a
@@ -177,7 +177,9 @@ type sizes need no media queries at all, see Typography above):
 
 ```css
 @media (max-width: 640px) {
-  .toolbar { flex-direction: column; }
+  .toolbar {
+    flex-direction: column;
+  }
 }
 ```
 
@@ -206,11 +208,11 @@ scoped to a subtree:
 
 ```css
 :root {
-  --accent-blue: #0a66c2;   /* rebrand the primary accent */
+  --accent-blue: #0a66c2; /* rebrand the primary accent */
 }
 
 .sidebar {
-  --bg-surface: var(--bg-inset);  /* retheme one region */
+  --bg-surface: var(--bg-inset); /* retheme one region */
 }
 ```
 
@@ -257,15 +259,17 @@ A tiny runes store that persists the appearance preference and keeps the
 ```ts
 import {
   initTheme,
-  getThemeMode, setThemeMode,   // "light" | "dark" | "system"
-  isDark,                        // resolved appearance (system → OS)
-  getHighContrast, setHighContrast,
+  getThemeMode,
+  setThemeMode, // "light" | "dark" | "system"
+  isDark, // resolved appearance (system → OS)
+  getHighContrast,
+  setHighContrast,
 } from "@kenn-io/kit-ui";
 
 initTheme(); // once, at app startup (SSR-safe; no-op on the server)
 
-setThemeMode("system");  // follow the OS, live via matchMedia
-setHighContrast(true);   // adds the high-contrast class
+setThemeMode("system"); // follow the OS, live via matchMedia
+setHighContrast(true); // adds the high-contrast class
 ```
 
 The mode persists to `localStorage` under `"kit-ui-theme"` (override with

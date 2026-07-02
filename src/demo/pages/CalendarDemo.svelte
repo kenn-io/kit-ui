@@ -1,10 +1,5 @@
 <script lang="ts">
-  import {
-    Calendar,
-    periodBounds,
-    todayStr,
-    type DateRange,
-  } from "../../lib/index.js";
+  import { Calendar, periodBounds, todayStr, type DateRange } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let picked = $state(todayStr());
@@ -54,11 +49,7 @@
   code={`<Calendar bind:month selected={periodBounds("week", anchor)} onpick={(d) => (anchor = d)} />`}
 >
   <div class="calendar-demo">
-    <Calendar
-      bind:month={weekMonth}
-      selected={week}
-      onpick={(d) => (weekAnchor = d)}
-    />
+    <Calendar bind:month={weekMonth} selected={week} onpick={(d) => (weekAnchor = d)} />
     <span class="readout">week: <code>{week.from} → {week.to}</code></span>
   </div>
 </DemoSection>

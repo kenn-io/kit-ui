@@ -10,12 +10,7 @@
     children?: Snippet;
   }
 
-  let {
-    icon = undefined,
-    title,
-    description = undefined,
-    children = undefined,
-  }: Props = $props();
+  let { icon = undefined, title, description = undefined, children = undefined }: Props = $props();
 </script>
 
 <div class="kit-empty-state">

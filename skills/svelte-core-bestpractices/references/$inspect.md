@@ -4,10 +4,10 @@ The `$inspect` rune is roughly equivalent to `console.log`, with the exception t
 
 ```svelte
 <script>
-	let count = $state(0);
-	let message = $state('hello');
+  let count = $state(0);
+  let message = $state("hello");
 
-	$inspect(count, message); // will console.log when `count` or `message` change
+  $inspect(count, message); // will console.log when `count` or `message` change
 </script>
 
 <button onclick={() => count++}>Increment</button>
@@ -22,13 +22,13 @@ On updates, a stack trace will be printed, making it easy to find the origin of 
 
 ```svelte
 <script>
-	let count = $state(0);
+  let count = $state(0);
 
-	$inspect(count).with((type, count) => {
-		if (type === 'update') {
-			debugger; // or `console.trace`, or whatever you want
-		}
-	});
+  $inspect(count).with((type, count) => {
+    if (type === "update") {
+      debugger; // or `console.trace`, or whatever you want
+    }
+  });
 </script>
 
 <button onclick={() => count++}>Increment</button>
@@ -40,13 +40,13 @@ This rune, added in 5.14, causes the surrounding function to be _traced_ in deve
 
 ```svelte
 <script>
-	import { doSomeWork } from './elsewhere';
+  import { doSomeWork } from "./elsewhere";
 
-	$effect(() => {
-		// $inspect.trace must be the first statement of a function body
-		$inspect.trace();
-		doSomeWork();
-	});
+  $effect(() => {
+    // $inspect.trace must be the first statement of a function body
+    $inspect.trace();
+    doSomeWork();
+  });
 </script>
 ```
 

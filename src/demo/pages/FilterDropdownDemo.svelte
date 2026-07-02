@@ -120,8 +120,20 @@
     sections={[
       {
         items: [
-          { id: "updated", label: "Recently updated", active: true, closeOnSelect: true, onSelect: () => {} },
-          { id: "created", label: "Newest", active: false, closeOnSelect: true, onSelect: () => {} },
+          {
+            id: "updated",
+            label: "Recently updated",
+            active: true,
+            closeOnSelect: true,
+            onSelect: () => {},
+          },
+          {
+            id: "created",
+            label: "Newest",
+            active: false,
+            closeOnSelect: true,
+            onSelect: () => {},
+          },
         ],
       },
     ]}

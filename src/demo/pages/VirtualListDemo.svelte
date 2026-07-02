@@ -46,11 +46,7 @@
       Jump to
       <input type="number" min="0" max="9999" bind:value={jump} />
     </label>
-    <button
-      class="jump-btn"
-      type="button"
-      onclick={() => list?.scrollToIndex(jump)}
-    >
+    <button class="jump-btn" type="button" onclick={() => list?.scrollToIndex(jump)}>
       scrollToIndex
     </button>
     <span class="control-note">

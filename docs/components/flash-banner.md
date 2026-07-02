@@ -18,29 +18,29 @@ Mount the banner once near the app root, then call `showFlash` from anywhere:
 // anywhere
 import { showFlash, dismissFlash } from "@kenn-io/kit-ui";
 
-showFlash("Copied to clipboard");        // auto-dismiss after 4s
-showFlash("Still working…", 10_000);     // custom duration
-showFlash("Merge complete", { tone: "success" });            // semantic accent
+showFlash("Copied to clipboard"); // auto-dismiss after 4s
+showFlash("Still working…", 10_000); // custom duration
+showFlash("Merge complete", { tone: "success" }); // semantic accent
 showFlash("Deploy failed", { tone: "danger", durationMs: 8000 });
-dismissFlash();                          // programmatic dismiss
+dismissFlash(); // programmatic dismiss
 ```
 
 ## Component props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
+| Prop  | Type     | Default  | Notes                                                   |
+| ----- | -------- | -------- | ------------------------------------------------------- |
 | `top` | `string` | `"44px"` | Offset from the viewport top, e.g. below the app header |
 
 ## Store API
 
-| Function | Notes |
-| --- | --- |
-| `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer. Non-finite or `<= 0` durations fall back to the 4s default |
+| Function                                 | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `showFlash(msg, durationMs = 4000)`      | Adds a flash; each runs its own dismiss timer. Non-finite or `<= 0` durations fall back to the 4s default                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `showFlash(msg, { tone?, durationMs? })` | Options form. `tone` (`"neutral" \| "info" \| "success" \| "warning" \| "danger"`, neutral default) tints the banner — band, ink, and countdown bar — with the semantic accent, following the Modal header recipe. No per-tone icons — but tone is never color-only: banners prepend a visually-hidden severity prefix ("Success:", "Error:", …) for screen readers, localizable via FlashBanner's `toneLabels` prop. The prefix cannot be suppressed for semantic tones — an empty/blank override falls back to the English default (only `neutral` is prefix-less), so the contract can't be silently broken. Unknown tone strings from untyped callers normalize to neutral. Note `FlashState.tone` is optional on the public type (read it as `tone ?? "neutral"`) |
-| `getFlashes(): FlashState[]` | Reactive read of all visible flashes, oldest first |
-| `getFlash(): FlashState \| null` | Reactive read of the most recent flash |
-| `getFlashMessage(): string \| null` | Reactive read of just the latest text |
-| `dismissFlash(id?)` | Dismiss one flash by id; with no argument (or a non-number, so `onclick={dismissFlash}` works) dismisses all |
+| `getFlashes(): FlashState[]`             | Reactive read of all visible flashes, oldest first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `getFlash(): FlashState \| null`         | Reactive read of the most recent flash                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `getFlashMessage(): string \| null`      | Reactive read of just the latest text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `dismissFlash(id?)`                      | Dismiss one flash by id; with no argument (or a non-number, so `onclick={dismissFlash}` works) dismisses all                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 At most **5** flashes show at once — bursts drop the oldest to bound stack
 growth — and the stack itself caps at the viewport height and scrolls

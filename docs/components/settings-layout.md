@@ -41,13 +41,13 @@ bounded height.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `categories` | `SettingsCategory[]` | — | `{ id, label }` per category |
-| `active` | `string` (bindable) | first category id | Selected category |
-| `panel` | `Snippet<[string]>` | — | Content for the active category; receives its id |
-| `title` | `string` | `"Settings"` | Sidebar heading; pass `""` to hide |
-| `footer` | `Snippet` | — | Pinned action row below the scrollable content |
+| Prop         | Type                 | Default           | Notes                                            |
+| ------------ | -------------------- | ----------------- | ------------------------------------------------ |
+| `categories` | `SettingsCategory[]` | —                 | `{ id, label }` per category                     |
+| `active`     | `string` (bindable)  | first category id | Selected category                                |
+| `panel`      | `Snippet<[string]>`  | —                 | Content for the active category; receives its id |
+| `title`      | `string`             | `"Settings"`      | Sidebar heading; pass `""` to hide               |
+| `footer`     | `Snippet`            | —                 | Pinned action row below the scrollable content   |
 
 `SettingsCategory` is exported from the package root.
 
@@ -65,8 +65,8 @@ column of rows (12px gap). Ported from middleman's `SettingsSection`.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `title` | `string` | — | Card header |
-| `description` | `string` | — | Muted helper text under the title |
-| `children` | `Snippet` | — | The setting rows |
+| Prop          | Type      | Default | Notes                             |
+| ------------- | --------- | ------- | --------------------------------- |
+| `title`       | `string`  | —       | Card header                       |
+| `description` | `string`  | —       | Muted helper text under the title |
+| `children`    | `Snippet` | —       | The setting rows                  |

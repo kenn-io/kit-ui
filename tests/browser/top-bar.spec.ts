@@ -39,7 +39,5 @@ test("tabs collapse into a dropdown when narrow and expand back when wide", asyn
   await expect(tabs).toBeVisible();
   await expect(dropdown).not.toBeVisible();
   // The selection made while collapsed is preserved.
-  await expect(
-    tabs.locator(".kit-top-bar__tab.active"),
-  ).toHaveText("Issues");
+  await expect(tabs.locator(".kit-top-bar__tab.active")).toHaveText("Issues");
 });

@@ -160,8 +160,7 @@
       calAnchor = selection.anchor;
     } else {
       calUnit = "week";
-      calAnchor =
-        selection.mode === "custom" && selection.to ? selection.to : todayStr();
+      calAnchor = selection.mode === "custom" && selection.to ? selection.to : todayStr();
     }
     const resolved = resolveRange(selection, earliestDate);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
@@ -426,7 +425,9 @@
     font-size: var(--font-size-sm);
     cursor: pointer;
     white-space: nowrap;
-    transition: border-color var(--transition-fast), background var(--transition-fast);
+    transition:
+      border-color var(--transition-fast),
+      background var(--transition-fast);
   }
 
   .kit-range-picker__trigger:hover {
@@ -496,7 +497,9 @@
     font-size: var(--font-size-sm);
     font-weight: 600;
     cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-range-picker__tab:hover {
@@ -525,7 +528,9 @@
     font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
   }
 
   .kit-range-picker__pill:hover {

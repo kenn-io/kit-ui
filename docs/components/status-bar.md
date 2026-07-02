@@ -33,8 +33,8 @@ overflow.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `left` | `Snippet` | — | Left-aligned content |
-| `center` | `Snippet` | — | Centered content |
-| `right` | `Snippet` | — | Right-aligned content |
+| Prop     | Type      | Default | Notes                 |
+| -------- | --------- | ------- | --------------------- |
+| `left`   | `Snippet` | —       | Left-aligned content  |
+| `center` | `Snippet` | —       | Centered content      |
+| `right`  | `Snippet` | —       | Right-aligned content |

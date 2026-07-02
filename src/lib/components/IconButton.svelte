@@ -1,11 +1,6 @@
 <script module lang="ts">
   export type IconButtonSize = "sm" | "md";
-  export type IconButtonTone =
-    | "neutral"
-    | "success"
-    | "danger"
-    | "info"
-    | "workflow";
+  export type IconButtonTone = "neutral" | "success" | "danger" | "info" | "workflow";
 </script>
 
 <script lang="ts">
@@ -56,12 +51,7 @@
 
 <button
   {type}
-  class={[
-    "kit-icon-button",
-    `kit-icon-button--${size}`,
-    `kit-icon-button--${tone}`,
-    className,
-  ]}
+  class={["kit-icon-button", `kit-icon-button--${size}`, `kit-icon-button--${tone}`, className]}
   {disabled}
   title={title ?? ariaLabel}
   aria-label={ariaLabel}

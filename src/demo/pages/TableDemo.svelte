@@ -64,11 +64,33 @@
   <div class="table-host">
     <Table ariaLabel="Review jobs">
       {#snippet header()}
-        <TableHeaderCell label="ID" sortable sortDirection={direction("id")} onsort={() => sortBy("id")} />
-        <TableHeaderCell label="Repo" sortable sortDirection={direction("repo")} onsort={() => sortBy("repo")} />
+        <TableHeaderCell
+          label="ID"
+          sortable
+          sortDirection={direction("id")}
+          onsort={() => sortBy("id")}
+        />
+        <TableHeaderCell
+          label="Repo"
+          sortable
+          sortDirection={direction("repo")}
+          onsort={() => sortBy("repo")}
+        />
         <TableHeaderCell label="Status" />
-        <TableHeaderCell label="Elapsed" numeric sortable sortDirection={direction("elapsed")} onsort={() => sortBy("elapsed")} />
-        <TableHeaderCell label="Cost" numeric sortable sortDirection={direction("cost")} onsort={() => sortBy("cost")} />
+        <TableHeaderCell
+          label="Elapsed"
+          numeric
+          sortable
+          sortDirection={direction("elapsed")}
+          onsort={() => sortBy("elapsed")}
+        />
+        <TableHeaderCell
+          label="Cost"
+          numeric
+          sortable
+          sortDirection={direction("cost")}
+          onsort={() => sortBy("cost")}
+        />
       {/snippet}
       {#each sorted as job (job.id)}
         <tr>

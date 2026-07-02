@@ -57,9 +57,7 @@
   // Garbage-in guard: non-finite or negative minimums behave like the
   // default shrink-wrapped slot instead of poisoning the collapse math.
   const searchMin = $derived(
-    searchMinWidth != null &&
-      Number.isFinite(searchMinWidth) &&
-      searchMinWidth >= 0
+    searchMinWidth != null && Number.isFinite(searchMinWidth) && searchMinWidth >= 0
       ? searchMinWidth
       : undefined,
   );
@@ -70,9 +68,7 @@
   let searchEl = $state<HTMLDivElement>();
   let probeEl = $state<HTMLDivElement>();
 
-  const allDisabled = $derived(
-    tabs.length > 0 && tabs.every((tab) => tab.disabled),
-  );
+  const allDisabled = $derived(tabs.length > 0 && tabs.every((tab) => tab.disabled));
 
   // With every tab disabled the collapsed dropdown gets a synthetic empty
   // option: SelectDropdown displays options[0] for unmatched values, which
@@ -120,9 +116,7 @@
     if (!barEl || !probeEl || tabs.length === 0) return;
     const styles = getComputedStyle(barEl);
     const gap = Number.parseFloat(styles.columnGap) || 0;
-    let used =
-      Number.parseFloat(styles.paddingLeft) +
-      Number.parseFloat(styles.paddingRight);
+    let used = Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight);
     let regions = 1;
     for (const el of [leftEl, rightEl]) {
       if (el) {

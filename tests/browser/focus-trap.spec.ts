@@ -45,7 +45,9 @@ test.describe("DetailDrawer focus trap", () => {
     const drawer = page.locator(".kit-detail-drawer");
     await expect(drawer).toBeVisible();
     await expect
-      .poll(() => page.evaluate(() => document.activeElement?.closest(".kit-detail-drawer") !== null))
+      .poll(() =>
+        page.evaluate(() => document.activeElement?.closest(".kit-detail-drawer") !== null),
+      )
       .toBe(true);
 
     for (let i = 0; i < 6; i++) {

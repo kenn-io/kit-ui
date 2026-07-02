@@ -57,9 +57,7 @@ export function checkBreakpoints(source, filename) {
       while ((width = widthRe.exec(media[0])) !== null) {
         const value = Number(width[1]);
         const unit = width[2];
-        const ok =
-          unit === "px" &&
-          STANDARD_BREAKPOINTS.some((bp) => Math.abs(value - bp) <= 1);
+        const ok = unit === "px" && STANDARD_BREAKPOINTS.some((bp) => Math.abs(value - bp) <= 1);
         if (!ok) {
           findings.push({
             rule: "nonstandard-breakpoint",
@@ -127,8 +125,7 @@ export function checkHandRolledModal(source, filename) {
       findings.push({
         rule: "hand-rolled-modal",
         line: lineOfIndex(source, offset + insetMatch.index),
-        message:
-          "full-viewport fixed overlay — use Modal (or FlashBanner) from @kenn-io/kit-ui",
+        message: "full-viewport fixed overlay — use Modal (or FlashBanner) from @kenn-io/kit-ui",
       });
     }
   }
@@ -162,8 +159,7 @@ export function checkClipboard(source) {
     findings.push({
       rule: "hand-rolled-clipboard",
       line: lineOfIndex(source, match.index),
-      message:
-        "direct clipboard write — use copyToClipboard or CopyButton from @kenn-io/kit-ui",
+      message: "direct clipboard write — use copyToClipboard or CopyButton from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -221,15 +217,13 @@ export function checkHandRolledSplitter(source, filename) {
  * only class attributes and CSS selectors, not prose or identifiers. */
 export function checkHandRolledSegmented(source) {
   const findings = [];
-  const re =
-    /class="[^"]*\b(?:segmented-control|seg-btn)\b|\.(?:segmented-control|seg-btn)\b/g;
+  const re = /class="[^"]*\b(?:segmented-control|seg-btn)\b|\.(?:segmented-control|seg-btn)\b/g;
   let match;
   while ((match = re.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-segmented",
       line: lineOfIndex(source, match.index),
-      message:
-        "segmented-control markup — use SegmentedControl from @kenn-io/kit-ui",
+      message: "segmented-control markup — use SegmentedControl from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -245,8 +239,7 @@ export function checkHandRolledTooltip(source) {
     findings.push({
       rule: "hand-rolled-tooltip",
       line: lineOfIndex(source, match.index),
-      message:
-        'role="tooltip" markup — use Tooltip from @kenn-io/kit-ui',
+      message: 'role="tooltip" markup — use Tooltip from @kenn-io/kit-ui',
     });
   }
   return findings;
@@ -263,8 +256,7 @@ export function checkHandRolledStatusBar(source) {
     findings.push({
       rule: "hand-rolled-status-bar",
       line: lineOfIndex(source, match.index),
-      message:
-        "status-bar markup — use StatusBar from @kenn-io/kit-ui",
+      message: "status-bar markup — use StatusBar from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -282,8 +274,7 @@ export function checkHandRolledTopBar(source) {
     findings.push({
       rule: "hand-rolled-top-bar",
       line: lineOfIndex(source, match.index),
-      message:
-        "app-header markup — use TopBar from @kenn-io/kit-ui",
+      message: "app-header markup — use TopBar from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -302,8 +293,7 @@ export function checkHandRolledIconButton(source) {
     findings.push({
       rule: "hand-rolled-icon-button",
       line: lineOfIndex(source, match.index),
-      message:
-        "icon-button markup — use IconButton from @kenn-io/kit-ui",
+      message: "icon-button markup — use IconButton from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -315,15 +305,13 @@ export function checkHandRolledIconButton(source) {
 export function checkHandRolledCodeBlock(source) {
   const findings = [];
   // (?!-) keeps suffixed names like .code-block-list from matching.
-  const re =
-    /class=["'][^"']*(?<!kit-)\bcode-block(?!-)\b|\.(?<!kit-)code-block(?!-)\b/g;
+  const re = /class=["'][^"']*(?<!kit-)\bcode-block(?!-)\b|\.(?<!kit-)code-block(?!-)\b/g;
   let match;
   while ((match = re.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-code-block",
       line: lineOfIndex(source, match.index),
-      message:
-        "code-block markup — use CodeBlock from @kenn-io/kit-ui",
+      message: "code-block markup — use CodeBlock from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -338,8 +326,7 @@ export function checkHandRolledEmptyState(source) {
     findings.push({
       rule: "hand-rolled-empty-state",
       line: lineOfIndex(source, match.index),
-      message:
-        "empty-state markup — use EmptyState from @kenn-io/kit-ui",
+      message: "empty-state markup — use EmptyState from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -354,8 +341,7 @@ export function checkHandRolledTableSort(source) {
     findings.push({
       rule: "hand-rolled-table-sort",
       line: lineOfIndex(source, match.index),
-      message:
-        "hand-rolled sortable header — use Table + TableHeaderCell from @kenn-io/kit-ui",
+      message: "hand-rolled sortable header — use Table + TableHeaderCell from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -367,8 +353,7 @@ export function checkHandRolledTableSort(source) {
 export function checkPinnedRootFontSize(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const re =
-      /(?:^|[\s,}])(?:html|:root)\b[^{}]*\{[^}]*?font-size:\s*([^;}]+)/gm;
+    const re = /(?:^|[\s,}])(?:html|:root)\b[^{}]*\{[^}]*?font-size:\s*([^;}]+)/gm;
     let match;
     while ((match = re.exec(css)) !== null) {
       const value = match[1].trim();
@@ -474,7 +459,5 @@ export function checkSource(source, filename, ruleNames = Object.keys(ALL_RULES)
     if (!rule) throw new Error(`unknown rule: ${name}`);
     findings.push(...rule(source, filename));
   }
-  return findings
-    .filter((f) => !isIgnored(lines, f.line))
-    .sort((a, b) => a.line - b.line);
+  return findings.filter((f) => !isIgnored(lines, f.line)).sort((a, b) => a.line - b.line);
 }

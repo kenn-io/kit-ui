@@ -82,11 +82,7 @@
     <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
   </button>
   <div class="kit-refresh-control__status">
-    <span
-      title={lastUpdatedAt === null
-        ? undefined
-        : new Date(lastUpdatedAt).toLocaleString()}
-    >
+    <span title={lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString()}>
       {ageLabel}
     </span>
   </div>
@@ -112,7 +108,10 @@
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast),
+      opacity var(--transition-fast);
   }
 
   .kit-refresh-control__btn:hover:not(:disabled) {

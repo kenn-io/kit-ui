@@ -55,7 +55,7 @@
 <DemoSection
   title="Title only"
   description="The minimal form."
-  code='<EmptyState title="Nothing selected" />'
+  code={'<EmptyState title="Nothing selected" />'}
 >
   <div class="empty-host empty-host--short">
     <EmptyState title="Nothing selected" />
