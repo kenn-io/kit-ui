@@ -183,12 +183,25 @@
 
   .kit-find-bar--floating {
     position: absolute;
-    top: var(--space-4);
-    right: var(--space-4);
-    z-index: 10;
+    /* Placement is themeable via custom properties — the component's
+     * scoped rules would out-specify a consumer's plain class selector. */
+    top: var(--kit-find-bar-inset-top, var(--space-4));
+    right: var(--kit-find-bar-inset-right, var(--space-4));
+    z-index: var(--kit-find-bar-z, 10);
     width: max-content;
-    min-width: min(300px, calc(100% - 2 * var(--space-4)));
-    max-width: calc(100% - 2 * var(--space-4));
+    /* Keep the card inset on both sides; mirrors the right inset so an
+     * override keeps the width guard consistent. */
+    min-width: min(
+      300px,
+      calc(
+        100% - var(--kit-find-bar-inset-right, var(--space-4)) -
+          var(--kit-find-bar-inset-right, var(--space-4))
+      )
+    );
+    max-width: calc(
+      100% - var(--kit-find-bar-inset-right, var(--space-4)) -
+        var(--kit-find-bar-inset-right, var(--space-4))
+    );
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);

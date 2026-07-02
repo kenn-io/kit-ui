@@ -54,9 +54,12 @@ The header label is a button (standard date-component pattern): clicking
 it zooms out from days to a 12-month grid, and clicking again to a 12-year
 grid; picking an entry drills back down (year → months → days). Notes:
 
-- Zooming is view-only — `month` and any `selected` range are untouched
-  until an entry is picked, so cancelling out (picking the same month)
-  returns to the same day view with the highlight intact.
+- Browsing the zoomed grids is view-only: the arrows and year picks move
+  an internal zoom anchor, and the bound `month` (and any `selected`
+  range) changes **only when a month is picked**. A consumer with
+  `bind:month` never observes churn from paging around, and backing out
+  (picking the currently-anchored month) returns to the same day view
+  with the highlight intact.
 - The arrows page by month, year, or 12 years to match the view; the year
   grid uses fixed 12-slot blocks (e.g. 2016–2027) so paging is stable.
 - `maxDate` applies in the zoomed grids too: months/years entirely after

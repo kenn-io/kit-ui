@@ -93,6 +93,25 @@ test("maxDate disables future months, future years, and paging past them", async
   await expect(cal.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
 });
 
+test("browsing zoomed grids never mutates the bound month", async ({ page }) => {
+  const cal = drillCalendar(page);
+  const readout = page.locator(".calendar-demo").nth(1).locator("code");
+  const prefix = `${thisYear}-${String(thisMonth + 1).padStart(2, "0")}`;
+  await expect(readout).toHaveText(prefix);
+
+  await cal.locator(".kit-calendar__month--button").click();
+  await cal.locator(".kit-calendar__nav").first().click(); // previous year
+  await expect(readout).toHaveText(prefix);
+
+  await cal.locator(".kit-calendar__month--button").click();
+  await cal.locator(".kit-calendar__nav").first().click(); // previous 12-year block
+  await expect(readout).toHaveText(prefix);
+
+  // Picking a year is still view-only — only a month pick commits.
+  await cal.locator(".kit-calendar__unit").first().click();
+  await expect(readout).toHaveText(prefix);
+});
+
 test("zooming out and back preserves the selected range highlight", async ({ page }) => {
   // The range-highlight demo calendar (third on the page) has a selected week.
   const cal = page.locator(".kit-calendar").nth(2);

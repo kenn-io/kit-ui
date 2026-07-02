@@ -10,7 +10,9 @@
     /** Distance from the top of the viewport, e.g. below an app header. */
     top?: string;
     /** Screen-reader severity prefixes per tone — tone must not be
-     * color-only. Empty string suppresses the prefix (neutral default). */
+     * color-only, so for semantic tones an empty override falls back to
+     * the English default rather than suppressing the prefix. Only
+     * `neutral` (no tone signal to convey) stays prefix-less. */
     toneLabels?: Partial<Record<FlashTone, string>>;
   }
 
@@ -25,7 +27,10 @@
   let { top = "44px", toneLabels = {} }: Props = $props();
 
   function toneLabel(tone: FlashTone): string {
-    return toneLabels[tone] ?? DEFAULT_TONE_LABELS[tone];
+    if (tone === "neutral") return "";
+    // Guard the a11y contract: a semantic tone with an empty label would
+    // be color-only, so blank overrides fall back to the default.
+    return toneLabels[tone]?.trim() || DEFAULT_TONE_LABELS[tone];
   }
 
   const flashes = $derived(getFlashes());

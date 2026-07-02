@@ -78,9 +78,17 @@ Two presentations, chosen by `variant`:
 - **`floating`** — an IDE-find-style shadowed card the component insets
   at the container's top-right (`position: absolute; top/right:
   --space-4; z-index: 10`). The container must be `position: relative`.
-  Content does not shift; the card overlays it. Override the position
-  with a `.kit-find-bar--floating` rule if an app needs different
-  insets or stacking (keep it below app overlays like modals/drawers).
+  Content does not shift; the card overlays it (reserve top padding in
+  the container only if covering the first lines is unacceptable — see
+  the demo). Placement is themeable via custom properties on the
+  container — the component's scoped rules out-specify a plain class
+  selector, so overrides go through these instead:
+
+  | Custom property | Default | Controls |
+  | --- | --- | --- |
+  | `--kit-find-bar-inset-top` | `var(--space-4)` | Top inset |
+  | `--kit-find-bar-inset-right` | `var(--space-4)` | Right inset; also mirrored into the narrow-container width guard |
+  | `--kit-find-bar-z` | `10` | Stacking (keep below app overlays like modals/drawers) |
 
   ```svelte
   <div class="pane" style="position: relative">
@@ -94,3 +102,17 @@ containers narrower than 300px it shrinks to fit instead of overflowing.
 The shadow treatment lives on the floating variant only; the pinned strip
 is part of the container chrome, matching the popover conventions in
 [theming](../theming.md).
+
+## Migrating from the pre-variant FindBar
+
+The bar was previously a floating shadowed card that the **app**
+positioned (agentsview wrapped it in its own absolute container). The
+default is now the pinned strip, which is a breaking presentation change
+for consumers that omit `variant`:
+
+- To keep the old look, pass `variant="floating"` and drop the app-side
+  absolute wrapper — the component now positions itself; the container
+  just needs `position: relative`.
+- To adopt the new default, render the bar as the container's first
+  child and remove any positioning wrapper; content below shifts down
+  while the bar is open.

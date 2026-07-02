@@ -103,7 +103,7 @@
 
 <DemoSection
   title="Floating (IDE style)"
-  description="variant=&quot;floating&quot; insets a shadowed card at the top-right of the searched region (the container needs position: relative) — the editor find-widget pattern. This is the variant that carries the popover shadow chrome."
+  description="variant=&quot;floating&quot; insets a shadowed card at the top-right of the searched region (the container needs position: relative) — the editor find-widget pattern. The card overlays content without shifting it; this demo reserves top padding only so the first lines stay readable, which real integrations don't need. This is the variant that carries the popover shadow chrome."
   code={`<div class="content-card" style="position: relative">
   <FindBar variant="floating" bind:query … />
   <!-- searched content -->
@@ -153,7 +153,8 @@
 
   .find-demo--positioned {
     position: relative;
-    /* Room for the floating bar above the content. */
+    /* Demo-only: keeps the sample lines readable under the overlay.
+     * Real integrations let the card cover content (see find-bar.md). */
     padding-top: 44px;
   }
 

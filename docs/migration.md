@@ -99,7 +99,7 @@ Requirements the app must satisfy:
 | --- | --- | --- |
 | `AppHeader` | `TopBar` | Replace the width breakpoints with measurement. For the two-breakpoint search behavior use `searchMinWidth` + a [FitStages](components/fit-stages.md) in the search slot (see [top-bar.md](components/top-bar.md#flexible-search-searchminwidth)) |
 | `RangePicker` | `RangePicker` | Decoupled from stores/i18n — all strings are props. The Calendar tab is a month grid now (no day stepping); `previousPeriodLabel`/`nextPeriodLabel` still work as deprecated aliases. `resolveRange()` bounds are inclusive; "Last N days" includes today; periods containing `maxDate` resolve to full bounds (clamp consumer-side) |
-| `SessionFindBar` | `FindBar` | Decoupled from the search store — you own matches/index. It's a **floating card** now; the app positions it (see the placement contract in [find-bar.md](components/find-bar.md#placement-contract)) |
+| `SessionFindBar` | `FindBar` | Decoupled from the search store — you own matches/index. The default is now a **pinned strip** (first child of the container, normal flow); pass `variant="floating"` to keep the old floating-card look — it positions itself now, so drop the app-side absolute wrapper (placement contract in [find-bar.md](components/find-bar.md#placement-contract)) |
 | `OptionTypeahead` | `Typeahead` | Options are `TypeaheadOption[]`; match highlighting built in |
 | `CopyButton` | `CopyButton` | Or use `copyToClipboard` directly for custom triggers |
 | `Spinner` | `Spinner` | — |
@@ -135,8 +135,9 @@ Requirements the app must satisfy:
   positioning; strip decorative transforms on layout wrappers.
 - **`DetailDrawer` covers the full viewport** — apps that kept a clickable
   sidebar next to the old drawer need a layout decision, not a prop.
-- **`FindBar` no longer positions itself** — mount points must supply
-  `position: absolute` + z-index (placement contract in its doc).
+- **`FindBar` defaults to a pinned strip** — existing floating
+  integrations must pass `variant="floating"` (the component then
+  positions itself; the old app-side absolute wrapper goes away).
 - **FitStages hosts must be container-sized** (`flex: 1 1 0; min-width: 0`,
   never `flex-basis: auto`) or stage selection feeds back on itself.
 - **Type scale**: components never write type media queries; if a view
@@ -160,7 +161,7 @@ PR sequence; this guide only adds what to verify at each stage:
 | 1. Tokens | No pinned `html { font-size }` remains; mobile type sizes match the old app on a touch device (pointer-keyed scale); dark mode still switches |
 | 2. Display primitives | Chip sizes visually match call-site intent (xs/sm/md ladder changed); StatusDot call sites map session → status string |
 | 3. Stateful primitives | Button call sites map old kinds onto tone×surface; Tooltip flips at viewport edges where the old popover clipped |
-| 4. Overlays and layout | Dropdown menus escape `overflow: hidden` ancestors (and no transformed ancestor breaks them); Modal scroll-lock hacks removed; per-flash dismiss buttons still dismiss one flash, not all; FindBar has an explicit positioned mount; DetailDrawer layering decision made |
+| 4. Overlays and layout | Dropdown menus escape `overflow: hidden` ancestors (and no transformed ancestor breaks them); Modal scroll-lock hacks removed; per-flash dismiss buttons still dismiss one flash, not all; FindBar call sites picked a variant (pinned flow vs self-positioned floating); DetailDrawer layering decision made |
 | 5. Utilities and theme store | `hashColor` color shifts reviewed on real data; theme persists across reload; relative times match old formatting closely enough |
 | 6. Enforce | `bunx kit-ui-check` (no `--warn`) green in CI; every `kit-ui-check-ignore` has a reason; the manual component inventory (Ground rules) fully ticked |
 

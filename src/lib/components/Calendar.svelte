@@ -52,9 +52,13 @@
 
   // Drill-down view (standard date-component pattern): clicking the
   // header label zooms out days → months → years; picking an entry
-  // drills back down. State is view-only — `month` (and any selection)
-  // stays put, so returning to the day grid keeps the range highlight.
+  // drills back down. Browsing the zoomed grids is view-only: paging
+  // and picking a year move only `zoomYear`, and the bound `month` (and
+  // any selection) is committed exclusively by picking a month — so a
+  // consumer with `bind:month` never observes mid-browse churn, and
+  // returning to the day grid keeps the range highlight.
   let view = $state<"days" | "months" | "years">("days");
+  let zoomYear = $state(0);
 
   const weekdays = weekdayLabels();
   const today = todayStr();
@@ -69,7 +73,7 @@
   const year = $derived(Number.parseInt(month.slice(0, 4), 10));
   // Years page in fixed 12-slot blocks so paging is stable regardless of
   // which year inside the block is anchored.
-  const yearBlockStart = $derived(year - (year % 12));
+  const yearBlockStart = $derived(zoomYear - (zoomYear % 12));
   const yearCells = $derived(
     Array.from({ length: 12 }, (_, i) => yearBlockStart + i),
   );
@@ -91,32 +95,37 @@
 
   function monthCellDisabled(monthIndex: number): boolean {
     return (
-      maxMonthPrefix != null && monthAnchor(year, monthIndex).slice(0, 7) > maxMonthPrefix
+      maxMonthPrefix != null &&
+      monthAnchor(zoomYear, monthIndex).slice(0, 7) > maxMonthPrefix
     );
   }
 
   function pickMonth(monthIndex: number): void {
-    month = monthAnchor(year, monthIndex);
+    month = monthAnchor(zoomYear, monthIndex);
     view = "days";
   }
 
   function pickYear(y: number): void {
-    month = monthAnchor(y, 0);
+    zoomYear = y;
     view = "months";
   }
 
   function headerZoomOut(): void {
-    if (view === "days") view = "months";
-    else if (view === "months") view = "years";
+    if (view === "days") {
+      zoomYear = year;
+      view = "months";
+    } else if (view === "months") {
+      view = "years";
+    }
   }
 
   function navStep(delta: 1 | -1): void {
     if (view === "days") {
       month = stepAnchor("month", month, delta);
     } else if (view === "months") {
-      month = monthAnchor(year + delta, Number.parseInt(month.slice(5, 7), 10) - 1);
+      zoomYear += delta;
     } else {
-      month = monthAnchor(year + delta * 12, 0);
+      zoomYear += delta * 12;
     }
   }
 
@@ -133,7 +142,7 @@
   const nextNavDisabled = $derived.by(() => {
     if (view === "days") return nextMonthDisabled;
     if (maxYear == null) return false;
-    if (view === "months") return year + 1 > maxYear;
+    if (view === "months") return zoomYear + 1 > maxYear;
     return yearBlockStart + 12 > maxYear;
   });
 
@@ -164,10 +173,10 @@
         aria-live="polite"
         aria-label="{view === 'days'
           ? formatMonthLabel(month)
-          : year}. {view === 'days' ? chooseMonthLabel : chooseYearLabel}"
+          : zoomYear}. {view === 'days' ? chooseMonthLabel : chooseYearLabel}"
         onclick={headerZoomOut}
       >
-        {view === "days" ? formatMonthLabel(month) : year}
+        {view === "days" ? formatMonthLabel(month) : zoomYear}
       </button>
     {/if}
     <button
@@ -213,10 +222,10 @@
       {#each monthNames as name, i (name)}
         <button
           class="kit-calendar__unit"
-          class:current={monthAnchor(year, i).slice(0, 7) === monthPrefix}
+          class:current={monthAnchor(zoomYear, i).slice(0, 7) === monthPrefix}
           type="button"
           disabled={monthCellDisabled(i)}
-          aria-label="{monthFullNames[i]} {year}"
+          aria-label="{monthFullNames[i]} {zoomYear}"
           onclick={() => pickMonth(i)}
         >
           {name}
@@ -385,13 +394,13 @@
   }
 
   /* Month / year drill-down grids: 3 columns spanning the same width as
-   * the 7-column day grid (7×30px + 6×1px gaps) so the calendar doesn't
-   * jump horizontally when zooming. */
+   * the 7-column day grid (7×30px columns + 6×1px gaps = 216px) so the
+   * calendar doesn't jump horizontally when zooming. */
   .kit-calendar__unit-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1px;
-    width: calc(7 * 30px + 6 * 1px);
+    width: 216px;
   }
 
   .kit-calendar__unit {
