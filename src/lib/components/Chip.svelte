@@ -210,17 +210,19 @@
     color: color-mix(in srgb, var(--accent-blue) 65%, var(--text-primary));
   }
 
-  /* Muted/canceled keep a greyer voice than neutral's --text-secondary:
-   * the same 65% mix over --text-muted lands just above AA on the inset
-   * and tint surfaces. */
+  /* Muted/canceled are DELIBERATELY low-contrast — de-emphasis is their
+   * entire meaning, so they sit below AA by design (documented exception
+   * in the contrast suite's baseline; every semantic tone above clears
+   * 4.5:1). Muted dips below even --text-muted so it reads clearly
+   * quieter than the retuned tone inks in both themes. */
   .kit-chip--tone-muted {
     background: var(--bg-inset);
-    color: color-mix(in srgb, var(--text-muted) 65%, var(--text-primary));
+    color: color-mix(in srgb, var(--text-muted) 75%, var(--bg-inset));
   }
 
   .kit-chip--tone-canceled {
     background: color-mix(in srgb, var(--text-muted) 15%, transparent);
-    color: color-mix(in srgb, var(--text-muted) 65%, var(--text-primary));
+    color: var(--text-muted);
   }
 
   .kit-chip--tone-neutral {
