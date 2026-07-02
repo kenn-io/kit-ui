@@ -99,9 +99,18 @@
   // Visual order — highlight/keyboard navigation indexes into this.
   const flat = $derived(groups.flatMap((g) => g.commands));
 
-  const firstEnabled = (): number => flat.findIndex((c) => !c.disabled);
+  // Rendered options need their flat index; indexOf per option would be
+  // quadratic in the result count on every keystroke.
+  const flatIndex = $derived(new Map(flat.map((c, i) => [c, i])));
 
-  const flatIndexOf = (command: PaletteCommand): number => flat.indexOf(command);
+  // Combo parsing is per command set, not per render — the list
+  // re-renders on every keystroke. Keyed by id so the recent-section
+  // clones share their source command's entry.
+  const comboKeys = $derived(
+    new Map(commands.filter((c) => c.combo).map((c) => [c.id, formatShortcutKeys(c.combo!)])),
+  );
+
+  const firstEnabled = (): number => flat.findIndex((c) => !c.disabled);
 
   // Reset search state on every open; push a shortcut scope so page-level
   // shortcuts are suspended while the palette is up.
@@ -210,7 +219,7 @@
             </div>
           {/if}
           {#each group.commands as command (command.id)}
-            {@const index = flatIndexOf(command)}
+            {@const index = flatIndex.get(command) ?? -1}
             <!-- aria-disabled (not disabled) keeps disabled commands
                  perceivable to screen readers; run() guards activation. -->
             <button
@@ -229,7 +238,7 @@
             >
               <span class="kit-command-palette__label">{command.label}</span>
               {#if command.combo}
-                <KbdBadge keys={formatShortcutKeys(command.combo)} />
+                <KbdBadge keys={comboKeys.get(command.id) ?? []} />
               {/if}
             </button>
           {/each}

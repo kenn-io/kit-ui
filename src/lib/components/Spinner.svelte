@@ -23,13 +23,8 @@
     border: 2px solid var(--border-default);
     border-top-color: var(--accent-blue);
     border-radius: 50%;
+    /* kit-spin comes from theme.css (shared with RefreshControl). */
     animation: kit-spin 0.8s linear infinite;
     flex-shrink: 0;
-  }
-
-  @keyframes kit-spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 </style>

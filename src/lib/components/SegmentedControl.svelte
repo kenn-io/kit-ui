@@ -92,7 +92,7 @@
     <button
       class="kit-segmented__btn"
       class:active={option.value === value}
-      data-tone={option.tone}
+      data-kit-tone={option.tone}
       type="button"
       role="radio"
       aria-checked={option.value === value}
@@ -128,9 +128,6 @@
   }
 
   .kit-segmented__btn {
-    /* Per-segment accent: the default matches the historical active
-     * tint; option.tone remaps it below. */
-    --kit-segmented-tone: var(--accent-blue);
     /* Flex so snippet content (icon + text) aligns and gaps cleanly;
      * inherited line-height keeps text-only segments unchanged. */
     display: inline-flex;
@@ -152,24 +149,15 @@
     white-space: nowrap;
   }
 
-  .kit-segmented__btn[data-tone="info"] {
-    --kit-segmented-tone: var(--accent-blue);
-  }
-  .kit-segmented__btn[data-tone="success"] {
-    --kit-segmented-tone: var(--accent-green);
-  }
-  .kit-segmented__btn[data-tone="warning"] {
-    --kit-segmented-tone: var(--accent-amber);
-  }
-  .kit-segmented__btn[data-tone="danger"] {
-    --kit-segmented-tone: var(--accent-red);
-  }
-
-  /* Toned active ink follows the Modal band recipe (72% toward
+  /* Per-segment accent comes from the shared data-kit-tone map in
+   * theme.css; untoned segments fall back to the historical active-blue
+   * via var(--kit-tone, var(--accent-blue)).
+   *
+   * Toned active ink follows the shared band recipe (72% toward
    * --text-primary keeps small text at AA on the tint) — applies to the
    * boxed pill too so a toned option reads consistently across variants. */
-  .kit-segmented__btn[data-tone].active {
-    color: color-mix(in srgb, var(--kit-segmented-tone) 72%, var(--text-primary));
+  .kit-segmented__btn[data-kit-tone].active {
+    color: var(--kit-tone-ink);
   }
 
   .kit-segmented--block .kit-segmented__btn {
@@ -244,17 +232,26 @@
   }
 
   /* Toned segments carry their color while inactive too: tinted border
-   * (30% mix, same as the active edge) and tinted ink. */
-  .kit-segmented--borderless .kit-segmented__btn[data-tone]:not(.active) {
-    border-color: color-mix(in srgb, var(--kit-segmented-tone) 30%, var(--border-default));
-    color: color-mix(in srgb, var(--kit-segmented-tone) 72%, var(--text-secondary));
+   * (30% mix, same as the active edge) and ink mixed toward
+   * --text-secondary — deliberately quieter than the active band's
+   * --kit-tone-ink. */
+  .kit-segmented--borderless .kit-segmented__btn[data-kit-tone]:not(.active) {
+    border-color: var(--kit-tone-border);
+    color: color-mix(in srgb, var(--kit-tone) 72%, var(--text-secondary));
   }
 
+  /* Active fill is 12% toward transparent (not the 9%-toward-surface band
+   * recipe): segments sit on arbitrary surfaces, so the tint must let the
+   * underlying background through. */
   .kit-segmented--borderless .kit-segmented__btn.active {
-    background: color-mix(in srgb, var(--kit-segmented-tone) 12%, transparent);
-    color: color-mix(in srgb, var(--kit-segmented-tone) 72%, var(--text-primary));
+    background: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 12%, transparent);
+    color: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 72%, var(--text-primary));
     font-weight: 600;
-    border-color: color-mix(in srgb, var(--kit-segmented-tone) 30%, var(--border-default));
+    border-color: color-mix(
+      in srgb,
+      var(--kit-tone, var(--accent-blue)) 30%,
+      var(--border-default)
+    );
     box-shadow: none;
     z-index: 1;
   }
@@ -264,7 +261,7 @@
     color: var(--text-secondary);
   }
 
-  .kit-segmented--borderless .kit-segmented__btn[data-tone]:hover:not(.active):not(:disabled) {
-    color: color-mix(in srgb, var(--kit-segmented-tone) 82%, var(--text-primary));
+  .kit-segmented--borderless .kit-segmented__btn[data-kit-tone]:hover:not(.active):not(:disabled) {
+    color: color-mix(in srgb, var(--kit-tone) 82%, var(--text-primary));
   }
 </style>

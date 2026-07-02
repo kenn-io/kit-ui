@@ -5,7 +5,7 @@ import {
   formatShortDate,
   formatWeekOfLabel,
   weekdayLabels,
-} from "../src/lib/components/range-picker.js";
+} from "../src/lib/components/date-range.js";
 
 describe("formatWeekOfLabel", () => {
   test("substitutes a {date} placeholder", () => {

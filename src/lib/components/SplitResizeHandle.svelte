@@ -104,9 +104,4 @@
   .kit-split-resize-handle:focus-visible {
     background: var(--accent-blue);
   }
-
-  .kit-split-resize-handle:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
 </style>

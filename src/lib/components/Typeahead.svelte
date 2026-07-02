@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
+  import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { TypeaheadOption } from "./typeahead.js";
 
@@ -50,21 +51,11 @@
     })}; width: ${Math.round(trigger.width)}px`;
   }
 
+  // Filtering changes the list's height — keep the flip/clamp current.
+  // No dismissable() here: the typeahead closes on blur instead.
   $effect(() => {
     if (!open) return;
-    function reposition(): void {
-      positionList();
-    }
-    // Filtering changes the list's height — keep the flip/clamp current.
-    const observer = new ResizeObserver(reposition);
-    if (listEl) observer.observe(listEl);
-    window.addEventListener("resize", reposition);
-    window.addEventListener("scroll", reposition, true);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", reposition);
-      window.removeEventListener("scroll", reposition, true);
-    };
+    return autoReposition(() => listEl, positionList);
   });
 
   const filtered = $derived.by(() => {
@@ -327,10 +318,5 @@
     font-size: var(--font-size-xs);
     color: var(--text-muted);
     font-style: italic;
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-typeahead__trigger:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

@@ -50,8 +50,9 @@ color:
 
 - **Borderless variant**: a toned segment tints its ink and border (30%
   tone mix) even while inactive; when active it takes the full band
-  (12% background, 72%-mixed ink, 30%-mixed border — the Modal band
-  recipes). Untoned segments stay grey and take the default accent when
+  (12% background, 72%-mixed ink, 30%-mixed border — the shared
+  `data-kit-tone` map/recipe from theme.css, see
+  [theming.md](../theming.md)). Untoned segments stay grey and take the default accent when
   active.
 - **Boxed variant**: tone tints the active pill's ink; the inset pad
   chrome is otherwise unchanged.

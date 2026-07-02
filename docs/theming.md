@@ -119,10 +119,19 @@ the gyp8 normalization pass):
 
 **Focus**: every interactive element shows
 `outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or
-−2px inset where the element sits flush inside a group). It must be a real
-`outline`, never a `box-shadow` ring — the high-contrast theme globally
-widens outlines (`:root.high-contrast :focus-visible { outline-width: 3px }`)
-and box-shadows would miss that. Text-entry fields are the one exception:
+−2px inset where the element sits flush inside a group). The 1px-outside
+default is a single **global rule in theme.css** —
+`:where([class^="kit-"], [class*=" kit-"]):focus-visible` — so components
+don't declare it themselves; the `:where()` keeps it at zero class
+specificity, meaning any scoped component rule (an inset offset, a
+delegated `:focus-within` wrapper) overrides it regardless of stylesheet
+order. Two consequences of the selector: the `kit-` class prefix is
+reserved by the library, and a consumer element carrying a `kit-*` class
+inherits the ring — that's the intended contract, not a leak. It must be a
+real `outline`, never a `box-shadow` ring — the high-contrast theme
+globally widens outlines
+(`:root.high-contrast :focus-visible { outline-width: 3px }`) and
+box-shadows would miss that. Text-entry fields are the one exception:
 their _wrapper_ signals focus with an `--accent-blue` border via
 `:focus-within` (TextInput, FindBar) since a ring around a chromeless inner
 input reads as double chrome.
@@ -134,7 +143,7 @@ border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
 background: var(--bg-surface)`.
 
 Chrome and positioning are separate contracts. _Trigger-anchored_ popovers
-(SelectDropdown, Typeahead, FilterDropdown, RangePicker, Tooltip)
+(SelectDropdown, Typeahead, FilterDropdown, DateRangePicker, Tooltip)
 additionally position with `position: fixed` via `floatingPopoverStyle` —
 repositioning on scroll, resize, and their own content resizing — so they
 can never be clipped by an overflow-hidden ancestor. Two surfaces share the
@@ -151,6 +160,41 @@ descendants.)
 deliberate exceptions: Calendar's disabled day _cells_ stay lighter (0.35 —
 a month of them at 0.5 is heavy) and RefreshControl's busy button stays at
 0.75 so the spinner remains visible.
+
+## Semantic tones (`data-kit-tone`)
+
+The tone system — the mapping from `info | success | warning | danger` to
+an accent color, plus the tinted-band recipe built on it — lives **once**
+in theme.css as a public contract. An element opts in with
+`data-kit-tone="…"`:
+
+```html
+<div data-kit-tone="danger">…</div>
+```
+
+The attribute resolves `--kit-tone` to the matching `--accent-*`, and three
+recipe tokens derive the standard toned surface from it (declared on the
+same selector because `var()` inside a custom property resolves where the
+property is declared — see the comment in theme.css):
+
+| Token                | Recipe                           | Role                     |
+| -------------------- | -------------------------------- | ------------------------ |
+| `--kit-tone-band-bg` | 9% tone into `--bg-surface`      | tinted band background   |
+| `--kit-tone-border`  | 30% tone into `--border-default` | band / segment border    |
+| `--kit-tone-ink`     | 72% tone into `--text-primary`   | AA-safe text on the band |
+
+Modal's header band, FlashBanner's toned banners, and SegmentedControl's
+toned segments all read these tokens, so the ratios cannot drift per
+component. Components with a genuinely different tint (SegmentedControl's
+12%-toward-transparent active fill, the dismiss-hover mixes) express it as
+a local `color-mix(… var(--kit-tone) …)` — different recipe, same map.
+Consumer markup may use `data-kit-tone` + the tokens directly; both the
+attribute name and the three tokens are stable API. Custom properties
+inherit, so a toned container's descendants see the resolved values.
+
+Two other shared rules live alongside it in theme.css: `.kit-sr-only`
+(visually hidden, screen-reader visible) and the `kit-spin` keyframes
+(every rotating indicator).
 
 ## Breakpoints
 

@@ -26,19 +26,21 @@ export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Markdown } from "./components/Markdown.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
-export { default as RangePicker } from "./components/RangePicker.svelte";
+export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export {
   allFromDate,
   daysAgo,
   DEFAULT_RANGE_PRESETS,
   localDateStr,
   monthGridDates,
+  monthLabels,
   periodBounds,
   presetRange,
   resolveRange,
   stepAnchor,
   todayStr,
   weekdayLabels,
+  type CalendarNavLabels,
   type CalendarSelection,
   type CalendarUnit,
   type CustomSelection,
@@ -47,7 +49,7 @@ export {
   type RangePreset,
   type RangeSelection,
   type RelativeSelection,
-} from "./components/range-picker.js";
+} from "./components/date-range.js";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";
@@ -118,6 +120,7 @@ export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
+export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { formatCost, formatDuration, formatNumber, formatTokenCount } from "./utils/format.js";
 export {
   createRefreshScheduler,

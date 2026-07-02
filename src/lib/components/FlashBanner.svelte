@@ -1,6 +1,7 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
   import { dismissFlash, getFlashes, type FlashTone } from "../stores/flash.svelte.js";
+  import IconButton from "./IconButton.svelte";
 
   interface Props {
     /** Distance from the top of the viewport, e.g. below an app header. */
@@ -38,21 +39,26 @@
   <div class="kit-flash-stack" style:top style:--kit-flash-top={top}>
     {#each flashes as flash (flash.id)}
       {@const tone = flash.tone ?? "neutral"}
-      <div class="kit-flash-banner kit-flash-banner--{tone}" role="status">
+      <div
+        class="kit-flash-banner"
+        data-kit-tone={tone === "neutral" ? undefined : tone}
+        role="status"
+      >
         <span class="kit-flash-banner__text">
-          {#if toneLabel(tone)}<span class="kit-flash-banner__sr-tone"
+          <!-- Non-color tone signal for assistive tech (tone must never be
+               color-only); visually hidden, announced as a severity prefix. -->
+          {#if toneLabel(tone)}<span class="kit-sr-only"
               >{toneLabel(tone)}:
             </span>{/if}{flash.message}</span
         >
-        <button
+        <IconButton
+          size="sm"
           class="kit-flash-banner__dismiss"
-          type="button"
+          ariaLabel="Dismiss"
           onclick={() => dismissFlash(flash.id)}
-          title="Dismiss"
-          aria-label="Dismiss"
         >
           <XIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </button>
+        </IconButton>
         <div
           class="kit-flash-banner__progress"
           style:animation-duration="{flash.durationMs}ms"
@@ -120,41 +126,13 @@
     border-top: 0;
   }
 
-  /* Semantic tones follow the Modal header-band recipe: one accent
-   * variable per tone; band, ink, and countdown bar derive from it. Ink
-   * mixes toward --text-primary to keep 13px text at AA on the tint. */
-  .kit-flash-banner--info {
-    --kit-flash-tone: var(--accent-blue);
-  }
-  .kit-flash-banner--success {
-    --kit-flash-tone: var(--accent-green);
-  }
-  .kit-flash-banner--warning {
-    --kit-flash-tone: var(--accent-amber);
-  }
-  .kit-flash-banner--danger {
-    --kit-flash-tone: var(--accent-red);
-  }
-
-  .kit-flash-banner:not(.kit-flash-banner--neutral) {
-    background: color-mix(in srgb, var(--kit-flash-tone) 9%, var(--bg-surface));
-    color: color-mix(in srgb, var(--kit-flash-tone) 72%, var(--text-primary));
-    /* Same 30% mix as the Modal band border. */
-    border-color: color-mix(in srgb, var(--kit-flash-tone) 30%, var(--border-default));
-  }
-
-  /* Non-color tone signal for assistive tech (tone must never be
-   * color-only); visually hidden, announced as a severity prefix. */
-  .kit-flash-banner__sr-tone {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
+  /* Semantic tones opt into the shared data-kit-tone map + band recipe in
+   * theme.css (same band as the Modal header — by construction now, not by
+   * copied percentages); band, ink, and countdown bar all derive from it. */
+  .kit-flash-banner[data-kit-tone] {
+    background: var(--kit-tone-band-bg);
+    color: var(--kit-tone-ink);
+    border-color: var(--kit-tone-border);
   }
 
   .kit-flash-banner__text {
@@ -165,36 +143,20 @@
     overflow-wrap: anywhere;
   }
 
-  .kit-flash-banner__dismiss {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    background: none;
-    border: none;
-    padding: 0;
-    /* Pull the button's box back out of the 16px text padding so its edge
-     * gap matches the 8px vertical padding (same trick as Modal's close). */
+  /* The dismiss chrome is a stock IconButton; only its placement in the
+   * banner lives here. Pull the button's box back out of the 16px text
+   * padding so its edge gap matches the 8px vertical padding (same trick
+   * as Modal's close). */
+  .kit-flash-banner :global(.kit-flash-banner__dismiss) {
     margin-right: calc(var(--space-4) - var(--space-6));
-    color: var(--text-muted);
-    cursor: pointer;
-    line-height: 1;
-    border-radius: var(--radius-sm);
   }
 
-  .kit-flash-banner__dismiss:hover {
-    color: var(--text-primary);
-    background: var(--bg-surface-hover);
+  .kit-flash-banner[data-kit-tone] :global(.kit-flash-banner__dismiss) {
+    color: var(--kit-tone-ink);
   }
 
-  .kit-flash-banner:not(.kit-flash-banner--neutral) .kit-flash-banner__dismiss {
-    color: color-mix(in srgb, var(--kit-flash-tone) 72%, var(--text-primary));
-  }
-
-  .kit-flash-banner:not(.kit-flash-banner--neutral) .kit-flash-banner__dismiss:hover {
-    background: color-mix(in srgb, var(--kit-flash-tone) 16%, var(--bg-surface));
+  .kit-flash-banner[data-kit-tone] :global(.kit-flash-banner__dismiss):hover {
+    background: color-mix(in srgb, var(--kit-tone) 16%, var(--bg-surface));
   }
 
   /* Countdown to auto-dismiss: full width at show time, empty when the
@@ -206,7 +168,7 @@
     right: 0;
     bottom: 0;
     height: 2px;
-    background: var(--kit-flash-tone, var(--accent-blue));
+    background: var(--kit-tone, var(--accent-blue));
     transform-origin: left;
     animation-name: kit-flash-countdown;
     animation-timing-function: linear;
@@ -227,10 +189,5 @@
       animation: none;
       transform: scaleX(1);
     }
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-flash-banner__dismiss:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

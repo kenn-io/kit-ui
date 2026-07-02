@@ -36,6 +36,9 @@
     "./utils/markdown": {
       "default": "./src/lib/utils/markdown.ts"
     },
+    "./utils/popover": {
+      "default": "./src/lib/utils/popover.ts"
+    },
     "./utils/refresh": {
       "default": "./src/lib/utils/refresh.ts"
     },

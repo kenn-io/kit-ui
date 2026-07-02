@@ -91,9 +91,9 @@
     color: var(--text-primary);
   }
 
+  /* Ring comes from theme.css's global kit- rule; only round it here so
+   * the outline hugs the label. */
   .kit-th__sort-btn:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
     border-radius: 2px;
   }
 

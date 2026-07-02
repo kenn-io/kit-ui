@@ -101,11 +101,6 @@
     color: var(--text-primary);
   }
 
-  .kit-icon-button:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
-
   .kit-icon-button:disabled {
     opacity: var(--opacity-disabled);
     cursor: default;

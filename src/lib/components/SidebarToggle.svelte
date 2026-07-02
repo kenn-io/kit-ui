@@ -69,9 +69,4 @@
   :global(.kit-sidebar-toggle--push) {
     margin-left: auto;
   }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  :global(.kit-sidebar-toggle):focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-  }
 </style>

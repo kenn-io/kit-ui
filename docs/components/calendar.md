@@ -2,7 +2,7 @@
 
 A single-month date grid: Monday-first weeks, month paging, an optional
 highlighted range, and a `maxDate` guard. This is the calendar surface
-`RangePicker` embeds in its Calendar tab; use it standalone for any
+`DateRangePicker` embeds in its Calendar tab; use it standalone for any
 pick-a-date UI.
 
 ```svelte
@@ -45,10 +45,14 @@ pick-a-date UI.
   between selected cells are filled), with the range start and end as
   solid accent pills rounded outward so the endpoints read at a glance —
   a one-day range is a single solid pill.
-- Weekday/month labels use the browser locale (`toLocaleDateString`), or
-  the `locale` prop when the app's language setting can diverge from it;
-  the grid itself is Monday-first regardless of locale, matching
-  `periodBounds("week", …)`'s ISO weeks.
+- Weekday/month labels use the browser locale (via memoized
+  `Intl.DateTimeFormat` instances — `weekdayLabels()` / `monthLabels()` are
+  exported), or the `locale` prop when the app's language setting can
+  diverge from it; the grid itself is Monday-first regardless of locale,
+  matching `periodBounds("week", …)`'s ISO weeks.
+- The eight nav/drill-down label props are the shared `CalendarNavLabels`
+  interface (exported); `DateRangePicker` accepts the same keys and
+  forwards them verbatim.
 - Day cells are plain focusable buttons with full-date `aria-label`s (no
   roving-tabindex grid navigation yet).
 

@@ -1,10 +1,10 @@
-# RangePicker
+# DateRangePicker
 
 Date-range trigger + popover with three tabs: **Relative** (rolling "last N
 days" pills), **Calendar** (a day/week/month period picked on an embedded
 [Calendar](calendar.md) month grid — clicking a day selects the day/ISO
 week/month containing it), and **Custom** (explicit from/to date inputs).
-Ported from agentsview's shared `RangePicker`, decoupled from its stores and
+Ported from agentsview's shared `DateRangePicker`, decoupled from its stores and
 i18n.
 
 The component is controlled: you hold a `RangeSelection` and it calls
@@ -21,13 +21,13 @@ handling). Date strings are trusted input: feed the helpers valid
 
 ```svelte
 <script lang="ts">
-  import { RangePicker, resolveRange, type RangeSelection } from "@kenn-io/kit-ui";
+  import { DateRangePicker, resolveRange, type RangeSelection } from "@kenn-io/kit-ui";
 
   let selection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
   const range = $derived(resolveRange(selection, earliestDate));
 </script>
 
-<RangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
+<DateRangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
 ```
 
 ## Props
@@ -42,7 +42,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `maxDate`                                                                                                                | `string \| null`                | `null`                                    | Later dates disabled in the calendar grid; month paging into fully-later months blocked. Note: a week/month period _containing_ `maxDate` still resolves to its full bounds, so `to` can exceed `maxDate` — clamp on the consumer side if your backend rejects future bounds |
 | `block`                                                                                                                  | `boolean`                       | `false`                                   | Trigger/panel stretch to the container width                                                                                                                                                                                                                                 |
 | `presets`                                                                                                                | `RangePreset[]`                 | `DEFAULT_RANGE_PRESETS`                   | Relative pills (`{ label, longLabel, days }`; `days <= 0` = all-time)                                                                                                                                                                                                        |
-| `relativeTabLabel` / `calendarTabLabel` / `customTabLabel`                                                               | `string`                        | `"Relative"` / `"Calendar"` / `"Custom"`  | Tab labels                                                                                                                                                                                                                                                                   |
+| `relativeTabLabel` / `calendarTabLabel` / `customTabLabel`                                                               | `string`                        | `"Relative"` / `"Calendar"` / `"Custom"`  | Mode-switch labels (rendered as a block [SegmentedControl](segmented-control.md), so the switch is a radiogroup with arrow-key movement)                                                                                                                                     |
 | `dayLabel` / `weekLabel` / `monthLabel`                                                                                  | `string`                        | `"Day"` / `"Week"` / `"Month"`            | Calendar unit pills                                                                                                                                                                                                                                                          |
 | `weekOfLabel`                                                                                                            | `string`                        | `"Week of"`                               | Week trigger label. A `"{date}"` placeholder is substituted with the week-start date (`"{date}所在周"`); without one the label is a prefix (`"Week of"` → "Week of Jun 29")                                                                                                  |
 | `lastDaysLabel`                                                                                                          | `string`                        | `"Last {days} days"`                      | Trigger label for non-preset relative windows                                                                                                                                                                                                                                |
@@ -50,14 +50,14 @@ handling). Date strings are trusted input: feed the helpers valid
 | `fromLabel` / `toLabel`                                                                                                  | `string`                        | `"From"` / `"To"`                         | Custom tab field labels                                                                                                                                                                                                                                                      |
 | `dialogLabel`                                                                                                            | `string`                        | `"Select date range"`                     | Popover `aria-label`                                                                                                                                                                                                                                                         |
 | `relativeGroupLabel` / `calendarGroupLabel`                                                                              | `string`                        | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s                                                                                                                                                                                                                                                     |
-| `previousMonthLabel` / `nextMonthLabel`                                                                                  | `string`                        | `"Previous month"` / `"Next month"`       | Calendar month-arrow `aria-label`s. The pre-Calendar names `previousPeriodLabel` / `nextPeriodLabel` still work as deprecated aliases                                                                                                                                        |
-| `previousYearLabel` / `nextYearLabel` / `previousYearsLabel` / `nextYearsLabel` / `chooseMonthLabel` / `chooseYearLabel` | `string`                        | Calendar defaults                         | Forwarded to the embedded [Calendar](calendar.md)'s month/year drill-down                                                                                                                                                                                                    |
+| `previousMonthLabel` / `nextMonthLabel`                                                                                  | `string`                        | `"Previous month"` / `"Next month"`       | Calendar month-arrow `aria-label`s.                                                                                                                                                                                                                                          |
+| `previousYearLabel` / `nextYearLabel` / `previousYearsLabel` / `nextYearsLabel` / `chooseMonthLabel` / `chooseYearLabel` | `string`                        | Calendar defaults                         | With the month arrows above, the shared `CalendarNavLabels` set — forwarded verbatim to the embedded [Calendar](calendar.md), whose own defaults apply                                                                                                                       |
 | `locale`                                                                                                                 | `string`                        | browser locale                            | BCP 47 tag for the date labels on the trigger and calendar, for apps whose language setting can diverge from the browser locale                                                                                                                                              |
 
-Date labels on the trigger and calendar format via `toLocaleDateString`
-with the browser locale, or the `locale` prop when set.
+Date labels on the trigger/stepper format with the browser locale (memoized
+`Intl.DateTimeFormat` instances), or the `locale` prop when set.
 
-## Types and helpers (`range-picker.ts`)
+## Types and helpers (`date-range.ts`)
 
 ```ts
 type RangeSelection =

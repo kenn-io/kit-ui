@@ -6,6 +6,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
+  import IconButton from "./IconButton.svelte";
 
   interface Props {
     title?: string;
@@ -63,26 +64,26 @@
     aria-modal="true"
     aria-label={ariaLabel ?? title}
     tabindex="-1"
-    data-tone={tone}
+    data-kit-tone={tone === "neutral" ? undefined : tone}
     class:kit-modal-panel--headered={!!title || closable}
     style:width
     style:max-width={maxWidth}
     {@attach trapFocus}
   >
     {#if title || closable}
-      <div class="kit-modal-header" data-tone={tone}>
+      <div class="kit-modal-header">
         {#if title}
           <span class="kit-modal-title">{title}</span>
         {/if}
         {#if closable}
-          <button
+          <IconButton
+            size="sm"
             class="kit-modal-close"
-            type="button"
-            aria-label="Close"
+            ariaLabel="Close"
             onclick={() => onclose?.()}
           >
             <XIcon size="14" strokeWidth="2" aria-hidden="true" />
-          </button>
+          </IconButton>
         {/if}
       </div>
     {/if}
@@ -150,70 +151,41 @@
     color: var(--text-primary);
   }
 
-  /* Tinted header bands for semantic tones: each tone sets one accent
-   * variable (on the panel, so both the panel edge and the header band
-   * derive from it) and the band, borders, title, and close button all
-   * follow. */
-  .kit-modal-panel[data-tone="info"] {
-    --kit-modal-tone: var(--accent-blue);
-  }
-  .kit-modal-panel[data-tone="success"] {
-    --kit-modal-tone: var(--accent-green);
-  }
-  .kit-modal-panel[data-tone="warning"] {
-    --kit-modal-tone: var(--accent-amber);
-  }
-  .kit-modal-panel[data-tone="danger"] {
-    --kit-modal-tone: var(--accent-red);
-  }
-
-  /* Tone reaches the band's full border area (top, sides, and the
+  /* Tinted header bands for semantic tones: the panel's data-kit-tone
+   * opts into the shared tone map + band recipe in theme.css (9% band,
+   * 30% border, 72% AA-safe ink — rationale documented there), and the
+   * band, borders, title, and close button all follow.
+   *
+   * Tone reaches the band's full border area (top, sides, and the
    * divider below) via the header's own border. Headerless toned modals
    * render no header element, so no stray colored edge. */
-  .kit-modal-header:not([data-tone="neutral"]) {
-    background: color-mix(in srgb, var(--kit-modal-tone) 9%, var(--bg-surface));
-    border-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
+  .kit-modal-panel[data-kit-tone] .kit-modal-header {
+    background: var(--kit-tone-band-bg);
+    border-color: var(--kit-tone-border);
   }
 
-  /* Title/close ink mixes the tone toward --text-primary: darker than the
-   * raw accent in the light theme, lighter in dark — keeps 13px text at AA
-   * on the tinted band in both (raw --accent-amber/green fall short). */
-  .kit-modal-header:not([data-tone="neutral"]) .kit-modal-title {
-    color: color-mix(in srgb, var(--kit-modal-tone) 72%, var(--text-primary));
+  .kit-modal-panel[data-kit-tone] .kit-modal-title {
+    color: var(--kit-tone-ink);
   }
 
-  .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close {
-    color: color-mix(in srgb, var(--kit-modal-tone) 72%, var(--text-primary));
+  .kit-modal-panel[data-kit-tone] :global(.kit-modal-close) {
+    color: var(--kit-tone-ink);
   }
 
-  .kit-modal-header:not([data-tone="neutral"]) .kit-modal-close:hover {
+  .kit-modal-panel[data-kit-tone] :global(.kit-modal-close):hover {
     /* Keep the contrast-safe mixed ink on hover too — raw amber/green on
      * the tinted band would dip below AA. Only the background changes. */
-    color: color-mix(in srgb, var(--kit-modal-tone) 72%, var(--text-primary));
-    background: color-mix(in srgb, var(--kit-modal-tone) 14%, transparent);
+    color: var(--kit-tone-ink);
+    background: color-mix(in srgb, var(--kit-tone) 14%, transparent);
   }
 
-  .kit-modal-close {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  /* The close chrome is a stock IconButton; only its placement in the
+   * header lives here. */
+  .kit-modal-header :global(.kit-modal-close) {
     margin-left: auto;
     /* The header's 16px side padding is for text; pull the button's box
      * back out so its edge gap matches the 6px vertical padding. */
     margin-right: calc(var(--space-3) - var(--space-6));
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--text-muted);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-
-  .kit-modal-close:hover {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
   }
 
   .kit-modal-body {
@@ -244,10 +216,5 @@
     padding: 12px 16px;
     border-top: 1px solid var(--border-default);
     flex-shrink: 0;
-  }
-  /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */
-  .kit-modal-close:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 </style>

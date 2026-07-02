@@ -74,6 +74,13 @@
     return h > 0 ? h : 1;
   };
 
+  // `itemHeight` is a uniform-height guarantee, so windowing math runs in
+  // O(1) instead of walking every row (same zero/negative guard as
+  // heightOf, which the fast path bypasses).
+  const fixedHeight = $derived(
+    itemHeight === undefined ? undefined : itemHeight > 0 ? itemHeight : 1,
+  );
+
   const slice = $derived.by(() => {
     void measureVersion;
     void items.length;
@@ -83,6 +90,7 @@
       count: items.length,
       overscan: Math.max(0, Math.floor(overscan)),
       heightOf,
+      fixedHeight,
     });
   });
 
@@ -148,7 +156,7 @@
   export async function scrollToIndex(index: number): Promise<void> {
     if (!containerEl || items.length === 0) return;
     const i = Math.min(Math.max(0, index), items.length - 1);
-    const top = offsetOfIndex(i, items.length, heightOf);
+    const top = offsetOfIndex(i, items.length, heightOf, fixedHeight);
     const bottom = top + heightOf(i);
     if (top < containerEl.scrollTop) {
       containerEl.scrollTop = top;

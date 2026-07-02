@@ -182,3 +182,75 @@
   outline-width: 3px;
   outline-offset: 2px;
 }
+
+/*
+ * Shared behavioral rules. Deliberate exceptions to "tokens only" (the
+ * high-contrast focus rule above set the precedent): each one replaces a
+ * rule that was otherwise copy-pasted into many components and had begun
+ * to drift.
+ */
+
+/* Normalized keyboard focus (gyp8): every kit- element gets the one ring,
+ * :focus-visible only. :where() keeps the rule at zero class specificity
+ * so any scoped component override — inset `-2px` offsets, `outline: none`
+ * with a :focus-within border — wins regardless of stylesheet order. The
+ * `kit-` class prefix is reserved by this library, so the selector is part
+ * of the public contract (see docs/theming.md). */
+:where([class^="kit-"], [class*=" kit-"]):focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* One spin animation for every rotating indicator (Spinner, the
+ * RefreshControl busy icon); scoped styles reference the name directly. */
+@keyframes kit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Visually hidden but available to assistive tech. */
+.kit-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Semantic tones. An element opts in with data-kit-tone="info|success|
+ * warning|danger"; this map resolves the tone to an accent once, and the
+ * band recipe below derives the standard toned surface from it — so the
+ * ratios can't drift per component. Components read var(--kit-tone) (or
+ * the recipe tokens) in their scoped styles; both inherit, so descendants
+ * of the toned element see the resolved values.
+ *
+ * The recipe tokens are declared HERE, not on :root: var() inside a custom
+ * property resolves against the element the property is declared on, so a
+ * :root declaration would bake in :root's --kit-tone forever.
+ *
+ * Band recipe rationale (AA contrast): 9% tint keeps the surface subtle in
+ * both themes, 30% border reads as an edge without shouting, 72% ink mixed
+ * toward --text-primary keeps small text legible on the tint. */
+[data-kit-tone] {
+  --kit-tone-band-bg: color-mix(in srgb, var(--kit-tone) 9%, var(--bg-surface));
+  --kit-tone-border: color-mix(in srgb, var(--kit-tone) 30%, var(--border-default));
+  --kit-tone-ink: color-mix(in srgb, var(--kit-tone) 72%, var(--text-primary));
+}
+
+[data-kit-tone="info"] {
+  --kit-tone: var(--accent-blue);
+}
+[data-kit-tone="success"] {
+  --kit-tone: var(--accent-green);
+}
+[data-kit-tone="warning"] {
+  --kit-tone: var(--accent-amber);
+}
+[data-kit-tone="danger"] {
+  --kit-tone: var(--accent-red);
+}
