@@ -42,7 +42,9 @@ test("filtering skips a disabled first result and Enter runs the highlight", asy
   await expect(page.locator(".kit-flash-banner")).toContainText("Find session");
 });
 
-test("Escape clears the query first, then closes; page shortcuts are suspended while open", async ({ page }) => {
+test("Escape clears the query first, then closes; page shortcuts are suspended while open", async ({
+  page,
+}) => {
   await gotoPage(page, "command-palette");
   const readout = page.locator(".readout code").nth(1);
 
@@ -84,7 +86,9 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
 });
 
-test("an all-disabled result set leaves Enter inert with no active descendant", async ({ page }) => {
+test("an all-disabled result set leaves Enter inert with no active descendant", async ({
+  page,
+}) => {
   await gotoPage(page, "command-palette");
   await page.getByRole("button", { name: /Open palette/ }).click();
   const input = page.locator(".kit-command-palette input");

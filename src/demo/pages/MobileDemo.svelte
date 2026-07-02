@@ -24,7 +24,10 @@
   <div class="frames">
     <figure class="frame">
       <div class="frame__device frame__device--phone">
-        <iframe src={touchFrameSrc} title="Sample screen on an emulated touch device (touch type scale)"></iframe>
+        <iframe
+          src={touchFrameSrc}
+          title="Sample screen on an emulated touch device (touch type scale)"
+        ></iframe>
       </div>
       <figcaption>375px, touch scale (kit-type-touch)</figcaption>
     </figure>

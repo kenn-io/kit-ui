@@ -59,10 +59,7 @@
   }
 
   function widthFromResize(event: SplitResizeEvent): number {
-    return Math.max(
-      minSidebarWidth,
-      Math.min(maxSidebarWidth, resizeStartWidth + event.deltaX),
-    );
+    return Math.max(minSidebarWidth, Math.min(maxSidebarWidth, resizeStartWidth + event.deltaX));
   }
 
   function handleResize(event: SplitResizeEvent): void {
@@ -77,10 +74,7 @@
   }
 </script>
 
-<div
-  class="kit-sidebar-layout"
-  class:kit-sidebar-layout--overlay-narrow={overlayOnNarrow}
->
+<div class="kit-sidebar-layout" class:kit-sidebar-layout--overlay-narrow={overlayOnNarrow}>
   {#if !isCollapsed && !hideSidebar}
     <aside
       class="kit-sidebar-layout__sidebar"

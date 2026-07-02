@@ -66,7 +66,9 @@ describe("raw-color", () => {
   });
 
   test("allows var() fallback nested inside color-mix", () => {
-    const src = svelte(`.x { background: color-mix(in srgb, var(--accent-green, #22c55e) 50%, #000); }`);
+    const src = svelte(
+      `.x { background: color-mix(in srgb, var(--accent-green, #22c55e) 50%, #000); }`,
+    );
     expect(checkSource(src, "A.svelte", ["raw-color"])).toHaveLength(0);
   });
 
@@ -116,7 +118,11 @@ describe("hand-rolled components", () => {
   });
 
   test("clipboard: direct writeText", () => {
-    const src = svelte(``, ``, `async function copy() { await navigator.clipboard.writeText("x"); }`);
+    const src = svelte(
+      ``,
+      ``,
+      `async function copy() { await navigator.clipboard.writeText("x"); }`,
+    );
     expect(checkSource(src, "A.svelte", ["hand-rolled-clipboard"])).toHaveLength(1);
   });
 
@@ -143,12 +149,18 @@ describe("hand-rolled components", () => {
   });
 
   test("segmented: seg-btn / segmented-control classes", () => {
-    const src = svelte(``, `<div class="segmented-control"><button class="seg-btn active">All</button></div>`);
+    const src = svelte(
+      ``,
+      `<div class="segmented-control"><button class="seg-btn active">All</button></div>`,
+    );
     expect(checkSource(src, "A.svelte", ["hand-rolled-segmented"])).toHaveLength(2);
   });
 
   test("segmented: does not match kit-segmented classes", () => {
-    const src = svelte(``, `<div class="kit-segmented"><button class="kit-segmented__btn">All</button></div>`);
+    const src = svelte(
+      ``,
+      `<div class="kit-segmented"><button class="kit-segmented__btn">All</button></div>`,
+    );
     expect(checkSource(src, "A.svelte", ["hand-rolled-segmented"])).toHaveLength(0);
   });
 
@@ -252,17 +264,17 @@ describe("hand-rolled components", () => {
 
 describe("typography rules", () => {
   test("pinned root: px font-size on html", () => {
-    const findings = checkSource(
-      `html, body { height: 100%; font-size: 13px; }`,
-      "app.css",
-      ["pinned-root-font-size"],
-    );
+    const findings = checkSource(`html, body { height: 100%; font-size: 13px; }`, "app.css", [
+      "pinned-root-font-size",
+    ]);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("rem scale");
   });
 
   test("pinned root: px font-size on :root", () => {
-    const findings = checkSource(`:root { font-size: 14px; }`, "app.css", ["pinned-root-font-size"]);
+    const findings = checkSource(`:root { font-size: 14px; }`, "app.css", [
+      "pinned-root-font-size",
+    ]);
     expect(findings).toHaveLength(1);
   });
 
@@ -272,11 +284,9 @@ describe("typography rules", () => {
   });
 
   test("pinned root: flags rem/var roots that compound the scale", () => {
-    const findings = checkSource(
-      `html, body { font-size: var(--font-size-root); }`,
-      "app.css",
-      ["pinned-root-font-size"],
-    );
+    const findings = checkSource(`html, body { font-size: var(--font-size-root); }`, "app.css", [
+      "pinned-root-font-size",
+    ]);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("var(--font-size-root)");
   });

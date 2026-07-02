@@ -6,10 +6,7 @@ export interface DebouncedFn<T extends (...args: never[]) => void> {
 /** Returns a debounced wrapper that delays calling `fn` until `ms`
  * milliseconds have elapsed since the last invocation. Call `.cancel()`
  * to drop a pending invocation (e.g. on component teardown). */
-export function debounce<T extends (...args: never[]) => void>(
-  fn: T,
-  ms: number,
-): DebouncedFn<T> {
+export function debounce<T extends (...args: never[]) => void>(fn: T, ms: number): DebouncedFn<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const debounced = (...args: Parameters<T>) => {

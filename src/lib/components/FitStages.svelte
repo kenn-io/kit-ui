@@ -24,9 +24,7 @@
   let hostEl = $state<HTMLElement>();
   let probeEls = $state<HTMLElement[]>([]);
 
-  const active = $derived(
-    Math.min(Math.max(stage, 0), Math.max(stages.length - 1, 0)),
-  );
+  const active = $derived(Math.min(Math.max(stage, 0), Math.max(stages.length - 1, 0)));
 
   // Every stage renders as a hidden shrink-wrapped probe, so each stage's
   // natural width is always known regardless of which one is visible. The

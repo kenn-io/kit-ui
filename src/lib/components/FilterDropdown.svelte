@@ -80,12 +80,8 @@
   let dropdownStyle = $state("");
 
   const isActive = $derived(active || badgeCount > 0);
-  const hasReset = $derived(
-    resetLabel !== undefined && onReset !== undefined,
-  );
-  const hasBulkActions = $derived(
-    onSelectAll !== undefined || onDeselectAll !== undefined,
-  );
+  const hasReset = $derived(resetLabel !== undefined && onReset !== undefined);
+  const hasBulkActions = $derived(onSelectAll !== undefined || onDeselectAll !== undefined);
 
   const visibleSections = $derived.by(() => {
     if (!search) return sections;
@@ -93,9 +89,7 @@
     return sections
       .map((section) => ({
         ...section,
-        items: section.items.filter((item) =>
-          item.label.toLowerCase().includes(q),
-        ),
+        items: section.items.filter((item) => item.label.toLowerCase().includes(q)),
       }))
       .filter((section) => section.items.length > 0);
   });
@@ -233,12 +227,7 @@
     >
       {#if searchable}
         <div class="kit-filter-dropdown__search">
-          <SearchInput
-            bind:value={search}
-            size="sm"
-            block
-            placeholder={searchPlaceholder}
-          />
+          <SearchInput bind:value={search} size="sm" block placeholder={searchPlaceholder} />
         </div>
       {/if}
       {#if hasBulkActions}
@@ -247,15 +236,15 @@
             <button
               class="kit-filter-dropdown__bulk-btn"
               type="button"
-              onclick={() => onSelectAll?.()}
-            >{selectAllLabel}</button>
+              onclick={() => onSelectAll?.()}>{selectAllLabel}</button
+            >
           {/if}
           {#if onDeselectAll}
             <button
               class="kit-filter-dropdown__bulk-btn"
               type="button"
-              onclick={() => onDeselectAll?.()}
-            >{deselectAllLabel}</button>
+              onclick={() => onDeselectAll?.()}>{deselectAllLabel}</button
+            >
           {/if}
         </div>
       {/if}
@@ -273,9 +262,7 @@
             onclick={() => handleSelect(item)}
             disabled={disabled || item.disabled}
             title={item.description}
-            aria-describedby={item.description
-              ? itemDescriptionId(item)
-              : undefined}
+            aria-describedby={item.description ? itemDescriptionId(item) : undefined}
             type="button"
           >
             <span
@@ -290,8 +277,16 @@
             {/if}
             <span class="kit-filter-dropdown__check" class:on={item.active}>
               {#if item.active}
-                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                  <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
+                  />
                 </svg>
               {/if}
             </span>
@@ -306,12 +301,7 @@
         <div class="kit-filter-dropdown__empty">{emptyLabel}</div>
       {/each}
       {#if hasReset}
-        <button
-          class="kit-filter-dropdown__reset"
-          onclick={handleReset}
-          {disabled}
-          type="button"
-        >
+        <button class="kit-filter-dropdown__reset" onclick={handleReset} {disabled} type="button">
           {resetLabel}
         </button>
       {/if}
@@ -337,7 +327,9 @@
     border: 1px solid var(--border-muted);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: border-color var(--transition-fast), color var(--transition-fast);
+    transition:
+      border-color var(--transition-fast),
+      color var(--transition-fast);
     position: relative;
     min-height: 24px;
   }

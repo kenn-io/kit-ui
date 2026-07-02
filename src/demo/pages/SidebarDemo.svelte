@@ -36,7 +36,11 @@
         <div class="pane pane--sidebar">
           <div class="pane-header">
             <span>Sessions</span>
-            <SidebarToggle state="expanded" onclick={() => (collapsed = true)} class="kit-sidebar-toggle--push" />
+            <SidebarToggle
+              state="expanded"
+              onclick={() => (collapsed = true)}
+              class="kit-sidebar-toggle--push"
+            />
           </div>
           <ul class="fake-list">
             <li>middleman #1204</li>

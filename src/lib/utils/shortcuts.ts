@@ -96,17 +96,14 @@ export function parseShortcut(combo: string): ParsedShortcut {
     meta: false,
   };
   if (!parsed.key || MODIFIER_NAMES.has(parsed.key)) {
-    throw new Error(
-      `Invalid shortcut "${combo}": missing key (write the literal + key as "plus")`,
-    );
+    throw new Error(`Invalid shortcut "${combo}": missing key (write the literal + key as "plus")`);
   }
   for (const part of parts) {
     if (part === "mod" || part === "cmdorctrl") parsed.mod = true;
     else if (part === "shift") parsed.shift = true;
     else if (part === "alt" || part === "option") parsed.alt = true;
     else if (part === "ctrl" || part === "control") parsed.ctrl = true;
-    else if (part === "meta" || part === "cmd" || part === "command")
-      parsed.meta = true;
+    else if (part === "meta" || part === "cmd" || part === "command") parsed.meta = true;
     else throw new Error(`Invalid shortcut "${combo}": unknown modifier "${part}"`);
   }
   return parsed;
@@ -134,19 +131,13 @@ export function shortcutMatches(
   // reports key "?", and "+" arrives with shiftKey set on layouts where it
   // lives on =. Match through the shifted pair and trust the character
   // over the shiftKey flag for these keys.
-  const isSymbolKey =
-    parsed.key.length === 1 && !/[a-z ]/.test(parsed.key);
+  const isSymbolKey = parsed.key.length === 1 && !/[a-z ]/.test(parsed.key);
   if (isSymbolKey) {
     if (!keyMatches && parsed.shift && SHIFTED_KEYS[parsed.key] === event.key) {
       // The produced character is the shifted counterpart — Shift proven.
       keyMatches = true;
       shiftMatches = true;
-    } else if (
-      keyMatches &&
-      !parsed.shift &&
-      event.shiftKey &&
-      SHIFTED_OUTPUTS.has(parsed.key)
-    ) {
+    } else if (keyMatches && !parsed.shift && event.shiftKey && SHIFTED_OUTPUTS.has(parsed.key)) {
       // Only characters that are themselves shifted outputs ("+", "?")
       // may arrive with shiftKey set on layouts that need Shift to
       // produce them. Base characters ("/", ",") keep strict matching —
@@ -191,10 +182,7 @@ const KEY_LABELS: Record<string, string> = {
 
 /** Display keys for KbdBadge: `formatShortcutKeys("mod+k")` → `["⌘", "K"]`
  * on a Mac, `["Ctrl", "K"]` elsewhere. */
-export function formatShortcutKeys(
-  combo: string,
-  isMac: boolean = isMacPlatform(),
-): string[] {
+export function formatShortcutKeys(combo: string, isMac: boolean = isMacPlatform()): string[] {
   const parsed = parseShortcut(combo);
   const labels = isMac ? MAC_LABELS : PC_LABELS;
   const keys: string[] = [];
@@ -204,8 +192,7 @@ export function formatShortcutKeys(
   if (parsed.meta) keys.push(labels.meta!);
   if (parsed.mod) keys.push(labels.mod!);
   keys.push(
-    KEY_LABELS[parsed.key] ??
-      (parsed.key.length === 1 ? parsed.key.toUpperCase() : parsed.key),
+    KEY_LABELS[parsed.key] ?? (parsed.key.length === 1 ? parsed.key.toUpperCase() : parsed.key),
   );
   return keys;
 }
@@ -259,16 +246,10 @@ interface Entry {
 // Duck-typed (no HTMLElement reference) so the manager stays SSR-safe and
 // testable without a DOM.
 function isEditableTarget(target: EventTarget | null): boolean {
-  const el = target as
-    | { tagName?: unknown; isContentEditable?: unknown }
-    | null;
+  const el = target as { tagName?: unknown; isContentEditable?: unknown } | null;
   if (!el || typeof el.tagName !== "string") return false;
   if (el.isContentEditable === true) return true;
-  return (
-    el.tagName === "INPUT" ||
-    el.tagName === "TEXTAREA" ||
-    el.tagName === "SELECT"
-  );
+  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
 }
 
 /** Platform-resolved identity of a combo — what actually has to be
@@ -293,9 +274,7 @@ function resolvedComboKey(parsed: ParsedShortcut, isMac: boolean): string {
   return `${key}|${meta}|${ctrl}|${parsed.alt}|${shift}`;
 }
 
-export function createShortcutManager(
-  isMac: boolean = isMacPlatform(),
-): ShortcutManager {
+export function createShortcutManager(isMac: boolean = isMacPlatform()): ShortcutManager {
   const entries = new Set<Entry>();
   const scopeStack: string[] = [ROOT_SCOPE];
 

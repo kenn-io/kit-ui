@@ -27,10 +27,7 @@
   {/each}
 </DemoSection>
 
-<DemoSection
-  title="Sizes"
-  code={`<StatusDot status="working" size={10} />`}
->
+<DemoSection title="Sizes" code={`<StatusDot status="working" size={10} />`}>
   <StatusDot status="working" size={6} />
   <StatusDot status="working" size={10} />
   <StatusDot status="working" size={14} />

@@ -50,7 +50,9 @@
       `kit-button--${surface}`,
       `kit-button--${size}`,
       className,
-    ].filter(Boolean).join(" "),
+    ]
+      .filter(Boolean)
+      .join(" "),
   );
 </script>
 
@@ -62,7 +64,7 @@
   aria-expanded={ariaExpanded}
   aria-label={ariaLabel ?? (label && shortLabel ? label : undefined)}
   aria-describedby={ariaDescribedby}
-  onclick={onclick}
+  {onclick}
 >
   {#if children}
     {@render children()}

@@ -11,7 +11,7 @@ spinner.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `size` | `number` | `24` | Diameter in px |
-| `label` | `string` | `"Loading"` | aria-label |
+| Prop    | Type     | Default     | Notes          |
+| ------- | -------- | ----------- | -------------- |
+| `size`  | `number` | `24`        | Diameter in px |
+| `label` | `string` | `"Loading"` | aria-label     |

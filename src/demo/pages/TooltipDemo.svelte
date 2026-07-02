@@ -24,7 +24,9 @@
     <Button size="sm" label="Update branch" />
   </Tooltip>
   <Tooltip text="Uses tabindex so plain text is keyboard-reachable" focusable>
-    <span style="text-decoration: underline dotted; color: var(--text-secondary)">focusable text</span>
+    <span style="text-decoration: underline dotted; color: var(--text-secondary)"
+      >focusable text</span
+    >
   </Tooltip>
 </DemoSection>
 

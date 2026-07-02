@@ -17,25 +17,27 @@ key.
   initTheme(); // once, at app startup
 </script>
 
-<ThemeToggle />                       <!-- header icon button -->
-<ThemeToggle variant="segmented" />   <!-- settings selector -->
+<ThemeToggle />
+<!-- header icon button -->
+<ThemeToggle variant="segmented" />
+<!-- settings selector -->
 ```
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `variant` | `"cycle" \| "segmented"` | `"cycle"` | |
-| `size` | `"sm" \| "md"` | `"md"` | Cycle variant's IconButton size |
-| `lightLabel` / `darkLabel` / `systemLabel` | `string` | `"Light"` / `"Dark"` / `"System"` | Segment labels + the `{mode}` value in `cycleLabel` |
-| `cycleLabel` | `string` | `"Change theme (current: {mode})"` | aria-label template for the cycle button — action-oriented; `{mode}` and `{nextMode}` are replaced |
-| `ariaLabel` | `string` | `"Theme mode"` | Group label for the segmented variant's radiogroup |
-| `block` | `boolean` | `false` | Segmented variant stretches to the container |
-| `class` | `string` | `""` | |
+| Prop                                       | Type                     | Default                            | Notes                                                                                              |
+| ------------------------------------------ | ------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `variant`                                  | `"cycle" \| "segmented"` | `"cycle"`                          |                                                                                                    |
+| `size`                                     | `"sm" \| "md"`           | `"md"`                             | Cycle variant's IconButton size                                                                    |
+| `lightLabel` / `darkLabel` / `systemLabel` | `string`                 | `"Light"` / `"Dark"` / `"System"`  | Segment labels + the `{mode}` value in `cycleLabel`                                                |
+| `cycleLabel`                               | `string`                 | `"Change theme (current: {mode})"` | aria-label template for the cycle button — action-oriented; `{mode}` and `{nextMode}` are replaced |
+| `ariaLabel`                                | `string`                 | `"Theme mode"`                     | Group label for the segmented variant's radiogroup                                                 |
+| `block`                                    | `boolean`                | `false`                            | Segmented variant stretches to the container                                                       |
+| `class`                                    | `string`                 | `""`                               |                                                                                                    |
 
 ## Notes
 
-- The component only *sets the mode* — high-contrast is a separate,
+- The component only _sets the mode_ — high-contrast is a separate,
   orthogonal flag (`setHighContrast`); expose it as its own switch in
   settings UIs.
 - `initTheme()` is what restores the persisted mode at startup and applies

@@ -28,14 +28,14 @@ refetching.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `lastUpdatedAt` | `number \| null` | required | Epoch ms of last successful fetch |
-| `onRefresh` | `() => void` | required | Called on click and on the interval |
-| `busy` | `boolean` | `false` | Spins the icon, disables the button |
-| `label` | `string` | `"Refresh"` | aria-label |
-| `title` | `string` | `label` | Tooltip |
-| `intervalMs` | `number` | `300000` (5 min) | Read once at mount |
+| Prop            | Type             | Default          | Notes                               |
+| --------------- | ---------------- | ---------------- | ----------------------------------- |
+| `lastUpdatedAt` | `number \| null` | required         | Epoch ms of last successful fetch   |
+| `onRefresh`     | `() => void`     | required         | Called on click and on the interval |
+| `busy`          | `boolean`        | `false`          | Spins the icon, disables the button |
+| `label`         | `string`         | `"Refresh"`      | aria-label                          |
+| `title`         | `string`         | `label`          | Tooltip                             |
+| `intervalMs`    | `number`         | `300000` (5 min) | Read once at mount                  |
 
 The underlying `createRefreshScheduler` / `formatRefreshAge` utilities are also
 exported — see [utilities](../utilities.md).

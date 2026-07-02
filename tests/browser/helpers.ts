@@ -40,9 +40,7 @@ export async function contrastOf(locator: Locator): Promise<number> {
       }
       // color(srgb r g b [/ a]) — how Chromium serializes color-mix()
       // results; channels are 0..1.
-      m = color.match(
-        /color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+%?))?\)/,
-      );
+      m = color.match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+%?))?\)/);
       if (m) {
         const alphaRaw = m[4];
         const alpha =
@@ -51,12 +49,7 @@ export async function contrastOf(locator: Locator): Promise<number> {
             : alphaRaw.endsWith("%")
               ? parseFloat(alphaRaw) / 100
               : parseFloat(alphaRaw);
-        return [
-          parseFloat(m[1]!) * 255,
-          parseFloat(m[2]!) * 255,
-          parseFloat(m[3]!) * 255,
-          alpha,
-        ];
+        return [parseFloat(m[1]!) * 255, parseFloat(m[2]!) * 255, parseFloat(m[3]!) * 255, alpha];
       }
       return [0, 0, 0, 1];
     }
@@ -72,11 +65,7 @@ export async function contrastOf(locator: Locator): Promise<number> {
         node = node.parentElement;
       }
       for (const [r, g, b, a] of stack.reverse()) {
-        rgb = [
-          r * a + rgb[0] * (1 - a),
-          g * a + rgb[1] * (1 - a),
-          b * a + rgb[2] * (1 - a),
-        ];
+        rgb = [r * a + rgb[0] * (1 - a), g * a + rgb[1] * (1 - a), b * a + rgb[2] * (1 - a)];
       }
       return rgb;
     }

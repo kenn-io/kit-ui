@@ -101,8 +101,7 @@
 
   const firstEnabled = (): number => flat.findIndex((c) => !c.disabled);
 
-  const flatIndexOf = (command: PaletteCommand): number =>
-    flat.indexOf(command);
+  const flatIndexOf = (command: PaletteCommand): number => flat.indexOf(command);
 
   // Reset search state on every open; push a shortcut scope so page-level
   // shortcuts are suspended while the palette is up.
@@ -137,9 +136,7 @@
       if (!flat[next]?.disabled) break;
     }
     highlighted = next;
-    document
-      .getElementById(`${uid}-option-${next}`)
-      ?.scrollIntoView({ block: "nearest" });
+    document.getElementById(`${uid}-option-${next}`)?.scrollIntoView({ block: "nearest" });
   }
 
   function handleKeydown(event: KeyboardEvent): void {
@@ -187,7 +184,7 @@
           {placeholder}
           block
           autofocus
-          ariaLabel={ariaLabel}
+          {ariaLabel}
           role="combobox"
           ariaExpanded={true}
           ariaControls="{uid}-listbox"

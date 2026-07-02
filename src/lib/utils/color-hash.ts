@@ -35,10 +35,7 @@ function djb2(s: string): number {
 /** Picks a stable color for a name (repo, project, user, …). The same name
  * always yields the same palette entry. Empty names fall back to
  * `var(--text-muted)`. */
-export function hashColor(
-  name: string,
-  palette: readonly string[] = DEFAULT_HASH_PALETTE,
-): string {
+export function hashColor(name: string, palette: readonly string[] = DEFAULT_HASH_PALETTE): string {
   if (!name || palette.length === 0) return FALLBACK;
   return palette[djb2(name) % palette.length]!;
 }

@@ -56,11 +56,7 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<div
-  class="kit-modal-overlay"
-  role="presentation"
-  onmousedown={handleOverlayMousedown}
->
+<div class="kit-modal-overlay" role="presentation" onmousedown={handleOverlayMousedown}>
   <div
     class="kit-modal-panel"
     role="dialog"

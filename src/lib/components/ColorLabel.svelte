@@ -34,9 +34,7 @@
 
     const channel = (value: number): number => {
       const normalized = value / 255;
-      return normalized <= 0.03928
-        ? normalized / 12.92
-        : ((normalized + 0.055) / 1.055) ** 2.4;
+      return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
     };
 
     return (
@@ -76,13 +74,7 @@
     class?: string;
   }
 
-  let {
-    name,
-    color,
-    size = "md",
-    title = undefined,
-    class: className = "",
-  }: Props = $props();
+  let { name, color, size = "md", title = undefined, class: className = "" }: Props = $props();
 
   const background = $derived(normalizeColor(color));
   const foreground = $derived(textColor(background));
@@ -92,8 +84,8 @@
   class={["kit-color-label", `kit-color-label--${size}`, className]}
   style:background-color={background}
   style:color={foreground}
-  {title}
->{name}</span>
+  {title}>{name}</span
+>
 
 <style>
   .kit-color-label {

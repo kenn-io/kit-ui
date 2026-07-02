@@ -20,8 +20,8 @@ Returns `false` if both fail.
 import { formatRelativeTime, formatTimestamp, truncate } from "@kenn-io/kit-ui";
 
 formatRelativeTime("2026-07-01T10:00:00Z"); // "just now" / "5m ago" / "3h ago" / "2d ago" / "Jun 12"
-formatTimestamp("2026-07-01T10:00:00Z");    // "Jul 1, 10:00 AM" (locale-aware)
-truncate("long string", 8);                 // "long st…"
+formatTimestamp("2026-07-01T10:00:00Z"); // "Jul 1, 10:00 AM" (locale-aware)
+truncate("long string", 8); // "long st…"
 ```
 
 Both formatters accept `null`/`undefined` and return `"—"`.
@@ -33,7 +33,7 @@ import { createRefreshScheduler, formatRefreshAge } from "@kenn-io/kit-ui";
 
 const scheduler = createRefreshScheduler(() => refetch(), 60_000);
 scheduler.scheduleNext(); // arm without an immediate refresh
-scheduler.refreshNow();   // refresh + reset the timer
+scheduler.refreshNow(); // refresh + reset the timer
 scheduler.stop();
 
 formatRefreshAge(lastUpdatedAt, Date.now()); // "Updated 3m ago" / "—"
@@ -79,28 +79,23 @@ surface — hence `tabindex="-1"`), traps Tab/Shift+Tab, locks body scroll
 ## Formatters
 
 ```ts
-import {
-  formatDuration,
-  formatNumber,
-  formatTokenCount,
-  formatCost,
-} from "@kenn-io/kit-ui";
+import { formatDuration, formatNumber, formatTokenCount, formatCost } from "@kenn-io/kit-ui";
 
-formatDuration(450);        // "450ms"
-formatDuration(4_000);      // "4.0s"
-formatDuration(150_000);    // "2m 30s"
-formatDuration(4_500_000);  // "1h 15m"
-formatDuration(-1);         // "—" (also NaN/Infinity)
+formatDuration(450); // "450ms"
+formatDuration(4_000); // "4.0s"
+formatDuration(150_000); // "2m 30s"
+formatDuration(4_500_000); // "1h 15m"
+formatDuration(-1); // "—" (also NaN/Infinity)
 
-formatNumber(1234567);      // "1,234,567" (toLocaleString)
+formatNumber(1234567); // "1,234,567" (toLocaleString)
 
-formatTokenCount(850);      // "850"
-formatTokenCount(1_234);    // "1.2k"
-formatTokenCount(3_500_000);// "3.5M"
+formatTokenCount(850); // "850"
+formatTokenCount(1_234); // "1.2k"
+formatTokenCount(3_500_000); // "3.5M"
 
-formatCost(0.004);          // "<$0.01"
-formatCost(12.339);         // "$12.34"
-formatCost(123.4);          // "$123"
+formatCost(0.004); // "<$0.01"
+formatCost(12.339); // "$12.34"
+formatCost(123.4); // "$123"
 ```
 
 Ported from agentsview without the i18n layer — output is plain English.
@@ -113,8 +108,9 @@ read as "60.0s".
 import { debounce } from "@kenn-io/kit-ui";
 
 const onInput = debounce((q: string) => search(q), 250);
-onInput("a"); onInput("ab"); // search("ab") fires once, 250ms later
-onInput.cancel();            // drop a pending call (e.g. on teardown)
+onInput("a");
+onInput("ab"); // search("ab") fires once, 250ms later
+onInput.cancel(); // drop a pending call (e.g. on teardown)
 ```
 
 ## Color hashing
@@ -122,8 +118,8 @@ onInput.cancel();            // drop a pending call (e.g. on teardown)
 ```ts
 import { hashColor, DEFAULT_HASH_PALETTE } from "@kenn-io/kit-ui";
 
-hashColor("my-repo");                 // e.g. "var(--accent-teal)" — stable per name
-hashColor("");                        // "var(--text-muted)" fallback
+hashColor("my-repo"); // e.g. "var(--accent-teal)" — stable per name
+hashColor(""); // "var(--text-muted)" fallback
 hashColor("x", ["var(--accent-red)"]); // custom palette
 ```
 

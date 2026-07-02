@@ -90,11 +90,7 @@
      `type` stays dynamic, so value syncs via the input handler instead of
      bind:value (Svelte requires a static type for two-way binding). -->
 <div
-  class={[
-    "kit-text-input",
-    `kit-text-input--${size}`,
-    className,
-  ]}
+  class={["kit-text-input", `kit-text-input--${size}`, className]}
   class:kit-text-input--invalid={invalid}
   class:kit-text-input--block={block}
   class:kit-text-input--disabled={disabled}
@@ -121,8 +117,7 @@
     aria-activedescendant={ariaActivedescendant}
     aria-autocomplete={ariaAutocomplete}
     oninput={handleInput}
-    onchange={(event) =>
-      onchange?.((event.currentTarget as HTMLInputElement).value)}
+    onchange={(event) => onchange?.((event.currentTarget as HTMLInputElement).value)}
     {onkeydown}
     {@attach focusOnMount}
   />

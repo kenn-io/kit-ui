@@ -16,10 +16,7 @@ export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
 export { default as EmptyState } from "./components/EmptyState.svelte";
 export { default as FilterDropdown } from "./components/FilterDropdown.svelte";
-export type {
-  FilterDropdownItem,
-  FilterDropdownSection,
-} from "./components/FilterDropdown.svelte";
+export type { FilterDropdownItem, FilterDropdownSection } from "./components/FilterDropdown.svelte";
 export { default as FindBar } from "./components/FindBar.svelte";
 export { default as FitStages } from "./components/FitStages.svelte";
 export { default as FlashBanner } from "./components/FlashBanner.svelte";
@@ -121,12 +118,7 @@ export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
-export {
-  formatCost,
-  formatDuration,
-  formatNumber,
-  formatTokenCount,
-} from "./utils/format.js";
+export { formatCost, formatDuration, formatNumber, formatTokenCount } from "./utils/format.js";
 export {
   createRefreshScheduler,
   DEFAULT_REFRESH_INTERVAL_MS,
@@ -158,7 +150,4 @@ export {
   type MarkdownRendererOptions,
 } from "./utils/markdown.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
-export {
-  floatingPopoverStyle,
-  type FloatingPopoverInput,
-} from "./components/floatingPosition.js";
+export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";

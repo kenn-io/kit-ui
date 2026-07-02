@@ -92,15 +92,11 @@
     { id: "virtual-list", label: "VirtualList", component: VirtualListDemo },
   ];
 
-  let activeId = $state(
-    (typeof location !== "undefined" && location.hash.slice(1)) || "theme",
-  );
+  let activeId = $state((typeof location !== "undefined" && location.hash.slice(1)) || "theme");
 
   initTheme();
 
-  const activePage = $derived(
-    pages.find((p) => p.id === activeId) ?? pages[0]!,
-  );
+  const activePage = $derived(pages.find((p) => p.id === activeId) ?? pages[0]!);
   const ActiveComponent = $derived(activePage.component);
 
   function navigate(id: string) {
@@ -118,36 +114,36 @@
 {/if}
 
 {#snippet gallery()}
-<FlashBanner top="16px" />
+  <FlashBanner top="16px" />
 
-<div class="shell">
-  <aside class="sidebar">
-    <div class="sidebar__brand">
-      <span class="sidebar__title">kit-ui</span>
-      <span class="sidebar__subtitle">component gallery</span>
-    </div>
-    <nav class="sidebar__nav">
-      {#each pages as page (page.id)}
-        <button
-          class="sidebar__link"
-          class:active={page.id === activeId}
-          type="button"
-          onclick={() => navigate(page.id)}
-        >
-          {page.label}
-        </button>
-      {/each}
-    </nav>
-    <div class="sidebar__theme">
-      <ThemeToggle variant="segmented" block />
-    </div>
-  </aside>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <span class="sidebar__title">kit-ui</span>
+        <span class="sidebar__subtitle">component gallery</span>
+      </div>
+      <nav class="sidebar__nav">
+        {#each pages as page (page.id)}
+          <button
+            class="sidebar__link"
+            class:active={page.id === activeId}
+            type="button"
+            onclick={() => navigate(page.id)}
+          >
+            {page.label}
+          </button>
+        {/each}
+      </nav>
+      <div class="sidebar__theme">
+        <ThemeToggle variant="segmented" block />
+      </div>
+    </aside>
 
-  <main class="content">
-    <h2 class="content__heading">{activePage.label}</h2>
-    <ActiveComponent />
-  </main>
-</div>
+    <main class="content">
+      <h2 class="content__heading">{activePage.label}</h2>
+      <ActiveComponent />
+    </main>
+  </div>
 {/snippet}
 
 <style>

@@ -25,19 +25,19 @@ conditionally — rendering it means it is open:
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `title` | `string` | — | Text in the default header row |
-| `onclose` | `() => void` | — | Called on Escape, overlay click, or close button |
-| `width` | `string` | `"min(560px, 100vw)"` | Panel width (any CSS length) |
-| `closable` | `boolean` | `true` | Render the X button in the default header |
-| `closeOnOverlayClick` | `boolean` | `true` | Dismiss on backdrop click |
-| `ariaLabel` | `string` | `title` (default header) / header text (custom `header`) | Dialog name. With a custom `header` and no `ariaLabel`, the dialog is named via `aria-labelledby` on the header container (its full text content) — pass `ariaLabel` for a concise name, and always when the header has no descriptive text |
-| `closeTitle` | `string` | `"Close (Esc)"` | Close button tooltip |
-| `closeAriaLabel` | `string` | `"Close"` | Close button `aria-label` |
-| `children` | `Snippet` | — | Body content (scrolls; bring your own padding) |
-| `header` | `Snippet` | — | Replaces the default title + close header entirely |
-| `footer` | `Snippet` | — | Pinned action row below the body |
+| Prop                  | Type         | Default                                                  | Notes                                                                                                                                                                                                                                       |
+| --------------------- | ------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`               | `string`     | —                                                        | Text in the default header row                                                                                                                                                                                                              |
+| `onclose`             | `() => void` | —                                                        | Called on Escape, overlay click, or close button                                                                                                                                                                                            |
+| `width`               | `string`     | `"min(560px, 100vw)"`                                    | Panel width (any CSS length)                                                                                                                                                                                                                |
+| `closable`            | `boolean`    | `true`                                                   | Render the X button in the default header                                                                                                                                                                                                   |
+| `closeOnOverlayClick` | `boolean`    | `true`                                                   | Dismiss on backdrop click                                                                                                                                                                                                                   |
+| `ariaLabel`           | `string`     | `title` (default header) / header text (custom `header`) | Dialog name. With a custom `header` and no `ariaLabel`, the dialog is named via `aria-labelledby` on the header container (its full text content) — pass `ariaLabel` for a concise name, and always when the header has no descriptive text |
+| `closeTitle`          | `string`     | `"Close (Esc)"`                                          | Close button tooltip                                                                                                                                                                                                                        |
+| `closeAriaLabel`      | `string`     | `"Close"`                                                | Close button `aria-label`                                                                                                                                                                                                                   |
+| `children`            | `Snippet`    | —                                                        | Body content (scrolls; bring your own padding)                                                                                                                                                                                              |
+| `header`              | `Snippet`    | —                                                        | Replaces the default title + close header entirely                                                                                                                                                                                          |
+| `footer`              | `Snippet`    | —                                                        | Pinned action row below the body                                                                                                                                                                                                            |
 
 Notes:
 

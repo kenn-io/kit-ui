@@ -24,18 +24,18 @@ the client. The pure planner/validator exports are environment-agnostic.
 <CodeBlock code={source} language="ts" title="session.ts" lineNumbers />
 ```
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `code` | `string` | required | |
-| `language` | `string` | — | Fence language; omitted/unknown renders escaped plain text |
-| `title` | `string` | — | Header label (filename); defaults to the language |
-| `lineNumbers` | `boolean` | `false` | CSS-counter gutter (plain and highlighted output) |
-| `wrap` | `boolean` (bindable) | `false` | Soft-wrap long lines |
-| `wrapToggle` | `boolean` | `true` | Show the header wrap button |
-| `copyable` | `boolean` | `true` | Show the CopyButton |
-| `maxHeight` | `string` | — | Cap the body height (scrolls beyond) |
-| `copyLabel` / `wrapLabel` | `string` | English defaults | i18n |
-| `class` | `string` | `""` | |
+| Prop                      | Type                 | Default          | Notes                                                      |
+| ------------------------- | -------------------- | ---------------- | ---------------------------------------------------------- |
+| `code`                    | `string`             | required         |                                                            |
+| `language`                | `string`             | —                | Fence language; omitted/unknown renders escaped plain text |
+| `title`                   | `string`             | —                | Header label (filename); defaults to the language          |
+| `lineNumbers`             | `boolean`            | `false`          | CSS-counter gutter (plain and highlighted output)          |
+| `wrap`                    | `boolean` (bindable) | `false`          | Soft-wrap long lines                                       |
+| `wrapToggle`              | `boolean`            | `true`           | Show the header wrap button                                |
+| `copyable`                | `boolean`            | `true`           | Show the CopyButton                                        |
+| `maxHeight`               | `string`             | —                | Cap the body height (scrolls beyond)                       |
+| `copyLabel` / `wrapLabel` | `string`             | English defaults | i18n                                                       |
+| `class`                   | `string`             | `""`             |                                                            |
 
 Highlighting is async — grammar chunks load on demand and the escaped
 plain rendering shows until then (and stays for unknown languages or
@@ -70,10 +70,10 @@ styles are namespaced under `.kit-markdown` and use theme tokens.
 
 ```ts
 import {
-  renderMarkdown,        // async: Promise<string>, highlighted fences
-  renderMarkdownSync,    // sync: highlights only already-loaded grammars
+  renderMarkdown, // async: Promise<string>, highlighted fences
+  renderMarkdownSync, // sync: highlights only already-loaded grammars
   createMarkdownRenderer,
-  highlightCode,         // one block → shiki HTML | null (CodeBlock uses this)
+  highlightCode, // one block → shiki HTML | null (CodeBlock uses this)
 } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/markdown"
 ```
 

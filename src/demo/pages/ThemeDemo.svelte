@@ -72,10 +72,26 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
       <tr><th>name</th><th>query</th><th>matches now</th></tr>
     </thead>
     <tbody>
-      <tr><td><code>compact</code></td><td><code>≤ {BREAKPOINTS.compact}px</code></td><td>{compact.current ? "✓" : "—"}</td></tr>
-      <tr><td><code>medium</code></td><td><code>≤ {BREAKPOINTS.medium}px</code></td><td>{medium.current ? "✓" : "—"}</td></tr>
-      <tr><td><code>wide</code></td><td><code>≤ {BREAKPOINTS.wide}px</code></td><td>{wide.current ? "✓" : "—"}</td></tr>
-      <tr><td><code>touch</code></td><td><code>{MEDIA.touch}</code></td><td>{touch.current ? "✓" : "—"}</td></tr>
+      <tr
+        ><td><code>compact</code></td><td><code>≤ {BREAKPOINTS.compact}px</code></td><td
+          >{compact.current ? "✓" : "—"}</td
+        ></tr
+      >
+      <tr
+        ><td><code>medium</code></td><td><code>≤ {BREAKPOINTS.medium}px</code></td><td
+          >{medium.current ? "✓" : "—"}</td
+        ></tr
+      >
+      <tr
+        ><td><code>wide</code></td><td><code>≤ {BREAKPOINTS.wide}px</code></td><td
+          >{wide.current ? "✓" : "—"}</td
+        ></tr
+      >
+      <tr
+        ><td><code>touch</code></td><td><code>{MEDIA.touch}</code></td><td
+          >{touch.current ? "✓" : "—"}</td
+        ></tr
+      >
     </tbody>
   </table>
 </DemoSection>

@@ -41,9 +41,7 @@
   }: Props = $props();
 
   const overflow = $derived(Math.max(0, items.length - maxVisible));
-  const visible = $derived(
-    expanded || overflow === 0 ? items : items.slice(0, maxVisible),
-  );
+  const visible = $derived(expanded || overflow === 0 ? items : items.slice(0, maxVisible));
 </script>
 
 <div
@@ -60,7 +58,7 @@
       tone="muted"
       {size}
       interactive
-      expanded={expanded}
+      {expanded}
       ariaLabel={expanded ? `Show fewer` : `Show ${overflow} more`}
       onclick={() => (expanded = !expanded)}
     >

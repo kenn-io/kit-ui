@@ -22,12 +22,12 @@ Omit `text` and drive the state yourself:
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `text` | `string` | — | Enables self-managed mode |
-| `copied` | `boolean` | `false` | Controlled mode indicator |
-| `ariaLabel` / `copiedAriaLabel` | `string` | `"Copy"` / `"Copied"` | |
-| `title` / `copiedTitle` | `string` | `"Copy"` / `"Copied"` | |
-| `revealOnHover` | `boolean` | `false` | Start invisible; the parent reveals `.kit-copy-btn` on hover (`.parent:hover .kit-copy-btn { opacity: 1; }`). Always visible on touch and when focused |
-| `onclick` | `(event: MouseEvent) => void \| Promise<void>` | — | Runs after the self-managed copy, if any |
-| `class` | `string` | `""` | |
+| Prop                            | Type                                           | Default               | Notes                                                                                                                                                  |
+| ------------------------------- | ---------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text`                          | `string`                                       | —                     | Enables self-managed mode                                                                                                                              |
+| `copied`                        | `boolean`                                      | `false`               | Controlled mode indicator                                                                                                                              |
+| `ariaLabel` / `copiedAriaLabel` | `string`                                       | `"Copy"` / `"Copied"` |                                                                                                                                                        |
+| `title` / `copiedTitle`         | `string`                                       | `"Copy"` / `"Copied"` |                                                                                                                                                        |
+| `revealOnHover`                 | `boolean`                                      | `false`               | Start invisible; the parent reveals `.kit-copy-btn` on hover (`.parent:hover .kit-copy-btn { opacity: 1; }`). Always visible on touch and when focused |
+| `onclick`                       | `(event: MouseEvent) => void \| Promise<void>` | —                     | Runs after the self-managed copy, if any                                                                                                               |
+| `class`                         | `string`                                       | `""`                  |                                                                                                                                                        |

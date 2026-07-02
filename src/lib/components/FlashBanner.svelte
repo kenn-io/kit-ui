@@ -1,10 +1,6 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
-  import {
-    dismissFlash,
-    getFlashes,
-    type FlashTone,
-  } from "../stores/flash.svelte.js";
+  import { dismissFlash, getFlashes, type FlashTone } from "../stores/flash.svelte.js";
 
   interface Props {
     /** Distance from the top of the viewport, e.g. below an app header. */

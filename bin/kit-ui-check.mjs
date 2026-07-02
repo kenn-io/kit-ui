@@ -99,9 +99,7 @@ if (opts.json) {
   for (const f of results) {
     console.log(`${f.file}:${f.line}  [${f.rule}]  ${f.message}`);
   }
-  console.log(
-    `\nkit-ui-check: ${results.length} finding(s) in ${scanned} file(s)`,
-  );
+  console.log(`\nkit-ui-check: ${results.length} finding(s) in ${scanned} file(s)`);
 }
 
 process.exit(results.length > 0 && !opts.warn ? 1 : 0);

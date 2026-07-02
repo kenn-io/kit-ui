@@ -218,14 +218,8 @@
     onscroll={handleScroll}
     onkeydown={handleKeydown}
   >
-    <div
-      class="kit-virtual-list__spacer"
-      style:height="{slice.totalHeight}px"
-    >
-      <div
-        class="kit-virtual-list__window"
-        style:transform="translateY({slice.topPad}px)"
-      >
+    <div class="kit-virtual-list__spacer" style:height="{slice.totalHeight}px">
+      <div class="kit-virtual-list__window" style:transform="translateY({slice.topPad}px)">
         {#each items.slice(slice.start, slice.end) as item, i (slice.start + i)}
           {@const index = slice.start + i}
           <!-- Pointer shortcuts only — Enter on the focused container is the

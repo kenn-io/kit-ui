@@ -1,11 +1,5 @@
 <script module lang="ts">
-  export type StatusDotStatus =
-    | "working"
-    | "waiting"
-    | "idle"
-    | "stale"
-    | "unclean"
-    | "quiet";
+  export type StatusDotStatus = "working" | "waiting" | "idle" | "stale" | "unclean" | "quiet";
 </script>
 
 <script lang="ts">
@@ -18,9 +12,7 @@
 
   let { status, label = undefined, size = 6 }: Props = $props();
 
-  const effectiveLabel = $derived(
-    label ?? (status === "quiet" ? "" : status),
-  );
+  const effectiveLabel = $derived(label ?? (status === "quiet" ? "" : status));
 </script>
 
 {#if status === "waiting"}
@@ -85,11 +77,7 @@
      filled dot using a muted green so it sits below pulse in
      visual weight but stays readable. */
   .kit-status-dot--idle {
-    background: color-mix(
-      in srgb,
-      var(--accent-green, #22c55e) 55%,
-      transparent
-    );
+    background: color-mix(in srgb, var(--accent-green, #22c55e) 55%, transparent);
     transform: scale(0.7);
   }
 
@@ -135,8 +123,7 @@
       box-shadow: 0 0 0 0 transparent;
     }
     50% {
-      box-shadow: 0 0 6px 3px
-        color-mix(in srgb, var(--accent-green, #22c55e) 50%, transparent);
+      box-shadow: 0 0 6px 3px color-mix(in srgb, var(--accent-green, #22c55e) 50%, transparent);
     }
   }
 </style>

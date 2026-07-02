@@ -32,14 +32,30 @@
     const activeLine = $derived(matches.length > 0 ? matches[safeIndex] : -1);
 
     return {
-      get visible() { return visible; },
-      set visible(v: boolean) { visible = v; },
-      get query() { return query; },
-      set query(v: string) { query = v; },
-      get matches() { return matches; },
-      get safeIndex() { return safeIndex; },
-      get activeLine() { return activeLine; },
-      reset() { currentIndex = 0; },
+      get visible() {
+        return visible;
+      },
+      set visible(v: boolean) {
+        visible = v;
+      },
+      get query() {
+        return query;
+      },
+      set query(v: string) {
+        query = v;
+      },
+      get matches() {
+        return matches;
+      },
+      get safeIndex() {
+        return safeIndex;
+      },
+      get activeLine() {
+        return activeLine;
+      },
+      reset() {
+        currentIndex = 0;
+      },
       next() {
         if (matches.length === 0) return;
         currentIndex = (safeIndex + 1) % matches.length;

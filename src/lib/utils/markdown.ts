@@ -27,11 +27,7 @@ import {
   type Tokens,
   type TokenizerAndRendererExtension,
 } from "marked";
-import {
-  getSingletonHighlighter,
-  type BundledLanguage,
-  type Highlighter,
-} from "shiki";
+import { getSingletonHighlighter, type BundledLanguage, type Highlighter } from "shiki";
 
 const SHIKI_LIGHT_THEME = "github-light-default";
 const SHIKI_DARK_THEME = "github-dark-default";
@@ -215,10 +211,7 @@ async function loadCodeFenceLanguages(languages: string[]): Promise<void> {
  * to escaped plain text. Shiki escapes the code text itself, so the
  * output is safe for `{@html}` without a DOMPurify pass.
  */
-export async function highlightCode(
-  code: string,
-  lang: string,
-): Promise<string | null> {
+export async function highlightCode(code: string, lang: string): Promise<string | null> {
   const language = codeFenceLanguage(lang);
   if (language === SHIKI_PLAINTEXT_LANG) return null;
   if (utf8ByteLength(code) > SHIKI_MAX_HIGHLIGHTED_BYTES) return null;
@@ -335,10 +328,7 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
       FORBID_TAGS: ["style"],
       ADD_ATTR: ["target", "rel", SHIKI_GENERATED_ATTR, ...allowedAttributes],
     });
-    return sanitized.replaceAll(
-      new RegExp(`\\s${SHIKI_GENERATED_ATTR}="[^"]*"`, "g"),
-      "",
-    );
+    return sanitized.replaceAll(new RegExp(`\\s${SHIKI_GENERATED_ATTR}="[^"]*"`, "g"), "");
   } finally {
     DOMPurify.removeHook("uponSanitizeAttribute", shikiStyleSanitizer);
     DOMPurify.removeHook("afterSanitizeAttributes", linkRelHardener);
@@ -348,9 +338,7 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
 /** Build a renderer with app-specific options. Create one per app (or
  * per distinct option set) and reuse it — each instance owns a Marked
  * instance and an LRU-ish render cache. */
-export function createMarkdownRenderer(
-  options: MarkdownRendererOptions = {},
-): MarkdownRenderer {
+export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): MarkdownRenderer {
   const marked = new Marked({ gfm: true, breaks: true });
   if (options.extensions?.length) {
     marked.use({ extensions: options.extensions });

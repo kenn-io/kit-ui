@@ -21,7 +21,7 @@ let square = $derived(num * num);
 let square;
 
 $effect(() => {
-	square = num * num;
+  square = num * num;
 });
 ```
 
@@ -51,10 +51,10 @@ Treat props as though they will change. For example, values that depend on props
 let { type } = $props();
 
 // do this
-let color = $derived(type === 'danger' ? 'red' : 'green');
+let color = $derived(type === "danger" ? "red" : "green");
 
 // don't do this — `color` will not update if `type` changes
-let color = type === 'danger' ? 'red' : 'green';
+let color = type === "danger" ? "red" : "green";
 ```
 
 ## `$inspect.trace`
@@ -90,10 +90,10 @@ Avoid using `onMount` or `$effect` for this.
 
 ```svelte
 {#snippet greeting(name)}
-	<p>hello {name}!</p>
+  <p>hello {name}!</p>
 {/snippet}
 
-{@render greeting('world')}
+{@render greeting("world")}
 ```
 
 > [!NOTE] Snippets declared at the top level of a component (i.e. not inside elements or blocks) can be referenced inside `<script>`. A snippet that doesn't reference component state is also available in a `<script module>`, in which case it can be exported for use by other components.
@@ -128,9 +128,9 @@ The CSS in a component's `<style>` is scoped to that component. If a parent comp
 <h1>Hello</h1>
 
 <style>
-	h1 {
-		color: var(--color);
-	}
+  h1 {
+    color: var(--color);
+  }
 </style>
 ```
 
@@ -138,15 +138,15 @@ If this is impossible (for example, the child component comes from a library) yo
 
 ```svelte
 <div>
-	<Child />
+  <Child />
 </div>
 
 <style>
-	div :global {
-		h1 {
-			color: red;
-		}
-	}
+  div :global {
+    h1 {
+      color: red;
+    }
+  }
 </style>
 ```
 

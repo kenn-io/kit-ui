@@ -31,11 +31,7 @@
   earliestDate="2025-02-16"
 />`}
 >
-  <RangePicker
-    {selection}
-    onSelect={(sel) => (selection = sel)}
-    {earliestDate}
-  />
+  <RangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
   <span class="readout">
     <code>{JSON.stringify(selection)}</code>
     <code>resolved: {resolved.from} → {resolved.to}</code>

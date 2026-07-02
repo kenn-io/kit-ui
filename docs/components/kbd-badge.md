@@ -12,8 +12,8 @@ version — it takes plain glyph strings.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `keys` | `string[]` | required | Key glyphs in press order |
-| `joiner` | `"compact" \| "plus"` | `"compact"` | compact runs glyphs together ("⌘K", sans font); plus joins with "+" ("Ctrl+K", mono font) |
-| `ariaLabel` | `string` | keys joined with spaces | Screen-reader label |
+| Prop        | Type                  | Default                 | Notes                                                                                     |
+| ----------- | --------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
+| `keys`      | `string[]`            | required                | Key glyphs in press order                                                                 |
+| `joiner`    | `"compact" \| "plus"` | `"compact"`             | compact runs glyphs together ("⌘K", sans font); plus joins with "+" ("Ctrl+K", mono font) |
+| `ariaLabel` | `string`              | keys joined with spaces | Screen-reader label                                                                       |

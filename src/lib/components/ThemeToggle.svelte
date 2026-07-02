@@ -2,11 +2,7 @@
   import MonitorIcon from "@lucide/svelte/icons/monitor";
   import MoonIcon from "@lucide/svelte/icons/moon";
   import SunIcon from "@lucide/svelte/icons/sun";
-  import {
-    getThemeMode,
-    setThemeMode,
-    type ThemeMode,
-  } from "../stores/theme.svelte.js";
+  import { getThemeMode, setThemeMode, type ThemeMode } from "../stores/theme.svelte.js";
   import IconButton from "./IconButton.svelte";
   import SegmentedControl from "./SegmentedControl.svelte";
 
@@ -52,17 +48,11 @@
   };
 
   function labelOf(themeMode: ThemeMode): string {
-    return themeMode === "light"
-      ? lightLabel
-      : themeMode === "dark"
-        ? darkLabel
-        : systemLabel;
+    return themeMode === "light" ? lightLabel : themeMode === "dark" ? darkLabel : systemLabel;
   }
 
   const cycleAriaLabel = $derived(
-    cycleLabel
-      .replace("{mode}", labelOf(mode))
-      .replace("{nextMode}", labelOf(CYCLE[mode])),
+    cycleLabel.replace("{mode}", labelOf(mode)).replace("{nextMode}", labelOf(CYCLE[mode])),
   );
 
   const options = $derived([

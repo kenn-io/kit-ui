@@ -21,15 +21,15 @@ closes and refocuses the trigger. Extracted from middleman.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `value` | `string` | required | Selected option value |
-| `options` | `SelectDropdownOption[]` | required | |
-| `onchange` | `(value: string) => void` | required | |
-| `title` | `string` | — | Prefix for the accessible trigger label ("Sort: Newest") and tooltip |
-| `disabled` | `boolean` | `false` | |
-| `align` | `"start" \| "end"` | `"start"` | Menu edge aligned with the trigger. Keep `start` — the menu already clamps to the viewport and flips above when out of room; use `end` only for triggers hugging the right screen edge |
-| `class` | `string` | `""` | |
+| Prop       | Type                      | Default   | Notes                                                                                                                                                                                  |
+| ---------- | ------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`    | `string`                  | required  | Selected option value                                                                                                                                                                  |
+| `options`  | `SelectDropdownOption[]`  | required  |                                                                                                                                                                                        |
+| `onchange` | `(value: string) => void` | required  |                                                                                                                                                                                        |
+| `title`    | `string`                  | —         | Prefix for the accessible trigger label ("Sort: Newest") and tooltip                                                                                                                   |
+| `disabled` | `boolean`                 | `false`   |                                                                                                                                                                                        |
+| `align`    | `"start" \| "end"`        | `"start"` | Menu edge aligned with the trigger. Keep `start` — the menu already clamps to the viewport and flips above when out of room; use `end` only for triggers hugging the right screen edge |
+| `class`    | `string`                  | `""`      |                                                                                                                                                                                        |
 
 The menu is `position: fixed` and positioned per open (and on scroll/resize),
 so normal `overflow: hidden`/`auto` ancestors can't clip it, and long option

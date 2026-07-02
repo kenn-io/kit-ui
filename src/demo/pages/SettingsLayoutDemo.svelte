@@ -51,10 +51,7 @@
               <input class="row__input" type="text" bind:value={displayName} />
             </label>
           </SettingsSection>
-          <SettingsSection
-            title="Sync"
-            description="Background refresh behavior."
-          >
+          <SettingsSection title="Sync" description="Background refresh behavior.">
             <label class="row">
               <span class="row__text">
                 <span class="row__label">Auto-sync</span>
@@ -71,10 +68,7 @@
             </label>
           </SettingsSection>
         {:else if id === "appearance"}
-          <SettingsSection
-            title="Theme"
-            description="Colors follow the kit-ui theme tokens."
-          >
+          <SettingsSection title="Theme" description="Colors follow the kit-ui theme tokens.">
             <div class="row">
               <span class="row__text">
                 <span class="row__label">Color scheme</span>

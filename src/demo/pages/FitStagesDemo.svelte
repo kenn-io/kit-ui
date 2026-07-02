@@ -55,13 +55,23 @@
     <Button tone="success" title="Approve" ariaLabel="Approve" onclick={() => act("Approved")}>
       <CheckIcon size="13" strokeWidth="2.2" aria-hidden="true" />
     </Button>
-    <Button title="Request changes" ariaLabel="Request changes" onclick={() => act("Changes requested")}>
+    <Button
+      title="Request changes"
+      ariaLabel="Request changes"
+      onclick={() => act("Changes requested")}
+    >
       <MessageSquareIcon size="13" strokeWidth="2.2" aria-hidden="true" />
     </Button>
     <Button title="Copy branch name" ariaLabel="Copy branch name" onclick={() => act("Copied")}>
       <CopyIcon size="13" strokeWidth="2.2" aria-hidden="true" />
     </Button>
-    <Button tone="info" surface="solid" title="Merge pull request" ariaLabel="Merge pull request" onclick={() => act("Merged")}>
+    <Button
+      tone="info"
+      surface="solid"
+      title="Merge pull request"
+      ariaLabel="Merge pull request"
+      onclick={() => act("Merged")}
+    >
       <GitMergeIcon size="13" strokeWidth="2.2" aria-hidden="true" />
     </Button>
   </div>
@@ -94,10 +104,7 @@
       <span class="pane__title">Add FitStages primitive</span>
       <span class="pane__branch">feature/fit-stages → main</span>
     </div>
-    <FitStages
-      bind:stage={paneStage}
-      stages={[fullActions, shortActions, iconActions]}
-    />
+    <FitStages bind:stage={paneStage} stages={[fullActions, shortActions, iconActions]} />
   </div>
 </DemoSection>
 
@@ -108,10 +115,10 @@
 .toolbar :global(.kit-fit-stages) { flex: 1 1 0; min-width: 0; }`}
 >
   <p class="note">
-    Stages are ordered richest → most compact; the last stage is the
-    unconditional fallback. Flexible stage content (e.g. a full-width input)
-    should declare its floor with <code>min-width</code> — that's what the
-    probe measures.
+    Stages are ordered richest → most compact; the last stage is the unconditional fallback.
+    Flexible stage content (e.g. a full-width input) should declare its floor with <code
+      >min-width</code
+    > — that's what the probe measures.
   </p>
 </DemoSection>
 

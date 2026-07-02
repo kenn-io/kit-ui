@@ -1,10 +1,5 @@
 <script lang="ts">
-  import {
-    Button,
-    showFlash,
-    type ButtonSurface,
-    type ButtonTone,
-  } from "../../lib/index.js";
+  import { Button, showFlash, type ButtonSurface, type ButtonTone } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const tones: ButtonTone[] = ["neutral", "info", "success", "danger", "workflow"];

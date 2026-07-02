@@ -4,9 +4,7 @@ const DAY = 86400;
 const WEEK = 604800;
 
 /** Formats an ISO timestamp as a human-friendly relative time. */
-export function formatRelativeTime(
-  isoString: string | null | undefined,
-): string {
+export function formatRelativeTime(isoString: string | null | undefined): string {
   if (!isoString) return "—";
 
   const date = new Date(isoString);
@@ -24,9 +22,7 @@ export function formatRelativeTime(
 }
 
 /** Formats an ISO timestamp as a readable date/time string. */
-export function formatTimestamp(
-  isoString: string | null | undefined,
-): string {
+export function formatTimestamp(isoString: string | null | undefined): string {
   if (!isoString) return "—";
   return new Date(isoString).toLocaleString(undefined, {
     month: "short",

@@ -69,8 +69,11 @@
     aria-label={ariaLabel}
     data-testid={dataTestid}
     {disabled}
-    onclick={onclick}
-  >{#if dot}<span class="kit-chip__dot" aria-hidden="true"></span>{/if}{#if children}<span class="kit-chip__label">{@render children()}</span>{/if}</button>
+    {onclick}
+    >{#if dot}<span class="kit-chip__dot" aria-hidden="true"></span>{/if}{#if children}<span
+        class="kit-chip__label">{@render children()}</span
+      >{/if}</button
+  >
 {:else}
   <span
     class={[
@@ -86,7 +89,10 @@
     {style}
     aria-label={ariaLabel}
     data-testid={dataTestid}
-  >{#if dot}<span class="kit-chip__dot" aria-hidden="true"></span>{/if}{#if children}<span class="kit-chip__label">{@render children()}</span>{/if}</span>
+    >{#if dot}<span class="kit-chip__dot" aria-hidden="true"></span>{/if}{#if children}<span
+        class="kit-chip__label">{@render children()}</span
+      >{/if}</span
+  >
 {/if}
 
 <style>
@@ -215,11 +221,7 @@
   }
 
   .kit-chip--tone-workspace {
-    background: color-mix(
-      in srgb,
-      var(--accent-teal, var(--accent-green)) 15%,
-      transparent
-    );
+    background: color-mix(in srgb, var(--accent-teal, var(--accent-green)) 15%, transparent);
     color: var(--accent-teal, var(--accent-green));
   }
   /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */

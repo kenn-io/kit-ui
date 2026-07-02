@@ -145,9 +145,8 @@ for (const mode of MODES) {
     // tone reached AA and the entry must go, or a later drop back below
     // 4.5 would hide behind the old baseline.
     const stale = Object.keys(baseline).filter((key) => seen.has(key) && !all.has(key));
-    expect(
-      stale,
-      "stale KNOWN_FAILURES entries — these tones now pass AA; remove them",
-    ).toEqual([]);
+    expect(stale, "stale KNOWN_FAILURES entries — these tones now pass AA; remove them").toEqual(
+      [],
+    );
   });
 }

@@ -114,11 +114,7 @@
   class={["kit-search-input", className].filter(Boolean).join(" ")}
 >
   {#snippet prefix()}
-    <SearchIcon
-      size={size === "sm" ? 12 : 13}
-      strokeWidth="2"
-      aria-hidden="true"
-    />
+    <SearchIcon size={size === "sm" ? 12 : 13} strokeWidth="2" aria-hidden="true" />
   {/snippet}
   {#snippet suffix()}
     {#if value !== "" && !disabled && !readonly}

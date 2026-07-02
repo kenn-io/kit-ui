@@ -33,18 +33,14 @@
   // App wiring: one initShortcuts() at startup, then register combos.
   $effect(() => {
     const detach = initShortcuts();
-    const offOpen = appShortcuts.register(
-      "mod+k",
-      () => (open = true),
-      { description: "Open command palette" },
-    );
+    const offOpen = appShortcuts.register("mod+k", () => (open = true), {
+      description: "Open command palette",
+    });
     // A page-level shortcut to demonstrate scope suspension: it counts
     // while the palette is closed, and stops while it's open.
-    const offPage = appShortcuts.register(
-      "g",
-      () => (pageShortcutFires += 1),
-      { description: "Page shortcut (demo)" },
-    );
+    const offPage = appShortcuts.register("g", () => (pageShortcutFires += 1), {
+      description: "Page shortcut (demo)",
+    });
     return () => {
       offOpen();
       offPage();

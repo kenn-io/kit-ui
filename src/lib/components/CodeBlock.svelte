@@ -63,9 +63,7 @@
     const lines = code.split("\n");
     // A fence's trailing newline would render as a spurious empty last line.
     if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
-    const body = lines
-      .map((line) => `<span class="line">${escapeHtml(line)}</span>`)
-      .join("\n");
+    const body = lines.map((line) => `<span class="line">${escapeHtml(line)}</span>`).join("\n");
     return `<pre class="kit-code-block__plain"><code>${body}</code></pre>`;
   });
 

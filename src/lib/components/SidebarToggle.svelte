@@ -22,19 +22,13 @@
     class: className = undefined,
   }: Props = $props();
 
-  const ToggleIcon = $derived(
-    state === "collapsed" ? PanelLeftOpenIcon : PanelLeftCloseIcon,
-  );
+  const ToggleIcon = $derived(state === "collapsed" ? PanelLeftOpenIcon : PanelLeftCloseIcon);
   const action = $derived(state === "collapsed" ? "Expand" : "Collapse");
   const accessibleLabel = $derived(`${action} ${label}`);
 </script>
 
 <button
-  class={[
-    "kit-sidebar-toggle",
-    `kit-sidebar-toggle--${state}`,
-    className,
-  ]}
+  class={["kit-sidebar-toggle", `kit-sidebar-toggle--${state}`, className]}
   {onclick}
   title={accessibleLabel}
   aria-label={accessibleLabel}
@@ -57,7 +51,9 @@
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     cursor: pointer;
-    transition: color var(--transition-fast), background var(--transition-fast);
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast);
   }
 
   .kit-sidebar-toggle:hover {

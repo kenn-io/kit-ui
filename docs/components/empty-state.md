@@ -26,9 +26,9 @@ content, so dropping it into any empty pane works without wrapper styles.
 
 ## Props
 
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `icon` | `Snippet` | — | Leading glyph, typically a lucide icon |
-| `title` | `string` | — | Primary line |
-| `description` | `string` | — | Muted secondary line (max-width 380px) |
-| `children` | `Snippet` | — | Action row under the text |
+| Prop          | Type      | Default | Notes                                  |
+| ------------- | --------- | ------- | -------------------------------------- |
+| `icon`        | `Snippet` | —       | Leading glyph, typically a lucide icon |
+| `title`       | `string`  | —       | Primary line                           |
+| `description` | `string`  | —       | Muted secondary line (max-width 380px) |
+| `children`    | `Snippet` | —       | Action row under the text              |

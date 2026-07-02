@@ -23,10 +23,7 @@
 
   let cleanup: (() => void) | null = null;
 
-  function resizeEventFromMouse(
-    event: MouseEvent,
-    startX: number,
-  ): SplitResizeEvent {
+  function resizeEventFromMouse(event: MouseEvent, startX: number): SplitResizeEvent {
     return {
       deltaX: event.clientX - startX,
       startX,
