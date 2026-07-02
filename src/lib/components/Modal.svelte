@@ -67,6 +67,7 @@
     aria-modal="true"
     aria-label={ariaLabel ?? title}
     tabindex="-1"
+    data-tone={tone}
     style:width
     style:max-width={maxWidth}
     {@attach trapFocus}
@@ -144,19 +145,28 @@
   }
 
   /* Tinted header bands for semantic tones: each tone sets one accent
-   * variable and the band, border, title, and close button all derive
-   * from it. */
-  .kit-modal-header[data-tone="info"] {
+   * variable (on the panel, so both the panel edge and the header band
+   * derive from it) and the band, borders, title, and close button all
+   * follow. */
+  .kit-modal-panel[data-tone="info"] {
     --kit-modal-tone: var(--accent-blue);
   }
-  .kit-modal-header[data-tone="success"] {
+  .kit-modal-panel[data-tone="success"] {
     --kit-modal-tone: var(--accent-green);
   }
-  .kit-modal-header[data-tone="warning"] {
+  .kit-modal-panel[data-tone="warning"] {
     --kit-modal-tone: var(--accent-amber);
   }
-  .kit-modal-header[data-tone="danger"] {
+  .kit-modal-panel[data-tone="danger"] {
     --kit-modal-tone: var(--accent-red);
+  }
+
+  /* The panel's top edge borders the tinted band, so it takes the tone
+   * border too — a grey edge against the tinted header reads as a bug.
+   * The rounded corners blend tone into the grey side borders, which is
+   * where the band visually ends. */
+  .kit-modal-panel:not([data-tone="neutral"]) {
+    border-top-color: color-mix(in srgb, var(--kit-modal-tone) 30%, var(--border-default));
   }
 
   .kit-modal-header:not([data-tone="neutral"]) {
