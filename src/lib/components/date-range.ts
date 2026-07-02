@@ -1,5 +1,5 @@
 /*
- * Types and pure date helpers for RangePicker.
+ * Types and pure date helpers for DateRangePicker.
  *
  * Ported from agentsview's `rangeSelection.ts` / `dateRangeSelector.ts`,
  * decoupled from its stores and i18n. All dates are local-timezone
@@ -7,7 +7,7 @@
  */
 
 /**
- * The three ways a user can pick a range with RangePicker. Consumers keep one
+ * The three ways a user can pick a range with DateRangePicker. Consumers keep one
  * of these; resolveRange() turns any of them into a concrete {from, to}.
  *
  * - relative: a rolling window ending today (last N days; days === 0 means

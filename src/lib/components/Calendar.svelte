@@ -10,7 +10,7 @@
     todayStr,
     weekdayLabels,
     type DateRange,
-  } from "./range-picker.js";
+  } from "./date-range.js";
 
   interface Props {
     /** Any date inside the visible month (YYYY-MM-DD, bindable). */

@@ -73,7 +73,7 @@ is bindable for app shortcut handlers that focus the field.
 
 - `FindBar`, `Typeahead`, `SelectDropdown` keep their own inputs — they're
   comboboxes/cards with their own ARIA wiring and chrome ownership.
-- `RangePicker`'s custom tab uses native `type="date"` inputs (native
+- `DateRangePicker`'s custom tab uses native `type="date"` inputs (native
   pickers beat styled text fields for dates).
 - `FilterDropdown`'s search box uses `SearchInput` internally (`size="sm"
 block`).

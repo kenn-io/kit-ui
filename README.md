@@ -43,7 +43,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | Component                                                    | Origin                              | Purpose                                                                                       |
 | ------------------------------------------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
 | [Button](docs/components/button.md)                          | middleman `ActionButton`            | Action button with tone × surface × size variants                                             |
-| [Calendar](docs/components/calendar.md)                      | new (RangePicker's month grid)      | Single-month date grid with range highlight and month paging                                  |
+| [Calendar](docs/components/calendar.md)                      | new (DateRangePicker's month grid)  | Single-month date grid with range highlight and month paging                                  |
 | [Chip](docs/components/chip.md)                              | middleman `Chip`                    | Status/label badge, optionally interactive                                                    |
 | [ChipStack](docs/components/chip-stack.md)                   | new (middleman mobile-view pattern) | Collapsing chip/button row with "+N" expansion                                                |
 | [CodeBlock](docs/components/code-block.md)                   | both (consolidated)                 | Standalone code card: shiki dual-theme highlighting, line numbers, wrap toggle, copy          |
@@ -62,7 +62,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [KbdBadge](docs/components/kbd-badge.md)                     | middleman                           | Keyboard-shortcut badge, hidden on touch devices                                              |
 | [Markdown](docs/components/code-block.md)                    | both (consolidated)                 | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
 | [Modal](docs/components/modal.md)                            | both (consolidated)                 | Dialog primitive: overlay, header, body, footer snippet                                       |
-| [RangePicker](docs/components/range-picker.md)               | agentsview                          | Relative / calendar / custom date-range popover with `resolveRange()`                         |
+| [DateRangePicker](docs/components/date-range-picker.md)      | agentsview                          | Relative / calendar / custom date-range popover with `resolveRange()`                         |
 | [RefreshControl](docs/components/refresh-control.md)         | agentsview                          | Refresh button + "Updated Xm ago" label with auto-refresh                                     |
 | [SearchInput](docs/components/text-input.md)                 | new (TextInput preset)              | Filter field: search icon, clear button, optional ⌘K hint                                     |
 | [SegmentedControl](docs/components/segmented-control.md)     | middleman (inline pattern)          | "All / PRs / Issues" style value selector                                                     |

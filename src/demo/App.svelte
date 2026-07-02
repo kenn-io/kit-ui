@@ -21,7 +21,7 @@
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
-  import RangePickerDemo from "./pages/RangePickerDemo.svelte";
+  import DateRangePickerDemo from "./pages/DateRangePickerDemo.svelte";
   import RefreshControlDemo from "./pages/RefreshControlDemo.svelte";
   import SegmentedControlDemo from "./pages/SegmentedControlDemo.svelte";
   import SelectDropdownDemo from "./pages/SelectDropdownDemo.svelte";
@@ -77,7 +77,7 @@
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
-    { id: "range-picker", label: "RangePicker", component: RangePickerDemo },
+    { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
     { id: "segmented-control", label: "SegmentedControl", component: SegmentedControlDemo },
     { id: "select-dropdown", label: "SelectDropdown", component: SelectDropdownDemo },
