@@ -35,7 +35,7 @@ custom virtualized surfaces (LogViewer-style scrollback, virtual tables).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `items` | `T[]` | required | |
-| `itemHeight` | `number` | — | Fixed row height in px (fast path, no measuring) |
+| `itemHeight` | `number` | — | Fixed row height in px (fast path, no measuring). The windowing math trusts it: rendered rows must actually be this tall (border-box), or offsets drift over long lists — use measured mode if content decides the height |
 | `estimateHeight` | `number` | `32` | Height guess for unmeasured variable rows |
 | `overscan` | `number` | `4` | Rows rendered beyond each viewport edge |
 | `height` | `string` | `"100%"` | CSS height of the scroll container |

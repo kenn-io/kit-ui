@@ -286,8 +286,10 @@ function resolvedComboKey(parsed: ParsedShortcut, isMac: boolean): string {
     key = shifted;
     shift = false;
   }
-  // Shifted-output keys ("+", "?") already treat shiftKey as don't-care
-  // in matching, so shift never distinguishes them here.
+  // Shifted-output keys ("+", "?") treat shiftKey as don't-care in
+  // matching, so shift must not distinguish them here either —
+  // "?" and "shift+?" overlap at runtime.
+  if (SHIFTED_OUTPUTS.has(key)) shift = false;
   return `${key}|${meta}|${ctrl}|${parsed.alt}|${shift}`;
 }
 

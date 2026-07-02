@@ -21,6 +21,12 @@
   let range = $state<[number, number]>([0, 0]);
   let list = $state<ReturnType<typeof VirtualList<Row>>>();
   let jump = $state(5000);
+
+  // Mount-time controlled selection: the list mounts with activeIndex
+  // already pointing far outside the first slice, exercising the
+  // deferred scroll (viewport isn't measured yet at mount).
+  let showInitial = $state(false);
+  let initialActive = $state(500);
 </script>
 
 <DemoSection
@@ -72,6 +78,46 @@
       {/snippet}
     </VirtualList>
   </div>
+</DemoSection>
+
+<DemoSection
+  title="Mount-time controlled selection"
+  description="A list can mount with activeIndex already set (restored selection). The scroll defers until the viewport is measured, then the active row is rendered, highlighted, and announced."
+  code={`let active = $state(500); // restored before mount
+
+<VirtualList {items} itemHeight={28} bind:activeIndex={active} ariaLabel="Restored selection">…</VirtualList>`}
+>
+  <div class="controls">
+    <button
+      class="jump-btn"
+      type="button"
+      onclick={() => {
+        initialActive = 500;
+        showInitial = !showInitial;
+      }}
+    >
+      {showInitial ? "Unmount" : "Mount with active row #500"}
+    </button>
+    {#if showInitial}
+      <span class="control-note">active: <code>{initialActive}</code></span>
+    {/if}
+  </div>
+  {#if showInitial}
+    <div class="host host--short">
+      <VirtualList
+        items={rows}
+        itemHeight={28}
+        bind:activeIndex={initialActive}
+        ariaLabel="Restored selection"
+      >
+        {#snippet row(item, _index, isActive)}
+          <div class="demo-row demo-row--flat" class:is-active={isActive}>
+            <span class="demo-row__title">{item.title}</span>
+          </div>
+        {/snippet}
+      </VirtualList>
+    </div>
+  {/if}
 </DemoSection>
 
 <style>
@@ -137,6 +183,21 @@
     border: 1px solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
+  }
+
+  .host--short {
+    height: 200px;
+  }
+
+  /* Fixed-height mode (itemHeight={28}): rows must actually BE 28px —
+   * the windowing math trusts the prop, so drifting content height would
+   * accumulate offset error over hundreds of rows. */
+  .demo-row--flat {
+    box-sizing: border-box;
+    height: 28px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 var(--space-5);
   }
 
   .demo-row {

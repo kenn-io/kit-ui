@@ -50,7 +50,8 @@ test("Escape clears the query first, then closes; page shortcuts are suspended w
   await page.keyboard.press("g");
   await expect(readout).toHaveText("1");
 
-  await page.keyboard.press("Meta+k"); // registered opener (mod+k)
+  // "mod+k" resolves to ⌘ on Mac and Ctrl elsewhere — mirror it.
+  await page.keyboard.press("ControlOrMeta+k");
   const palette = page.locator(".kit-command-palette");
   await expect(palette).toBeVisible();
 
@@ -81,4 +82,25 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
+});
+
+test("an all-disabled result set leaves Enter inert with no active descendant", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const input = page.locator(".kit-command-palette input");
+
+  // "archive" matches only the disabled "Archive session" command.
+  await input.fill("archive");
+  const options = page.locator(".kit-command-palette__option");
+  await expect(options).toHaveCount(1);
+  await expect(options.first()).toHaveAttribute("aria-disabled", "true");
+  await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
+
+  // Enter and arrows have no runnable target — the palette stays open
+  // and nothing runs.
+  await page.keyboard.press("ArrowDown");
+  await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-command-palette")).toBeVisible();
+  await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
 });

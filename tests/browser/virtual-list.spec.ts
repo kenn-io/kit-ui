@@ -43,6 +43,30 @@ test("scrollToIndex reaches deep rows with measured heights", async ({ page }) =
   await expect(page.locator(".kit-virtual-list")).toContainText("Session #5000");
 });
 
+test("mount-time initial activeIndex renders and announces after measurement", async ({ page }) => {
+  await gotoPage(page, "virtual-list");
+  // The list mounts with activeIndex=500, far outside the first slice —
+  // the scroll must defer until ResizeObserver measures the viewport,
+  // then leave the row rendered, selected, and announced.
+  await page.getByRole("button", { name: "Mount with active row #500" }).click();
+  const list = page.locator('.kit-virtual-list[aria-label="Restored selection"]');
+  await expect(list).toHaveAttribute("aria-activedescendant", /-row-500$/);
+  const activeRow = list.locator(".kit-virtual-list__row[aria-selected='true']");
+  await expect(activeRow).toContainText("Session #500");
+  // Scrolled within the list's own scroll container (the page viewport
+  // is irrelevant — the demo section may sit below the fold).
+  await expect
+    .poll(() =>
+      activeRow.evaluate((row) => {
+        const container = row.closest(".kit-virtual-list")!;
+        const rowBox = row.getBoundingClientRect();
+        const box = container.getBoundingClientRect();
+        return rowBox.bottom > box.top && rowBox.top < box.bottom;
+      }),
+    )
+    .toBe(true);
+});
+
 test("keys typed into nested demo controls are not stolen", async ({ page }) => {
   await gotoPage(page, "virtual-list");
   const jump = page.locator('input[type="number"]');

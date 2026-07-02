@@ -219,6 +219,18 @@ describe("createShortcutManager", () => {
       slash.register("/", () => {});
       slash.register("shift+/", () => {});
       expect(warnings.length).toBe(2);
+
+      // Shifted-output keys with an explicit shift overlap their plain
+      // form at runtime ("?" matches shifted events too) — must collide.
+      const explicit = createShortcutManager(true);
+      explicit.register("?", () => {});
+      explicit.register("shift+?", () => {});
+      expect(warnings.length).toBe(3);
+
+      const modPlus = createShortcutManager(true);
+      modPlus.register("mod+plus", () => {});
+      modPlus.register("mod+shift+plus", () => {});
+      expect(warnings.length).toBe(4);
     } finally {
       console.warn = origWarn;
     }

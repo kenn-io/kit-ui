@@ -27,61 +27,34 @@ function keyOf(className: string): string {
     .join(".");
 }
 
-const KNOWN_FAILURES: Record<string, string[]> = {
-  light: [
-    "kit-chip--tone-canceled",
-    "kit-chip--tone-danger",
-    "kit-chip--tone-info",
-    "kit-chip--tone-info.kit-chip--interactive",
-    "kit-chip--tone-muted",
-    "kit-chip--tone-muted.kit-chip--interactive",
-    "kit-chip--tone-success",
-    "kit-chip--tone-warning",
-    "kit-chip--tone-workspace",
-    "kit-button--info.kit-button--solid",
-    "kit-button--info.kit-button--soft",
-    "kit-button--success.kit-button--solid",
-    "kit-button--success.kit-button--soft",
-    "kit-button--success.kit-button--outline",
-    "kit-button--danger.kit-button--solid",
-    "kit-button--danger.kit-button--soft",
-    "kit-button--danger.kit-button--outline",
-    "kit-button--neutral.kit-button--outline",
-    "kit-button--workflow.kit-button--soft",
-  ],
-  dark: [
-    "kit-button--info.kit-button--solid",
-    "kit-button--success.kit-button--solid",
-    "kit-button--danger.kit-button--solid",
-    "kit-button--neutral.kit-button--outline",
-  ],
-  "light-hc": [
-    "kit-chip--tone-canceled",
-    "kit-chip--tone-danger",
-    "kit-chip--tone-info",
-    "kit-chip--tone-info.kit-chip--interactive",
-    "kit-chip--tone-muted",
-    "kit-chip--tone-muted.kit-chip--interactive",
-    "kit-chip--tone-success",
-    "kit-chip--tone-warning",
-    "kit-chip--tone-workspace",
-    "kit-button--info.kit-button--solid",
-    "kit-button--info.kit-button--soft",
-    "kit-button--success.kit-button--solid",
-    "kit-button--success.kit-button--soft",
-    "kit-button--success.kit-button--outline",
-    "kit-button--danger.kit-button--solid",
-    "kit-button--danger.kit-button--soft",
-    "kit-button--danger.kit-button--outline",
-    "kit-button--neutral.kit-button--outline",
-    "kit-button--workflow.kit-button--soft",
-  ],
-  "dark-hc": [
-    "kit-button--info.kit-button--solid",
-    "kit-button--success.kit-button--solid",
-    "kit-button--danger.kit-button--solid",
-    "kit-button--neutral.kit-button--outline",
-  ],
+// Worst measured ratio per failing tone combination per mode.
+// Regenerate with: CAPTURE_CONTRAST=1 bunx playwright test contrast
+const KNOWN_FAILURES: Record<string, Record<string, number>> = {
+  light: {
+    "kit-chip--tone-muted": 2.8,
+    "kit-chip--tone-success": 3.14,
+    "kit-chip--tone-warning": 2.71,
+    "kit-chip--tone-danger": 3.82,
+    "kit-chip--tone-info": 4.19,
+    "kit-chip--tone-canceled": 2.83,
+    "kit-chip--tone-workspace": 3.08,
+    "kit-chip--interactive.kit-chip--tone-info": 4.19,
+    "kit-button--soft.kit-button--success": 3.26,
+    "kit-button--outline.kit-button--success": 3.77,
+    "kit-button--info.kit-button--soft": 4.5,
+    "kit-button--danger.kit-button--soft": 4.14,
+  },
+  "light-hc": {
+    "kit-chip--tone-success": 3.14,
+    "kit-chip--tone-warning": 2.71,
+    "kit-chip--tone-danger": 3.82,
+    "kit-chip--tone-workspace": 3.08,
+    "kit-button--soft.kit-button--success": 3.26,
+    "kit-button--outline.kit-button--success": 3.77,
+    "kit-button--danger.kit-button--soft": 4.14,
+  },
+  dark: {},
+  "dark-hc": {},
 };
 
 async function collectFailures(
@@ -106,11 +79,13 @@ async function collectFailures(
   return failures;
 }
 
+// Ratios move slightly with rendering differences (font smoothing,
+// compositing rounding); a drop beyond this is a real regression.
+const DEGRADE_TOLERANCE = 0.15;
+
 for (const mode of MODES) {
-  test(`tone contrast in ${mode.name}: no new AA failures`, async ({ page }) => {
-    const known = new Set(
-      (KNOWN_FAILURES[mode.name] ?? []).map((k) => k.split(".").sort().join(".")),
-    );
+  test(`tone contrast in ${mode.name}: no new or degraded AA failures`, async ({ page }) => {
+    const baseline = KNOWN_FAILURES[mode.name] ?? {};
     const all = new Map<string, number>();
 
     await gotoPage(page, "chip");
@@ -121,17 +96,29 @@ for (const mode of MODES) {
     await setTheme(page, mode);
     for (const [k, v] of await collectFailures(page, ".kit-button")) all.set(k, v);
 
-    const fresh = [...all.entries()].filter(([key]) => !known.has(key));
+    if (process.env.CAPTURE_CONTRAST) {
+      // Baseline regeneration: CAPTURE_CONTRAST=1 bunx playwright test contrast
+      console.log(
+        `CONTRAST-BASELINE ${mode.name} ${JSON.stringify(
+          Object.fromEntries([...all.entries()].map(([k, r]) => [k, Number(r.toFixed(2))])),
+        )}`,
+      );
+      return;
+    }
+
+    const fresh = [...all.entries()].filter(([key]) => !(key in baseline));
     expect(
       fresh.map(([k, r]) => `${k}: ${r.toFixed(2)}`),
       "new AA contrast failures (not in the known baseline)",
     ).toEqual([]);
 
-    // Known failures must not degrade below the UI-component minimum.
-    const degraded = [...all.entries()].filter(([key, r]) => known.has(key) && r < 1.5);
+    // Known failures must not get worse than their measured baseline.
+    const degraded = [...all.entries()].filter(
+      ([key, r]) => key in baseline && r < baseline[key]! - DEGRADE_TOLERANCE,
+    );
     expect(
-      degraded.map(([k, r]) => `${k}: ${r.toFixed(2)}`),
-      "known failures degraded below 1.5:1",
+      degraded.map(([k, r]) => `${k}: ${r.toFixed(2)} (baseline ${baseline[k]})`),
+      "known failures degraded beyond tolerance",
     ).toEqual([]);
   });
 }
