@@ -30,6 +30,7 @@
     dataTestid?: string | undefined;
     onclick?: ((event: MouseEvent) => void) | undefined;
     children?: Snippet | undefined;
+    trailing?: Snippet | undefined;
   }
 
   let {
@@ -47,6 +48,7 @@
     dataTestid = undefined,
     onclick = undefined,
     children,
+    trailing,
   }: Props = $props();
 </script>
 
@@ -72,7 +74,7 @@
     {onclick}
     >{#if dot}<span class="kit-chip__dot" aria-hidden="true"></span>{/if}{#if children}<span
         class="kit-chip__label">{@render children()}</span
-      >{/if}</button
+      >{/if}{#if trailing}<span class="kit-chip__trailing">{@render trailing()}</span>{/if}</button
   >
 {:else}
   <span
@@ -91,7 +93,7 @@
     data-testid={dataTestid}
     >{#if dot}<span class="kit-chip__dot" aria-hidden="true"></span>{/if}{#if children}<span
         class="kit-chip__label">{@render children()}</span
-      >{/if}</span
+      >{/if}{#if trailing}<span class="kit-chip__trailing">{@render trailing()}</span>{/if}</span
   >
 {/if}
 
@@ -173,6 +175,25 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Icons composed into the label would otherwise sit on the text baseline
+   * and sag below uppercase labels. The label span must stay inline (flex
+   * would break the ellipsis above), so center via vertical-align; the
+   * negative block margin keeps an icon taller than the 1-unit line-height
+   * from growing the line box and thus the chip. */
+  .kit-chip__label :global(svg) {
+    vertical-align: middle;
+    margin-block: -0.2em;
+  }
+
+  /* Trailing indicator (e.g. a dropdown chevron) — a flex child outside the
+   * label span, so it centers exactly and stays visible when the label
+   * truncates. */
+  .kit-chip__trailing {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   .kit-chip--xs .kit-chip__dot {
