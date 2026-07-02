@@ -17,6 +17,7 @@
     todayStr,
     type CalendarNavLabels,
     type CalendarUnit,
+    type DateRange,
     type RangeMode,
     type RangePreset,
     type RangeSelection,
@@ -107,6 +108,10 @@
   let calMonth = $state<string>(todayStr());
   let customFrom = $state<string>("");
   let customTo = $state<string>("");
+  // Two-click range pick on the Custom tab: true after the first click,
+  // meaning the next pick completes the range.
+  let customPending = $state(false);
+  let customMonth = $state<string>(todayStr());
 
   const tabs = $derived<SegmentedControlOption[]>([
     { value: "relative", label: relativeTabLabel },
@@ -148,6 +153,11 @@
   // current anchor.
   const calSelected = $derived(periodBounds(calUnit, calAnchor));
 
+  // While an end pick is pending only the start day highlights.
+  const calCustomSelected = $derived<DateRange | null>(
+    customFrom ? { from: customFrom, to: customTo || customFrom } : null,
+  );
+
   function seed(): void {
     tab = selection.mode;
     if (selection.mode === "calendar") {
@@ -160,7 +170,9 @@
     const resolved = resolveRange(selection, earliestDate);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
+    customPending = false;
     calMonth = calAnchor;
+    customMonth = customTo || todayStr();
   }
 
   let panelEl = $state<HTMLDivElement>();
@@ -197,13 +209,15 @@
     return selection.mode === "relative" && selection.days === days;
   }
 
-  // Keep the Custom tab's inputs in step with the latest committed selection
+  // Keep the Custom tab's range in step with the latest committed selection
   // so switching tabs after picking a preset edits that range, not a stale
   // seed.
   function syncCustomFields(sel: RangeSelection): void {
     const resolved = resolveRange(sel, earliestDate);
     customFrom = resolved.from;
     customTo = resolved.to;
+    customPending = false;
+    customMonth = resolved.to;
   }
 
   function applyRelative(days: number): void {
@@ -222,12 +236,22 @@
     onSelect(sel);
   }
 
-  function commitCustom(): void {
-    if (!customFrom || !customTo) return;
-    // Normalize a reversed range so consumers always get ordered bounds;
-    // reflect it in the inputs.
-    if (customFrom > customTo) {
-      [customFrom, customTo] = [customTo, customFrom];
+  // The classic two-click range: the first pick starts a range, the second
+  // completes it (an earlier second click swaps the ends so consumers always
+  // get ordered bounds), and only a complete range commits.
+  function pickCustomDay(date: string): void {
+    if (!customPending) {
+      customFrom = date;
+      customTo = "";
+      customPending = true;
+      return;
+    }
+    customPending = false;
+    if (date < customFrom) {
+      customTo = customFrom;
+      customFrom = date;
+    } else {
+      customTo = date;
     }
     onSelect({ mode: "custom", from: customFrom, to: customTo });
   }
@@ -339,25 +363,32 @@
           />
         </div>
       {:else}
-        <div class="kit-date-range-picker__fields">
-          <label class="kit-date-range-picker__field">
-            <span>{fromLabel}</span>
-            <input
-              type="date"
-              class="kit-date-range-picker__date-input"
-              bind:value={customFrom}
-              onchange={commitCustom}
-            />
-          </label>
-          <label class="kit-date-range-picker__field">
-            <span>{toLabel}</span>
-            <input
-              type="date"
-              class="kit-date-range-picker__date-input"
-              bind:value={customTo}
-              onchange={commitCustom}
-            />
-          </label>
+        <!-- Readout, not inputs: the range is picked on the calendar below
+             (two clicks); the highlighted endpoint is the one the next
+             click sets. -->
+        <div class="kit-date-range-picker__endpoints" aria-live="polite">
+          <span class="kit-date-range-picker__endpoint" class:active={!customPending}>
+            <span class="kit-date-range-picker__endpoint-label">{fromLabel}</span>
+            <span class="kit-date-range-picker__endpoint-value">
+              {customFrom ? formatShortDate(customFrom, locale) : "…"}
+            </span>
+          </span>
+          <span class="kit-date-range-picker__endpoint" class:active={customPending}>
+            <span class="kit-date-range-picker__endpoint-label">{toLabel}</span>
+            <span class="kit-date-range-picker__endpoint-value">
+              {customTo ? formatShortDate(customTo, locale) : "…"}
+            </span>
+          </span>
+        </div>
+        <div class="kit-date-range-picker__calendar">
+          <Calendar
+            bind:month={customMonth}
+            selected={calCustomSelected}
+            {maxDate}
+            {...calendarLabels}
+            {locale}
+            onpick={pickCustomDay}
+          />
         </div>
       {/if}
     </div>
@@ -486,40 +517,42 @@
     margin-top: var(--space-4);
   }
 
-  .kit-date-range-picker__fields {
+  .kit-date-range-picker__endpoints {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
-  .kit-date-range-picker__field {
+  /* Sized like the pill rows above so the tabs read as one family; the
+   * accent border marks the endpoint the next calendar click sets. */
+  .kit-date-range-picker__endpoint {
+    flex: 1;
+    box-sizing: border-box;
+    height: 30px;
+    padding: 0 var(--space-3);
     display: flex;
     align-items: center;
-    gap: var(--space-4);
+    justify-content: space-between;
+    gap: var(--space-3);
+    background: var(--bg-inset);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast);
   }
 
-  .kit-date-range-picker__field > span {
-    width: 36px;
+  .kit-date-range-picker__endpoint.active {
+    border-color: var(--accent-blue);
+  }
+
+  .kit-date-range-picker__endpoint-label {
     font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--text-muted);
   }
 
-  .kit-date-range-picker__date-input {
-    flex: 1;
-    height: 30px;
-    padding: 0 var(--space-4);
-    background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
+  .kit-date-range-picker__endpoint-value {
     font-size: var(--font-size-sm);
-    transition: border-color var(--transition-fast);
-  }
-
-  .kit-date-range-picker__date-input:focus {
-    outline: none;
-    border-color: var(--accent-blue);
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 </style>

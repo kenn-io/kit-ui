@@ -24,7 +24,7 @@
 
 <DemoSection
   title="Relative / Calendar / Custom"
-  description="One trigger, three tabs: rolling presets, steppable day/week/month periods, and an explicit from/to span. The demo readout shows the selection object plus the concrete bounds resolveRange() derives from it."
+  description="One trigger, three tabs: rolling presets, steppable day/week/month periods, and a custom from/to span picked with two clicks on the embedded calendar. The demo readout shows the selection object plus the concrete bounds resolveRange() derives from it."
   code={`<DateRangePicker
   {selection}
   onSelect={(sel) => (selection = sel)}

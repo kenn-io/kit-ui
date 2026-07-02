@@ -3,9 +3,12 @@
 Date-range trigger + popover with three tabs: **Relative** (rolling "last N
 days" pills), **Calendar** (a day/week/month period picked on an embedded
 [Calendar](calendar.md) month grid — clicking a day selects the day/ISO
-week/month containing it), and **Custom** (explicit from/to date inputs).
-Ported from agentsview's shared `DateRangePicker`, decoupled from its stores and
-i18n.
+week/month containing it), and **Custom** (an explicit from/to span picked
+with two clicks on the same embedded calendar: the first click starts the
+range, the second completes it — an earlier second click swaps the ends — and
+a From/To readout shows which endpoint the next click sets; only a complete
+range commits). Ported from agentsview's shared `DateRangePicker`, decoupled
+from its stores and i18n.
 
 The component is controlled: you hold a `RangeSelection` and it calls
 `onSelect` with a new one on every edit. `resolveRange()` turns any selection
@@ -47,7 +50,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | `weekOfLabel`                                                                                                            | `string`                        | `"Week of"`                               | Week trigger label. A `"{date}"` placeholder is substituted with the week-start date (`"{date}所在周"`); without one the label is a prefix (`"Week of"` → "Week of Jun 29")                                                                                                  |
 | `lastDaysLabel`                                                                                                          | `string`                        | `"Last {days} days"`                      | Trigger label for non-preset relative windows                                                                                                                                                                                                                                |
 | `customRangeLabel`                                                                                                       | `string`                        | `"Custom range"`                          | Trigger label for an incomplete custom range                                                                                                                                                                                                                                 |
-| `fromLabel` / `toLabel`                                                                                                  | `string`                        | `"From"` / `"To"`                         | Custom tab field labels                                                                                                                                                                                                                                                      |
+| `fromLabel` / `toLabel`                                                                                                  | `string`                        | `"From"` / `"To"`                         | Custom tab endpoint-readout labels                                                                                                                                                                                                                                           |
 | `dialogLabel`                                                                                                            | `string`                        | `"Select date range"`                     | Popover `aria-label`                                                                                                                                                                                                                                                         |
 | `relativeGroupLabel` / `calendarGroupLabel`                                                                              | `string`                        | `"Relative window"` / `"Calendar period"` | Pill group `aria-label`s                                                                                                                                                                                                                                                     |
 | `previousMonthLabel` / `nextMonthLabel`                                                                                  | `string`                        | `"Previous month"` / `"Next month"`       | Calendar month-arrow `aria-label`s.                                                                                                                                                                                                                                          |
