@@ -86,7 +86,7 @@
 </script>
 
 <div
-  class="kit-find-bar kit-find-bar--{variant}"
+  class={["kit-find-bar", `kit-find-bar--${variant}`, variant === "floating" && "kit-popover-card"]}
   class:kit-find-bar--no-results={noResults}
   role="search"
   aria-label={ariaLabel}
@@ -202,9 +202,6 @@
       100% - var(--kit-find-bar-inset-right, var(--space-4)) -
         var(--kit-find-bar-inset-right, var(--space-4))
     );
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
   }
 
   .kit-find-bar--floating:focus-within {
@@ -303,12 +300,14 @@
     cursor: default;
   }
 
-  .kit-find-bar__nav-btn:not(:disabled):hover {
+  .kit-find-bar__nav-btn:not(:disabled):hover,
+  .kit-find-bar__close:hover {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }
 
-  .kit-find-bar__nav-btn:not(:disabled):active {
+  .kit-find-bar__nav-btn:not(:disabled):active,
+  .kit-find-bar__close:active {
     transform: scale(0.9);
   }
 
@@ -322,14 +321,5 @@
 
   .kit-find-bar__close {
     color: var(--text-muted);
-  }
-
-  .kit-find-bar__close:hover {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-  }
-
-  .kit-find-bar__close:active {
-    transform: scale(0.9);
   }
 </style>

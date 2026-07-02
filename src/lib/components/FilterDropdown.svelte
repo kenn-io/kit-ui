@@ -19,6 +19,7 @@
 
 <script lang="ts">
   import ArrowUpDownIcon from "@lucide/svelte/icons/arrow-up-down";
+  import CheckIcon from "@lucide/svelte/icons/check";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
   import { tick } from "svelte";
@@ -198,7 +199,7 @@
 
   {#if isOpen}
     <div
-      class="kit-filter-dropdown__panel"
+      class="kit-filter-dropdown__panel kit-popover-card"
       bind:this={dropdownRef}
       style={dropdownStyle}
       style:min-width={minWidth}
@@ -255,17 +256,7 @@
             {/if}
             <span class="kit-filter-dropdown__check" class:on={item.active}>
               {#if item.active}
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                  />
-                </svg>
+                <CheckIcon size="10" strokeWidth="2.2" aria-hidden="true" />
               {/if}
             </span>
           </button>
@@ -345,11 +336,7 @@
 
   .kit-filter-dropdown__panel {
     position: fixed;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 1000;
+    z-index: var(--z-popover);
     padding: 4px 0;
   }
 

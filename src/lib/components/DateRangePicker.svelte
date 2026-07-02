@@ -281,7 +281,7 @@
 
   {#if open}
     <div
-      class="kit-date-range-picker__panel"
+      class="kit-date-range-picker__panel kit-popover-card"
       style={panelStyle}
       bind:this={panelEl}
       role="dialog"
@@ -427,11 +427,7 @@
   .kit-date-range-picker__panel {
     position: fixed;
     box-sizing: border-box;
-    z-index: 100;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
+    z-index: var(--z-popover);
     padding: var(--space-4);
   }
 

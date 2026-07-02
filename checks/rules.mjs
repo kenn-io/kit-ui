@@ -149,6 +149,35 @@ export function checkHandRolledSpinner(source, filename) {
   return findings;
 }
 
+/** The popover card chrome (border-default + radius-md + shadow-lg on one
+ * rule) is the library's floating-surface identity — theme.css ships it as
+ * .kit-popover-card, so a hand-written copy should use the class instead.
+ * Matching needs all three in one rule block: shadow-lg alone is also the
+ * drawer/flash chrome, and border+radius alone is any card. */
+export function checkHandRolledPopoverCard(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const ruleRe = /\{[^{}]*\}/g;
+    let match;
+    while ((match = ruleRe.exec(css)) !== null) {
+      const body = match[0];
+      if (
+        /border:[^;]*var\(--border-default\)/.test(body) &&
+        /border-radius:\s*var\(--radius-md\)/.test(body) &&
+        /box-shadow:\s*var\(--shadow-lg\)/.test(body)
+      ) {
+        findings.push({
+          rule: "hand-rolled-popover-card",
+          line: lineOfIndex(source, offset + match.index),
+          message:
+            "popover card chrome (border-default + radius-md + shadow-lg) — use the kit-popover-card class from @kenn-io/kit-ui/theme.css",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
 /** Direct clipboard writes should go through copyToClipboard / CopyButton
  * (they handle the non-secure-context fallback). */
 export function checkClipboard(source) {
@@ -439,6 +468,7 @@ export const ALL_RULES = {
   "hand-rolled-segmented": checkHandRolledSegmented,
   "hand-rolled-table-sort": checkHandRolledTableSort,
   "hand-rolled-tooltip": checkHandRolledTooltip,
+  "hand-rolled-popover-card": checkHandRolledPopoverCard,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
   "hand-rolled-code-block": checkHandRolledCodeBlock,
   "hand-rolled-empty-state": checkHandRolledEmptyState,

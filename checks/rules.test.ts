@@ -188,6 +188,36 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("Tooltip");
   });
 
+  test("popover card: all three chrome declarations in one rule", () => {
+    const src = svelte(
+      `.menu {
+        position: fixed;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+      }`,
+      `<div class="menu"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-popover-card"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("kit-popover-card");
+  });
+
+  test("popover card: partial chrome (no shadow) does not match", () => {
+    const src = svelte(
+      `.card {
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+      }
+      .drawer {
+        box-shadow: var(--shadow-lg);
+      }`,
+      `<div class="card"></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-popover-card"])).toHaveLength(0);
+  });
+
   test("status bar: class and CSS selector", () => {
     const src = svelte(
       `.status-bar { height: var(--status-bar-height); }`,

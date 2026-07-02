@@ -138,9 +138,25 @@ input reads as double chrome.
 
 **Popover chrome**: every transient floating surface (dropdown menus,
 typeahead lists, filter panels, the range-picker panel, tooltips, toasts,
-FindBar) uses the same card: `border: 1px solid var(--border-default);
-border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
-background: var(--bg-surface)`.
+FindBar) uses the same card, shipped as the **`.kit-popover-card`** class
+in theme.css: `border: 1px solid var(--border-default); border-radius:
+var(--radius-md); box-shadow: var(--shadow-lg); background:
+var(--bg-surface)`. Reuse the class for custom popovers — `kit-ui-check`
+flags a hand-written copy of the recipe (`hand-rolled-popover-card`).
+
+**Stacking**: three z tokens in theme.css order the layers —
+`--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`
+(1000, full-screen overlays and the flash stack; popovers opened from
+inside an overlay are later siblings in its stacking context, so equal z
+suffices), `--z-tooltip` (1100, above everything). Use the tokens rather
+than raw numbers so an app that must slot its own chrome between layers
+can retune them in one place.
+
+**Escape layering**: Escape closes one layer per press. Popover dismissal
+(`dismissable`) and search-field clearing claim the key with
+`preventDefault`; overlay Escape handlers (`escapeCloses`) respect
+`defaultPrevented` — so Escape in an open dropdown inside a modal closes
+the dropdown first and the modal on the next press.
 
 Chrome and positioning are separate contracts. _Trigger-anchored_ popovers
 (SelectDropdown, Typeahead, FilterDropdown, DateRangePicker, Tooltip)
