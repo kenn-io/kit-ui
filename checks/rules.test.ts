@@ -290,6 +290,150 @@ describe("hand-rolled components", () => {
     const src = `<script>// the app-header pattern</script>\n<div class="kit-top-bar"></div>`;
     expect(checkSource(src, "A.svelte", ["hand-rolled-top-bar"])).toHaveLength(0);
   });
+
+  test("search input: type=search and class names", () => {
+    const src = svelte(
+      `.search-input { flex: 1; }`,
+      `<input type="search" class="search-input" placeholder="Filter" />`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-search-input"]);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]!.message).toContain("SearchInput");
+  });
+
+  test("search input: does not match kit-search-input", () => {
+    const src = svelte(
+      `:global(.kit-search-input) { max-width: 320px; }`,
+      `<div class="kit-search-input"></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-search-input"])).toHaveLength(0);
+  });
+
+  test("date input: native type=date and datetime-local", () => {
+    const src = svelte(``, `<input type="date" /><input type="datetime-local" />`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-date-input"]);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("DateRangePicker");
+  });
+
+  test("toast: classes including compounds like undo-toast", () => {
+    const src = svelte(
+      `.undo-toast { position: fixed; }`,
+      `<div class="undo-toast">Deleted</div><div class="snackbar"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-toast"]);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]!.message).toContain("FlashBanner");
+  });
+
+  test("toast: does not match prose or toaster", () => {
+    const src = `<p>a toast to snackbars</p>\n<div class="toaster"></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-toast"])).toHaveLength(0);
+  });
+
+  test("drawer: bare class and compounds", () => {
+    const src = svelte(
+      `.drawer-panel { width: 320px; }`,
+      `<div class="drawer"><div class="drawer-panel"></div></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]!.message).toContain("DetailDrawer");
+  });
+
+  test("drawer: does not match kit-detail-drawer", () => {
+    const src = svelte(
+      `:global(.kit-detail-drawer) { width: 400px; }`,
+      `<div class="kit-detail-drawer"></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
+  });
+
+  test("drawer: leaves other drawer-* compounds alone", () => {
+    const src = svelte(
+      `.drawer-demo-body { padding: 8px; }`,
+      `<div class="drawer-demo-body"></div><ul class="drawer-list"></ul>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
+  });
+
+  test("find bar: class match, kit-find-bar exempt", () => {
+    const bad = svelte(`.find-bar { display: flex; }`, `<div class="find-bar"></div>`);
+    expect(checkSource(bad, "A.svelte", ["hand-rolled-find-bar"])).toHaveLength(2);
+    const ok = svelte(``, `<div class="kit-find-bar"></div>`);
+    expect(checkSource(ok, "A.svelte", ["hand-rolled-find-bar"])).toHaveLength(0);
+  });
+
+  test("status dot: class match, kit-status-dot exempt", () => {
+    const bad = svelte(`.status-dot { width: 8px; }`, `<span class="status-dot"></span>`);
+    expect(checkSource(bad, "A.svelte", ["hand-rolled-status-dot"])).toHaveLength(2);
+    const ok = svelte(``, `<span class="kit-status-dot kit-status-dot--idle"></span>`);
+    expect(checkSource(ok, "A.svelte", ["hand-rolled-status-dot"])).toHaveLength(0);
+  });
+
+  test("sidebar toggle: class match, kit-sidebar-toggle exempt", () => {
+    const bad = svelte(``, `<button class="sidebar-toggle"></button>`);
+    expect(checkSource(bad, "A.svelte", ["hand-rolled-sidebar-toggle"])).toHaveLength(1);
+    const ok = svelte(``, `<div class="kit-sidebar-toggle--push"></div>`);
+    expect(checkSource(ok, "A.svelte", ["hand-rolled-sidebar-toggle"])).toHaveLength(0);
+  });
+
+  test("sr-only: clip recipes in styles", () => {
+    const src = svelte(
+      `.visually-hidden { position: absolute; width: 1px; height: 1px; clip: rect(0 0 0 0); }
+      .sr { clip-path: inset(50%); }`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-sr-only"]);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("kit-sr-only");
+  });
+
+  test("virtualization: library imports", () => {
+    const src = svelte(``, ``, `import { createVirtualizer } from "@tanstack/virtual-core";`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-virtualization"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("VirtualList");
+  });
+
+  test("virtualization: scans .ts sources too", () => {
+    const src = `import VirtualList from "svelte-tiny-virtual-list";`;
+    expect(checkSource(src, "list.ts", ["hand-rolled-virtualization"])).toHaveLength(1);
+  });
+
+  test("markdown: direct marked/dompurify imports", () => {
+    const src = `import { marked } from "marked";\nimport DOMPurify from "dompurify";`;
+    const findings = checkSource(src, "markdown.ts", ["hand-rolled-markdown"]);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("renderMarkdown");
+  });
+
+  test("markdown: does not match kit-ui's own exports", () => {
+    const src = `import { renderMarkdown } from "@kenn-io/kit-ui";`;
+    expect(checkSource(src, "a.ts", ["hand-rolled-markdown"])).toHaveLength(0);
+  });
+
+  test("focus trap: tabbable-selector string", () => {
+    const src = svelte(
+      ``,
+      ``,
+      `const TABBABLE = 'button, [href], [tabindex]:not([tabindex="-1"])';`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-focus-trap"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("trapFocus");
+  });
+
+  test("debounce: relative import and inline function", () => {
+    const src = `import { debounce } from "../utils/debounce.js";\nfunction debounce(fn, ms) {}`;
+    const findings = checkSource(src, "a.ts", ["local-debounce"]);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("@kenn-io/kit-ui");
+  });
+
+  test("debounce: does not match the kit-ui import", () => {
+    const src = `import { debounce } from "@kenn-io/kit-ui";\nconst run = debounce(load, 150);`;
+    expect(checkSource(src, "a.ts", ["local-debounce"])).toHaveLength(0);
+  });
 });
 
 describe("typography rules", () => {
@@ -331,6 +475,49 @@ describe("typography rules", () => {
     const findings = checkSource(src, "A.svelte", ["legacy-mobile-type"]);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("--font-size-mobile-title");
+  });
+});
+
+describe("theme wiring", () => {
+  test("manual color scheme: prefers-color-scheme media query", () => {
+    const findings = checkSource(
+      `@media (prefers-color-scheme: dark) { :root { --bg: #000; } }`,
+      "app.css",
+      ["manual-color-scheme"],
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("initTheme");
+  });
+
+  test("manual color scheme: matchMedia and classList toggling", () => {
+    const src = svelte(
+      ``,
+      ``,
+      `const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.classList.toggle("dark", dark);`,
+    );
+    expect(checkSource(src, "A.svelte", ["manual-color-scheme"])).toHaveLength(2);
+  });
+
+  test("manual color scheme: unrelated classList calls pass", () => {
+    const src = svelte(``, ``, `document.body.classList.add("kit-type-touch");`);
+    expect(checkSource(src, "A.svelte", ["manual-color-scheme"])).toHaveLength(0);
+  });
+});
+
+describe("raw-z-index", () => {
+  test("flags overlay-scale literals", () => {
+    const src = svelte(`.overlay { z-index: 1000; }\n.toast-layer { z-index: 9999; }`);
+    const findings = checkSource(src, "A.svelte", ["raw-z-index"]);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("--z-popover");
+  });
+
+  test("allows small local stacking and z tokens", () => {
+    const src = svelte(
+      `.a { z-index: 2; }\n.b { z-index: 99; }\n.c { z-index: var(--z-popover); }`,
+    );
+    expect(checkSource(src, "A.svelte", ["raw-z-index"])).toHaveLength(0);
   });
 });
 

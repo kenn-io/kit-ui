@@ -376,6 +376,245 @@ export function checkHandRolledTableSort(source) {
   return findings;
 }
 
+/** Hand-rolled search inputs duplicate SearchInput. type="search" is the
+ * reliable marker; the class names are the ones middleman converged on.
+ * kit-search-input (the library's own class) is exempt. */
+export function checkHandRolledSearchInput(source) {
+  const findings = [];
+  const re =
+    /type="search"|class=["'][^"']*(?<!kit-)\bsearch-(?:input|box|field)\b|\.(?<!kit-)search-(?:input|box|field)\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-search-input",
+      line: lineOfIndex(source, match.index),
+      message: "search input markup — use SearchInput from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Native date inputs duplicate the calendar components (and render
+ * platform chrome that ignores the theme). */
+export function checkHandRolledDateInput(source) {
+  const findings = [];
+  const re = /type="(date|datetime-local)"/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-date-input",
+      line: lineOfIndex(source, match.index),
+      message: `type="${match[1]}" input — use DateRangePicker or Calendar from @kenn-io/kit-ui`,
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled toasts/snackbars duplicate FlashBanner + the flash store.
+ * \b also matches inside compounds like undo-toast. */
+export function checkHandRolledToast(source) {
+  const findings = [];
+  const re = /class=["'][^"']*\b(?:toast|snackbar)\b|\.(?:[a-z-]+-)?(?:toast|snackbar)\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-toast",
+      line: lineOfIndex(source, match.index),
+      message: "toast/snackbar markup — use FlashBanner and the flash store from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled slide-in drawers duplicate DetailDrawer. Matches the bare
+ * drawer class and the structural compounds agentsview converged on —
+ * other drawer-* names (e.g. content classes on a composed DetailDrawer)
+ * are left alone, and kit-detail-drawer* is exempt. */
+export function checkHandRolledDrawer(source) {
+  const findings = [];
+  const part = "drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))";
+  const re = new RegExp(
+    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${part}|\\.(?<!kit-detail-)${part}`,
+    "g",
+  );
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-drawer",
+      line: lineOfIndex(source, match.index),
+      message: "drawer markup — use DetailDrawer from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled find bars duplicate FindBar; kit-find-bar is exempt. */
+export function checkHandRolledFindBar(source) {
+  const findings = [];
+  const re = /class=["'][^"']*(?<!kit-)\bfind-bar\b|\.(?<!kit-)find-bar\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-find-bar",
+      line: lineOfIndex(source, match.index),
+      message: "find-bar markup — use FindBar from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled status dots duplicate StatusDot; kit-status-dot is exempt. */
+export function checkHandRolledStatusDot(source) {
+  const findings = [];
+  const re = /class=["'][^"']*(?<!kit-)\bstatus-dot\b|\.(?<!kit-)status-dot\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-status-dot",
+      line: lineOfIndex(source, match.index),
+      message: "status-dot markup — use StatusDot from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Hand-rolled sidebar toggles duplicate SidebarToggle; kit-sidebar-toggle
+ * is exempt. */
+export function checkHandRolledSidebarToggle(source) {
+  const findings = [];
+  const re = /class=["'][^"']*(?<!kit-)\bsidebar-toggle\b|\.(?<!kit-)sidebar-toggle\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-sidebar-toggle",
+      line: lineOfIndex(source, match.index),
+      message: "sidebar-toggle markup — use SidebarToggle from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** The visually-hidden clip recipe is shipped as .kit-sr-only in theme.css. */
+export function checkHandRolledSrOnly(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const re = /clip:\s*rect\(0|clip-path:\s*inset\(50%\)/g;
+    let match;
+    while ((match = re.exec(css)) !== null) {
+      findings.push({
+        rule: "hand-rolled-sr-only",
+        line: lineOfIndex(source, offset + match.index),
+        message:
+          "visually-hidden clip recipe — use the kit-sr-only class from @kenn-io/kit-ui/theme.css",
+      });
+    }
+  }
+  return findings;
+}
+
+/** Overlay-scale z-index literals should come from the z token ladder so
+ * app overlays stack predictably against library popovers/tooltips. Small
+ * literals (<100) are legitimate local stacking. */
+export function checkRawZIndex(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const re = /z-index:\s*(\d+)/g;
+    let match;
+    while ((match = re.exec(css)) !== null) {
+      if (Number(match[1]) < 100) continue;
+      findings.push({
+        rule: "raw-z-index",
+        line: lineOfIndex(source, offset + match.index),
+        message: `z-index ${match[1]} — use the z tokens from kit-ui theme.css (var(--z-popover)/var(--z-overlay): 1000, var(--z-tooltip): 1100)`,
+      });
+    }
+  }
+  return findings;
+}
+
+/** Manual dark-mode wiring (prefers-color-scheme media queries, toggling a
+ * dark class by hand) bypasses the theme store — tokens already resolve per
+ * theme, and initTheme owns the system-preference subscription. */
+export function checkManualColorScheme(source) {
+  const findings = [];
+  const re = /prefers-color-scheme|classList\.(?:toggle|add|remove)\(\s*["']dark["']/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "manual-color-scheme",
+      line: lineOfIndex(source, match.index),
+      message:
+        "manual dark-mode wiring — use the kit-ui theme store (initTheme/setThemeMode) and ThemeToggle; theme tokens already resolve per theme",
+    });
+  }
+  return findings;
+}
+
+/** Virtualization library imports duplicate VirtualList. */
+export function checkHandRolledVirtualization(source) {
+  const findings = [];
+  const re =
+    /from\s+["'](@tanstack\/virtual-core|@tanstack\/svelte-virtual|svelte-virtual-list|svelte-tiny-virtual-list|svelte-window|virtua(?:\/[a-z]+)?)["']/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-virtualization",
+      line: lineOfIndex(source, match.index),
+      message: `${match[1]} import — use VirtualList from @kenn-io/kit-ui`,
+    });
+  }
+  return findings;
+}
+
+/** Direct markdown/sanitizer imports duplicate the markdown pipeline,
+ * which bundles sanitization and code highlighting. */
+export function checkHandRolledMarkdown(source) {
+  const findings = [];
+  const re = /from\s+["'](marked|dompurify|isomorphic-dompurify)["']/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-markdown",
+      line: lineOfIndex(source, match.index),
+      message: `direct ${match[1]} import — use Markdown or renderMarkdown from @kenn-io/kit-ui (they bundle sanitization)`,
+    });
+  }
+  return findings;
+}
+
+/** The tabbable-elements selector is the signature of a hand-rolled focus
+ * trap (Tab cycling, initial focus, roving menus). trapFocus also locks
+ * body scroll re-entrantly and restores focus on teardown. */
+export function checkHandRolledFocusTrap(source) {
+  const findings = [];
+  const re = /\[tabindex\]:not\(/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-focus-trap",
+      line: lineOfIndex(source, match.index),
+      message: "tabbable-selector focus wiring — use trapFocus from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
+/** Local debounce implementations (a relative debounce module or an inline
+ * function) duplicate the library util, which also ships .cancel(). */
+export function checkLocalDebounce(source) {
+  const findings = [];
+  const re = /from\s+["']\.[^"']*debounce[^"']*["']|\bfunction debounce\s*\(/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "local-debounce",
+      line: lineOfIndex(source, match.index),
+      message: "local debounce implementation — import debounce from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Any font-size on html/:root (other than 100%/1rem/initial) breaks the rem
  * type scale: px pins it (defeating the browser font-size preference), and
  * rem/var values make every token compound against the shrunken root. */
@@ -474,6 +713,20 @@ export const ALL_RULES = {
   "hand-rolled-empty-state": checkHandRolledEmptyState,
   "hand-rolled-icon-button": checkHandRolledIconButton,
   "hand-rolled-top-bar": checkHandRolledTopBar,
+  "hand-rolled-search-input": checkHandRolledSearchInput,
+  "hand-rolled-date-input": checkHandRolledDateInput,
+  "hand-rolled-toast": checkHandRolledToast,
+  "hand-rolled-drawer": checkHandRolledDrawer,
+  "hand-rolled-find-bar": checkHandRolledFindBar,
+  "hand-rolled-status-dot": checkHandRolledStatusDot,
+  "hand-rolled-sidebar-toggle": checkHandRolledSidebarToggle,
+  "hand-rolled-sr-only": checkHandRolledSrOnly,
+  "hand-rolled-virtualization": checkHandRolledVirtualization,
+  "hand-rolled-markdown": checkHandRolledMarkdown,
+  "hand-rolled-focus-trap": checkHandRolledFocusTrap,
+  "local-debounce": checkLocalDebounce,
+  "manual-color-scheme": checkManualColorScheme,
+  "raw-z-index": checkRawZIndex,
   "pinned-root-font-size": checkPinnedRootFontSize,
   "legacy-mobile-type": checkLegacyMobileType,
   "nonstandard-spacing": checkNonstandardSpacing,

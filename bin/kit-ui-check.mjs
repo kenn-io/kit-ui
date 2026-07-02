@@ -68,7 +68,10 @@ function* walk(path) {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
       yield* walk(join(path, entry.name));
-    } else if (/\.(svelte|css)$/.test(entry.name)) {
+    } else if (/\.(svelte|css|ts|js|mjs)$/.test(entry.name)) {
+      // Declarations and tests aren't app code; scanning them only produces
+      // noise (test fixtures legitimately contain the flagged patterns).
+      if (/\.(d\.ts|test\.[tj]s|spec\.[tj]s)$/.test(entry.name)) continue;
       yield join(path, entry.name);
     }
   }

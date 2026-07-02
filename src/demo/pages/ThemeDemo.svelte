@@ -40,11 +40,12 @@
 
 <DemoSection
   title="Design tokens"
-  description="Every component reads only these CSS variables (plus radii, shadows, and font sizes). Import theme.css once, toggle dark mode by adding the dark class to <html>, and retheme by overriding any variable."
+  description="Every component reads only these CSS variables (plus radii, shadows, and font sizes). Import theme.css once, let the theme store manage the dark class on <html>, and retheme by overriding any variable."
   code={`import "@kenn-io/kit-ui/theme.css";
+import { initTheme, setThemeMode } from "@kenn-io/kit-ui";
 
-// dark mode
-document.documentElement.classList.toggle("dark");`}
+initTheme(); // restores the saved mode, follows the system preference
+setThemeMode("dark"); // or wire up <ThemeToggle />`}
 >
   <div class="swatches">
     {#each colorTokens as token (token)}
