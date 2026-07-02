@@ -186,7 +186,7 @@
   {#if open}
     <div
       id={listboxID}
-      class="kit-select-dropdown__list"
+      class="kit-select-dropdown__list kit-popover-card"
       role="listbox"
       style={listStyle}
       bind:this={listEl}
@@ -274,16 +274,12 @@
 
   .kit-select-dropdown__list {
     position: fixed;
-    z-index: 1000;
+    z-index: var(--z-popover);
     width: max-content;
     max-width: min(280px, calc(100vw - 16px));
     max-height: min(320px, calc(100vh - 16px));
     overflow-y: auto;
     padding: 2px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
-    box-shadow: var(--shadow-lg);
   }
 
   .kit-select-dropdown__option {
@@ -293,7 +289,7 @@
     width: 100%;
     padding: 5px 8px;
     border: 0;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--text-secondary);
     cursor: pointer;

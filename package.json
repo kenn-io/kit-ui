@@ -36,6 +36,9 @@
     "./utils/markdown": {
       "default": "./src/lib/utils/markdown.ts"
     },
+    "./utils/overlay": {
+      "default": "./src/lib/utils/overlay.ts"
+    },
     "./utils/popover": {
       "default": "./src/lib/utils/popover.ts"
     },

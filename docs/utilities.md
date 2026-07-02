@@ -90,6 +90,27 @@ on window resize, any ancestor scroll (capture phase), and panel size
 changes (ResizeObserver), coalesced to one call per animation frame. Both
 return their cleanup function.
 
+## Overlay wiring
+
+```svelte
+<script lang="ts">
+  import { backdropCloses, escapeCloses } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
+</script>
+
+<svelte:window onkeydown={escapeCloses(close)} />
+<div class="my-overlay" role="presentation" onpointerdown={backdropCloses(close)}>
+```
+
+The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
+`backdropCloses` closes when the press starts on the backdrop itself
+(press semantics — a drag ending on the backdrop doesn't dismiss).
+`escapeCloses` closes one layer at a time: inner surfaces that already
+handled Escape (a popover's `dismissable`, a clearing search field) call
+`preventDefault`, and it respects that. Pair with `trapFocus` below for a
+complete custom overlay.
+
+## Focus trap
+
 ```svelte
 <script lang="ts">
   import { trapFocus } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/focus-trap"

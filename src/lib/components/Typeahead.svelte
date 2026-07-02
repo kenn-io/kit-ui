@@ -156,7 +156,7 @@
       autocomplete="off"
     />
     <ul
-      class="kit-typeahead__list"
+      class="kit-typeahead__list kit-popover-card"
       style={listStyle}
       bind:this={listEl}
       role="listbox"
@@ -275,11 +275,7 @@
     box-sizing: border-box;
     max-height: 50vh;
     overflow-y: auto;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
+    z-index: var(--z-popover);
     list-style: none;
     padding: 2px;
     margin-block-end: 0;
@@ -290,7 +286,7 @@
     font-size: var(--font-size-xs);
     color: var(--text-secondary);
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

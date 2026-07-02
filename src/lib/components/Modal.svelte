@@ -6,6 +6,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
+  import { backdropCloses, escapeCloses } from "../utils/overlay.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -40,24 +41,16 @@
     footer,
   }: Props = $props();
 
-  function handleOverlayMousedown(event: MouseEvent): void {
-    if (!closeOnOverlayClick) return;
-    if (event.target === event.currentTarget) {
-      onclose?.();
-    }
-  }
-
-  function handleWindowKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onclose?.();
-    }
-  }
+  const close = () => onclose?.();
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
+<svelte:window onkeydown={escapeCloses(close)} />
 
-<div class="kit-modal-overlay" role="presentation" onmousedown={handleOverlayMousedown}>
+<div
+  class="kit-modal-overlay"
+  role="presentation"
+  onpointerdown={closeOnOverlayClick ? backdropCloses(close) : undefined}
+>
   <div
     class="kit-modal-panel"
     role="dialog"
@@ -108,7 +101,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-overlay);
   }
 
   .kit-modal-panel {

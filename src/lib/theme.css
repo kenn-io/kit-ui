@@ -201,6 +201,30 @@
   outline-offset: 1px;
 }
 
+/* Stacking ladder. Trigger-anchored popovers and full-screen overlays
+ * share one plane — a popover opened from inside an overlay is a later
+ * sibling in its stacking context, so equal z suffices — and tooltips sit
+ * above everything (they follow the pointer, never block it). Values were
+ * previously hard-coded per component and had drifted (100 vs 1000). */
+:root {
+  --z-popover: 1000;
+  --z-overlay: 1000;
+  --z-tooltip: 1100;
+}
+
+/* The popover card: the one chrome for transient floating surfaces
+ * (dropdown menus, typeahead lists, filter panels, the date-range panel,
+ * tooltips, the command palette, floating FindBar). Chrome only —
+ * positioning is a separate contract (floatingPopoverStyle) and stacking
+ * comes from the --z-* tokens above. Consumers building a custom popover
+ * should reuse this class so the surface reads as one family. */
+.kit-popover-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
 /* One spin animation for every rotating indicator (Spinner, the
  * RefreshControl busy icon); scoped styles reference the name directly. */
 @keyframes kit-spin {

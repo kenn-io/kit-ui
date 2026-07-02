@@ -135,7 +135,7 @@
 {#if open}
   <div
     id={tooltipID}
-    class={["kit-tooltip", className]}
+    class={["kit-tooltip", "kit-popover-card", className]}
     role="tooltip"
     data-side={side}
     data-align={align}
@@ -167,17 +167,13 @@
 
   .kit-tooltip {
     position: fixed;
-    z-index: 1100;
+    z-index: var(--z-tooltip);
     width: max-content;
     max-width: min(280px, calc(100vw - 32px));
     padding: var(--space-4) var(--space-5);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
     color: var(--text-primary);
     font-size: var(--font-size-sm);
     line-height: 1.45;
-    box-shadow: var(--shadow-lg);
   }
 
   /* Arrow — mirrors the DiffSummaryChip precedent; flips with data-side. */

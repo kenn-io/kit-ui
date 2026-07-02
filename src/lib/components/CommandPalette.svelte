@@ -14,6 +14,7 @@
 
 <script lang="ts">
   import { trapFocus } from "../utils/focus-trap.js";
+  import { backdropCloses } from "../utils/overlay.js";
   import { appShortcuts } from "../utils/shortcuts.js";
   import { formatShortcutKeys } from "../utils/shortcuts.js";
   import KbdBadge from "./KbdBadge.svelte";
@@ -172,12 +173,10 @@
   <div
     class="kit-command-palette-overlay"
     role="presentation"
-    onpointerdown={(event) => {
-      if (event.target === event.currentTarget) close();
-    }}
+    onpointerdown={backdropCloses(close)}
   >
     <div
-      class={["kit-command-palette", className]}
+      class={["kit-command-palette", "kit-popover-card", className]}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
@@ -252,7 +251,7 @@
   .kit-command-palette-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--z-overlay);
     background: var(--overlay-bg);
     display: flex;
     justify-content: center;
@@ -265,10 +264,6 @@
     flex-direction: column;
     width: min(560px, calc(100vw - 32px));
     max-height: min(420px, 70vh);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
     overflow: hidden;
   }
 

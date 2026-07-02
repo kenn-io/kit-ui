@@ -78,7 +78,7 @@
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 1000;
+    z-index: var(--z-overlay);
     display: flex;
     flex-direction: column;
     align-items: stretch;

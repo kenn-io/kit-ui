@@ -30,7 +30,10 @@ export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key !== "Escape") return;
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    // Claim the key so enclosing layers (an overlay's escapeCloses) leave
+    // their surface open — Escape peels one layer per press.
+    event.preventDefault();
     dismiss();
     escapeFocus?.()?.focus();
   }

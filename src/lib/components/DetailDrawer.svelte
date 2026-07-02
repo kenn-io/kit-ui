@@ -2,6 +2,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
+  import { backdropCloses, escapeCloses } from "../utils/overlay.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -45,24 +46,16 @@
   const uid = $props.id();
   const headerId = `kit-detail-drawer-header-${uid}`;
 
-  function handleOverlayMousedown(event: MouseEvent): void {
-    if (!closeOnOverlayClick) return;
-    if (event.target === event.currentTarget) {
-      onclose?.();
-    }
-  }
-
-  function handleWindowKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape" && !event.defaultPrevented) {
-      event.preventDefault();
-      onclose?.();
-    }
-  }
+  const close = () => onclose?.();
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
+<svelte:window onkeydown={escapeCloses(close)} />
 
-<div class="kit-detail-drawer-overlay" role="presentation" onmousedown={handleOverlayMousedown}>
+<div
+  class="kit-detail-drawer-overlay"
+  role="presentation"
+  onpointerdown={closeOnOverlayClick ? backdropCloses(close) : undefined}
+>
   <div
     class="kit-detail-drawer"
     role="dialog"
@@ -113,7 +106,7 @@
     position: fixed;
     inset: 0;
     background: var(--overlay-bg, rgba(0, 0, 0, 0.3));
-    z-index: 1000;
+    z-index: var(--z-overlay);
   }
 
   .kit-detail-drawer {
