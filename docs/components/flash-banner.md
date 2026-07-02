@@ -20,6 +20,8 @@ import { showFlash, dismissFlash } from "@kenn-io/kit-ui";
 
 showFlash("Copied to clipboard");        // auto-dismiss after 4s
 showFlash("Still working…", 10_000);     // custom duration
+showFlash("Merge complete", { tone: "success" });            // semantic accent
+showFlash("Deploy failed", { tone: "danger", durationMs: 8000 });
 dismissFlash();                          // programmatic dismiss
 ```
 
@@ -34,6 +36,7 @@ dismissFlash();                          // programmatic dismiss
 | Function | Notes |
 | --- | --- |
 | `showFlash(msg, durationMs = 4000)` | Adds a flash; each runs its own dismiss timer. Non-finite or `<= 0` durations fall back to the 4s default |
+| `showFlash(msg, { tone?, durationMs? })` | Options form. `tone` (`"neutral" \| "info" \| "success" \| "warning" \| "danger"`, neutral default) tints the banner — band, ink, and countdown bar — with the semantic accent, following the Modal header recipe. No per-tone icons: like Modal, tone is carried by color alone |
 | `getFlashes(): FlashState[]` | Reactive read of all visible flashes, oldest first |
 | `getFlash(): FlashState \| null` | Reactive read of the most recent flash |
 | `getFlashMessage(): string \| null` | Reactive read of just the latest text |

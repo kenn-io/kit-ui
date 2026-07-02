@@ -97,7 +97,9 @@ export {
   getFlashes,
   getFlashMessage,
   showFlash,
+  type FlashOptions,
   type FlashState,
+  type FlashTone,
 } from "./stores/flash.svelte.js";
 export {
   cleanupTheme,

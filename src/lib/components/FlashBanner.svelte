@@ -17,7 +17,10 @@
        the widest message set the width for all of them. -->
   <div class="kit-flash-stack" style:top style:--kit-flash-top={top}>
     {#each flashes as flash (flash.id)}
-      <div class="kit-flash-banner" role="status">
+      <div
+        class="kit-flash-banner kit-flash-banner--{flash.tone}"
+        role="status"
+      >
         <span class="kit-flash-banner__text">{flash.message}</span>
         <button
           class="kit-flash-banner__dismiss"
@@ -82,6 +85,27 @@
     border-top: 1px solid var(--border-muted);
   }
 
+  /* Semantic tones follow the Modal header-band recipe: one accent
+   * variable per tone; band, ink, and countdown bar derive from it. Ink
+   * mixes toward --text-primary to keep 13px text at AA on the tint. */
+  .kit-flash-banner--info {
+    --kit-flash-tone: var(--accent-blue);
+  }
+  .kit-flash-banner--success {
+    --kit-flash-tone: var(--accent-green);
+  }
+  .kit-flash-banner--warning {
+    --kit-flash-tone: var(--accent-amber);
+  }
+  .kit-flash-banner--danger {
+    --kit-flash-tone: var(--accent-red);
+  }
+
+  .kit-flash-banner:not(.kit-flash-banner--neutral) {
+    background: color-mix(in srgb, var(--kit-flash-tone) 9%, var(--bg-surface));
+    color: color-mix(in srgb, var(--kit-flash-tone) 72%, var(--text-primary));
+  }
+
   .kit-flash-banner__text {
     flex: 1;
     min-width: 0;
@@ -114,6 +138,14 @@
     background: var(--bg-surface-hover);
   }
 
+  .kit-flash-banner:not(.kit-flash-banner--neutral) .kit-flash-banner__dismiss {
+    color: color-mix(in srgb, var(--kit-flash-tone) 72%, var(--text-primary));
+  }
+
+  .kit-flash-banner:not(.kit-flash-banner--neutral) .kit-flash-banner__dismiss:hover {
+    background: color-mix(in srgb, var(--kit-flash-tone) 16%, var(--bg-surface));
+  }
+
   /* Countdown to auto-dismiss: full width at show time, empty when the
    * timer fires. Each banner is keyed by flash id, so the animation runs
    * once per flash. */
@@ -123,7 +155,7 @@
     right: 0;
     bottom: 0;
     height: 2px;
-    background: var(--accent-blue);
+    background: var(--kit-flash-tone, var(--accent-blue));
     transform-origin: left;
     animation-name: kit-flash-countdown;
     animation-timing-function: linear;
