@@ -28,7 +28,7 @@ focus.
 
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `options` | `SegmentedControlOption[]` | required | `{ value, label, title?, disabled? }` |
+| `options` | `SegmentedControlOption[]` | required | `{ value, label, title?, disabled?, tone? }` |
 | `value` | `string` | required | Selected option value |
 | `onchange` | `(value: string) => void` | required | Not called when the active segment is re-clicked |
 | `ariaLabel` | `string` | — | Group label for screen readers |
@@ -39,3 +39,24 @@ focus.
 
 Use SegmentedControl for 2–5 mutually exclusive views; for longer lists use
 `SelectDropdown`.
+
+## Per-segment tones
+
+`option.tone` (`"info" | "success" | "warning" | "danger"`,
+`SegmentedControlTone`) gives a segment its own semantic accent — the
+status-filter pattern where "Passing / Flaky / Failing" each carry their
+color:
+
+- **Borderless variant**: a toned segment tints its ink and border (30%
+  tone mix) even while inactive; when active it takes the full band
+  (12% background, 72%-mixed ink, 30%-mixed border — the Modal band
+  recipes). Untoned segments stay grey and take the default accent when
+  active.
+- **Boxed variant**: tone tints the active pill's ink; the inset pad
+  chrome is otherwise unchanged.
+
+Shared-edge precedence in the flat strip: the **active** segment's border
+wins both of its edges (it overlays its left neighbor's edge); between
+two inactive segments the **leftmost** one's right border owns the shared
+edge — so a toned segment's color reaches exactly to its right edge and
+no further.
