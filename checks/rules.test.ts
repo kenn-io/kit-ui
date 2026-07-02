@@ -581,6 +581,11 @@ describe("chip-label-override", () => {
     );
     expect(checkSource(src, "A.svelte", ["chip-label-override"])).toHaveLength(0);
   });
+
+  test("ignores suffixed local classes like .kit-chip__label-wrapper", () => {
+    const src = `.kit-chip__label-wrapper { display: flex; }\n`;
+    expect(checkSource(src, "app.css", ["chip-label-override"])).toHaveLength(0);
+  });
 });
 
 describe("suppression and plumbing", () => {
