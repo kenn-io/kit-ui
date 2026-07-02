@@ -161,7 +161,7 @@ PR sequence; this guide only adds what to verify at each stage:
 | 1. Tokens | No pinned `html { font-size }` remains; mobile type sizes match the old app on a touch device (pointer-keyed scale); dark mode still switches |
 | 2. Display primitives | Chip sizes visually match call-site intent (xs/sm/md ladder changed); StatusDot call sites map session → status string |
 | 3. Stateful primitives | Button call sites map old kinds onto tone×surface; Tooltip flips at viewport edges where the old popover clipped |
-| 4. Overlays and layout | Dropdown menus escape `overflow: hidden` ancestors (and no transformed ancestor breaks them); Modal scroll-lock hacks removed; per-flash dismiss buttons still dismiss one flash, not all; FindBar call sites picked a variant (pinned flow vs self-positioned floating); DetailDrawer layering decision made |
+| 4. Overlays and layout | Dropdown menus escape `overflow: hidden` ancestors (and no transformed ancestor breaks them); Modal scroll-lock hacks removed; per-flash dismiss buttons still dismiss one flash, not all; FindBar call sites picked a variant (pinned flow vs self-positioned floating), old positioning wrappers removed, any placement overrides moved to the `--kit-find-bar-*` custom properties, and no app doc/style guide still describes FindBar as app-positioned; DetailDrawer layering decision made |
 | 5. Utilities and theme store | `hashColor` color shifts reviewed on real data; theme persists across reload; relative times match old formatting closely enough |
 | 6. Enforce | `bunx kit-ui-check` (no `--warn`) green in CI; every `kit-ui-check-ignore` has a reason; the manual component inventory (Ground rules) fully ticked |
 

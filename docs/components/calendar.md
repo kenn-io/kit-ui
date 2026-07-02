@@ -61,6 +61,10 @@ grid; picking an entry drills back down (year → months → days). Notes:
   `bind:month` never observes churn from paging around, and backing out
   (picking the currently-anchored month) returns to the same day view
   with the highlight intact.
+- The independence cuts both ways: an external `bind:month` update while
+  the calendar is zoomed does not reset the view or move the zoom anchor
+  (the user keeps their browsing position); it takes effect in the day
+  grid, and a subsequent month pick overrides it.
 - The arrows page by month, year, or 12 years to match the view; the year
   grid uses fixed 12-slot blocks (e.g. 2016–2027) so paging is stable.
 - `maxDate` applies in the zoomed grids too: months/years entirely after
