@@ -191,7 +191,7 @@
     </div>
 
     <div class="kit-calendar__grid">
-      {#each cells as date (date)}
+      {#each cells as date, i (date)}
         {@const selectedDay = inRange(date)}
         <button
           class="kit-calendar__day"
@@ -200,6 +200,7 @@
           class:selected={selectedDay}
           class:range-start={selectedDay && date === selected?.from}
           class:range-end={selectedDay && date === selected?.to}
+          class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
           type="button"
           disabled={maxDate != null && date > maxDate}
           aria-label={formatDayLabel(date)}
@@ -356,13 +357,15 @@
 
   /* Hovering a selected day deepens the band instead of swapping it for
    * the grey hover surface — the selection must stay legible under the
-   * pointer (it sits there right after a pick). */
+   * pointer (it sits there right after a pick). Range ends keep their
+   * solid pill. */
   .kit-calendar__day.selected:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-blue) 24%, transparent);
     color: var(--accent-blue);
   }
 
-  .kit-calendar__day.range-start.range-end:hover:not(:disabled) {
+  .kit-calendar__day.range-start:hover:not(:disabled),
+  .kit-calendar__day.range-end:hover:not(:disabled) {
     background: var(--accent-blue);
     color: var(--bg-surface);
   }
@@ -384,10 +387,15 @@
     opacity: 1;
   }
 
-  /* The range must read as one connected band per week row: fill the
-   * grid's 1px column gap to the left of every selected cell that has a
-   * selected neighbor there. range-start owns the band's left edge, and
-   * first-column cells have the grid edge to their left, not a cell. */
+  /* The range must read as one contiguous region — no grid seams inside
+   * it. ::before fills the 1px column gap to the left of every selected
+   * cell with a selected neighbor there (range-start owns the band's
+   * left edge; first-column cells have the grid edge to their left).
+   * ::after fills the 1px row gap above cells whose same-column neighbor
+   * in the row above is selected (the .fill-above class — the component
+   * computes it, since CSS can't see the cell above); it reaches 1px
+   * left to also cover the four-cell corner pinhole, except in the first
+   * column where that would poke past the grid edge. */
   .kit-calendar__day.selected:not(.range-start):not(:nth-child(7n + 1))::before {
     content: "";
     position: absolute;
@@ -396,6 +404,28 @@
     bottom: 0;
     width: 1px;
     background: var(--kit-calendar-range-bg);
+  }
+
+  .kit-calendar__day.fill-above::after {
+    content: "";
+    position: absolute;
+    left: -1px;
+    right: 0;
+    top: -1px;
+    height: 1px;
+    background: var(--kit-calendar-range-bg);
+  }
+
+  .kit-calendar__day.fill-above:nth-child(7n + 1)::after {
+    left: 0;
+  }
+
+  /* Range ends are solid pills so start/end read at a glance; the
+   * squared inner edge flows into the tinted band. */
+  .kit-calendar__day.range-start,
+  .kit-calendar__day.range-end {
+    background: var(--accent-blue);
+    color: var(--bg-surface);
   }
 
   .kit-calendar__day.range-start {
@@ -408,8 +438,6 @@
 
   .kit-calendar__day.range-start.range-end {
     border-radius: var(--radius-sm);
-    background: var(--accent-blue);
-    color: var(--bg-surface);
   }
 
   .kit-calendar__day:disabled {

@@ -39,10 +39,11 @@ pick-a-date UI.
 
 - The grid always renders six Monday-first weeks (fixed height across
   months); adjacent-month days are muted but clickable.
-- Today is marked with a subtle inset ring; the `selected` range is tinted
-  as one connected band per week row (the grid's seams between selected
-  cells are filled) with the range ends rounded outward, and a one-day
-  range renders as a solid accent pill.
+- Today is marked with a subtle inset ring; the `selected` range renders
+  as one contiguous tinted region (both the column and row grid seams
+  between selected cells are filled), with the range start and end as
+  solid accent pills rounded outward so the endpoints read at a glance —
+  a one-day range is a single solid pill.
 - Weekday/month labels use the browser locale (`toLocaleDateString`); the
   grid itself is Monday-first regardless of locale, matching
   `periodBounds("week", …)`'s ISO weeks.
