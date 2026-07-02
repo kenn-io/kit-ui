@@ -79,6 +79,9 @@
   title="Anchored popover"
   description="Sections clip their content by default (long text truncates inside the 24px bar), which also clips popovers. Set the overflow prop to visible and anchor the popover in a position:relative wrapper — bottom-anchored, dressed with kit-popover-card, dismissed via the dismissable util."
   code={`<StatusBar overflow="visible">
+  {#snippet left()}
+    <span>main</span>
+  {/snippet}
   {#snippet right()}
     <span class="anchor" bind:this={anchorEl}>
       <button onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>

@@ -51,12 +51,17 @@ for a popover opening out of the status bar (e.g. a rate-limit budget panel):
    no ancestor between the bar and the viewport clips either.
 2. Anchor the popover in a `position: relative` wrapper inside the snippet and
    grow it upward: `position: absolute; bottom: calc(100% + 4px); right: 0;
-z-index: var(--z-popover)`.
+z-index: var(--z-popover)`. This works best when the bar has room to the right
+   of the trigger; if the panel needs viewport-aware clamping, switch to
+   `floatingPopoverStyle` instead.
 3. Dress it with the shared `kit-popover-card` class and wire dismissal with
    the `dismissable` util (outside press + Escape).
 
 ```svelte
 <StatusBar overflow="visible">
+  {#snippet left()}
+    <span>main</span>
+  {/snippet}
   {#snippet right()}
     <span class="anchor" bind:this={anchorEl}>
       <button onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>
@@ -88,7 +93,11 @@ z-index: var(--z-popover)`.
 ```ts
 $effect(() => {
   if (!open) return;
-  return dismissable({ owners: () => [anchorEl], dismiss: () => (open = false) });
+  return dismissable({
+    owners: () => [anchorEl],
+    dismiss: () => (open = false),
+    escapeFocus: () => triggerEl,
+  });
 });
 ```
 

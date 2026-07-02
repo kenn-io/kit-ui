@@ -18,7 +18,7 @@ Pairs with [SettingsSection](#settingssection) for the content cards.
 
 ```svelte
 <script lang="ts">
-  import { Button, SettingsLayout, SettingsSection } from "@kenn-io/kit-ui";
+  import { Button, SearchInput, SettingsLayout, SettingsSection } from "@kenn-io/kit-ui";
 
   const categories = [
     { id: "general", label: "General", group: "Account", summary: "Profile and identity" },
@@ -26,11 +26,19 @@ Pairs with [SettingsSection](#settingssection) for the content cards.
   ];
   let active = $state("general");
   let query = $state("");
+  const visibleCategories = $derived(
+    categories.filter((c) =>
+      `${c.label} ${c.group} ${c.summary}`.toLowerCase().includes(query.trim().toLowerCase()),
+    ),
+  );
 </script>
 
-<SettingsLayout {categories} bind:active>
+<SettingsLayout categories={visibleCategories} bind:active>
   {#snippet sidebarHeader()}
     <SearchInput bind:value={query} size="sm" block placeholder="Search settings…" />
+    {#if visibleCategories.length === 0}
+      <p class="empty">No matching settings</p>
+    {/if}
   {/snippet}
   {#snippet panel(id)}
     {#if id === "general"}
@@ -49,6 +57,25 @@ Pairs with [SettingsSection](#settingssection) for the content cards.
 
 The layout fills its flex parent (`flex: 1; min-height: 0`) — give the host a
 bounded height.
+
+### Filtering contract
+
+The host owns filtering; the layout owns keeping the display consistent. While
+the bound `active` id is absent from `categories` (a transient filter hid it),
+the layout displays the first category instead — nav highlight, `aria-current`
+and the id passed to `panel` all agree — without writing to `active`, so
+clearing the filter restores the original selection. Clicking a category
+commits it to `active` as usual. With an empty `categories` array no panel
+renders at all; put the "no matches" notice inside `sidebarHeader`.
+
+### Narrow strip
+
+Below 760px the sidebar becomes a horizontal strip: `title`, `sidebarHeader`
+and the category labels flow inline (the strip scrolls horizontally), while
+group headings and summaries are hidden. A search box works fine inline; hide
+or restyle bulkier header chrome from the host's own styles if it crowds the
+strip. Group headings are plain text (not focusable, announced in reading
+order); a category's summary is part of its button's accessible name.
 
 ## Props
 

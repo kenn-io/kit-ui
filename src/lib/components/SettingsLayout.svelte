@@ -87,10 +87,10 @@
           <button
             class={[
               "kit-settings__nav-item",
-              active === category.id && "kit-settings__nav-item--active",
+              resolvedActive === category.id && "kit-settings__nav-item--active",
             ]}
             type="button"
-            aria-current={active === category.id ? "true" : undefined}
+            aria-current={resolvedActive === category.id ? "true" : undefined}
             onclick={() => (active = category.id)}
           >
             <span class="kit-settings__nav-label">{category.label}</span>
@@ -105,9 +105,11 @@
 
   <div class="kit-settings__content">
     <div class="kit-settings__scroll">
-      <div class="kit-settings__panel">
-        {@render panel(active)}
-      </div>
+      {#if resolvedActive}
+        <div class="kit-settings__panel">
+          {@render panel(resolvedActive)}
+        </div>
+      {/if}
     </div>
     {#if footer}
       <div class="kit-settings__footer">
