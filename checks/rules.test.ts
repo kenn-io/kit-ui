@@ -561,6 +561,33 @@ describe("legacy-svelte", () => {
   });
 });
 
+describe("chip-label-override", () => {
+  test("flags the alignment override in a plain CSS file", () => {
+    const src = `.kit-chip__label svg {\n  vertical-align: middle;\n  margin-block: -0.2em;\n}\n`;
+    const findings = checkSource(src, "app.css", ["chip-label-override"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("trailing snippet");
+  });
+
+  test("flags the selector in a component style block", () => {
+    const src = svelte(`:global(.kit-chip__label) { font-style: italic; }`);
+    expect(checkSource(src, "A.svelte", ["chip-label-override"])).toHaveLength(1);
+  });
+
+  test("ignores the class in markup and other kit-chip selectors", () => {
+    const src = svelte(
+      `.kit-chip--tone-info { opacity: 0.9; }`,
+      `<span class="kit-chip__label">x</span>`,
+    );
+    expect(checkSource(src, "A.svelte", ["chip-label-override"])).toHaveLength(0);
+  });
+
+  test("ignores suffixed local classes like .kit-chip__label-wrapper", () => {
+    const src = `.kit-chip__label-wrapper { display: flex; }\n`;
+    expect(checkSource(src, "app.css", ["chip-label-override"])).toHaveLength(0);
+  });
+});
+
 describe("suppression and plumbing", () => {
   test("kit-ui-check-ignore on the same line suppresses", () => {
     const src = svelte(`.x { color: #ff0000; } /* kit-ui-check-ignore */`);

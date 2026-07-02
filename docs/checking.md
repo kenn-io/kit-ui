@@ -60,6 +60,7 @@ markdown pipeline or debounce util lives in `.ts`, not markup.
 | `pinned-root-font-size`      | px `font-size` on `html`/`:root`                                                                                                                                                            | leave the root at 100% — it defeats the rem type scale ([theming](theming.md#typography))  |
 | `legacy-mobile-type`         | `--font-size-mobile-*` usage                                                                                                                                                                | the standard tokens; they resize on touch devices ([migration map](theming.md#typography)) |
 | `legacy-svelte`              | `on:event` directives, `export let`                                                                                                                                                         | runes mode (`$props`, `onclick`)                                                           |
+| `chip-label-override`        | CSS selectors targeting `.kit-chip__label`, Chip's internal label span (suffixed local names like `kit-chip__label-wrapper` are exempt)                                                     | nothing — Chip centers label svgs itself; use its `trailing` snippet for dropdown chevrons |
 
 ## Suppressing a finding
 
@@ -111,7 +112,8 @@ everything and aren't repeated per row.
 | Markdown / markdown pipeline              | `hand-rolled-markdown` (the dependency is the tell — direct `marked`/`dompurify` imports)                                           |
 | IconButton                                | `hand-rolled-icon-button`                                                                                                           |
 | TopBar                                    | `hand-rolled-top-bar`                                                                                                               |
-| Button, Chip, ChipStack                   | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift                                |
+| Button, ChipStack                         | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift                                |
+| Chip                                      | `chip-label-override` (CSS reaching into the internal label span); hand-rolled badge markup itself has no reliable signature        |
 | StatusDot                                 | `hand-rolled-status-dot`                                                                                                            |
 | ColorLabel, DiffStats                     | no rule — small display primitives with no detectable marker; found in review                                                       |
 | FindBar                                   | `hand-rolled-find-bar`                                                                                                              |

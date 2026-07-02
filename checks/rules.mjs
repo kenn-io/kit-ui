@@ -695,6 +695,30 @@ export function checkLegacySvelte(source, filename) {
   return findings;
 }
 
+/** Consumer CSS reaching into Chip's internal label span — the historical
+ * icon-alignment override (`.kit-chip__label svg { vertical-align: … }`).
+ * Chip centers label svgs itself now, and trailing indicators have a
+ * first-class snippet, so any such rule is stale drift against a private
+ * element. Suffixed local classes (.kit-chip__label-wrapper) are someone
+ * else's name, not the internal — `-` continues a CSS identifier, so a
+ * plain \b would false-positive on them. */
+export function checkChipLabelOverride(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const re = /\.kit-chip__label(?![\w-])/g;
+    let match;
+    while ((match = re.exec(css)) !== null) {
+      findings.push({
+        rule: "chip-label-override",
+        line: lineOfIndex(source, offset + match.index),
+        message:
+          ".kit-chip__label is a Chip internal — kit-ui centers label svgs itself; drop the override (use Chip's trailing snippet for dropdown chevrons)",
+      });
+    }
+  }
+  return findings;
+}
+
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
   "raw-color": checkRawColors,
@@ -731,6 +755,7 @@ export const ALL_RULES = {
   "legacy-mobile-type": checkLegacyMobileType,
   "nonstandard-spacing": checkNonstandardSpacing,
   "legacy-svelte": checkLegacySvelte,
+  "chip-label-override": checkChipLabelOverride,
 };
 
 /** Run all (or the selected) rules on one file's source. */
