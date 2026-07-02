@@ -1,0 +1,4 @@
+# Scope `bun test` discovery to the unit tests; tests/browser/*.spec.ts are
+# Playwright specs (run via `bun run test:browser`) and crash under bun's runner.
+[test]
+root = "checks"
