@@ -45,7 +45,8 @@ The age label defaults to `formatRefreshAge`'s English strings (`"—"`,
 `"Updated just now"`, `"Updated 3m ago"` / `"3h ago"` / `"3d ago"`). Pass
 `formatAge` to render localized strings instead; the component calls it with
 `lastUpdatedAt` and its once-a-minute clock tick, so the label advances
-without a refetch:
+without a refetch. The tick is clamped to `lastUpdatedAt` (a fresh update can
+outrun the minute clock), so formatters can assume a non-negative age:
 
 ```svelte
 <RefreshControl

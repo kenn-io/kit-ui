@@ -201,28 +201,33 @@ export function monthGridDates(anchor: string): string[] {
  *
  * Like date strings, `locale` is trusted input: Intl throws a RangeError on
  * malformed BCP 47 tags, so validate app-provided values (e.g. persisted
- * settings) before passing them down. */
+ * settings) before passing them down.
+ *
+ * Both caches are size-capped (FIFO eviction) so a server that renders with
+ * many distinct request-derived locales can't grow them without bound. The
+ * cap is far above what one app's locale set reaches, so eviction never
+ * happens client-side. */
+const CACHE_MAX = 64;
+
+function capped<V>(cache: Map<string, V>, key: string, value: V): V {
+  if (cache.size >= CACHE_MAX) {
+    cache.delete(cache.keys().next().value as string);
+  }
+  cache.set(key, value);
+  return value;
+}
+
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatter(options: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
   const key = `${locale ?? ""}|${JSON.stringify(options)}`;
-  let fmt = formatters.get(key);
-  if (!fmt) {
-    fmt = new Intl.DateTimeFormat(locale, options);
-    formatters.set(key, fmt);
-  }
-  return fmt;
+  return formatters.get(key) ?? capped(formatters, key, new Intl.DateTimeFormat(locale, options));
 }
 
 const labelTables = new Map<string, string[]>();
 
 function labelTable(key: string, build: () => string[]): string[] {
-  let table = labelTables.get(key);
-  if (!table) {
-    table = build();
-    labelTables.set(key, table);
-  }
-  return table;
+  return labelTables.get(key) ?? capped(labelTables, key, build());
 }
 
 /** Monday-first weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
