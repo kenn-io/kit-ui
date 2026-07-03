@@ -93,6 +93,70 @@ test("a mid-pick start survives switching tabs", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("an external selection change while closed drops the mid-pick draft", async ({ page }) => {
+  await openCustomTab(page);
+  await day(page, 5).click(); // start a draft against the relative-30 seed
+  await page.keyboard.press("Escape");
+
+  // The app swaps in a DIFFERENT committed selection while the popover is
+  // closed (relative 7, not the seed's 30), so the draft's key no longer
+  // matches.
+  await page.getByRole("button", { name: "External: last 7 days" }).click();
+
+  // Reopening reseeds from the new selection — the stale start is gone, so
+  // the From endpoint is armed again and the first click starts fresh.
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(0)).toHaveClass(
+    /active/,
+  );
+  await day(page, 12).click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+});
+
+test("re-keying survives an external incomplete-custom swap between drafts", async ({ page }) => {
+  // Regression for the stale-key hole: a full reseed that armed a pending
+  // draft (from a controlled incomplete custom selection) but left the key
+  // pointing at an older draft would let a later reopen adopt the wrong
+  // start date.
+  await openCustomTab(page);
+  await day(page, 5).click(); // draft A, keyed to the relative selection
+  await page.keyboard.press("Escape");
+
+  // App swaps in an incomplete custom selection (from = month start, no to).
+  // Reopening reseeds and arms a draft from THAT selection, re-keyed to it.
+  await page.getByRole("button", { name: "External: mid-pick custom" }).click();
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+
+  // App swaps back to the relative selection (draft A's original key). The
+  // re-keyed draft must NOT be resurrected: reopening reseeds fresh with the
+  // From endpoint armed, not the month-start start from the custom swap.
+  await page.getByRole("button", { name: "External: last 30 days" }).click();
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(0)).toHaveClass(
+    /active/,
+  );
+});
+
+test("a controlled incomplete custom selection reopens armed to complete", async ({ page }) => {
+  await page.getByRole("button", { name: "External: mid-pick custom" }).click();
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  // From is set (month start), To is armed for the completing click.
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(1);
+});
+
 test("an earlier second pick swaps the ends", async ({ page }) => {
   await openCustomTab(page);
   await day(page, 10).click();

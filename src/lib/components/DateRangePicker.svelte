@@ -190,8 +190,12 @@
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
     // A controlled selection with only `from` is a range mid-pick: stay
-    // armed so the next click completes it instead of restarting.
+    // armed so the next click completes it instead of restarting. Re-key
+    // the draft to THIS selection either way — a full reseed that leaves
+    // an older key behind would let a later reopen under the old selection
+    // adopt this draft as its own.
     customPending = customFrom !== "" && customTo === "";
+    pendingFor = customPending ? selectionKey(selection) : null;
     calMonth = calAnchor;
     customMonth = customTo || customFrom || todayStr();
   }

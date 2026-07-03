@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from "../../lib/components/Button.svelte";
   import DateRangePicker from "../../lib/components/DateRangePicker.svelte";
   import {
     daysAgo,
@@ -12,6 +13,12 @@
 
   let selection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
   const resolved = $derived(resolveRange(selection, earliestDate));
+
+  // External-change hooks: the picker drops a mid-pick draft when the app
+  // swaps the committed selection while the popover is closed, and reopens
+  // armed to complete a controlled incomplete custom selection. Browser
+  // specs drive both paths through these buttons.
+  const monthStart = todayStr().slice(0, 8) + "01";
 
   let pinnedSelection = $state.raw<RangeSelection>({
     mode: "calendar",
@@ -36,6 +43,26 @@
     <code>{JSON.stringify(selection)}</code>
     <code>resolved: {resolved.from} → {resolved.to}</code>
   </span>
+  <div class="external-row">
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: mid-pick custom"
+      onclick={() => (selection = { mode: "custom", from: monthStart, to: "" })}
+    />
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: last 30 days"
+      onclick={() => (selection = { mode: "relative", days: 30 })}
+    />
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: last 7 days"
+      onclick={() => (selection = { mode: "relative", days: 7 })}
+    />
+  </div>
 </DemoSection>
 
 <DemoSection
@@ -75,6 +102,11 @@
     flex-direction: column;
     gap: var(--space-2);
     font-size: var(--font-size-sm);
+  }
+
+  .external-row {
+    display: flex;
+    gap: var(--space-3);
   }
 
   .right-rail {
