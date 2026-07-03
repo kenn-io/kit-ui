@@ -56,6 +56,27 @@ test("two clicks commit an ordered custom range; the readout tracks the pending 
   await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(6);
 });
 
+test("a mid-pick start survives dismissing and reopening the popover", async ({ page }) => {
+  await openCustomTab(page);
+  await day(page, 5).click();
+  // Nothing commits on the first click — the demo readout still shows the
+  // seeded relative selection.
+  await expect(page.locator("code", { hasText: '"mode":"relative"' })).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).toHaveCount(0);
+
+  // Reopening lands back on the Custom tab with the To endpoint still armed.
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+  await day(page, 10).click();
+  await expect(
+    page.locator("code", { hasText: `"from":"${yyyy}-${mm}-05","to":"${yyyy}-${mm}-10"` }),
+  ).toBeVisible();
+});
+
 test("an earlier second pick swaps the ends", async ({ page }) => {
   await openCustomTab(page);
   await day(page, 10).click();

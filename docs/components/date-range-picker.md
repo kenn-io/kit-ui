@@ -7,7 +7,10 @@ week/month containing it), and **Custom** (an explicit from/to span picked
 with two clicks on the same embedded calendar: the first click starts the
 range, the second completes it — an earlier second click swaps the ends — and
 a From/To readout shows which endpoint the next click sets; only a complete
-range commits). Ported from agentsview's shared `DateRangePicker`, decoupled
+range commits). A mid-pick start survives dismissing and reopening the
+popover — the incomplete draft stays component-local and is never emitted
+through `onSelect`, and it is dropped if the controlled `selection` changes
+while closed. Ported from agentsview's shared `DateRangePicker`, decoupled
 from its stores and i18n.
 
 The component is controlled: you hold a `RangeSelection` and it calls
