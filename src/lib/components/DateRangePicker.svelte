@@ -112,9 +112,17 @@
   // meaning the next pick completes the range.
   let customPending = $state(false);
   let customMonth = $state<string>(todayStr());
-  // The committed selection the pending draft was started against. Only
-  // read inside seed()/pick handlers, so a plain (non-reactive) variable.
-  let pendingFor: RangeSelection | null = null;
+  // Value snapshot of the committed selection the pending draft was started
+  // against — by value, not object identity, so a parent mutating in place
+  // or recreating an equivalent object compares correctly. Only read inside
+  // seed()/pick handlers, so a plain (non-reactive) variable.
+  let pendingFor: string | null = null;
+
+  function selectionKey(sel: RangeSelection): string {
+    if (sel.mode === "relative") return `relative:${sel.days}`;
+    if (sel.mode === "calendar") return `calendar:${sel.unit}:${sel.anchor}`;
+    return `custom:${sel.from}:${sel.to}`;
+  }
 
   const tabs = $derived<SegmentedControlOption[]>([
     { value: "relative", label: relativeTabLabel },
@@ -166,7 +174,7 @@
     // clicks shouldn't discard the chosen start — but only while the
     // committed selection is the one the draft was started against; a
     // selection swapped in from outside makes the draft stale.
-    if (customPending && selection === pendingFor) {
+    if (customPending && selectionKey(selection) === pendingFor) {
       tab = "custom";
       return;
     }
@@ -258,7 +266,7 @@
       customFrom = date;
       customTo = "";
       customPending = true;
-      pendingFor = selection;
+      pendingFor = selectionKey(selection);
       return;
     }
     customPending = false;

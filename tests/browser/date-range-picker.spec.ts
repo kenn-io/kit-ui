@@ -77,6 +77,22 @@ test("a mid-pick start survives dismissing and reopening the popover", async ({ 
   ).toBeVisible();
 });
 
+test("a mid-pick start survives switching tabs", async ({ page }) => {
+  await openCustomTab(page);
+  await day(page, 5).click();
+
+  await panel(page).getByRole("radio", { name: "Relative" }).click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+  await day(page, 10).click();
+  await expect(
+    page.locator("code", { hasText: `"from":"${yyyy}-${mm}-05","to":"${yyyy}-${mm}-10"` }),
+  ).toBeVisible();
+});
+
 test("an earlier second pick swaps the ends", async ({ page }) => {
   await openCustomTab(page);
   await day(page, 10).click();

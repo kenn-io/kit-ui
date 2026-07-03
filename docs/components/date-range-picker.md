@@ -7,16 +7,27 @@ week/month containing it), and **Custom** (an explicit from/to span picked
 with two clicks on the same embedded calendar: the first click starts the
 range, the second completes it — an earlier second click swaps the ends — and
 a From/To readout shows which endpoint the next click sets; only a complete
-range commits). A mid-pick start survives dismissing and reopening the
-popover — the incomplete draft stays component-local and is never emitted
-through `onSelect`, and it is dropped if the controlled `selection` changes
-while closed. Ported from agentsview's shared `DateRangePicker`, decoupled
+range commits). Ported from agentsview's shared `DateRangePicker`, decoupled
 from its stores and i18n.
 
 The component is controlled: you hold a `RangeSelection` and it calls
-`onSelect` with a new one on every edit. `resolveRange()` turns any selection
-into concrete inclusive `{from, to}` bounds (local-timezone `YYYY-MM-DD`
-strings). Escape and outside clicks dismiss the popover.
+`onSelect` with a new one whenever a selection **commits** — relative pills
+and calendar picks commit immediately; a custom range commits only on the
+completing second click. Treat `selection` as replace-only (hold it in
+`$state.raw` as below and assign a new object in `onSelect`), never mutate it
+in place. `resolveRange()` turns any selection into concrete inclusive
+`{from, to}` bounds (local-timezone `YYYY-MM-DD` strings). Escape and outside
+clicks dismiss the popover.
+
+**Mid-pick draft lifecycle**: between the two custom clicks the incomplete
+range is internal UI state — it is never emitted through `onSelect`. The
+draft survives switching tabs and dismissing/reopening the popover, so an
+Escape between clicks doesn't discard the chosen start; committing from any
+tab clears it, and a `selection` whose value differs from the one the draft
+was started against (e.g. the app changed the range while the popover was
+closed) drops it in favor of a full reseed. A controlled `selection` that is
+itself incomplete (`from` set, `to` empty) reopens armed to complete the
+range.
 
 **Semantics**: bounds are inclusive on both ends, and "Last N days" means N
 calendar days including today (so `from` is N−1 days back). All date math is
@@ -41,7 +52,7 @@ handling). Date strings are trusted input: feed the helpers valid
 | Prop                                                                                                                     | Type                            | Default                                   | Notes                                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `selection`                                                                                                              | `RangeSelection`                | required                                  | Current selection (controlled)                                                                                                                                                                                                                                               |
-| `onSelect`                                                                                                               | `(sel: RangeSelection) => void` | required                                  | Fires on every edit                                                                                                                                                                                                                                                          |
+| `onSelect`                                                                                                               | `(sel: RangeSelection) => void` | required                                  | Fires on every committed selection (custom ranges commit on the second click)                                                                                                                                                                                                |
 | `busy`                                                                                                                   | `boolean`                       | `false`                                   | Dims the trigger while data reloads                                                                                                                                                                                                                                          |
 | `earliestDate`                                                                                                           | `string \| null`                | `null`                                    | Earliest data date; anchors the "All" preset                                                                                                                                                                                                                                 |
 | `align`                                                                                                                  | `"left" \| "right"`             | `"left"`                                  | Popover edge alignment                                                                                                                                                                                                                                                       |
