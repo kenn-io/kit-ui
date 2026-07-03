@@ -170,9 +170,11 @@
     const resolved = resolveRange(selection, earliestDate);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
-    customPending = false;
+    // A controlled selection with only `from` is a range mid-pick: stay
+    // armed so the next click completes it instead of restarting.
+    customPending = customFrom !== "" && customTo === "";
     calMonth = calAnchor;
-    customMonth = customTo || todayStr();
+    customMonth = customTo || customFrom || todayStr();
   }
 
   let panelEl = $state<HTMLDivElement>();
