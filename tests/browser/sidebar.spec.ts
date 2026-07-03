@@ -9,7 +9,9 @@ test("forced overlay styles do not leak into nested sidebars", async ({ page }) 
   await expect(overlayLayout).toHaveClass(/kit-sidebar-layout--overlay/);
 
   await page.evaluate(() => {
-    const source = document.querySelector(".sidebar-host:not(.sidebar-host--overlay) .kit-sidebar-layout");
+    const source = document.querySelector(
+      ".sidebar-host:not(.sidebar-host--overlay) .kit-sidebar-layout",
+    );
     const overlaySidebar = document.querySelector(
       ".sidebar-host--overlay .kit-sidebar-layout--overlay > .kit-sidebar-layout__sidebar",
     );
@@ -26,7 +28,9 @@ test("forced overlay styles do not leak into nested sidebars", async ({ page }) 
   const outerSidebar = page
     .locator(".sidebar-host--overlay .kit-sidebar-layout--overlay > .kit-sidebar-layout__sidebar")
     .first();
-  const nestedSidebar = page.locator('[data-testid="nested-sidebar"] > .kit-sidebar-layout__sidebar').first();
+  const nestedSidebar = page
+    .locator('[data-testid="nested-sidebar"] > .kit-sidebar-layout__sidebar')
+    .first();
 
   await expect(outerSidebar).toHaveCSS("position", "absolute");
   await expect(outerSidebar).toHaveCSS("width", "390px");
