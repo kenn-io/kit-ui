@@ -149,8 +149,12 @@
   }
 
   const selectedOption = $derived(value === "" ? undefined : findByName(options, value));
+  // A custom value has no matching option — show it verbatim so the closed
+  // trigger doesn't look unselected.
   const displayValue = $derived(
-    selectedOption?.displayLabel ?? selectedOption?.label ?? fallbackLabel,
+    selectedOption?.displayLabel ??
+      selectedOption?.label ??
+      (allowCustom && value !== "" ? value : fallbackLabel),
   );
 
   async function openDropdown() {
@@ -223,8 +227,13 @@
       return;
     }
     // A loading/error status row stands in for the options, so there is
-    // nothing to navigate to or select — let other keys reach the input.
-    if (loading || error) return;
+    // nothing to navigate to or select — keep selection/navigation keys inert
+    // (Enter would otherwise submit an enclosing form) but let editing keys
+    // reach the input.
+    if (loading || error) {
+      if (e.key === "Enter" || e.key === "ArrowDown" || e.key === "ArrowUp") e.preventDefault();
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       highlightIndex = Math.min(highlightIndex + 1, Math.max(rowCount - 1, 0));
