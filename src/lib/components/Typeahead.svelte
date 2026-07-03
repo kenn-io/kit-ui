@@ -148,6 +148,12 @@
   const customValue = $derived(allowCustom && rows.length === 0 ? query.trim() : "");
   const rowCount = $derived(rows.length + clearOffset + (customValue !== "" ? 1 : 0));
 
+  // Async option/header swaps can shrink the list under the highlight, so
+  // rendering, aria-activedescendant, and selection all read this clamped
+  // view — it always names a rendered row (with zero rows the descendant is
+  // dropped instead).
+  const activeIndex = $derived(Math.min(highlightIndex, Math.max(rowCount - 1, 0)));
+
   function findByName(opts: TypeaheadOption[], name: string): TypeaheadOption | undefined {
     for (const option of opts) {
       if (option.name === name) return option;
@@ -184,11 +190,15 @@
   function closeDropdown() {
     open = false;
     query = "";
+    // Invalidate in-flight selections: a slow onselect from this (or an
+    // earlier) open instance must not close a menu the user reopens later.
+    selectSeq += 1;
   }
 
   // Orders concurrent async onselect calls: only the latest attempt may close
   // the list, so a slow earlier selection resolving after a later veto/error
-  // can't hide the caller's error state.
+  // can't hide the caller's error state, and none may outlive the open
+  // instance it started in (closeDropdown bumps the token).
   let selectSeq = 0;
 
   async function select(name: string) {
@@ -214,15 +224,15 @@
   // Enter commits exactly the row aria-activedescendant names — never a
   // different value than what a screen reader announced as active.
   function selectHighlighted() {
-    if (allowClear && highlightIndex === 0) {
+    if (allowClear && activeIndex === 0) {
       void select("");
       return;
     }
-    if (customValue !== "" && highlightIndex === clearOffset) {
+    if (customValue !== "" && activeIndex === clearOffset) {
       void select(customValue);
       return;
     }
-    const row = rows[highlightIndex - clearOffset];
+    const row = rows[activeIndex - clearOffset];
     if (row) activateRow(row);
   }
 
@@ -241,18 +251,18 @@
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      highlightIndex = Math.min(highlightIndex + 1, Math.max(rowCount - 1, 0));
+      highlightIndex = Math.min(activeIndex + 1, Math.max(rowCount - 1, 0));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      highlightIndex = Math.max(highlightIndex - 1, 0);
+      highlightIndex = Math.max(activeIndex - 1, 0);
     } else if (e.key === "ArrowRight" && grouped && query === "") {
-      const row = rows[highlightIndex - clearOffset];
+      const row = rows[activeIndex - clearOffset];
       if (row?.group && !row.expanded) {
         e.preventDefault();
         toggleExpand(row.option);
       }
     } else if (e.key === "ArrowLeft" && grouped && query === "") {
-      const idx = highlightIndex - clearOffset;
+      const idx = activeIndex - clearOffset;
       const row = rows[idx];
       if (!row) return;
       if (row.group && row.expanded) {
@@ -337,7 +347,7 @@
       aria-controls={listId}
       aria-autocomplete="list"
       aria-activedescendant={!loading && !error && rowCount > 0
-        ? `${listId}-row-${highlightIndex}`
+        ? `${listId}-row-${activeIndex}`
         : undefined}
       autocomplete="off"
     />
@@ -367,7 +377,7 @@
           {#if allowClear}
             <li
               class="kit-typeahead__option"
-              class:highlighted={highlightIndex === 0}
+              class:highlighted={activeIndex === 0}
               class:selected={value === ""}
               id={`${listId}-row-0`}
               role={grouped ? "treeitem" : "option"}
@@ -382,7 +392,7 @@
             <li
               class="kit-typeahead__option"
               class:kit-typeahead__option--group={row.group}
-              class:highlighted={i + clearOffset === highlightIndex}
+              class:highlighted={i + clearOffset === activeIndex}
               class:selected={!row.group && row.option.name === value}
               id={`${listId}-row-${i + clearOffset}`}
               role={grouped ? "treeitem" : "option"}
@@ -416,7 +426,7 @@
             {#if customValue !== ""}
               <li
                 class="kit-typeahead__option"
-                class:highlighted={highlightIndex === clearOffset}
+                class:highlighted={activeIndex === clearOffset}
                 class:selected={customValue === value}
                 id={`${listId}-row-${clearOffset}`}
                 role={grouped ? "treeitem" : "option"}
