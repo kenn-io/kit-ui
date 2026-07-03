@@ -58,11 +58,18 @@
 
   $effect(() => {
     if (!open) {
+      // Bump the version so an in-flight response can't land after close and
+      // repopulate results (which would flash on the next open).
+      searchVersion++;
       results = [];
+      searching = false;
       return;
     }
     const q = query;
     const version = ++searchVersion;
+    // Drop the previous query's results up front: while the new search is
+    // pending there must be nothing stale to navigate to or insert.
+    results = [];
     searching = true;
     void (async () => {
       try {

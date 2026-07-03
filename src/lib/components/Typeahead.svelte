@@ -65,6 +65,8 @@
   let containerEl = $state<HTMLDivElement>();
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
+  // Guards the focusout dismissal during the trigger→input focus handoff.
+  let opening = false;
   // Group rows the user has toggled away from their initial state.
   let expansionOverrides = $state<Record<string, boolean>>({});
 
@@ -155,10 +157,15 @@
     if (disabled) return;
     query = "";
     open = true;
+    // The trigger button unmounts as the input mounts; focus briefly lands on
+    // <body> and would fire focusout on the container. Suppress dismissal
+    // until we've handed focus to the input.
+    opening = true;
     highlightIndex = rows.length > 0 ? clearOffset : 0;
     await tick();
     positionPanel();
     inputEl?.focus();
+    opening = false;
   }
 
   function closeDropdown() {
@@ -211,6 +218,13 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      closeDropdown();
+      return;
+    }
+    // A loading/error status row stands in for the options, so there is
+    // nothing to navigate to or select — let other keys reach the input.
+    if (loading || error) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       highlightIndex = Math.min(highlightIndex + 1, Math.max(rowCount - 1, 0));
@@ -270,14 +284,14 @@
     ];
   }
 
-  function handleBlur(e: FocusEvent) {
+  // focusout bubbles (blur does not), so one handler on the container catches
+  // focus leaving the input *or* a focusable header control. Without it, a
+  // keyboard user could tab from the input into a header button and then out
+  // of the component, leaving the panel stuck open.
+  function handleFocusOut(e: FocusEvent) {
+    if (opening) return;
     const related = e.relatedTarget as Node | null;
-    if (containerEl && related && containerEl.contains(related)) {
-      return;
-    }
-    if (panelEl && related && panelEl.contains(related)) {
-      return;
-    }
+    if (containerEl && related && containerEl.contains(related)) return;
     closeDropdown();
   }
 
@@ -292,7 +306,7 @@
   {/each}
 {/snippet}
 
-<div class="kit-typeahead" bind:this={containerEl}>
+<div class="kit-typeahead" bind:this={containerEl} onfocusout={handleFocusOut}>
   {#if open}
     <input
       bind:this={inputEl}
@@ -302,7 +316,6 @@
       bind:value={query}
       oninput={() => (highlightIndex = rows.length > 0 ? clearOffset : 0)}
       onkeydown={handleKeydown}
-      onblur={handleBlur}
       {placeholder}
       {disabled}
       aria-label={placeholder}

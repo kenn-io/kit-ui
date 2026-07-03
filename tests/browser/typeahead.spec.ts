@@ -53,6 +53,30 @@ test("a vetoed selection keeps the list open and shows the error row", async ({ 
   await expect(page.locator(".kit-typeahead__status--error")).toHaveText("That branch is locked");
   await expect(page.getByRole("combobox", { name: "Filter branches…" })).toBeVisible();
   await expect(page.locator('[data-demo="branch-value"]')).toHaveText("main");
+
+  // The error status row stands in for the options: Enter must not select a
+  // hidden row, and aria-activedescendant is dropped while it shows.
+  const input = page.getByRole("combobox", { name: "Filter branches…" });
+  await expect(input).not.toHaveAttribute("aria-activedescendant", /.+/);
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-typeahead__status--error")).toBeVisible();
+  await expect(page.locator('[data-demo="branch-value"]')).toHaveText("main");
+  // Escape still closes.
+  await page.keyboard.press("Escape");
+  await expect(input).toHaveCount(0);
+});
+
+test("tabbing out of a focusable header control dismisses the panel", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Filter refs…" }).click();
+  await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+
+  // Focus the header tab (inside the panel) then tab away — focusout on the
+  // container must close the panel even though blur was on the header button.
+  await page.locator('[data-demo="ref-tabs"] button', { hasText: "Branches" }).focus();
+  await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await expect(page.locator(".kit-typeahead__panel")).toHaveCount(0);
 });
 
 test("groups expand and collapse by mouse and keyboard", async ({ page }) => {

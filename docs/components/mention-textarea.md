@@ -55,6 +55,25 @@ interface MentionOption {
 }
 ```
 
+## Trigger contract
+
+`trigger` is a **single character**. The menu opens when it appears at the
+start of the text or immediately after ASCII whitespace (space, tab,
+newline), with no whitespace between it and the caret — so `#`/`@` mentions
+fire but `issue#12` (mid-word) does not. Multi-character triggers and
+punctuation-adjacent boundaries are out of scope; wrap the component if you
+need a different rule.
+
+## Async search and stale responses
+
+`search` may be sync or async. Each keystroke (and open/close) starts a new
+lookup and drops the previous query's results up front, so a slow response
+can never leave an option from an earlier query selectable, and a response
+that resolves after the menu closes is discarded rather than flashing on the
+next open. A rejected `search` promise surfaces as the `emptyLabel` row —
+render your own error state inside the results if you need to distinguish
+"failed" from "no matches".
+
 ## Keyboard protocol
 
 While the menu is open with results: ArrowDown/ArrowUp cycle, Enter (without
@@ -63,6 +82,14 @@ result, Escape dismisses. Everything else — including Enter when the menu is
 closed — reaches the textarea and the `onkeydown` prop. Caret movement
 (arrows, Home/End, clicks) re-evaluates whether the caret sits in a mention
 query.
+
+## Non-goals
+
+The wrapper owns the textarea, so native form attributes beyond those listed
+(`name`, `id`, `required`, `maxlength`, `readonly`, generic event forwarding)
+are not passed through today — this primitive targets inline mention
+completion, not a drop-in `<textarea>` replacement. Provide an accessible
+name via `ariaLabel`.
 
 ## Positioning
 

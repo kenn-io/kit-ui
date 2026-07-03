@@ -62,6 +62,27 @@ test("a trigger inside a word does not open the menu", async ({ page }) => {
   await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
 });
 
+test("a pending search cannot insert a stale option", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Task description" });
+
+  // Load results for "#", then change the query. The previous results must be
+  // dropped up front so a fast Enter during the (150ms) pending window can't
+  // insert a reference from the prior query.
+  await textarea.pressSequentially("#");
+  await expect(page.locator(".kit-mention__option")).toHaveCount(5);
+  await page.keyboard.type("zzz");
+  await expect(page.locator(".kit-mention__status")).toHaveText("Searching…");
+  await expect(page.locator(".kit-mention__option")).toHaveCount(0);
+  await page.keyboard.press("Enter");
+
+  const value = page.locator('[data-demo="mention-value"]');
+  await expect(value).toContainText("#zzz");
+  // No stale reference from the "#" query was inserted (Enter fell through to
+  // the textarea instead, since there was nothing to select).
+  await expect(value).not.toContainText("j9cr");
+});
+
 test("custom trigger and row snippet", async ({ page }) => {
   await gotoPage(page, "mention-textarea");
   const textarea = page.getByRole("textbox", { name: "Comment" });

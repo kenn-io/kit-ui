@@ -78,8 +78,15 @@ option has children the list uses `role="tree"` semantics
 
 `onselect` may return `false` (or a promise of `false`), or throw, to keep
 the list open — use this to reject a value and surface a message through the
-`error` prop without losing the user's query. `loading` covers async option
-sources (e.g. refetching after a `header` tab switch).
+`error` prop without losing the user's query. `error` is caller-owned: the
+component never sets or clears it, so clear it yourself on the next attempt
+(the demo resets it at the top of `onselect`) to avoid a menu stuck on a
+stale error row. `loading` covers async option sources (e.g. refetching
+after a `header` tab switch).
+
+While a `loading` or `error` status row is showing it stands in for the
+options: arrow keys and Enter are inert (Escape still closes), and
+`aria-activedescendant` is dropped so nothing hidden is announced as active.
 
 ## CSS knobs
 
