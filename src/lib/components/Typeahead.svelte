@@ -18,8 +18,12 @@
      * `fallbackLabel` when nothing matches the value. */
     allowClear?: boolean;
     clearLabel?: string;
-    /** Enter with no matching option selects the trimmed query verbatim. */
+    /** With no matching option, offer a row that selects the trimmed query
+     * verbatim. */
     allowCustom?: boolean;
+    /** Label of the custom-value row; `{query}` is replaced with the trimmed
+     * query. */
+    customLabel?: string;
     /** Force the list above/below the trigger; "auto" (default) flips near
      * the viewport bottom. */
     placement?: "auto" | "top" | "bottom";
@@ -49,6 +53,7 @@
     allowClear = false,
     clearLabel = "None",
     allowCustom = false,
+    customLabel = 'Use "{query}"',
     placement = "auto",
     triggerPrefix = "",
     loading = false,
@@ -137,7 +142,11 @@
   const rows = $derived(buildRows(options, 0, query.trim().toLowerCase(), false));
   const grouped = $derived(options.some((o) => o.children));
   const clearOffset = $derived(allowClear ? 1 : 0);
-  const rowCount = $derived(rows.length + clearOffset);
+  // With no matches, the custom value is a real row (at index `clearOffset`)
+  // rather than hidden Enter behavior, so aria-activedescendant always names
+  // the row Enter will commit.
+  const customValue = $derived(allowCustom && rows.length === 0 ? query.trim() : "");
+  const rowCount = $derived(rows.length + clearOffset + (customValue !== "" ? 1 : 0));
 
   function findByName(opts: TypeaheadOption[], name: string): TypeaheadOption | undefined {
     for (const option of opts) {
@@ -177,10 +186,16 @@
     query = "";
   }
 
+  // Orders concurrent async onselect calls: only the latest attempt may close
+  // the list, so a slow earlier selection resolving after a later veto/error
+  // can't hide the caller's error state.
+  let selectSeq = 0;
+
   async function select(name: string) {
+    const seq = ++selectSeq;
     try {
       const vetoed = (await onselect(name)) === false;
-      if (!vetoed) closeDropdown();
+      if (!vetoed && seq === selectSeq) closeDropdown();
     } catch {
       // Keep the list open so the caller can surface its own error state
       // (e.g. the `error` prop) without losing the attempted value.
@@ -196,29 +211,19 @@
     else void select(row.option.name);
   }
 
+  // Enter commits exactly the row aria-activedescendant names — never a
+  // different value than what a screen reader announced as active.
   function selectHighlighted() {
-    const trimmed = query.trim();
     if (allowClear && highlightIndex === 0) {
-      // With a live query the clear row is only highlighted because nothing
-      // (or nothing better) matched — prefer the first match or the custom
-      // value over silently clearing.
-      if (trimmed !== "" && rows[0]) {
-        activateRow(rows[0]);
-        return;
-      }
-      if (trimmed !== "" && allowCustom) {
-        void select(trimmed);
-        return;
-      }
       void select("");
       return;
     }
-    const row = rows[highlightIndex - clearOffset];
-    if (row) {
-      activateRow(row);
+    if (customValue !== "" && highlightIndex === clearOffset) {
+      void select(customValue);
       return;
     }
-    if (allowCustom && trimmed !== "") void select(trimmed);
+    const row = rows[highlightIndex - clearOffset];
+    if (row) activateRow(row);
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -323,7 +328,7 @@
       type="text"
       role="combobox"
       bind:value={query}
-      oninput={() => (highlightIndex = rows.length > 0 ? clearOffset : 0)}
+      oninput={() => (highlightIndex = rows.length > 0 || customValue !== "" ? clearOffset : 0)}
       onkeydown={handleKeydown}
       {placeholder}
       {disabled}
@@ -408,7 +413,25 @@
               {/if}
             </li>
           {:else}
-            <li class="kit-typeahead__empty" role="presentation">{emptyLabel}</li>
+            {#if customValue !== ""}
+              <li
+                class="kit-typeahead__option"
+                class:highlighted={highlightIndex === clearOffset}
+                class:selected={customValue === value}
+                id={`${listId}-row-${clearOffset}`}
+                role={grouped ? "treeitem" : "option"}
+                aria-selected={customValue === value}
+                aria-level={grouped ? 1 : undefined}
+                onmousedown={() => void select(customValue)}
+                onmouseenter={() => (highlightIndex = clearOffset)}
+              >
+                <span class="kit-typeahead__option-label">
+                  {customLabel.replace("{query}", customValue)}
+                </span>
+              </li>
+            {:else}
+              <li class="kit-typeahead__empty" role="presentation">{emptyLabel}</li>
+            {/if}
           {/each}
         {/if}
       </ul>

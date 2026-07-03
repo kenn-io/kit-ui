@@ -36,13 +36,40 @@ test("clear row selects the empty value and meta text is searched", async ({ pag
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("(none)");
 });
 
-test("Enter submits a custom value when nothing matches", async ({ page }) => {
+test("a custom value renders as a real row that Enter commits", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: /^owner:/ }).click();
-  await page.getByRole("combobox", { name: "Filter owners…" }).fill("someone-new");
-  await expect(page.locator(".kit-typeahead__empty")).toBeVisible();
+  const input = page.getByRole("combobox", { name: "Filter owners…" });
+  await input.fill("someone-new");
+
+  // The custom value is a highlighted row named by aria-activedescendant —
+  // Enter commits exactly what a screen reader hears as active, never a
+  // hidden fallback.
+  const customRow = page.locator(".kit-typeahead__option", { hasText: 'Use "someone-new"' });
+  await expect(customRow).toBeVisible();
+  const activeId = await input.getAttribute("aria-activedescendant");
+  await expect(page.locator(`[id="${activeId}"]`)).toContainText('Use "someone-new"');
   await page.keyboard.press("Enter");
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("someone-new");
+});
+
+test("Enter honors a deliberately highlighted clear row while filtering", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: /^owner:/ }).click();
+  const input = page.getByRole("combobox", { name: "Filter owners…" });
+  await input.fill("dana");
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-demo="owner-value"]')).toHaveText("dana");
+
+  // ArrowUp from the first match onto the clear row: the active descendant
+  // says "None", so Enter must clear — not select the match below it.
+  await page.getByRole("button", { name: /^owner:/ }).click();
+  await input.fill("dana");
+  await page.keyboard.press("ArrowUp");
+  const activeId = await input.getAttribute("aria-activedescendant");
+  await expect(page.locator(`[id="${activeId}"]`)).toHaveText("None");
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-demo="owner-value"]')).toHaveText("(none)");
 });
 
 test("a vetoed selection keeps the list open and shows the error row", async ({ page }) => {
