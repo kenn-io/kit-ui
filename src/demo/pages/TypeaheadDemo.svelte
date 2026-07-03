@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Typeahead } from "../../lib/index.js";
+  import { Typeahead, type TypeaheadOption } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let repo = $state("");
@@ -9,6 +9,69 @@
     { name: "kenn-io/kit-ui", label: "kenn-io/kit-ui", displayLabel: "kit-ui" },
     { name: "kenn-io/infra", label: "kenn-io/infra", displayLabel: "infra" },
   ];
+
+  let owner = $state("");
+  const owners: TypeaheadOption[] = [
+    { name: "marius", label: "marius", meta: "42 open" },
+    { name: "sam", label: "sam", meta: "7 open" },
+    { name: "dana", label: "dana", meta: "on leave" },
+  ];
+
+  let branch = $state("main");
+  let branchError = $state("");
+  const branches: TypeaheadOption[] = [
+    { name: "main", label: "main" },
+    { name: "release", label: "release" },
+    { name: "locked/prod", label: "locked/prod" },
+  ];
+  function selectBranch(value: string): boolean {
+    if (value.startsWith("locked/")) {
+      branchError = "That branch is locked";
+      return false;
+    }
+    branchError = "";
+    branch = value;
+    return true;
+  }
+
+  let grouped = $state("");
+  const groupedOptions: TypeaheadOption[] = [
+    {
+      name: "github.com",
+      label: "github.com",
+      children: [
+        { name: "github.com/kenn-io/middleman", label: "kenn-io/middleman" },
+        { name: "github.com/kenn-io/agentsview", label: "kenn-io/agentsview" },
+      ],
+    },
+    {
+      name: "gitlab.com",
+      label: "gitlab.com",
+      expanded: false,
+      children: [{ name: "gitlab.com/kenn-io/mirror", label: "kenn-io/mirror" }],
+    },
+  ];
+
+  let ref = $state("");
+  let refKind = $state<"branches" | "tags">("branches");
+  let refsLoading = $state(false);
+  const refOptions = $derived(
+    refKind === "branches"
+      ? [
+          { name: "main", label: "main" },
+          { name: "release", label: "release" },
+        ]
+      : [
+          { name: "v1.0.0", label: "v1.0.0" },
+          { name: "v1.1.0", label: "v1.1.0" },
+        ],
+  );
+  function switchRefKind(kind: "branches" | "tags") {
+    if (kind === refKind) return;
+    refKind = kind;
+    refsLoading = true;
+    setTimeout(() => (refsLoading = false), 600);
+  }
 </script>
 
 <DemoSection
@@ -19,7 +82,9 @@
   value={repo}
   fallbackLabel="All repositories"
   placeholder="Filter repositories…"
-  onselect={(v) => (repo = v)}
+  onselect={(v) => {
+    repo = v;
+  }}
 />`}
 >
   <Typeahead
@@ -27,7 +92,175 @@
     value={repo}
     fallbackLabel="All repositories"
     placeholder="Filter repositories…"
-    onselect={(v) => (repo = v)}
+    onselect={(v) => {
+      repo = v;
+    }}
   />
-  <span>value: <code>{repo || "(none)"}</code></span>
+  <span>value: <code data-demo="repo-value">{repo || "(none)"}</code></span>
 </DemoSection>
+
+<DemoSection
+  title="Clear row, custom values, meta"
+  description="allowClear prepends a row that selects the empty value; allowCustom lets Enter submit free text with no match; option meta is searched and rendered dim; triggerPrefix labels the closed trigger."
+  code={`<Typeahead
+  options={owners}
+  value={owner}
+  allowClear
+  allowCustom
+  triggerPrefix="owner:"
+  fallbackLabel="Anyone"
+  placeholder="Filter owners…"
+  onselect={(v) => {
+    owner = v;
+  }}
+/>`}
+>
+  <Typeahead
+    options={owners}
+    value={owner}
+    allowClear
+    allowCustom
+    triggerPrefix="owner:"
+    fallbackLabel="Anyone"
+    placeholder="Filter owners…"
+    onselect={(v) => {
+      owner = v;
+    }}
+  />
+  <span>value: <code data-demo="owner-value">{owner || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Veto and error row"
+  description="onselect may return false (or throw) to keep the list open; the error prop replaces the options with an error row. Selecting locked/prod here is vetoed."
+  code={`<Typeahead
+  options={branches}
+  value={branch}
+  error={branchError}
+  fallbackLabel="Select branch"
+  placeholder="Filter branches…"
+  onselect={selectBranch}
+/>`}
+>
+  <Typeahead
+    options={branches}
+    value={branch}
+    error={branchError}
+    fallbackLabel="Select branch"
+    placeholder="Filter branches…"
+    onselect={selectBranch}
+  />
+  <span>value: <code data-demo="branch-value">{branch}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Grouped options"
+  description="Options with children render as expand/collapse groups: ArrowRight expands, ArrowLeft collapses (or jumps to the parent), Enter toggles a group and selects a leaf. Filtering searches leaves and keeps their group headers."
+  code={`const options: TypeaheadOption[] = [
+  {
+    name: "github.com",
+    label: "github.com",
+    children: [
+      { name: "github.com/kenn-io/middleman", label: "kenn-io/middleman" },
+    ],
+  },
+  { name: "gitlab.com", label: "gitlab.com", expanded: false, children: [...] },
+];
+
+<Typeahead options={options} value={grouped} … />`}
+>
+  <Typeahead
+    options={groupedOptions}
+    value={grouped}
+    fallbackLabel="All repos"
+    placeholder="Filter grouped repos…"
+    onselect={(v) => {
+      grouped = v;
+    }}
+  />
+  <span>value: <code data-demo="grouped-value">{grouped || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Header snippet and loading row"
+  description="The header snippet renders inside the popover above the options (a Branches/Tags switcher here); loading replaces the rows with a loading row while an async source resolves. placement forces the list above or below the trigger."
+  code={`<Typeahead
+  options={refOptions}
+  value={ref}
+  loading={refsLoading}
+  placement="top"
+  fallbackLabel="Select ref"
+  placeholder="Filter refs…"
+  onselect={(v) => {
+    ref = v;
+  }}
+>
+  {#snippet header()}
+    <button onclick={() => switchRefKind("branches")}>Branches</button>
+    <button onclick={() => switchRefKind("tags")}>Tags</button>
+  {/snippet}
+</Typeahead>`}
+>
+  <Typeahead
+    options={refOptions}
+    value={ref}
+    loading={refsLoading}
+    placement="top"
+    fallbackLabel="Select ref"
+    placeholder="Filter refs…"
+    onselect={(v) => {
+      ref = v;
+    }}
+  >
+    {#snippet header()}
+      <div class="ref-tabs" data-demo="ref-tabs">
+        <button
+          type="button"
+          class="ref-tab"
+          class:active={refKind === "branches"}
+          onclick={() => switchRefKind("branches")}
+        >
+          Branches
+        </button>
+        <button
+          type="button"
+          class="ref-tab"
+          class:active={refKind === "tags"}
+          onclick={() => switchRefKind("tags")}
+        >
+          Tags
+        </button>
+      </div>
+    {/snippet}
+  </Typeahead>
+  <span>value: <code data-demo="ref-value">{ref || "(none)"}</code></span>
+</DemoSection>
+
+<style>
+  .ref-tabs {
+    display: flex;
+    gap: 2px;
+  }
+
+  .ref-tab {
+    flex: 1;
+    padding: 3px 8px;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .ref-tab:hover {
+    background: var(--bg-surface-hover);
+  }
+
+  .ref-tab.active {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+</style>

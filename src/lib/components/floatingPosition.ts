@@ -1,4 +1,5 @@
 type FloatingAlign = "start" | "end";
+type FloatingPlacement = "auto" | "below" | "above";
 
 export interface FloatingPopoverInput {
   trigger: Pick<DOMRect, "left" | "right" | "top" | "bottom">;
@@ -11,6 +12,9 @@ export interface FloatingPopoverInput {
   triggerGap?: number;
   maxWidth?: number;
   constrainWidth?: boolean;
+  /** "auto" (default) flips above the trigger when it would overflow the
+   * viewport bottom; "below"/"above" force one side. */
+  placement?: FloatingPlacement;
 }
 
 export function floatingPopoverStyle({
@@ -24,6 +28,7 @@ export function floatingPopoverStyle({
   triggerGap = 4,
   maxWidth,
   constrainWidth = false,
+  placement = "auto",
 }: FloatingPopoverInput): string {
   const availableWidth = Math.max(0, viewportWidth - edgeGap * 2);
   const width = constrainWidth
@@ -40,6 +45,7 @@ export function floatingPopoverStyle({
     viewportHeight,
     edgeGap,
     triggerGap,
+    placement,
   });
 
   const style = [`left: ${formatPx(left)}px`, `top: ${Math.round(top)}px`];
@@ -55,6 +61,7 @@ interface FloatingTopInput {
   viewportHeight: number | undefined;
   edgeGap: number;
   triggerGap: number;
+  placement: FloatingPlacement;
 }
 
 function floatingTop({
@@ -63,9 +70,13 @@ function floatingTop({
   viewportHeight,
   edgeGap,
   triggerGap,
+  placement,
 }: FloatingTopInput): number {
   const below = trigger.bottom + triggerGap;
-  if (popoverHeight === undefined || viewportHeight === undefined) {
+  if (placement === "above") {
+    return Math.max(edgeGap, trigger.top - (popoverHeight ?? 0) - triggerGap);
+  }
+  if (placement === "below" || popoverHeight === undefined || viewportHeight === undefined) {
     return below;
   }
 

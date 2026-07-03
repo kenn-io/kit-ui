@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import { tick } from "svelte";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import { tick, type Snippet } from "svelte";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { TypeaheadOption } from "./typeahead.js";
@@ -13,7 +14,28 @@
     title?: string;
     emptyLabel?: string;
     disabled?: boolean;
-    onselect: (value: string) => void;
+    /** Prepend a row that selects `""`; the trigger falls back to
+     * `fallbackLabel` when nothing matches the value. */
+    allowClear?: boolean;
+    clearLabel?: string;
+    /** Enter with no matching option selects the trimmed query verbatim. */
+    allowCustom?: boolean;
+    /** Force the list above/below the trigger; "auto" (default) flips near
+     * the viewport bottom. */
+    placement?: "auto" | "top" | "bottom";
+    /** Dim text rendered before the value on the closed trigger. */
+    triggerPrefix?: string;
+    /** Replace the option rows with a loading row (async option sources). */
+    loading?: boolean;
+    loadingLabel?: string;
+    /** Replace the option rows with an error row. */
+    error?: string;
+    /** Rendered inside the popover above the option list (e.g. a tab
+     * switcher); receives no arguments. */
+    header?: Snippet;
+    /** Return `false` (or a promise of `false`), or throw, to keep the list
+     * open — e.g. to veto a value or surface `error`. */
+    onselect: (value: string) => void | boolean | Promise<void | boolean>;
   }
 
   let {
@@ -24,6 +46,15 @@
     title,
     emptyLabel = "No matches",
     disabled = false,
+    allowClear = false,
+    clearLabel = "None",
+    allowCustom = false,
+    placement = "auto",
+    triggerPrefix = "",
+    loading = false,
+    loadingLabel = "Loading…",
+    error = "",
+    header,
     onselect,
   }: Props = $props();
 
@@ -32,51 +63,101 @@
   let highlightIndex = $state(0);
   let inputEl = $state<HTMLInputElement>();
   let containerEl = $state<HTMLDivElement>();
-  let listEl = $state<HTMLUListElement>();
-  let listStyle = $state("");
+  let panelEl = $state<HTMLDivElement>();
+  let panelStyle = $state("");
+  // Group rows the user has toggled away from their initial state.
+  let expansionOverrides = $state<Record<string, boolean>>({});
+
+  const uid = $props.id();
+  const listId = `${uid}-list`;
+
+  interface Row {
+    option: TypeaheadOption;
+    depth: number;
+    group: boolean;
+    expanded: boolean;
+  }
 
   // Fixed positioning (same contract as SelectDropdown) so the list is
   // never clipped by an overflow-hidden ancestor; width pins to the
   // trigger so long labels keep truncating instead of widening the menu.
-  function positionList(): void {
-    if (!containerEl || !listEl) return;
+  function positionPanel(): void {
+    if (!containerEl || !panelEl) return;
     const trigger = containerEl.getBoundingClientRect();
-    listStyle = `${floatingPopoverStyle({
+    panelStyle = `${floatingPopoverStyle({
       trigger,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       popoverWidth: trigger.width,
-      popoverHeight: listEl.offsetHeight,
+      popoverHeight: panelEl.offsetHeight,
       triggerGap: 2,
+      placement: placement === "top" ? "above" : placement === "bottom" ? "below" : "auto",
     })}; width: ${Math.round(trigger.width)}px`;
   }
 
-  // Filtering changes the list's height — keep the flip/clamp current.
-  // No dismissable() here: the typeahead closes on blur instead.
+  // Filtering/expansion changes the panel's height — keep the flip/clamp
+  // current. No dismissable() here: the typeahead closes on blur instead.
   $effect(() => {
     if (!open) return;
-    return autoReposition(() => listEl, positionList);
+    return autoReposition(() => panelEl, positionPanel);
   });
 
-  const filtered = $derived.by(() => {
-    if (!query) return options;
-    const q = query.toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-  });
+  function matches(option: TypeaheadOption, q: string): boolean {
+    return [option.label, option.name, option.meta ?? ""].some((part) =>
+      part.toLowerCase().includes(q),
+    );
+  }
 
+  function isExpanded(option: TypeaheadOption): boolean {
+    return expansionOverrides[option.name] ?? option.expanded ?? true;
+  }
+
+  /** Flatten the option tree into visible rows. While filtering, groups are
+   * forced open and shown only when they (or a descendant) match; a group
+   * whose own label matches keeps all its descendants. */
+  function buildRows(opts: TypeaheadOption[], depth: number, q: string, force: boolean): Row[] {
+    const rows: Row[] = [];
+    for (const option of opts) {
+      if (option.children) {
+        const selfMatch = q !== "" && matches(option, q);
+        const kids = buildRows(option.children, depth + 1, selfMatch ? "" : q, force || selfMatch);
+        if (q !== "" && !selfMatch && kids.length === 0) continue;
+        const expanded = q !== "" || force ? true : isExpanded(option);
+        rows.push({ option, depth, group: true, expanded });
+        if (expanded) rows.push(...kids);
+      } else if (q === "" || matches(option, q)) {
+        rows.push({ option, depth, group: false, expanded: false });
+      }
+    }
+    return rows;
+  }
+
+  const rows = $derived(buildRows(options, 0, query.trim().toLowerCase(), false));
+  const grouped = $derived(options.some((o) => o.children));
+  const clearOffset = $derived(allowClear ? 1 : 0);
+  const rowCount = $derived(rows.length + clearOffset);
+
+  function findByName(opts: TypeaheadOption[], name: string): TypeaheadOption | undefined {
+    for (const option of opts) {
+      if (option.name === name) return option;
+      const child = option.children && findByName(option.children, name);
+      if (child) return child;
+    }
+    return undefined;
+  }
+
+  const selectedOption = $derived(value === "" ? undefined : findByName(options, value));
   const displayValue = $derived(
-    options.find((o) => o.name === value)?.displayLabel ??
-      options.find((o) => o.name === value)?.label ??
-      fallbackLabel,
+    selectedOption?.displayLabel ?? selectedOption?.label ?? fallbackLabel,
   );
 
   async function openDropdown() {
     if (disabled) return;
     query = "";
     open = true;
-    highlightIndex = 0;
+    highlightIndex = rows.length > 0 ? clearOffset : 0;
     await tick();
-    positionList();
+    positionPanel();
     inputEl?.focus();
   }
 
@@ -85,22 +166,84 @@
     query = "";
   }
 
-  function select(name: string) {
-    onselect(name);
-    closeDropdown();
+  async function select(name: string) {
+    try {
+      const vetoed = (await onselect(name)) === false;
+      if (!vetoed) closeDropdown();
+    } catch {
+      // Keep the list open so the caller can surface its own error state
+      // (e.g. the `error` prop) without losing the attempted value.
+    }
+  }
+
+  function toggleExpand(option: TypeaheadOption) {
+    expansionOverrides[option.name] = !isExpanded(option);
+  }
+
+  function activateRow(row: Row) {
+    if (row.group) toggleExpand(row.option);
+    else void select(row.option.name);
+  }
+
+  function selectHighlighted() {
+    const trimmed = query.trim();
+    if (allowClear && highlightIndex === 0) {
+      // With a live query the clear row is only highlighted because nothing
+      // (or nothing better) matched — prefer the first match or the custom
+      // value over silently clearing.
+      if (trimmed !== "" && rows[0]) {
+        activateRow(rows[0]);
+        return;
+      }
+      if (trimmed !== "" && allowCustom) {
+        void select(trimmed);
+        return;
+      }
+      void select("");
+      return;
+    }
+    const row = rows[highlightIndex - clearOffset];
+    if (row) {
+      activateRow(row);
+      return;
+    }
+    if (allowCustom && trimmed !== "") void select(trimmed);
   }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      highlightIndex = Math.min(highlightIndex + 1, filtered.length - 1);
+      highlightIndex = Math.min(highlightIndex + 1, Math.max(rowCount - 1, 0));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       highlightIndex = Math.max(highlightIndex - 1, 0);
+    } else if (e.key === "ArrowRight" && grouped && query === "") {
+      const row = rows[highlightIndex - clearOffset];
+      if (row?.group && !row.expanded) {
+        e.preventDefault();
+        toggleExpand(row.option);
+      }
+    } else if (e.key === "ArrowLeft" && grouped && query === "") {
+      const idx = highlightIndex - clearOffset;
+      const row = rows[idx];
+      if (!row) return;
+      if (row.group && row.expanded) {
+        e.preventDefault();
+        toggleExpand(row.option);
+      } else if (row.depth > 0) {
+        // On a leaf (or an already-collapsed group), move to the parent:
+        // the nearest preceding row at a shallower depth.
+        e.preventDefault();
+        for (let i = idx - 1; i >= 0; i -= 1) {
+          if (rows[i]!.depth < row.depth) {
+            highlightIndex = i + clearOffset;
+            break;
+          }
+        }
+      }
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const item = filtered[highlightIndex];
-      if (item) select(item.name);
+      selectHighlighted();
     } else if (e.key === "Escape") {
       closeDropdown();
     }
@@ -132,6 +275,9 @@
     if (containerEl && related && containerEl.contains(related)) {
       return;
     }
+    if (panelEl && related && panelEl.contains(related)) {
+      return;
+    }
     closeDropdown();
   }
 
@@ -140,47 +286,111 @@
   }
 </script>
 
+{#snippet segments(text: string)}
+  {#each highlightSegments(text, query.trim()) as seg, segIndex (segIndex)}
+    {#if seg.match}<mark class="kit-typeahead__match">{seg.text}</mark>{:else}{seg.text}{/if}
+  {/each}
+{/snippet}
+
 <div class="kit-typeahead" bind:this={containerEl}>
   {#if open}
     <input
       bind:this={inputEl}
       class="kit-typeahead__input"
       type="text"
+      role="combobox"
       bind:value={query}
-      oninput={() => (highlightIndex = 0)}
+      oninput={() => (highlightIndex = rows.length > 0 ? clearOffset : 0)}
       onkeydown={handleKeydown}
       onblur={handleBlur}
       {placeholder}
       {disabled}
       aria-label={placeholder}
+      aria-expanded="true"
+      aria-controls={listId}
+      aria-autocomplete="list"
+      aria-activedescendant={!loading && !error && rowCount > 0
+        ? `${listId}-row-${highlightIndex}`
+        : undefined}
       autocomplete="off"
     />
-    <ul
-      class="kit-typeahead__list kit-popover-card"
-      style={listStyle}
-      bind:this={listEl}
-      role="listbox"
+    <div
+      class="kit-typeahead__panel kit-popover-card"
+      style={panelStyle}
+      bind:this={panelEl}
       onmousedown={preventBlur}
+      role="presentation"
     >
-      {#each filtered as option, i (option.name)}
-        <li
-          class="kit-typeahead__option"
-          class:highlighted={i === highlightIndex}
-          class:selected={option.name === value}
-          role="option"
-          aria-selected={option.name === value}
-          onmousedown={() => select(option.name)}
-          onmouseenter={() => (highlightIndex = i)}
-        >
-          {#each highlightSegments(option.label, query) as seg, segIndex (segIndex)}
-            {#if seg.match}<mark class="kit-typeahead__match">{seg.text}</mark
-              >{:else}{seg.text}{/if}
+      {#if header}
+        <div class="kit-typeahead__header">{@render header()}</div>
+      {/if}
+      <ul
+        class="kit-typeahead__list"
+        id={listId}
+        role={grouped ? "tree" : "listbox"}
+        aria-label={placeholder}
+      >
+        {#if loading}
+          <li class="kit-typeahead__status" role="presentation">{loadingLabel}</li>
+        {:else if error}
+          <li class="kit-typeahead__status kit-typeahead__status--error" role="presentation">
+            {error}
+          </li>
+        {:else}
+          {#if allowClear}
+            <li
+              class="kit-typeahead__option"
+              class:highlighted={highlightIndex === 0}
+              class:selected={value === ""}
+              id={`${listId}-row-0`}
+              role={grouped ? "treeitem" : "option"}
+              aria-selected={value === ""}
+              onmousedown={() => void select("")}
+              onmouseenter={() => (highlightIndex = 0)}
+            >
+              <span class="kit-typeahead__option-label">{clearLabel}</span>
+            </li>
+          {/if}
+          {#each rows as row, i (row.option.name)}
+            <li
+              class="kit-typeahead__option"
+              class:kit-typeahead__option--group={row.group}
+              class:highlighted={i + clearOffset === highlightIndex}
+              class:selected={!row.group && row.option.name === value}
+              id={`${listId}-row-${i + clearOffset}`}
+              role={grouped ? "treeitem" : "option"}
+              aria-selected={row.group ? undefined : row.option.name === value}
+              aria-expanded={row.group ? row.expanded : undefined}
+              aria-level={grouped ? row.depth + 1 : undefined}
+              style:--typeahead-depth={row.depth}
+              onmousedown={() => activateRow(row)}
+              onmouseenter={() => (highlightIndex = i + clearOffset)}
+            >
+              {#if row.group}
+                <ChevronRightIcon
+                  class="kit-typeahead__group-chevron{row.expanded
+                    ? ' kit-typeahead__group-chevron--open'
+                    : ''}"
+                  size="12"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                />
+              {/if}
+              <span class="kit-typeahead__option-label">
+                {@render segments(row.option.label)}
+              </span>
+              {#if row.option.meta}
+                <span class="kit-typeahead__option-meta">
+                  {@render segments(row.option.meta)}
+                </span>
+              {/if}
+            </li>
+          {:else}
+            <li class="kit-typeahead__empty" role="presentation">{emptyLabel}</li>
           {/each}
-        </li>
-      {:else}
-        <li class="kit-typeahead__empty">{emptyLabel}</li>
-      {/each}
-    </ul>
+        {/if}
+      </ul>
+    </div>
   {:else}
     <button
       class="kit-typeahead__trigger"
@@ -188,9 +398,12 @@
       onclick={openDropdown}
       {title}
       {disabled}
-      aria-label={placeholder}
+      aria-label={triggerPrefix ? `${triggerPrefix} ${displayValue}` : placeholder}
     >
-      <span class="kit-typeahead__value">{displayValue}</span>
+      <span class="kit-typeahead__value">
+        {#if triggerPrefix}<span class="kit-typeahead__prefix">{triggerPrefix}</span>{/if}
+        <span class="kit-typeahead__value-text">{displayValue}</span>
+      </span>
       <ChevronDownIcon
         class="kit-typeahead__chevron"
         size="12"
@@ -242,9 +455,21 @@
 
   .kit-typeahead__value {
     flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .kit-typeahead__value-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .kit-typeahead__prefix {
+    flex-shrink: 0;
+    color: var(--text-muted);
   }
 
   :global(.kit-typeahead__chevron) {
@@ -270,26 +495,71 @@
     color: var(--text-muted);
   }
 
-  .kit-typeahead__list {
+  .kit-typeahead__panel {
     position: fixed;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     max-height: 50vh;
-    overflow-y: auto;
     z-index: var(--z-popover);
-    list-style: none;
     padding: 2px;
-    margin-block-end: 0;
+  }
+
+  .kit-typeahead__header {
+    flex-shrink: 0;
+    padding: 2px;
+    border-bottom: 1px solid var(--border-muted);
+    margin-bottom: 2px;
+  }
+
+  .kit-typeahead__list {
+    overflow-y: auto;
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
 
   .kit-typeahead__option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     padding: 4px 8px;
+    padding-left: calc(8px + var(--typeahead-depth, 0) * 14px);
     font-size: var(--font-size-xs);
     color: var(--text-secondary);
     cursor: pointer;
     border-radius: var(--radius-sm);
     white-space: nowrap;
+  }
+
+  .kit-typeahead__option-label {
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kit-typeahead__option-meta {
+    flex-shrink: 0;
+    margin-left: auto;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kit-typeahead__option--group {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  :global(.kit-typeahead__group-chevron) {
+    flex-shrink: 0;
+    opacity: 0.72;
+    transition: transform var(--transition-fast);
+  }
+
+  :global(.kit-typeahead__group-chevron--open) {
+    transform: rotate(90deg);
   }
 
   .kit-typeahead__option.highlighted {
@@ -309,10 +579,16 @@
     border-radius: 1px;
   }
 
-  .kit-typeahead__empty {
+  .kit-typeahead__empty,
+  .kit-typeahead__status {
     padding: 6px 8px;
     font-size: var(--font-size-xs);
     color: var(--text-muted);
     font-style: italic;
+  }
+
+  .kit-typeahead__status--error {
+    color: var(--accent-red);
+    font-style: normal;
   }
 </style>
