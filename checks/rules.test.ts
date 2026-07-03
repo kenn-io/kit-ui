@@ -133,7 +133,16 @@ describe("hand-rolled components", () => {
 
   test("dropdown: combobox role", () => {
     const src = svelte(``, `<button role="combobox" aria-expanded="false">x</button>`);
-    expect(checkSource(src, "A.svelte", ["hand-rolled-dropdown"])).toHaveLength(1);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-dropdown"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).not.toContain("MentionTextarea");
+  });
+
+  test("dropdown: listbox next to a textarea steers to MentionTextarea", () => {
+    const src = svelte(``, `<textarea></textarea>\n<div role="listbox">x</div>`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-dropdown"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("MentionTextarea");
   });
 
   test("kbd element", () => {
