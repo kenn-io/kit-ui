@@ -2,6 +2,11 @@
   export interface SettingsCategory {
     id: string;
     label: string;
+    /** Categories sharing a group get a muted heading rendered above their
+     * run; ungrouped categories render as before. */
+    group?: string;
+    /** Muted one-liner under the label describing the category. */
+    summary?: string;
   }
 </script>
 
@@ -16,6 +21,9 @@
     panel: Snippet<[string]>;
     /** Sidebar heading. Pass "" to hide it. */
     title?: string;
+    /** Rendered above the category nav — e.g. a settings search box or a
+     * back-to-app button. */
+    sidebarHeader?: Snippet;
     /** Pinned below the scrollable content, e.g. save/cancel actions. */
     footer?: Snippet;
   }
@@ -25,8 +33,39 @@
     active = $bindable(categories[0]?.id ?? ""),
     panel,
     title = "Settings",
+    sidebarHeader = undefined,
     footer = undefined,
   }: Props = $props();
+
+  // Group headings sit between runs of the same `group` value, so the
+  // categories array order stays the display order.
+  interface CategoryRun {
+    /** First category's id — stable key for the run. */
+    key: string;
+    group: string | undefined;
+    items: SettingsCategory[];
+  }
+
+  // Display-level fallback: if the bound `active` id is absent from
+  // `categories` (e.g. a transient host-side filter), show the first category
+  // instead of a stale panel. `active` itself is left untouched so clearing
+  // the filter restores the selection; clicking commits a new one.
+  const resolvedActive = $derived(
+    categories.some((category) => category.id === active) ? active : (categories[0]?.id ?? ""),
+  );
+
+  const runs = $derived.by(() => {
+    const result: CategoryRun[] = [];
+    for (const category of categories) {
+      const last = result.at(-1);
+      if (last && last.group === category.group) {
+        last.items.push(category);
+      } else {
+        result.push({ key: category.id, group: category.group, items: [category] });
+      }
+    }
+    return result;
+  });
 </script>
 
 <div class="kit-settings">
@@ -34,28 +73,43 @@
     {#if title}
       <h2 class="kit-settings__title">{title}</h2>
     {/if}
+    {#if sidebarHeader}
+      <div class="kit-settings__sidebar-header">
+        {@render sidebarHeader()}
+      </div>
+    {/if}
     <nav class="kit-settings__nav" aria-label={title || "Settings"}>
-      {#each categories as category (category.id)}
-        <button
-          class={[
-            "kit-settings__nav-item",
-            active === category.id && "kit-settings__nav-item--active",
-          ]}
-          type="button"
-          aria-current={active === category.id ? "true" : undefined}
-          onclick={() => (active = category.id)}
-        >
-          {category.label}
-        </button>
+      {#each runs as run (run.key)}
+        {#if run.group}
+          <div class="kit-settings__group-title">{run.group}</div>
+        {/if}
+        {#each run.items as category (category.id)}
+          <button
+            class={[
+              "kit-settings__nav-item",
+              resolvedActive === category.id && "kit-settings__nav-item--active",
+            ]}
+            type="button"
+            aria-current={resolvedActive === category.id ? "true" : undefined}
+            onclick={() => (active = category.id)}
+          >
+            <span class="kit-settings__nav-label">{category.label}</span>
+            {#if category.summary}
+              <span class="kit-settings__nav-summary">{category.summary}</span>
+            {/if}
+          </button>
+        {/each}
       {/each}
     </nav>
   </aside>
 
   <div class="kit-settings__content">
     <div class="kit-settings__scroll">
-      <div class="kit-settings__panel">
-        {@render panel(active)}
-      </div>
+      {#if resolvedActive}
+        <div class="kit-settings__panel">
+          {@render panel(resolvedActive)}
+        </div>
+      {/if}
     </div>
     {#if footer}
       <div class="kit-settings__footer">
@@ -94,13 +148,35 @@
     font-weight: 650;
   }
 
+  .kit-settings__sidebar-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
   .kit-settings__nav {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
   }
 
+  .kit-settings__group-title {
+    padding: 0 var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .kit-settings__group-title:not(:first-child) {
+    margin-top: var(--space-4);
+  }
+
   .kit-settings__nav-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
     padding: var(--space-3) var(--space-4);
     border: 0;
     background: transparent;
@@ -112,6 +188,13 @@
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+  }
+
+  .kit-settings__nav-summary {
+    color: var(--text-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: 400;
+    white-space: normal;
   }
 
   .kit-settings__nav-item:hover {
@@ -187,6 +270,13 @@
 
     .kit-settings__nav {
       flex-direction: row;
+    }
+
+    /* The horizontal strip keeps only the labels: group headings and
+     * per-item summaries don't fit a single scrolling row. */
+    .kit-settings__group-title,
+    .kit-settings__nav-summary {
+      display: none;
     }
   }
   /* Normalized keyboard focus (gyp8): one ring token, :focus-visible only. */

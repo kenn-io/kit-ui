@@ -5,12 +5,17 @@
     left: Snippet;
     center?: Snippet;
     right?: Snippet;
+    /** Sections clip their content by default so long text truncates inside
+     * the 24px bar. Pass "visible" when a snippet anchors a popover (see the
+     * Popovers section in the docs) — overflow management is then the app's
+     * responsibility. */
+    overflow?: "hidden" | "visible";
   }
 
-  let { left, center = undefined, right = undefined }: Props = $props();
+  let { left, center = undefined, right = undefined, overflow = "hidden" }: Props = $props();
 </script>
 
-<footer class="kit-status-bar">
+<footer class="kit-status-bar" class:kit-status-bar--overflow-visible={overflow === "visible"}>
   <div class="kit-status-bar__section kit-status-bar__section--left">
     {@render left()}
   </div>
@@ -61,5 +66,9 @@
 
   .kit-status-bar__section--right {
     justify-content: flex-end;
+  }
+
+  .kit-status-bar--overflow-visible .kit-status-bar__section {
+    overflow: visible;
   }
 </style>

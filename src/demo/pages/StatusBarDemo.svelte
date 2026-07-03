@@ -1,8 +1,21 @@
 <script lang="ts">
   import StatusBar from "../../lib/components/StatusBar.svelte";
+  import { dismissable } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let synced = $state(true);
+  let budgetOpen = $state(false);
+  let budgetAnchor = $state<HTMLElement>();
+  let budgetTrigger = $state<HTMLButtonElement>();
+
+  $effect(() => {
+    if (!budgetOpen) return;
+    return dismissable({
+      owners: () => [budgetAnchor],
+      dismiss: () => (budgetOpen = false),
+      escapeFocus: () => budgetTrigger,
+    });
+  });
 </script>
 
 <DemoSection
@@ -62,6 +75,66 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Anchored popover"
+  description="Sections clip their content by default (long text truncates inside the 24px bar), which also clips popovers. Set the overflow prop to visible and anchor the popover in a position:relative wrapper — bottom-anchored, dressed with kit-popover-card, dismissed via the dismissable util."
+  code={`<StatusBar overflow="visible">
+  {#snippet left()}
+    <span>main</span>
+  {/snippet}
+  {#snippet right()}
+    <span class="anchor" bind:this={anchorEl}>
+      <button onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>
+        api budget
+      </button>
+      {#if open}
+        <div class="popover kit-popover-card" role="dialog" aria-label="API budget">…</div>
+      {/if}
+    </span>
+  {/snippet}
+</StatusBar>
+
+/* .anchor { position: relative; }
+   .popover { position: absolute; bottom: calc(100% + 4px); right: 0;
+              z-index: var(--z-popover); } */`}
+>
+  <div class="bar-host bar-host--open">
+    <div class="fake-app">app content</div>
+    <StatusBar overflow="visible">
+      {#snippet left()}
+        <span>main</span>
+      {/snippet}
+      {#snippet right()}
+        <span class="popover-anchor" bind:this={budgetAnchor}>
+          <button
+            class="bar-btn"
+            type="button"
+            bind:this={budgetTrigger}
+            aria-haspopup="dialog"
+            aria-expanded={budgetOpen}
+            onclick={() => (budgetOpen = !budgetOpen)}
+          >
+            api budget · 64%
+          </button>
+          {#if budgetOpen}
+            <div class="budget-popover kit-popover-card" role="dialog" aria-label="API budget">
+              <div class="budget-popover__title">API budget</div>
+              <div class="budget-popover__row">
+                <span>REST</span>
+                <span class="mono">3,210 / 5,000</span>
+              </div>
+              <div class="budget-popover__row">
+                <span>GraphQL</span>
+                <span class="mono">1,480 / 2,000</span>
+              </div>
+            </div>
+          {/if}
+        </span>
+      {/snippet}
+    </StatusBar>
+  </div>
+</DemoSection>
+
 <style>
   .bar-host {
     width: 100%;
@@ -111,5 +184,43 @@
 
   .bar-btn:hover {
     color: var(--text-primary);
+  }
+
+  /* The popover host must not clip either — no overflow:hidden here. */
+  .bar-host--open {
+    overflow: visible;
+  }
+
+  .popover-anchor {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .budget-popover {
+    position: absolute;
+    bottom: calc(100% + var(--space-2));
+    right: 0;
+    z-index: var(--z-popover);
+    width: 200px;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    white-space: normal;
+  }
+
+  .budget-popover__title {
+    color: var(--text-primary);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+  }
+
+  .budget-popover__row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
   }
 </style>

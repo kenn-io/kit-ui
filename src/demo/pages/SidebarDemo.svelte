@@ -4,6 +4,8 @@
 
   let collapsed = $state(false);
   let width = $state(220);
+  let overlayForced = $state(false);
+  let overlayCollapsed = $state(false);
 </script>
 
 <DemoSection
@@ -57,6 +59,52 @@
 </DemoSection>
 
 <DemoSection
+  title="Host-driven overlay"
+  description="overlayOnNarrow keys the floating overlay on the viewport (below 900px). When the app's narrow signal is a measured container width instead — embedded panes, split-pane hosts — pass the overlay prop and kit applies the same kit-sidebar-layout--overlay presentation; no app-side CSS copy."
+  code={`<CollapsibleSidebar overlay={containerWidth < 500} isCollapsed={collapsed} …>
+  {#snippet sidebar()}…{/snippet}
+  <main>…</main>
+</CollapsibleSidebar>`}
+>
+  <label class="overlay-switch">
+    <input type="checkbox" bind:checked={overlayForced} />
+    <span>Force <code>overlay</code> (host signal says narrow)</span>
+  </label>
+  <div class="sidebar-host sidebar-host--overlay">
+    <CollapsibleSidebar
+      isCollapsed={overlayCollapsed}
+      showCollapsedStrip
+      overlay={overlayForced || undefined}
+      sidebarWidth={200}
+      minSidebarWidth={160}
+      maxSidebarWidth={360}
+      onExpand={() => (overlayCollapsed = false)}
+    >
+      {#snippet sidebar()}
+        <div class="pane pane--sidebar">
+          <div class="pane-header">
+            <span>Sessions</span>
+            <SidebarToggle
+              state="expanded"
+              onclick={() => (overlayCollapsed = true)}
+              class="kit-sidebar-toggle--push"
+            />
+          </div>
+          <ul class="fake-list">
+            <li>middleman #1204</li>
+            <li>agentsview #88</li>
+            <li>kit-ui #3</li>
+          </ul>
+        </div>
+      {/snippet}
+      <div class="pane pane--main">
+        <p>overlay: <code>{overlayForced ? "true" : "undefined"}</code></p>
+      </div>
+    </CollapsibleSidebar>
+  </div>
+</DemoSection>
+
+<DemoSection
   title="SidebarToggle"
   description="The standalone toggle button, also usable in app headers."
   code={`<SidebarToggle state={collapsed ? "collapsed" : "expanded"} onclick={toggle} />`}
@@ -76,6 +124,20 @@
     border: 1px solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
+  }
+
+  .sidebar-host--overlay {
+    height: 180px;
+  }
+
+  .overlay-switch {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
   }
 
   .pane {
