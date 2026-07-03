@@ -81,16 +81,15 @@ test("a vetoed selection keeps the list open and shows the error row", async ({ 
   await expect(page.getByRole("combobox", { name: "Filter branches…" })).toBeVisible();
   await expect(page.locator('[data-demo="branch-value"]')).toHaveText("main");
 
-  // The error status row stands in for the options: Enter must not select a
-  // hidden row, and aria-activedescendant is dropped while it shows.
-  const input = page.getByRole("combobox", { name: "Filter branches…" });
-  await expect(input).not.toHaveAttribute("aria-activedescendant", /.+/);
-  await page.keyboard.press("Enter");
-  await expect(page.locator(".kit-typeahead__status--error")).toBeVisible();
-  await expect(page.locator('[data-demo="branch-value"]')).toHaveText("main");
-  // Escape still closes.
-  await page.keyboard.press("Escape");
-  await expect(input).toHaveCount(0);
+  // The error row is announced (role=alert) but does not stand in for the
+  // options: they stay selectable so the user can retry, which is where the
+  // caller clears the error.
+  await expect(page.locator(".kit-typeahead__status--error")).toHaveAttribute("role", "alert");
+  const release = page.locator(".kit-typeahead__option", { hasText: "release" });
+  await expect(release).toBeVisible();
+  await release.click();
+  await expect(page.locator('[data-demo="branch-value"]')).toHaveText("release");
+  await expect(page.locator(".kit-typeahead__status--error")).toHaveCount(0);
 });
 
 test("tabbing out of a focusable header control dismisses the panel", async ({ page }) => {

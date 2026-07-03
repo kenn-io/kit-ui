@@ -48,7 +48,7 @@ values, veto, meta text) and grouped options.
 | `triggerPrefix` | `string`                                                        | —               | Dim text before the value on the closed trigger                                   |
 | `loading`       | `boolean`                                                       | `false`         | Replaces option rows with `loadingLabel` (async sources)                          |
 | `loadingLabel`  | `string`                                                        | `"Loading…"`    |                                                                                   |
-| `error`         | `string`                                                        | —               | Replaces option rows with an error row                                            |
+| `error`         | `string`                                                        | —               | Error row above the options, which stay selectable (clear it in `onselect`)       |
 | `header`        | `Snippet`                                                       | —               | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher) |
 
 ## Option shape
@@ -79,15 +79,17 @@ option has children the list uses `role="tree"` semantics
 
 `onselect` may return `false` (or a promise of `false`), or throw, to keep
 the list open — use this to reject a value and surface a message through the
-`error` prop without losing the user's query. `error` is caller-owned: the
-component never sets or clears it, so clear it yourself on the next attempt
-(the demo resets it at the top of `onselect`) to avoid a menu stuck on a
-stale error row. `loading` covers async option sources (e.g. refetching
+`error` prop without losing the user's query. The error renders as a
+`role="alert"` row _above_ the options, which stay visible and selectable —
+the user's retry is what lets you clear the error. `error` is caller-owned:
+the component never sets or clears it, so clear it yourself on the next
+attempt (the demo resets it at the top of `onselect`) to avoid a menu stuck
+on a stale error row. `loading` covers async option sources (e.g. refetching
 after a `header` tab switch).
 
-While a `loading` or `error` status row is showing it stands in for the
-options: arrow keys and Enter are inert (Escape still closes), and
-`aria-activedescendant` is dropped so nothing hidden is announced as active.
+While a `loading` status row is showing it stands in for the options: arrow
+keys and Enter are inert (Escape still closes), and `aria-activedescendant`
+is dropped so nothing hidden is announced as active.
 
 Enter always commits exactly the row `aria-activedescendant` names — the
 clear row clears even while filtering, and a custom value (`allowCustom`)

@@ -132,7 +132,7 @@
 
 <DemoSection
   title="Veto and error row"
-  description="onselect may return false (or throw) to keep the list open; the error prop replaces the options with an error row. Selecting locked/prod here is vetoed."
+  description="onselect may return false (or throw) to keep the list open; the error prop shows an error row above the options, which stay selectable so a retry can clear it. Selecting locked/prod here is vetoed."
   code={`<Typeahead
   options={branches}
   value={branch}

@@ -32,7 +32,8 @@
     /** Replace the option rows with a loading row (async option sources). */
     loading?: boolean;
     loadingLabel?: string;
-    /** Replace the option rows with an error row. */
+    /** Error row rendered above the options, which stay selectable so the
+     * user can retry (clear it in `onselect`). */
     error?: string;
     /** Rendered inside the popover above the option list (e.g. a tab
      * switcher); receives no arguments. */
@@ -241,11 +242,13 @@
       closeDropdown();
       return;
     }
-    // A loading/error status row stands in for the options, so there is
-    // nothing to navigate to or select — keep selection/navigation keys inert
-    // (Enter would otherwise submit an enclosing form) but let editing keys
-    // reach the input.
-    if (loading || error) {
+    // A loading status row stands in for the options, so there is nothing to
+    // navigate to or select — keep selection/navigation keys inert (Enter
+    // would otherwise submit an enclosing form) but let editing keys reach
+    // the input. An error row does NOT stand in: the options stay selectable
+    // so the user can immediately retry (which is where callers clear the
+    // caller-owned `error`).
+    if (loading) {
       if (e.key === "Enter" || e.key === "ArrowDown" || e.key === "ArrowUp") e.preventDefault();
       return;
     }
@@ -346,9 +349,7 @@
       aria-expanded="true"
       aria-controls={listId}
       aria-autocomplete="list"
-      aria-activedescendant={!loading && !error && rowCount > 0
-        ? `${listId}-row-${activeIndex}`
-        : undefined}
+      aria-activedescendant={!loading && rowCount > 0 ? `${listId}-row-${activeIndex}` : undefined}
       autocomplete="off"
     />
     <div
@@ -369,11 +370,15 @@
       >
         {#if loading}
           <li class="kit-typeahead__status" role="presentation">{loadingLabel}</li>
-        {:else if error}
-          <li class="kit-typeahead__status kit-typeahead__status--error" role="presentation">
-            {error}
-          </li>
         {:else}
+          {#if error}
+            <!-- Above (not instead of) the options: the user must be able to
+                 retry, since callers clear `error` on the next onselect.
+                 role="alert" announces the veto to screen readers. -->
+            <li class="kit-typeahead__status kit-typeahead__status--error" role="alert">
+              {error}
+            </li>
+          {/if}
           {#if allowClear}
             <li
               class="kit-typeahead__option"
