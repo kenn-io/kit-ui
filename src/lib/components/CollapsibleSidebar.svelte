@@ -199,7 +199,7 @@
   }
 
   .kit-sidebar-layout--overlay
-    .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
+    > .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
     position: absolute;
     inset: 0 auto 0 0;
     z-index: 20;
@@ -208,7 +208,7 @@
     box-shadow: var(--shadow-lg);
   }
 
-  .kit-sidebar-layout--overlay .kit-sidebar-layout__sidebar--collapsed {
+  .kit-sidebar-layout--overlay > .kit-sidebar-layout__sidebar--collapsed {
     width: 36px;
     padding-top: 8px;
   }
@@ -223,7 +223,7 @@
     }
 
     .kit-sidebar-layout--overlay-narrow
-      .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
+      > .kit-sidebar-layout__sidebar:not(.kit-sidebar-layout__sidebar--collapsed) {
       position: absolute;
       inset: 0 auto 0 0;
       z-index: 20;
@@ -232,7 +232,7 @@
       box-shadow: var(--shadow-lg);
     }
 
-    .kit-sidebar-layout--overlay-narrow .kit-sidebar-layout__sidebar--collapsed {
+    .kit-sidebar-layout--overlay-narrow > .kit-sidebar-layout__sidebar--collapsed {
       width: 36px;
       padding-top: 8px;
     }
