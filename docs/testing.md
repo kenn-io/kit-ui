@@ -34,7 +34,7 @@ server alive across runs while iterating. Chromium comes from
 | `virtual-list.spec.ts`     | Windowed DOM, container keyboard nav + `aria-activedescendant`, Enter activation, `scrollToIndex`, nested-control key isolation                                                                                                                                       |
 | `markdown.spec.ts`         | Sanitizer against real DOMPurify (script/style/inline-style vectors, faked-shiki nonce check, `rel` hardening), dual-theme code colors, CodeBlock line numbers / wrap toggle / clipboard copy                                                                         |
 | `mention-textarea.spec.ts` | Trigger detection at word boundaries (and not mid-word), async search states, ArrowUp/Down cycling + Tab/Enter insert + Escape dismiss, caret placement after insert, custom trigger char and row snippet                                                             |
-| `mermaid.spec.ts`         | Mermaid post-processor against real mermaid: fence → pan/zoom viewer, wheel zoom + reset, source copy, expand lightbox (Escape/backdrop close, focus restore), invalid-diagram source fallback, theme-flip re-render                                                  |
+| `mermaid.spec.ts`          | Mermaid post-processor against real mermaid: fence → pan/zoom viewer, wheel zoom + reset, source copy, expand lightbox (Escape/backdrop close, focus restore), invalid-diagram source fallback, theme-flip re-render                                                  |
 
 Conventions: specs drive the gallery pages (`/#page-id`) through
 `helpers.ts` (`gotoPage`, `setSlider`, `setTheme`, `contrastOf`) —

@@ -27,7 +27,7 @@ const renderer = createMarkdownRenderer({ codeFence: mermaidCodeFence });
 const controller = initMarkdownMermaidRendering(appRoot); // once at startup
 ```
 
-and install the peer: `bun add mermaid` (`^11`).
+and install the peer: `bun add mermaid@^11.15.0`.
 
 ## How it works
 
@@ -66,10 +66,10 @@ mermaidCodeFence(code: string, lang: string): string | undefined
 
 `MarkdownMermaidOptions`:
 
-| Option           | Default                                         | Notes                                                                                                              |
-| ---------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `load`           | dynamic `import("mermaid")`                     | Injectable loader (tests, custom bundling)                                                                         |
-| `onLightboxOpen` | push `"kit-mermaid-lightbox"` on `appShortcuts` | Suspend app keyboard handling while the lightbox is open; returns the restore function. Hook a modal stack in here |
+| Option           | Default                                         | Notes                                                                                                                  |
+| ---------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `load`           | dynamic `import("mermaid")`                     | Injectable loader (tests, custom bundling); custom loaders must expose `version` for the `>=11.15.0 <12` runtime guard |
+| `onLightboxOpen` | push `"kit-mermaid-lightbox"` on `appShortcuts` | Suspend app keyboard handling while the lightbox is open; returns the restore function. Hook a modal stack in here     |
 
 ## Security model
 
@@ -83,11 +83,12 @@ test in `tests/browser/mermaid.spec.ts`).
 Failure handling distinguishes two cases. A diagram that fails to
 _render_ keeps its escaped source visible and is held (not retried)
 until its source changes. An _infrastructure_ failure — the mermaid
-chunk failing to load, a missing theme token — clears the pending state
-instead, so the next render pass (`renderNow()`, a DOM mutation, a
-theme flip) retries. Failures are reported via `console.error` only;
-apps that need telemetry can call `renderMarkdownMermaidDiagrams`
-themselves and observe the rejection.
+chunk failing to load, a missing theme token, or `mermaid.run`
+rejecting before per-node attachment — clears the pending state instead,
+so the next render pass (`renderNow()`, a DOM mutation, a theme flip)
+retries. Failures are reported via `console.error` only; apps that need
+telemetry can call `renderMarkdownMermaidDiagrams` themselves and
+observe the rejection.
 
 Budgets bound hostile input: 25 diagrams and 200 KB of diagram source
 (beyond these, blocks stay plain source), 50 KB and 500 edges per

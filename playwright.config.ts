@@ -22,6 +22,7 @@ if (!process.env.KIT_UI_TEST_PORT) {
   process.env.KIT_UI_TEST_PORT = String(claimed);
 }
 const port = Number(process.env.KIT_UI_TEST_PORT);
+const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "tests/browser",
@@ -30,12 +31,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL,
     viewport: { width: 1280, height: 800 },
   },
   webServer: {
     command: `bunx vite --port ${port} --strictPort`,
-    url: `http://localhost:${port}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
   },
 });

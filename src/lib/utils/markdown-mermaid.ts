@@ -33,6 +33,7 @@ import { escapeHtml } from "./markdown.js";
 import { appShortcuts } from "./shortcuts.js";
 
 export interface MarkdownMermaidAPI {
+  version?: string;
   initialize: (config: MarkdownMermaidConfig) => void;
   run: (config: { nodes: ArrayLike<HTMLElement>; suppressErrors: true }) => Promise<unknown>;
 }
@@ -89,6 +90,8 @@ const MAX_MERMAID_DIAGRAMS_PER_DOCUMENT = 25;
 const MAX_MERMAID_SOURCE_BYTES_PER_DOCUMENT = 200_000;
 const MERMAID_MAX_TEXT_SIZE = 50_000;
 const MERMAID_MAX_EDGES = 500;
+const MINIMUM_SUPPORTED_MERMAID_VERSION = "11.15.0";
+const SUPPORTED_MERMAID_VERSION_RANGE = `>=${MINIMUM_SUPPORTED_MERMAID_VERSION} <12`;
 const MERMAID_SECURE_CONFIG = [
   "secure",
   "securityLevel",
@@ -185,6 +188,11 @@ const MERMAID_BUTTON_GLYPHS: Record<MermaidButtonIcon, string> = {
 let mermaidButtonIconSvgs: Record<MermaidButtonIcon, string> | null = null;
 let mermaidButtonIconPromise: Promise<void> | null = null;
 
+interface MermaidPackageModule {
+  default?: { version?: unknown };
+  version?: unknown;
+}
+
 function loadMermaidButtonIcons(): Promise<void> {
   mermaidButtonIconPromise ??= (async () => {
     const [svelte, expand, copy, reset, close, check] = await Promise.all([
@@ -230,14 +238,49 @@ function setMermaidButtonIcon(button: HTMLButtonElement, icon: MermaidButtonIcon
 
 async function loadMermaid(): Promise<MarkdownMermaidAPI> {
   if (!mermaidPromise) {
-    mermaidPromise = import("mermaid")
-      .then((module): MarkdownMermaidAPI => module.default)
+    mermaidPromise = Promise.all([import("mermaid"), import("mermaid/package.json")])
+      .then(([module, packageModule]): MarkdownMermaidAPI => {
+        const mermaid = module.default;
+        const version = mermaidPackageVersion(packageModule as MermaidPackageModule);
+        if (version) {
+          Object.defineProperty(mermaid, "version", {
+            configurable: true,
+            value: version,
+          });
+        }
+        return mermaid;
+      })
       .catch((error: unknown) => {
         mermaidPromise = null;
         throw error;
       });
   }
   return mermaidPromise;
+}
+
+function mermaidPackageVersion(packageModule: MermaidPackageModule): string | undefined {
+  const version = packageModule.default?.version ?? packageModule.version;
+  return typeof version === "string" ? version : undefined;
+}
+
+function assertSupportedMermaidVersion(mermaid: MarkdownMermaidAPI): void {
+  const version = mermaid.version;
+  if (!version || !mermaidVersionIsSupported(version)) {
+    throw new Error(
+      `Unsupported Mermaid runtime version ${version ?? "unknown"}; @kenn-io/kit-ui requires mermaid ${SUPPORTED_MERMAID_VERSION_RANGE}.`,
+    );
+  }
+}
+
+function mermaidVersionIsSupported(version: string): boolean {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:\+.*)?$/.exec(version);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  if (major !== 11) return false;
+  if (minor > 15) return true;
+  return minor === 15 && patch >= 0;
 }
 
 export async function renderMarkdownMermaidDiagrams(
@@ -255,40 +298,32 @@ export async function renderMarkdownMermaidDiagrams(
   let mermaid: MarkdownMermaidAPI;
   try {
     [mermaid] = await Promise.all([(options.load ?? loadMermaid)(), loadMermaidButtonIcons()]);
+    assertSupportedMermaidVersion(mermaid);
     initializeMermaidForCurrentTheme(mermaid);
   } catch (error: unknown) {
-    // Infrastructure failure — the loader chunk or a theme token, nothing
-    // diagram-specific. Clear the pending state instead of failure-holding
-    // so the next render pass (renderNow, a mutation, a theme flip)
-    // retries; only per-source parse failures are held below.
-    for (const node of nodes) {
-      restoreMermaidSource(node);
-      clearMermaidRenderState(node);
-    }
+    restoreMermaidSourcesAndClearRenderState(nodes);
     throw error;
   }
 
   try {
     await mermaid.run({ nodes, suppressErrors: true });
-    let renderedCount = 0;
-    for (const node of nodes) {
-      if (attachMermaidViewer(node, diagramSources.get(node) ?? "", options)) {
-        failedDiagramSources.delete(node);
-        node.dataset.mermaidRendered = "true";
-        renderedCount += 1;
-      } else {
-        restoreMermaidSource(node);
-        markMermaidRenderFailed(node);
-      }
-    }
-    return renderedCount;
   } catch (error: unknown) {
-    for (const node of nodes) {
+    restoreMermaidSourcesAndClearRenderState(nodes);
+    throw error;
+  }
+
+  let renderedCount = 0;
+  for (const node of nodes) {
+    if (attachMermaidViewer(node, diagramSources.get(node) ?? "", options)) {
+      failedDiagramSources.delete(node);
+      node.dataset.mermaidRendered = "true";
+      renderedCount += 1;
+    } else {
       restoreMermaidSource(node);
       markMermaidRenderFailed(node);
     }
-    throw error;
   }
+  return renderedCount;
 }
 
 function collectRenderableMermaidNodes(root: ParentNode): HTMLElement[] {
@@ -381,6 +416,13 @@ function attachMermaidViewer(
 function clearMermaidRenderState(node: HTMLElement): void {
   delete node.dataset.mermaidRendered;
   delete node.dataset.processed;
+}
+
+function restoreMermaidSourcesAndClearRenderState(nodes: HTMLElement[]): void {
+  for (const node of nodes) {
+    restoreMermaidSource(node);
+    clearMermaidRenderState(node);
+  }
 }
 
 function markMermaidRenderFailed(node: HTMLElement): void {
@@ -547,6 +589,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
 
   const panel = document.createElement("div");
   panel.className = "kit-mermaid-lightbox__panel";
+  panel.tabIndex = -1;
 
   const closeButton = createMermaidButton("Close expanded diagram", "close", closeLightbox);
   closeButton.classList.add("kit-mermaid-lightbox__close");
@@ -577,7 +620,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   // scroll lock, focus restore on close. [autofocus] steers the trap's
   // initial focus to the close control.
   closeButton.setAttribute("autofocus", "");
-  const releaseFocusTrap = trapFocus(overlay);
+  const releaseFocusTrap = trapFocus(panel);
 
   function closeLightbox(): void {
     overlay.removeEventListener("keydown", onKeyDown);

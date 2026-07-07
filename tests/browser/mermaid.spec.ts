@@ -54,13 +54,34 @@ test("expand opens a lightbox dialog; Escape closes and restores focus", async (
   await expand.click();
 
   const lightbox = page.locator(".kit-mermaid-lightbox");
+  const panel = lightbox.locator(".kit-mermaid-lightbox__panel");
   await expect(lightbox).toHaveAttribute("role", "dialog");
   await expect(lightbox.locator(".kit-mermaid-viewer__pan svg")).toBeVisible();
   await expect(lightbox.getByRole("button", { name: "Close expanded diagram" })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(
+        () => document.activeElement?.closest(".kit-mermaid-lightbox__panel") !== null,
+      ),
+    ).toBe(true);
+  }
+  for (let i = 0; i < 2; i++) {
+    await page.keyboard.press("Shift+Tab");
+    expect(
+      await page.evaluate(
+        () => document.activeElement?.closest(".kit-mermaid-lightbox__panel") !== null,
+      ),
+    ).toBe(true);
+  }
+  await expect(panel).toHaveAttribute("tabindex", "-1");
 
   await page.keyboard.press("Escape");
   await expect(lightbox).toHaveCount(0);
   await expect(expand).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
 });
 
 test("backdrop click closes the lightbox", async ({ page }) => {
@@ -176,6 +197,168 @@ test("invalid diagrams keep their escaped source visible", async ({ page }) => {
   await expect(failed).toHaveCount(1, { timeout: 15_000 });
   await expect(failed).toContainText("not mermaid");
   await expect(failed.locator("svg")).toHaveCount(0);
+});
+
+test("skips mermaid.run when the runtime version is below the supported floor", async ({
+  page,
+}) => {
+  const result = await page.evaluate(async () => {
+    const { renderMarkdownMermaidDiagrams } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const root = document.createElement("div");
+    root.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    const node = root.querySelector<HTMLElement>("pre.mermaid")!;
+    let runCalls = 0;
+    let message = "";
+
+    try {
+      await renderMarkdownMermaidDiagrams(root, {
+        load: async () => ({
+          version: "11.14.0",
+          initialize() {},
+          async run() {
+            runCalls += 1;
+          },
+        }),
+      });
+    } catch (error: unknown) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    return {
+      message,
+      rendered: node.dataset.mermaidRendered ?? null,
+      runCalls,
+      source: node.textContent,
+    };
+  });
+
+  expect(result.message).toContain(">=11.15.0 <12");
+  expect(result.rendered).toBeNull();
+  expect(result.runCalls).toBe(0);
+  expect(result.source).toBe("graph LR\nA-->B");
+});
+
+test("loader-level failures leave diagrams retryable", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { renderMarkdownMermaidDiagrams } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const root = document.createElement("div");
+    root.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    const node = root.querySelector<HTMLElement>("pre.mermaid")!;
+    let loadCalls = 0;
+    let runCalls = 0;
+
+    try {
+      await renderMarkdownMermaidDiagrams(root, {
+        load: async () => {
+          loadCalls += 1;
+          throw new Error("chunk unavailable");
+        },
+      });
+    } catch {
+      // Expected: transient loader failure.
+    }
+
+    const afterFailure = {
+      rendered: node.dataset.mermaidRendered ?? null,
+      source: node.textContent,
+    };
+    const renderedCount = await renderMarkdownMermaidDiagrams(root, {
+      load: async () => ({
+        version: "11.15.0",
+        initialize() {},
+        async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
+          runCalls += 1;
+          for (const item of Array.from(nodes)) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            item.textContent = "";
+            item.append(svg);
+            item.dataset.processed = "true";
+          }
+        },
+      }),
+    });
+
+    return {
+      afterFailure,
+      loadCalls,
+      rendered: node.dataset.mermaidRendered ?? null,
+      renderedCount,
+      runCalls,
+      viewer: node.classList.contains("kit-mermaid-viewer"),
+    };
+  });
+
+  expect(result.afterFailure).toEqual({
+    rendered: null,
+    source: "graph LR\nA-->B",
+  });
+  expect(result.loadCalls).toBe(1);
+  expect(result.rendered).toBe("true");
+  expect(result.renderedCount).toBe(1);
+  expect(result.runCalls).toBe(1);
+  expect(result.viewer).toBe(true);
+});
+
+test("run-level failures leave diagrams retryable", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { renderMarkdownMermaidDiagrams } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const root = document.createElement("div");
+    root.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    const node = root.querySelector<HTMLElement>("pre.mermaid")!;
+    let runCalls = 0;
+
+    try {
+      await renderMarkdownMermaidDiagrams(root, {
+        load: async () => ({
+          version: "11.15.0",
+          initialize() {},
+          async run() {
+            runCalls += 1;
+            throw new Error("worker unavailable");
+          },
+        }),
+      });
+    } catch {
+      // Expected: transient mermaid.run failure.
+    }
+
+    const afterFailure = {
+      rendered: node.dataset.mermaidRendered ?? null,
+      source: node.textContent,
+    };
+    const renderedCount = await renderMarkdownMermaidDiagrams(root, {
+      load: async () => ({
+        version: "11.15.0",
+        initialize() {},
+        async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
+          runCalls += 1;
+          for (const item of Array.from(nodes)) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            item.textContent = "";
+            item.append(svg);
+            item.dataset.processed = "true";
+          }
+        },
+      }),
+    });
+
+    return {
+      afterFailure,
+      rendered: node.dataset.mermaidRendered ?? null,
+      renderedCount,
+      runCalls,
+      viewer: node.classList.contains("kit-mermaid-viewer"),
+    };
+  });
+
+  expect(result.afterFailure).toEqual({
+    rendered: null,
+    source: "graph LR\nA-->B",
+  });
+  expect(result.rendered).toBe("true");
+  expect(result.renderedCount).toBe(1);
+  expect(result.runCalls).toBe(2);
+  expect(result.viewer).toBe(true);
 });
 
 test("theme flip re-renders diagrams with the other palette", async ({ page }) => {
