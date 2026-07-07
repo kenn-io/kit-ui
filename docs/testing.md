@@ -11,11 +11,11 @@ bunx playwright test focus-trap   # one spec
 bunx playwright test --ui         # interactive debugging
 ```
 
-The config (`playwright.config.ts`) boots `vite --port 4198` and reuses
-an already-running instance outside CI — including one started by a
-_different_ checkout or worktree, which silently tests that checkout's
-code. Set `KIT_UI_TEST_PORT` to run against a free port when 4198 is
-taken. Chromium comes from
+The config (`playwright.config.ts`) boots Vite on an OS-assigned
+ephemeral port claimed per run, so parallel checkouts/worktrees never
+reuse each other's dev server (which would silently test the other
+checkout's code). Set `KIT_UI_TEST_PORT` to pin the port and keep one
+server alive across runs while iterating. Chromium comes from
 `bunx playwright install chromium` (one-time locally; CI installs it in
 `.github/workflows/ci.yml` with the download cached on `bun.lock`).
 
