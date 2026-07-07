@@ -169,6 +169,33 @@ test("an external selection change while open drops the mid-pick draft", async (
   await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveText("12");
 });
 
+test("an external calendar selection while open also reseeds the calendar tab", async ({
+  page,
+}) => {
+  // Regression: draft invalidation used to reseed only the custom fields,
+  // leaving calUnit/calAnchor from the pre-drift selection — switching to
+  // the Calendar tab then showed (and would commit) the wrong period.
+  await openCustomTab(page);
+  await day(page, 5).click(); // start a draft against the relative-30 seed
+
+  await page
+    .getByRole("button", { name: "External: this calendar month" })
+    .evaluate((button) => (button as HTMLButtonElement).click());
+  await expect(page.locator("code", { hasText: '"unit":"month"' })).toBeVisible();
+  await expect(panel(page)).toBeVisible();
+
+  // The invalidation keeps the user on the Custom tab; the Calendar tab's
+  // working state must nonetheless reflect the new controlled selection.
+  await panel(page).getByRole("radio", { name: "Calendar" }).click();
+  await expect(panel(page).getByRole("button", { name: "Month", exact: true })).toHaveClass(
+    /active/,
+  );
+  await panel(page).getByRole("button", { name: "Week", exact: true }).click();
+  await expect(
+    page.locator("code", { hasText: `"unit":"week","anchor":"${yyyy}-${mm}-01"` }),
+  ).toBeVisible();
+});
+
 test("re-keying survives an external incomplete-custom swap between drafts", async ({ page }) => {
   // Regression for the stale-key hole: a full reseed that armed a pending
   // draft (from a controlled incomplete custom selection) but left the key

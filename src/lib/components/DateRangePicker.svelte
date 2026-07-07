@@ -179,6 +179,14 @@
       return;
     }
     tab = selection.mode;
+    reseedFromSelection();
+  }
+
+  // Everything seed() resets except the active tab: calendar unit/anchor/
+  // month plus the custom draft fields. Also the drift path, where the tab
+  // is deliberately left alone — an open panel shouldn't switch tabs under
+  // the user just because the parent swapped the selection.
+  function reseedFromSelection(): void {
     if (selection.mode === "calendar") {
       calUnit = selection.unit;
       calAnchor = selection.anchor;
@@ -246,15 +254,6 @@
     customMonth = resolved.to;
   }
 
-  function seedCustomFields(sel: RangeSelection): void {
-    const resolved = resolveRange(sel, earliestDate);
-    customFrom = sel.mode === "custom" ? sel.from : resolved.from;
-    customTo = sel.mode === "custom" ? sel.to : resolved.to;
-    customPending = customFrom !== "" && customTo === "";
-    pendingFor = customPending ? selectionKey(sel) : null;
-    customMonth = customTo || customFrom || todayStr();
-  }
-
   function applyRelative(days: number): void {
     const sel: RangeSelection = { mode: "relative", days };
     calAnchor = resolveRange(sel, earliestDate).to;
@@ -296,9 +295,12 @@
 
   // Invalidate while closed too: a selection A -> B -> A round trip before
   // reopening still means the draft that started under the first A is stale.
+  // Reseed the calendar state along with the custom fields — an open panel
+  // whose calendar tab still shows the pre-drift unit/anchor would commit
+  // the wrong period on the next pill click.
   $effect(() => {
     if (!customPending || selectionKey(selection) === pendingFor) return;
-    seedCustomFields(selection);
+    reseedFromSelection();
   });
 
   $effect(() => {

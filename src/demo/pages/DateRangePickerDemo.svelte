@@ -62,6 +62,12 @@
       label="External: last 7 days"
       onclick={() => (selection = { mode: "relative", days: 7 })}
     />
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: this calendar month"
+      onclick={() => (selection = { mode: "calendar", unit: "month", anchor: monthStart })}
+    />
   </div>
 </DemoSection>
 
