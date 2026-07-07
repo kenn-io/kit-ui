@@ -41,8 +41,9 @@ wraps each result in a viewer:
 - **drag to pan, wheel to zoom** (0.4×–3×, cursor-anchored), with a reset
   control;
 - **copy** — the original fence source, via kit-ui's `copyToClipboard`;
-- **expand** — a full-screen lightbox (`role="dialog"`, Escape or
-  backdrop click closes, focus returns to the opener).
+- **expand** — a full-screen lightbox (`role="dialog"` with full modal
+  semantics via kit's `trapFocus`: Tab containment, body scroll lock;
+  Escape or backdrop click closes and focus returns to the opener).
 
 A second observer watches the `dark` class on `<html>`: a theme flip
 resets every rendered viewer and re-renders with the other palette —
@@ -53,9 +54,12 @@ including mid-render flips.
 ```ts
 initMarkdownMermaidRendering(root?: HTMLElement | Document, options?): MarkdownMermaidController
 // → { renderNow(): void; disconnect(): void }
+// SSR-safe: without a DOM it returns a no-op controller (call again on
+// the client). The default root is `document`.
 
 renderMarkdownMermaidDiagrams(root: ParentNode, options?): Promise<number>
-// one-shot render (init uses this); resolves the rendered count
+// one-shot render (init uses this); resolves the rendered count.
+// Browser-only — rejects without a DOM.
 
 mermaidCodeFence(code: string, lang: string): string | undefined
 ```
@@ -71,13 +75,28 @@ mermaidCodeFence(code: string, lang: string): string | undefined
 
 Mirrors `utils/markdown`: `securityLevel: "strict"`, `htmlLabels: false`,
 mermaid's DOMPurify pass forbids `style` attributes/tags, and the
-security-relevant config keys are locked with `secure` so diagram init
-directives (`%%{init: …}%%`) can't loosen them. Failed renders keep the
-escaped source visible and are not retried until the source changes.
+security-relevant config keys — including `theme`/`themeVariables`, so
+the token palette is part of the contract — are locked with `secure` so
+diagram init directives (`%%{init: …}%%`) can't loosen them (regression
+test in `tests/browser/mermaid.spec.ts`).
 
-Per-document budgets bound hostile input: 25 diagrams and 200 KB of
-diagram source (beyond these, blocks stay plain source), 50 KB and 500
-edges per diagram (mermaid's own limits, enforced by config).
+Failure handling distinguishes two cases. A diagram that fails to
+_render_ keeps its escaped source visible and is held (not retried)
+until its source changes. An _infrastructure_ failure — the mermaid
+chunk failing to load, a missing theme token — clears the pending state
+instead, so the next render pass (`renderNow()`, a DOM mutation, a
+theme flip) retries. Failures are reported via `console.error` only;
+apps that need telemetry can call `renderMarkdownMermaidDiagrams`
+themselves and observe the rejection.
+
+Budgets bound hostile input: 25 diagrams and 200 KB of diagram source
+(beyond these, blocks stay plain source), 50 KB and 500 edges per
+diagram (mermaid's own limits, enforced by config). The document-level
+budgets are scoped **per observed root**: each
+`initMarkdownMermaidRendering(root)` controller (or direct
+`renderMarkdownMermaidDiagrams(root)` call) counts within its own root,
+so initialize one controller per markdown document — several controllers
+over the same untrusted document would multiply the budget.
 
 ## Theming
 
@@ -96,12 +115,24 @@ with middleman's image lightbox).
 
 ## Migrating the apps
 
-- **middleman** `frontend/src/lib/utils/markdownMermaid.ts` is this
-  module (selectors generalized from `.markdown-body`/`.doc-markdown` to
-  any `pre.mermaid`; viewer classes renamed `mermaid-viewer__*` →
-  `kit-mermaid-viewer__*`, lightbox → `kit-mermaid-lightbox*`). The
-  `pushModalFrame` integration becomes
-  `onLightboxOpen: () => pushModalFrame("mermaid-lightbox", [])`. The
-  mermaid token/viewer CSS in `app.css` and the two hand-rolled mermaid
-  fence branches in its markdown pipelines are replaced by `mermaid.css`
-  and `mermaidCodeFence`.
+middleman's `frontend/src/lib/utils/markdownMermaid.ts` is this module
+(selectors generalized from `.markdown-body`/`.doc-markdown` to any
+`pre.mermaid`; viewer classes renamed `mermaid-viewer__*` →
+`kit-mermaid-viewer__*`, lightbox → `kit-mermaid-lightbox*` — any CSS
+overrides targeting the old class names must move to the new ones or be
+dropped). Migrate in reviewable steps, in this order:
+
+1. Add the `mermaid` dependency and the `mermaid.css` import; delete the
+   `--mermaid-*`/viewer token block from `app.css`.
+2. Replace the hand-rolled mermaid fence branches in both markdown
+   pipelines with `mermaidCodeFence`.
+3. Swap `initMarkdownMermaidRendering` to the kit import, passing
+   `onLightboxOpen: () => pushModalFrame("mermaid-lightbox", [])`.
+4. Delete `markdownMermaid.ts` + its viewer CSS and update e2e selectors
+   to the `kit-mermaid-*` classes. This step also brings the budget caps
+   back under test coverage (their unit tests currently live only in
+   middleman's suite).
+5. Only then take the kit-ui version with the `hand-rolled-mermaid`
+   checker rule — it fires on the legacy copy, so adopting it earlier
+   fails CI mid-migration (or suppress the legacy file's import lines
+   with `kit-ui-check-ignore` during the transition).

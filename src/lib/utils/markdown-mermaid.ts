@@ -20,12 +20,15 @@
  *
  * Security model mirrors utils/markdown.ts: strict securityLevel, no
  * HTML labels, DOMPurify config forbidding style, and the security-
- * relevant config keys locked with `secure` so diagram init directives
- * can't loosen them. Per-document budgets (diagram count, source bytes)
- * bound the work a hostile document can queue.
+ * relevant config keys (including the theme/themeVariables palette)
+ * locked with `secure` so diagram init directives can't loosen them.
+ * Budgets (diagram count, source bytes) bound the work a hostile
+ * document can queue; they are scoped per observed root, so initialize
+ * one controller per markdown document (see docs/components/mermaid.md).
  */
 
 import { copyToClipboard } from "./clipboard.js";
+import { trapFocus } from "./focus-trap.js";
 import { escapeHtml } from "./markdown.js";
 import { appShortcuts } from "./shortcuts.js";
 
@@ -98,6 +101,12 @@ const MERMAID_SECURE_CONFIG = [
   "themeCSS",
   "fontFamily",
   "altFontFamily",
+  // The token-derived palette is part of the contract too — without
+  // these, a %%{init}%% directive in untrusted diagram source could
+  // restyle diagrams past the theme.
+  "theme",
+  "themeVariables",
+  "darkMode",
 ];
 const MERMAID_THEME_TOKENS = {
   background: "--mermaid-bg",
@@ -243,12 +252,23 @@ export async function renderMarkdownMermaidDiagrams(
     diagramSources.set(node, node.textContent ?? "");
   }
 
+  let mermaid: MarkdownMermaidAPI;
   try {
-    const [mermaid] = await Promise.all([
-      (options.load ?? loadMermaid)(),
-      loadMermaidButtonIcons(),
-    ]);
+    [mermaid] = await Promise.all([(options.load ?? loadMermaid)(), loadMermaidButtonIcons()]);
     initializeMermaidForCurrentTheme(mermaid);
+  } catch (error: unknown) {
+    // Infrastructure failure — the loader chunk or a theme token, nothing
+    // diagram-specific. Clear the pending state instead of failure-holding
+    // so the next render pass (renderNow, a mutation, a theme flip)
+    // retries; only per-source parse failures are held below.
+    for (const node of nodes) {
+      restoreMermaidSource(node);
+      clearMermaidRenderState(node);
+    }
+    throw error;
+  }
+
+  try {
     await mermaid.run({ nodes, suppressErrors: true });
     let renderedCount = 0;
     for (const node of nodes) {
@@ -523,6 +543,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   overlay.setAttribute("aria-label", "Expanded Mermaid diagram");
   overlay.setAttribute("aria-modal", "true");
   overlay.setAttribute("role", "dialog");
+  overlay.tabIndex = -1;
 
   const panel = document.createElement("div");
   panel.className = "kit-mermaid-lightbox__panel";
@@ -535,8 +556,6 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   panel.append(diagramView.viewport, closeButton, diagramView.controls);
   overlay.append(panel);
 
-  const restoreFocusTo =
-    document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const onLightboxClose = (options.onLightboxOpen ?? defaultLightboxOpen)();
   const onKeyDown = (event: KeyboardEvent) => {
     event.stopPropagation();
@@ -554,7 +573,11 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   document.addEventListener("keydown", onKeyDown);
   document.body.append(overlay);
   closeActiveMermaidLightbox = closeLightbox;
-  closeButton.focus({ preventScroll: true });
+  // Full modal semantics via the shared trap: Tab containment, body
+  // scroll lock, focus restore on close. [autofocus] steers the trap's
+  // initial focus to the close control.
+  closeButton.setAttribute("autofocus", "");
+  const releaseFocusTrap = trapFocus(overlay);
 
   function closeLightbox(): void {
     overlay.removeEventListener("keydown", onKeyDown);
@@ -564,7 +587,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
     if (closeActiveMermaidLightbox === closeLightbox) {
       closeActiveMermaidLightbox = null;
     }
-    restoreFocusTo?.focus({ preventScroll: true });
+    releaseFocusTrap();
   }
 }
 
@@ -671,9 +694,15 @@ function formatScale(value: number): string {
 }
 
 export function initMarkdownMermaidRendering(
-  root: HTMLElement | Document = document,
+  root?: HTMLElement | Document,
   options: MarkdownMermaidOptions = {},
 ): MarkdownMermaidController {
+  // SSR-safe no-op (same contract as initShortcuts): the post-processor
+  // is browser-only — call it again on the client.
+  if (typeof document === "undefined") {
+    return { renderNow: () => {}, disconnect: () => {} };
+  }
+  const observedRoot = root ?? document;
   let disconnected = false;
   let scheduled = false;
   let rendering = false;
@@ -695,7 +724,7 @@ export function initMarkdownMermaidRendering(
       rendering = true;
       const themeAtStart = currentMermaidTheme();
       try {
-        await renderMarkdownMermaidDiagrams(root, options);
+        await renderMarkdownMermaidDiagrams(observedRoot, options);
       } catch (error: unknown) {
         console.error("Failed to render Mermaid diagrams in markdown", error);
       } finally {
@@ -708,7 +737,7 @@ export function initMarkdownMermaidRendering(
         themeResetAfterCurrent = false;
         renderAfterCurrent = false;
         renderedTheme = themeAtEnd;
-        resetRenderedMermaidViewers(root);
+        resetRenderedMermaidViewers(observedRoot);
         render();
         return;
       }
@@ -727,10 +756,13 @@ export function initMarkdownMermaidRendering(
       : new MutationObserver(() => {
           render();
         });
-  observer?.observe(root instanceof Document ? root.documentElement : root, {
-    childList: true,
-    subtree: true,
-  });
+  observer?.observe(
+    observedRoot instanceof Document ? observedRoot.documentElement : observedRoot,
+    {
+      childList: true,
+      subtree: true,
+    },
+  );
 
   const themeObserver =
     typeof MutationObserver === "undefined"
@@ -743,7 +775,7 @@ export function initMarkdownMermaidRendering(
             themeResetAfterCurrent = true;
             return;
           }
-          resetRenderedMermaidViewers(root);
+          resetRenderedMermaidViewers(observedRoot);
           render();
         });
   themeObserver?.observe(document.documentElement, {

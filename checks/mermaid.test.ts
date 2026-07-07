@@ -2,8 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { mermaidCodeFence } from "../src/lib/utils/markdown-mermaid.js";
 
 // The DOM/rendering half of the module (viewer controls, lightbox, theme
-// re-render, budgets) is covered against real mermaid in
-// tests/browser/mermaid.spec.ts — this pins the pure fence interceptor.
+// re-render, secure-config lock, load-failure retry) is covered against
+// real mermaid in tests/browser/mermaid.spec.ts — this pins the pure
+// fence interceptor. The per-root budget caps (25 diagrams / 200 KB) are
+// NOT covered here yet; their unit tests live in middleman's suite until
+// its migration lands (docs/components/mermaid.md, migration step 4).
 
 describe("mermaidCodeFence", () => {
   test("routes mermaid fences to pre.mermaid blocks", () => {
