@@ -239,6 +239,9 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
+      // Consumed: a parent overlay listening for Escape must not also close.
+      e.preventDefault();
+      e.stopPropagation();
       closeDropdown();
       return;
     }
@@ -285,8 +288,6 @@
     } else if (e.key === "Enter") {
       e.preventDefault();
       selectHighlighted();
-    } else if (e.key === "Escape") {
-      closeDropdown();
     }
   }
 
