@@ -24,6 +24,8 @@ export { default as IconButton } from "./components/IconButton.svelte";
 export type { IconButtonSize, IconButtonTone } from "./components/IconButton.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Markdown } from "./components/Markdown.svelte";
+export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
+export type { MentionOption } from "./components/mention.js";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";

@@ -11,25 +11,29 @@ bunx playwright test focus-trap   # one spec
 bunx playwright test --ui         # interactive debugging
 ```
 
-The config (`playwright.config.ts`) boots `vite --port 4198` and reuses
-an already-running instance outside CI (make sure nothing unrelated
-squats on that port). Chromium comes from
+The config (`playwright.config.ts`) boots Vite on an OS-assigned
+ephemeral port claimed per run, so parallel checkouts/worktrees never
+reuse each other's dev server (which would silently test the other
+checkout's code). Set `KIT_UI_TEST_PORT` to pin the port and keep one
+server alive across runs while iterating. Chromium comes from
 `bunx playwright install chromium` (one-time locally; CI installs it in
 `.github/workflows/ci.yml` with the download cached on `bun.lock`).
 
 ## What's covered (`tests/browser/`)
 
-| Spec                      | Covers                                                                                                                                                                                                                                                                |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `focus-trap.spec.ts`      | Modal + DetailDrawer: initial focus, Tab/Shift+Tab containment, Escape close, focus restore to trigger                                                                                                                                                                |
-| `flash.spec.ts`           | Flash stack cap (5) and per-banner dismiss                                                                                                                                                                                                                            |
-| `top-bar.spec.ts`         | Tab collapse into the nav dropdown and back across width sweeps; selection preserved through collapse                                                                                                                                                                 |
-| `fit-stages.spec.ts`      | Stage transitions across widths, full recovery to the richest stage                                                                                                                                                                                                   |
-| `contrast.spec.ts`        | WCAG AA (4.5:1) for chip tones and button surfaces in light/dark/high-contrast, alpha-composited from real rendered colors. Measured pre-existing failures are baselined in `KNOWN_FAILURES` (remediation: kata y1v0); the suite fails on new failures or degradation |
-| `chip.spec.ts`            | Icon alignment: label-composed svgs stay centered without growing the pill (md + sm), the trailing snippet centers exactly and survives label truncation                                                                                                              |
-| `command-palette.spec.ts` | Combobox ARIA state, disabled-skip highlight, Escape clear-then-close, shortcut scope suspension, empty-result inertness                                                                                                                                              |
-| `virtual-list.spec.ts`    | Windowed DOM, container keyboard nav + `aria-activedescendant`, Enter activation, `scrollToIndex`, nested-control key isolation                                                                                                                                       |
-| `markdown.spec.ts`        | Sanitizer against real DOMPurify (script/style/inline-style vectors, faked-shiki nonce check, `rel` hardening), dual-theme code colors, CodeBlock line numbers / wrap toggle / clipboard copy                                                                         |
+| Spec                       | Covers                                                                                                                                                                                                                                                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `focus-trap.spec.ts`       | Modal + DetailDrawer: initial focus, Tab/Shift+Tab containment, Escape close, focus restore to trigger                                                                                                                                                                |
+| `flash.spec.ts`            | Flash stack cap (5) and per-banner dismiss                                                                                                                                                                                                                            |
+| `top-bar.spec.ts`          | Tab collapse into the nav dropdown and back across width sweeps; selection preserved through collapse                                                                                                                                                                 |
+| `fit-stages.spec.ts`       | Stage transitions across widths, full recovery to the richest stage                                                                                                                                                                                                   |
+| `contrast.spec.ts`         | WCAG AA (4.5:1) for chip tones and button surfaces in light/dark/high-contrast, alpha-composited from real rendered colors. Measured pre-existing failures are baselined in `KNOWN_FAILURES` (remediation: kata y1v0); the suite fails on new failures or degradation |
+| `chip.spec.ts`             | Icon alignment: label-composed svgs stay centered without growing the pill (md + sm), the trailing snippet centers exactly and survives label truncation                                                                                                              |
+| `command-palette.spec.ts`  | Combobox ARIA state, disabled-skip highlight, Escape clear-then-close, shortcut scope suspension, empty-result inertness                                                                                                                                              |
+| `typeahead.spec.ts`        | Clear row + meta search, custom-value Enter, veto/error row, grouped-option tree (mouse + ArrowRight/ArrowLeft expand-collapse, filter-forced expansion), header snippet through the loading row, forced `placement="top"`                                            |
+| `virtual-list.spec.ts`     | Windowed DOM, container keyboard nav + `aria-activedescendant`, Enter activation, `scrollToIndex`, nested-control key isolation                                                                                                                                       |
+| `markdown.spec.ts`         | Sanitizer against real DOMPurify (script/style/inline-style vectors, faked-shiki nonce check, `rel` hardening), dual-theme code colors, CodeBlock line numbers / wrap toggle / clipboard copy                                                                         |
+| `mention-textarea.spec.ts` | Trigger detection at word boundaries (and not mid-word), async search states, ArrowUp/Down cycling + Tab/Enter insert + Escape dismiss, caret placement after insert, custom trigger char and row snippet                                                             |
 
 Conventions: specs drive the gallery pages (`/#page-id`) through
 `helpers.ts` (`gotoPage`, `setSlider`, `setTheme`, `contrastOf`) —

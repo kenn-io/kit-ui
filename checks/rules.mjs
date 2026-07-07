@@ -198,12 +198,17 @@ export function checkClipboard(source) {
 export function checkCombobox(source) {
   const findings = [];
   const re = /role="(combobox|listbox)"/g;
+  // A listbox in a file with a <textarea> is usually a mention/reference
+  // autocomplete rather than a select — steer to the editor primitive too.
+  const nearTextarea = /<textarea[\s>]/.test(source);
   let match;
   while ((match = re.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-dropdown",
       line: lineOfIndex(source, match.index),
-      message: `role="${match[1]}" markup — use SelectDropdown, Typeahead, or FilterDropdown from @kenn-io/kit-ui`,
+      message: nearTextarea
+        ? `role="${match[1]}" markup — use SelectDropdown, Typeahead, FilterDropdown, or MentionTextarea from @kenn-io/kit-ui`
+        : `role="${match[1]}" markup — use SelectDropdown, Typeahead, or FilterDropdown from @kenn-io/kit-ui`,
     });
   }
   return findings;
