@@ -41,7 +41,6 @@
   --viewer-control-border: rgba(139, 148, 158, 0.48);
   --viewer-control-text: #f0f6fc;
   --viewer-control-shadow: 0 1px 4px rgba(1, 4, 9, 0.24);
-  --viewer-panel-shadow: 0 8px 24px rgba(1, 4, 9, 0.38);
 }
 
 :root.dark {
@@ -209,15 +208,17 @@ pre.mermaid.kit-mermaid-viewer .edgeLabel div,
   background: var(--viewer-scrim);
 }
 
+/* Panel chrome matches the kit dialog surfaces (Modal, DetailDrawer):
+ * 1px default border + standard shadow, not middleman's heavier glass. */
 .kit-mermaid-lightbox__panel {
   position: relative;
   width: min(96vw, 1540px);
   height: min(84vh, 760px);
   overflow: hidden;
   background: var(--mermaid-bg);
-  border: 2px solid color-mix(in srgb, var(--text-secondary) 72%, var(--border-default));
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  box-shadow: var(--viewer-panel-shadow);
+  box-shadow: var(--shadow-lg);
 }
 
 .kit-mermaid-lightbox .kit-mermaid-viewer__viewport {
