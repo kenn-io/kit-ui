@@ -68,6 +68,7 @@
   let open = $state(false);
   let highlightIndex = $state(0);
   let inputEl = $state<HTMLInputElement>();
+  let triggerEl = $state<HTMLButtonElement>();
   let containerEl = $state<HTMLDivElement>();
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
@@ -188,12 +189,20 @@
     opening = false;
   }
 
-  function closeDropdown() {
+  // `refocus` moves focus to the (re-mounted) trigger — pass it whenever the
+  // close is keyboard-driven (Escape, Enter-select), where unmounting the
+  // input would otherwise drop focus on <body>. Focusout-driven closes must
+  // NOT refocus: the user is deliberately leaving.
+  async function closeDropdown(refocus = false) {
     open = false;
     query = "";
     // Invalidate in-flight selections: a slow onselect from this (or an
     // earlier) open instance must not close a menu the user reopens later.
     selectSeq += 1;
+    if (refocus) {
+      await tick();
+      triggerEl?.focus();
+    }
   }
 
   // Orders concurrent async onselect calls: only the latest attempt may close
@@ -206,7 +215,7 @@
     const seq = ++selectSeq;
     try {
       const vetoed = (await onselect(name)) === false;
-      if (!vetoed && seq === selectSeq) closeDropdown();
+      if (!vetoed && seq === selectSeq) void closeDropdown(true);
     } catch {
       // Keep the list open so the caller can surface its own error state
       // (e.g. the `error` prop) without losing the attempted value.
@@ -237,14 +246,21 @@
     if (row) activateRow(row);
   }
 
+  // Escape must close the typeahead from any focused descendant — the input
+  // or a header snippet control — without also closing a parent overlay.
+  // Attached to both the input and the panel (the header lives in the panel,
+  // which is a DOM sibling of the input). Skips events a descendant already
+  // consumed, e.g. a header SearchInput clearing its own text.
+  function handleEscape(e: KeyboardEvent): boolean {
+    if (e.key !== "Escape" || e.defaultPrevented) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    void closeDropdown(true);
+    return true;
+  }
+
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      // Consumed: a parent overlay listening for Escape must not also close.
-      e.preventDefault();
-      e.stopPropagation();
-      closeDropdown();
-      return;
-    }
+    if (handleEscape(e)) return;
     // A loading status row stands in for the options, so there is nothing to
     // navigate to or select — keep selection/navigation keys inert (Enter
     // would otherwise submit an enclosing form) but let editing keys reach
@@ -358,6 +374,7 @@
       style={panelStyle}
       bind:this={panelEl}
       onmousedown={preventBlur}
+      onkeydown={(e) => void handleEscape(e)}
       role="presentation"
     >
       {#if header}
@@ -454,6 +471,7 @@
     </div>
   {:else}
     <button
+      bind:this={triggerEl}
       class="kit-typeahead__trigger"
       type="button"
       onclick={openDropdown}

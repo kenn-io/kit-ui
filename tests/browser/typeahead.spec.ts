@@ -105,6 +105,21 @@ test("tabbing out of a focusable header control dismisses the panel", async ({ p
   await expect(page.locator(".kit-typeahead__panel")).toHaveCount(0);
 });
 
+test("Escape inside a header control closes the panel and refocuses the trigger", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Filter refs…" }).click();
+  await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+
+  // Escape must work from any focused descendant, not just the input, and
+  // must hand focus back to the trigger instead of dropping it on <body>.
+  await page.locator('[data-demo="ref-tabs"] button', { hasText: "Branches" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".kit-typeahead__panel")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Filter refs…" })).toBeFocused();
+});
+
 test("groups expand and collapse by mouse and keyboard", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter grouped repos…" }).click();

@@ -91,6 +91,13 @@ While a `loading` status row is showing it stands in for the options: arrow
 keys and Enter are inert (Escape still closes), and `aria-activedescendant`
 is dropped so nothing hidden is announced as active.
 
+Escape closes the list from any focused descendant — the input or a
+focusable `header` control — consuming the event so a parent overlay does
+not also close (a header control that already handled Escape, e.g. a
+SearchInput clearing its text, wins). Keyboard-driven closes (Escape,
+selection) return focus to the trigger; closes caused by focus leaving the
+component do not steal focus back.
+
 Enter always commits exactly the row `aria-activedescendant` names — the
 clear row clears even while filtering, and a custom value (`allowCustom`)
 appears as a real "Use \"query\"" row when nothing matches instead of being
