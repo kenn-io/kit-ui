@@ -78,6 +78,11 @@ export interface MarkdownMermaidOptions {
   onLightboxOpen?: () => () => void;
 }
 
+interface InternalMarkdownMermaidOptions extends MarkdownMermaidOptions {
+  onLightboxMounted?: (close: () => void) => void;
+  onLightboxClosed?: (close: () => void) => void;
+}
+
 const MERMAID_SELECTOR = "pre.mermaid";
 const MERMAID_VIEWER_SELECTOR = "pre.mermaid.kit-mermaid-viewer";
 const MERMAID_VIEWER_ATTACHED = "true";
@@ -387,7 +392,7 @@ function skipMermaidRender(node: HTMLElement): void {
 function attachMermaidViewer(
   node: HTMLElement,
   source: string,
-  options: MarkdownMermaidOptions,
+  options: InternalMarkdownMermaidOptions,
 ): boolean {
   if (node.dataset.mermaidViewer === MERMAID_VIEWER_ATTACHED) return true;
 
@@ -421,6 +426,7 @@ function clearMermaidRenderState(node: HTMLElement): void {
 function restoreMermaidSourcesAndClearRenderState(nodes: HTMLElement[]): void {
   for (const node of nodes) {
     restoreMermaidSource(node);
+    diagramSources.delete(node);
     clearMermaidRenderState(node);
   }
 }
@@ -577,7 +583,7 @@ function createMermaidResetControls(resetView: () => void): HTMLDivElement {
   return navControls;
 }
 
-function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions): void {
+function openMermaidLightbox(svg: SVGSVGElement, options: InternalMarkdownMermaidOptions): void {
   closeActiveMermaidLightbox?.();
 
   const overlay = document.createElement("div");
@@ -599,7 +605,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   panel.append(diagramView.viewport, closeButton, diagramView.controls);
   overlay.append(panel);
 
-  const onLightboxClose = (options.onLightboxOpen ?? defaultLightboxOpen)();
+  const releaseShortcutScope = (options.onLightboxOpen ?? defaultLightboxOpen)();
   const onKeyDown = (event: KeyboardEvent) => {
     event.stopPropagation();
     if (event.key === "Escape") {
@@ -616,20 +622,25 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   document.addEventListener("keydown", onKeyDown);
   document.body.append(overlay);
   closeActiveMermaidLightbox = closeLightbox;
+  options.onLightboxMounted?.(closeLightbox);
   // Full modal semantics via the shared trap: Tab containment, body
   // scroll lock, focus restore on close. [autofocus] steers the trap's
   // initial focus to the close control.
   closeButton.setAttribute("autofocus", "");
   const releaseFocusTrap = trapFocus(panel);
+  let closed = false;
 
   function closeLightbox(): void {
+    if (closed) return;
+    closed = true;
     overlay.removeEventListener("keydown", onKeyDown);
     document.removeEventListener("keydown", onKeyDown);
-    onLightboxClose();
-    overlay.remove();
     if (closeActiveMermaidLightbox === closeLightbox) {
       closeActiveMermaidLightbox = null;
     }
+    options.onLightboxClosed?.(closeLightbox);
+    releaseShortcutScope();
+    overlay.remove();
     releaseFocusTrap();
   }
 }
@@ -752,6 +763,18 @@ export function initMarkdownMermaidRendering(
   let renderAfterCurrent = false;
   let themeResetAfterCurrent = false;
   let renderedTheme = currentMermaidTheme();
+  let closeOwnedLightbox: (() => void) | null = null;
+  const renderOptions: InternalMarkdownMermaidOptions = {
+    ...options,
+    onLightboxMounted(close) {
+      closeOwnedLightbox = close;
+    },
+    onLightboxClosed(close) {
+      if (closeOwnedLightbox === close) {
+        closeOwnedLightbox = null;
+      }
+    },
+  };
 
   const render = () => {
     if (disconnected) return;
@@ -767,7 +790,7 @@ export function initMarkdownMermaidRendering(
       rendering = true;
       const themeAtStart = currentMermaidTheme();
       try {
-        await renderMarkdownMermaidDiagrams(observedRoot, options);
+        await renderMarkdownMermaidDiagrams(observedRoot, renderOptions);
       } catch (error: unknown) {
         console.error("Failed to render Mermaid diagrams in markdown", error);
       } finally {
@@ -831,8 +854,14 @@ export function initMarkdownMermaidRendering(
     renderNow: render,
     disconnect() {
       disconnected = true;
-      observer?.disconnect();
-      themeObserver?.disconnect();
+      const closeLightbox = closeOwnedLightbox;
+      closeOwnedLightbox = null;
+      try {
+        closeLightbox?.();
+      } finally {
+        observer?.disconnect();
+        themeObserver?.disconnect();
+      }
     },
   };
 }

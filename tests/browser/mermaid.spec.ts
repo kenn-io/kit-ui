@@ -192,6 +192,45 @@ test("lightbox traps Tab and locks body scroll while open", async ({ page }) => 
     .not.toBe("hidden");
 });
 
+test("disconnect closes an open lightbox owned by that controller", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const host = document.createElement("div");
+    host.id = "disconnect-lightbox-host";
+    host.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    document.body.append(host);
+    const controller = initMarkdownMermaidRendering(host);
+    Object.assign(window, { __disconnectMermaidController: controller });
+  });
+
+  const host = page.locator("#disconnect-lightbox-host");
+  await expect(host.locator("pre.mermaid.kit-mermaid-viewer")).toBeVisible({
+    timeout: 15_000,
+  });
+  await host.getByRole("button", { name: "Open diagram in expanded view" }).click();
+  const lightbox = page.locator(".kit-mermaid-lightbox");
+  await expect(lightbox).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+
+  await page.evaluate(() => {
+    const controller = (
+      window as typeof window & {
+        __disconnectMermaidController?: { disconnect: () => void };
+      }
+    ).__disconnectMermaidController;
+    controller?.disconnect();
+    document.querySelector("#disconnect-lightbox-host")?.remove();
+    delete (
+      window as typeof window & {
+        __disconnectMermaidController?: { disconnect: () => void };
+      }
+    ).__disconnectMermaidController;
+  });
+
+  await expect(lightbox).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
+});
+
 test("invalid diagrams keep their escaped source visible", async ({ page }) => {
   const failed = page.locator('pre.mermaid[data-mermaid-rendered="failed"]');
   await expect(failed).toHaveCount(1, { timeout: 15_000 });
@@ -297,6 +336,57 @@ test("loader-level failures leave diagrams retryable", async ({ page }) => {
   expect(result.renderedCount).toBe(1);
   expect(result.runCalls).toBe(1);
   expect(result.viewer).toBe(true);
+});
+
+test("retry budget uses same-node source changes after transient failures", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { renderMarkdownMermaidDiagrams } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const root = document.createElement("div");
+    root.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    const node = root.querySelector<HTMLElement>("pre.mermaid")!;
+    let runCalls = 0;
+
+    try {
+      await renderMarkdownMermaidDiagrams(root, {
+        load: async () => {
+          throw new Error("chunk unavailable");
+        },
+      });
+    } catch {
+      // Expected: transient loader failure.
+    }
+
+    node.textContent = `graph LR\nA["${"x".repeat(200_001)}"]`;
+    const renderedCount = await renderMarkdownMermaidDiagrams(root, {
+      load: async () => ({
+        version: "11.15.0",
+        initialize() {},
+        async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
+          runCalls += 1;
+          for (const item of Array.from(nodes)) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            item.textContent = "";
+            item.append(svg);
+            item.dataset.processed = "true";
+          }
+        },
+      }),
+    });
+
+    return {
+      rendered: node.dataset.mermaidRendered ?? null,
+      renderedCount,
+      runCalls,
+      stillMermaid: node.classList.contains("mermaid"),
+      viewer: node.classList.contains("kit-mermaid-viewer"),
+    };
+  });
+
+  expect(result.rendered).toBe("skipped");
+  expect(result.renderedCount).toBe(0);
+  expect(result.runCalls).toBe(0);
+  expect(result.stillMermaid).toBe(false);
+  expect(result.viewer).toBe(false);
 });
 
 test("run-level failures leave diagrams retryable", async ({ page }) => {
