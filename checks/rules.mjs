@@ -366,6 +366,24 @@ export function checkHandRolledEmptyState(source) {
   return findings;
 }
 
+/** Hand-rolled image preview panels duplicate ImagePreview. Matches
+ * image-preview class names (middleman's diff-image-preview included);
+ * kit-image-preview is exempt. */
+export function checkHandRolledImagePreview(source) {
+  const findings = [];
+  // [\w-]* lets prefixed selectors like .diff-image-preview match too.
+  const re = /class=["'][^"']*(?<!kit-)\bimage-preview\b|\.[\w-]*(?<!kit-)\bimage-preview\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-image-preview",
+      line: lineOfIndex(source, match.index),
+      message: "image preview markup — use ImagePreview from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Custom sortable table headers duplicate TableHeaderCell. */
 export function checkHandRolledTableSort(source) {
   const findings = [];
@@ -741,6 +759,7 @@ export const ALL_RULES = {
   "hand-rolled-code-block": checkHandRolledCodeBlock,
   "hand-rolled-empty-state": checkHandRolledEmptyState,
   "hand-rolled-icon-button": checkHandRolledIconButton,
+  "hand-rolled-image-preview": checkHandRolledImagePreview,
   "hand-rolled-top-bar": checkHandRolledTopBar,
   "hand-rolled-search-input": checkHandRolledSearchInput,
   "hand-rolled-date-input": checkHandRolledDateInput,

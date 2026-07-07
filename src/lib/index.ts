@@ -22,6 +22,7 @@ export { default as FitStages } from "./components/FitStages.svelte";
 export { default as FlashBanner } from "./components/FlashBanner.svelte";
 export { default as IconButton } from "./components/IconButton.svelte";
 export type { IconButtonSize, IconButtonTone } from "./components/IconButton.svelte";
+export { default as ImagePreview } from "./components/ImagePreview.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Markdown } from "./components/Markdown.svelte";
 export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
