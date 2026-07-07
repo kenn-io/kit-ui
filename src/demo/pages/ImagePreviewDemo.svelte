@@ -1,5 +1,7 @@
 <script lang="ts">
   import ImagePreview from "../../lib/components/ImagePreview.svelte";
+  import Button from "../../lib/components/Button.svelte";
+  import Modal from "../../lib/components/Modal.svelte";
   import DemoSection from "../DemoSection.svelte";
 
   const shapes =
@@ -10,6 +12,8 @@
         <rect x="156" y="36" width="88" height="88" rx="12" fill="#6366f1" opacity="0.85"/>
       </svg>`,
     );
+
+  let nestedOpen = $state(false);
 </script>
 
 <DemoSection
@@ -42,4 +46,23 @@
   code={'<ImagePreview src="/missing.png" alt="Missing" errorLabel="Unable to load image" />'}
 >
   <ImagePreview src="/this-image-does-not-exist.png" alt="Missing image" />
+</DemoSection>
+
+<DemoSection
+  title="Inside modal"
+  description="Lightbox dismissal and focus trapping stay isolated when the preview is rendered inside another overlay."
+  code={'<Modal title="Image attachment"><ImagePreview src={dataURL} alt="attachment.png" /></Modal>'}
+>
+  <Button onclick={() => (nestedOpen = true)}>Open image modal</Button>
+
+  {#if nestedOpen}
+    <Modal title="Image attachment" onclose={() => (nestedOpen = false)}>
+      <ImagePreview
+        src={shapes}
+        alt="Nested demo shapes"
+        expandLabel="Expand nested image"
+        closeLabel="Close nested image"
+      />
+    </Modal>
+  {/if}
 </DemoSection>

@@ -37,8 +37,6 @@
   let expanded = $state(false);
 </script>
 
-<svelte:window onkeydown={expanded ? escapeCloses(() => (expanded = false)) : undefined} />
-
 <div class="kit-image-preview">
   {#if failed}
     <p class="kit-image-preview__error">{errorLabel}</p>
@@ -84,6 +82,7 @@
       aria-modal="true"
       aria-label={alt}
       tabindex="-1"
+      onkeydown={escapeCloses(() => (expanded = false))}
       {@attach trapFocus}
     >
       <img class="kit-image-preview__lightbox-img" {src} {alt} />

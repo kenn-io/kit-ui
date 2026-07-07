@@ -66,7 +66,7 @@ export function trapFocus(surface: HTMLElement): () => void {
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key !== "Tab") return;
+    if (event.defaultPrevented || event.key !== "Tab") return;
     const items = tabbables(surface);
     if (items.length === 0) {
       event.preventDefault();
