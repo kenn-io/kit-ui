@@ -23,6 +23,8 @@ test("renders mermaid fences into pan/zoom viewers", async ({ page }) => {
   await expect(viewer.locator(".kit-mermaid-viewer__viewport svg")).toBeVisible();
   await expect(viewer.locator(".kit-mermaid-viewer__button")).toHaveCount(3);
   await expect(viewer.getByRole("button", { name: "Reset diagram view" })).toBeVisible();
+  // Controls render lucide icons (svg), not the legacy text glyphs.
+  await expect(viewer.locator(".kit-mermaid-viewer__button svg.lucide")).toHaveCount(3);
 });
 
 test("wheel zoom is cursor-anchored and reset restores it", async ({ page }) => {
@@ -53,7 +55,7 @@ test("expand opens a lightbox dialog; Escape closes and restores focus", async (
 
   const lightbox = page.locator(".kit-mermaid-lightbox");
   await expect(lightbox).toHaveAttribute("role", "dialog");
-  await expect(lightbox.locator("svg")).toBeVisible();
+  await expect(lightbox.locator(".kit-mermaid-viewer__pan svg")).toBeVisible();
   await expect(lightbox.getByRole("button", { name: "Close expanded diagram" })).toBeFocused();
 
   await page.keyboard.press("Escape");
@@ -86,5 +88,5 @@ test("theme flip re-renders diagrams with the other palette", async ({ page }) =
   await expect
     .poll(async () => firstViewer(page).evaluate((el) => getComputedStyle(el).backgroundColor))
     .not.toBe(lightBg);
-  await expect(firstViewer(page).locator("svg")).toBeVisible();
+  await expect(firstViewer(page).locator(".kit-mermaid-viewer__pan svg")).toBeVisible();
 });

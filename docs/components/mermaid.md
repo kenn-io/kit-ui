@@ -86,9 +86,13 @@ Diagram colors come from the `--mermaid-*` tokens defined in
 them after the import to retheme. They're read through
 `getComputedStyle` at render time along with `--font-sans` and
 `--font-size-md`; a missing token throws, so `mermaid.css` (or a complete
-replacement) is required. Viewer/lightbox control chrome uses the fixed
-`--viewer-*` glass tokens so controls stay legible over diagram surfaces
-in both themes.
+replacement) is required. The control buttons carry IconButton's md
+ghost chrome (inlined in `mermaid.css` because the DOM is imperative —
+keep in sync with `IconButton.svelte`) and render the same lucide icons
+the components use (`copy`/`check`, `x`), loaded with the mermaid chunk
+and falling back to text glyphs if that load fails. Only the lightbox
+scrim keeps a fixed theme-invariant color (`--viewer-scrim`, shared
+with middleman's image lightbox).
 
 ## Migrating the apps
 

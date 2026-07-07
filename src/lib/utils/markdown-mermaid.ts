@@ -155,6 +155,70 @@ function defaultLightboxOpen(): () => void {
   return appShortcuts.pushScope("kit-mermaid-lightbox");
 }
 
+// Viewer control icons — the same lucide set the component library uses
+// (CopyButton's copy/check pair, Modal's x). The viewer DOM is imperative,
+// so instead of managing per-button Svelte lifecycles each icon component
+// is mounted once into a detached host, its svg markup captured, and the
+// instance unmounted; buttons clone the cached markup. Imported
+// dynamically (with the text glyphs below as fallback) because .svelte
+// modules can't load in the unit-test runtime, and mermaid callers
+// already pay a dynamic-import roundtrip before any button exists.
+type MermaidButtonIcon = "expand" | "copy" | "reset" | "close" | "check";
+
+const MERMAID_BUTTON_GLYPHS: Record<MermaidButtonIcon, string> = {
+  expand: "⟷",
+  copy: "⧉",
+  reset: "⟳",
+  close: "×",
+  check: "✓",
+};
+
+let mermaidButtonIconSvgs: Record<MermaidButtonIcon, string> | null = null;
+let mermaidButtonIconPromise: Promise<void> | null = null;
+
+function loadMermaidButtonIcons(): Promise<void> {
+  mermaidButtonIconPromise ??= (async () => {
+    const [svelte, expand, copy, reset, close, check] = await Promise.all([
+      import("svelte"),
+      import("@lucide/svelte/icons/maximize-2"),
+      import("@lucide/svelte/icons/copy"),
+      import("@lucide/svelte/icons/rotate-ccw"),
+      import("@lucide/svelte/icons/x"),
+      import("@lucide/svelte/icons/check"),
+    ]);
+    const renderIconSvg = (icon: { default: unknown }): string => {
+      const host = document.createElement("div");
+      const instance = svelte.mount(icon.default as Parameters<typeof svelte.mount>[0], {
+        target: host,
+        props: { size: 16, "aria-hidden": "true" },
+      });
+      const svg = host.innerHTML;
+      svelte.unmount(instance);
+      return svg;
+    };
+    mermaidButtonIconSvgs = {
+      expand: renderIconSvg(expand),
+      copy: renderIconSvg(copy),
+      reset: renderIconSvg(reset),
+      close: renderIconSvg(close),
+      check: renderIconSvg(check),
+    };
+  })().catch(() => {
+    // Icon chunk failed (offline) — buttons fall back to text glyphs and
+    // a later render retries the import.
+    mermaidButtonIconPromise = null;
+  });
+  return mermaidButtonIconPromise;
+}
+
+function setMermaidButtonIcon(button: HTMLButtonElement, icon: MermaidButtonIcon): void {
+  if (mermaidButtonIconSvgs) {
+    button.innerHTML = mermaidButtonIconSvgs[icon];
+  } else {
+    button.textContent = MERMAID_BUTTON_GLYPHS[icon];
+  }
+}
+
 async function loadMermaid(): Promise<MarkdownMermaidAPI> {
   if (!mermaidPromise) {
     mermaidPromise = import("mermaid")
@@ -180,7 +244,10 @@ export async function renderMarkdownMermaidDiagrams(
   }
 
   try {
-    const mermaid = await (options.load ?? loadMermaid)();
+    const [mermaid] = await Promise.all([
+      (options.load ?? loadMermaid)(),
+      loadMermaidButtonIcons(),
+    ]);
     initializeMermaidForCurrentTheme(mermaid);
     await mermaid.run({ nodes, suppressErrors: true });
     let renderedCount = 0;
@@ -274,10 +341,10 @@ function attachMermaidViewer(
 
   svg.remove();
   const diagramView = createPannableDiagramView(svg);
-  const expandButton = createMermaidButton("Open diagram in expanded view", "⟷", () =>
+  const expandButton = createMermaidButton("Open diagram in expanded view", "expand", () =>
     openMermaidLightbox(svg, options),
   );
-  const copyButton = createMermaidButton("Copy Mermaid source", "⧉", () =>
+  const copyButton = createMermaidButton("Copy Mermaid source", "copy", () =>
     copyMermaidSource(source, copyButton),
   );
   const topControls = document.createElement("div");
@@ -444,7 +511,7 @@ function createPannableDiagramView(svg: SVGSVGElement): {
 function createMermaidResetControls(resetView: () => void): HTMLDivElement {
   const navControls = document.createElement("div");
   navControls.className = "kit-mermaid-viewer__controls kit-mermaid-viewer__controls--nav";
-  navControls.append(createMermaidButton("Reset diagram view", "⟳", resetView));
+  navControls.append(createMermaidButton("Reset diagram view", "reset", resetView));
   return navControls;
 }
 
@@ -460,7 +527,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
   const panel = document.createElement("div");
   panel.className = "kit-mermaid-lightbox__panel";
 
-  const closeButton = createMermaidButton("Close expanded diagram", "×", closeLightbox);
+  const closeButton = createMermaidButton("Close expanded diagram", "close", closeLightbox);
   closeButton.classList.add("kit-mermaid-lightbox__close");
 
   const expandedSvg = svg.cloneNode(true) as SVGSVGElement;
@@ -503,7 +570,7 @@ function openMermaidLightbox(svg: SVGSVGElement, options: MarkdownMermaidOptions
 
 function createMermaidButton(
   label: string,
-  text: string,
+  icon: MermaidButtonIcon,
   onClick: () => void | Promise<void>,
 ): HTMLButtonElement {
   const button = document.createElement("button");
@@ -511,7 +578,7 @@ function createMermaidButton(
   button.className = "kit-mermaid-viewer__button";
   button.setAttribute("aria-label", label);
   button.title = label;
-  button.textContent = text;
+  setMermaidButtonIcon(button, icon);
   button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -530,10 +597,12 @@ async function copyMermaidSource(source: string, button: HTMLButtonElement): Pro
   button.dataset.copied = "true";
   button.setAttribute("aria-label", "Copied Mermaid source");
   button.title = "Copied Mermaid source";
+  setMermaidButtonIcon(button, "check");
   window.setTimeout(() => {
     button.dataset.copied = "false";
     button.setAttribute("aria-label", "Copy Mermaid source");
     button.title = "Copy Mermaid source";
+    setMermaidButtonIcon(button, "copy");
   }, 1200);
 }
 
