@@ -246,6 +246,15 @@
     customMonth = resolved.to;
   }
 
+  function seedCustomFields(sel: RangeSelection): void {
+    const resolved = resolveRange(sel, earliestDate);
+    customFrom = sel.mode === "custom" ? sel.from : resolved.from;
+    customTo = sel.mode === "custom" ? sel.to : resolved.to;
+    customPending = customFrom !== "" && customTo === "";
+    pendingFor = customPending ? selectionKey(sel) : null;
+    customMonth = customTo || customFrom || todayStr();
+  }
+
   function applyRelative(days: number): void {
     const sel: RangeSelection = { mode: "relative", days };
     calAnchor = resolveRange(sel, earliestDate).to;
@@ -289,8 +298,7 @@
   // reopening still means the draft that started under the first A is stale.
   $effect(() => {
     if (!customPending || selectionKey(selection) === pendingFor) return;
-    customPending = false;
-    pendingFor = null;
+    seedCustomFields(selection);
   });
 
   $effect(() => {

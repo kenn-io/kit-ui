@@ -154,6 +154,10 @@ test("an external selection change while open drops the mid-pick draft", async (
     .evaluate((button) => (button as HTMLButtonElement).click());
   await expect(page.locator("code", { hasText: '"days":7' })).toBeVisible();
   await expect(panel(page)).toBeVisible();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(0)).toHaveClass(
+    /active/,
+  );
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(7);
 
   // The next custom pick starts a fresh draft instead of completing the
   // stale day-5 draft over the externally controlled selection.
