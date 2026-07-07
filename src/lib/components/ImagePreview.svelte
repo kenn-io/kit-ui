@@ -35,6 +35,7 @@
   const failed = $derived(failedSrc === src);
 
   let expanded = $state(false);
+  const triggerLabel = $derived(alt.trim() ? `${expandLabel}: ${alt}` : expandLabel);
 </script>
 
 <div class="kit-image-preview">
@@ -44,8 +45,8 @@
     <button
       type="button"
       class="kit-image-preview__trigger"
-      aria-label={expandLabel}
-      title={expandLabel}
+      aria-label={triggerLabel}
+      title={triggerLabel}
       onclick={() => (expanded = true)}
     >
       <img

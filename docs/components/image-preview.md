@@ -22,8 +22,9 @@ panel shows `errorLabel` instead of the browser's broken-image glyph. A
 When `expandable` (the default), the image is a zoom trigger: clicking it
 (or focusing and pressing Enter) opens the image at full viewport size in a
 modal lightbox — focus is trapped, and Escape, a backdrop click, or the
-close button dismiss it. A magnifier badge appears on hover/focus as the
-affordance.
+close button dismiss it. The trigger name combines `expandLabel` with `alt`
+so multiple previews are distinguishable to assistive technology. A magnifier
+badge appears on hover/focus as the affordance.
 
 ## Props
 
@@ -34,5 +35,5 @@ affordance.
 | `maxHeight`   | `string`  | `"70vh"`                        | Any CSS length capping image height      |
 | `expandable`  | `boolean` | `true`                          | Click-to-expand lightbox                 |
 | `errorLabel`  | `string`  | `"Unable to load image"`        | Shown when the image fails to load       |
-| `expandLabel` | `string`  | `"Open image in expanded view"` | Accessible name of the zoom trigger      |
+| `expandLabel` | `string`  | `"Open image in expanded view"` | Action phrase prepended to `alt`         |
 | `closeLabel`  | `string`  | `"Close expanded image"`        | Accessible name of the lightbox close    |
