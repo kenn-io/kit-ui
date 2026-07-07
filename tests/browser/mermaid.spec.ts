@@ -451,6 +451,64 @@ test("run-level failures leave diagrams retryable", async ({ page }) => {
   expect(result.viewer).toBe(true);
 });
 
+test("budget caps: excess diagrams and over-budget sources stay plain blocks", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { renderMarkdownMermaidDiagrams } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const root = document.createElement("div");
+    // 25-diagram cap: 27 small diagrams — the last two must be skipped
+    // without reaching mermaid.run.
+    for (let i = 0; i < 27; i += 1) {
+      const pre = document.createElement("pre");
+      pre.className = "mermaid";
+      pre.textContent = `graph LR\nA${i}-->B${i}`;
+      root.append(pre);
+    }
+    let runNodeCounts: number[] = [];
+    const fakeLoad = async () => ({
+      version: "11.15.0",
+      initialize() {},
+      async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
+        runNodeCounts.push(nodes.length);
+        for (const item of Array.from(nodes)) {
+          item.textContent = "";
+          item.append(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+          item.dataset.processed = "true";
+        }
+      },
+    });
+    const countRendered = await renderMarkdownMermaidDiagrams(root, { load: fakeLoad });
+    const countSkipped = root.querySelectorAll('pre[data-mermaid-rendered="skipped"]').length;
+
+    // 200 KB byte cap is cumulative: a diagram that would overflow the
+    // remaining budget is skipped, but later diagrams that still fit
+    // are rendered.
+    const byteRoot = document.createElement("div");
+    const sources = [
+      `graph LR\nA["${"x".repeat(150_000)}"]`,
+      `graph LR\nB["${"x".repeat(60_000)}"]`,
+      "graph LR\nC-->D",
+    ];
+    for (const source of sources) {
+      const pre = document.createElement("pre");
+      pre.className = "mermaid";
+      pre.textContent = source;
+      byteRoot.append(pre);
+    }
+    runNodeCounts = [];
+    const bytesRendered = await renderMarkdownMermaidDiagrams(byteRoot, { load: fakeLoad });
+    const byteStates = Array.from(byteRoot.querySelectorAll("pre")).map(
+      (pre) => pre.dataset.mermaidRendered ?? null,
+    );
+
+    return { countRendered, countSkipped, bytesRendered, byteStates, runNodeCounts };
+  });
+  expect(result.countRendered).toBe(25);
+  expect(result.countSkipped).toBe(2);
+  expect(result.bytesRendered).toBe(2);
+  expect(result.byteStates).toEqual(["true", "skipped", "true"]);
+  expect(result.runNodeCounts).toEqual([2]);
+});
+
 test("a controller settles after a persistent load failure instead of retry-looping", async ({
   page,
 }) => {

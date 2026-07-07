@@ -351,15 +351,29 @@ function collectRenderableMermaidNodes(
   let sourceBytes = 0;
 
   for (const node of Array.from(root.querySelectorAll<HTMLElement>(MERMAID_SELECTOR))) {
-    const source = mermaidNodeSource(node);
-    const nextSourceBytes = mermaidSourceByteLength(source);
-
     const heldSource = infrastructureFailureHolds.get(node);
+    const hasRenderState =
+      heldSource !== undefined ||
+      node.dataset.mermaidRendered !== undefined ||
+      node.dataset.processed === "true";
+
+    // Fresh candidates past the diagram cap are skipped before their
+    // source is even read — hostile documents shouldn't buy per-block
+    // O(bytes) work on every observer pass. Stateful nodes fall through:
+    // their sources were admitted under an earlier budget pass, so
+    // recounting them is bounded by the byte budget itself.
+    if (!hasRenderState && diagramCount >= MAX_MERMAID_DIAGRAMS_PER_DOCUMENT) {
+      skipMermaidRender(node);
+      continue;
+    }
+
+    const source = mermaidNodeSource(node);
+
     if (heldSource !== undefined) {
       infrastructureFailureHolds.delete(node);
       if (!retryHeldInfrastructureFailures && heldSource === source) {
         diagramCount += 1;
-        sourceBytes += nextSourceBytes;
+        sourceBytes += mermaidSourceByteLength(source);
         continue;
       }
     }
@@ -368,7 +382,7 @@ function collectRenderableMermaidNodes(
       const failedSource = failedDiagramSources.get(node);
       if (failedSource === undefined || failedSource === source) {
         diagramCount += 1;
-        sourceBytes += nextSourceBytes;
+        sourceBytes += mermaidSourceByteLength(source);
         continue;
       }
       failedDiagramSources.delete(node);
@@ -377,13 +391,15 @@ function collectRenderableMermaidNodes(
 
     if (node.dataset.mermaidRendered || node.dataset.processed === "true") {
       diagramCount += 1;
-      sourceBytes += nextSourceBytes;
+      sourceBytes += mermaidSourceByteLength(source);
       continue;
     }
 
+    const remainingSourceBytes = MAX_MERMAID_SOURCE_BYTES_PER_DOCUMENT - sourceBytes;
+    const nextSourceBytes = mermaidSourceByteLength(source, remainingSourceBytes);
     if (
       diagramCount >= MAX_MERMAID_DIAGRAMS_PER_DOCUMENT ||
-      sourceBytes + nextSourceBytes > MAX_MERMAID_SOURCE_BYTES_PER_DOCUMENT
+      nextSourceBytes > remainingSourceBytes
     ) {
       skipMermaidRender(node);
       continue;
@@ -404,8 +420,33 @@ function mermaidNodeSource(node: HTMLElement): string {
   return diagramSources.get(node) ?? node.textContent ?? "";
 }
 
-function mermaidSourceByteLength(source: string): number {
-  return new TextEncoder().encode(source).byteLength;
+/** UTF-8 byte length without allocating an encoded copy. With `cap`,
+ * returns early (with a value above the cap) once the cap is exceeded,
+ * so an over-budget source costs O(cap) instead of O(length). Lone
+ * surrogates count as 3 bytes (U+FFFD), matching TextEncoder.
+ * Exported for the parity unit tests only — not part of the API. */
+export function mermaidSourceByteLength(source: string, cap = Infinity): number {
+  let bytes = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    const code = source.charCodeAt(i);
+    if (code < 0x80) {
+      bytes += 1;
+    } else if (code < 0x800) {
+      bytes += 2;
+    } else if (code >= 0xd800 && code < 0xdc00 && i + 1 < source.length) {
+      const next = source.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next < 0xe000) {
+        bytes += 4;
+        i += 1;
+      } else {
+        bytes += 3;
+      }
+    } else {
+      bytes += 3;
+    }
+    if (bytes > cap) return bytes;
+  }
+  return bytes;
 }
 
 function skipMermaidRender(node: HTMLElement): void {
