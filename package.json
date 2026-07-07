@@ -12,6 +12,7 @@
       "default": "./src/lib/index.ts"
     },
     "./theme.css": "./src/lib/theme.css",
+    "./mermaid.css": "./src/lib/mermaid.css",
     "./breakpoints": {
       "default": "./src/lib/breakpoints.ts"
     },
@@ -35,6 +36,9 @@
     },
     "./utils/markdown": {
       "default": "./src/lib/utils/markdown.ts"
+    },
+    "./utils/markdown-mermaid": {
+      "default": "./src/lib/utils/markdown-mermaid.ts"
     },
     "./utils/overlay": {
       "default": "./src/lib/utils/overlay.ts"
@@ -80,6 +84,7 @@
     "@sveltejs/vite-plugin-svelte": "7.1.2",
     "@tsconfig/svelte": "5.0.8",
     "@types/node": "^26.0.0",
+    "mermaid": "11.15.0",
     "svelte": "5.56.3",
     "svelte-check": "4.6.0",
     "typescript": "^5.9.0",
@@ -90,8 +95,14 @@
     "@lucide/svelte": ">=1.0.0",
     "dompurify": "^3.2.0",
     "marked": "^18.0.0",
+    "mermaid": ">=11.15.0 <12",
     "shiki": "^4.0.0",
     "svelte": "^5.29.0"
+  },
+  "peerDependenciesMeta": {
+    "mermaid": {
+      "optional": true
+    }
   },
   "packageManager": "bun@1.3.14"
 }

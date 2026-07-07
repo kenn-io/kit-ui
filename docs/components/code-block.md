@@ -85,13 +85,18 @@ cache, cleared past 500 entries):
 const renderer = createMarkdownRenderer({
   // marked tokenizer/renderer extensions (issue refs, wrapper tags)
   extensions: [myItemRefExtension],
-  // intercept fences (mermaid, custom viewers); undefined falls through
+  // intercept fences (custom viewers); undefined falls through. For
+  // mermaid, pass the ready-made `mermaidCodeFence` (see mermaid.md)
   codeFence: (code, lang) =>
-    lang === "mermaid" ? `<pre class="mermaid">${escapeHtml(code)}</pre>` : undefined,
+    lang === "graphviz" ? `<pre class="graphviz">${escapeHtml(code)}</pre>` : undefined,
   // extra attributes sanitization keeps (for extension-emitted markup)
   allowedAttributes: ["data-item-ref"],
 });
 ```
+
+Mermaid diagram rendering (fence interceptor + pan/zoom viewer) ships as
+an opt-in module on top of this hook — see
+[mermaid.md](mermaid.md).
 
 `codeFence` contract: the returned string is **markup**, so the
 interceptor must escape the user-authored fence text itself

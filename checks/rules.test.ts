@@ -434,6 +434,18 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "a.ts", ["hand-rolled-markdown"])).toHaveLength(0);
   });
 
+  test("mermaid: static and dynamic mermaid imports", () => {
+    const src = `import mermaid from "mermaid";\nconst lazy = () => import("mermaid");`;
+    const findings = checkSource(src, "diagrams.ts", ["hand-rolled-mermaid"]);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("markdown-mermaid");
+  });
+
+  test("mermaid: does not match kit-ui's own subpath", () => {
+    const src = `import { mermaidCodeFence } from "@kenn-io/kit-ui/utils/markdown-mermaid";`;
+    expect(checkSource(src, "a.ts", ["hand-rolled-mermaid"])).toHaveLength(0);
+  });
+
   test("focus trap: tabbable-selector string", () => {
     const src = svelte(
       ``,

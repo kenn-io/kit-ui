@@ -1,0 +1,288 @@
+/*
+ * kit-ui mermaid viewer — opt-in stylesheet for utils/markdown-mermaid.
+ * Import alongside theme.css in apps that render mermaid diagrams:
+ *
+ *   import "@kenn-io/kit-ui/theme.css";
+ *   import "@kenn-io/kit-ui/mermaid.css";
+ *
+ * Kept out of theme.css because the viewer chrome only matters to apps
+ * that install the optional `mermaid` peer; everything here layers on the
+ * theme.css tokens. The viewer DOM is created imperatively (post-processing
+ * rendered markdown), so these styles are global by necessity.
+ */
+
+/* Mermaid theme tokens — GitHub-flavored diagram palette, read by
+ * markdown-mermaid.ts via getComputedStyle at render time (a missing
+ * token throws). Deliberate hex values: this file is a token definition
+ * site, like theme.css. */
+:root {
+  --mermaid-bg: #ffffff;
+  --mermaid-viewer-bg: #f6f8fa;
+  --mermaid-node-bg: #ffffff;
+  --mermaid-node-text: #24292f;
+  --mermaid-node-border: #d0d7de;
+  --mermaid-cluster-bg: #f6f8fa;
+  --mermaid-cluster-text: #24292f;
+  --mermaid-cluster-border: #d0d7de;
+  --mermaid-line: #57606a;
+  --mermaid-text: #24292f;
+  --mermaid-label-bg: #ffffff;
+  --mermaid-label-text: #24292f;
+  --mermaid-note-bg: #fff8c5;
+  --mermaid-note-text: #24292f;
+  --mermaid-note-border: #d4a72c;
+
+  /* Lightbox scrim: fixed GitHub-dark glass regardless of app theme.
+   * Shared name with middleman's image lightbox by design. */
+  --viewer-scrim: rgba(1, 4, 9, 0.72);
+}
+
+:root.dark {
+  --mermaid-bg: #0d1117;
+  --mermaid-viewer-bg: #4a4d4b;
+  --mermaid-node-bg: #f6f8fa;
+  --mermaid-node-text: #24292f;
+  --mermaid-node-border: #d0d7de;
+  --mermaid-cluster-bg: #4a4d4b;
+  --mermaid-cluster-text: #f0f6fc;
+  --mermaid-cluster-border: #4a4d4b;
+  --mermaid-line: #c9d1d9;
+  --mermaid-text: #c9d1d9;
+  --mermaid-label-bg: #30363d;
+  --mermaid-label-text: #f0f6fc;
+  --mermaid-note-bg: #30363d;
+  --mermaid-note-text: #f0f6fc;
+  --mermaid-note-border: #8b949e;
+}
+
+/* Unrendered (or render-failed) mermaid fences: plain source block. */
+pre.mermaid {
+  background: var(--bg-surface);
+  text-align: center;
+}
+
+/* Direct child only — the rendered diagram; the control buttons nest
+ * their own icon svgs deeper. */
+pre.mermaid > svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Rendered diagram wrapped in the pan/zoom viewer. */
+pre.mermaid.kit-mermaid-viewer {
+  position: relative;
+  height: clamp(180px, 34vw, 420px);
+  min-height: 180px;
+  padding: 0;
+  overflow: hidden;
+  background: var(--mermaid-viewer-bg);
+  border-color: var(--border-default);
+  border-radius: var(--radius-md);
+  text-align: initial;
+}
+
+.kit-mermaid-viewer__viewport {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+
+.kit-mermaid-viewer__viewport--dragging {
+  cursor: grabbing;
+}
+
+.kit-mermaid-viewer__pan {
+  width: calc(100% - 28px);
+  height: calc(100% - 28px);
+  max-width: calc(100% - 28px);
+  max-height: calc(100% - 28px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 120ms ease-out;
+  will-change: transform;
+}
+
+.kit-mermaid-viewer__pan svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  background: transparent;
+}
+
+.kit-mermaid-viewer__controls {
+  position: absolute;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.kit-mermaid-viewer__controls--top {
+  top: 10px;
+  grid-template-columns: repeat(2, 28px);
+}
+
+.kit-mermaid-viewer__controls--nav {
+  top: 50%;
+  grid-template-columns: 28px;
+  transform: translateY(-50%);
+}
+
+/* IconButton's md ghost chrome (kit-icon-button--md), inlined because
+ * the buttons are imperative DOM; keep in sync with IconButton.svelte.
+ * Font properties only matter for the text-glyph fallback when the
+ * lucide icon chunk failed to load. */
+.kit-mermaid-viewer__button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.kit-mermaid-viewer__button:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.kit-mermaid-viewer__button[data-copied="true"] {
+  color: var(--accent-green);
+}
+
+/* Edge labels: mermaid renders these as foreignObject/text nodes whose
+ * default fill fights the themed background — pin them to the label
+ * tokens in both the inline viewer and the lightbox. */
+pre.mermaid.kit-mermaid-viewer .edgeLabel,
+.kit-mermaid-lightbox .edgeLabel {
+  color: var(--mermaid-label-text);
+}
+
+pre.mermaid.kit-mermaid-viewer .edgeLabel text,
+.kit-mermaid-lightbox .edgeLabel text {
+  fill: var(--mermaid-label-text) !important;
+}
+
+pre.mermaid.kit-mermaid-viewer .edgeLabel span,
+pre.mermaid.kit-mermaid-viewer .edgeLabel p,
+pre.mermaid.kit-mermaid-viewer .edgeLabel div,
+.kit-mermaid-lightbox .edgeLabel span,
+.kit-mermaid-lightbox .edgeLabel p,
+.kit-mermaid-lightbox .edgeLabel div {
+  color: var(--mermaid-label-text) !important;
+}
+
+/* Full-screen pan/zoom lightbox with its own chrome, not a dialog
+ * surface. */
+.kit-mermaid-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: var(--viewer-scrim);
+}
+
+/* Panel chrome matches the kit dialog surfaces (Modal, DetailDrawer):
+ * 1px default border + standard shadow, not middleman's heavier glass. */
+.kit-mermaid-lightbox__panel {
+  position: relative;
+  width: min(96vw, 1540px);
+  height: min(84vh, 760px);
+  overflow: hidden;
+  background: var(--mermaid-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.kit-mermaid-lightbox .kit-mermaid-viewer__viewport {
+  background: transparent;
+}
+
+.kit-mermaid-lightbox .kit-mermaid-viewer__pan {
+  width: calc(100% - 96px);
+  height: calc(100% - 96px);
+  max-width: none;
+  max-height: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kit-mermaid-lightbox .kit-mermaid-viewer__pan svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.kit-mermaid-lightbox .kit-mermaid-viewer__controls--nav {
+  right: 24px;
+  bottom: 24px;
+  top: auto;
+  transform: none;
+}
+
+.kit-mermaid-lightbox__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-mermaid-viewer__pan {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  pre.mermaid.kit-mermaid-viewer {
+    height: 240px;
+  }
+
+  .kit-mermaid-lightbox {
+    padding: 10px;
+  }
+
+  .kit-mermaid-lightbox__panel {
+    width: 100%;
+    height: 88vh;
+  }
+
+  .kit-mermaid-lightbox .kit-mermaid-viewer__pan {
+    width: calc(100% - 32px);
+    height: calc(100% - 72px);
+  }
+
+  .kit-mermaid-lightbox .kit-mermaid-viewer__controls--nav {
+    right: 12px;
+    bottom: 12px;
+  }
+}
