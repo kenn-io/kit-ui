@@ -285,6 +285,14 @@
     onSelect({ mode: "custom", from: customFrom, to: customTo });
   }
 
+  // Invalidate while closed too: a selection A -> B -> A round trip before
+  // reopening still means the draft that started under the first A is stale.
+  $effect(() => {
+    if (!customPending || selectionKey(selection) === pendingFor) return;
+    customPending = false;
+    pendingFor = null;
+  });
+
   $effect(() => {
     if (!open) return;
     const cleanups = [

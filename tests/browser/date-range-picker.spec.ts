@@ -116,6 +116,32 @@ test("an external selection change while closed drops the mid-pick draft", async
   );
 });
 
+test("an external selection change while closed invalidates drafts even if the key returns", async ({
+  page,
+}) => {
+  await openCustomTab(page);
+  await day(page, 5).click(); // draft A, keyed to the relative-30 seed
+  await page.keyboard.press("Escape");
+
+  // The parent briefly swaps to a different committed selection, then back
+  // to the original key before the popover reopens. The intervening change
+  // still makes draft A stale.
+  await page.getByRole("button", { name: "External: last 7 days" }).click();
+  await page.getByRole("button", { name: "External: last 30 days" }).click();
+
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(0)).toHaveClass(
+    /active/,
+  );
+  await day(page, 12).click();
+  await expect(page.locator("code", { hasText: '"days":30' })).toBeVisible();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveText("12");
+});
+
 test("an external selection change while open drops the mid-pick draft", async ({ page }) => {
   await openCustomTab(page);
   await day(page, 5).click(); // start a draft against the relative-30 seed
