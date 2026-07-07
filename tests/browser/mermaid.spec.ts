@@ -451,6 +451,93 @@ test("run-level failures leave diagrams retryable", async ({ page }) => {
   expect(result.viewer).toBe(true);
 });
 
+test("a controller settles after a persistent load failure instead of retry-looping", async ({
+  page,
+}) => {
+  const result = await page.evaluate(async () => {
+    const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const host = document.createElement("div");
+    host.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    const node = host.querySelector<HTMLElement>("pre.mermaid")!;
+    document.body.append(host);
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let loadCalls = 0;
+    const controller = initMarkdownMermaidRendering(host, {
+      load: async () => {
+        loadCalls += 1;
+        throw new Error("mermaid infrastructure unavailable");
+      },
+    });
+    try {
+      // The failure restores the source, which wakes the controller's
+      // own MutationObserver — a loop would rack up calls here.
+      await wait(300);
+      const settledCalls = loadCalls;
+      const settledSource = node.textContent;
+
+      controller.renderNow();
+      await wait(300);
+      const afterRenderNow = loadCalls;
+
+      node.textContent = "graph LR\nB-->C";
+      await wait(300);
+      const afterSourceChange = loadCalls;
+
+      return { settledCalls, settledSource, afterRenderNow, afterSourceChange };
+    } finally {
+      controller.disconnect();
+      host.remove();
+    }
+  });
+  expect(result.settledCalls).toBe(1);
+  expect(result.settledSource).toBe("graph LR\nA-->B");
+  // Explicit renderNow() and a real source change each retry exactly once.
+  expect(result.afterRenderNow).toBe(2);
+  expect(result.afterSourceChange).toBe(3);
+});
+
+test("a controller settles after a run failure that mutated the node", async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const host = document.createElement("div");
+    host.innerHTML = '<pre class="mermaid">graph LR\nA-->B</pre>';
+    const node = host.querySelector<HTMLElement>("pre.mermaid")!;
+    document.body.append(host);
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let runCalls = 0;
+    const controller = initMarkdownMermaidRendering(host, {
+      load: async () => ({
+        version: "11.15.0",
+        initialize() {},
+        async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
+          runCalls += 1;
+          for (const item of Array.from(nodes)) {
+            item.textContent = "partial render output";
+          }
+          throw new Error("worker unavailable");
+        },
+      }),
+    });
+    try {
+      await wait(300);
+      const settledCalls = runCalls;
+      const settledSource = node.textContent;
+
+      controller.renderNow();
+      await wait(300);
+      const afterRenderNow = runCalls;
+
+      return { settledCalls, settledSource, afterRenderNow };
+    } finally {
+      controller.disconnect();
+      host.remove();
+    }
+  });
+  expect(result.settledCalls).toBe(1);
+  expect(result.settledSource).toBe("graph LR\nA-->B");
+  expect(result.afterRenderNow).toBe(2);
+});
+
 test("theme flip re-renders diagrams with the other palette", async ({ page }) => {
   await setTheme(page, { dark: false });
   await firstViewer(page).waitFor({ timeout: 15_000 });

@@ -86,9 +86,12 @@ until its source changes. An _infrastructure_ failure — the mermaid
 chunk failing to load, a missing theme token, or `mermaid.run`
 rejecting before per-node attachment — clears the pending state instead,
 so the next render pass (`renderNow()`, a DOM mutation, a theme flip)
-retries. Failures are reported via `console.error` only; apps that need
-telemetry can call `renderMarkdownMermaidDiagrams` themselves and
-observe the rejection.
+retries. The failure's own source restore does not count as that
+trigger: the controller holds the diagram through the observer pass its
+restore mutation wakes, so a persistent failure settles instead of
+retrying in a loop. Failures are reported via `console.error` only;
+apps that need telemetry can call `renderMarkdownMermaidDiagrams`
+themselves and observe the rejection.
 
 Budgets bound hostile input: 25 diagrams and 200 KB of diagram source
 (beyond these, blocks stay plain source), 50 KB and 500 edges per

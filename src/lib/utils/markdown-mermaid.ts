@@ -81,6 +81,14 @@ export interface MarkdownMermaidOptions {
 interface InternalMarkdownMermaidOptions extends MarkdownMermaidOptions {
   onLightboxMounted?: (close: () => void) => void;
   onLightboxClosed?: (close: () => void) => void;
+  /** Whether this pass may retry nodes held after an infrastructure
+   * failure (default true). The controller sets false for observer-
+   * triggered passes: the failure's own source-restore mutation wakes
+   * the observer, and without the hold a persistent failure (missing
+   * mermaid.css, unsupported runtime, dead chunk) would retry in a
+   * tight loop. The hold is one-shot — the skipping pass consumes it —
+   * so the next external trigger retries as documented. */
+  retryHeldInfrastructureFailures?: boolean;
 }
 
 const MERMAID_SELECTOR = "pre.mermaid";
@@ -157,6 +165,7 @@ let mermaidPromise: Promise<MarkdownMermaidAPI> | null = null;
 const initializedMermaidTheme = new WeakMap<MarkdownMermaidAPI, MermaidThemeName>();
 const diagramSources = new WeakMap<HTMLElement, string>();
 const failedDiagramSources = new WeakMap<HTMLElement, string>();
+const infrastructureFailureHolds = new WeakMap<HTMLElement, string>();
 let closeActiveMermaidLightbox: (() => void) | null = null;
 
 /** `codeFence` interceptor for `createMarkdownRenderer`: routes
@@ -292,7 +301,9 @@ export async function renderMarkdownMermaidDiagrams(
   root: ParentNode,
   options: MarkdownMermaidOptions = {},
 ): Promise<number> {
-  const nodes = collectRenderableMermaidNodes(root);
+  const retryHeldFailures =
+    (options as InternalMarkdownMermaidOptions).retryHeldInfrastructureFailures ?? true;
+  const nodes = collectRenderableMermaidNodes(root, retryHeldFailures);
   if (nodes.length === 0) return 0;
 
   for (const node of nodes) {
@@ -331,7 +342,10 @@ export async function renderMarkdownMermaidDiagrams(
   return renderedCount;
 }
 
-function collectRenderableMermaidNodes(root: ParentNode): HTMLElement[] {
+function collectRenderableMermaidNodes(
+  root: ParentNode,
+  retryHeldInfrastructureFailures: boolean,
+): HTMLElement[] {
   const nodes: HTMLElement[] = [];
   let diagramCount = 0;
   let sourceBytes = 0;
@@ -339,6 +353,17 @@ function collectRenderableMermaidNodes(root: ParentNode): HTMLElement[] {
   for (const node of Array.from(root.querySelectorAll<HTMLElement>(MERMAID_SELECTOR))) {
     const source = mermaidNodeSource(node);
     const nextSourceBytes = mermaidSourceByteLength(source);
+
+    const heldSource = infrastructureFailureHolds.get(node);
+    if (heldSource !== undefined) {
+      infrastructureFailureHolds.delete(node);
+      if (!retryHeldInfrastructureFailures && heldSource === source) {
+        diagramCount += 1;
+        sourceBytes += nextSourceBytes;
+        continue;
+      }
+    }
+
     if (node.dataset.mermaidRendered === "failed") {
       const failedSource = failedDiagramSources.get(node);
       if (failedSource === undefined || failedSource === source) {
@@ -425,7 +450,11 @@ function clearMermaidRenderState(node: HTMLElement): void {
 
 function restoreMermaidSourcesAndClearRenderState(nodes: HTMLElement[]): void {
   for (const node of nodes) {
+    const source = diagramSources.get(node);
     restoreMermaidSource(node);
+    if (source !== undefined) {
+      infrastructureFailureHolds.set(node, source);
+    }
     diagramSources.delete(node);
     clearMermaidRenderState(node);
   }
@@ -764,6 +793,9 @@ export function initMarkdownMermaidRendering(
   let themeResetAfterCurrent = false;
   let renderedTheme = currentMermaidTheme();
   let closeOwnedLightbox: (() => void) | null = null;
+  // The initial pass and renderNow() are explicit — they may retry
+  // infrastructure-held diagrams. Observer-triggered passes are not.
+  let retryHeldFailures = true;
   const renderOptions: InternalMarkdownMermaidOptions = {
     ...options,
     onLightboxMounted(close) {
@@ -788,6 +820,8 @@ export function initMarkdownMermaidRendering(
       scheduled = false;
       if (disconnected) return;
       rendering = true;
+      renderOptions.retryHeldInfrastructureFailures = retryHeldFailures;
+      retryHeldFailures = false;
       const themeAtStart = currentMermaidTheme();
       try {
         await renderMarkdownMermaidDiagrams(observedRoot, renderOptions);
@@ -851,7 +885,10 @@ export function initMarkdownMermaidRendering(
   render();
 
   return {
-    renderNow: render,
+    renderNow() {
+      retryHeldFailures = true;
+      render();
+    },
     disconnect() {
       disconnected = true;
       const closeLightbox = closeOwnedLightbox;
