@@ -16,6 +16,7 @@
   import FitStagesDemo from "./pages/FitStagesDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
   import IconButtonDemo from "./pages/IconButtonDemo.svelte";
+  import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MarkdownDemo from "./pages/MarkdownDemo.svelte";
   import MentionTextareaDemo from "./pages/MentionTextareaDemo.svelte";
@@ -75,6 +76,7 @@
     { id: "fit-stages", label: "FitStages", component: FitStagesDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
     { id: "icon-button", label: "IconButton", component: IconButtonDemo },
+    { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "mention-textarea", label: "MentionTextarea", component: MentionTextareaDemo },

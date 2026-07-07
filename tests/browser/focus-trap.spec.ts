@@ -62,3 +62,37 @@ test.describe("DetailDrawer focus trap", () => {
     await expect(trigger).toBeFocused();
   });
 });
+
+test.describe("ImagePreview nested in Modal", () => {
+  test("lightbox Escape and Tab handling stay inside the nested overlay", async ({ page }) => {
+    await gotoPage(page, "image-preview");
+    await page.getByRole("button", { name: "Open image modal" }).click();
+
+    const modal = page.locator(".kit-modal-panel").filter({ hasText: "Image attachment" });
+    await expect(modal).toBeVisible();
+    await modal.getByRole("button", { name: "Expand nested image" }).click();
+
+    const lightbox = page.locator(".kit-image-preview__lightbox-panel");
+    await expect(lightbox).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.activeElement?.closest(".kit-image-preview__lightbox-panel") !== null,
+        ),
+      )
+      .toBe(true);
+
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Close nested image" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(
+        () => document.activeElement?.closest(".kit-image-preview__lightbox-panel") !== null,
+      ),
+    ).toBe(true);
+
+    await page.keyboard.press("Escape");
+    await expect(lightbox).not.toBeVisible();
+    await expect(modal).toBeVisible();
+  });
+});

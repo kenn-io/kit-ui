@@ -256,6 +256,19 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
   });
 
+  test("image preview: class and CSS selector, prefixed names included", () => {
+    const src = svelte(
+      `.diff-image-preview { background-size: 20px 20px; }`,
+      `<div class="diff-image-preview"><img src={url} alt="" /></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-image-preview"])).toHaveLength(2);
+  });
+
+  test("image preview: does not match kit-image-preview", () => {
+    const src = `<div class="kit-image-preview"></div>\n<style>.kit-image-preview { padding: 0; }</style>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-image-preview"])).toHaveLength(0);
+  });
+
   test("icon button: class and CSS selector, both spellings", () => {
     const src = svelte(
       `.icon-btn { width: 28px; } .icon-button:hover { color: red; }`,
