@@ -587,6 +587,24 @@ export function checkHandRolledMarkdown(source) {
   return findings;
 }
 
+/** Direct mermaid imports duplicate kit-ui's markdown-mermaid module,
+ * which bundles the strict-sandbox config, per-document budgets, themed
+ * re-rendering, and the pan/zoom viewer. */
+export function checkHandRolledMermaid(source) {
+  const findings = [];
+  const re = /from\s+["']mermaid["']|import\(\s*["']mermaid["']\s*\)/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-mermaid",
+      line: lineOfIndex(source, match.index),
+      message:
+        "direct mermaid import — use mermaidCodeFence + initMarkdownMermaidRendering from @kenn-io/kit-ui/utils/markdown-mermaid (strict sandbox, budgets, themed viewer)",
+    });
+  }
+  return findings;
+}
+
 /** The tabbable-elements selector is the signature of a hand-rolled focus
  * trap (Tab cycling, initial focus, roving menus). trapFocus also locks
  * body scroll re-entrantly and restores focus on teardown. */
@@ -752,6 +770,7 @@ export const ALL_RULES = {
   "hand-rolled-sr-only": checkHandRolledSrOnly,
   "hand-rolled-virtualization": checkHandRolledVirtualization,
   "hand-rolled-markdown": checkHandRolledMarkdown,
+  "hand-rolled-mermaid": checkHandRolledMermaid,
   "hand-rolled-focus-trap": checkHandRolledFocusTrap,
   "local-debounce": checkLocalDebounce,
   "manual-color-scheme": checkManualColorScheme,

@@ -19,6 +19,7 @@
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MarkdownDemo from "./pages/MarkdownDemo.svelte";
   import MentionTextareaDemo from "./pages/MentionTextareaDemo.svelte";
+  import MermaidDemo from "./pages/MermaidDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
@@ -78,6 +79,7 @@
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "mention-textarea", label: "MentionTextarea", component: MentionTextareaDemo },
+    { id: "mermaid", label: "Mermaid", component: MermaidDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
