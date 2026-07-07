@@ -266,11 +266,12 @@
   // completes it (an earlier second click swaps the ends so consumers always
   // get ordered bounds), and only a complete range commits.
   function pickCustomDay(date: string): void {
-    if (!customPending) {
+    const currentSelectionKey = selectionKey(selection);
+    if (!customPending || currentSelectionKey !== pendingFor) {
       customFrom = date;
       customTo = "";
       customPending = true;
-      pendingFor = selectionKey(selection);
+      pendingFor = currentSelectionKey;
       return;
     }
     customPending = false;

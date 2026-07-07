@@ -116,6 +116,29 @@ test("an external selection change while closed drops the mid-pick draft", async
   );
 });
 
+test("an external selection change while open drops the mid-pick draft", async ({ page }) => {
+  await openCustomTab(page);
+  await day(page, 5).click(); // start a draft against the relative-30 seed
+
+  // Programmatic external change: this mirrors a parent-controlled prop
+  // update while avoiding the outside mousedown that would dismiss the
+  // popover in the demo page.
+  await page
+    .getByRole("button", { name: "External: last 7 days" })
+    .evaluate((button) => (button as HTMLButtonElement).click());
+  await expect(page.locator("code", { hasText: '"days":7' })).toBeVisible();
+  await expect(panel(page)).toBeVisible();
+
+  // The next custom pick starts a fresh draft instead of completing the
+  // stale day-5 draft over the externally controlled selection.
+  await day(page, 12).click();
+  await expect(page.locator("code", { hasText: '"days":7' })).toBeVisible();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint").nth(1)).toHaveClass(
+    /active/,
+  );
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveText("12");
+});
+
 test("re-keying survives an external incomplete-custom swap between drafts", async ({ page }) => {
   // Regression for the stale-key hole: a full reseed that armed a pending
   // draft (from a controlled incomplete custom selection) but left the key
