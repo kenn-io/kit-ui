@@ -143,15 +143,24 @@
     open = true;
   }
 
+  // Every key that can move the caret without editing. ArrowUp/ArrowDown
+  // belong here for multiline values: when the menu consumes them for
+  // highlight cycling it prevents default, so the caret hasn't moved and the
+  // refresh is a no-op — otherwise they change lines and the mention state
+  // must follow the caret.
+  const caretKeys = new Set([
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
+  ]);
+
   function handleKeyup(event: KeyboardEvent): void {
-    if (
-      event.key === "ArrowLeft" ||
-      event.key === "ArrowRight" ||
-      event.key === "Home" ||
-      event.key === "End"
-    ) {
-      refreshMention();
-    }
+    if (caretKeys.has(event.key)) refreshMention();
   }
 
   function handleBlur(event: FocusEvent): void {

@@ -54,6 +54,34 @@ test("keyboard protocol: arrows cycle, Tab inserts, Escape dismisses", async ({ 
   await expect(page.locator('[data-demo="mention-value"]')).toHaveText("#y1v0 ");
 });
 
+test("vertical caret movement keeps the menu in sync in multiline text", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Task description" });
+  const menu = page.locator(".kit-mention__menu");
+
+  // Line 1 holds a mention query; Escape dismisses the menu so Enter can type
+  // a newline and leave the caret on a plain second line.
+  await textarea.pressSequentially("#ry");
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await textarea.pressSequentially("\nplain");
+  await expect(menu).not.toBeVisible();
+
+  // ArrowUp moves the caret to the end of "#ry": the menu must reopen there.
+  await page.keyboard.press("ArrowUp");
+  await expect(menu).toBeVisible();
+  await expect(menu.locator(".kit-mention__option")).toContainText(["#ry18"]);
+
+  // With no matches the menu doesn't consume ArrowUp, so the caret leaves the
+  // query line and the popup must close instead of tracking a dead position.
+  await page.keyboard.press("Escape");
+  await textarea.fill("");
+  await textarea.pressSequentially("x\n#zz");
+  await expect(menu.locator(".kit-mention__status")).toHaveText("No matches");
+  await page.keyboard.press("ArrowUp");
+  await expect(menu).not.toBeVisible();
+});
+
 test("a trigger inside a word does not open the menu", async ({ page }) => {
   await gotoPage(page, "mention-textarea");
   const textarea = page.getByRole("textbox", { name: "Task description" });
