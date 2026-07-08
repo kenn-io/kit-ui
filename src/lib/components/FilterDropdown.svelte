@@ -338,6 +338,11 @@
     position: fixed;
     z-index: var(--z-popover);
     padding: 4px 0;
+    /* Long item lists (agentsview's branch filter runs to thousands of
+       entries) must scroll instead of growing past the viewport. */
+    max-height: min(420px, calc(100vh - 16px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .kit-filter-dropdown__search {
