@@ -737,6 +737,39 @@ describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
   });
 
+  test("checkbox: nested at-rule preludes don't leak into the parent's declarations", () => {
+    // The @supports prelude names accent-color but is the CHILD's prelude,
+    // not a parent declaration — an earlier scanner appended the selector
+    // tail to the parent frame and false-flagged .checkbox-zone.
+    const src = svelte(
+      `.checkbox-zone {
+        @supports (accent-color: auto) {
+          input[type="range"] { width: 14px; }
+        }
+      }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
+  });
+
+  test("checkbox: semicolons inside quoted attribute values don't split the selector", () => {
+    // lastIndexOf(";") over the raw text would cut the selector at the
+    // quoted ";" and lose the checkbox half — a false negative.
+    const src = svelte(`input[type="checkbox"][data-token=";"] { width: 14px; }`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(1);
+  });
+
+  test("checkbox: declarations before a nested checkbox rule stay with the parent", () => {
+    // The parent's accent-color must not vanish into the child selector
+    // split; the checkbox-named parent still flags.
+    const src = svelte(
+      `.checkbox-row {
+        accent-color: var(--accent-blue);
+        span { color: var(--text-primary); }
+      }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(1);
+  });
+
   test("checkbox: braces inside content strings are not structural", () => {
     const src = svelte(
       `input[type="checkbox"] { width: 14px; }
@@ -757,8 +790,11 @@ describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
 
   test("checkbox: deep nesting stays linear", () => {
     // An earlier scanner re-sliced each frame's full body on every close
-    // brace — quadratic on adversarial nesting depth.
-    const depth = 4000;
+    // brace — quadratic on adversarial nesting depth. Depth is sized so
+    // the quadratic version copies ~1.4GB (multiple seconds) while the
+    // linear pass stays in the low milliseconds; the generous wall-clock
+    // budget then only separates complexity classes, not hardware.
+    const depth = 20000;
     const src = svelte(
       `${".x{".repeat(depth)}input[type="range"]{accent-color:red;}${"}".repeat(depth)}`,
     );

@@ -47,9 +47,9 @@ the accent hover (border + 6% tint) and the shared focus ring. Don't put
 other interactive elements (including header `actions`) inside a clickable
 card — nested interactive elements are invalid HTML.
 
-`href` and `onclick` are mutually exclusive; if both are passed, `href`
-wins — the card renders as a link and the `onclick` handler is ignored
-(it is not attached to the anchor).
+`href` takes precedence over `onclick`: when both are passed the card
+renders as a link and the `onclick` handler is ignored (it is not
+attached to the anchor). Pass one or the other.
 
 For choice-card sets (theme pickers, plan selectors), `selected` marks the
 active card: the button variant renders `aria-pressed`, the anchor variant

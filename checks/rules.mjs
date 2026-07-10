@@ -608,6 +608,7 @@ export function checkHandRolledCheckbox(source, filename) {
     const stack = [];
     let line = 0; // newlines seen so far within this block
     let pending = ""; // non-skipped text since the last structural brace
+    let declEnd = 0; // pending length as of the last STRUCTURAL semicolon
     let segStart = 0;
     let i = 0;
     while (i < css.length) {
@@ -628,7 +629,7 @@ export function checkHandRolledCheckbox(source, filename) {
       if (ch === '"' || ch === "'") {
         // Quoted text stays in the segment (attribute selectors like
         // input[type="checkbox"] must keep matching) but is stepped over
-        // wholesale so a brace in a content string isn't structural.
+        // wholesale so a brace or semicolon in a string isn't structural.
         let j = i + 1;
         while (j < css.length && css[j] !== ch) {
           if (css[j] === "\n") line += 1;
@@ -638,15 +639,22 @@ export function checkHandRolledCheckbox(source, filename) {
         i = Math.min(j + 1, css.length);
         continue;
       }
-      if (ch === "{") {
+      if (ch === ";") {
+        // Declaration boundary, recorded during the scan so semicolons
+        // hidden in quoted attribute values can't split a selector.
+        declEnd = pending.length + (i - segStart) + 1;
+      } else if (ch === "{") {
         pending += css.slice(segStart, i);
-        // Declarations before a nested rule stay with the parent; only
-        // the tail after the last `;` is the child's selector (or an
-        // at-rule prelude, which the checkbox regexes never match).
-        const selector = pending.slice(pending.lastIndexOf(";") + 1);
-        if (stack.length > 0) stack[stack.length - 1].direct += pending;
+        // Split at the last structural semicolon: complete declarations
+        // before it stay with the parent; the tail is the child's
+        // selector (or an at-rule prelude — which must NOT reach the
+        // parent's declaration text, else `@supports (accent-color:…)`
+        // reads as a parent declaration).
+        const selector = pending.slice(declEnd);
+        if (stack.length > 0) stack[stack.length - 1].direct += pending.slice(0, declEnd);
         stack.push({ selector, line, direct: "" });
         pending = "";
+        declEnd = 0;
         segStart = i + 1;
       } else if (ch === "}") {
         pending += css.slice(segStart, i);
@@ -666,6 +674,7 @@ export function checkHandRolledCheckbox(source, filename) {
           }
         }
         pending = "";
+        declEnd = 0;
         segStart = i + 1;
       }
       i += 1;

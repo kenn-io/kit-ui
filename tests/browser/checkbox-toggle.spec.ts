@@ -41,6 +41,49 @@ test("indeterminate parent resolves to all-on, children drive the dash", async (
   await expect(parent).toHaveJSProperty("indeterminate", true);
 });
 
+test("required checkbox gates native submission and submits name=value when checked", async ({
+  page,
+}) => {
+  await gotoPage(page, "checkbox");
+  const box = page.getByRole("checkbox", { name: "Accept the terms (required)" });
+  const result = page.getByTestId("checkbox-form-result");
+  // Unchecked + required → constraint validation blocks the submit handler.
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(result).toHaveText("");
+  expect(await box.evaluate((el: HTMLInputElement) => el.checkValidity())).toBe(false);
+  await page.locator(".kit-checkbox", { hasText: "Accept the terms" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(result).toHaveText("terms=accepted");
+});
+
+test("required toggle gates native submission and submits the native default value", async ({
+  page,
+}) => {
+  await gotoPage(page, "toggle");
+  const sw = page.getByRole("switch", { name: "Enable sync to continue (required)" });
+  const result = page.getByTestId("toggle-form-result");
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(result).toHaveText("");
+  expect(await sw.evaluate((el: HTMLInputElement) => el.checkValidity())).toBe(false);
+  await page.locator(".kit-toggle", { hasText: "Enable sync to continue" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(result).toHaveText("sync=on");
+});
+
+test("uncontrolled onchange reports the input's new state, not a stale prop", async ({ page }) => {
+  await gotoPage(page, "checkbox");
+  // "All files" is controlled (checked={derived}, no bind:) with onchange
+  // driving the children — the exact shape where a stale callback value
+  // would set every child to the OLD state instead of the new one.
+  const parent = page.getByRole("checkbox", { name: /All files/ });
+  await expect(parent).toHaveJSProperty("indeterminate", true);
+  await parent.click({ force: true });
+  // onchange received true → all children on (a stale false would clear them).
+  await expect(page.getByRole("checkbox", { name: "Toggle.svelte" })).toBeChecked();
+  await parent.click({ force: true });
+  await expect(page.getByRole("checkbox", { name: "Button.svelte" })).not.toBeChecked();
+});
+
 test("toggle exposes switch semantics and flips on click", async ({ page }) => {
   await gotoPage(page, "toggle");
   const sw = page.getByRole("switch", { name: "Desktop notifications" }).first();

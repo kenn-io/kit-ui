@@ -1,9 +1,16 @@
 <script lang="ts">
-  import { Toggle } from "../../lib/index.js";
+  import { Button, Toggle } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let notifications = $state(true);
   let autoSync = $state(false);
+
+  let submitted = $state("");
+  function submitForm(event: SubmitEvent) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    submitted = [...data.entries()].map(([k, v]) => `${k}=${v}`).join("&");
+  }
 </script>
 
 <DemoSection
@@ -48,11 +55,35 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Form contract"
+  description="A real checkbox input under the switch: name submits the native default value ('on'), and required blocks submission while off."
+  code={`<form onsubmit={submitForm}>
+  <Toggle name="sync" required label="Enable sync to continue (required)" />
+  <Button type="submit" size="sm" label="Submit" />
+</form>`}
+>
+  <form class="col" onsubmit={submitForm}>
+    <Toggle name="sync" required label="Enable sync to continue (required)" />
+    <div>
+      <Button type="submit" size="sm" label="Submit" />
+    </div>
+    <span class="form-result" data-testid="toggle-form-result">{submitted}</span>
+  </form>
+</DemoSection>
+
 <style>
   .col {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+  }
+
+  .form-result {
+    font-size: var(--font-size-xs);
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    min-height: 1em;
   }
 
   .rows {

@@ -1,9 +1,16 @@
 <script lang="ts">
-  import { Checkbox } from "../../lib/index.js";
+  import { Button, Checkbox } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let subscribed = $state(true);
   let terms = $state(false);
+
+  let submitted = $state("");
+  function submitForm(event: SubmitEvent) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    submitted = [...data.entries()].map(([k, v]) => `${k}=${v}`).join("&");
+  }
 
   let files = $state([
     { name: "Button.svelte", included: true },
@@ -59,11 +66,35 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Form contract"
+  description="The underlying element is a real input, so name/value submit natively and required blocks submission through the browser's constraint validation."
+  code={`<form onsubmit={submitForm}>
+  <Checkbox name="terms" value="accepted" required label="Accept the terms (required)" />
+  <Button type="submit" size="sm" label="Submit" />
+</form>`}
+>
+  <form class="col" onsubmit={submitForm}>
+    <Checkbox name="terms" value="accepted" required label="Accept the terms (required)" />
+    <div>
+      <Button type="submit" size="sm" label="Submit" />
+    </div>
+    <span class="form-result" data-testid="checkbox-form-result">{submitted}</span>
+  </form>
+</DemoSection>
+
 <style>
   .col {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+  }
+
+  .form-result {
+    font-size: var(--font-size-xs);
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    min-height: 1em;
   }
 
   .col--nested {
