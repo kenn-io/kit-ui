@@ -29,6 +29,26 @@ function day(page: import("@playwright/test").Page, n: number) {
     .filter({ hasText: new RegExp(`^${n}$`) });
 }
 
+async function expectCompactEndpointsToFit(page: import("@playwright/test").Page) {
+  const endpoints = panel(page).locator(".kit-date-range-picker__endpoint");
+  const firstBox = await endpoints.nth(0).boundingBox();
+  const secondBox = await endpoints.nth(1).boundingBox();
+  expect(firstBox).not.toBeNull();
+  expect(secondBox).not.toBeNull();
+  expect(secondBox!.y).toBeGreaterThan(firstBox!.y);
+
+  for (const endpoint of await endpoints.all()) {
+    const endpointBox = await endpoint.boundingBox();
+    const labelBox = await endpoint.locator(".kit-date-range-picker__endpoint-label").boundingBox();
+    const valueBox = await endpoint.locator(".kit-date-range-picker__endpoint-value").boundingBox();
+    expect(endpointBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(valueBox).not.toBeNull();
+    expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(valueBox!.x);
+    expect(valueBox!.x + valueBox!.width).toBeLessThanOrEqual(endpointBox!.x + endpointBox!.width);
+  }
+}
+
 test("custom tab renders a calendar, not native date inputs", async ({ page }) => {
   await openCustomTab(page);
   await expect(panel(page).locator(".kit-calendar")).toBeVisible();
@@ -277,4 +297,25 @@ test("cross-year custom ranges show complete ISO dates without crowding", async 
     expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(valueBox!.x);
     expect(valueBox!.x + valueBox!.width).toBeLessThanOrEqual(endpointBox!.x + endpointBox!.width);
   }
+});
+
+test("custom panel stays inside a 320px viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await openCustomTab(page);
+
+  const panelBox = await panel(page).boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.x).toBeGreaterThanOrEqual(0);
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(320);
+  await expectCompactEndpointsToFit(page);
+});
+
+test("240px block picker stacks complete endpoint dates", async ({ page }) => {
+  await page.locator(".kit-date-range-picker__trigger").nth(2).click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+
+  const panelBox = await panel(page).boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.width).toBe(240);
+  await expectCompactEndpointsToFit(page);
 });

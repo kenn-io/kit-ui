@@ -210,6 +210,7 @@
 
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
+  let compactPanel = $state(false);
 
   // Fixed positioning (shared popover contract) so the panel escapes
   // overflow-hidden ancestors; align maps left/right onto the trigger's
@@ -217,7 +218,9 @@
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
     const trigger = containerEl.getBoundingClientRect();
-    const width = block ? Math.max(240, trigger.width) : 360;
+    const desiredWidth = block ? Math.max(240, trigger.width) : 360;
+    const width = Math.min(desiredWidth, Math.max(0, window.innerWidth - 16));
+    compactPanel = width < 360;
     panelStyle = `${floatingPopoverStyle({
       trigger,
       viewportWidth: window.innerWidth,
@@ -413,7 +416,11 @@
         <!-- Readout, not inputs: the range is picked on the calendar below
              (two clicks); the highlighted endpoint is the one the next
              click sets. -->
-        <div class="kit-date-range-picker__endpoints" aria-live="polite">
+        <div
+          class="kit-date-range-picker__endpoints"
+          class:compact={compactPanel}
+          aria-live="polite"
+        >
           <span class="kit-date-range-picker__endpoint" class:active={!customPending}>
             <span class="kit-date-range-picker__endpoint-label">{fromLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
@@ -567,6 +574,15 @@
   .kit-date-range-picker__endpoints {
     display: flex;
     gap: var(--space-2);
+  }
+
+  .kit-date-range-picker__endpoints.compact {
+    flex-direction: column;
+  }
+
+  .kit-date-range-picker__endpoints.compact .kit-date-range-picker__endpoint {
+    flex: none;
+    width: 100%;
   }
 
   /* Sized like the pill rows above so the tabs read as one family; the
