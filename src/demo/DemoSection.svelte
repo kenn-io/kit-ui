@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { Card } from "../lib/index.js";
 
   interface Props {
     title: string;
@@ -16,13 +17,15 @@
   {#if description}
     <p class="demo-section__description">{description}</p>
   {/if}
-  <div class="demo-section__canvas">
+  <Card level="raised" class="demo-section__canvas">
     {#if children}
       {@render children()}
     {/if}
-  </div>
+  </Card>
   {#if code}
-    <pre class="demo-section__code"><code>{code}</code></pre>
+    <Card level="inset" padding="none" class="demo-section__code">
+      <pre><code>{code}</code></pre>
+    </Card>
   {/if}
 </section>
 
@@ -43,23 +46,24 @@
     max-width: 640px;
   }
 
-  .demo-section__canvas {
+  /* The canvas is a raised Card so every page's stage exercises the
+   * theme's border weight and shadow character. Its body hosts the demo
+   * cluster; the direct-child selector keeps Cards demoed INSIDE the
+   * canvas (CardDemo) untouched. */
+  .demo-section :global(.demo-section__canvas > .kit-card__body) {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--space-5);
-    padding: 20px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
   }
 
-  .demo-section__code {
+  .demo-section :global(.demo-section__code) {
     margin-top: 8px;
+  }
+
+  .demo-section pre {
+    margin: 0;
     padding: 12px 16px;
-    background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
-    border-radius: var(--radius-md);
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
     color: var(--text-secondary);

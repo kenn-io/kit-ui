@@ -95,7 +95,7 @@
     min-width: 0;
     max-width: 100%;
     border-radius: 999px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     line-height: 1.5;
     white-space: nowrap;
     overflow: hidden;

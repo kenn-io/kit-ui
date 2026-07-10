@@ -3,7 +3,7 @@
     type SettingsCategory,
   } from "../../lib/components/SettingsLayout.svelte";
   import SettingsSection from "../../lib/components/SettingsSection.svelte";
-  import { Button, SearchInput, SegmentedControl, showFlash } from "../../lib/index.js";
+  import { Button, SearchInput, SegmentedControl, showFlash, Toggle } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const categories: SettingsCategory[] = [
@@ -82,29 +82,29 @@
           </SettingsSection>
         {:else if id === "notifications"}
           <SettingsSection title="Notifications" description="Desktop alert behavior.">
-            <label class="row">
+            <div class="row">
               <span class="row__text">
                 <span class="row__label">Desktop notifications</span>
               </span>
-              <input type="checkbox" checked />
-            </label>
+              <Toggle checked ariaLabel="Desktop notifications" />
+            </div>
           </SettingsSection>
         {:else if id === "sync"}
           <SettingsSection title="Sync" description="Background refresh behavior.">
-            <label class="row">
+            <div class="row">
               <span class="row__text">
                 <span class="row__label">Auto-sync</span>
                 <span class="row__hint">Poll providers every few minutes.</span>
               </span>
-              <input type="checkbox" bind:checked={autoSync} />
-            </label>
-            <label class="row">
+              <Toggle bind:checked={autoSync} ariaLabel="Auto-sync" />
+            </div>
+            <div class="row">
               <span class="row__text">
                 <span class="row__label">Hide bot activity</span>
                 <span class="row__hint">Filter [bot] authors from feeds.</span>
               </span>
-              <input type="checkbox" bind:checked={hideBots} />
-            </label>
+              <Toggle bind:checked={hideBots} ariaLabel="Hide bot activity" />
+            </div>
           </SettingsSection>
         {:else if id === "appearance"}
           <SettingsSection title="Theme" description="Colors follow the kit-ui theme tokens.">
@@ -125,13 +125,13 @@
             </div>
           </SettingsSection>
           <SettingsSection title="Density">
-            <label class="row">
+            <div class="row">
               <span class="row__text">
                 <span class="row__label">Compact lists</span>
                 <span class="row__hint">Tighter rows in tables and feeds.</span>
               </span>
-              <input type="checkbox" bind:checked={compactLists} />
-            </label>
+              <Toggle bind:checked={compactLists} ariaLabel="Compact lists" />
+            </div>
           </SettingsSection>
         {/if}
       {/snippet}
@@ -159,12 +159,12 @@
       title="Notifications"
       description="Standalone section without the surrounding layout."
     >
-      <label class="row">
+      <div class="row">
         <span class="row__text">
           <span class="row__label">Desktop notifications</span>
         </span>
-        <input type="checkbox" checked />
-      </label>
+        <Toggle checked ariaLabel="Desktop notifications" />
+      </div>
     </SettingsSection>
   </div>
 </DemoSection>
@@ -174,7 +174,7 @@
     width: 100%;
     height: 460px;
     display: flex;
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
   }
@@ -219,7 +219,7 @@
   .row__input {
     width: 180px;
     padding: var(--space-2) var(--space-4);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-sm);
     background: var(--bg-inset);
     color: var(--text-primary);

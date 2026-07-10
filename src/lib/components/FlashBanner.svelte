@@ -106,7 +106,7 @@
     padding: 8px 16px;
     font-size: var(--font-size-md);
     color: var(--text-primary);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
   }
 
   .kit-flash-banner:first-child {

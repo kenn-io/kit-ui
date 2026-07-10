@@ -164,9 +164,9 @@
     padding: 0 var(--space-4);
     color: var(--text-muted);
     font-size: var(--font-size-2xs);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--letter-spacing-label, 0.04em);
   }
 
   .kit-settings__group-title:not(:first-child) {
@@ -184,7 +184,7 @@
     color: var(--text-secondary);
     font-family: inherit;
     font-size: var(--font-size-sm);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     text-align: left;
     cursor: pointer;
     white-space: nowrap;

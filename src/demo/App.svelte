@@ -1,8 +1,22 @@
 <script lang="ts">
   import type { Component } from "svelte";
-  import { FlashBanner, initTheme, SearchInput, ThemeToggle } from "../lib/index.js";
+  import {
+    FlashBanner,
+    getHighContrast,
+    getThemeName,
+    initTheme,
+    KIT_THEMES,
+    SearchInput,
+    SelectDropdown,
+    setHighContrast,
+    setThemeName,
+    ThemeToggle,
+    Toggle,
+  } from "../lib/index.js";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
+  import CardDemo from "./pages/CardDemo.svelte";
+  import CheckboxDemo from "./pages/CheckboxDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
   import CodeBlockDemo from "./pages/CodeBlockDemo.svelte";
@@ -36,9 +50,12 @@
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
   import TextInputDemo from "./pages/TextInputDemo.svelte";
+  import TimelineDemo from "./pages/TimelineDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
   import ThemeModeDemo from "./pages/ThemeModeDemo.svelte";
+  import ThemesDemo from "./pages/ThemesDemo.svelte";
   import ThemeToggleDemo from "./pages/ThemeToggleDemo.svelte";
+  import ToggleDemo from "./pages/ToggleDemo.svelte";
   import TooltipDemo from "./pages/TooltipDemo.svelte";
   import TopBarDemo from "./pages/TopBarDemo.svelte";
   import TypeaheadDemo from "./pages/TypeaheadDemo.svelte";
@@ -58,12 +75,15 @@
   // sorted alphabetically by label regardless of declaration order.
   const metaPages: Page[] = [
     { id: "theme", label: "Theme tokens", component: ThemeDemo },
+    { id: "themes", label: "Themes", component: ThemesDemo },
     { id: "mobile", label: "Mobile preview", component: MobileDemo },
   ];
 
   const componentPages: Page[] = [
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
+    { id: "card", label: "Card", component: CardDemo },
+    { id: "checkbox", label: "Checkbox", component: CheckboxDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
     { id: "code-block", label: "CodeBlock", component: CodeBlockDemo },
@@ -95,6 +115,8 @@
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
     { id: "table", label: "Table", component: TableDemo },
     { id: "text-input", label: "TextInput", component: TextInputDemo },
+    { id: "timeline", label: "Timeline", component: TimelineDemo },
+    { id: "toggle", label: "Toggle", component: ToggleDemo },
     { id: "theme-mode", label: "Theme mode", component: ThemeModeDemo },
     { id: "theme-toggle", label: "ThemeToggle", component: ThemeToggleDemo },
     { id: "tooltip", label: "Tooltip", component: TooltipDemo },
@@ -179,14 +201,28 @@
           <span class="sidebar__empty">No matches</span>
         {/if}
       </nav>
-      <div class="sidebar__theme">
-        <ThemeToggle variant="segmented" block />
-      </div>
     </aside>
 
     <main class="content">
-      <h2 class="content__heading">{activePage.label}</h2>
-      <ActiveComponent />
+      <header class="content__topbar">
+        <h2 class="content__heading">{activePage.label}</h2>
+        <div class="content__theme-controls">
+          <SelectDropdown
+            value={getThemeName() ?? ""}
+            options={[
+              { value: "", label: "Default theme" },
+              ...KIT_THEMES.map((t) => ({ value: t.name, label: t.label })),
+            ]}
+            onchange={(v) => setThemeName(v || null)}
+            title="Theme"
+          />
+          <ThemeToggle variant="segmented" />
+          <Toggle checked={getHighContrast()} onchange={setHighContrast} label="High contrast" />
+        </div>
+      </header>
+      <div class="content__body">
+        <ActiveComponent />
+      </div>
     </main>
   </div>
 {/snippet}
@@ -273,19 +309,43 @@
     font-weight: 600;
   }
 
-  .sidebar__theme {
-    margin-top: 12px;
-  }
-
   .content {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Theme controls ride a pinned header so every page can flip theme,
+   * mode, and high contrast without scrolling back to chrome. */
+  .content__topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-6);
+    flex-shrink: 0;
+    padding: var(--space-5) 32px;
+    border-bottom: 1px solid var(--border-muted);
+    background: var(--bg-surface);
+  }
+
+  .content__theme-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+  }
+
+  .content__body {
+    flex: 1;
     overflow-y: auto;
-    padding: 24px 32px 64px;
+    padding: 20px 32px 64px;
   }
 
   .content__heading {
     font-size: var(--font-size-xl);
     font-weight: 700;
-    margin-bottom: 20px;
+    margin: 0;
   }
 </style>

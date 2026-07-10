@@ -12,6 +12,8 @@
       "default": "./src/lib/index.ts"
     },
     "./theme.css": "./src/lib/theme.css",
+    "./themes.css": "./src/lib/themes.css",
+    "./fonts.css": "./src/lib/fonts.css",
     "./mermaid.css": "./src/lib/mermaid.css",
     "./breakpoints": {
       "default": "./src/lib/breakpoints.ts"

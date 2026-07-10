@@ -52,6 +52,21 @@
   --transition-fast: 0.12s;
   --opacity-disabled: 0.5;
 
+  /* Identity tokens (all themable; the theme pack retunes them). These
+   * three are declared here because every call site shares one value.
+   * Sibling tokens with per-site defaults are deliberately NOT declared —
+   * components read them as var(--token, <site default>) so the default
+   * theme stays pixel-identical: --transition-ease (hover/press curve),
+   * --transition-medium (overlay/drawer motion), --letter-spacing-label
+   * (uppercase label tracking), --line-height-prose (comment/markdown
+   * bodies), --icon-stroke (lucide stroke width, applied by themes.css),
+   * --overlay-filter (backdrop-filter on overlay scrims). */
+  --border-width: 1px;
+  --press-transform: translateY(1px);
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 
@@ -220,9 +235,18 @@
  * should reuse this class so the surface reads as one family. */
 .kit-popover-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
+}
+
+/* Native form-control accents (range sliders, radios, progress bars, any
+ * checkbox that hasn't migrated to <Checkbox>) follow the theme accent
+ * instead of the UA default blue — otherwise they're the one piece of
+ * chrome a pluggable theme can't recolor. :where() keeps it at zero
+ * specificity so any explicit accent-color wins. */
+:where(input, progress) {
+  accent-color: var(--accent-blue);
 }
 
 /* One spin animation for every rotating indicator (Spinner, the

@@ -290,10 +290,10 @@
     padding: 3px 10px;
     font-family: inherit;
     font-size: var(--font-size-xs);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
     background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition:
@@ -324,7 +324,7 @@
 
   .kit-filter-dropdown__badge {
     font-size: 0.9em;
-    font-weight: 700;
+    font-weight: var(--font-weight-bold, 700);
     background: var(--accent-blue);
     color: white;
     border-radius: 6px;
@@ -375,10 +375,10 @@
   .kit-filter-dropdown__section-title {
     padding: 4px 12px 4px;
     font-size: 0.9em;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--letter-spacing-label, 0.04em);
   }
 
   .kit-filter-dropdown__divider {
@@ -418,7 +418,7 @@
   .kit-filter-dropdown__dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: var(--radius-dot, 50%);
     flex-shrink: 0;
     transition: background var(--transition-fast);
   }

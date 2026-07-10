@@ -54,6 +54,17 @@
       .filter(Boolean)
       .join(" "),
   );
+
+  // Publishes the pointer's element-relative position as --kit-pointer-x/y
+  // for themes that paint a cursor-tracking glow (ember's tactile hover in
+  // themes.css). Fires only while the pointer is over this button; themes
+  // that don't read the vars pay nothing beyond the property write.
+  function trackPointer(event: PointerEvent) {
+    const el = event.currentTarget as HTMLButtonElement;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty("--kit-pointer-x", `${event.clientX - rect.left}px`);
+    el.style.setProperty("--kit-pointer-y", `${event.clientY - rect.top}px`);
+  }
 </script>
 
 <button
@@ -65,6 +76,7 @@
   aria-label={ariaLabel ?? (label && shortLabel ? label : undefined)}
   aria-describedby={ariaDescribedby}
   {onclick}
+  onpointermove={trackPointer}
 >
   {#if children}
     {@render children()}
@@ -90,7 +102,7 @@
     min-height: 28px;
     font-family: inherit;
     font-size: var(--font-size-md);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     padding: 6px 14px;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -99,20 +111,20 @@
      * with UA button chrome (black border, platform background). */
     background: var(--bg-inset);
     color: var(--text-secondary);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     transition:
-      background-color var(--transition-fast) ease,
-      border-color var(--transition-fast) ease,
-      color var(--transition-fast) ease,
-      box-shadow var(--transition-fast) ease,
-      transform var(--transition-fast) ease,
-      opacity var(--transition-fast) ease;
+      background-color var(--transition-fast) var(--transition-ease, ease),
+      border-color var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease),
+      transform var(--transition-fast) var(--transition-ease, ease),
+      opacity var(--transition-fast) var(--transition-ease, ease);
     white-space: nowrap;
     line-height: 1;
   }
 
   .kit-button:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: var(--press-transform);
   }
 
   .kit-button:disabled {
@@ -139,7 +151,7 @@
   .kit-button--outline.kit-button--neutral {
     background: var(--bg-inset);
     color: var(--text-secondary);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
   }
   .kit-button--outline.kit-button--neutral:hover:not(:disabled) {
     background: var(--bg-surface-hover);
@@ -150,7 +162,7 @@
   .kit-button--soft.kit-button--neutral {
     background: color-mix(in srgb, var(--text-muted) 8%, var(--bg-inset));
     color: var(--text-secondary);
-    border: 1px solid color-mix(in srgb, var(--border-default) 80%, transparent);
+    border: var(--border-width) solid color-mix(in srgb, var(--border-default) 80%, transparent);
   }
   .kit-button--soft.kit-button--neutral:hover:not(:disabled) {
     background: var(--bg-surface-hover);
@@ -158,23 +170,26 @@
     border-color: var(--border-default);
   }
 
-  /* Danger outline — neutral at rest, red on hover */
+  /* Danger outline — neutral at rest; hover warns with the shared
+   * 9/30/72 toned-band recipe (tint + red ink) instead of flipping to a
+   * solid fill, so it moves the same distance on hover as every other
+   * outline. The full-red confirmation moment belongs to danger+solid. */
   .kit-button--outline.kit-button--danger {
-    background: var(--bg-surface);
+    background: var(--bg-inset);
     color: var(--text-secondary);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
   }
   .kit-button--outline.kit-button--danger:hover:not(:disabled) {
-    background: var(--accent-red, #d73a49);
-    color: var(--bg-surface);
-    border-color: var(--accent-red, #d73a49);
+    background: color-mix(in srgb, var(--accent-red) 9%, var(--bg-surface));
+    color: color-mix(in srgb, var(--accent-red) 72%, var(--text-primary));
+    border-color: color-mix(in srgb, var(--accent-red) 30%, var(--border-default));
   }
 
   /* Danger solid — destructive confirm */
   .kit-button--solid.kit-button--danger {
     background: var(--accent-red);
     color: var(--bg-surface);
-    border: 1px solid var(--accent-red);
+    border: var(--border-width) solid var(--accent-red);
   }
   .kit-button--solid.kit-button--danger:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-red) 88%, #000);
@@ -187,7 +202,7 @@
   .kit-button--solid.kit-button--success {
     background: color-mix(in srgb, var(--accent-green) 82%, #000);
     color: var(--bg-surface);
-    border: 1px solid color-mix(in srgb, var(--accent-green) 82%, #000);
+    border: var(--border-width) solid color-mix(in srgb, var(--accent-green) 82%, #000);
   }
   .kit-button--solid.kit-button--success:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-green) 72%, #000);
@@ -203,7 +218,7 @@
   .kit-button--solid.kit-button--neutral {
     background: var(--text-primary);
     color: var(--bg-primary);
-    border: 1px solid var(--text-primary);
+    border: var(--border-width) solid var(--text-primary);
   }
   .kit-button--solid.kit-button--neutral:hover:not(:disabled) {
     background: color-mix(in srgb, var(--text-primary) 82%, var(--bg-primary));
@@ -214,7 +229,7 @@
   .kit-button--solid.kit-button--workflow {
     background: var(--accent-purple);
     color: var(--bg-surface);
-    border: 1px solid var(--accent-purple);
+    border: var(--border-width) solid var(--accent-purple);
   }
   .kit-button--solid.kit-button--workflow:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-purple) 88%, #000);
@@ -225,7 +240,7 @@
   .kit-button--solid.kit-button--info {
     background: var(--accent-blue);
     color: var(--bg-surface);
-    border: 1px solid var(--accent-blue);
+    border: var(--border-width) solid var(--accent-blue);
   }
   .kit-button--solid.kit-button--info:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-blue) 88%, #000);
@@ -244,7 +259,7 @@
   .kit-button--soft.kit-button--success {
     background: color-mix(in srgb, var(--accent-green) 12%, transparent);
     color: color-mix(in srgb, var(--accent-green) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-green) 30%, transparent);
+    border: var(--border-width) solid color-mix(in srgb, var(--accent-green) 30%, transparent);
   }
   .kit-button--soft.kit-button--success:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-green) 20%, transparent);
@@ -259,7 +274,7 @@
   .kit-button--soft.kit-button--info {
     background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
     color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
+    border: var(--border-width) solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
   }
   .kit-button--soft.kit-button--info:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-blue) 18%, transparent);
@@ -269,7 +284,7 @@
   .kit-button--soft.kit-button--workflow {
     background: color-mix(in srgb, var(--accent-purple) 12%, transparent);
     color: color-mix(in srgb, var(--accent-purple) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-purple) 30%, transparent);
+    border: var(--border-width) solid color-mix(in srgb, var(--accent-purple) 30%, transparent);
   }
   .kit-button--soft.kit-button--workflow:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
@@ -279,7 +294,7 @@
   .kit-button--soft.kit-button--danger {
     background: color-mix(in srgb, var(--accent-red) 10%, transparent);
     color: color-mix(in srgb, var(--accent-red) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-red) 30%, transparent);
+    border: var(--border-width) solid color-mix(in srgb, var(--accent-red) 30%, transparent);
   }
   .kit-button--soft.kit-button--danger:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-red) 18%, transparent);
@@ -289,7 +304,8 @@
   .kit-button--outline.kit-button--success {
     background: var(--bg-surface);
     color: color-mix(in srgb, var(--accent-green) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-green) 40%, var(--border-default));
+    border: var(--border-width) solid
+      color-mix(in srgb, var(--accent-green) 40%, var(--border-default));
   }
   .kit-button--outline.kit-button--success:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-green) 8%, var(--bg-surface));
@@ -298,7 +314,8 @@
   .kit-button--outline.kit-button--info {
     background: var(--bg-surface);
     color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-blue) 40%, var(--border-default));
+    border: var(--border-width) solid
+      color-mix(in srgb, var(--accent-blue) 40%, var(--border-default));
   }
   .kit-button--outline.kit-button--info:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-surface));
@@ -307,7 +324,8 @@
   .kit-button--outline.kit-button--workflow {
     background: var(--bg-surface);
     color: color-mix(in srgb, var(--accent-purple) 72%, var(--text-primary));
-    border: 1px solid color-mix(in srgb, var(--accent-purple) 40%, var(--border-default));
+    border: var(--border-width) solid
+      color-mix(in srgb, var(--accent-purple) 40%, var(--border-default));
   }
   .kit-button--outline.kit-button--workflow:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-purple) 8%, var(--bg-surface));

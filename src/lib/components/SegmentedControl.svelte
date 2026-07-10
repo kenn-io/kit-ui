@@ -139,7 +139,7 @@
     background: transparent;
     font-family: inherit;
     font-size: var(--font-size-xs);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
     border-radius: calc(var(--radius-sm) - 1px);
     cursor: pointer;
@@ -202,7 +202,7 @@
   .kit-segmented--borderless .kit-segmented__btn {
     position: relative;
     padding: 4px 10px;
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: 0;
   }
 
@@ -246,7 +246,7 @@
   .kit-segmented--borderless .kit-segmented__btn.active {
     background: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 12%, transparent);
     color: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 72%, var(--text-primary));
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     border-color: color-mix(
       in srgb,
       var(--kit-tone, var(--accent-blue)) 30%,

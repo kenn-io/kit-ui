@@ -136,7 +136,7 @@
   .control input {
     width: 80px;
     height: 24px;
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-sm);
     background: var(--bg-surface);
     color: var(--text-primary);
@@ -148,7 +148,7 @@
   .jump-btn {
     height: 24px;
     padding: 0 var(--space-4);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-sm);
     background: var(--bg-inset);
     color: var(--text-secondary);
@@ -176,7 +176,7 @@
     height: 360px;
     width: 100%;
     max-width: 560px;
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
   }

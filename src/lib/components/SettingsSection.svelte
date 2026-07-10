@@ -26,7 +26,7 @@
 
 <style>
   .kit-settings-section {
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     background: var(--bg-surface);
   }
@@ -40,7 +40,7 @@
     margin: 0;
     color: var(--text-primary);
     font-size: var(--font-size-md);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   .kit-settings-section__description {

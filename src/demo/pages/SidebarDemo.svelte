@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CollapsibleSidebar, SidebarToggle } from "../../lib/index.js";
+  import { Checkbox, CollapsibleSidebar, SidebarToggle } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let collapsed = $state(false);
@@ -66,10 +66,11 @@
   <main>…</main>
 </CollapsibleSidebar>`}
 >
-  <label class="overlay-switch">
-    <input type="checkbox" bind:checked={overlayForced} />
-    <span>Force <code>overlay</code> (host signal says narrow)</span>
-  </label>
+  <div class="overlay-switch">
+    <Checkbox bind:checked={overlayForced}>
+      Force <code>overlay</code> (host signal says narrow)
+    </Checkbox>
+  </div>
   <div class="sidebar-host sidebar-host--overlay">
     <CollapsibleSidebar
       isCollapsed={overlayCollapsed}
@@ -121,7 +122,7 @@
     width: 100%;
     height: 220px;
     display: flex;
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
   }
@@ -131,13 +132,7 @@
   }
 
   .overlay-switch {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
     margin-bottom: var(--space-4);
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-    cursor: pointer;
   }
 
   .pane {

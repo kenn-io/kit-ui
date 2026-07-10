@@ -62,7 +62,7 @@
   .kit-th {
     padding: 6px 10px;
     font-size: var(--font-size-xs);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     color: var(--text-muted);
     text-align: left;
     background: var(--bg-inset);

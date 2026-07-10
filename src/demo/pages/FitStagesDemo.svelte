@@ -149,6 +149,7 @@
     color: var(--text-muted);
   }
 
+  /* kit-ui-check-ignore -- width-slider squeeze rig, not a semantic card */
   .pane {
     box-sizing: border-box;
     max-width: 100%;
@@ -156,7 +157,7 @@
     align-items: center;
     gap: var(--space-4);
     padding: var(--space-4) var(--space-5);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     background: var(--bg-surface);
   }

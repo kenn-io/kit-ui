@@ -178,6 +178,61 @@ export function checkHandRolledPopoverCard(source, filename) {
   return findings;
 }
 
+/** The three Card hierarchy recipes (inset / default / raised). Matching is
+ * signature-exact — background + border + radius (+ shadow-sm for raised)
+ * in one rule — so near-misses like TextInput's wrapper (bg-surface +
+ * border-DEFAULT + radius-md) stay clean. The popover chrome (shadow-lg)
+ * is the separate hand-rolled-popover-card rule. */
+export function checkHandRolledCard(source, filename) {
+  const findings = [];
+  const levels = [
+    {
+      level: "inset",
+      bg: "--bg-inset",
+      border: "--border-muted",
+      radius: "--radius-sm",
+      shadow: null,
+    },
+    {
+      level: "default",
+      bg: "--bg-surface",
+      border: "--border-muted",
+      radius: "--radius-md",
+      shadow: null,
+    },
+    {
+      level: "raised",
+      bg: "--bg-surface",
+      border: "--border-default",
+      radius: "--radius-lg",
+      shadow: "--shadow-sm",
+    },
+  ];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const ruleRe = /\{[^{}]*\}/g;
+    let match;
+    while ((match = ruleRe.exec(css)) !== null) {
+      const body = match[0];
+      for (const { level, bg, border, radius, shadow } of levels) {
+        if (
+          new RegExp(`background:[^;]*var\\(${bg}\\)`).test(body) &&
+          new RegExp(`border:[^;]*var\\(${border}\\)`).test(body) &&
+          new RegExp(`border-radius:\\s*var\\(${radius}\\)`).test(body) &&
+          (shadow === null || new RegExp(`box-shadow:\\s*var\\(${shadow}\\)`).test(body))
+        ) {
+          findings.push({
+            rule: "hand-rolled-card",
+            line: lineOfIndex(source, offset + match.index),
+            message: `card chrome (${bg.slice(2)} + ${border.slice(2)} + ${radius.slice(2)}) — use <Card level="${level}"> from @kenn-io/kit-ui`,
+          });
+          break;
+        }
+      }
+    }
+  }
+  return findings;
+}
+
 /** Direct clipboard writes should go through copyToClipboard / CopyButton
  * (they handle the non-secure-context fallback). */
 export function checkClipboard(source) {
@@ -517,6 +572,58 @@ export function checkHandRolledSidebarToggle(source) {
   return findings;
 }
 
+/** Raw native checkboxes (bare markup, input[type=checkbox] selectors, or
+ * checkbox-scoped accent-color styling) duplicate Checkbox/Toggle.
+ * accent-color on OTHER controls (range sliders, progress) is legitimate —
+ * theme.css sets it globally — so the CSS signal requires a selector that
+ * names checkboxes. kit-ui's own Markdown component already styles
+ * rendered task-list checkboxes. */
+export function checkHandRolledCheckbox(source, filename) {
+  const findings = [];
+  const markupRe = /<input[^>]*type=["']checkbox["']/g;
+  let match;
+  while ((match = markupRe.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-checkbox",
+      line: lineOfIndex(source, match.index),
+      message:
+        "native checkbox markup — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+    });
+  }
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+    while ((match = ruleRe.exec(css)) !== null) {
+      const [, selector, body] = match;
+      const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(selector);
+      const checkboxAccent = /checkbox/i.test(selector) && /accent-color:/.test(body);
+      if (selectsCheckbox || checkboxAccent) {
+        findings.push({
+          rule: "hand-rolled-checkbox",
+          line: lineOfIndex(source, offset + match.index),
+          message:
+            "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+/** Hand-built switches (role="switch" plus a track/knob) duplicate Toggle. */
+export function checkHandRolledToggle(source) {
+  const findings = [];
+  const re = /role=["']switch["']/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-toggle",
+      line: lineOfIndex(source, match.index),
+      message: 'role="switch" markup — use Toggle from @kenn-io/kit-ui',
+    });
+  }
+  return findings;
+}
+
 /** The visually-hidden clip recipe is shipped as .kit-sr-only in theme.css. */
 export function checkHandRolledSrOnly(source, filename) {
   const findings = [];
@@ -773,6 +880,7 @@ export const ALL_RULES = {
   "hand-rolled-table-sort": checkHandRolledTableSort,
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-popover-card": checkHandRolledPopoverCard,
+  "hand-rolled-card": checkHandRolledCard,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
   "hand-rolled-code-block": checkHandRolledCodeBlock,
   "hand-rolled-empty-state": checkHandRolledEmptyState,
@@ -785,6 +893,8 @@ export const ALL_RULES = {
   "hand-rolled-drawer": checkHandRolledDrawer,
   "hand-rolled-find-bar": checkHandRolledFindBar,
   "hand-rolled-status-dot": checkHandRolledStatusDot,
+  "hand-rolled-checkbox": checkHandRolledCheckbox,
+  "hand-rolled-toggle": checkHandRolledToggle,
   "hand-rolled-sidebar-toggle": checkHandRolledSidebarToggle,
   "hand-rolled-sr-only": checkHandRolledSrOnly,
   "hand-rolled-virtualization": checkHandRolledVirtualization,

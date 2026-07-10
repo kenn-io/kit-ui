@@ -234,13 +234,13 @@
     height: 26px;
     padding: 0 8px;
     background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
     cursor: pointer;
     font-family: inherit;
     font-size: var(--font-size-xs);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     text-align: left;
     transition:
       border-color var(--transition-fast),
@@ -307,7 +307,7 @@
 
   .kit-select-dropdown__option.selected {
     color: var(--accent-blue);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   .kit-select-dropdown__option:disabled {

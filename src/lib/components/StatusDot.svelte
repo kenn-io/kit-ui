@@ -59,7 +59,7 @@
 <style>
   .kit-status-dot {
     display: inline-block;
-    border-radius: 50%;
+    border-radius: var(--radius-dot, 50%);
     flex-shrink: 0;
     vertical-align: middle;
     box-sizing: border-box;

@@ -1,0 +1,917 @@
+/*
+ * kit-ui built-in theme pack (opt-in).
+ *
+ * Import AFTER theme.css:
+ *
+ *   import "@kenn-io/kit-ui/theme.css";
+ *   import "@kenn-io/kit-ui/themes.css";
+ *
+ * Activate a theme by setting `data-kit-theme="<name>"` on <html> — the
+ * theme store does this for you (setThemeName). No attribute (or an unknown
+ * name) falls back to the untouched default light/dark pair in theme.css.
+ *
+ * Every theme is a full identity, not a palette swap: it retunes shape
+ * (--radius-*), elevation character (--shadow-*), border presence
+ * (--border-*), hover feel (--bg-surface-hover), motion speed
+ * (--transition-fast), the focus treatment (--focus-ring), and typography
+ * (--font-sans) together. Each ships a light AND a dark variant, so the
+ * existing dark-mode toggle keeps working under any theme.
+ *
+ * Cascade contract (why the blocks look the way they do):
+ *  - `:root[data-kit-theme="x"]` (0,2,0) beats base `:root` on specificity
+ *    and — because this file loads after theme.css — beats base `:root.dark`
+ *    on order. So every mode-dependent token a theme's light block sets MUST
+ *    be re-overridden in its `:root.dark[data-kit-theme="x"]` (0,3,0) block,
+ *    or the light value would leak into dark mode. Mode-independent tokens
+ *    (radii, fonts, motion, focus style) are declared once in the light
+ *    block and inherited by both modes.
+ *  - `color-scheme` is never declared here; theme.css owns it.
+ *  - `--focus-ring` referencing var(--accent-blue) resolves live, so ring
+ *    color follows each theme/mode automatically; themes only override the
+ *    ring to change its width or style.
+ *  - High contrast must beat any theme: the two blocks at the end of this
+ *    file re-assert the theme.css high-contrast values at higher
+ *    specificity for every theme at once.
+ */
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Control Room — "mission console at 2am"
+ * Status-first monitoring: dense cool steel, small machined radii, instant
+ * 0.08s feedback, signal-cyan primary. Dark mode is the home variant, with
+ * a faint phosphor rim on floating surfaces.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="control-room"] {
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --transition-fast: 0.08s;
+  /* DIN-flavored instrument lettering: Barlow ships in fonts.css; without
+   * it, Bahnschrift (Windows) / Avenir Next (Apple) stand in. */
+  --font-sans: "Barlow", "Bahnschrift", "Avenir Next", "Avenir", "Segoe UI", sans-serif;
+  /* Instrument feel: decisive symmetric curve, wide DIN-style label
+   * tracking, standard-weight icon strokes. */
+  --transition-ease: cubic-bezier(0.3, 0, 0.2, 1);
+  --transition-medium: 0.14s;
+  --letter-spacing-label: 0.06em;
+  --icon-stroke: 2;
+
+  --bg-primary: #eef1f5;
+  --bg-surface: #f8fafc;
+  --bg-surface-hover: #e5eaf1;
+  --bg-inset: #e2e7ee;
+  --border-default: #c2cbd8;
+  --border-muted: #d5dbe5;
+
+  --text-primary: #101720;
+  --text-secondary: #46536a;
+  --text-muted: #7b889d;
+
+  --accent-blue: #0967a4;
+  --accent-amber: #a16207;
+  --accent-purple: #5f43c0;
+  --accent-green: #0a7a56;
+  --accent-red: #bb2532;
+  --accent-teal: #0d7a8c;
+  --status-waiting: #96803f;
+
+  --shadow-sm: 0 1px 2px rgba(9, 30, 50, 0.08);
+  --shadow-md: 0 2px 8px rgba(9, 30, 50, 0.1);
+  --shadow-lg: 0 4px 16px rgba(9, 30, 50, 0.14);
+  --overlay-bg: rgba(9, 20, 34, 0.35);
+}
+
+:root.dark[data-kit-theme="control-room"] {
+  --bg-primary: #0a0f16;
+  --bg-surface: #101722;
+  --bg-surface-hover: #18212f;
+  --bg-inset: #0d131d;
+  --border-default: #2b3a4f;
+  --border-muted: #22303f;
+
+  --text-primary: #e6edf5;
+  --text-secondary: #a9b8cc;
+  --text-muted: #7688a0;
+
+  --accent-blue: #4cc2ff;
+  --accent-amber: #ffc247;
+  --accent-purple: #a78bfa;
+  --accent-green: #43d17c;
+  --accent-teal: #30d5cf;
+  --accent-red: #ff6470;
+  --status-waiting: #c9ad62;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 0 0 1px rgba(76, 194, 255, 0.07), 0 8px 24px rgba(0, 0, 0, 0.6);
+  --overlay-bg: rgba(2, 6, 12, 0.65);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Terminal — "the quiet terminal"
+ * Mono everywhere, zero radius, flat elevation: borders do all the work.
+ * Light is ink-on-paper teletype; dark is mint phosphor on green-black
+ * with a CRT glow instead of a drop shadow. Dashed focus ring, 0.06s snap.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="terminal"] {
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --transition-fast: 0.06s;
+  --font-sans: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --focus-ring: 2px dashed var(--accent-blue);
+  /* Terminals don't tween: state flips on a frame boundary (steps(1)),
+   * nothing depresses, and uppercase labels get teletype-wide tracking.
+   * Status dots become block pixels — nothing on a terminal is round,
+   * including the toggle track. */
+  --radius-dot: 0;
+  --radius-toggle: 0;
+  --transition-ease: steps(1, start);
+  --transition-medium: 0.06s;
+  --press-transform: none;
+  --letter-spacing-label: 0.08em;
+  --icon-stroke: 2;
+
+  --bg-primary: #f2efe2;
+  --bg-surface: #faf8ee;
+  --bg-surface-hover: #e9e5d2;
+  --bg-inset: #ebe7d6;
+  --border-default: #b5ae92;
+  --border-muted: #d6d0ba;
+
+  --text-primary: #23221b;
+  --text-secondary: #5a5747;
+  --text-muted: #8a8672;
+
+  --accent-blue: #0c7d62;
+  --accent-amber: #9a6700;
+  --accent-purple: #5f41a8;
+  --accent-green: #4d7c0f;
+  --accent-red: #b42318;
+  --accent-teal: #12689c;
+  --status-waiting: #9c8a3a;
+
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 rgba(35, 34, 27, 0.15);
+  --shadow-lg: 0 2px 0 rgba(35, 34, 27, 0.2);
+  --overlay-bg: rgba(35, 34, 27, 0.35);
+}
+
+:root.dark[data-kit-theme="terminal"] {
+  --bg-primary: #07100b;
+  --bg-surface: #0b1510;
+  --bg-surface-hover: #12211a;
+  --bg-inset: #091209;
+  --border-default: #275c3f;
+  --border-muted: #16291f;
+
+  --text-primary: #d3ecd9;
+  --text-secondary: #93b8a2;
+  --text-muted: #628070;
+
+  --accent-blue: #34e8a4;
+  --accent-amber: #e3b341;
+  --accent-purple: #bc9eff;
+  --accent-green: #a3e635;
+  --accent-red: #ff7b72;
+  --accent-teal: #59c2e8;
+  --status-waiting: #d9c76a;
+
+  --shadow-sm: none;
+  --shadow-md: 0 0 12px rgba(52, 232, 164, 0.1);
+  --shadow-lg: 0 0 24px rgba(52, 232, 164, 0.16);
+  --overlay-bg: rgba(2, 10, 6, 0.75);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Zine — "risograph poster"
+ * Neo-brutalist print: square corners, stark ink borders on every edge,
+ * hard offset shadows instead of blur, a thick ink focus ring, and 0.05s
+ * transitions that feel stamped rather than eased. Light is riso-blue on
+ * cream stock; dark is neon inks on black paper.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="zine"] {
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --transition-fast: 0.05s;
+  /* The zine face: plain Helvetica, the photocopier classic. Native
+   * Helvetica Neue where the platform has it; Arimo (metric-compatible,
+   * fonts.css) everywhere else. */
+  --font-sans: "Helvetica Neue", Helvetica, "Arimo", Arial, sans-serif;
+  --focus-ring: 3px solid var(--text-primary);
+  /* Print physics: 2px ink borders everywhere, presses shove the whole
+   * card into its offset shadow, linear "stamped" motion, heavy poster
+   * weights, thick icon strokes, square registration-mark status dots
+   * and a square toggle track. */
+  --radius-dot: 0;
+  --radius-toggle: 0;
+  --border-width: 2px;
+  --press-transform: translate(2px, 2px);
+  --transition-ease: linear;
+  --transition-medium: 0.08s;
+  --letter-spacing-label: 0.01em;
+  --icon-stroke: 2.4;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+
+  --bg-primary: #f5efdf;
+  --bg-surface: #fdf9ee;
+  --bg-surface-hover: #efe7cf;
+  --bg-inset: #efe8d2;
+  --border-default: #2a2419;
+  --border-muted: #b8ae94;
+
+  --text-primary: #201a10;
+  --text-secondary: #4a4232;
+  --text-muted: #7d7259;
+
+  --accent-blue: #2242c8;
+  --accent-amber: #c4560c;
+  --accent-purple: #6741c9;
+  --accent-green: #2b8a3e;
+  --accent-red: #c92a2a;
+  --accent-teal: #0b7285;
+  --status-waiting: #9c7a1e;
+
+  --shadow-sm: 2px 2px 0 rgba(32, 26, 16, 0.9);
+  --shadow-md: 4px 4px 0 rgba(32, 26, 16, 0.9);
+  --shadow-lg: 6px 6px 0 rgba(32, 26, 16, 0.9);
+  --overlay-bg: rgba(32, 26, 16, 0.45);
+}
+
+:root.dark[data-kit-theme="zine"] {
+  --bg-primary: #111013;
+  --bg-surface: #19171c;
+  --bg-surface-hover: #242028;
+  --bg-inset: #141317;
+  --border-default: #d9d2c0;
+  --border-muted: #4d4856;
+
+  --text-primary: #f2eee2;
+  --text-secondary: #c4bda9;
+  --text-muted: #8d8775;
+
+  --accent-blue: #748fff;
+  --accent-amber: #ffa94d;
+  --accent-purple: #b197fc;
+  --accent-green: #69db7c;
+  --accent-red: #ff6b6b;
+  --accent-teal: #3bc9db;
+  --status-waiting: #e8c25a;
+
+  --shadow-sm: 2px 2px 0 rgba(217, 210, 192, 0.85);
+  --shadow-md: 4px 4px 0 rgba(217, 210, 192, 0.85);
+  --shadow-lg: 6px 6px 0 rgba(217, 210, 192, 0.85);
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Pebble — "soft clay"
+ * The anti-terminal: big rounded radii, near-invisible borders, depth from
+ * large diffuse shadows, a translucent halo focus ring, and languid 0.2s
+ * transitions. Warm dusty neutrals with a muted lavender primary; the
+ * rounded system face (SF Rounded where available) softens the type too.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="pebble"] {
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --transition-fast: 0.2s;
+  /* Rounded voice: Nunito ships in fonts.css; ui-rounded (SF Rounded)
+   * stands in on Apple platforms without it. */
+  --font-sans:
+    "Nunito", ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI", "Trebuchet MS", sans-serif;
+  --focus-ring: 3px solid color-mix(in srgb, var(--accent-blue) 55%, transparent);
+  /* Clay physics: springy ease-out-expo settle, long overlay motion,
+   * presses squish (scale) instead of drop, lighter icon strokes, frosted
+   * glass behind overlays, roomy prose. */
+  --transition-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-medium: 0.32s;
+  --press-transform: scale(0.985);
+  --icon-stroke: 1.8;
+  --overlay-filter: blur(6px);
+  --letter-spacing-label: 0.05em;
+  --line-height-prose: 1.7;
+
+  --bg-primary: #f4f2ef;
+  --bg-surface: #fbfaf8;
+  --bg-surface-hover: #edeae4;
+  --bg-inset: #ece9e3;
+  --border-default: #ddd7ce;
+  --border-muted: #e8e4dd;
+
+  --text-primary: #2b2925;
+  --text-secondary: #6b6660;
+  --text-muted: #9b958c;
+
+  --accent-blue: #5b50b8;
+  --accent-amber: #a97828;
+  --accent-purple: #9c4894;
+  --accent-green: #3a7d5f;
+  --accent-red: #b3423e;
+  --accent-teal: #35818c;
+  --status-waiting: #a08a58;
+
+  --shadow-sm: 0 2px 6px rgba(43, 41, 37, 0.05);
+  --shadow-md: 0 8px 24px rgba(43, 41, 37, 0.08);
+  --shadow-lg: 0 20px 48px rgba(43, 41, 37, 0.13);
+  --overlay-bg: rgba(43, 41, 37, 0.35);
+}
+
+:root.dark[data-kit-theme="pebble"] {
+  --bg-primary: #171512;
+  --bg-surface: #201d19;
+  --bg-surface-hover: #2a2620;
+  --bg-inset: #1a1815;
+  --border-default: #3d382f;
+  --border-muted: #332f28;
+
+  --text-primary: #ece8e1;
+  --text-secondary: #bdb6aa;
+  --text-muted: #8f887c;
+
+  --accent-blue: #a99df2;
+  --accent-amber: #ddb079;
+  --accent-purple: #d495cc;
+  --accent-green: #7cc4a4;
+  --accent-red: #e79088;
+  --accent-teal: #7fc4cc;
+  --status-waiting: #cfb583;
+
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Gallery — "exhibition catalogue"
+ * Editorial print: an old-style serif carries the UI, warm paper neutrals,
+ * hairline borders, faint diffuse shadows, tight print-like radii, and an
+ * ink-navy primary. Dark is the gallery at night — warm charcoal, brass
+ * and slate accents. Unhurried 0.15s transitions.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="gallery"] {
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 5px;
+  --transition-fast: 0.15s;
+  /* Catalogue serif: Lora ships in fonts.css; Iowan/Palatino stand in. */
+  --font-sans: "Lora", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  /* Catalogue restraint: classic ease-in-out, hairline icon strokes to
+   * match the serif's line, wide small-caps-style label tracking, book
+   * leading for prose. */
+  --transition-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-medium: 0.22s;
+  --icon-stroke: 1.5;
+  --letter-spacing-label: 0.06em;
+  --line-height-prose: 1.7;
+
+  --bg-primary: #f7f5f0;
+  --bg-surface: #fdfcf9;
+  --bg-surface-hover: #f0ede5;
+  --bg-inset: #f1eee7;
+  --border-default: #dcd7cb;
+  --border-muted: #e9e5db;
+
+  --text-primary: #1c1a17;
+  --text-secondary: #54504a;
+  --text-muted: #8b857c;
+
+  --accent-blue: #1f3a5f;
+  --accent-amber: #a06920;
+  --accent-purple: #5f4b8b;
+  --accent-green: #3a6b4a;
+  --accent-red: #a83232;
+  --accent-teal: #33686b;
+  --status-waiting: #8f7940;
+
+  --shadow-sm: 0 1px 3px rgba(28, 26, 23, 0.06);
+  --shadow-md: 0 4px 12px rgba(28, 26, 23, 0.08);
+  --shadow-lg: 0 10px 30px rgba(28, 26, 23, 0.12);
+  --overlay-bg: rgba(28, 26, 23, 0.4);
+}
+
+:root.dark[data-kit-theme="gallery"] {
+  --bg-primary: #161412;
+  --bg-surface: #1e1b18;
+  --bg-surface-hover: #282420;
+  --bg-inset: #191714;
+  --border-default: #383329;
+  --border-muted: #2e2a23;
+
+  --text-primary: #ede9e0;
+  --text-secondary: #bcb5a8;
+  --text-muted: #8d8779;
+
+  --accent-blue: #8fb0d8;
+  --accent-amber: #d3a55e;
+  --accent-purple: #af9bd6;
+  --accent-green: #93bd9e;
+  --accent-red: #e08e83;
+  --accent-teal: #82b5b0;
+  --status-waiting: #c6ab6e;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.55);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Arctic — "glacier light"
+ * Airy and near-borderless: structure comes from tonal steps and soft
+ * blue-cast shadows rather than edges. Generous radii, unhurried 0.16s
+ * motion, ice-blue primary. Dark is polar night — deep blue-black with
+ * bright glacial accents.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="arctic"] {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --transition-fast: 0.16s;
+  /* Geometric and open — round bowls read glacial next to Inter's
+   * grotesque. Figtree ships in fonts.css; Avenir / Century Gothic stand
+   * in without it. */
+  --font-sans: "Figtree", "Avenir", "Century Gothic", "Segoe UI", sans-serif;
+  /* Glacial calm: long decelerating glide, barely-there press, light
+   * icon strokes, and heavy frost on overlay scrims. */
+  --transition-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-medium: 0.28s;
+  --press-transform: scale(0.99);
+  --icon-stroke: 1.75;
+  --overlay-filter: blur(8px);
+
+  --bg-primary: #edf3f8;
+  --bg-surface: #fafcfe;
+  --bg-surface-hover: #e2ecf4;
+  --bg-inset: #e4edf4;
+  --border-default: #d8e4ee;
+  --border-muted: #e7eff6;
+
+  --text-primary: #17222c;
+  --text-secondary: #4c6172;
+  --text-muted: #8398a9;
+
+  --accent-blue: #11669e;
+  --accent-amber: #b57b1a;
+  --accent-purple: #6a63cc;
+  --accent-green: #148066;
+  --accent-red: #c8404a;
+  --accent-teal: #0f8577;
+  --status-waiting: #8c7d45;
+
+  --shadow-sm: 0 2px 8px rgba(23, 52, 80, 0.06);
+  --shadow-md: 0 8px 28px rgba(23, 52, 80, 0.1);
+  --shadow-lg: 0 18px 44px rgba(23, 52, 80, 0.15);
+  --overlay-bg: rgba(23, 52, 80, 0.3);
+}
+
+:root.dark[data-kit-theme="arctic"] {
+  --bg-primary: #0b1420;
+  --bg-surface: #111c2a;
+  --bg-surface-hover: #192736;
+  --bg-inset: #0e1826;
+  --border-default: #24384c;
+  --border-muted: #1d2e40;
+
+  --text-primary: #e8f0f7;
+  --text-secondary: #aec2d4;
+  --text-muted: #7b91a6;
+
+  --accent-blue: #7cc4f2;
+  --accent-amber: #ecc06a;
+  --accent-purple: #a5a1f0;
+  --accent-green: #5adbb5;
+  --accent-red: #f4909a;
+  --accent-teal: #67d8c8;
+  --status-waiting: #c2b070;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.55);
+  --overlay-bg: rgba(2, 8, 16, 0.6);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Ember — "last light"
+ * Committed warmth: peach-cast neutrals, burnt-orange primary, shadows
+ * tinted like late sun. Middle-of-the-road shape and speed — the identity
+ * is temperature. Dark is dusk embers: umber surfaces, true coral primary,
+ * and a faint ember glow under floating surfaces.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="ember"] {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  /* Warm humanist: Cabin ships in fonts.css; Seravek (Apple) / Trebuchet
+   * stand in without it. */
+  --font-sans: "Cabin", "Seravek", "Trebuchet MS", Verdana, sans-serif;
+  /* Temperature is the identity; motion stays conventional — the Material
+   * standard curve at an unhurried tempo. */
+  --transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-medium: 0.2s;
+  --icon-stroke: 2;
+
+  --bg-primary: #faf3ec;
+  --bg-surface: #fffaf5;
+  --bg-surface-hover: #f4e8da;
+  --bg-inset: #f4e8db;
+  --border-default: #e4d2be;
+  --border-muted: #efe2d2;
+
+  --text-primary: #2b1d12;
+  --text-secondary: #6b543f;
+  --text-muted: #a08668;
+
+  --accent-blue: #c24d0e;
+  --accent-amber: #9d740c;
+  --accent-purple: #8d3fb0;
+  --accent-green: #2f7d4f;
+  --accent-red: #c22f3e;
+  --accent-teal: #0e7f86;
+  --status-waiting: #a5731f;
+
+  --shadow-sm: 0 1px 3px rgba(90, 45, 10, 0.08);
+  --shadow-md: 0 3px 10px rgba(90, 45, 10, 0.12);
+  --shadow-lg: 0 8px 24px rgba(90, 45, 10, 0.16);
+  --overlay-bg: rgba(43, 29, 18, 0.4);
+}
+
+:root.dark[data-kit-theme="ember"] {
+  --bg-primary: #1a120d;
+  --bg-surface: #241812;
+  --bg-surface-hover: #2f2018;
+  --bg-inset: #1d140e;
+  --border-default: #46311f;
+  --border-muted: #392818;
+
+  --text-primary: #f5e9de;
+  --text-secondary: #cfb49c;
+  --text-muted: #9c8267;
+
+  --accent-blue: #ff7849;
+  --accent-amber: #f2b73c;
+  --accent-purple: #c884e8;
+  --accent-green: #66c586;
+  --accent-red: #ff5d7d;
+  --accent-teal: #4ecbd4;
+  --status-waiting: #d1a05a;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 3px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 4px 24px rgba(255, 120, 73, 0.1), 0 8px 24px rgba(0, 0, 0, 0.55);
+  --overlay-bg: rgba(10, 5, 2, 0.65);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Graphite — "machined steel"
+ * Industrial precision: cool gunmetal neutrals, strong visible borders,
+ * tight 2–4px radii, crisp shallow shadows, and near-instant 0.06s
+ * response. The single flash of color is safety orange, used exactly the
+ * way it's used on machinery.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root[data-kit-theme="graphite"] {
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --transition-fast: 0.06s;
+  /* Machined: hairline 0.5px borders (renders as a device hairline on
+   * dense displays), linear motion, no press travel — a machine tool
+   * doesn't flex — lathe-thin icon strokes, and chamfered square status
+   * dots (indicator lamps in a milled panel, not stick-on LEDs). */
+  --border-width: 0.5px;
+  --radius-dot: 1px;
+  --radius-toggle: 2px;
+  --transition-ease: linear;
+  --transition-medium: 0.08s;
+  --press-transform: none;
+  --icon-stroke: 1.75;
+  --letter-spacing-label: 0.05em;
+
+  --bg-primary: #e9eaec;
+  --bg-surface: #f4f5f6;
+  --bg-surface-hover: #dfe1e4;
+  --bg-inset: #dee0e3;
+  --border-default: #b0b5bd;
+  --border-muted: #ccd0d5;
+
+  --text-primary: #16181b;
+  --text-secondary: #4a4f57;
+  --text-muted: #787e88;
+
+  --accent-blue: #9e4508;
+  --accent-amber: #92700c;
+  --accent-purple: #6650c8;
+  --accent-green: #26743e;
+  --accent-red: #b3261e;
+  --accent-teal: #0e7086;
+  --status-waiting: #8c7625;
+
+  --shadow-sm: 0 1px 2px rgba(22, 24, 27, 0.14);
+  --shadow-md: 0 2px 4px rgba(22, 24, 27, 0.16);
+  --shadow-lg: 0 3px 8px rgba(22, 24, 27, 0.2);
+  --overlay-bg: rgba(22, 24, 27, 0.4);
+}
+
+:root.dark[data-kit-theme="graphite"] {
+  --bg-primary: #121417;
+  --bg-surface: #1a1d21;
+  --bg-surface-hover: #24282e;
+  --bg-inset: #15181c;
+  --border-default: #3a4048;
+  --border-muted: #2c3138;
+
+  --text-primary: #e8eaed;
+  --text-secondary: #aab1ba;
+  --text-muted: #7d848e;
+
+  --accent-blue: #ff8a3d;
+  --accent-amber: #e0b13e;
+  --accent-purple: #a48cf2;
+  --accent-green: #46b96a;
+  --accent-red: #f0655c;
+  --accent-teal: #43bfd8;
+  --status-waiting: #cfb14a;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 3px 8px rgba(0, 0, 0, 0.55);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Canvas decor — each identity owns its ground, not just its tokens.
+ *
+ * These rules paint the app canvas (the body, where --bg-primary shows
+ * through) with theme-specific texture: engineering grids, CRT scanlines,
+ * paper grain, halftone dots, auroras, brushed steel. They work in any
+ * consuming app because docs/theming.md's base styles put
+ * `background: var(--bg-primary)` on body — the shorthand resets
+ * background-image, but these higher-specificity rules win regardless of
+ * import order. Raster textures live in ./textures (generated assets,
+ * tileable, washed by a gradient layer so their strength is tuned here in
+ * CSS, not baked into the file). Raised surfaces (--bg-surface) stay flat
+ * on purpose: the texture is the desk, not the paper you write on.
+ *
+ * Also here: accent-aware text selection and scrollbar tinting for every
+ * theme. The default pair carries no data-kit-theme attribute, so none of
+ * this touches it.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+:root[data-kit-theme] ::selection {
+  background: color-mix(in srgb, var(--accent-blue) 30%, transparent);
+}
+
+:root[data-kit-theme] {
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 50%, transparent) transparent;
+}
+
+/* Icon line weight follows the theme's type: hairline strokes next to
+ * Lora's serifs, thick marker strokes next to zine's poster weights. CSS
+ * stroke-width beats the SVG presentation attribute, so under an identity
+ * theme every lucide icon is unified to the theme's weight (per-icon
+ * strokeWidth props apply only in the default pair). */
+:root[data-kit-theme] svg.lucide {
+  stroke-width: var(--icon-stroke, 2);
+}
+
+/* Control Room — engineering grid; dark adds the console's cyan cast. */
+:root[data-kit-theme="control-room"] body {
+  background-image:
+    linear-gradient(rgba(194, 203, 216, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(194, 203, 216, 0.28) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+:root.dark[data-kit-theme="control-room"] body {
+  background-image:
+    radial-gradient(140% 70% at 50% 0%, rgba(76, 194, 255, 0.06), transparent 60%),
+    linear-gradient(rgba(43, 58, 79, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 58, 79, 0.35) 1px, transparent 1px);
+  background-size:
+    auto,
+    28px 28px,
+    28px 28px;
+}
+
+/* Terminal — bond paper in light; scanlines, phosphor cast, and a faint
+ * text bloom in dark. */
+:root[data-kit-theme="terminal"] body {
+  background-image:
+    linear-gradient(rgba(242, 239, 226, 0.5), rgba(242, 239, 226, 0.5)),
+    url("./textures/paper-speckle.webp");
+  background-size: auto, 512px;
+}
+
+:root.dark[data-kit-theme="terminal"] body {
+  background-image:
+    radial-gradient(120% 90% at 50% 0%, rgba(52, 232, 164, 0.05), transparent 62%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.16) 0px,
+      rgba(0, 0, 0, 0.16) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  text-shadow: 0 0 6px rgba(52, 232, 164, 0.18);
+}
+
+/* Zine — speckled recycled stock in light; halftone dot matrix in dark. */
+:root[data-kit-theme="zine"] body {
+  background-image:
+    linear-gradient(rgba(245, 239, 223, 0.25), rgba(245, 239, 223, 0.25)),
+    url("./textures/paper-speckle.webp");
+  background-size: auto, 512px;
+}
+
+:root.dark[data-kit-theme="zine"] body {
+  background-image: radial-gradient(rgba(217, 210, 192, 0.07) 1px, transparent 1.5px);
+  background-size: 7px 7px;
+}
+
+/* Pebble — matte clay grain. Dark mode uses a dedicated dark asset:
+ * washing a light texture toward a dark ground crushes its grain (an 86%
+ * wash keeps only 14% of the contrast), so the dark variants bake the
+ * grain onto the night tone directly. Same for gallery and graphite. */
+:root[data-kit-theme="pebble"] body {
+  background-image:
+    linear-gradient(rgba(244, 242, 239, 0.45), rgba(244, 242, 239, 0.45)),
+    url("./textures/clay-grain.webp");
+  background-size: auto, 480px;
+}
+
+:root.dark[data-kit-theme="pebble"] body {
+  background-image: url("./textures/clay-grain-dark.webp");
+  background-size: 480px;
+}
+
+/* Gallery — laid paper with chain lines; night paper after dark. */
+:root[data-kit-theme="gallery"] body {
+  background-image:
+    linear-gradient(rgba(247, 245, 240, 0.25), rgba(247, 245, 240, 0.25)),
+    url("./textures/paper-laid.webp");
+  background-size: auto, 512px;
+}
+
+:root.dark[data-kit-theme="gallery"] body {
+  background-image: url("./textures/paper-laid-dark.webp");
+  background-size: 512px;
+}
+
+/* Arctic — vertical ice sheen in light; twin aurora glows in the dark. */
+:root[data-kit-theme="arctic"] body {
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(214, 230, 242, 0.5) 100%
+  );
+}
+
+:root.dark[data-kit-theme="arctic"] body {
+  background-image:
+    radial-gradient(90% 55% at 15% 0%, rgba(90, 219, 181, 0.05), transparent 60%),
+    radial-gradient(90% 55% at 85% 0%, rgba(165, 161, 240, 0.06), transparent 60%);
+}
+
+/* Ember — dawn wash in light; the horizon glows from below in dark. */
+:root[data-kit-theme="ember"] body {
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 250, 244, 0.7),
+    rgba(244, 226, 200, 0.35) 100%
+  );
+}
+
+:root.dark[data-kit-theme="ember"] body {
+  background-image: radial-gradient(
+    120% 70% at 50% 105%,
+    rgba(255, 120, 73, 0.09),
+    transparent 60%
+  );
+}
+
+/* Ember — tactile hover: a warm light source tracks the pointer across
+ * buttons. Button.svelte publishes --kit-pointer-x/y from pointermove;
+ * the glow is painted on an ::after overlay so only its OPACITY ever
+ * transitions (the gradient just repositions), and it fades rather than
+ * pops when the pointer enters. Pointer-input devices only — keyboard
+ * focus keeps the ring, touch never sees a stale hotspot. */
+@media (hover: hover) {
+  :root[data-kit-theme="ember"] .kit-button {
+    position: relative;
+  }
+
+  :root[data-kit-theme="ember"] .kit-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.85);
+    /* Ember physics: ignition is quick (the enter duration lives on the
+     * :hover rule below), but this base rule owns the EXIT — the glow
+     * cools off over 0.45s with a slight recede, like a coal dimming. */
+    transition:
+      opacity 0.45s var(--transition-ease, ease),
+      transform 0.45s var(--transition-ease, ease);
+    /* Late-sun warmth: a white-hot core cooling to amber, so it reads on
+     * cream outline buttons and solid oranges alike. */
+    background: radial-gradient(
+      90px circle at var(--kit-pointer-x, 50%) var(--kit-pointer-y, 50%),
+      rgba(255, 234, 200, 0.5),
+      rgba(255, 180, 110, 0.18) 55%,
+      transparent 75%
+    );
+  }
+
+  :root.dark[data-kit-theme="ember"] .kit-button::after {
+    /* Coal glow at dusk: dimmer, redder. */
+    background: radial-gradient(
+      90px circle at var(--kit-pointer-x, 50%) var(--kit-pointer-y, 50%),
+      rgba(255, 170, 110, 0.28),
+      rgba(255, 110, 60, 0.12) 55%,
+      transparent 75%
+    );
+  }
+
+  :root[data-kit-theme="ember"] .kit-button:hover:not(:disabled)::after {
+    opacity: 1;
+    transform: scale(1);
+    /* Ignite: a 0.18s bloom in — noticeably faster than the cool-off. */
+    transition-duration: 0.18s, 0.18s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-kit-theme="ember"] .kit-button::after {
+      transition: none;
+      transform: none;
+    }
+  }
+}
+
+/* Graphite — fine brushed-steel grain; gunmetal sheet after dark. The
+ * machined identity wants a hint of tooling marks, not scratched-up sheet
+ * metal, so both modes run a strong wash over the (deliberately
+ * high-contrast) bakes. */
+:root[data-kit-theme="graphite"] body {
+  background-image:
+    linear-gradient(rgba(233, 234, 236, 0.65), rgba(233, 234, 236, 0.65)),
+    url("./textures/steel-brushed.webp");
+  background-size: auto, 512px;
+}
+
+:root.dark[data-kit-theme="graphite"] body {
+  background-image:
+    linear-gradient(rgba(18, 20, 23, 0.65), rgba(18, 20, 23, 0.65)),
+    url("./textures/steel-brushed-dark.webp");
+  background-size: auto, 512px;
+}
+
+/*
+ * High contrast beats every theme. These re-assert the theme.css
+ * high-contrast values at higher specificity than any theme block, so
+ * accessibility wins regardless of the active identity. Values mirror
+ * :root.high-contrast / :root.dark.high-contrast in theme.css. Canvas
+ * decor is also stripped: texture behind text is exactly what a
+ * high-contrast user asked to not have.
+ */
+:root.high-contrast[data-kit-theme] {
+  --text-primary: #000000;
+  --text-secondary: #2a2f3a;
+  --text-muted: #44495a;
+  --border-default: #6b7080;
+  --border-muted: #7d8290;
+  --accent-blue: #0a47c2;
+  --focus-ring: 2px solid var(--accent-blue);
+  /* Graphite's 0.5px hairline is the one identity border that can drop
+   * below visibility thresholds; high contrast restores full-width edges
+   * everywhere. (Zine's 2px survives — thicker is better here.) */
+  --border-width: 1px;
+}
+
+:root.high-contrast[data-kit-theme="zine"] {
+  --border-width: 2px;
+}
+
+:root.dark.high-contrast[data-kit-theme] {
+  --text-primary: #ffffff;
+  --text-secondary: #d4d8e0;
+  --text-muted: #b8bdc9;
+  --border-default: #8a8f9e;
+  --border-muted: #6e7282;
+  --accent-blue: #8ab8ff;
+}
+
+:root.high-contrast[data-kit-theme] body {
+  background-image: none;
+  text-shadow: none;
+}
+
+/* Decorative hover glows (ember's pointer-tracking light) are exactly the
+ * kind of low-contrast layer over text a high-contrast user opted out of. */
+:root.high-contrast[data-kit-theme] .kit-button::after {
+  content: none;
+}

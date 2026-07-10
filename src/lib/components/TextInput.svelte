@@ -136,7 +136,7 @@
     max-width: 100%;
     padding: 0 var(--space-3);
     background: var(--bg-surface);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     color: var(--text-primary);
     transition: border-color var(--transition-fast);

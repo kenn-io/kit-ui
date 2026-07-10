@@ -42,7 +42,7 @@
     width: 100%;
     height: 120px;
     display: flex;
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
   }

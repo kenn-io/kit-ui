@@ -2,9 +2,70 @@ export type ThemeMode = "light" | "dark" | "system";
 
 export interface ThemeOptions {
   /** localStorage key for the persisted mode. The high-contrast flag
-   * persists under `${storageKey}-high-contrast`. */
+   * persists under `${storageKey}-high-contrast` and the theme name under
+   * `${storageKey}-name`. */
   storageKey?: string;
 }
+
+/** Descriptor for a pluggable theme, as listed in `KIT_THEMES`. */
+export interface KitThemeInfo {
+  /** The `data-kit-theme` attribute value. */
+  name: string;
+  /** Human-readable label (English; localize in the app if needed). */
+  label: string;
+  /** One-line identity description for pickers. */
+  description: string;
+}
+
+/**
+ * The built-in theme pack shipped in `themes.css` (import it alongside
+ * theme.css to use these). Each entry is a full identity — shape,
+ * elevation, borders, motion, focus, type, palette — with light and dark
+ * variants. `setThemeName` accepts any string, so apps can register their
+ * own themes outside this list.
+ */
+export const KIT_THEMES: readonly KitThemeInfo[] = [
+  {
+    name: "control-room",
+    label: "Control Room",
+    description: "Mission console: dense cool steel, signal cyan, DIN lettering",
+  },
+  {
+    name: "terminal",
+    label: "Terminal",
+    description: "Quiet teletype: mono type, square corners, phosphor mint",
+  },
+  {
+    name: "zine",
+    label: "Zine",
+    description: "Risograph poster: stark ink borders, hard offset shadows, Helvetica",
+  },
+  {
+    name: "pebble",
+    label: "Pebble",
+    description: "Soft clay: big radii, diffuse shadows, languid motion",
+  },
+  {
+    name: "gallery",
+    label: "Gallery",
+    description: "Exhibition catalogue: serif type, paper neutrals, ink navy",
+  },
+  {
+    name: "arctic",
+    label: "Arctic",
+    description: "Glacier light: airy, near-borderless, geometric type",
+  },
+  {
+    name: "ember",
+    label: "Ember",
+    description: "Last light: warm humanist type, burnt-orange primary",
+  },
+  {
+    name: "graphite",
+    label: "Graphite",
+    description: "Machined steel: strong borders, tight radii, safety orange",
+  },
+];
 
 const DEFAULT_STORAGE_KEY = "kit-ui-theme";
 
@@ -12,6 +73,7 @@ let storageKey = DEFAULT_STORAGE_KEY;
 let mode = $state<ThemeMode>("system");
 let dark = $state(false);
 let highContrast = $state(false);
+let themeName = $state<string | null>(null);
 let mediaCleanup: (() => void) | null = null;
 
 function hasDOM(): boolean {
@@ -37,10 +99,24 @@ function writeStored(key: string, value: string): void {
   }
 }
 
+function removeStored(key: string): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Storage blocked — nothing to clear
+  }
+}
+
 function applyClasses(): void {
   if (!hasDOM()) return;
   document.documentElement.classList.toggle("dark", dark);
   document.documentElement.classList.toggle("high-contrast", highContrast);
+  if (themeName) {
+    document.documentElement.setAttribute("data-kit-theme", themeName);
+  } else {
+    document.documentElement.removeAttribute("data-kit-theme");
+  }
 }
 
 /** Recomputes `dark` from the current mode, (re)arming the OS-preference
@@ -81,6 +157,7 @@ export function initTheme(options?: ThemeOptions): void {
       ? storedMode
       : "system";
   highContrast = readStored(`${storageKey}-high-contrast`) === "true";
+  themeName = readStored(`${storageKey}-name`);
 
   resolveDark();
 }
@@ -113,5 +190,26 @@ export function getHighContrast(): boolean {
 export function setHighContrast(value: boolean): void {
   highContrast = value;
   writeStored(`${storageKey}-high-contrast`, value ? "true" : "false");
+  applyClasses();
+}
+
+/** The active pluggable theme name, or null for the built-in default. */
+export function getThemeName(): string | null {
+  return themeName;
+}
+
+/**
+ * Activates a pluggable theme by setting `data-kit-theme` on `<html>`
+ * (composes with the dark / high-contrast classes). Pass a name from
+ * `KIT_THEMES`, any custom theme an app defines, or `null` to return to
+ * the default light/dark pair. Persists under `${storageKey}-name`.
+ */
+export function setThemeName(name: string | null): void {
+  themeName = name;
+  if (name) {
+    writeStored(`${storageKey}-name`, name);
+  } else {
+    removeStored(`${storageKey}-name`);
+  }
   applyClasses();
 }

@@ -227,6 +227,74 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-popover-card"])).toHaveLength(0);
   });
 
+  test("card: default-level recipe (surface + muted border + radius-md)", () => {
+    const src = svelte(
+      `.event-card {
+        flex: 1;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-muted);
+        border-radius: var(--radius-md);
+      }`,
+      `<div class="event-card"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-card"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain('level="default"');
+  });
+
+  test("card: inset-level recipe (inset + muted border + radius-sm)", () => {
+    const src = svelte(
+      `.inset-box {
+        background: var(--bg-inset);
+        border: 1px solid var(--border-muted);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+      }`,
+      `<div class="inset-box"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-card"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain('level="inset"');
+  });
+
+  test("card: raised-level recipe requires shadow-sm", () => {
+    const raised = svelte(
+      `.panel {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+      }`,
+      `<div class="panel"></div>`,
+    );
+    const findings = checkSource(raised, "A.svelte", ["hand-rolled-card"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain('level="raised"');
+
+    // Without the shadow it's any bordered container, not the raised card.
+    const flat = svelte(
+      `.panel {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+      }`,
+      `<div class="panel"></div>`,
+    );
+    expect(checkSource(flat, "A.svelte", ["hand-rolled-card"])).toHaveLength(0);
+  });
+
+  test("card: input-wrapper chrome (border-default + radius-md) does not match", () => {
+    const src = svelte(
+      `.input {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+      }`,
+      `<div class="input"><input /></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-card"])).toHaveLength(0);
+  });
+
   test("status bar: class and CSS selector", () => {
     const src = svelte(
       `.status-bar { height: var(--status-bar-height); }`,
@@ -619,6 +687,51 @@ describe("chip-label-override", () => {
   test("ignores suffixed local classes like .kit-chip__label-wrapper", () => {
     const src = `.kit-chip__label-wrapper { display: flex; }\n`;
     expect(checkSource(src, "app.css", ["chip-label-override"])).toHaveLength(0);
+  });
+});
+
+describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
+  test("checkbox: flags bare native checkbox markup", () => {
+    const src = svelte(``, `<label><input type="checkbox" checked /> Auto-sync</label>`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-checkbox"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("Checkbox");
+  });
+
+  test("checkbox: flags input[type=checkbox] selectors and checkbox-scoped accent-color", () => {
+    const src = svelte(
+      `input[type="checkbox"] { width: 14px; }
+      .checkbox-row input { accent-color: var(--accent-blue); }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(2);
+  });
+
+  test("checkbox: accent-color on non-checkbox controls is clean", () => {
+    const src = svelte(
+      `input[type="range"] { accent-color: var(--accent-blue); }
+      .control input { accent-color: var(--accent-blue); }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
+  });
+
+  test("checkbox: <Checkbox> component usage is clean", () => {
+    const src = svelte(``, `<Checkbox bind:checked={autoSync} label="Auto-sync" />`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
+  });
+
+  test("toggle: flags role=switch markup", () => {
+    const src = svelte(
+      `.toggle-switch { width: 36px; }`,
+      `<button role="switch" aria-checked="true"><span class="toggle-switch"></span></button>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-toggle"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("Toggle");
+  });
+
+  test("toggle: <Toggle> component usage is clean", () => {
+    const src = svelte(``, `<Toggle bind:checked={on} label="Notifications" />`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-toggle"])).toHaveLength(0);
   });
 });
 

@@ -98,6 +98,8 @@
     position: fixed;
     inset: 0;
     background: var(--overlay-bg, rgba(0, 0, 0, 0.3));
+    -webkit-backdrop-filter: var(--overlay-filter, none);
+    backdrop-filter: var(--overlay-filter, none);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,7 +108,7 @@
 
   .kit-modal-panel {
     background: var(--bg-surface);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     /* No overflow: hidden — the header must be able to overlay the
@@ -132,14 +134,14 @@
      * as a bug (the tone applies to the toned region's whole border
      * area, same principle as the borderless SegmentedControl). */
     margin: -1px -1px 0;
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     flex-shrink: 0;
   }
 
   .kit-modal-title {
     font-size: var(--font-size-md);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     line-height: 1.3;
     color: var(--text-primary);
   }

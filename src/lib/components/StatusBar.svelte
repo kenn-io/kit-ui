@@ -43,7 +43,7 @@
     border-top: 1px solid var(--border-default);
     color: var(--text-muted);
     font-size: var(--font-size-2xs);
-    letter-spacing: 0.01em;
+    letter-spacing: var(--letter-spacing-label, 0.01em);
   }
 
   .kit-status-bar__section {

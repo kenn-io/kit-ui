@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-09T00:00:00Z",
+  "title": "Design System: kit-ui",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Action Blue",
+        "canonical": "#2563eb",
+        "tonalRamp": [
+          "oklch(25% 0.12 262)",
+          "oklch(35% 0.16 262)",
+          "oklch(45% 0.19 262)",
+          "oklch(55% 0.21 262)",
+          "oklch(65% 0.18 262)",
+          "oklch(75% 0.13 262)",
+          "oklch(85% 0.08 262)",
+          "oklch(95% 0.03 262)"
+        ]
+      },
+      "workbench-fog": {
+        "role": "neutral",
+        "displayName": "Workbench Fog",
+        "canonical": "#f5f6f8",
+        "tonalRamp": [
+          "oklch(20% 0.008 265)",
+          "oklch(35% 0.008 265)",
+          "oklch(50% 0.008 265)",
+          "oklch(65% 0.008 265)",
+          "oklch(78% 0.007 265)",
+          "oklch(88% 0.006 265)",
+          "oklch(94% 0.004 265)",
+          "oklch(97% 0.003 265)"
+        ]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Ink Primary",
+        "canonical": "#181b24",
+        "tonalRamp": [
+          "oklch(15% 0.015 265)",
+          "oklch(25% 0.015 265)",
+          "oklch(38% 0.015 265)",
+          "oklch(50% 0.015 265)",
+          "oklch(62% 0.012 265)",
+          "oklch(75% 0.01 265)",
+          "oklch(87% 0.006 265)",
+          "oklch(95% 0.003 265)"
+        ]
+      },
+      "confirm-green": {
+        "role": "secondary",
+        "displayName": "Confirm Green",
+        "canonical": "#059669",
+        "tonalRamp": [
+          "oklch(25% 0.08 163)",
+          "oklch(35% 0.1 163)",
+          "oklch(45% 0.12 163)",
+          "oklch(55% 0.13 163)",
+          "oklch(65% 0.13 163)",
+          "oklch(75% 0.11 163)",
+          "oklch(85% 0.08 163)",
+          "oklch(95% 0.03 163)"
+        ]
+      },
+      "danger-red": {
+        "role": "secondary",
+        "displayName": "Danger Red",
+        "canonical": "#dc2626",
+        "tonalRamp": [
+          "oklch(25% 0.1 27)",
+          "oklch(35% 0.13 27)",
+          "oklch(45% 0.17 27)",
+          "oklch(55% 0.2 27)",
+          "oklch(65% 0.17 27)",
+          "oklch(75% 0.12 27)",
+          "oklch(85% 0.07 27)",
+          "oklch(95% 0.02 27)"
+        ]
+      },
+      "waiting-gold": {
+        "role": "tertiary",
+        "displayName": "Waiting Gold",
+        "canonical": "#a48a55",
+        "tonalRamp": [
+          "oklch(25% 0.05 85)",
+          "oklch(35% 0.06 85)",
+          "oklch(45% 0.07 85)",
+          "oklch(55% 0.08 85)",
+          "oklch(65% 0.08 85)",
+          "oklch(75% 0.07 85)",
+          "oklch(85% 0.05 85)",
+          "oklch(95% 0.02 85)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body",
+        "purpose": "The 13px UI base; everything from table cells to button labels."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code, ids, keyboard keys — content that is literally monospaced, never decoration."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 1px 2px rgba(0,0,0,0.05)",
+        "purpose": "Resting cards that genuinely need lift."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 2px 8px rgba(0,0,0,0.08)",
+        "purpose": "Sticky chrome, drag states."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0 4px 16px rgba(0,0,0,0.1)",
+        "purpose": "Popovers, modals — every transient floating surface."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-fast",
+        "value": "0.12s ease",
+        "purpose": "Hover/press color, background, and border transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "640px" },
+      { "name": "medium", "value": "760px" },
+      { "name": "wide", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid info button — the one 'do the thing' action per view.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; background: var(--accent-blue, #2563eb); color: var(--bg-surface, #fff); border: 1px solid var(--accent-blue, #2563eb); border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: 500; line-height: 1; cursor: pointer; transition: background-color 0.12s ease, border-color 0.12s ease; } .ds-btn-primary:hover { background: color-mix(in srgb, var(--accent-blue, #2563eb) 88%, #000); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent-blue, #2563eb); outline-offset: 1px; } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Neutral outline — cancel and secondary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; min-height: 28px; background: var(--bg-inset, #ecedf2); color: var(--text-secondary, #555b6e); border: 1px solid var(--border-default, #d8dae2); border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: 500; line-height: 1; cursor: pointer; transition: background-color 0.12s ease, color 0.12s ease; } .ds-btn-secondary:hover { background: var(--bg-surface-hover, #f0f1f4); color: var(--text-primary, #181b24); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--accent-blue, #2563eb); outline-offset: 1px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Wrapper-focus text field; border shifts to Action Blue on focus-within.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Filter sessions…\" />",
+      "css": ".ds-input { background: var(--bg-surface, #fff); color: var(--text-primary, #181b24); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; transition: border-color 0.12s ease; } .ds-input::placeholder { color: var(--text-muted, #878ea0); } .ds-input:focus { outline: none; border-color: var(--accent-blue, #2563eb); }"
+    },
+    {
+      "name": "Toned Chip",
+      "kind": "chip",
+      "refersTo": "popover-card",
+      "description": "Success chip via the shared tone recipe (9% tint / 30% border / 72% ink).",
+      "html": "<span class=\"ds-chip\">merged</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; background: color-mix(in srgb, var(--accent-green, #059669) 9%, var(--bg-surface, #fff)); border: 1px solid color-mix(in srgb, var(--accent-green, #059669) 30%, var(--border-default, #d8dae2)); color: color-mix(in srgb, var(--accent-green, #059669) 72%, var(--text-primary, #181b24)); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 500; }"
+    },
+    {
+      "name": "Popover Card",
+      "kind": "card",
+      "refersTo": "popover-card",
+      "description": "The one chrome for every transient floating surface.",
+      "html": "<div class=\"ds-popover\"><div class=\"ds-popover__item ds-popover__item--active\">Open session</div><div class=\"ds-popover__item\">Copy id</div><div class=\"ds-popover__item\">Archive</div></div>",
+      "css": ".ds-popover { background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: 4px; width: 200px; font-size: 13px; } .ds-popover__item { padding: 5px 8px; border-radius: 4px; color: var(--text-secondary, #555b6e); cursor: pointer; } .ds-popover__item:hover { background: var(--bg-surface-hover, #f0f1f4); color: var(--text-primary, #181b24); } .ds-popover__item--active { background: color-mix(in srgb, var(--accent-blue, #2563eb) 12%, transparent); color: var(--accent-blue, #2563eb); font-weight: 600; }"
+    },
+    {
+      "name": "Status Dot",
+      "kind": "custom",
+      "refersTo": "button-primary",
+      "description": "Signature session-state indicator with the waiting-gold pulse.",
+      "html": "<span class=\"ds-status\"><span class=\"ds-status__dot\"></span> waiting for you</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary, #555b6e); } .ds-status__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-waiting, #a48a55); box-shadow: 0 0 0 0 rgba(164,138,85,0.5); animation: ds-pulse 2s infinite; } @keyframes ds-pulse { 0% { box-shadow: 0 0 0 0 rgba(164,138,85,0.4); } 70% { box-shadow: 0 0 0 6px rgba(164,138,85,0); } 100% { box-shadow: 0 0 0 0 rgba(164,138,85,0); } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Workbench",
+    "overview": "kit-ui is the shared component vocabulary for kenn-io's developer tools: a calm, dense tool surface where everything is within reach and nothing is decorative. Density is a feature; the tool disappears into the task. Structure comes from 1px borders and tonal steps, not shadow stacks. The Workbench is the base identity; alternate identities ship as opt-in theme packs in themes.css, each retuning the full token surface while components stay byte-identical.",
+    "keyCharacteristics": [
+      "Dense, compact, keyboard-first; 13px desktop base that self-scales to 16px on touch",
+      "Borders define structure; shadows only lift transient surfaces",
+      "One accent (blue) for primary action, selection, and focus; five semantic accents used only for meaning",
+      "Every interactive state standardized: hover, focus-visible ring, active press, disabled at 0.5 opacity"
+    ],
+    "rules": [
+      {
+        "name": "The Tokens-Only Rule",
+        "body": "No component ships a hex color. Palette lives in theme.css; pure #000/#fff are permitted only inside color-mix() as shade arithmetic.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tone Recipe Rule",
+        "body": "Toned surfaces always derive from the shared data-kit-tone recipe: 9% tint background, 30% border, 72% ink toward --text-primary.",
+        "section": "colors"
+      },
+      {
+        "name": "The Pointer-Keyed Scale Rule",
+        "body": "The whole rem scale redefines itself on coarse-pointer devices. Components never write type media queries; apps never pin html font-size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Rem-for-Text-Only Rule",
+        "body": "Text is rem; spacing, borders, radii, and chrome are px. Gaps come from the --space-1…8 ladder.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Card Rule",
+        "body": "Every floating surface uses .kit-popover-card. Hand-rolled copies are flagged by kit-ui-check.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do read every color through a --token; fallbacks like var(--accent-green, #22c55e) are the only inline hex allowed.",
+      "Do keep gaps on the --space ladder and radii on --radius-sm/md/lg.",
+      "Do give every interactive element the full state set: hover, :focus-visible ring, active, disabled.",
+      "Do use data-kit-tone + the three recipe tokens for any toned surface.",
+      "Do keep new themes structural: retune radius, shadow character, border presence, motion speed, focus treatment, and type together, as one identity."
+    ],
+    "donts": [
+      "Don't touch the default light/dark palettes when adding themes; alternate identities live in themes.css under data-kit-theme.",
+      "Don't use side-stripe border-left accents, gradient text, glassmorphism, hero-metric layouts, or identical icon-card grids.",
+      "Don't write type media queries in components or pin the root font size in apps.",
+      "Don't draw keyboard focus with box-shadow; it must be a real outline so high-contrast can widen it.",
+      "Don't hard-code z-indexes; use --z-popover, --z-overlay, --z-tooltip."
+    ]
+  }
+}
