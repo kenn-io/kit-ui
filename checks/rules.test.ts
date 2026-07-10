@@ -726,6 +726,47 @@ describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
   });
 
+  test("checkbox: non-checkbox declarations nested under a checkbox-named ancestor are clean", () => {
+    // The accent-color belongs to the nested range rule, not the ancestor —
+    // an earlier scanner blamed descendant declarations on ancestor selectors.
+    const src = svelte(
+      `.checkbox-zone {
+        input[type="range"] { accent-color: var(--accent-blue); }
+      }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
+  });
+
+  test("checkbox: braces inside content strings are not structural", () => {
+    const src = svelte(
+      `input[type="checkbox"] { width: 14px; }
+      .badge::before { content: "{"; }
+      .checkbox-row input { accent-color: var(--accent-blue); }`,
+    );
+    // The stray "{" must not desync the scanner: both real findings survive.
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(2);
+  });
+
+  test("checkbox: commented-out checkbox rules are clean", () => {
+    const src = svelte(
+      `/* input[type="checkbox"] { accent-color: red; } */
+      .row { color: var(--text-primary); }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
+  });
+
+  test("checkbox: deep nesting stays linear", () => {
+    // An earlier scanner re-sliced each frame's full body on every close
+    // brace — quadratic on adversarial nesting depth.
+    const depth = 4000;
+    const src = svelte(
+      `${".x{".repeat(depth)}input[type="range"]{accent-color:red;}${"}".repeat(depth)}`,
+    );
+    const start = performance.now();
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
   test("checkbox: <Checkbox> component usage is clean", () => {
     const src = svelte(``, `<Checkbox bind:checked={autoSync} label="Auto-sync" />`);
     expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(0);

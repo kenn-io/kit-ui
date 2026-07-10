@@ -594,36 +594,81 @@ export function checkHandRolledCheckbox(source, filename) {
     });
   }
   for (const { css, offset } of styleBlocks(source, filename)) {
-    // Linear brace-aware walk over selector { body } pairs — a
-    // backtracking selector regex is polynomial on brace-free inputs
-    // (same CodeQL rule as above), and a flat next-brace walk misses
-    // rules nested in @media/@supports. Each `{` pushes the selector
-    // text preceding it; the matching `}` closes that frame, so nested
-    // at-rule contents are examined like top-level ones.
+    // Single linear pass over selector { body } pairs. Constraints, in
+    // order of discovery: a backtracking selector regex is polynomial on
+    // brace-free inputs (same CodeQL rule as above); a flat next-brace
+    // walk misses rules nested in @media/@supports; and re-slicing each
+    // frame's full body on `}` is quadratic on deep nesting AND blames
+    // descendant declarations on ancestor selectors (a range slider's
+    // accent-color inside `.checkbox-zone { … }` is not a checkbox).
+    // So: comments and quoted strings are skipped up front (their braces
+    // aren't structural), text accumulates only into the innermost open
+    // frame, and each rule is judged on its OWN selector + declarations.
+    const baseLine = lineOfIndex(source, offset);
     const stack = [];
-    let selStart = 0;
-    for (let i = 0; i < css.length; i += 1) {
+    let line = 0; // newlines seen so far within this block
+    let pending = ""; // non-skipped text since the last structural brace
+    let segStart = 0;
+    let i = 0;
+    while (i < css.length) {
       const ch = css[i];
+      if (ch === "\n") {
+        line += 1;
+        i += 1;
+        continue;
+      }
+      if (ch === "/" && css[i + 1] === "*") {
+        pending += css.slice(segStart, i);
+        const close = css.indexOf("*/", i + 2);
+        const stop = close === -1 ? css.length : close + 2;
+        for (let j = i; j < stop; j += 1) if (css[j] === "\n") line += 1;
+        i = segStart = stop;
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        // Quoted text stays in the segment (attribute selectors like
+        // input[type="checkbox"] must keep matching) but is stepped over
+        // wholesale so a brace in a content string isn't structural.
+        let j = i + 1;
+        while (j < css.length && css[j] !== ch) {
+          if (css[j] === "\n") line += 1;
+          if (css[j] === "\\") j += 1;
+          j += 1;
+        }
+        i = Math.min(j + 1, css.length);
+        continue;
+      }
       if (ch === "{") {
-        stack.push({ selector: css.slice(selStart, i), open: i });
-        selStart = i + 1;
+        pending += css.slice(segStart, i);
+        // Declarations before a nested rule stay with the parent; only
+        // the tail after the last `;` is the child's selector (or an
+        // at-rule prelude, which the checkbox regexes never match).
+        const selector = pending.slice(pending.lastIndexOf(";") + 1);
+        if (stack.length > 0) stack[stack.length - 1].direct += pending;
+        stack.push({ selector, line, direct: "" });
+        pending = "";
+        segStart = i + 1;
       } else if (ch === "}") {
+        pending += css.slice(segStart, i);
         const frame = stack.pop();
         if (frame) {
-          const body = css.slice(frame.open + 1, i);
+          frame.direct += pending;
           const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(frame.selector);
-          const checkboxAccent = /checkbox/i.test(frame.selector) && body.includes("accent-color:");
+          const checkboxAccent =
+            /checkbox/i.test(frame.selector) && frame.direct.includes("accent-color:");
           if (selectsCheckbox || checkboxAccent) {
             findings.push({
               rule: "hand-rolled-checkbox",
-              line: lineOfIndex(source, offset + frame.open),
+              line: baseLine + frame.line,
               message:
                 "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
             });
           }
         }
-        selStart = i + 1;
+        pending = "";
+        segStart = i + 1;
       }
+      i += 1;
     }
   }
   return findings;

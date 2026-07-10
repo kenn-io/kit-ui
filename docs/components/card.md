@@ -48,7 +48,8 @@ other interactive elements (including header `actions`) inside a clickable
 card — nested interactive elements are invalid HTML.
 
 `href` and `onclick` are mutually exclusive; if both are passed, `href`
-wins and the card renders as a link.
+wins — the card renders as a link and the `onclick` handler is ignored
+(it is not attached to the anchor).
 
 For choice-card sets (theme pickers, plan selectors), `selected` marks the
 active card: the button variant renders `aria-pressed`, the anchor variant

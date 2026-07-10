@@ -11,6 +11,8 @@
     name?: string;
     /** Submitted form value when on (native default "on"). */
     value?: string;
+    /** Native constraint validation — the form won't submit while off. */
+    required?: boolean;
     /** Accessible name when there is no visible label. */
     ariaLabel?: string;
     /** Points at hint/error text elsewhere in the form. */
@@ -27,6 +29,7 @@
     id = undefined,
     name = undefined,
     value = undefined,
+    required = false,
     ariaLabel = undefined,
     ariaDescribedby = undefined,
     onchange = undefined,
@@ -45,9 +48,10 @@
     {id}
     {name}
     {value}
+    {required}
     aria-label={ariaLabel}
     aria-describedby={ariaDescribedby}
-    onchange={() => onchange?.(checked)}
+    onchange={(event) => onchange?.(event.currentTarget.checked)}
   />
   <span class="kit-toggle__track" aria-hidden="true">
     <span class="kit-toggle__knob"></span>

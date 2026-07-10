@@ -22,8 +22,10 @@ track).
 - `label` — plain-text label after the switch; `children` for rich content.
   For label-left settings rows (SettingsLayout), keep the row layout in the
   app and pass a bare `<Toggle ariaLabel="…">` on the right.
-- Form contract: `name` + `value` submit natively when on (the element is
-  a real checkbox input with `role="switch"`).
+- Form contract: `name` + `value` submit natively when on, `required`
+  blocks submission while off (the element is a real checkbox input with
+  `role="switch"`, so constraint validation and form association via the
+  surrounding `<form>` behave natively).
 - `disabled`, `id`, `ariaLabel`, `ariaDescribedby`, `onchange(checked)`,
   `class`.
 

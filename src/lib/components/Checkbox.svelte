@@ -54,7 +54,7 @@
     {required}
     aria-label={ariaLabel}
     aria-describedby={ariaDescribedby}
-    onchange={() => onchange?.(checked)}
+    onchange={(event) => onchange?.(event.currentTarget.checked)}
     {@attach (el) => {
       // `indeterminate` is a DOM property, not an attribute — sync it so
       // the :indeterminate pseudo-class (which draws the dash) tracks the

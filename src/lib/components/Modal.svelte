@@ -194,13 +194,13 @@
    * its own corners (scrollbar included) where it meets the panel's
    * rounded edge. */
   .kit-modal-body:first-child {
-    border-top-left-radius: calc(var(--radius-lg) - 1px);
-    border-top-right-radius: calc(var(--radius-lg) - 1px);
+    border-top-left-radius: calc(var(--radius-lg) - var(--border-width));
+    border-top-right-radius: calc(var(--radius-lg) - var(--border-width));
   }
 
   .kit-modal-body:last-child {
-    border-bottom-left-radius: calc(var(--radius-lg) - 1px);
-    border-bottom-right-radius: calc(var(--radius-lg) - 1px);
+    border-bottom-left-radius: calc(var(--radius-lg) - var(--border-width));
+    border-bottom-right-radius: calc(var(--radius-lg) - var(--border-width));
   }
 
   .kit-modal-footer {

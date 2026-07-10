@@ -28,10 +28,9 @@ focusable and carries the shared focus ring on the drawn box.
   toggles). Don't put links or buttons in the label — nested interactive
   content inside a `<label>` is invalid.
 - Form contract: `name`, `value` (submitted when checked, native default
-  "on"), `required` (native constraint validation), `id`, `form
-association via the surrounding <form>` — the underlying element is a
-  real `<input type="checkbox">`, so submission and validation behave
-  natively.
+  "on"), `required` (native constraint validation), `id` — the underlying
+  element is a real `<input type="checkbox">`, so submission, validation,
+  and form association via the surrounding `<form>` behave natively.
 - `disabled`, `ariaLabel` (for boxes with no visible label),
   `ariaDescribedby` (hint/error text), `onchange(checked)`, `class`.
 
