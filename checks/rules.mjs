@@ -580,7 +580,10 @@ export function checkHandRolledSidebarToggle(source) {
  * rendered task-list checkboxes. */
 export function checkHandRolledCheckbox(source, filename) {
   const findings = [];
-  const markupRe = /<input[^>]*type=["']checkbox["']/g;
+  // [^<>] (not [^>]) so a failed attempt can't rescan past the next tag —
+  // the checker runs over arbitrary project files, so its regexes must
+  // stay linear on pathological inputs (CodeQL js/polynomial-redos).
+  const markupRe = /<input\b[^<>]*type=["']checkbox["']/g;
   let match;
   while ((match = markupRe.exec(source)) !== null) {
     findings.push({
@@ -591,19 +594,29 @@ export function checkHandRolledCheckbox(source, filename) {
     });
   }
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
-    while ((match = ruleRe.exec(css)) !== null) {
-      const [, selector, body] = match;
+    // Linear indexOf walk over selector { body } pairs — a backtracking
+    // selector regex is polynomial on brace-free inputs (same CodeQL
+    // rule as above). Naive about nested @media blocks, like the other
+    // CSS-recipe rules.
+    let cursor = 0;
+    for (;;) {
+      const open = css.indexOf("{", cursor);
+      if (open === -1) break;
+      const close = css.indexOf("}", open + 1);
+      if (close === -1) break;
+      const selector = css.slice(cursor, open);
+      const body = css.slice(open + 1, close);
       const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(selector);
-      const checkboxAccent = /checkbox/i.test(selector) && /accent-color:/.test(body);
+      const checkboxAccent = /checkbox/i.test(selector) && body.includes("accent-color:");
       if (selectsCheckbox || checkboxAccent) {
         findings.push({
           rule: "hand-rolled-checkbox",
-          line: lineOfIndex(source, offset + match.index),
+          line: lineOfIndex(source, offset + open),
           message:
             "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
         });
       }
+      cursor = close + 1;
     }
   }
   return findings;
