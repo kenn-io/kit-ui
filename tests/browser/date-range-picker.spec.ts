@@ -245,3 +245,36 @@ test("an earlier second pick swaps the ends", async ({ page }) => {
     page.locator("code", { hasText: `"from":"${yyyy}-${mm}-05","to":"${yyyy}-${mm}-10"` }),
   ).toBeVisible();
 });
+
+test("cross-year custom ranges show complete ISO dates without crowding", async ({ page }) => {
+  await openCustomTab(page);
+
+  const calendar = panel(page).locator(".kit-calendar");
+  for (let i = 0; i < 12; i += 1) {
+    await calendar.locator(".kit-calendar__nav").first().click();
+  }
+  await day(page, 11).click();
+  for (let i = 0; i < 12; i += 1) {
+    await calendar.locator(".kit-calendar__nav").last().click();
+  }
+  await day(page, 10).click();
+
+  const from = `${yyyy - 1}-${mm}-11`;
+  const to = `${yyyy}-${mm}-10`;
+  await expect(page.locator(".kit-date-range-picker__trigger-label").first()).toHaveText(
+    `${from} - ${to}`,
+  );
+  const endpoints = panel(page).locator(".kit-date-range-picker__endpoint");
+  await expect(endpoints.locator(".kit-date-range-picker__endpoint-value")).toHaveText([from, to]);
+
+  for (const endpoint of await endpoints.all()) {
+    const endpointBox = await endpoint.boundingBox();
+    const labelBox = await endpoint.locator(".kit-date-range-picker__endpoint-label").boundingBox();
+    const valueBox = await endpoint.locator(".kit-date-range-picker__endpoint-value").boundingBox();
+    expect(endpointBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(valueBox).not.toBeNull();
+    expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(valueBox!.x);
+    expect(valueBox!.x + valueBox!.width).toBeLessThanOrEqual(endpointBox!.x + endpointBox!.width);
+  }
+});

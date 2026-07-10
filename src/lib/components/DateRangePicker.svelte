@@ -156,8 +156,8 @@
       return calendarLabelFor(selection.unit, selection.anchor);
     }
     if (!selection.from || !selection.to) return customRangeLabel;
-    if (selection.from === selection.to) return formatShortDate(selection.from, locale);
-    return `${formatShortDate(selection.from, locale)} - ${formatShortDate(selection.to, locale)}`;
+    if (selection.from === selection.to) return selection.from;
+    return `${selection.from} - ${selection.to}`;
   });
 
   // The period the calendar highlights: the day/week/month around the
@@ -217,7 +217,7 @@
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
     const trigger = containerEl.getBoundingClientRect();
-    const width = block ? Math.max(240, trigger.width) : 264;
+    const width = block ? Math.max(240, trigger.width) : 360;
     panelStyle = `${floatingPopoverStyle({
       trigger,
       viewportWidth: window.innerWidth,
@@ -417,13 +417,13 @@
           <span class="kit-date-range-picker__endpoint" class:active={!customPending}>
             <span class="kit-date-range-picker__endpoint-label">{fromLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
-              {customFrom ? formatShortDate(customFrom, locale) : "…"}
+              {customFrom || "…"}
             </span>
           </span>
           <span class="kit-date-range-picker__endpoint" class:active={customPending}>
             <span class="kit-date-range-picker__endpoint-label">{toLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
-              {customTo ? formatShortDate(customTo, locale) : "…"}
+              {customTo || "…"}
             </span>
           </span>
         </div>
