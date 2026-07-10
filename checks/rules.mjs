@@ -618,6 +618,14 @@ export function checkHandRolledCheckbox(source, filename) {
         i += 1;
         continue;
       }
+      if (ch === "\\") {
+        // A CSS escape neutralizes the next character — `.foo\;bar` is a
+        // class name, not a declaration boundary. Step over both; the
+        // escaped text stays in the segment.
+        if (css[i + 1] === "\n") line += 1;
+        i += 2;
+        continue;
+      }
       if (ch === "/" && css[i + 1] === "*") {
         pending += css.slice(segStart, i);
         const close = css.indexOf("*/", i + 2);

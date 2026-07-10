@@ -758,6 +758,13 @@ describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(1);
   });
 
+  test("checkbox: escaped semicolons in selectors are not declaration boundaries", () => {
+    // `\;` is part of the class name — splitting there would drop the
+    // checkbox half of the selector and miss the rule.
+    const src = svelte(`input[type="checkbox"].foo\\;bar { width: 14px; }`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(1);
+  });
+
   test("checkbox: declarations before a nested checkbox rule stay with the parent", () => {
     // The parent's accent-color must not vanish into the child selector
     // split; the checkbox-named parent still flags.

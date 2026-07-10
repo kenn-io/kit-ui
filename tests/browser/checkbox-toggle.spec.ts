@@ -53,7 +53,10 @@ test("required checkbox gates native submission and submits name=value when chec
   expect(await box.evaluate((el: HTMLInputElement) => el.checkValidity())).toBe(false);
   await page.locator(".kit-checkbox", { hasText: "Accept the terms" }).click();
   await page.getByRole("button", { name: "Submit" }).click();
-  await expect(result).toHaveText("terms=accepted");
+  // The "submitted:" sentinel proves the handler ran — a wrongly invoked
+  // handler on the blocked attempt would have produced "submitted: " too,
+  // failing the empty-string assertion above.
+  await expect(result).toHaveText("submitted: terms=accepted");
 });
 
 test("required toggle gates native submission and submits the native default value", async ({
@@ -67,7 +70,7 @@ test("required toggle gates native submission and submits the native default val
   expect(await sw.evaluate((el: HTMLInputElement) => el.checkValidity())).toBe(false);
   await page.locator(".kit-toggle", { hasText: "Enable sync to continue" }).click();
   await page.getByRole("button", { name: "Submit" }).click();
-  await expect(result).toHaveText("sync=on");
+  await expect(result).toHaveText("submitted: sync=on");
 });
 
 test("uncontrolled onchange reports the input's new state, not a stale prop", async ({ page }) => {

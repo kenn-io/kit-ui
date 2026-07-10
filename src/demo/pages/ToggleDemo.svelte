@@ -9,7 +9,7 @@
   function submitForm(event: SubmitEvent) {
     event.preventDefault();
     const data = new FormData(event.currentTarget as HTMLFormElement);
-    submitted = [...data.entries()].map(([k, v]) => `${k}=${v}`).join("&");
+    submitted = `submitted: ${[...data.entries()].map(([k, v]) => `${k}=${v}`).join("&")}`;
   }
 </script>
 
