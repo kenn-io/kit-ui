@@ -125,8 +125,13 @@
     "motion": [
       {
         "name": "transition-fast",
-        "value": "0.12s ease",
-        "purpose": "Hover/press color, background, and border transitions."
+        "value": "0.12s",
+        "purpose": "Hover/press transition duration; easing comes from --transition-ease (fallback: ease)."
+      },
+      {
+        "name": "transition-ease",
+        "value": "ease (fallback-only token)",
+        "purpose": "Hover/press easing curve; themes retune it (steps(1), ease-out-expo, linear)."
       }
     ],
     "breakpoints": [

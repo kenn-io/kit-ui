@@ -476,8 +476,8 @@
     cursor: pointer;
     white-space: nowrap;
     transition:
-      border-color var(--transition-fast),
-      background var(--transition-fast);
+      border-color var(--transition-fast) var(--transition-ease, ease),
+      background var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__trigger:hover {
@@ -508,7 +508,7 @@
     display: inline-flex;
     color: var(--text-muted);
     flex-shrink: 0;
-    transition: transform var(--transition-fast);
+    transition: transform var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__trigger-chevron.open {
@@ -545,8 +545,8 @@
     font-weight: var(--font-weight-medium, 500);
     cursor: pointer;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__pill:hover {
@@ -583,7 +583,7 @@
     background: var(--bg-inset);
     border: var(--border-width) solid transparent;
     border-radius: var(--radius-md);
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__endpoint.active {

@@ -21,13 +21,15 @@
     title?: string | undefined;
     /** Right-aligned muted text in the header row (e.g. a timestamp). */
     meta?: string | undefined;
-    /** Renders an <a> instead of a <div>; implies the hover affordance. */
+    /** Renders an <a> instead of a <div>; implies the hover affordance.
+     * Mutually exclusive with onclick — if both are passed, href wins. */
     href?: string | undefined;
     /** Renders a <button> instead of a <div>; implies the hover affordance. */
     onclick?: ((event: MouseEvent) => void) | undefined;
     /** For choice-card sets (theme pickers, plan selectors): marks this card
-     * as the active choice. Renders aria-pressed on the button variant and
-     * the accent border + tint treatment. */
+     * as the active choice. Renders aria-pressed on the button variant,
+     * aria-current on the anchor variant, and the accent border + tint;
+     * on a static card it is visual-only (prefer a clickable variant). */
     selected?: boolean | undefined;
     ariaLabel?: string | undefined;
     class?: string;
@@ -103,7 +105,9 @@
 {/snippet}
 
 {#if href !== undefined}
-  <a class={classes} {href} aria-label={ariaLabel}>{@render inner()}</a>
+  <a class={classes} {href} aria-current={selected ? "true" : undefined} aria-label={ariaLabel}
+    >{@render inner()}</a
+  >
 {:else if onclick !== undefined}
   <button type="button" class={classes} {onclick} aria-pressed={selected} aria-label={ariaLabel}
     >{@render inner()}</button
@@ -172,7 +176,8 @@
     transition:
       background-color var(--transition-fast) var(--transition-ease, ease),
       border-color var(--transition-fast) var(--transition-ease, ease),
-      box-shadow var(--transition-fast) var(--transition-ease, ease);
+      box-shadow var(--transition-fast) var(--transition-ease, ease),
+      transform var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-card--clickable:hover {

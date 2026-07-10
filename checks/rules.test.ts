@@ -706,6 +706,18 @@ describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(2);
   });
 
+  test("checkbox: rules nested inside @media are still detected", () => {
+    const src = svelte(
+      `@media (hover: hover) {
+        input[type="checkbox"] { width: 14px; }
+      }
+      @media (max-width: 640px) {
+        .checkbox-row input { accent-color: var(--accent-blue); }
+      }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-checkbox"])).toHaveLength(2);
+  });
+
   test("checkbox: accent-color on non-checkbox controls is clean", () => {
     const src = svelte(
       `input[type="range"] { accent-color: var(--accent-blue); }

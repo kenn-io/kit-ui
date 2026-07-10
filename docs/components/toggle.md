@@ -22,7 +22,17 @@ track).
 - `label` — plain-text label after the switch; `children` for rich content.
   For label-left settings rows (SettingsLayout), keep the row layout in the
   app and pass a bare `<Toggle ariaLabel="…">` on the right.
-- `disabled`, `id`, `name`, `ariaLabel`, `onchange(checked)`, `class`.
+- Form contract: `name` + `value` submit natively when on (the element is
+  a real checkbox input with `role="switch"`).
+- `disabled`, `id`, `ariaLabel`, `ariaDescribedby`, `onchange(checked)`,
+  `class`.
+
+## States
+
+Hover deepens the track (ink-mixed off, shaded accent on); pressing
+stretches the knob along its travel (iOS-style); keyboard focus is
+delegated to the drawn track (`--focus-ring`, widened under high
+contrast); disabled dims via `--opacity-disabled`.
 
 ## Checkbox or Toggle?
 

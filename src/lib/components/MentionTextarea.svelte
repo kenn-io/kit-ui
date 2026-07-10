@@ -298,7 +298,7 @@
     font-size: var(--font-size-sm);
     line-height: 1.4;
     color: var(--text-primary);
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-mention__textarea:focus {

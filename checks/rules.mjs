@@ -594,29 +594,36 @@ export function checkHandRolledCheckbox(source, filename) {
     });
   }
   for (const { css, offset } of styleBlocks(source, filename)) {
-    // Linear indexOf walk over selector { body } pairs — a backtracking
-    // selector regex is polynomial on brace-free inputs (same CodeQL
-    // rule as above). Naive about nested @media blocks, like the other
-    // CSS-recipe rules.
-    let cursor = 0;
-    for (;;) {
-      const open = css.indexOf("{", cursor);
-      if (open === -1) break;
-      const close = css.indexOf("}", open + 1);
-      if (close === -1) break;
-      const selector = css.slice(cursor, open);
-      const body = css.slice(open + 1, close);
-      const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(selector);
-      const checkboxAccent = /checkbox/i.test(selector) && body.includes("accent-color:");
-      if (selectsCheckbox || checkboxAccent) {
-        findings.push({
-          rule: "hand-rolled-checkbox",
-          line: lineOfIndex(source, offset + open),
-          message:
-            "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
-        });
+    // Linear brace-aware walk over selector { body } pairs — a
+    // backtracking selector regex is polynomial on brace-free inputs
+    // (same CodeQL rule as above), and a flat next-brace walk misses
+    // rules nested in @media/@supports. Each `{` pushes the selector
+    // text preceding it; the matching `}` closes that frame, so nested
+    // at-rule contents are examined like top-level ones.
+    const stack = [];
+    let selStart = 0;
+    for (let i = 0; i < css.length; i += 1) {
+      const ch = css[i];
+      if (ch === "{") {
+        stack.push({ selector: css.slice(selStart, i), open: i });
+        selStart = i + 1;
+      } else if (ch === "}") {
+        const frame = stack.pop();
+        if (frame) {
+          const body = css.slice(frame.open + 1, i);
+          const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(frame.selector);
+          const checkboxAccent = /checkbox/i.test(frame.selector) && body.includes("accent-color:");
+          if (selectsCheckbox || checkboxAccent) {
+            findings.push({
+              rule: "hand-rolled-checkbox",
+              line: lineOfIndex(source, offset + frame.open),
+              message:
+                "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+            });
+          }
+        }
+        selStart = i + 1;
       }
-      cursor = close + 1;
     }
   }
   return findings;

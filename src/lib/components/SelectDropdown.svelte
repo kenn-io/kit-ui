@@ -243,9 +243,9 @@
     font-weight: var(--font-weight-semibold, 600);
     text-align: left;
     transition:
-      border-color var(--transition-fast),
-      color var(--transition-fast),
-      background var(--transition-fast);
+      border-color var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease),
+      background var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-select-dropdown__trigger:hover:not(:disabled),

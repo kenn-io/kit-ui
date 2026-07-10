@@ -144,8 +144,8 @@
     border-radius: calc(var(--radius-sm) - 1px);
     cursor: pointer;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
     white-space: nowrap;
   }
 
@@ -213,8 +213,8 @@
   /* Active trumps leftmost: it restores its left border and pulls over
    * the left neighbor's right border, its z-index winning the overlap. */
   .kit-segmented--borderless .kit-segmented__btn + .kit-segmented__btn.active {
-    border-left-width: 1px;
-    margin-left: -1px;
+    border-left-width: var(--border-width);
+    margin-left: calc(-1 * var(--border-width));
   }
 
   .kit-segmented--borderless .kit-segmented__btn:first-child {

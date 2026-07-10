@@ -9,8 +9,12 @@
     label?: string | undefined;
     id?: string;
     name?: string;
+    /** Submitted form value when on (native default "on"). */
+    value?: string;
     /** Accessible name when there is no visible label. */
     ariaLabel?: string;
+    /** Points at hint/error text elsewhere in the form. */
+    ariaDescribedby?: string;
     onchange?: (checked: boolean) => void;
     class?: string;
     children?: Snippet;
@@ -22,7 +26,9 @@
     label = undefined,
     id = undefined,
     name = undefined,
+    value = undefined,
     ariaLabel = undefined,
+    ariaDescribedby = undefined,
     onchange = undefined,
     class: className = "",
     children,
@@ -38,7 +44,9 @@
     {disabled}
     {id}
     {name}
+    {value}
     aria-label={ariaLabel}
+    aria-describedby={ariaDescribedby}
     onchange={() => onchange?.(checked)}
   />
   <span class="kit-toggle__track" aria-hidden="true">
@@ -95,9 +103,37 @@
     background: var(--accent-blue);
   }
 
+  /* Hover deepens the track toward ink (off) or shade (on); pressing
+   * stretches the knob iOS-style along its travel direction. */
+  .kit-toggle:hover .kit-toggle__input:not(:disabled) + .kit-toggle__track {
+    background: color-mix(in srgb, var(--text-secondary) 25%, var(--border-default));
+  }
+
+  .kit-toggle:hover .kit-toggle__input:checked:not(:disabled) + .kit-toggle__track {
+    background: color-mix(in srgb, var(--accent-blue) 88%, #000);
+  }
+
+  .kit-toggle:active .kit-toggle__input:not(:disabled) + .kit-toggle__track .kit-toggle__knob {
+    width: 19px;
+  }
+
+  .kit-toggle:active
+    .kit-toggle__input:checked:not(:disabled)
+    + .kit-toggle__track
+    .kit-toggle__knob {
+    transform: translateX(13px);
+  }
+
   .kit-toggle__input:focus-visible + .kit-toggle__track {
     outline: var(--focus-ring);
     outline-offset: 1px;
+  }
+
+  /* Delegated-focus exception to the global ring rule (see Checkbox):
+   * the drawn track carries the ring and mirrors high-contrast widening. */
+  :global(:root.high-contrast) .kit-toggle__input:focus-visible + .kit-toggle__track {
+    outline-width: 3px;
+    outline-offset: 2px;
   }
 
   /* Knob stays white in both modes on purpose (middleman's annotated
@@ -112,7 +148,9 @@
     border-radius: var(--radius-dot, 50%);
     background: var(--kit-toggle-knob, #ffffff);
     box-shadow: var(--shadow-sm);
-    transition: transform var(--transition-fast) var(--transition-ease, ease);
+    transition:
+      transform var(--transition-fast) var(--transition-ease, ease),
+      width var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-toggle__input:checked + .kit-toggle__track .kit-toggle__knob {

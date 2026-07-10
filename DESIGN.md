@@ -85,17 +85,21 @@ the restrained accent discipline all serve one goal — the tool disappears into
 the task. Density is a feature: tables carry many rows, chrome bars are 44px
 and 24px, controls are compact and instantly responsive (0.12s).
 
-The system explicitly rejects marketing gloss: no gradients, no glassmorphism,
-no hero metrics, no side-stripe accents. Structure comes from 1px borders and
-tonal steps, not shadow stacks. Every color a component uses is a CSS custom
-property from `theme.css`; consuming apps retheme by overriding tokens, never
-by forking components.
+The system explicitly rejects marketing gloss **inside component chrome**: no
+gradients, no glassmorphism, no hero metrics, no side-stripe accents.
+Structure comes from 1px borders and tonal steps, not shadow stacks. Theme
+**canvas decor** is the one sanctioned exception — an identity may paint the
+body ground (and, for ember, a pointer-tracking button glow) with gradients
+or backdrop blur, because that layer is decoration a theme owns, not
+component structure; high contrast strips it. Every color a component uses
+is a CSS custom property from `theme.css`; consuming apps retheme by
+overriding tokens, never by forking components.
 
 The Workbench is the **base identity**, shipped as the untouchable default
-light/dark pair. Alternate identities (The Control Room, The Quiet Terminal,
-and five more) ship as opt-in theme packs in `themes.css` — each retunes the
-full token surface (shape, elevation, borders, motion, type, palette) while
-components stay byte-identical.
+light/dark pair. Eight alternate identities — Control Room, Terminal, Zine,
+Pebble, Gallery, Arctic, Ember, Graphite — ship as opt-in theme packs in
+`themes.css`, each retuning the full token surface (shape, elevation,
+borders, motion, type, palette) while components stay byte-identical.
 
 **Key Characteristics:**
 

@@ -327,8 +327,8 @@
     cursor: pointer;
     white-space: nowrap;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-top-bar__tab:hover:not(:disabled) {

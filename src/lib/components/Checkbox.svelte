@@ -12,8 +12,14 @@
     label?: string | undefined;
     id?: string;
     name?: string;
+    /** Submitted form value when checked (native default "on"). */
+    value?: string;
+    /** Native constraint validation — the form won't submit unchecked. */
+    required?: boolean;
     /** Accessible name when there is no visible label. */
     ariaLabel?: string;
+    /** Points at hint/error text elsewhere in the form. */
+    ariaDescribedby?: string;
     onchange?: (checked: boolean) => void;
     class?: string;
     children?: Snippet;
@@ -26,7 +32,10 @@
     label = undefined,
     id = undefined,
     name = undefined,
+    value = undefined,
+    required = false,
     ariaLabel = undefined,
+    ariaDescribedby = undefined,
     onchange = undefined,
     class: className = "",
     children,
@@ -41,7 +50,10 @@
     {disabled}
     {id}
     {name}
+    {value}
+    {required}
     aria-label={ariaLabel}
+    aria-describedby={ariaDescribedby}
     onchange={() => onchange?.(checked)}
     {@attach (el) => {
       // `indeterminate` is a DOM property, not an attribute — sync it so
@@ -111,7 +123,8 @@
     border-radius: min(var(--radius-sm), 5px);
     transition:
       background-color var(--transition-fast) var(--transition-ease, ease),
-      border-color var(--transition-fast) var(--transition-ease, ease);
+      border-color var(--transition-fast) var(--transition-ease, ease),
+      transform var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-checkbox:hover .kit-checkbox__input:not(:disabled) + .kit-checkbox__box {
@@ -131,6 +144,15 @@
   .kit-checkbox__input:focus-visible + .kit-checkbox__box {
     outline: var(--focus-ring);
     outline-offset: 1px;
+  }
+
+  /* Delegated-focus exception to the global ring rule: the real input is
+   * invisible (its own outline dies with opacity: 0), so the drawn box
+   * carries the ring — and must also mirror the high-contrast widening
+   * that :root.high-contrast applies to :focus-visible elements. */
+  :global(:root.high-contrast) .kit-checkbox__input:focus-visible + .kit-checkbox__box {
+    outline-width: 3px;
+    outline-offset: 2px;
   }
 
   /* Glyphs are surface-colored so they contrast against the accent fill

@@ -27,8 +27,19 @@ focusable and carries the shared focus ring on the drawn box.
   content instead (both live in the wrapping `<label>`, so the whole row
   toggles). Don't put links or buttons in the label — nested interactive
   content inside a `<label>` is invalid.
-- `disabled`, `id`, `name`, `ariaLabel` (for boxes with no visible label),
-  `onchange(checked)`, `class`.
+- Form contract: `name`, `value` (submitted when checked, native default
+  "on"), `required` (native constraint validation), `id`, `form
+association via the surrounding <form>` — the underlying element is a
+  real `<input type="checkbox">`, so submission and validation behave
+  natively.
+- `disabled`, `ariaLabel` (for boxes with no visible label),
+  `ariaDescribedby` (hint/error text), `onchange(checked)`, `class`.
+
+## Focus
+
+The input is invisible, so keyboard focus is delegated: the drawn box
+carries `outline: var(--focus-ring)`, and under high contrast the ring
+widens to 3px/2px offset to mirror the global `:focus-visible` rule.
 
 ## Theming
 

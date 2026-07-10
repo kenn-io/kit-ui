@@ -47,10 +47,15 @@ the accent hover (border + 6% tint) and the shared focus ring. Don't put
 other interactive elements (including header `actions`) inside a clickable
 card — nested interactive elements are invalid HTML.
 
+`href` and `onclick` are mutually exclusive; if both are passed, `href`
+wins and the card renders as a link.
+
 For choice-card sets (theme pickers, plan selectors), `selected` marks the
-active card: the button variant renders `aria-pressed` and the card holds
-the accent border + 8% tint. Wrap the set in a `role="group"` container
-with an `aria-label`.
+active card: the button variant renders `aria-pressed`, the anchor variant
+renders `aria-current="true"`, and the card holds the accent border + 8%
+tint. On a static (non-clickable) card `selected` is visual-only — prefer
+a clickable variant so the state is exposed to assistive tech. Wrap the
+set in a `role="group"` container with an `aria-label`.
 
 ## Theming
 

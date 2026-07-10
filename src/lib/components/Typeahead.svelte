@@ -514,7 +514,7 @@
     font-size: var(--typeahead-control-font-size, var(--font-size-xs));
     color: var(--text-secondary);
     cursor: pointer;
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast) var(--transition-ease, ease);
     text-align: left;
   }
 
@@ -634,7 +634,7 @@
   :global(.kit-typeahead__group-chevron) {
     flex-shrink: 0;
     opacity: 0.72;
-    transition: transform var(--transition-fast);
+    transition: transform var(--transition-fast) var(--transition-ease, ease);
   }
 
   :global(.kit-typeahead__group-chevron--open) {

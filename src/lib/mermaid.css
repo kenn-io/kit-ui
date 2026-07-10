@@ -160,8 +160,8 @@ pre.mermaid.kit-mermaid-viewer {
   font-size: var(--font-size-md);
   line-height: 1;
   transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
+    background var(--transition-fast) var(--transition-ease, ease),
+    color var(--transition-fast) var(--transition-ease, ease);
 }
 
 .kit-mermaid-viewer__button:hover {

@@ -143,7 +143,7 @@
     border: none;
     cursor: pointer;
     font-family: inherit;
-    transition: opacity var(--transition-fast);
+    transition: opacity var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-chip--interactive:hover:not(:disabled) {

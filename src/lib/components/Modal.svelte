@@ -133,7 +133,7 @@
      * top AND side edges — a grey side edge beside the tinted band reads
      * as a bug (the tone applies to the toned region's whole border
      * area, same principle as the borderless SegmentedControl). */
-    margin: -1px -1px 0;
+    margin: calc(-1 * var(--border-width)) calc(-1 * var(--border-width)) 0;
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     flex-shrink: 0;
