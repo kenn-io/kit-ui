@@ -77,6 +77,12 @@ set. Complete custom ranges are the deliberate exception: the trigger and
 From/To readouts always render canonical `YYYY-MM-DD` bounds, regardless of
 locale, so the year and range ordering stay explicit.
 
+The standard trigger keeps a stable 168px width so changing ranges does not
+shift adjacent toolbar controls. Labels that do not fit are ellipsized; the
+button's accessible name and `title` retain the complete label. In `block`
+mode the trigger follows its container width and applies the same overflow
+handling.
+
 ## Types and helpers (`date-range.ts`)
 
 ```ts

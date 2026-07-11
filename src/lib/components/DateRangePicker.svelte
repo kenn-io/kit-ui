@@ -352,6 +352,7 @@
     class="kit-date-range-picker__trigger"
     class:open
     type="button"
+    title={label}
     bind:this={triggerEl}
     onclick={toggleOpen}
     aria-haspopup="dialog"
@@ -463,6 +464,7 @@
 
   .kit-date-range-picker--block .kit-date-range-picker__trigger {
     width: 100%;
+    min-width: 0;
     justify-content: space-between;
   }
 
@@ -470,6 +472,7 @@
     height: 28px;
     /* Hold a stable width so the label changing (e.g. "Jun 19" vs
        "Mar 26 - Apr 25") never resizes the button and shifts neighbors. */
+    width: 168px;
     min-width: 168px;
     padding: 0 var(--space-4);
     display: inline-flex;
@@ -508,7 +511,10 @@
 
   .kit-date-range-picker__trigger-label {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
     text-align: left;
+    text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
   }
 

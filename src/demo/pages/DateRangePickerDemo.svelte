@@ -26,7 +26,11 @@
     anchor: todayStr(),
   });
 
-  let blockSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
+  let blockSelection = $state.raw<RangeSelection>({
+    mode: "custom",
+    from: "2025-07-11",
+    to: "2026-07-10",
+  });
 </script>
 
 <DemoSection
@@ -73,6 +77,12 @@
       surface="soft"
       label="External: this calendar month"
       onclick={() => (selection = { mode: "calendar", unit: "month", anchor: monthStart })}
+    />
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: cross-year custom"
+      onclick={() => (selection = { mode: "custom", from: "2025-07-11", to: "2026-07-10" })}
     />
   </div>
 </DemoSection>

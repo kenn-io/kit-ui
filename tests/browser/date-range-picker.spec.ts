@@ -320,3 +320,34 @@ test("240px block picker stacks complete endpoint dates", async ({ page }) => {
   expect(panelBox!.width).toBe(240);
   await expectCompactEndpointsToFit(page);
 });
+
+test("completed ISO range keeps the normal trigger stable and fully named", async ({ page }) => {
+  await page.getByRole("button", { name: "External: cross-year custom" }).click();
+
+  const fullRange = "2025-07-11 - 2026-07-10";
+  const trigger = page.locator(".kit-date-range-picker__trigger").first();
+  await expect(trigger).toHaveAccessibleName(fullRange);
+  await expect(trigger).toHaveAttribute("title", fullRange);
+  await expect(trigger).toHaveCSS("width", "168px");
+  const label = trigger.locator(".kit-date-range-picker__trigger-label");
+  expect(await label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+});
+
+test("completed ISO range stays contained in a narrow block trigger", async ({ page }) => {
+  await page.locator(".sidebar-slot").evaluate((element) => {
+    (element as HTMLElement).style.width = "168px";
+  });
+
+  const fullRange = "2025-07-11 - 2026-07-10";
+  const trigger = page.locator(".kit-date-range-picker__trigger").nth(2);
+  await expect(trigger).toHaveAccessibleName(fullRange);
+  await expect(trigger).toHaveAttribute("title", fullRange);
+  const triggerBox = await trigger.boundingBox();
+  const label = trigger.locator(".kit-date-range-picker__trigger-label");
+  const labelBox = await label.boundingBox();
+  expect(triggerBox).not.toBeNull();
+  expect(labelBox).not.toBeNull();
+  expect(triggerBox!.width).toBeLessThanOrEqual(168);
+  expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(triggerBox!.x + triggerBox!.width);
+  expect(await label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+});
