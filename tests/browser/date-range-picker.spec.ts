@@ -29,6 +29,26 @@ function day(page: import("@playwright/test").Page, n: number) {
     .filter({ hasText: new RegExp(`^${n}$`) });
 }
 
+async function expectCompactEndpointsToFit(page: import("@playwright/test").Page) {
+  const endpoints = panel(page).locator(".kit-date-range-picker__endpoint");
+  const firstBox = await endpoints.nth(0).boundingBox();
+  const secondBox = await endpoints.nth(1).boundingBox();
+  expect(firstBox).not.toBeNull();
+  expect(secondBox).not.toBeNull();
+  expect(secondBox!.y).toBeGreaterThan(firstBox!.y);
+
+  for (const endpoint of await endpoints.all()) {
+    const endpointBox = await endpoint.boundingBox();
+    const labelBox = await endpoint.locator(".kit-date-range-picker__endpoint-label").boundingBox();
+    const valueBox = await endpoint.locator(".kit-date-range-picker__endpoint-value").boundingBox();
+    expect(endpointBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(valueBox).not.toBeNull();
+    expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(valueBox!.x);
+    expect(valueBox!.x + valueBox!.width).toBeLessThanOrEqual(endpointBox!.x + endpointBox!.width);
+  }
+}
+
 test("custom tab renders a calendar, not native date inputs", async ({ page }) => {
   await openCustomTab(page);
   await expect(panel(page).locator(".kit-calendar")).toBeVisible();
@@ -244,4 +264,90 @@ test("an earlier second pick swaps the ends", async ({ page }) => {
   await expect(
     page.locator("code", { hasText: `"from":"${yyyy}-${mm}-05","to":"${yyyy}-${mm}-10"` }),
   ).toBeVisible();
+});
+
+test("cross-year custom ranges show complete ISO dates without crowding", async ({ page }) => {
+  await openCustomTab(page);
+
+  const calendar = panel(page).locator(".kit-calendar");
+  await expect(calendar.locator(".kit-calendar__month")).toContainText(`${yyyy}年`);
+  for (let i = 0; i < 12; i += 1) {
+    await calendar.locator(".kit-calendar__nav").first().click();
+  }
+  await day(page, 11).click();
+  for (let i = 0; i < 12; i += 1) {
+    await calendar.locator(".kit-calendar__nav").last().click();
+  }
+  await day(page, 10).click();
+
+  const from = `${yyyy - 1}-${mm}-11`;
+  const to = `${yyyy}-${mm}-10`;
+  await expect(page.locator(".kit-date-range-picker__trigger-label").first()).toHaveText(
+    `${from} - ${to}`,
+  );
+  const endpoints = panel(page).locator(".kit-date-range-picker__endpoint");
+  await expect(endpoints.locator(".kit-date-range-picker__endpoint-value")).toHaveText([from, to]);
+
+  for (const endpoint of await endpoints.all()) {
+    const endpointBox = await endpoint.boundingBox();
+    const labelBox = await endpoint.locator(".kit-date-range-picker__endpoint-label").boundingBox();
+    const valueBox = await endpoint.locator(".kit-date-range-picker__endpoint-value").boundingBox();
+    expect(endpointBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(valueBox).not.toBeNull();
+    expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(valueBox!.x);
+    expect(valueBox!.x + valueBox!.width).toBeLessThanOrEqual(endpointBox!.x + endpointBox!.width);
+  }
+});
+
+test("custom panel stays inside a 320px viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await openCustomTab(page);
+
+  const panelBox = await panel(page).boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.x).toBeGreaterThanOrEqual(0);
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(320);
+  await expectCompactEndpointsToFit(page);
+});
+
+test("240px block picker stacks complete endpoint dates", async ({ page }) => {
+  await page.locator(".kit-date-range-picker__trigger").nth(2).click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+
+  const panelBox = await panel(page).boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.width).toBe(240);
+  await expectCompactEndpointsToFit(page);
+});
+
+test("completed ISO range keeps the normal trigger stable and fully named", async ({ page }) => {
+  await page.getByRole("button", { name: "External: cross-year custom" }).click();
+
+  const fullRange = "2025-07-11 - 2026-07-10";
+  const trigger = page.locator(".kit-date-range-picker__trigger").first();
+  await expect(trigger).toHaveAccessibleName(fullRange);
+  await expect(trigger).toHaveAttribute("title", fullRange);
+  await expect(trigger).toHaveCSS("width", "168px");
+  const label = trigger.locator(".kit-date-range-picker__trigger-label");
+  expect(await label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+});
+
+test("completed ISO range stays contained in a narrow block trigger", async ({ page }) => {
+  await page.locator(".sidebar-slot").evaluate((element) => {
+    (element as HTMLElement).style.width = "168px";
+  });
+
+  const fullRange = "2025-07-11 - 2026-07-10";
+  const trigger = page.locator(".kit-date-range-picker__trigger").nth(2);
+  await expect(trigger).toHaveAccessibleName(fullRange);
+  await expect(trigger).toHaveAttribute("title", fullRange);
+  const triggerBox = await trigger.boundingBox();
+  const label = trigger.locator(".kit-date-range-picker__trigger-label");
+  const labelBox = await label.boundingBox();
+  expect(triggerBox).not.toBeNull();
+  expect(labelBox).not.toBeNull();
+  expect(triggerBox!.width).toBeLessThanOrEqual(168);
+  expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(triggerBox!.x + triggerBox!.width);
+  expect(await label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
 });

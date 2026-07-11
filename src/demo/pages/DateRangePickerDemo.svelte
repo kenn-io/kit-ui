@@ -26,19 +26,29 @@
     anchor: todayStr(),
   });
 
-  let blockSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
+  let blockSelection = $state.raw<RangeSelection>({
+    mode: "custom",
+    from: "2025-07-11",
+    to: "2026-07-10",
+  });
 </script>
 
 <DemoSection
   title="Relative / Calendar / Custom"
-  description="One trigger, three tabs: rolling presets, steppable day/week/month periods, and a custom from/to span picked with two clicks on the embedded calendar. The demo readout shows the selection object plus the concrete bounds resolveRange() derives from it."
+  description="One trigger, three tabs: rolling presets, steppable day/week/month periods, and a custom from/to span picked with two clicks on the embedded calendar. This instance uses zh-CN to demonstrate localized calendar chrome with locale-independent ISO custom bounds."
   code={`<DateRangePicker
   {selection}
   onSelect={(sel) => (selection = sel)}
   earliestDate="2025-02-16"
+  locale="zh-CN"
 />`}
 >
-  <DateRangePicker {selection} onSelect={(sel) => (selection = sel)} {earliestDate} />
+  <DateRangePicker
+    {selection}
+    onSelect={(sel) => (selection = sel)}
+    {earliestDate}
+    locale="zh-CN"
+  />
   <span class="readout">
     <code>{JSON.stringify(selection)}</code>
     <code>resolved: {resolved.from} → {resolved.to}</code>
@@ -67,6 +77,12 @@
       surface="soft"
       label="External: this calendar month"
       onclick={() => (selection = { mode: "calendar", unit: "month", anchor: monthStart })}
+    />
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: cross-year custom"
+      onclick={() => (selection = { mode: "custom", from: "2025-07-11", to: "2026-07-10" })}
     />
   </div>
 </DemoSection>

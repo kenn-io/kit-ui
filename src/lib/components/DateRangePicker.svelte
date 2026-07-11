@@ -57,9 +57,10 @@
     dialogLabel?: string;
     relativeGroupLabel?: string;
     calendarGroupLabel?: string;
-    /** BCP 47 tag for the date labels on the trigger and calendar, for apps
-     * whose language setting can diverge from the browser locale. Omitted =
-     * browser locale. (`| undefined` keeps forwarding consumers with
+    /** BCP 47 tag for calendar-mode trigger labels and the embedded calendar.
+     * Complete custom ranges deliberately stay as canonical YYYY-MM-DD so
+     * cross-year bounds are unambiguous in every locale. Omitted = browser
+     * locale. (`| undefined` keeps forwarding consumers with
      * exactOptionalPropertyTypes happy.) */
     locale?: string | undefined;
   }
@@ -156,8 +157,8 @@
       return calendarLabelFor(selection.unit, selection.anchor);
     }
     if (!selection.from || !selection.to) return customRangeLabel;
-    if (selection.from === selection.to) return formatShortDate(selection.from, locale);
-    return `${formatShortDate(selection.from, locale)} - ${formatShortDate(selection.to, locale)}`;
+    if (selection.from === selection.to) return selection.from;
+    return `${selection.from} - ${selection.to}`;
   });
 
   // The period the calendar highlights: the day/week/month around the
@@ -210,6 +211,7 @@
 
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
+  let compactPanel = $state(false);
 
   // Fixed positioning (shared popover contract) so the panel escapes
   // overflow-hidden ancestors; align maps left/right onto the trigger's
@@ -217,7 +219,9 @@
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
     const trigger = containerEl.getBoundingClientRect();
-    const width = block ? Math.max(240, trigger.width) : 264;
+    const desiredWidth = block ? Math.max(240, trigger.width) : 360;
+    const width = Math.min(desiredWidth, Math.max(0, window.innerWidth - 16));
+    compactPanel = width < 360;
     panelStyle = `${floatingPopoverStyle({
       trigger,
       viewportWidth: window.innerWidth,
@@ -348,6 +352,7 @@
     class="kit-date-range-picker__trigger"
     class:open
     type="button"
+    title={label}
     bind:this={triggerEl}
     onclick={toggleOpen}
     aria-haspopup="dialog"
@@ -413,17 +418,21 @@
         <!-- Readout, not inputs: the range is picked on the calendar below
              (two clicks); the highlighted endpoint is the one the next
              click sets. -->
-        <div class="kit-date-range-picker__endpoints" aria-live="polite">
+        <div
+          class="kit-date-range-picker__endpoints"
+          class:compact={compactPanel}
+          aria-live="polite"
+        >
           <span class="kit-date-range-picker__endpoint" class:active={!customPending}>
             <span class="kit-date-range-picker__endpoint-label">{fromLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
-              {customFrom ? formatShortDate(customFrom, locale) : "…"}
+              {customFrom || "…"}
             </span>
           </span>
           <span class="kit-date-range-picker__endpoint" class:active={customPending}>
             <span class="kit-date-range-picker__endpoint-label">{toLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
-              {customTo ? formatShortDate(customTo, locale) : "…"}
+              {customTo || "…"}
             </span>
           </span>
         </div>
@@ -455,6 +464,7 @@
 
   .kit-date-range-picker--block .kit-date-range-picker__trigger {
     width: 100%;
+    min-width: 0;
     justify-content: space-between;
   }
 
@@ -462,6 +472,7 @@
     height: 28px;
     /* Hold a stable width so the label changing (e.g. "Jun 19" vs
        "Mar 26 - Apr 25") never resizes the button and shifts neighbors. */
+    width: 168px;
     min-width: 168px;
     padding: 0 var(--space-4);
     display: inline-flex;
@@ -500,7 +511,10 @@
 
   .kit-date-range-picker__trigger-label {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
     text-align: left;
+    text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
   }
 
@@ -567,6 +581,15 @@
   .kit-date-range-picker__endpoints {
     display: flex;
     gap: var(--space-2);
+  }
+
+  .kit-date-range-picker__endpoints.compact {
+    flex-direction: column;
+  }
+
+  .kit-date-range-picker__endpoints.compact .kit-date-range-picker__endpoint {
+    flex: none;
+    width: 100%;
   }
 
   /* Sized like the pill rows above so the tabs read as one family; the
