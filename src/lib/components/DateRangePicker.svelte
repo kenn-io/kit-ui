@@ -57,9 +57,10 @@
     dialogLabel?: string;
     relativeGroupLabel?: string;
     calendarGroupLabel?: string;
-    /** BCP 47 tag for the date labels on the trigger and calendar, for apps
-     * whose language setting can diverge from the browser locale. Omitted =
-     * browser locale. (`| undefined` keeps forwarding consumers with
+    /** BCP 47 tag for calendar-mode trigger labels and the embedded calendar.
+     * Complete custom ranges deliberately stay as canonical YYYY-MM-DD so
+     * cross-year bounds are unambiguous in every locale. Omitted = browser
+     * locale. (`| undefined` keeps forwarding consumers with
      * exactOptionalPropertyTypes happy.) */
     locale?: string | undefined;
   }

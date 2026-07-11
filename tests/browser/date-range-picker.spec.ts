@@ -270,6 +270,7 @@ test("cross-year custom ranges show complete ISO dates without crowding", async 
   await openCustomTab(page);
 
   const calendar = panel(page).locator(".kit-calendar");
+  await expect(calendar.locator(".kit-calendar__month")).toContainText(`${yyyy}年`);
   for (let i = 0; i < 12; i += 1) {
     await calendar.locator(".kit-calendar__nav").first().click();
   }
