@@ -41,3 +41,47 @@ test("tabs collapse into a dropdown when narrow and expand back when wide", asyn
   // The selection made while collapsed is preserved.
   await expect(tabs.locator(".kit-top-bar__tab.active")).toHaveText("Issues");
 });
+
+test("per-tab indicator dot renders on the tab, in the probe, and survives collapse", async ({
+  page,
+}) => {
+  await gotoPage(page, "top-bar");
+
+  const host = page.locator(".bar-host").first();
+  const bar = host.locator(".kit-top-bar");
+  const slider = page.locator('input[type="range"]').first();
+
+  // Expanded: the Reviews tab carries the dot, title included.
+  const tabDot = bar.getByRole("button", { name: "Reviews" }).locator(".kit-top-bar__tab-dot");
+  await expect(tabDot).toBeVisible();
+  await expect(tabDot).toHaveAttribute("title", "roborev daemon unreachable");
+
+  // The hidden measurement probe renders it too, so the dot participates
+  // in the collapse math (probe is visibility:hidden — count, not visible).
+  await expect(bar.locator(".kit-top-bar__probe .kit-top-bar__tab-dot")).toHaveCount(1);
+
+  // The demo toggle drops the indicator from the tab and the probe alike.
+  const toggle = page.getByRole("checkbox", { name: "Reviews indicator" });
+  await toggle.uncheck();
+  await expect(bar.locator(".kit-top-bar__tab-dot")).toHaveCount(0);
+  await toggle.check();
+  await expect(tabDot).toBeVisible();
+
+  // Collapse: the dropdown option shows the dot…
+  for (const width of [800, 680, 560, 440, 360]) {
+    await setSlider(slider, width);
+  }
+  const dropdown = bar.locator(".kit-top-bar__nav-select");
+  await expect(dropdown).toBeVisible();
+  await dropdown.locator(".kit-select-dropdown__trigger").click();
+  const reviewsOption = page.getByRole("option", { name: "Reviews" });
+  await expect(reviewsOption.locator(".kit-select-dropdown__indicator")).toBeVisible();
+
+  // …and once that tab is the selection, the closed trigger shows it too.
+  await reviewsOption.click();
+  const triggerDot = dropdown.locator(
+    ".kit-select-dropdown__trigger .kit-select-dropdown__indicator",
+  );
+  await expect(triggerDot).toBeVisible();
+  await expect(triggerDot).toHaveAttribute("title", "roborev daemon unreachable");
+});

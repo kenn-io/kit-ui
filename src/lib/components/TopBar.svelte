@@ -1,13 +1,25 @@
 <script module lang="ts">
+  import type { SelectDropdownIndicator, SelectDropdownIndicatorTone } from "./select-dropdown.js";
+
+  /** Same shape as the collapsed dropdown's option indicator — the tab's
+   * indicator is handed to SelectDropdown verbatim when the tabs collapse. */
+  export type TopBarTabIndicator = SelectDropdownIndicator;
+  export type TopBarTabIndicatorTone = SelectDropdownIndicatorTone;
+
   export interface TopBarTab {
     id: string;
     label: string;
     disabled?: boolean;
+    /** Small status dot after the label ("daemon unreachable" etc.).
+     * Rendered on the expanded tab, in the collapsed dropdown's option and
+     * trigger, and in the measurement probe (it counts toward collapse). */
+    indicator?: TopBarTabIndicator;
   }
 </script>
 
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
+  import type { SelectDropdownOption } from "./select-dropdown.js";
   import SelectDropdown from "./SelectDropdown.svelte";
 
   interface Props {
@@ -74,10 +86,11 @@
   // option: SelectDropdown displays options[0] for unmatched values, which
   // would otherwise present the first disabled tab as the current page.
   const options = $derived.by(() => {
-    const opts = tabs.map((tab) => ({
+    const opts: SelectDropdownOption[] = tabs.map((tab) => ({
       value: tab.id,
       label: tab.label,
       disabled: tab.disabled,
+      indicator: tab.indicator,
     }));
     if (allDisabled) opts.unshift({ value: "", label: "—", disabled: true });
     return opts;
@@ -160,6 +173,19 @@
   });
 </script>
 
+<!-- Tab status dot. With a title it's role="img" so the label joins the tab
+     button's accessible name; without one it's decorative and hidden. -->
+{#snippet indicatorDot(indicator: TopBarTabIndicator)}
+  <span
+    class="kit-top-bar__tab-dot"
+    data-kit-tone={indicator.tone && indicator.tone !== "neutral" ? indicator.tone : undefined}
+    title={indicator.title}
+    role={indicator.title ? "img" : undefined}
+    aria-label={indicator.title}
+    aria-hidden={indicator.title ? undefined : true}
+  ></span>
+{/snippet}
+
 <header class={["kit-top-bar", className]} bind:this={barEl}>
   {#if left}
     <div class="kit-top-bar__left" bind:this={leftEl}>
@@ -198,14 +224,23 @@
               onclick={() => select(tab.id)}
             >
               {tab.label}
+              {#if tab.indicator}
+                {@render indicatorDot(tab.indicator)}
+              {/if}
             </button>
           {/each}
         </div>
       {/if}
-      <!-- Measurement probe: the full tab row, never collapsed. -->
+      <!-- Measurement probe: the full tab row, never collapsed. Indicators
+           render here too so they count toward the collapse math. -->
       <div class="kit-top-bar__probe" bind:this={probeEl} aria-hidden="true">
         {#each tabs as tab (tab.id)}
-          <span class="kit-top-bar__tab">{tab.label}</span>
+          <span class="kit-top-bar__tab">
+            {tab.label}
+            {#if tab.indicator}
+              {@render indicatorDot(tab.indicator)}
+            {/if}
+          </span>
         {/each}
       </div>
     </nav>
@@ -315,6 +350,9 @@
   }
 
   .kit-top-bar__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
     padding: 4px 14px;
     border: 0;
     background: transparent;
@@ -345,6 +383,16 @@
   .kit-top-bar__tab:disabled {
     opacity: var(--opacity-disabled);
     cursor: default;
+  }
+
+  /* Neutral (tone-less) dots fall back to muted; data-kit-tone resolves
+   * --kit-tone for the semantic tones via the shared theme map. */
+  .kit-top-bar__tab-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-dot, 50%);
+    background: var(--kit-tone, var(--text-muted));
+    flex-shrink: 0;
   }
 
   .kit-top-bar__probe {

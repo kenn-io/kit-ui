@@ -65,7 +65,11 @@ export type {
   SegmentedControlTone,
 } from "./components/SegmentedControl.svelte";
 export { default as SelectDropdown } from "./components/SelectDropdown.svelte";
-export type { SelectDropdownOption } from "./components/select-dropdown.js";
+export type {
+  SelectDropdownIndicator,
+  SelectDropdownIndicatorTone,
+  SelectDropdownOption,
+} from "./components/select-dropdown.js";
 export { default as SettingsLayout } from "./components/SettingsLayout.svelte";
 export type { SettingsCategory } from "./components/SettingsLayout.svelte";
 export { default as SettingsSection } from "./components/SettingsSection.svelte";
@@ -89,7 +93,11 @@ export type { TimelineTone } from "./components/TimelineItem.svelte";
 export { default as Toggle } from "./components/Toggle.svelte";
 export { default as Tooltip } from "./components/Tooltip.svelte";
 export { default as TopBar } from "./components/TopBar.svelte";
-export type { TopBarTab } from "./components/TopBar.svelte";
+export type {
+  TopBarTab,
+  TopBarTabIndicator,
+  TopBarTabIndicatorTone,
+} from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadOption } from "./components/typeahead.js";
 export { default as VirtualList } from "./components/VirtualList.svelte";

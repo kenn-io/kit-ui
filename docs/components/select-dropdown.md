@@ -47,8 +47,27 @@ interface SelectDropdownOption {
   label: string;
   triggerLabel?: string; // shorter label for the closed trigger
   disabled?: boolean;
+  indicator?: SelectDropdownIndicator; // small status dot after the label
+}
+
+interface SelectDropdownIndicator {
+  /** "neutral" (default) | "info" | "success" | "warning" | "danger" */
+  tone?: SelectDropdownIndicatorTone;
+  /** Tooltip / accessible description of what the dot signals. */
+  title?: string;
 }
 ```
+
+An option's `indicator` renders a small dot after its label in the list, and
+after the trigger text while that option is the selection. `tone` defaults to
+**neutral** — a muted dot (`--text-muted`); the semantic tones resolve through
+the shared `data-kit-tone` accent map in `theme.css`. Color must not carry the
+meaning alone: give the dot a `title` — it shows as a tooltip, joins the
+option's accessible name, and is appended to the trigger's aria-label while
+selected ("Primary: Reviews (roborev daemon unreachable)"). A titleless dot is
+decorative and hidden from assistive tech. This is what
+[TopBar](top-bar.md#tab-indicators) feeds tab indicators through when its tabs
+collapse.
 
 **Gotcha:** unlike a native `<select>`, an unmatched `value` does not render
 blank — the trigger falls back to the first option. If you feed `options` from
