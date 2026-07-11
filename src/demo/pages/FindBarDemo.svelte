@@ -161,7 +161,7 @@
   .find-demo {
     width: 100%;
     max-width: 560px;
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     background: var(--bg-surface);
     overflow: hidden;

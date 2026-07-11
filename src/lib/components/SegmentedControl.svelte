@@ -139,13 +139,13 @@
     background: transparent;
     font-family: inherit;
     font-size: var(--font-size-xs);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
     border-radius: calc(var(--radius-sm) - 1px);
     cursor: pointer;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
     white-space: nowrap;
   }
 
@@ -202,7 +202,7 @@
   .kit-segmented--borderless .kit-segmented__btn {
     position: relative;
     padding: 4px 10px;
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: 0;
   }
 
@@ -213,8 +213,8 @@
   /* Active trumps leftmost: it restores its left border and pulls over
    * the left neighbor's right border, its z-index winning the overlap. */
   .kit-segmented--borderless .kit-segmented__btn + .kit-segmented__btn.active {
-    border-left-width: 1px;
-    margin-left: -1px;
+    border-left-width: var(--border-width);
+    margin-left: calc(-1 * var(--border-width));
   }
 
   .kit-segmented--borderless .kit-segmented__btn:first-child {
@@ -246,7 +246,7 @@
   .kit-segmented--borderless .kit-segmented__btn.active {
     background: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 12%, transparent);
     color: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 72%, var(--text-primary));
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     border-color: color-mix(
       in srgb,
       var(--kit-tone, var(--accent-blue)) 30%,

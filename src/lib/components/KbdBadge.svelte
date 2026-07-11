@@ -24,7 +24,7 @@
     display: inline-flex;
     align-items: center;
     padding: 1px 5px;
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: 3px;
     font-size: var(--font-size-xs);
     line-height: 1;
@@ -35,7 +35,7 @@
 
   .kit-kbd-badge[data-joiner="compact"] {
     font-family: var(--font-sans);
-    letter-spacing: 0.07em;
+    letter-spacing: var(--letter-spacing-label, 0.07em);
   }
 
   @media (pointer: coarse) {

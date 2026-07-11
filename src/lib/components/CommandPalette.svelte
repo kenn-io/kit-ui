@@ -253,6 +253,8 @@
     inset: 0;
     z-index: var(--z-overlay);
     background: var(--overlay-bg);
+    -webkit-backdrop-filter: var(--overlay-filter, none);
+    backdrop-filter: var(--overlay-filter, none);
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -280,8 +282,8 @@
   .kit-command-palette__section {
     padding: var(--space-3) var(--space-4) var(--space-1);
     font-size: var(--font-size-2xs);
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: var(--letter-spacing-label, 0.04em);
     text-transform: uppercase;
     color: var(--text-muted);
   }

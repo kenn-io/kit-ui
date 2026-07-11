@@ -110,7 +110,7 @@
     width: 100%;
     max-height: 260px;
     display: flex;
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
   }

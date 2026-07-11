@@ -321,14 +321,14 @@
     border-radius: calc(var(--radius-md) - 2px);
     font-family: inherit;
     font-size: var(--font-size-md);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     line-height: 1.4;
     color: var(--text-secondary);
     cursor: pointer;
     white-space: nowrap;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-top-bar__tab:hover:not(:disabled) {

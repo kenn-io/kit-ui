@@ -292,13 +292,13 @@
     resize: vertical;
     padding: var(--space-2) var(--space-3);
     background: var(--bg-surface);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     font-family: inherit;
     font-size: var(--font-size-sm);
     line-height: 1.4;
     color: var(--text-primary);
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-mention__textarea:focus {
@@ -357,7 +357,7 @@
     flex-shrink: 0;
     color: var(--accent-blue);
     font-family: var(--font-mono);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   .kit-mention__label {

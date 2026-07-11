@@ -104,9 +104,9 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     line-height: 1;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--letter-spacing-label, 0.03em);
     text-transform: uppercase;
     vertical-align: middle;
     white-space: nowrap;
@@ -143,7 +143,7 @@
     border: none;
     cursor: pointer;
     font-family: inherit;
-    transition: opacity var(--transition-fast);
+    transition: opacity var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-chip--interactive:hover:not(:disabled) {
@@ -163,7 +163,7 @@
   .kit-chip__dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: var(--radius-dot, 50%);
     background: currentColor;
     flex-shrink: 0;
   }

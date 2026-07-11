@@ -178,6 +178,61 @@ export function checkHandRolledPopoverCard(source, filename) {
   return findings;
 }
 
+/** The three Card hierarchy recipes (inset / default / raised). Matching is
+ * signature-exact — background + border + radius (+ shadow-sm for raised)
+ * in one rule — so near-misses like TextInput's wrapper (bg-surface +
+ * border-DEFAULT + radius-md) stay clean. The popover chrome (shadow-lg)
+ * is the separate hand-rolled-popover-card rule. */
+export function checkHandRolledCard(source, filename) {
+  const findings = [];
+  const levels = [
+    {
+      level: "inset",
+      bg: "--bg-inset",
+      border: "--border-muted",
+      radius: "--radius-sm",
+      shadow: null,
+    },
+    {
+      level: "default",
+      bg: "--bg-surface",
+      border: "--border-muted",
+      radius: "--radius-md",
+      shadow: null,
+    },
+    {
+      level: "raised",
+      bg: "--bg-surface",
+      border: "--border-default",
+      radius: "--radius-lg",
+      shadow: "--shadow-sm",
+    },
+  ];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const ruleRe = /\{[^{}]*\}/g;
+    let match;
+    while ((match = ruleRe.exec(css)) !== null) {
+      const body = match[0];
+      for (const { level, bg, border, radius, shadow } of levels) {
+        if (
+          new RegExp(`background:[^;]*var\\(${bg}\\)`).test(body) &&
+          new RegExp(`border:[^;]*var\\(${border}\\)`).test(body) &&
+          new RegExp(`border-radius:\\s*var\\(${radius}\\)`).test(body) &&
+          (shadow === null || new RegExp(`box-shadow:\\s*var\\(${shadow}\\)`).test(body))
+        ) {
+          findings.push({
+            rule: "hand-rolled-card",
+            line: lineOfIndex(source, offset + match.index),
+            message: `card chrome (${bg.slice(2)} + ${border.slice(2)} + ${radius.slice(2)}) — use <Card level="${level}"> from @kenn-io/kit-ui`,
+          });
+          break;
+        }
+      }
+    }
+  }
+  return findings;
+}
+
 /** Direct clipboard writes should go through copyToClipboard / CopyButton
  * (they handle the non-secure-context fallback). */
 export function checkClipboard(source) {
@@ -517,6 +572,140 @@ export function checkHandRolledSidebarToggle(source) {
   return findings;
 }
 
+/** Raw native checkboxes (bare markup, input[type=checkbox] selectors, or
+ * checkbox-scoped accent-color styling) duplicate Checkbox/Toggle.
+ * accent-color on OTHER controls (range sliders, progress) is legitimate —
+ * theme.css sets it globally — so the CSS signal requires a selector that
+ * names checkboxes. kit-ui's own Markdown component already styles
+ * rendered task-list checkboxes. */
+export function checkHandRolledCheckbox(source, filename) {
+  const findings = [];
+  // [^<>] (not [^>]) so a failed attempt can't rescan past the next tag —
+  // the checker runs over arbitrary project files, so its regexes must
+  // stay linear on pathological inputs (CodeQL js/polynomial-redos).
+  const markupRe = /<input\b[^<>]*type=["']checkbox["']/g;
+  let match;
+  while ((match = markupRe.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-checkbox",
+      line: lineOfIndex(source, match.index),
+      message:
+        "native checkbox markup — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+    });
+  }
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    // Single linear pass over selector { body } pairs. Constraints, in
+    // order of discovery: a backtracking selector regex is polynomial on
+    // brace-free inputs (same CodeQL rule as above); a flat next-brace
+    // walk misses rules nested in @media/@supports; and re-slicing each
+    // frame's full body on `}` is quadratic on deep nesting AND blames
+    // descendant declarations on ancestor selectors (a range slider's
+    // accent-color inside `.checkbox-zone { … }` is not a checkbox).
+    // So: comments and quoted strings are skipped up front (their braces
+    // aren't structural), text accumulates only into the innermost open
+    // frame, and each rule is judged on its OWN selector + declarations.
+    const baseLine = lineOfIndex(source, offset);
+    const stack = [];
+    let line = 0; // newlines seen so far within this block
+    let pending = ""; // non-skipped text since the last structural brace
+    let declEnd = 0; // pending length as of the last STRUCTURAL semicolon
+    let segStart = 0;
+    let i = 0;
+    while (i < css.length) {
+      const ch = css[i];
+      if (ch === "\n") {
+        line += 1;
+        i += 1;
+        continue;
+      }
+      if (ch === "\\") {
+        // A CSS escape neutralizes the next character — `.foo\;bar` is a
+        // class name, not a declaration boundary. Step over both; the
+        // escaped text stays in the segment.
+        if (css[i + 1] === "\n") line += 1;
+        i += 2;
+        continue;
+      }
+      if (ch === "/" && css[i + 1] === "*") {
+        pending += css.slice(segStart, i);
+        const close = css.indexOf("*/", i + 2);
+        const stop = close === -1 ? css.length : close + 2;
+        for (let j = i; j < stop; j += 1) if (css[j] === "\n") line += 1;
+        i = segStart = stop;
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        // Quoted text stays in the segment (attribute selectors like
+        // input[type="checkbox"] must keep matching) but is stepped over
+        // wholesale so a brace or semicolon in a string isn't structural.
+        let j = i + 1;
+        while (j < css.length && css[j] !== ch) {
+          if (css[j] === "\n") line += 1;
+          if (css[j] === "\\") j += 1;
+          j += 1;
+        }
+        i = Math.min(j + 1, css.length);
+        continue;
+      }
+      if (ch === ";") {
+        // Declaration boundary, recorded during the scan so semicolons
+        // hidden in quoted attribute values can't split a selector.
+        declEnd = pending.length + (i - segStart) + 1;
+      } else if (ch === "{") {
+        pending += css.slice(segStart, i);
+        // Split at the last structural semicolon: complete declarations
+        // before it stay with the parent; the tail is the child's
+        // selector (or an at-rule prelude — which must NOT reach the
+        // parent's declaration text, else `@supports (accent-color:…)`
+        // reads as a parent declaration).
+        const selector = pending.slice(declEnd);
+        if (stack.length > 0) stack[stack.length - 1].direct += pending.slice(0, declEnd);
+        stack.push({ selector, line, direct: "" });
+        pending = "";
+        declEnd = 0;
+        segStart = i + 1;
+      } else if (ch === "}") {
+        pending += css.slice(segStart, i);
+        const frame = stack.pop();
+        if (frame) {
+          frame.direct += pending;
+          const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(frame.selector);
+          const checkboxAccent =
+            /checkbox/i.test(frame.selector) && frame.direct.includes("accent-color:");
+          if (selectsCheckbox || checkboxAccent) {
+            findings.push({
+              rule: "hand-rolled-checkbox",
+              line: baseLine + frame.line,
+              message:
+                "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+            });
+          }
+        }
+        pending = "";
+        declEnd = 0;
+        segStart = i + 1;
+      }
+      i += 1;
+    }
+  }
+  return findings;
+}
+
+/** Hand-built switches (role="switch" plus a track/knob) duplicate Toggle. */
+export function checkHandRolledToggle(source) {
+  const findings = [];
+  const re = /role=["']switch["']/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-toggle",
+      line: lineOfIndex(source, match.index),
+      message: 'role="switch" markup — use Toggle from @kenn-io/kit-ui',
+    });
+  }
+  return findings;
+}
+
 /** The visually-hidden clip recipe is shipped as .kit-sr-only in theme.css. */
 export function checkHandRolledSrOnly(source, filename) {
   const findings = [];
@@ -773,6 +962,7 @@ export const ALL_RULES = {
   "hand-rolled-table-sort": checkHandRolledTableSort,
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-popover-card": checkHandRolledPopoverCard,
+  "hand-rolled-card": checkHandRolledCard,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
   "hand-rolled-code-block": checkHandRolledCodeBlock,
   "hand-rolled-empty-state": checkHandRolledEmptyState,
@@ -785,6 +975,8 @@ export const ALL_RULES = {
   "hand-rolled-drawer": checkHandRolledDrawer,
   "hand-rolled-find-bar": checkHandRolledFindBar,
   "hand-rolled-status-dot": checkHandRolledStatusDot,
+  "hand-rolled-checkbox": checkHandRolledCheckbox,
+  "hand-rolled-toggle": checkHandRolledToggle,
   "hand-rolled-sidebar-toggle": checkHandRolledSidebarToggle,
   "hand-rolled-sr-only": checkHandRolledSrOnly,
   "hand-rolled-virtualization": checkHandRolledVirtualization,

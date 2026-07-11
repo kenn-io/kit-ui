@@ -53,7 +53,7 @@
     margin: 0;
     color: var(--text-secondary);
     font-size: var(--font-size-md);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   .kit-empty-state__description {

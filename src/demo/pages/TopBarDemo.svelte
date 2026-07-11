@@ -217,7 +217,7 @@
 
   .bar-host {
     max-width: 100%;
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
   }
@@ -251,7 +251,7 @@
     gap: var(--space-3);
     padding: 0 10px;
     background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     color: var(--text-muted);
     font-family: inherit;

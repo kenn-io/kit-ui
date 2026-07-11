@@ -508,13 +508,13 @@
     gap: 4px;
     padding: var(--typeahead-control-padding, 0 8px);
     background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: var(--typeahead-control-font-size, var(--font-size-xs));
     color: var(--text-secondary);
     cursor: pointer;
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast) var(--transition-ease, ease);
     text-align: left;
   }
 
@@ -561,7 +561,7 @@
     width: 100%;
     padding: var(--typeahead-control-padding, 0 8px);
     background: var(--bg-inset);
-    border: 1px solid var(--accent-blue);
+    border: var(--border-width) solid var(--accent-blue);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: var(--typeahead-control-font-size, var(--font-size-xs));
@@ -628,13 +628,13 @@
 
   .kit-typeahead__option--group {
     color: var(--text-primary);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   :global(.kit-typeahead__group-chevron) {
     flex-shrink: 0;
     opacity: 0.72;
-    transition: transform var(--transition-fast);
+    transition: transform var(--transition-fast) var(--transition-ease, ease);
   }
 
   :global(.kit-typeahead__group-chevron--open) {
@@ -648,13 +648,13 @@
 
   .kit-typeahead__option.selected {
     color: var(--accent-blue);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   .kit-typeahead__match {
     background: color-mix(in srgb, var(--accent-blue) 40%, transparent);
     color: var(--accent-blue);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     border-radius: 1px;
   }
 

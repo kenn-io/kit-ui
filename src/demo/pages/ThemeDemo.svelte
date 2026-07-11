@@ -180,7 +180,7 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
     width: 22px;
     height: 22px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     flex-shrink: 0;
   }
 </style>

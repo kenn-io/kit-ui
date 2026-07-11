@@ -117,6 +117,29 @@ the gyp8 normalization pass):
 | `--transition-fast`  | `0.12s`                        | hover/press color+background transitions |
 | `--opacity-disabled` | `0.5`                          | disabled controls                        |
 
+### Identity tokens
+
+A second tier of tokens carries the _feel_ of an identity rather than its
+palette — themes retune these together (see Pluggable themes below). Tokens
+whose call sites all share one value are declared on `:root` in `theme.css`;
+the rest are **fallback-only**: never declared by the default pair, read as
+`var(--token, <site default>)` so the default theme stays pixel-identical
+and each call site keeps its own tuned default until a theme opts in.
+
+| Token                                | Default                      | Used for                                                                                                                                           |
+| ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--border-width`                     | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
+| `--press-transform`                  | `translateY(1px)` (declared) | `:active` on Button and clickable Card                                                                                                             |
+| `--font-weight-medium/semibold/bold` | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
+| `--transition-ease`                  | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
+| `--transition-medium`                | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
+| `--letter-spacing-label`             | per site (fallback)          | uppercase label/eyebrow tracking                                                                                                                   |
+| `--line-height-prose`                | `1.6` (fallback)             | comment/markdown body leading                                                                                                                      |
+| `--icon-stroke`                      | `2` (fallback)               | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                |
+| `--radius-dot`                       | `50%` (fallback)             | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities |
+| `--radius-toggle`                    | `999px` (fallback)           | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                       |
+| `--overlay-filter`                   | `none` (fallback)            | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                    |
+
 **Focus**: every interactive element shows
 `outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or
 −2px inset where the element sits flush inside a group). The 1px-outside
@@ -311,6 +334,144 @@ semantic/identity colors and are left unchanged so meaning is preserved.
 Toggle by adding the `high-contrast` class to `<html>`; it stacks with
 `dark`. The theme store below manages both classes for you.
 
+## Pluggable themes
+
+Beyond overriding individual tokens, whole alternate identities plug in via a
+`data-kit-theme` attribute on `<html>`. A theme is **not** a palette swap: it
+retunes shape (`--radius-*`), elevation character (`--shadow-*`), border
+presence (`--border-*` and `--border-width`), hover feel
+(`--bg-surface-hover`), motion (`--transition-fast/medium` speed **and**
+`--transition-ease` character), press physics (`--press-transform`), focus
+treatment (`--focus-ring`), typographic voice (`--font-sans`, the
+`--font-weight-*` ladder, `--letter-spacing-label`, `--line-height-prose`),
+icon line weight (`--icon-stroke`), and overlay frosting (`--overlay-filter`)
+together, and ships both a light and a dark variant so the dark-mode toggle
+keeps working under any theme.
+
+The built-in pack lives in the opt-in `themes.css` (the default light/dark
+pair in `theme.css` is untouched by it):
+
+```ts
+import "@kenn-io/kit-ui/theme.css";
+import "@kenn-io/kit-ui/themes.css"; // opt-in
+
+import { KIT_THEMES, getThemeName, setThemeName } from "@kenn-io/kit-ui";
+
+setThemeName("gallery"); // sets data-kit-theme="gallery" on <html>
+setThemeName(null); // back to the default pair
+```
+
+`KIT_THEMES` exports metadata (`name`, `label`, `description`) for building a
+picker. The eight built-in identities:
+
+| Name           | Identity                                                                                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `control-room` | Mission console: dense cool steel, signal cyan, 0.08s feedback, machined radii, DIN lettering (Bahnschrift / Avenir Next)                                                             |
+| `terminal`     | Quiet teletype: mono type, zero radius, flat borders-only elevation, `steps(1)` no-tween state changes, no press travel, phosphor mint dark / ink-on-paper light                      |
+| `zine`         | Risograph poster: 2px ink borders, hard offset shadows, presses shove the card into its shadow (`translate(2px, 2px)`), poster weights (600/700/800), square corners, plain Helvetica |
+| `pebble`       | Soft clay: 10–20px radii, near-invisible borders, large diffuse shadows, halo focus, ease-out-expo squish press, frosted overlays, rounded face                                       |
+| `gallery`      | Exhibition catalogue: old-style serif UI (Iowan / Palatino), paper neutrals, hairline 1.5 icon strokes, book leading, ink navy                                                        |
+| `arctic`       | Glacier light: airy, near-borderless, tonal depth, generous radii, long decelerating glide, heavy overlay frost, geometric type (Avenir / Century Gothic)                             |
+| `ember`        | Last light: warm peach neutrals, burnt-orange primary, sun-tinted shadows, humanist type (Seravek / Trebuchet), pointer-tracking warm glow on buttons                                 |
+| `graphite`     | Machined steel: 0.5px hairline borders, tight 2–4px radii, linear 0.06s response, no press travel, safety orange; deliberately keeps the base Inter                                   |
+
+### Canvas decor
+
+Each theme also paints the **app canvas** — the body, where `--bg-primary`
+shows through — with an identity-specific ground: an engineering grid
+(control-room), CRT scanlines plus a faint phosphor text bloom
+(terminal dark), speckled recycled paper / a halftone dot matrix (zine),
+matte clay grain (pebble), laid paper (gallery), ice sheen and auroras
+(arctic), a dawn wash and ember horizon glow (ember), and brushed steel
+(graphite). Raster textures are generated assets in `src/lib/textures/`
+(WebP, ~650KB total across 7 files, tileable; dark modes get dedicated
+dark-baked variants because washing a light texture toward a dark ground
+crushes its grain), with light modes washed by a gradient layer so their
+strength is tuned
+in CSS. This works in any app that follows the base-styles convention of
+`background: var(--bg-primary)` on `body` — the decor rules outrank that
+shorthand on specificity. Raised surfaces (`--bg-surface`) stay flat:
+the texture is the desk, not the paper you write on.
+
+Themes additionally tint text selection (`::selection`) and scrollbars
+(`scrollbar-color`) from their accent. High contrast strips all canvas
+decor and text shadows.
+
+### Pointer-tracking hover (ember)
+
+Ember's buttons carry a tactile hover: a warm radial glow that follows the
+cursor. The mechanics are split the same way as everything else here —
+**Button publishes, the theme paints**. `Button.svelte` writes the
+pointer's element-relative position to `--kit-pointer-x/y` on `pointermove`
+(a no-op visually unless a theme reads them), and `themes.css` paints a
+`radial-gradient(… at var(--kit-pointer-x) var(--kit-pointer-y))` on the
+button's `::after` — only opacity and a slight scale ever animate, with
+ember physics on the timing: a 0.18s ignite in, a 0.45s cool-off out. The
+rules live under `@media (hover: hover)` (keyboard focus keeps the ring,
+touch never sees a stale hotspot), reduced motion drops the transition, and
+high contrast strips the overlay entirely. A custom theme can reuse the same two variables to
+paint its own pointer-reactive treatment without touching components.
+
+### Web fonts (`fonts.css`)
+
+The theme voices above lean on platform-native faces (Avenir, Seravek,
+Iowan…), which only exist on some OSes. The opt-in `fonts.css` bundles open
+(SIL OFL) equivalents — latin subsets, ~290KB total, `font-display: swap` —
+and each theme stack lists its bundled face ahead of the native stand-ins:
+
+```ts
+import "@kenn-io/kit-ui/fonts.css"; // opt-in, order-independent
+```
+
+| Family (bundled) | Feeds                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| Inter            | the base `--font-sans` (theme.css is untouched — this just makes its first choice resolve) |
+| JetBrains Mono   | the base `--font-mono` and the `terminal` theme                                            |
+| Barlow           | `control-room` (DIN lettering)                                                             |
+| Arimo            | `zine` (metric-compatible Helvetica fallback)                                              |
+| Nunito           | `pebble` (rounded)                                                                         |
+| Lora             | `gallery` (old-style serif)                                                                |
+| Figtree          | `arctic` (geometric)                                                                       |
+| Cabin            | `ember` (humanist)                                                                         |
+
+Italics are synthesized and non-latin scripts fall through to the platform
+fallbacks in each stack. Licenses: `src/lib/fonts/OFL.txt`. Apps with their
+own font pipeline can skip the file and self-host any of these families.
+
+### Authoring a custom theme
+
+`setThemeName` accepts any string, so apps can define their own themes with
+two CSS blocks (after importing `theme.css`):
+
+```css
+/* mode-independent structure + the light palette */
+:root[data-kit-theme="acme"] {
+  --radius-sm: 2px; /* ... shape, motion, focus, type */
+  --bg-primary: #f4f6f4; /* ... full light palette */
+}
+
+/* the dark palette */
+:root.dark[data-kit-theme="acme"] {
+  --bg-primary: #101410; /* ... */
+}
+```
+
+Two cascade rules to respect (see the comment atop `themes.css`):
+
+- The theme's light block outranks the base dark palette, so the dark block
+  **must re-override every mode-dependent token** the light block sets
+  (backgrounds, text, borders, accents, shadows, `--overlay-bg`,
+  `--status-waiting`). Mode-independent tokens (radii, fonts, motion, focus
+  style) are declared once in the light block.
+- Never declare `color-scheme`; `theme.css` owns it. And keep high contrast
+  winning: `themes.css` re-asserts the `high-contrast` values above any
+  `data-kit-theme` — a custom theme file should copy those two blocks (or
+  simply be imported before `themes.css`).
+
+Solid buttons render `--bg-surface` as their text color, so keep light-mode
+accents deep enough for near-white text (≥ 4.5:1) and dark-mode accents
+bright enough for near-black text — the same discipline as the defaults.
+
 ## Theme store
 
 A tiny runes store that persists the appearance preference and keeps the
@@ -324,6 +485,8 @@ import {
   isDark, // resolved appearance (system → OS)
   getHighContrast,
   setHighContrast,
+  getThemeName,
+  setThemeName, // pluggable theme (data-kit-theme), or null for default
 } from "@kenn-io/kit-ui";
 
 initTheme(); // once, at app startup (SSR-safe; no-op on the server)
@@ -334,7 +497,8 @@ setHighContrast(true); // adds the high-contrast class
 
 The mode persists to `localStorage` under `"kit-ui-theme"` (override with
 `initTheme({ storageKey })`; high contrast persists under
-`` `${storageKey}-high-contrast` ``). In `system` mode a
+`` `${storageKey}-high-contrast` `` and the theme name under
+`` `${storageKey}-name` ``). In `system` mode a
 `prefers-color-scheme` listener tracks OS changes until the mode is set
 explicitly. The getters are reactive (`$state`-backed), so they can drive
 templates directly. Storage-blocked contexts (private mode, sandboxed

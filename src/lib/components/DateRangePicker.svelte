@@ -467,7 +467,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-3);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     background: var(--bg-surface);
     color: var(--text-primary);
@@ -476,8 +476,8 @@
     cursor: pointer;
     white-space: nowrap;
     transition:
-      border-color var(--transition-fast),
-      background var(--transition-fast);
+      border-color var(--transition-fast) var(--transition-ease, ease),
+      background var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__trigger:hover {
@@ -508,7 +508,7 @@
     display: inline-flex;
     color: var(--text-muted);
     flex-shrink: 0;
-    transition: transform var(--transition-fast);
+    transition: transform var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__trigger-chevron.open {
@@ -542,11 +542,11 @@
     color: var(--text-secondary);
     font-family: inherit;
     font-size: var(--font-size-sm);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium, 500);
     cursor: pointer;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__pill:hover {
@@ -581,9 +581,9 @@
     justify-content: space-between;
     gap: var(--space-3);
     background: var(--bg-inset);
-    border: 1px solid transparent;
+    border: var(--border-width) solid transparent;
     border-radius: var(--radius-md);
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-date-range-picker__endpoint.active {
@@ -592,7 +592,7 @@
 
   .kit-date-range-picker__endpoint-label {
     font-size: var(--font-size-xs);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     color: var(--text-muted);
   }
 

@@ -1,5 +1,7 @@
 import { mount } from "svelte";
 import "../lib/theme.css";
+import "../lib/themes.css";
+import "../lib/fonts.css";
 import "../lib/mermaid.css";
 import "./demo.css";
 import App from "./App.svelte";

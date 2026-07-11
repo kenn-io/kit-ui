@@ -86,7 +86,7 @@ appShortcuts.register("mod+k", () => (open = true));
     gap: var(--space-3);
     height: 28px;
     padding: 0 var(--space-4);
-    border: 1px solid var(--border-default);
+    border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
     background: var(--bg-surface);
     color: var(--text-primary);

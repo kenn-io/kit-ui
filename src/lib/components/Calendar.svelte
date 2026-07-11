@@ -277,7 +277,7 @@
 
   .kit-calendar__month {
     font-size: var(--font-size-sm);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     color: var(--text-primary);
     text-align: center;
     flex: 1;
@@ -290,7 +290,7 @@
     border-radius: var(--radius-sm);
     font-family: inherit;
     cursor: pointer;
-    transition: background var(--transition-fast);
+    transition: background var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-calendar__month--button:hover {
@@ -310,8 +310,8 @@
     color: var(--text-secondary);
     cursor: pointer;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-calendar__nav:hover:not(:disabled) {
@@ -333,11 +333,11 @@
 
   .kit-calendar__weekday {
     font-size: var(--font-size-2xs);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     color: var(--text-muted);
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: var(--letter-spacing-label, 0.02em);
     overflow: hidden;
     text-overflow: clip;
     white-space: nowrap;
@@ -361,8 +361,8 @@
     color: var(--text-secondary);
     cursor: pointer;
     transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+      background var(--transition-fast) var(--transition-ease, ease),
+      color var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-calendar__day {

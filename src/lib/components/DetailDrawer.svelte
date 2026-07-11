@@ -106,6 +106,8 @@
     position: fixed;
     inset: 0;
     background: var(--overlay-bg, rgba(0, 0, 0, 0.3));
+    -webkit-backdrop-filter: var(--overlay-filter, none);
+    backdrop-filter: var(--overlay-filter, none);
     z-index: var(--z-overlay);
   }
 
@@ -121,7 +123,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    animation: kit-detail-drawer-slide-in 0.18s ease-out;
+    animation: kit-detail-drawer-slide-in var(--transition-medium, 0.18s)
+      var(--transition-ease, ease-out);
   }
 
   @keyframes kit-detail-drawer-slide-in {

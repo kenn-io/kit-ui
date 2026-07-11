@@ -2,6 +2,9 @@
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
 export { default as Calendar } from "./components/Calendar.svelte";
+export { default as Checkbox } from "./components/Checkbox.svelte";
+export { default as Card } from "./components/Card.svelte";
+export type { CardLevel, CardPadding, CardTone } from "./components/Card.svelte";
 export { default as Chip } from "./components/Chip.svelte";
 export type { ChipSize, ChipTone } from "./components/Chip.svelte";
 export { default as ChipStack } from "./components/ChipStack.svelte";
@@ -10,6 +13,7 @@ export { default as CollapsibleSidebar } from "./components/CollapsibleSidebar.s
 export { default as ColorLabel } from "./components/ColorLabel.svelte";
 export type { ColorLabelSize } from "./components/ColorLabel.svelte";
 export { default as CommandPalette } from "./components/CommandPalette.svelte";
+export { default as CommentCard } from "./components/CommentCard.svelte";
 export type { PaletteCommand } from "./components/CommandPalette.svelte";
 export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
@@ -79,6 +83,10 @@ export type { SortDirection } from "./components/TableHeaderCell.svelte";
 export { default as TextInput } from "./components/TextInput.svelte";
 export type { TextInputSize } from "./components/TextInput.svelte";
 export { default as ThemeToggle } from "./components/ThemeToggle.svelte";
+export { default as Timeline } from "./components/Timeline.svelte";
+export { default as TimelineItem } from "./components/TimelineItem.svelte";
+export type { TimelineTone } from "./components/TimelineItem.svelte";
+export { default as Toggle } from "./components/Toggle.svelte";
 export { default as Tooltip } from "./components/Tooltip.svelte";
 export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab } from "./components/TopBar.svelte";
@@ -110,10 +118,14 @@ export {
   cleanupTheme,
   getHighContrast,
   getThemeMode,
+  getThemeName,
   initTheme,
   isDark,
+  KIT_THEMES,
   setHighContrast,
   setThemeMode,
+  setThemeName,
+  type KitThemeInfo,
   type ThemeMode,
   type ThemeOptions,
 } from "./stores/theme.svelte.js";

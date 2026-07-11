@@ -1,0 +1,109 @@
+/*
+ * kit-ui web-font pack (opt-in).
+ *
+ * Import alongside the stylesheets whose stacks it feeds:
+ *
+ *   import "@kenn-io/kit-ui/theme.css";
+ *   import "@kenn-io/kit-ui/themes.css"; // theme pack (optional)
+ *   import "@kenn-io/kit-ui/fonts.css";  // this file (optional)
+ *
+ * Guarantees every declared font voice cross-platform instead of relying
+ * on faces a given OS happens to ship:
+ *
+ *   - Inter + JetBrains Mono — the base theme.css stacks (theme.css itself
+ *     is untouched; this just makes its first-choice families resolve).
+ *   - Barlow (Control Room), Arimo (Zine), Nunito (Pebble), Lora
+ *     (Gallery), Figtree (Arctic), Cabin (Ember) — the theme-pack voices;
+ *     themes.css lists each ahead of its platform-native equivalents.
+ *
+ * Latin subsets only (~290KB total); non-latin glyphs fall through to the
+ * platform fallbacks in each stack, as do italics (synthesized). All
+ * families are licensed under the SIL Open Font License 1.1 — see
+ * fonts/OFL.txt. Apps with their own font pipeline can skip this file and
+ * load any of these families themselves.
+ */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/inter-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("./fonts/jetbrains-mono-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/barlow-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/barlow-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/barlow-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/barlow-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Arimo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/arimo-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("./fonts/nunito-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Lora";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/lora-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("./fonts/figtree-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Cabin";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/cabin-var.woff2") format("woff2");
+}

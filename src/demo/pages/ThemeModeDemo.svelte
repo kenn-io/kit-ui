@@ -1,5 +1,6 @@
 <script lang="ts">
   import SegmentedControl from "../../lib/components/SegmentedControl.svelte";
+  import Toggle from "../../lib/components/Toggle.svelte";
   import {
     getHighContrast,
     getThemeMode,
@@ -51,22 +52,11 @@ initTheme(); // once, at app startup
 <DemoSection
   title="High contrast"
   description="Persisted flag that adds the high-contrast class alongside dark, strengthening text/border tokens to clear WCAG AA."
-  code={`import { getHighContrast, setHighContrast } from "@kenn-io/kit-ui";
+  code={`import { getHighContrast, setHighContrast, Toggle } from "@kenn-io/kit-ui";
 
-<input
-  type="checkbox"
-  checked={getHighContrast()}
-  onchange={(e) => setHighContrast(e.currentTarget.checked)}
-/>`}
+<Toggle checked={getHighContrast()} onchange={setHighContrast} label="High contrast" />`}
 >
-  <label class="hc-toggle">
-    <input
-      type="checkbox"
-      checked={getHighContrast()}
-      onchange={(e) => setHighContrast(e.currentTarget.checked)}
-    />
-    High contrast
-  </label>
+  <Toggle checked={getHighContrast()} onchange={setHighContrast} label="High contrast" />
 </DemoSection>
 
 <DemoSection
@@ -86,20 +76,6 @@ initTheme(); // once, at app startup
 </DemoSection>
 
 <style>
-  .hc-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    font-size: var(--font-size-md);
-    color: var(--text-primary);
-    cursor: pointer;
-  }
-
-  .hc-toggle input {
-    accent-color: var(--accent-blue);
-    cursor: pointer;
-  }
-
   .state {
     display: grid;
     grid-template-columns: max-content 1fr;

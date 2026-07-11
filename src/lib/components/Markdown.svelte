@@ -45,7 +45,7 @@
 <style>
   .kit-markdown {
     font-size: var(--font-size-md);
-    line-height: 1.6;
+    line-height: var(--line-height-prose, 1.6);
     color: var(--text-primary);
     overflow-wrap: break-word;
   }
@@ -65,7 +65,7 @@
   .kit-markdown :global(h5),
   .kit-markdown :global(h6) {
     margin: 1.2em 0 0.5em;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     line-height: 1.3;
   }
 
@@ -140,12 +140,12 @@
   .kit-markdown :global(th),
   .kit-markdown :global(td) {
     padding: var(--space-2) var(--space-4);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     text-align: left;
   }
 
   .kit-markdown :global(th) {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold, 600);
     background: var(--bg-inset);
   }
 
@@ -164,7 +164,7 @@
   .kit-markdown :global(pre) {
     padding: var(--space-5) var(--space-6);
     background: var(--bg-inset);
-    border: 1px solid var(--border-muted);
+    border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
     line-height: 1.55;

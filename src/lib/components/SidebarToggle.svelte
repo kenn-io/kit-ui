@@ -52,8 +52,8 @@
     color: var(--text-muted);
     cursor: pointer;
     transition:
-      color var(--transition-fast),
-      background var(--transition-fast);
+      color var(--transition-fast) var(--transition-ease, ease),
+      background var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-sidebar-toggle:hover {
