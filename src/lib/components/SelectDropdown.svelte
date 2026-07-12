@@ -4,7 +4,7 @@
   import { tick } from "svelte";
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { SelectDropdownOption } from "./select-dropdown.js";
+  import type { SelectDropdownIndicator, SelectDropdownOption } from "./select-dropdown.js";
 
   interface Props {
     value: string;
@@ -44,11 +44,15 @@
   // options (or derive anything used for submission with the same fallback),
   // otherwise the trigger can show one option while submit acts on a stale value.
   const selectedOption = $derived(options.find((option) => option.value === value) ?? options[0]);
-  const triggerLabel = $derived(
-    title
-      ? `${title}: ${selectedOption?.triggerLabel ?? selectedOption?.label ?? value}`
-      : (selectedOption?.triggerLabel ?? selectedOption?.label ?? value),
-  );
+  const triggerText = $derived(selectedOption?.triggerLabel ?? selectedOption?.label ?? value);
+  // aria-label on the trigger overrides its contents for assistive tech, so
+  // the selected option's indicator title must be folded in here — the dot's
+  // own label never reaches the accessible name.
+  const triggerLabel = $derived.by(() => {
+    const base = title ? `${title}: ${triggerText}` : triggerText;
+    const note = selectedOption?.indicator?.title;
+    return note ? `${base} (${note})` : base;
+  });
 
   $effect(() => {
     if (!open) return;
@@ -156,6 +160,21 @@
   }
 </script>
 
+<!-- Option status dot. In the option rows the role="img" label joins the
+     option's accessible name; on the trigger the title is folded into
+     triggerLabel instead (aria-label overrides content). A titleless dot is
+     decorative — hidden from assistive tech. -->
+{#snippet indicatorDot(indicator: SelectDropdownIndicator)}
+  <span
+    class="kit-select-dropdown__indicator"
+    data-kit-tone={indicator.tone && indicator.tone !== "neutral" ? indicator.tone : undefined}
+    title={indicator.title}
+    role={indicator.title ? "img" : undefined}
+    aria-label={indicator.title}
+    aria-hidden={indicator.title ? undefined : true}
+  ></span>
+{/snippet}
+
 <div class={["kit-select-dropdown", className]} bind:this={containerEl} onfocusout={onFocusout}>
   <button
     bind:this={buttonEl}
@@ -172,9 +191,10 @@
     {title}
     {disabled}
   >
-    <span class="kit-select-dropdown__value"
-      >{selectedOption?.triggerLabel ?? selectedOption?.label ?? value}</span
-    >
+    <span class="kit-select-dropdown__value">{triggerText}</span>
+    {#if selectedOption?.indicator}
+      {@render indicatorDot(selectedOption.indicator)}
+    {/if}
     <ChevronDownIcon
       class="kit-select-dropdown__chevron"
       size="12"
@@ -207,7 +227,12 @@
             highlightedIndex = index;
           }}
         >
-          <span class="kit-select-dropdown__option-label">{option.label}</span>
+          <span class="kit-select-dropdown__option-label">
+            {option.label}
+            {#if option.indicator}
+              {@render indicatorDot(option.indicator)}
+            {/if}
+          </span>
           <span class="kit-select-dropdown__check">
             {#if option.value === value}
               <CheckIcon size="12" strokeWidth="2.2" aria-hidden="true" />
@@ -317,6 +342,19 @@
 
   .kit-select-dropdown__option-label {
     flex: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  /* Neutral (tone-less) dots fall back to muted; data-kit-tone resolves
+   * --kit-tone for the semantic tones via the shared theme map. */
+  .kit-select-dropdown__indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-dot, 50%);
+    background: var(--kit-tone, var(--text-muted));
+    flex-shrink: 0;
   }
 
   .kit-select-dropdown__check {

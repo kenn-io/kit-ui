@@ -5,6 +5,7 @@
   import SearchIcon from "@lucide/svelte/icons/search";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import {
+    Checkbox,
     FitStages,
     IconButton,
     KbdBadge,
@@ -15,18 +16,30 @@
   } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
-  const middlemanTabs: TopBarTab[] = [
+  let reviewsIndicator = $state(true);
+
+  const middlemanTabs = $derived<TopBarTab[]>([
     { id: "activity", label: "Activity" },
     { id: "repos", label: "Repos" },
     { id: "pulls", label: "Pulls" },
     { id: "issues", label: "Issues" },
-    { id: "reviews", label: "Reviews" },
+    {
+      id: "reviews",
+      label: "Reviews",
+      // Neutral (tone-less) indicator: the muted "something is off but not
+      // alarming" dot — middleman shows this when its review daemon is down.
+      indicator: reviewsIndicator ? { title: "roborev daemon unreachable" } : undefined,
+    },
     { id: "workspaces", label: "Workspaces" },
-  ];
+  ]);
 
   const agentsviewTabs: TopBarTab[] = [
     { id: "sessions", label: "Sessions" },
-    { id: "usage", label: "Usage" },
+    {
+      id: "usage",
+      label: "Usage",
+      indicator: { tone: "warning", title: "Approaching plan limit" },
+    },
     { id: "activity", label: "Activity" },
     { id: "trends", label: "Trends" },
     { id: "insights", label: "Insights" },
@@ -64,17 +77,24 @@
 
 <DemoSection
   title="middleman-style: brand + centered tabs + actions"
-  description="Reserved left/right regions never shrink; the tab group collapses into a SelectDropdown the moment the full row stops fitting (measured, not a breakpoint). Drag the slider."
+  description="Reserved left/right regions never shrink; the tab group collapses into a SelectDropdown the moment the full row stops fitting (measured, not a breakpoint). The Reviews tab carries a per-tab indicator dot — it follows the tab into the collapsed dropdown's options and trigger. Drag the slider."
   code={`<TopBar tabs={TABS} bind:active bind:collapsed centerTabs>
   {#snippet left()}<span class="brand">middleman</span><SelectDropdown … />{/snippet}
   {#snippet right()}<IconButton ariaLabel="Search"><Search /></IconButton>…{/snippet}
-</TopBar>`}
+</TopBar>
+
+const TABS: TopBarTab[] = [
+  …
+  { id: "reviews", label: "Reviews",
+    indicator: daemonDown ? { title: "roborev daemon unreachable" } : undefined },
+];`}
 >
   <div class="controls">
     <label class="control">
       Width {mmWidth}px
       <input type="range" min="360" max="920" bind:value={mmWidth} />
     </label>
+    <Checkbox bind:checked={reviewsIndicator} label="Reviews indicator" />
     <span class="control-note"
       >collapsed: <code>{mmCollapsed}</code>, active: <code>{mmActive}</code></span
     >
@@ -123,7 +143,7 @@
 
 <DemoSection
   title="agentsview-style: two breakpoints via searchMinWidth + FitStages"
-  description="With searchMinWidth the search region owns the flexible middle. First breakpoint: the tabs collapse into the dropdown and the (now full-width) search field spans the freed space. Second breakpoint: FitStages swaps the field for the compact icon form once even the field's minimum stops fitting."
+  description="With searchMinWidth the search region owns the flexible middle. First breakpoint: the tabs collapse into the dropdown and the (now full-width) search field spans the freed space. Second breakpoint: FitStages swaps the field for the compact icon form once even the field's minimum stops fitting. The Usage tab shows a toned indicator (tone: warning)."
   code={`<TopBar tabs={TABS} bind:active bind:collapsed
   searchMinWidth={collapsed ? 48 : 220}>
   {#snippet search()}
