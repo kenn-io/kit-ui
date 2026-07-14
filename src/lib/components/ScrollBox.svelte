@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount, type Snippet } from "svelte";
+  import { onMount, type Snippet } from "svelte";
   import type { ClassValue, HTMLAttributes } from "svelte/elements";
   import { getScrollIndicatorGeometry } from "./scroll-indicator.js";
 
@@ -56,10 +56,11 @@
     if (viewport) observer.observe(viewport);
     if (content) observer.observe(content);
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(hideTimer);
+    };
   });
-
-  onDestroy(() => window.clearTimeout(hideTimer));
 </script>
 
 <div class={["kit-scrollbox", className]} data-test={dataTest}>
