@@ -64,6 +64,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Modal](docs/components/modal.md)                            | both (consolidated)                 | Dialog primitive: overlay, header, body, footer snippet                                       |
 | [DateRangePicker](docs/components/date-range-picker.md)      | agentsview                          | Relative / calendar / custom date-range popover with `resolveRange()`                         |
 | [RefreshControl](docs/components/refresh-control.md)         | agentsview                          | Refresh button + "Updated Xm ago" label with auto-refresh                                     |
+| [ScrollBox](docs/components/scroll-box.md)                   | middleman `ScrollBox`               | Vertical scroller with fading overlay indicator instead of a native scrollbar                 |
 | [SearchInput](docs/components/text-input.md)                 | new (TextInput preset)              | Filter field: search icon, clear button, optional ⌘K hint                                     |
 | [SegmentedControl](docs/components/segmented-control.md)     | middleman (inline pattern)          | "All / PRs / Issues" style value selector                                                     |
 | [SelectDropdown](docs/components/select-dropdown.md)         | middleman                           | Accessible single-select combobox                                                             |

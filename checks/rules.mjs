@@ -778,6 +778,29 @@ export function checkHandRolledVirtualization(source) {
   return findings;
 }
 
+/** A vertical scroller with its native scrollbar hidden is the ScrollBox
+ * pattern. Horizontal strips (overflow-x) are exempt — ScrollBox is
+ * vertical-only. */
+export function checkHandRolledScrollBox(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const blockRe = /\{[^{}]*\}/g;
+    let block;
+    while ((block = blockRe.exec(css)) !== null) {
+      const hidden = /scrollbar-width:\s*none/.exec(block[0]);
+      if (!hidden) continue;
+      if (!/overflow(?:-y)?:\s*(?:auto|scroll)/.test(block[0])) continue;
+      findings.push({
+        rule: "hand-rolled-scroll-box",
+        line: lineOfIndex(source, offset + block.index + hidden.index),
+        message:
+          "vertical scroller with hidden scrollbar — use ScrollBox from @kenn-io/kit-ui (overlay indicator, labelled keyboard-accessible region)",
+      });
+    }
+  }
+  return findings;
+}
+
 /** Direct markdown/sanitizer imports duplicate the markdown pipeline,
  * which bundles sanitization and code highlighting. */
 export function checkHandRolledMarkdown(source) {
@@ -980,6 +1003,7 @@ export const ALL_RULES = {
   "hand-rolled-sidebar-toggle": checkHandRolledSidebarToggle,
   "hand-rolled-sr-only": checkHandRolledSrOnly,
   "hand-rolled-virtualization": checkHandRolledVirtualization,
+  "hand-rolled-scroll-box": checkHandRolledScrollBox,
   "hand-rolled-markdown": checkHandRolledMarkdown,
   "hand-rolled-mermaid": checkHandRolledMermaid,
   "hand-rolled-focus-trap": checkHandRolledFocusTrap,
