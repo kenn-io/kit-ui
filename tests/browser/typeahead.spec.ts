@@ -17,6 +17,21 @@ test("filters, highlights matches, and selects", async ({ page }) => {
   await expect(page.locator('[data-demo="repo-value"]')).toHaveText("kenn-io/agentsview");
 });
 
+test("remote mode reports queries without filtering caller-supplied options", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+  await input.fill("does not match the result");
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("does not match the result");
+  await expect(page.getByRole("option", { name: "Server result" })).toBeVisible();
+
+  await page.getByRole("option", { name: "Server result" }).click();
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("server-result");
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+});
+
 test("clear row selects the empty value and meta text is searched", async ({ page }) => {
   await gotoPage(page, "typeahead");
   const trigger = page.getByRole("button", { name: /^owner:/ });

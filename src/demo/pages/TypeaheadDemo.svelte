@@ -10,6 +10,12 @@
     { name: "kenn-io/infra", label: "kenn-io/infra", displayLabel: "infra" },
   ];
 
+  let remoteValue = $state("");
+  let remoteQuery = $state("");
+  const remoteOptions = $derived<TypeaheadOption[]>(
+    remoteQuery === "" ? [] : [{ name: "server-result", label: "Server result" }],
+  );
+
   let owner = $state("");
   const owners: TypeaheadOption[] = [
     { name: "marius", label: "marius", meta: "42 open" },
@@ -97,6 +103,40 @@
     }}
   />
   <span>value: <code data-demo="repo-value">{repo || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Remote option source"
+  description="remote disables local filtering while onquery reports input changes so a caller can fetch and replace the option source. Opening, closing, and selection reset the reported query."
+  code={`<Typeahead
+  remote
+  options={remoteOptions}
+  value={remoteValue}
+  fallbackLabel="Select remote result"
+  placeholder="Search remote options…"
+  onquery={(query) => {
+    remoteQuery = query;
+  }}
+  onselect={(value) => {
+    remoteValue = value;
+  }}
+/>`}
+>
+  <Typeahead
+    remote
+    options={remoteOptions}
+    value={remoteValue}
+    fallbackLabel="Select remote result"
+    placeholder="Search remote options…"
+    onquery={(query) => {
+      remoteQuery = query;
+    }}
+    onselect={(value) => {
+      remoteValue = value;
+    }}
+  />
+  <span>query: <code data-demo="remote-query">{remoteQuery || "(empty)"}</code></span>
+  <span>value: <code data-demo="remote-value">{remoteValue || "(none)"}</code></span>
 </DemoSection>
 
 <DemoSection

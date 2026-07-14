@@ -32,6 +32,10 @@
     /** Replace the option rows with a loading row (async option sources). */
     loading?: boolean;
     loadingLabel?: string;
+    /** Disable local filtering when the caller supplies remotely filtered options. */
+    remote?: boolean;
+    /** Called when the open input query changes, including reset on open and close. */
+    onquery?: (query: string) => void;
     /** Error row rendered above the options, which stay selectable so the
      * user can retry (clear it in `onselect`). */
     error?: string;
@@ -59,6 +63,8 @@
     triggerPrefix = "",
     loading = false,
     loadingLabel = "Loading…",
+    remote = false,
+    onquery,
     error = "",
     header,
     onselect,
@@ -141,7 +147,8 @@
     return rows;
   }
 
-  const rows = $derived(buildRows(options, 0, query.trim().toLowerCase(), false));
+  const filterQuery = $derived(remote ? "" : query.trim().toLowerCase());
+  const rows = $derived(buildRows(options, 0, filterQuery, false));
   const grouped = $derived(options.some((o) => o.children));
   const clearOffset = $derived(allowClear ? 1 : 0);
   // With no matches, the custom value is a real row (at index `clearOffset`)
@@ -174,9 +181,14 @@
       (allowCustom && value !== "" ? value : fallbackLabel),
   );
 
+  function updateQuery(nextQuery: string): void {
+    query = nextQuery;
+    onquery?.(nextQuery);
+  }
+
   async function openDropdown() {
     if (disabled) return;
-    query = "";
+    updateQuery("");
     open = true;
     // The trigger button unmounts as the input mounts; focus briefly lands on
     // <body> and would fire focusout on the container. Suppress dismissal
@@ -195,7 +207,7 @@
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
     open = false;
-    query = "";
+    updateQuery("");
     // Invalidate in-flight selections: a slow onselect from this (or an
     // earlier) open instance must not close a menu the user reopens later.
     selectSeq += 1;
@@ -357,8 +369,11 @@
       class="kit-typeahead__input"
       type="text"
       role="combobox"
-      bind:value={query}
-      oninput={() => (highlightIndex = rows.length > 0 || customValue !== "" ? clearOffset : 0)}
+      value={query}
+      oninput={(event) => {
+        updateQuery(event.currentTarget.value);
+        highlightIndex = rows.length > 0 || customValue !== "" ? clearOffset : 0;
+      }}
       onkeydown={handleKeydown}
       {placeholder}
       {disabled}
