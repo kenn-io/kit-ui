@@ -778,6 +778,19 @@ export function checkHandRolledVirtualization(source) {
   return findings;
 }
 
+/** Whether a declaration block scrolls vertically: overflow-y wins, and the
+ * one/two-value overflow shorthand resolves to (x, y) per CSS semantics —
+ * `overflow: auto hidden` is horizontal-only, `overflow: hidden auto` is a
+ * vertical scroller. */
+function hasVerticalOverflow(block) {
+  const axis = /overflow-y:\s*([a-z]+)/.exec(block);
+  if (axis) return axis[1] === "auto" || axis[1] === "scroll";
+  const shorthand = /overflow:\s*([a-z]+)(?:\s+([a-z]+))?/.exec(block);
+  if (!shorthand) return false;
+  const y = shorthand[2] ?? shorthand[1];
+  return y === "auto" || y === "scroll";
+}
+
 /** A vertical scroller with its native scrollbar hidden is the ScrollBox
  * pattern. Horizontal strips (overflow-x) are exempt — ScrollBox is
  * vertical-only. */
@@ -789,7 +802,7 @@ export function checkHandRolledScrollBox(source, filename) {
     while ((block = blockRe.exec(css)) !== null) {
       const hidden = /scrollbar-width:\s*none/.exec(block[0]);
       if (!hidden) continue;
-      if (!/overflow(?:-y)?:\s*(?:auto|scroll)/.test(block[0])) continue;
+      if (!hasVerticalOverflow(block[0])) continue;
       findings.push({
         rule: "hand-rolled-scroll-box",
         line: lineOfIndex(source, offset + block.index + hidden.index),

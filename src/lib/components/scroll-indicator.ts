@@ -17,7 +17,13 @@ export function getScrollIndicatorGeometry(
     return { scrollable: false, height: 0, top: 0 };
   }
 
-  const height = Math.max(MIN_THUMB_HEIGHT, (viewportHeight * viewportHeight) / contentHeight);
+  // The minimum keeps the thumb grabbable-looking on long content, but it
+  // must never exceed the track: a sub-24px viewport would otherwise get
+  // negative travel and an off-track thumb.
+  const height = Math.min(
+    viewportHeight,
+    Math.max(MIN_THUMB_HEIGHT, (viewportHeight * viewportHeight) / contentHeight),
+  );
   const scrollRange = contentHeight - viewportHeight;
   const travel = viewportHeight - height;
   const clampedScrollTop = Math.min(Math.max(scrollTop, 0), scrollRange);
@@ -25,6 +31,6 @@ export function getScrollIndicatorGeometry(
   return {
     scrollable: true,
     height,
-    top: (clampedScrollTop / scrollRange) * travel,
+    top: travel <= 0 ? 0 : (clampedScrollTop / scrollRange) * travel,
   };
 }

@@ -32,6 +32,10 @@
   const geometry = $derived(getScrollIndicatorGeometry(viewportHeight, contentHeight, scrollTop));
 
   function handleScroll(event: Event): void {
+    // Re-measure on every scroll: overflowing/transformed descendants can
+    // grow scrollHeight without resizing the content wrapper's border box,
+    // so the ResizeObserver alone can miss them.
+    updateDimensions();
     scrollTop = (event.currentTarget as HTMLDivElement).scrollTop;
     if (geometry.scrollable) {
       visible = true;
@@ -44,9 +48,12 @@
   }
 
   function updateDimensions(): void {
-    if (!viewport || !content) return;
+    if (!viewport) return;
     viewportHeight = viewport.clientHeight;
-    contentHeight = content.offsetHeight;
+    // scrollHeight, not the content wrapper's offsetHeight: it includes
+    // collapsed margins and overflowing descendants, which is what the
+    // viewport can actually scroll across.
+    contentHeight = viewport.scrollHeight;
   }
 
   onMount(() => {

@@ -25,4 +25,12 @@ describe("getScrollIndicatorGeometry", () => {
       top: 76,
     });
   });
+
+  test("caps the thumb at the track height for sub-minimum viewports", () => {
+    expect(getScrollIndicatorGeometry(20, 100, 40)).toEqual({
+      scrollable: true,
+      height: 20,
+      top: 0,
+    });
+  });
 });

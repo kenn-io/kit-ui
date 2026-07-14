@@ -6,6 +6,12 @@ the last scroll event (no fade under `prefers-reduced-motion`; `CanvasText`
 thumb under forced colors). The viewport is a labelled focusable
 `role="region"`, so keyboard users can tab to it and scroll with arrow keys.
 
+The thumb is deliberately an indicator, not a control: it has
+`pointer-events: none` and cannot be dragged. Pointer users scroll with the
+wheel, trackpad, or keyboard like any scroller — dragging is an explicit
+non-goal. For a surface whose users rely on grabbing the scrollbar (or that
+scrolls both axes), keep a native scroller instead of ScrollBox.
+
 The thumb geometry is exported as a pure function
 (`getScrollIndicatorGeometry`) — unit-tested in
 `checks/scroll-indicator.test.ts` and reusable for custom overlay scrollers.

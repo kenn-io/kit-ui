@@ -506,6 +506,15 @@ describe("hand-rolled components", () => {
     expect(checkSource(separate, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
   });
 
+  test("scroll-box: two-value overflow shorthand resolves per axis", () => {
+    const horizontal = svelte(`.strip { overflow: auto hidden; scrollbar-width: none; }`);
+    expect(checkSource(horizontal, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
+    const vertical = svelte(`.pane { overflow: hidden auto; scrollbar-width: none; }`);
+    expect(checkSource(vertical, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(1);
+    const axisWins = svelte(`.pane { overflow: auto; overflow-y: hidden; scrollbar-width: none; }`);
+    expect(checkSource(axisWins, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
+  });
+
   test("markdown: direct marked/dompurify imports", () => {
     const src = `import { marked } from "marked";\nimport DOMPurify from "dompurify";`;
     const findings = checkSource(src, "markdown.ts", ["hand-rolled-markdown"]);
