@@ -490,6 +490,22 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "list.ts", ["hand-rolled-virtualization"])).toHaveLength(1);
   });
 
+  test("scroll-box: vertical scroller with hidden scrollbar", () => {
+    const src = svelte(`.feed { overflow-y: auto; scrollbar-width: none; }`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-scroll-box"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("ScrollBox");
+  });
+
+  test("scroll-box: shorthand overflow counts, horizontal strips are exempt", () => {
+    const both = svelte(`.pane { overflow: auto; scrollbar-width: none; }`);
+    expect(checkSource(both, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(1);
+    const tabs = svelte(`.tabs { overflow-x: auto; scrollbar-width: none; }`);
+    expect(checkSource(tabs, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
+    const separate = svelte(`.a { overflow-y: auto; }\n.b { scrollbar-width: none; }`);
+    expect(checkSource(separate, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
+  });
+
   test("markdown: direct marked/dompurify imports", () => {
     const src = `import { marked } from "marked";\nimport DOMPurify from "dompurify";`;
     const findings = checkSource(src, "markdown.ts", ["hand-rolled-markdown"]);
