@@ -107,7 +107,9 @@ pre.mermaid.kit-mermaid-viewer {
   justify-content: center;
   transform-origin: center center;
   transition: transform 120ms ease-out;
-  will-change: transform;
+  /* Do not promote this SVG-bearing element with will-change. Chromium
+   * otherwise keeps a fixed raster of the diagram and compositor-scales
+   * that bitmap instead of repainting the vector at each zoom level. */
 }
 
 .kit-mermaid-viewer__pan svg {
