@@ -188,7 +188,9 @@ test("starts resizing from the live height before deferred observers refresh", a
   await expect(separator).toHaveAttribute("aria-valuenow", "176");
 });
 
-test("does not remeasure constraints when only the dock height changes", async ({ page }) => {
+test("coalesces dock-owned resizes and refreshes after a concurrent context change", async ({
+  page,
+}) => {
   await gotoPage(page, "bottom-dock");
 
   const separator = page.getByRole("separator", { name: "Review details" });
@@ -204,8 +206,11 @@ test("does not remeasure constraints when only the dock height changes", async (
   const measurement = await separator.evaluate(async (element) => {
     const dock = element.closest(".kit-bottom-dock");
     const workspace = element.closest<HTMLElement>(".workspace-surface");
+    const workspaceContent = workspace?.querySelector<HTMLElement>(".workspace-content");
     const row = dock?.querySelector<HTMLElement>(".review-row");
-    if (!row || !workspace) throw new Error("Bottom dock test layout is missing");
+    if (!row || !workspace || !workspaceContent) {
+      throw new Error("Bottom dock test layout is missing");
+    }
 
     let reads = 0;
     Object.defineProperty(row, "scrollHeight", {
@@ -217,13 +222,17 @@ test("does not remeasure constraints when only the dock height changes", async (
     });
 
     const heightBefore = Math.round(workspace.getBoundingClientRect().height);
-    element.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowUp",
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    for (let step = 0; step < 3; step += 1) {
+      element.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowUp",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      if (step === 1) workspaceContent.style.height = "180px";
+      await new Promise(requestAnimationFrame);
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
     return {
       constraintReads: reads,
@@ -233,5 +242,5 @@ test("does not remeasure constraints when only the dock height changes", async (
   });
 
   expect(measurement.heightAfter).toBeGreaterThan(measurement.heightBefore);
-  expect(measurement.constraintReads).toBe(0);
+  expect(measurement.constraintReads).toBe(1);
 });

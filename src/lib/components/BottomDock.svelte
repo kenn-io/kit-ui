@@ -48,6 +48,8 @@
   let dockElement: HTMLElement | null = null;
   let ownResizePending = false;
   let ownResizeResetFrame: number | null = null;
+  let suppressedContextResize = false;
+  let scheduleConstraintRefresh: (() => void) | null = null;
 
   interface ScrollPosition {
     element: HTMLElement;
@@ -147,6 +149,7 @@
         }
         constraintsFrame = requestAnimationFrame(updateConstraints);
       };
+      scheduleConstraintRefresh = scheduleConstraintUpdate;
 
       updateConstraints();
       const resizeObserver = new ResizeObserver((entries) => {
@@ -154,7 +157,8 @@
         const contextResized = entries.some((entry) => entry.target !== element);
 
         if (dockResized) scheduleHeightUpdate();
-        if (contextResized && !(dockResized && ownResizePending)) scheduleConstraintUpdate();
+        if (contextResized && dockResized && ownResizePending) suppressedContextResize = true;
+        else if (contextResized) scheduleConstraintUpdate();
       });
       resizeObserver.observe(element);
 
@@ -180,8 +184,11 @@
         if (heightFrame !== null) cancelAnimationFrame(heightFrame);
         if (constraintsFrame !== null) cancelAnimationFrame(constraintsFrame);
         if (ownResizeResetFrame !== null) cancelAnimationFrame(ownResizeResetFrame);
+        if (scheduleConstraintRefresh === scheduleConstraintUpdate)
+          scheduleConstraintRefresh = null;
         ownResizePending = false;
         ownResizeResetFrame = null;
+        suppressedContextResize = false;
       };
     };
   }
@@ -198,6 +205,10 @@
       ownResizeResetFrame = requestAnimationFrame(() => {
         ownResizePending = false;
         ownResizeResetFrame = null;
+        if (suppressedContextResize) {
+          suppressedContextResize = false;
+          scheduleConstraintRefresh?.();
+        }
       });
     });
     requestedHeight = `${Math.max(0, startHeight - event.delta)}px`;
