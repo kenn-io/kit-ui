@@ -82,6 +82,10 @@
   let opening = false;
   // Group rows the user has toggled away from their initial state.
   let expansionOverrides = $state<Record<string, boolean>>({});
+  // Remote result sets are commonly cleared when the picker closes. Retain
+  // the label selected from the last result set so the controlled value still
+  // has meaningful trigger text after its source row disappears.
+  let selectedLabelCache = $state<{ name: string; label: string }>();
 
   const uid = $props.id();
   const listId = `${uid}-list`;
@@ -178,6 +182,7 @@
   const displayValue = $derived(
     selectedOption?.displayLabel ??
       selectedOption?.label ??
+      (selectedLabelCache?.name === value ? selectedLabelCache.label : undefined) ??
       (allowCustom && value !== "" ? value : fallbackLabel),
   );
 
@@ -225,9 +230,14 @@
 
   async function select(name: string) {
     const seq = ++selectSeq;
+    const option = findByName(options, name);
+    const selectedLabel = option?.displayLabel ?? option?.label;
     try {
       const vetoed = (await onselect(name)) === false;
-      if (!vetoed && seq === selectSeq) void closeDropdown(true);
+      if (!vetoed && seq === selectSeq) {
+        if (selectedLabel !== undefined) selectedLabelCache = { name, label: selectedLabel };
+        void closeDropdown(true);
+      }
     } catch {
       // Keep the list open so the caller can surface its own error state
       // (e.g. the `error` prop) without losing the attempted value.
@@ -289,13 +299,13 @@
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       highlightIndex = Math.max(activeIndex - 1, 0);
-    } else if (e.key === "ArrowRight" && grouped && query === "") {
+    } else if (e.key === "ArrowRight" && grouped && filterQuery === "") {
       const row = rows[activeIndex - clearOffset];
       if (row?.group && !row.expanded) {
         e.preventDefault();
         toggleExpand(row.option);
       }
-    } else if (e.key === "ArrowLeft" && grouped && query === "") {
+    } else if (e.key === "ArrowLeft" && grouped && filterQuery === "") {
       const idx = activeIndex - clearOffset;
       const row = rows[idx];
       if (!row) return;

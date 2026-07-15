@@ -30,6 +30,26 @@ test("remote mode reports queries without filtering caller-supplied options", as
   await page.getByRole("option", { name: "Server result" }).click();
   await expect(page.locator('[data-demo="remote-value"]')).toHaveText("server-result");
   await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+  await expect(page.getByRole("button", { name: "Search remote options…" })).toContainText(
+    "Server result",
+  );
+});
+
+test("remote grouped results retain keyboard expansion while a query is present", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await input.fill("group");
+  const group = page.getByRole("treeitem", { name: "Server group" });
+  await expect(group).toHaveAttribute("aria-expanded", "false");
+  await group.hover();
+  await page.keyboard.press("ArrowRight");
+
+  await expect(group).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("treeitem", { name: "Server child" })).toBeVisible();
 });
 
 test("clear row selects the empty value and meta text is searched", async ({ page }) => {

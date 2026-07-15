@@ -13,7 +13,18 @@
   let remoteValue = $state("");
   let remoteQuery = $state("");
   const remoteOptions = $derived<TypeaheadOption[]>(
-    remoteQuery === "" ? [] : [{ name: "server-result", label: "Server result" }],
+    remoteQuery === ""
+      ? []
+      : remoteQuery === "group"
+        ? [
+            {
+              name: "server-group",
+              label: "Server group",
+              expanded: false,
+              children: [{ name: "server-child", label: "Server child" }],
+            },
+          ]
+        : [{ name: "server-result", label: "Server result" }],
   );
 
   let owner = $state("");
