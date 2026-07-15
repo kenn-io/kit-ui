@@ -5,6 +5,10 @@ agentsview). Consumed as source: `package.json` exports point at
 `src/lib/index.ts`; there is no library build step. `vite build` bundles the
 demo gallery only.
 
+## API stability
+
+Breaking API changes are 100% acceptable.
+
 ## Commands
 
 ```bash
