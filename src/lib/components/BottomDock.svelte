@@ -45,6 +45,38 @@
   let measuredMinHeight = $state(0);
   let measuredMaxHeight = $state(100);
   let startHeight = 0;
+  let dockElement: HTMLElement | null = null;
+
+  interface ScrollPosition {
+    element: HTMLElement;
+    top: number;
+    left: number;
+  }
+
+  function scrollPositions(element: HTMLElement): ScrollPosition[] {
+    const positions: ScrollPosition[] = [];
+    const remember = (candidate: HTMLElement) => {
+      if (
+        candidate.scrollTop !== 0 ||
+        candidate.scrollLeft !== 0 ||
+        candidate.scrollHeight > candidate.clientHeight ||
+        candidate.scrollWidth > candidate.clientWidth
+      ) {
+        positions.push({
+          element: candidate,
+          top: candidate.scrollTop,
+          left: candidate.scrollLeft,
+        });
+      }
+    };
+
+    remember(element);
+    for (const descendant of element.querySelectorAll<HTMLElement>("*")) remember(descendant);
+    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      remember(ancestor);
+    }
+    return positions;
+  }
 
   /* Resolve CSS lengths through the dock's real containing block. */
   function measureHeights(
@@ -53,6 +85,7 @@
     maximum: string,
   ): { height: number; min: number; max: number } {
     const originalStyle = element.getAttribute("style");
+    const savedScrollPositions = scrollPositions(element);
     let min = 0;
     let max = 0;
 
@@ -69,6 +102,11 @@
     } finally {
       if (originalStyle === null) element.removeAttribute("style");
       else element.setAttribute("style", originalStyle);
+      element.getBoundingClientRect();
+      for (const position of savedScrollPositions) {
+        position.element.scrollTop = position.top;
+        position.element.scrollLeft = position.left;
+      }
     }
 
     const height = Math.round(element.getBoundingClientRect().height);
@@ -77,6 +115,7 @@
 
   function observeHeight(minimum: string, maximum: string): Attachment<HTMLElement> {
     return (element) => {
+      dockElement = element;
       let frame: number | null = null;
 
       const update = () => {
@@ -111,6 +150,7 @@
 
       window.addEventListener("resize", scheduleUpdate);
       return () => {
+        if (dockElement === element) dockElement = null;
         resizeObserver.disconnect();
         mutationObserver.disconnect();
         window.removeEventListener("resize", scheduleUpdate);
@@ -120,7 +160,7 @@
   }
 
   function handleResizeStart(): void {
-    startHeight = measuredHeight ?? 0;
+    startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
   }
 
   function handleResize(event: SplitResizeEvent): void {

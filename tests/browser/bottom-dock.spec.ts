@@ -165,3 +165,25 @@ test("keeps body scroll position while measuring responsive limits", async ({ pa
   await page.evaluate(() => new Promise(requestAnimationFrame));
   expect(await body.evaluate((element) => element.scrollTop)).toBe(scrollTop);
 });
+
+test("starts resizing from the live height before deferred observers refresh", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Review details" });
+  const separator = page.getByRole("separator", { name: "Review details" });
+  await page.getByRole("button", { name: "Use theme variable limits" }).click();
+
+  await separator.evaluate((element) => {
+    document.documentElement.style.setProperty("--kit-demo-dock-max-height", "200px");
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+
+  await expect.poll(() => renderedHeight(dock)).toBe(176);
+  await expect(separator).toHaveAttribute("aria-valuenow", "176");
+});
