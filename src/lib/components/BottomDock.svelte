@@ -95,7 +95,6 @@
       update();
       const resizeObserver = new ResizeObserver(scheduleUpdate);
       resizeObserver.observe(element);
-      if (element.parentElement) resizeObserver.observe(element.parentElement);
 
       const mutationObserver = new MutationObserver(scheduleUpdate);
       mutationObserver.observe(element, {
@@ -103,9 +102,10 @@
         attributeFilter: ["class"],
       });
       for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        resizeObserver.observe(ancestor);
         mutationObserver.observe(ancestor, {
           attributes: true,
-          attributeFilter: ["class", "style"],
+          attributeFilter: ["class", "style", "data-kit-theme"],
         });
       }
 

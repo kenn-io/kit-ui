@@ -462,7 +462,10 @@ describe("hand-rolled components", () => {
   });
 
   test("drawer: generic dock names remain exempt", () => {
-    const src = svelte(`.dock { display: flex; }`, `<nav class="dock-item"></nav>`);
+    const src = svelte(
+      `.dock { display: flex; } .editor-bottom-panel { height: 10rem; } .bottom-tray-content { overflow: auto; }`,
+      `<nav class="dock-item"></nav><div class="editor-bottom-dock"></div><div class="bottom-panel-content"></div>`,
+    );
     expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
   });
 

@@ -3,12 +3,13 @@
     BottomDock,
     Button,
     SegmentedControl,
+    setThemeName,
     type SegmentedControlOption,
   } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   type DockTab = "review" | "log" | "prompt";
-  type LimitMode = "pixels" | "container" | "viewport";
+  type LimitMode = "pixels" | "container" | "viewport" | "theme";
 
   const tabs: SegmentedControlOption[] = [
     { value: "review", label: "Review" },
@@ -23,10 +24,22 @@
   let limitMode = $state<LimitMode>("pixels");
   let workspaceTall = $state(false);
   const minHeight = $derived(
-    limitMode === "container" ? "25%" : limitMode === "viewport" ? "20vh" : "180px",
+    limitMode === "container"
+      ? "25%"
+      : limitMode === "viewport"
+        ? "20vh"
+        : limitMode === "theme"
+          ? "var(--kit-demo-dock-min-height)"
+          : "180px",
   );
   const maxHeight = $derived(
-    limitMode === "container" ? "calc(75% - 10px)" : limitMode === "viewport" ? "80vh" : "360px",
+    limitMode === "container"
+      ? "calc(75% - 10px)"
+      : limitMode === "viewport"
+        ? "80vh"
+        : limitMode === "theme"
+          ? "var(--kit-demo-dock-max-height)"
+          : "360px",
   );
 </script>
 
@@ -48,6 +61,8 @@
   <div class="dock-controls">
     <Button label="Use container limits" onclick={() => (limitMode = "container")} />
     <Button label="Use viewport limits" onclick={() => (limitMode = "viewport")} />
+    <Button label="Use theme variable limits" onclick={() => (limitMode = "theme")} />
+    <Button label="Switch dock limit theme" onclick={() => setThemeName("control-room")} />
     <Button label="Make workspace taller" onclick={() => (workspaceTall = true)} />
     <Button label="Set initial height to 300px" onclick={() => (initialHeight = "300px")} />
     {#if !open}
@@ -103,6 +118,16 @@
 </DemoSection>
 
 <style>
+  :global(:root) {
+    --kit-demo-dock-min-height: 150px;
+    --kit-demo-dock-max-height: 390px;
+  }
+
+  :global(:root[data-kit-theme="control-room"]) {
+    --kit-demo-dock-min-height: 190px;
+    --kit-demo-dock-max-height: 430px;
+  }
+
   .dock-controls {
     min-height: 28px;
     display: flex;

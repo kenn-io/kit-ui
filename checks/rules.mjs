@@ -509,10 +509,11 @@ export function checkHandRolledToast(source) {
  * are left alone; kit component classes are exempt. */
 export function checkHandRolledDrawer(source) {
   const findings = [];
-  const part =
-    "(?:drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))|bottom-(?:dock|panel|tray)\\b)";
+  const drawerPart =
+    "drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))";
+  const bottomPart = "bottom-(?:dock|panel|tray)";
   const re = new RegExp(
-    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${part}|\\.(?<!kit-)(?<!kit-detail-)${part}`,
+    `class=["'][^"']*(?:(?<!kit-)(?<!kit-detail-)\\b${drawerPart}|(?<![\\w-])${bottomPart}(?![\\w-]))|\\.(?:(?<!kit-detail-)${drawerPart}|${bottomPart}(?![\\w-]))`,
     "g",
   );
   let match;

@@ -55,8 +55,10 @@ including `%`, viewport units, CSS variables, and `calc()`, through its live
 layout box. The resulting minimum and maximum are exposed through
 `aria-valuemin` and `aria-valuemax`, keeping all separator range values in the
 same pixel unit. Bounds refresh when the props, containing block, viewport, or
-ancestor class/style context changes without requiring the dock itself to
-resize.
+ancestor class/style/theme context changes without requiring the dock itself to
+resize. Percentage-based limits require a definite block-axis size in the CSS
+containing block; use absolute or viewport units when the host height is
+content-sized.
 
 `open` is controlled. The built-in close `IconButton` calls `onclose`; the
 parent changes `open`. Closing and reopening the same component instance keeps

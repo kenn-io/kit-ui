@@ -135,3 +135,18 @@ test("replaces a local resize override when initialHeight changes", async ({ pag
   await expect.poll(() => renderedHeight(dock)).toBe(300);
   await expect(separator).toHaveAttribute("aria-valuenow", "300");
 });
+
+test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Review details" });
+  await page.getByRole("button", { name: "Use theme variable limits" }).click();
+  await expect(separator).toHaveAttribute("aria-valuemin", "150");
+  await expect(separator).toHaveAttribute("aria-valuemax", "390");
+  await expect(separator).toHaveAttribute("aria-valuenow", "260");
+
+  await page.getByRole("button", { name: "Switch dock limit theme" }).click();
+  await expect(separator).toHaveAttribute("aria-valuemin", "190");
+  await expect(separator).toHaveAttribute("aria-valuemax", "430");
+  await expect(separator).toHaveAttribute("aria-valuenow", "260");
+});

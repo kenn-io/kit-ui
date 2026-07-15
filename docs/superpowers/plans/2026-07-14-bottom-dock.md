@@ -2,6 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Status:** Historical execution plan. The implementation shipped through
+> commits `7aa3579`, `30dee08`, `2b30595`, and follow-up review fixes; unchecked
+> boxes preserve the original test-first sequence rather than indicating
+> remaining work.
+
 **Goal:** Add bidirectional split resizing and a controlled inline bottom dock to kit-ui.
 
 **Architecture:** Keep `SplitResizeHandle` layout-free and axis-neutral, then compose it inside a new `BottomDock` that owns inline surface layout, CSS-length height limits, scrolling regions, and a shared close control. The dock does not adopt dialog, overlay, focus-trap, or Escape behavior.
@@ -277,9 +282,11 @@ function handleResize(event: SplitResizeEvent): void {
 Implement the attachment as a reactive factory keyed by `minHeight` and
 `maxHeight`. Resolve each constraint by temporarily applying it as the dock's
 height with min/max disabled, measuring the real layout box, then restoring the
-original inline styles synchronously. Observe the dock and containing block,
-listen for viewport resize, and observe ancestor class/style mutations so
-responsive or inherited limits refresh even when the dock height is unchanged.
+original inline styles synchronously. Observe the dock and every ancestor box,
+listen for viewport resize, and observe ancestor class/style/`data-kit-theme`
+mutations so responsive or inherited limits refresh even when the dock height
+is unchanged. Percentage limits require a definite block-axis size in their CSS
+containing block.
 
 The prop defaults must match the approved spec. When `open` is true, render a named `<section>` with:
 
@@ -340,12 +347,13 @@ Change the drawer message to:
 ```
 
 Extend the rule to detect exact `bottom-dock`, `bottom-panel`, and
-`bottom-tray` class patterns while exempting `kit-bottom-dock` and generic
-`dock` names. Document `BottomDock` as a `hand-rolled-drawer` replacement for
-inline panels, add it to the component enforcement matrix and migration
-ordering, and create `docs/components/bottom-dock.md` with the full prop table,
-snippets, resizing direction, CSS-length constraints, controlled-open example,
-and explicit statement that Escape belongs to the parent application.
+`bottom-tray` class tokens while exempting `kit-bottom-dock`, prefixed or
+suffixed compounds, and generic `dock` names. Document `BottomDock` as a
+`hand-rolled-drawer` replacement for inline panels, add it to the component
+enforcement matrix and migration ordering, and create
+`docs/components/bottom-dock.md` with the full prop table, snippets, resizing
+direction, CSS-length constraints, controlled-open example, and explicit
+statement that Escape belongs to the parent application.
 
 - [ ] **Step 9: Autofix and verify Task 2**
 

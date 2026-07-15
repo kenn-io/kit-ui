@@ -119,7 +119,9 @@ without selectors targeting their private classes.
 
 The initial and limit props accept CSS lengths so consumers can use viewport-
 relative sizing in a full-page layout and the same component in a narrower
-sidebar container.
+sidebar container. Percentage and percentage-containing limits require a
+definite block-axis size in their CSS containing block; content-sized hosts
+must use absolute or viewport-relative units instead.
 
 At resize start, `BottomDock` measures its rendered height in pixels. Pointer
 and keyboard events calculate the next requested height as:
@@ -137,19 +139,22 @@ used pixel value in the real containing block, and restoring the requested
 height before paint. This handles `%`, viewport units, CSS variables, and
 `calc()` without parsing CSS serialization.
 
-The measurement refreshes when the limit props change, when the dock or its
-containing block resizes, when the viewport resizes, and when ancestor
-class/style changes can alter inherited CSS values. It passes the resolved
-minimum and maximum with the current rendered height to `aria-valuemin`,
-`aria-valuemax`, and `aria-valuenow`, so all three values remain in one pixel
-unit even when the dock itself stays at the same height.
+The measurement refreshes when the limit props change, when the dock or any
+ancestor box resizes, when the viewport resizes, and when ancestor class,
+style, or `data-kit-theme` changes can alter inherited CSS values. Observing
+the ancestor chain covers sizing contexts that skip a `display: contents`
+wrapper without trying to infer one containing-block element. The dock passes
+the resolved minimum and maximum with the current rendered height to
+`aria-valuemin`, `aria-valuemax`, and `aria-valuenow`, so all three values
+remain in one pixel unit even when the dock itself stays at the same height.
 
 ## Checker and Documentation
 
 The hand-rolled splitter rule will detect both `col-resize` and `row-resize`.
 The hand-rolled drawer rule will detect existing drawer structures plus the
 explicit inline class patterns `bottom-dock`, `bottom-panel`, and `bottom-tray`,
-while leaving generic `dock` names alone. Its guidance recommends
+as complete class tokens while leaving prefixed/suffixed compounds and generic
+`dock` names alone. Its guidance recommends
 `DetailDrawer` for overlay side sheets and `BottomDock` for inline bottom
 panels. Checker documentation and the component-to-rule matrix will list the
 new component.
