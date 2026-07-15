@@ -76,7 +76,7 @@
   }
 
   function widthFromResize(event: SplitResizeEvent): number {
-    return Math.max(minSidebarWidth, Math.min(maxSidebarWidth, resizeStartWidth + event.deltaX));
+    return Math.max(minSidebarWidth, Math.min(maxSidebarWidth, resizeStartWidth + event.delta));
   }
 
   function handleResize(event: SplitResizeEvent): void {
@@ -107,6 +107,7 @@
     {#if !sidebarOnly && hasMain}
       <SplitResizeHandle
         ariaLabel="Resize sidebar"
+        orientation="horizontal"
         onResizeStart={handleResizeStart}
         onResize={handleResize}
         onResizeEnd={handleResizeEnd}

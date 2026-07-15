@@ -150,11 +150,14 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-kbd"])).toHaveLength(1);
   });
 
-  test("splitter: col-resize cursor", () => {
-    const src = svelte(`.divider { width: 4px; cursor: col-resize; }`);
+  test("splitter: pane-resize cursors", () => {
+    const src = svelte(
+      `.columns { width: 4px; cursor: col-resize; }\n.rows { height: 4px; cursor: row-resize; }`,
+    );
     const findings = checkSource(src, "A.svelte", ["hand-rolled-splitter"]);
-    expect(findings).toHaveLength(1);
+    expect(findings).toHaveLength(2);
     expect(findings[0]!.message).toContain("SplitResizeHandle");
+    expect(findings[1]!.message).toContain("SplitResizeHandle");
   });
 
   test("segmented: seg-btn / segmented-control classes", () => {

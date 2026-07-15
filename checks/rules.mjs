@@ -284,18 +284,18 @@ export function checkKbd(source) {
   return findings;
 }
 
-/** A col-resize cursor in styles is a hand-rolled pane splitter. */
+/** A pane-resize cursor in styles is a hand-rolled pane splitter. */
 export function checkHandRolledSplitter(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const re = /cursor:\s*col-resize/g;
+    const re = /cursor:\s*(?:col|row)-resize/g;
     let match;
     while ((match = re.exec(css)) !== null) {
       findings.push({
         rule: "hand-rolled-splitter",
         line: lineOfIndex(source, offset + match.index),
         message:
-          "col-resize divider — use SplitResizeHandle (or CollapsibleSidebar) from @kenn-io/kit-ui",
+          "pane-resize divider — use SplitResizeHandle (or CollapsibleSidebar) from @kenn-io/kit-ui",
       });
     }
   }
