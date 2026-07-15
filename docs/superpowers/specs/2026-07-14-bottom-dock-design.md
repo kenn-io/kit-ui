@@ -23,7 +23,8 @@ generic split-pane layout container, or add an inline mode to `DetailDrawer`.
 `SplitResizeHandle` remains a layout-free input primitive. Consumers own pane
 dimensions and clamp or persist them.
 
-The component adds an `orientation` prop with these meanings:
+The component adds an optional `orientation?: SplitResizeOrientation` prop,
+defaulting to `"horizontal"`, with these meanings:
 
 - `horizontal`: panes sit side by side, pointer movement uses the x axis, the
   cursor is `col-resize`, and Left/Right resize keys are active;
@@ -50,9 +51,11 @@ leaves the four-pixel handle. It also supports `disabled`, `ariaValueMin`,
 the physical separator: horizontal pane layouts render a vertical separator,
 while vertical pane layouts render a horizontal separator.
 
-This is an intentional API replacement for the unpublished `deltaX`, `startX`,
-and `currentX` fields. There will be no compatibility aliases or dual event
-shape.
+This is an intentional breaking replacement for the previously exported and
+documented `deltaX`, `startX`, and `currentX` fields. The package remains
+pre-1.0 and source consumers migrate directly to the axis-neutral fields; there
+will be no compatibility aliases or dual event shape. `docs/migration.md`
+records the exact field mapping.
 
 ## BottomDock Contract
 
@@ -126,10 +129,10 @@ dragging downward or pressing ArrowDown decreases it. CSS `min-height` and
 actual rendered pixel height for `aria-valuenow`, including when CSS clamps the
 requested height or the containing viewport changes.
 
-The resize handle does not expose numeric `aria-valuemin` or `aria-valuemax`
-for the dock because the corresponding public limits may be non-pixel CSS
-expressions. The current rendered height remains available through
-`aria-valuenow`.
+The dock resolves its computed CSS minimum and maximum heights to pixels and
+passes those values with the current rendered height to `aria-valuemin`,
+`aria-valuemax`, and `aria-valuenow`. All three separator values therefore use
+one consistent unit even when callers supplied viewport-relative CSS lengths.
 
 ## Checker and Documentation
 

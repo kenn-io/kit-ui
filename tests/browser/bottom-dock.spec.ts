@@ -26,6 +26,8 @@ test("renders and resizes a controlled inline bottom dock", async ({ page }) => 
   await expect(dock).toBeVisible();
   await expect(dock).toHaveCSS("position", "static");
   await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
+  await expect(separator).toHaveAttribute("aria-valuemin", "180");
+  await expect(separator).toHaveAttribute("aria-valuemax", "360");
   await expect(separator).toHaveAttribute("aria-valuenow", "260");
   await expect(page.getByText("Workspace content")).toBeVisible();
   await expect(page.getByText("Review body item 20")).toBeAttached();

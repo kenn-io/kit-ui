@@ -10,9 +10,9 @@
     disabled?: boolean;
     /** Pixels moved per arrow-key press. */
     keyboardStep?: number;
-    ariaValueMin?: number;
-    ariaValueMax?: number;
-    ariaValueNow?: number;
+    ariaValueMin: number;
+    ariaValueMax: number;
+    ariaValueNow: number;
     onResizeStart?: (event: KeyboardEvent | PointerEvent) => void;
     onResize?: (event: SplitResizeEvent) => void;
     onResizeEnd?: (event: SplitResizeEvent) => void;
@@ -24,9 +24,9 @@
     class: className = "",
     disabled = false,
     keyboardStep = 24,
-    ariaValueMin = undefined,
-    ariaValueMax = undefined,
-    ariaValueNow = undefined,
+    ariaValueMin,
+    ariaValueMax,
+    ariaValueNow,
     onResizeStart,
     onResize,
     onResizeEnd,
@@ -34,14 +34,18 @@
 
   let cleanup: (() => void) | null = null;
 
-  function position(event: PointerEvent): number {
-    return orientation === "horizontal" ? event.clientX : event.clientY;
+  function position(event: PointerEvent, resizeOrientation: SplitResizeOrientation): number {
+    return resizeOrientation === "horizontal" ? event.clientX : event.clientY;
   }
 
-  function resizeEventFromPointer(event: PointerEvent, start: number): SplitResizeEvent {
-    const current = position(event);
+  function resizeEventFromPointer(
+    event: PointerEvent,
+    start: number,
+    resizeOrientation: SplitResizeOrientation,
+  ): SplitResizeEvent {
+    const current = position(event, resizeOrientation);
     return {
-      orientation,
+      orientation: resizeOrientation,
       delta: current - start,
       start,
       current,
@@ -55,37 +59,50 @@
   }
 
   function startResize(event: PointerEvent): void {
-    if (disabled) return;
+    if (disabled || cleanup) return;
     event.preventDefault();
-    stopResize();
     const handle = event.currentTarget as HTMLButtonElement;
-    const start = position(event);
+    const resizeOrientation = orientation;
+    const start = position(event, resizeOrientation);
     const pointerId = event.pointerId;
+    let lastResizeEvent = resizeEventFromPointer(event, start, resizeOrientation);
     handle.setPointerCapture(pointerId);
 
     onResizeStart?.(event);
 
     function onMove(moveEvent: PointerEvent): void {
-      onResize?.(resizeEventFromPointer(moveEvent, start));
+      if (moveEvent.pointerId !== pointerId) return;
+      lastResizeEvent = resizeEventFromPointer(moveEvent, start, resizeOrientation);
+      onResize?.(lastResizeEvent);
     }
 
-    function onEnd(endEvent: PointerEvent): void {
-      onResizeEnd?.(resizeEventFromPointer(endEvent, start));
-      try {
-        handle.releasePointerCapture(pointerId);
-      } catch {
-        // Pointer capture may already be gone after browser cancellation.
-      }
+    function finish(endEvent: PointerEvent, cancelled: boolean): void {
+      if (endEvent.pointerId !== pointerId) return;
+      const finalResizeEvent = cancelled
+        ? lastResizeEvent
+        : resizeEventFromPointer(endEvent, start, resizeOrientation);
+      onResizeEnd?.(finalResizeEvent);
       stopResize();
     }
 
+    function onUp(upEvent: PointerEvent): void {
+      finish(upEvent, false);
+    }
+
+    function onCancel(cancelEvent: PointerEvent): void {
+      finish(cancelEvent, true);
+    }
+
     handle.addEventListener("pointermove", onMove);
-    handle.addEventListener("pointerup", onEnd);
-    handle.addEventListener("pointercancel", onEnd);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onCancel);
     cleanup = () => {
       handle.removeEventListener("pointermove", onMove);
-      handle.removeEventListener("pointerup", onEnd);
-      handle.removeEventListener("pointercancel", onEnd);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onCancel);
+      if (handle.hasPointerCapture(pointerId)) {
+        handle.releasePointerCapture(pointerId);
+      }
     };
   }
 
@@ -152,11 +169,13 @@
   .kit-split-resize-handle--horizontal {
     width: 4px;
     cursor: col-resize;
+    touch-action: pan-y;
   }
 
   .kit-split-resize-handle--vertical {
     height: 4px;
     cursor: row-resize;
+    touch-action: pan-x;
   }
 
   .kit-split-resize-handle:hover,

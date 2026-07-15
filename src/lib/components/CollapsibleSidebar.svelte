@@ -108,6 +108,9 @@
       <SplitResizeHandle
         ariaLabel="Resize sidebar"
         orientation="horizontal"
+        ariaValueMin={minSidebarWidth}
+        ariaValueMax={maxSidebarWidth}
+        ariaValueNow={currentWidth}
         onResizeStart={handleResizeStart}
         onResize={handleResize}
         onResizeEnd={handleResizeEnd}

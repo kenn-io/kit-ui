@@ -38,7 +38,7 @@
 
 - Produces: `SplitResizeOrientation = "horizontal" | "vertical"`.
 - Produces: `SplitResizeEvent { orientation, delta, start, current, event }`.
-- Produces: `SplitResizeHandle` props `orientation`, `disabled`, `ariaValueMin`, `ariaValueMax`, and `ariaValueNow`.
+- Produces: `SplitResizeHandle` props `orientation`, `disabled`, and required `ariaValueMin`, `ariaValueMax`, and `ariaValueNow`.
 - Consumes: existing callback lifecycle `onResizeStart`, `onResize`, and `onResizeEnd`.
 
 - [ ] **Step 1: Write the failing checker test**
@@ -153,7 +153,7 @@ Update `SplitResizeHandle.svelte` so it:
 - emits axis-neutral resize events;
 - accepts only Left/Right for horizontal and Up/Down for vertical;
 - renders `role="separator"` with the physical separator ARIA orientation;
-- binds optional separator values and native `disabled`;
+- binds required separator values and native `disabled`;
 - uses `kit-split-resize-handle--horizontal` and `--vertical` modifiers for 4px col-resize and row-resize handles.
 
 Use the exact callback behavior in the approved design: pointer end and pointer cancel both call `onResizeEnd`, keyboard presses call start/resize/end atomically, and teardown removes every installed listener.
@@ -270,7 +270,7 @@ The prop defaults must match the approved spec. When `open` is true, render a na
 - `style:min-height={minHeight}`;
 - `style:max-height={maxHeight}`;
 - the `ResizeObserver` attachment;
-- a top vertical `SplitResizeHandle` using `ariaLabel`, `keyboardStep`, and `ariaValueNow={measuredHeight}`;
+- a top vertical `SplitResizeHandle` using `ariaLabel`, `keyboardStep`, and the measured minimum, maximum, and current heights;
 - an optional header wrapper with caller content and the built-in `IconButton` containing the Lucide X icon;
 - a flexible scrollable body;
 - an optional footer wrapper.

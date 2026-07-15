@@ -41,12 +41,22 @@
   }: Props = $props();
 
   let requestedHeight = $derived(initialHeight);
-  let measuredHeight = $state<number | undefined>();
+  let measuredHeight = $state(0);
+  let measuredMinHeight = $state(0);
+  let measuredMaxHeight = $state(100);
   let startHeight = 0;
 
   const observeHeight: Attachment<HTMLElement> = (element) => {
     const update = () => {
-      measuredHeight = Math.round(element.getBoundingClientRect().height);
+      const styles = getComputedStyle(element);
+      const height = Math.round(element.getBoundingClientRect().height);
+      const min = Number.parseFloat(styles.minHeight);
+      const max = Number.parseFloat(styles.maxHeight);
+      measuredHeight = height;
+      measuredMinHeight = Number.isFinite(min) ? Math.round(min) : 0;
+      measuredMaxHeight = Number.isFinite(max)
+        ? Math.max(measuredMinHeight, Math.round(max))
+        : Math.max(measuredMinHeight, height);
     };
     update();
     const observer = new ResizeObserver(update);
@@ -76,6 +86,8 @@
       {ariaLabel}
       orientation="vertical"
       {keyboardStep}
+      ariaValueMin={measuredMinHeight}
+      ariaValueMax={measuredMaxHeight}
       ariaValueNow={measuredHeight}
       onResizeStart={handleResizeStart}
       onResize={handleResize}

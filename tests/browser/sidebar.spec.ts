@@ -37,3 +37,12 @@ test("forced overlay styles do not leak into nested sidebars", async ({ page }) 
   await expect(nestedSidebar).toHaveCSS("position", "static");
   await expect(nestedSidebar).toHaveCSS("width", "220px");
 });
+
+test("resize separator reports the sidebar width and bounds", async ({ page }) => {
+  await gotoPage(page, "sidebar");
+
+  const separator = page.getByRole("separator", { name: "Resize sidebar" }).first();
+  await expect(separator).toHaveAttribute("aria-valuemin", "160");
+  await expect(separator).toHaveAttribute("aria-valuemax", "360");
+  await expect(separator).toHaveAttribute("aria-valuenow", "220");
+});

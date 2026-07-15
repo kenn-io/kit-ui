@@ -50,7 +50,9 @@ ArrowUp increases the dock height; dragging downward or pressing ArrowDown
 decreases it. The component accepts CSS lengths for its initial, minimum, and
 maximum heights, so full-page and container-sized hosts can use the same
 contract. CSS enforces the limits, while `aria-valuenow` reports the rendered
-pixel height.
+pixel height. The resolved computed minimum and maximum are exposed through
+`aria-valuemin` and `aria-valuemax`, keeping all separator range values in the
+same pixel unit.
 
 `open` is controlled. The built-in close `IconButton` calls `onclose`; the
 parent changes `open`. Closing and reopening the same component instance keeps
