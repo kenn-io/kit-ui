@@ -116,45 +116,63 @@
   function observeHeight(minimum: string, maximum: string): Attachment<HTMLElement> {
     return (element) => {
       dockElement = element;
-      let frame: number | null = null;
+      let heightFrame: number | null = null;
+      let constraintsFrame: number | null = null;
 
-      const update = () => {
-        frame = null;
+      const updateHeight = () => {
+        heightFrame = null;
+        measuredHeight = Math.round(element.getBoundingClientRect().height);
+      };
+
+      const updateConstraints = () => {
+        constraintsFrame = null;
         const measured = measureHeights(element, minimum, maximum);
         measuredHeight = measured.height;
         measuredMinHeight = measured.min;
         measuredMaxHeight = measured.max;
       };
 
-      const scheduleUpdate = () => {
-        if (frame !== null) return;
-        frame = requestAnimationFrame(update);
+      const scheduleHeightUpdate = () => {
+        if (heightFrame !== null || constraintsFrame !== null) return;
+        heightFrame = requestAnimationFrame(updateHeight);
       };
 
-      update();
-      const resizeObserver = new ResizeObserver(scheduleUpdate);
-      resizeObserver.observe(element);
+      const scheduleConstraintUpdate = () => {
+        if (constraintsFrame !== null) return;
+        if (heightFrame !== null) {
+          cancelAnimationFrame(heightFrame);
+          heightFrame = null;
+        }
+        constraintsFrame = requestAnimationFrame(updateConstraints);
+      };
 
-      const mutationObserver = new MutationObserver(scheduleUpdate);
+      updateConstraints();
+      const heightObserver = new ResizeObserver(scheduleHeightUpdate);
+      heightObserver.observe(element);
+      const contextResizeObserver = new ResizeObserver(scheduleConstraintUpdate);
+
+      const mutationObserver = new MutationObserver(scheduleConstraintUpdate);
       mutationObserver.observe(element, {
         attributes: true,
         attributeFilter: ["class"],
       });
       for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
-        resizeObserver.observe(ancestor);
+        contextResizeObserver.observe(ancestor);
         mutationObserver.observe(ancestor, {
           attributes: true,
           attributeFilter: ["class", "style", "data-kit-theme"],
         });
       }
 
-      window.addEventListener("resize", scheduleUpdate);
+      window.addEventListener("resize", scheduleConstraintUpdate);
       return () => {
         if (dockElement === element) dockElement = null;
-        resizeObserver.disconnect();
+        heightObserver.disconnect();
+        contextResizeObserver.disconnect();
         mutationObserver.disconnect();
-        window.removeEventListener("resize", scheduleUpdate);
-        if (frame !== null) cancelAnimationFrame(frame);
+        window.removeEventListener("resize", scheduleConstraintUpdate);
+        if (heightFrame !== null) cancelAnimationFrame(heightFrame);
+        if (constraintsFrame !== null) cancelAnimationFrame(constraintsFrame);
       };
     };
   }

@@ -187,3 +187,37 @@ test("starts resizing from the live height before deferred observers refresh", a
   await expect.poll(() => renderedHeight(dock)).toBe(176);
   await expect(separator).toHaveAttribute("aria-valuenow", "176");
 });
+
+test("does not remeasure constraints when only the dock height changes", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Review details" });
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+
+  const constraintReads = await separator.evaluate(async (element) => {
+    const dock = element.closest(".kit-bottom-dock");
+    const row = dock?.querySelector<HTMLElement>(".review-row");
+    if (!row) throw new Error("Bottom dock review row is missing");
+
+    let reads = 0;
+    Object.defineProperty(row, "scrollHeight", {
+      configurable: true,
+      get: () => {
+        reads += 1;
+        return 0;
+      },
+    });
+
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowUp",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return reads;
+  });
+
+  expect(constraintReads).toBe(0);
+});
