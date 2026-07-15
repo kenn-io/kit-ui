@@ -1,4 +1,5 @@
 // Components
+export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
 export { default as Calendar } from "./components/Calendar.svelte";

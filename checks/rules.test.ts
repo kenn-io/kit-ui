@@ -432,6 +432,7 @@ describe("hand-rolled components", () => {
     const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
     expect(findings).toHaveLength(3);
     expect(findings[0]!.message).toContain("DetailDrawer");
+    expect(findings[0]!.message).toContain("BottomDock");
   });
 
   test("drawer: does not match kit-detail-drawer", () => {

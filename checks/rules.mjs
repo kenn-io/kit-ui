@@ -520,7 +520,8 @@ export function checkHandRolledDrawer(source) {
     findings.push({
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),
-      message: "drawer markup — use DetailDrawer from @kenn-io/kit-ui",
+      message:
+        "drawer markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
     });
   }
   return findings;
