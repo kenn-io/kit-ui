@@ -453,11 +453,11 @@ describe("hand-rolled components", () => {
 
   test("drawer: explicit inline bottom-panel classes", () => {
     const src = svelte(
-      `.bottom-panel { height: 240px; } .bottom-tray { overflow: auto; }`,
+      `.bottom-panel { height: 240px; } .bottom-tray { overflow: auto; } :is(.bottom-panel) :not(.bottom-tray) { display: block; }`,
       `<div class="bottom-dock"></div><div class="kit-bottom-dock"></div>`,
     );
     const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
-    expect(findings).toHaveLength(3);
+    expect(findings).toHaveLength(5);
     expect(findings[0]!.message).toContain("BottomDock");
   });
 

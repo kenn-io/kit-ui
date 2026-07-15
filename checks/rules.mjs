@@ -537,7 +537,7 @@ export function checkHandRolledDrawer(source) {
     });
   }
 
-  const bottomSelectorRe = /\.(?:bottom-dock|bottom-panel|bottom-tray)(?=$|[\s,.#:[>+~{])/g;
+  const bottomSelectorRe = /\.(?:bottom-dock|bottom-panel|bottom-tray)(?=$|[\s),.#:[>+~{])/g;
   while ((match = bottomSelectorRe.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-drawer",
