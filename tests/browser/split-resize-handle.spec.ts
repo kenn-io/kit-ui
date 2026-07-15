@@ -48,6 +48,24 @@ test("resizes horizontal and vertical panes on their active axes", async ({ page
   await expect(vertical).toHaveAttribute("aria-valuenow", "136");
 });
 
+test("ignores non-primary pointer buttons", async ({ page }) => {
+  await gotoPage(page, "split-resize");
+
+  const vertical = page.getByRole("separator", { name: "Resize top pane" });
+  const box = await vertical.boundingBox();
+  if (!box) throw new Error("Vertical split handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  for (const button of ["right", "middle"] as const) {
+    await page.mouse.move(x, y);
+    await page.mouse.down({ button });
+    await page.mouse.move(x, y + 24);
+    await page.mouse.up({ button });
+    await expect(vertical).toHaveAttribute("aria-valuenow", "88");
+  }
+});
+
 test("keeps one active pointer and commits the last valid delta on cancellation", async ({
   page,
 }) => {

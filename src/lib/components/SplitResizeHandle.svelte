@@ -59,7 +59,7 @@
   }
 
   function startResize(event: PointerEvent): void {
-    if (disabled || cleanup) return;
+    if (disabled || cleanup || event.button !== 0) return;
     event.preventDefault();
     const handle = event.currentTarget as HTMLButtonElement;
     const resizeOrientation = orientation;
