@@ -2,6 +2,7 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick, type Snippet } from "svelte";
+  import { SvelteMap } from "svelte/reactivity";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { TypeaheadOption } from "./typeahead.js";
@@ -83,10 +84,11 @@
   // Group rows the user has toggled away from their initial state.
   let expansionOverrides = $state<Record<string, boolean>>({});
   // Remote result sets are commonly cleared when the picker closes. Retain
-  // labels by option name so the controlled value still has meaningful
-  // trigger text after its source row disappears. Keying prevents stale async
-  // selections from evicting the current value's label.
-  let selectedLabelCache = $state<Record<string, string>>({});
+  // labels by option name so the controlled value still has meaningful trigger
+  // text after its source row disappears. Versions prevent an older async
+  // selection from replacing a newer label for the same option.
+  const selectedLabelCache = new SvelteMap<string, { label: string; version: number }>();
+  let labelSeq = 0;
 
   const uid = $props.id();
   const listId = `${uid}-list`;
@@ -183,13 +185,20 @@
   const displayValue = $derived(
     selectedOption?.displayLabel ??
       selectedOption?.label ??
-      (remote ? selectedLabelCache[value] : undefined) ??
+      (remote ? selectedLabelCache.get(value)?.label : undefined) ??
       (allowCustom && value !== "" ? value : fallbackLabel),
   );
 
+  function cacheSelectedLabel(name: string, label: string, version = ++labelSeq): void {
+    const cached = selectedLabelCache.get(name);
+    if (!cached || cached.version <= version) {
+      selectedLabelCache.set(name, { label, version });
+    }
+  }
+
   function rememberSelectedLabel(): void {
     if (!remote || !selectedOption) return;
-    selectedLabelCache[selectedOption.name] = selectedOption.displayLabel ?? selectedOption.label;
+    cacheSelectedLabel(selectedOption.name, selectedOption.displayLabel ?? selectedOption.label);
   }
 
   function updateQuery(nextQuery: string): void {
@@ -239,11 +248,12 @@
     const seq = ++selectSeq;
     const option = findByName(options, name);
     const selectedLabel = option?.displayLabel ?? option?.label;
+    const selectedLabelVersion = ++labelSeq;
     try {
       const vetoed = (await onselect(name)) === false;
       if (!vetoed) {
         if (remote && selectedLabel !== undefined) {
-          selectedLabelCache[name] = selectedLabel;
+          cacheSelectedLabel(name, selectedLabel, selectedLabelVersion);
         }
         if (seq === selectSeq) void closeDropdown(true);
       }

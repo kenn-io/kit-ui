@@ -81,20 +81,22 @@ test("remote mode retains the label when async selection succeeds after closing"
   await expect(trigger).toContainText("Slow result");
 });
 
-test("a stale async selection cannot evict the current remote label", async ({ page }) => {
+test("an older async selection cannot replace a newer label for the same option", async ({
+  page,
+}) => {
   await gotoPage(page, "typeahead");
   const trigger = page.getByRole("button", { name: "Search remote options…" });
   await trigger.click();
   const input = page.getByRole("combobox", { name: "Search remote options…" });
 
-  await input.fill("stale");
-  await page.getByRole("option", { name: "Stale result" }).click();
-  await input.fill("fast");
-  await page.getByRole("option", { name: "Fast result" }).click();
-  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("fast-result");
+  await input.fill("old");
+  await page.getByRole("option", { name: "Old result" }).click();
+  await input.fill("new");
+  await page.getByRole("option", { name: "New result" }).click();
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
   await page.waitForTimeout(400);
 
-  await expect(trigger).toContainText("Fast result");
+  await expect(trigger).toContainText("New result");
 });
 
 test("remote grouped results retain keyboard expansion while a query is present", async ({
