@@ -215,7 +215,7 @@
     // <body> and would fire focusout on the container. Suppress dismissal
     // until we've handed focus to the input.
     opening = true;
-    highlightIndex = rows.length > 0 ? clearOffset : 0;
+    highlightIndex = clearOffset;
     await tick();
     positionPanel();
     inputEl?.focus();

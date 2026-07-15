@@ -13,6 +13,7 @@
   let remoteValue = $state("server-result");
   let remoteQuery = $state("initial");
   let remoteOptionsQuery = $state("initial");
+  let remoteOpenResetCountdown = 0;
   const remoteOptions = $derived<TypeaheadOption[]>(
     remoteOptionsQuery === ""
       ? []
@@ -39,6 +40,21 @@
   );
   function updateRemoteQuery(query: string): void {
     remoteQuery = query;
+    if (query === "async-open") {
+      remoteOptionsQuery = "";
+      remoteOpenResetCountdown = 2;
+      return;
+    }
+    if (query === "" && remoteOpenResetCountdown > 0) {
+      remoteOptionsQuery = "";
+      remoteOpenResetCountdown -= 1;
+      if (remoteOpenResetCountdown === 0) {
+        setTimeout(() => {
+          if (remoteQuery === "") remoteOptionsQuery = "new";
+        }, 100);
+      }
+      return;
+    }
     if (query !== "async") {
       remoteOptionsQuery = query;
       return;

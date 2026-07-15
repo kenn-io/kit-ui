@@ -49,6 +49,22 @@ test("remote results move Enter past the clear row after an empty loading state"
   await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
 });
 
+test("remote results move Enter past the clear row when they arrive after opening", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  await page.getByRole("combobox", { name: "Search remote options…" }).fill("async-open");
+  await page.keyboard.press("Escape");
+
+  await trigger.click();
+  await expect(page.getByRole("option", { name: "New result" })).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
+});
+
 test("remote mode retains a controlled preselection when opening clears its options", async ({
   page,
 }) => {
