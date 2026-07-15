@@ -232,8 +232,7 @@
     onkeydown={handleKeydown}
     onkeyup={handleKeyup}
     onclick={refreshMention}
-    onblur={handleBlur}
-  ></textarea>
+    onblur={handleBlur}></textarea>
   {#if open}
     <div
       bind:this={menuEl}
