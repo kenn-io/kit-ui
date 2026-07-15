@@ -10,8 +10,8 @@
     { name: "kenn-io/infra", label: "kenn-io/infra", displayLabel: "infra" },
   ];
 
-  let remoteValue = $state("");
-  let remoteQuery = $state("");
+  let remoteValue = $state("server-result");
+  let remoteQuery = $state("initial");
   const remoteOptions = $derived<TypeaheadOption[]>(
     remoteQuery === ""
       ? []

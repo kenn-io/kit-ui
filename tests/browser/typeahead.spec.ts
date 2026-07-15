@@ -35,6 +35,20 @@ test("remote mode reports queries without filtering caller-supplied options", as
   );
 });
 
+test("remote mode retains a controlled preselection when opening clears its options", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await expect(trigger).toContainText("Server result");
+
+  await trigger.click();
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+  await page.keyboard.press("Escape");
+
+  await expect(trigger).toContainText("Server result");
+});
+
 test("remote grouped results retain keyboard expansion while a query is present", async ({
   page,
 }) => {

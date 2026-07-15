@@ -182,9 +182,17 @@
   const displayValue = $derived(
     selectedOption?.displayLabel ??
       selectedOption?.label ??
-      (selectedLabelCache?.name === value ? selectedLabelCache.label : undefined) ??
+      (remote && selectedLabelCache?.name === value ? selectedLabelCache.label : undefined) ??
       (allowCustom && value !== "" ? value : fallbackLabel),
   );
+
+  function rememberSelectedLabel(): void {
+    if (!remote || !selectedOption) return;
+    selectedLabelCache = {
+      name: selectedOption.name,
+      label: selectedOption.displayLabel ?? selectedOption.label,
+    };
+  }
 
   function updateQuery(nextQuery: string): void {
     query = nextQuery;
@@ -193,6 +201,7 @@
 
   async function openDropdown() {
     if (disabled) return;
+    rememberSelectedLabel();
     updateQuery("");
     open = true;
     // The trigger button unmounts as the input mounts; focus briefly lands on
@@ -211,6 +220,7 @@
   // input would otherwise drop focus on <body>. Focusout-driven closes must
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
+    rememberSelectedLabel();
     open = false;
     updateQuery("");
     // Invalidate in-flight selections: a slow onselect from this (or an
@@ -235,7 +245,9 @@
     try {
       const vetoed = (await onselect(name)) === false;
       if (!vetoed && seq === selectSeq) {
-        if (selectedLabel !== undefined) selectedLabelCache = { name, label: selectedLabel };
+        if (remote && selectedLabel !== undefined) {
+          selectedLabelCache = { name, label: selectedLabel };
+        }
         void closeDropdown(true);
       }
     } catch {
