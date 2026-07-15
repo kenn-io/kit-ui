@@ -511,13 +511,34 @@ export function checkHandRolledDrawer(source) {
   const findings = [];
   const drawerPart =
     "drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))";
-  const bottomPart = "bottom-(?:dock|panel|tray)";
   const re = new RegExp(
-    `class=["'][^"']*(?:(?<!kit-)(?<!kit-detail-)\\b${drawerPart}|(?<![\\w-])${bottomPart}(?![\\w-]))|\\.(?:(?<!kit-detail-)${drawerPart}|${bottomPart}(?![\\w-]))`,
+    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${drawerPart}|\\.(?<!kit-detail-)${drawerPart}`,
     "g",
   );
   let match;
   while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-drawer",
+      line: lineOfIndex(source, match.index),
+      message:
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+    });
+  }
+
+  const bottomClasses = new Set(["bottom-dock", "bottom-panel", "bottom-tray"]);
+  const classRe = /class=["']([^"']*)["']/g;
+  while ((match = classRe.exec(source)) !== null) {
+    if (!match[1].split(/\s+/).some((name) => bottomClasses.has(name))) continue;
+    findings.push({
+      rule: "hand-rolled-drawer",
+      line: lineOfIndex(source, match.index),
+      message:
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+    });
+  }
+
+  const bottomSelectorRe = /\.(?:bottom-dock|bottom-panel|bottom-tray)(?=$|[\s,.#:[>+~{])/g;
+  while ((match = bottomSelectorRe.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),

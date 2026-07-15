@@ -70,50 +70,56 @@
     {/if}
   </div>
 
-  <div class={["workspace-surface", workspaceTall && "workspace-surface--tall"]}>
+  <div class="workspace-surface">
     <div class="workspace-content">
       <strong>Workspace content</strong>
       <span>The dock occupies layout space instead of covering this area.</span>
+      <span
+        class={["dock-size-signal", workspaceTall && "dock-size-signal--tall"]}
+        aria-hidden="true"
+      ></span>
     </div>
 
-    <BottomDock
-      {open}
-      ariaLabel="Review details"
-      {initialHeight}
-      {minHeight}
-      {maxHeight}
-      onclose={() => (open = false)}
-    >
-      {#snippet header()}
-        <div class="dock-header-content">
-          <div class="dock-title-row">
-            <strong>Review #42</strong>
-            <span class="dock-status">running</span>
+    <div class="dock-layout-context">
+      <BottomDock
+        {open}
+        ariaLabel="Review details"
+        {initialHeight}
+        {minHeight}
+        {maxHeight}
+        onclose={() => (open = false)}
+      >
+        {#snippet header()}
+          <div class="dock-header-content">
+            <div class="dock-title-row">
+              <strong>Review #42</strong>
+              <span class="dock-status">running</span>
+            </div>
+            <SegmentedControl
+              options={tabs}
+              value={activeTab}
+              onchange={(value) => (activeTab = value as DockTab)}
+              ariaLabel="Review detail view"
+              variant="borderless"
+            />
           </div>
-          <SegmentedControl
-            options={tabs}
-            value={activeTab}
-            onchange={(value) => (activeTab = value as DockTab)}
-            ariaLabel="Review detail view"
-            variant="borderless"
-          />
-        </div>
-      {/snippet}
+        {/snippet}
 
-      <div class="review-body" data-active-tab={activeTab}>
-        {#each bodyItems as item (item)}
-          <div class="review-row">Review body item {item}</div>
-        {/each}
-      </div>
-
-      {#snippet footer()}
-        <span class="dock-ready">Ready to merge</span>
-        <div class="dock-actions">
-          <Button size="sm" label="Rerun" />
-          <Button size="sm" tone="danger" label="Cancel" />
+        <div class="review-body" data-active-tab={activeTab}>
+          {#each bodyItems as item (item)}
+            <div class="review-row">Review body item {item}</div>
+          {/each}
         </div>
-      {/snippet}
-    </BottomDock>
+
+        {#snippet footer()}
+          <span class="dock-ready">Ready to merge</span>
+          <div class="dock-actions">
+            <Button size="sm" label="Rerun" />
+            <Button size="sm" tone="danger" label="Cancel" />
+          </div>
+        {/snippet}
+      </BottomDock>
+    </div>
   </div>
 </DemoSection>
 
@@ -146,8 +152,16 @@
     border-radius: var(--radius-md);
   }
 
-  .workspace-surface--tall {
+  .workspace-surface:has(.dock-size-signal--tall) {
     height: 600px;
+  }
+
+  .dock-size-signal {
+    display: none;
+  }
+
+  .dock-layout-context {
+    display: contents;
   }
 
   .workspace-content {

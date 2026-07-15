@@ -150,3 +150,18 @@ test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page 
   await expect(separator).toHaveAttribute("aria-valuemax", "430");
   await expect(separator).toHaveAttribute("aria-valuenow", "260");
 });
+
+test("keeps body scroll position while measuring responsive limits", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const body = page.locator(".kit-bottom-dock__body");
+  await body.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const scrollTop = await body.evaluate((element) => element.scrollTop);
+  expect(scrollTop).toBeGreaterThan(0);
+
+  await page.getByRole("button", { name: "Use container limits" }).click();
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  expect(await body.evaluate((element) => element.scrollTop)).toBe(scrollTop);
+});
