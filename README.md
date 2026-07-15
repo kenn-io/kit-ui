@@ -42,6 +42,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 
 | Component                                                    | Origin                              | Purpose                                                                                       |
 | ------------------------------------------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| [BottomDock](docs/components/bottom-dock.md)                 | middleman                           | Inline resizable bottom panel with composable regions                                         |
 | [Button](docs/components/button.md)                          | middleman `ActionButton`            | Action button with tone × surface × size variants                                             |
 | [Calendar](docs/components/calendar.md)                      | new (DateRangePicker's month grid)  | Single-month date grid with range highlight and month paging                                  |
 | [Chip](docs/components/chip.md)                              | middleman `Chip`                    | Status/label badge, optionally interactive                                                    |

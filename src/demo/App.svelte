@@ -13,6 +13,7 @@
     ThemeToggle,
     Toggle,
   } from "../lib/index.js";
+  import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
   import CardDemo from "./pages/CardDemo.svelte";
@@ -81,6 +82,7 @@
   ];
 
   const componentPages: Page[] = [
+    { id: "bottom-dock", label: "BottomDock", component: BottomDockDemo },
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "card", label: "Card", component: CardDemo },

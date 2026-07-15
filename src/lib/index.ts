@@ -1,4 +1,5 @@
 // Components
+export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
 export { default as Calendar } from "./components/Calendar.svelte";
@@ -82,7 +83,7 @@ export { default as SidebarToggle } from "./components/SidebarToggle.svelte";
 export type { SidebarToggleState } from "./components/SidebarToggle.svelte";
 export { default as Spinner } from "./components/Spinner.svelte";
 export { default as SplitResizeHandle } from "./components/SplitResizeHandle.svelte";
-export type { SplitResizeEvent } from "./components/split-resize.js";
+export type { SplitResizeEvent, SplitResizeOrientation } from "./components/split-resize.js";
 export { default as StatusBar } from "./components/StatusBar.svelte";
 export { default as StatusDot } from "./components/StatusDot.svelte";
 export type { StatusDotStatus } from "./components/StatusDot.svelte";

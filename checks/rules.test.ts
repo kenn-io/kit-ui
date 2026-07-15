@@ -150,11 +150,14 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-kbd"])).toHaveLength(1);
   });
 
-  test("splitter: col-resize cursor", () => {
-    const src = svelte(`.divider { width: 4px; cursor: col-resize; }`);
+  test("splitter: pane-resize cursors", () => {
+    const src = svelte(
+      `.columns { width: 4px; cursor: col-resize; }\n.rows { height: 4px; cursor: row-resize; }`,
+    );
     const findings = checkSource(src, "A.svelte", ["hand-rolled-splitter"]);
-    expect(findings).toHaveLength(1);
+    expect(findings).toHaveLength(2);
     expect(findings[0]!.message).toContain("SplitResizeHandle");
+    expect(findings[1]!.message).toContain("SplitResizeHandle");
   });
 
   test("segmented: seg-btn / segmented-control classes", () => {
@@ -429,6 +432,7 @@ describe("hand-rolled components", () => {
     const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
     expect(findings).toHaveLength(3);
     expect(findings[0]!.message).toContain("DetailDrawer");
+    expect(findings[0]!.message).toContain("BottomDock");
   });
 
   test("drawer: does not match kit-detail-drawer", () => {
@@ -443,6 +447,24 @@ describe("hand-rolled components", () => {
     const src = svelte(
       `.drawer-demo-body { padding: 8px; }`,
       `<div class="drawer-demo-body"></div><ul class="drawer-list"></ul>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
+  });
+
+  test("drawer: explicit inline bottom-panel classes", () => {
+    const src = svelte(
+      `.bottom-panel { height: 240px; } .bottom-tray { overflow: auto; } :is(.bottom-panel) :not(.bottom-tray) { display: block; }`,
+      `<div class="bottom-dock"></div><div class="kit-bottom-dock"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
+    expect(findings).toHaveLength(5);
+    expect(findings[0]!.message).toContain("BottomDock");
+  });
+
+  test("drawer: generic dock names remain exempt", () => {
+    const src = svelte(
+      `.dock { display: flex; } .editor-bottom-panel { height: 10rem; } .bottom-tray-content { overflow: auto; }`,
+      `<nav class="dock-item"></nav><div class="editor-bottom-dock"></div><div class="bottom-panel-content"></div><div class="sm:bottom-panel bottom-panel/item"></div>`,
     );
     expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
   });
