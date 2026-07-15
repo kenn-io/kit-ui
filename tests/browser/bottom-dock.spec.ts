@@ -192,12 +192,20 @@ test("does not remeasure constraints when only the dock height changes", async (
   await gotoPage(page, "bottom-dock");
 
   const separator = page.getByRole("separator", { name: "Review details" });
-  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.locator(".workspace-surface").evaluate((element) => {
+    const workspaceContent = element.querySelector<HTMLElement>(".workspace-content");
+    if (!workspaceContent) throw new Error("Bottom dock workspace content is missing");
+    element.style.height = "auto";
+    workspaceContent.style.flex = "none";
+    workspaceContent.style.height = "100px";
+  });
+  await page.waitForTimeout(100);
 
-  const constraintReads = await separator.evaluate(async (element) => {
+  const measurement = await separator.evaluate(async (element) => {
     const dock = element.closest(".kit-bottom-dock");
+    const workspace = element.closest<HTMLElement>(".workspace-surface");
     const row = dock?.querySelector<HTMLElement>(".review-row");
-    if (!row) throw new Error("Bottom dock review row is missing");
+    if (!row || !workspace) throw new Error("Bottom dock test layout is missing");
 
     let reads = 0;
     Object.defineProperty(row, "scrollHeight", {
@@ -208,6 +216,7 @@ test("does not remeasure constraints when only the dock height changes", async (
       },
     });
 
+    const heightBefore = Math.round(workspace.getBoundingClientRect().height);
     element.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "ArrowUp",
@@ -216,8 +225,13 @@ test("does not remeasure constraints when only the dock height changes", async (
       }),
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
-    return reads;
+    return {
+      constraintReads: reads,
+      heightBefore,
+      heightAfter: Math.round(workspace.getBoundingClientRect().height),
+    };
   });
 
-  expect(constraintReads).toBe(0);
+  expect(measurement.heightAfter).toBeGreaterThan(measurement.heightBefore);
+  expect(measurement.constraintReads).toBe(0);
 });

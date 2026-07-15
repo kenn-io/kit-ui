@@ -46,6 +46,8 @@
   let measuredMaxHeight = $state(100);
   let startHeight = 0;
   let dockElement: HTMLElement | null = null;
+  let ownResizePending = false;
+  let ownResizeResetFrame: number | null = null;
 
   interface ScrollPosition {
     element: HTMLElement;
@@ -147,9 +149,14 @@
       };
 
       updateConstraints();
-      const heightObserver = new ResizeObserver(scheduleHeightUpdate);
-      heightObserver.observe(element);
-      const contextResizeObserver = new ResizeObserver(scheduleConstraintUpdate);
+      const resizeObserver = new ResizeObserver((entries) => {
+        const dockResized = entries.some((entry) => entry.target === element);
+        const contextResized = entries.some((entry) => entry.target !== element);
+
+        if (dockResized) scheduleHeightUpdate();
+        if (contextResized && !(dockResized && ownResizePending)) scheduleConstraintUpdate();
+      });
+      resizeObserver.observe(element);
 
       const mutationObserver = new MutationObserver(scheduleConstraintUpdate);
       mutationObserver.observe(element, {
@@ -157,7 +164,7 @@
         attributeFilter: ["class"],
       });
       for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
-        contextResizeObserver.observe(ancestor);
+        resizeObserver.observe(ancestor);
         mutationObserver.observe(ancestor, {
           attributes: true,
           attributeFilter: ["class", "style", "data-kit-theme"],
@@ -167,12 +174,14 @@
       window.addEventListener("resize", scheduleConstraintUpdate);
       return () => {
         if (dockElement === element) dockElement = null;
-        heightObserver.disconnect();
-        contextResizeObserver.disconnect();
+        resizeObserver.disconnect();
         mutationObserver.disconnect();
         window.removeEventListener("resize", scheduleConstraintUpdate);
         if (heightFrame !== null) cancelAnimationFrame(heightFrame);
         if (constraintsFrame !== null) cancelAnimationFrame(constraintsFrame);
+        if (ownResizeResetFrame !== null) cancelAnimationFrame(ownResizeResetFrame);
+        ownResizePending = false;
+        ownResizeResetFrame = null;
       };
     };
   }
@@ -182,6 +191,15 @@
   }
 
   function handleResize(event: SplitResizeEvent): void {
+    ownResizePending = true;
+    if (ownResizeResetFrame !== null) cancelAnimationFrame(ownResizeResetFrame);
+    /* Keep the marker through ResizeObserver delivery, which may follow the next animation frame. */
+    ownResizeResetFrame = requestAnimationFrame(() => {
+      ownResizeResetFrame = requestAnimationFrame(() => {
+        ownResizePending = false;
+        ownResizeResetFrame = null;
+      });
+    });
     requestedHeight = `${Math.max(0, startHeight - event.delta)}px`;
   }
 </script>
