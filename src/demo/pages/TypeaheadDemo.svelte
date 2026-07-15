@@ -12,10 +12,11 @@
 
   let remoteValue = $state("server-result");
   let remoteQuery = $state("initial");
+  let remoteOptionsQuery = $state("initial");
   const remoteOptions = $derived<TypeaheadOption[]>(
-    remoteQuery === ""
+    remoteOptionsQuery === ""
       ? []
-      : remoteQuery === "group"
+      : remoteOptionsQuery === "group"
         ? [
             {
               name: "server-group",
@@ -24,18 +25,29 @@
               children: [{ name: "server-child", label: "Server child" }],
             },
           ]
-        : remoteQuery === "updated"
+        : remoteOptionsQuery === "updated"
           ? [{ name: "server-result", label: "Updated server result" }]
-          : remoteQuery === "other"
+          : remoteOptionsQuery === "other"
             ? [{ name: "other-result", label: "Other result" }]
-            : remoteQuery === "slow"
+            : remoteOptionsQuery === "slow"
               ? [{ name: "slow-result", label: "Slow result" }]
-              : remoteQuery === "old"
+              : remoteOptionsQuery === "old"
                 ? [{ name: "shared-result", label: "Old result" }]
-                : remoteQuery === "new"
+                : remoteOptionsQuery === "new"
                   ? [{ name: "shared-result", label: "New result" }]
                   : [{ name: "server-result", label: "Server result" }],
   );
+  function updateRemoteQuery(query: string): void {
+    remoteQuery = query;
+    if (query !== "async") {
+      remoteOptionsQuery = query;
+      return;
+    }
+    remoteOptionsQuery = "";
+    setTimeout(() => {
+      if (remoteQuery === "async") remoteOptionsQuery = "new";
+    }, 100);
+  }
   async function selectRemote(value: string): Promise<void> {
     const selectionQuery = remoteQuery;
     if (value === "slow-result" || selectionQuery === "old") {
@@ -138,6 +150,7 @@
   description="remote disables local filtering while onquery reports input changes so a caller can fetch and replace the option source. Opening, closing, and selection reset the reported query."
   code={`<Typeahead
   remote
+  allowClear
   options={remoteOptions}
   value={remoteValue}
   fallbackLabel="Select remote result"
@@ -152,12 +165,13 @@
 >
   <Typeahead
     remote
+    allowClear
     options={remoteOptions}
     value={remoteValue}
     fallbackLabel="Select remote result"
     placeholder="Search remote options…"
     onquery={(query) => {
-      remoteQuery = query;
+      updateRemoteQuery(query);
     }}
     onselect={selectRemote}
   />

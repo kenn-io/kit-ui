@@ -401,7 +401,7 @@
       value={query}
       oninput={(event) => {
         updateQuery(event.currentTarget.value);
-        highlightIndex = rows.length > 0 || customValue !== "" ? clearOffset : 0;
+        highlightIndex = clearOffset;
       }}
       onkeydown={handleKeydown}
       {placeholder}

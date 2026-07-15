@@ -35,6 +35,20 @@ test("remote mode reports queries without filtering caller-supplied options", as
   );
 });
 
+test("remote results move Enter past the clear row after an empty loading state", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await input.fill("async");
+  await expect(page.getByRole("option", { name: "New result" })).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
+});
+
 test("remote mode retains a controlled preselection when opening clears its options", async ({
   page,
 }) => {
