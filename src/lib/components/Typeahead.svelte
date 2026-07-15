@@ -83,9 +83,10 @@
   // Group rows the user has toggled away from their initial state.
   let expansionOverrides = $state<Record<string, boolean>>({});
   // Remote result sets are commonly cleared when the picker closes. Retain
-  // the label selected from the last result set so the controlled value still
-  // has meaningful trigger text after its source row disappears.
-  let selectedLabelCache = $state<{ name: string; label: string }>();
+  // labels by option name so the controlled value still has meaningful
+  // trigger text after its source row disappears. Keying prevents stale async
+  // selections from evicting the current value's label.
+  let selectedLabelCache = $state<Record<string, string>>({});
 
   const uid = $props.id();
   const listId = `${uid}-list`;
@@ -182,16 +183,13 @@
   const displayValue = $derived(
     selectedOption?.displayLabel ??
       selectedOption?.label ??
-      (remote && selectedLabelCache?.name === value ? selectedLabelCache.label : undefined) ??
+      (remote ? selectedLabelCache[value] : undefined) ??
       (allowCustom && value !== "" ? value : fallbackLabel),
   );
 
   function rememberSelectedLabel(): void {
     if (!remote || !selectedOption) return;
-    selectedLabelCache = {
-      name: selectedOption.name,
-      label: selectedOption.displayLabel ?? selectedOption.label,
-    };
+    selectedLabelCache[selectedOption.name] = selectedOption.displayLabel ?? selectedOption.label;
   }
 
   function updateQuery(nextQuery: string): void {
@@ -245,7 +243,7 @@
       const vetoed = (await onselect(name)) === false;
       if (!vetoed) {
         if (remote && selectedLabel !== undefined) {
-          selectedLabelCache = { name, label: selectedLabel };
+          selectedLabelCache[name] = selectedLabel;
         }
         if (seq === selectSeq) void closeDropdown(true);
       }

@@ -30,12 +30,17 @@
             ? [{ name: "other-result", label: "Other result" }]
             : remoteQuery === "slow"
               ? [{ name: "slow-result", label: "Slow result" }]
-              : [{ name: "server-result", label: "Server result" }],
+              : remoteQuery === "stale"
+                ? [{ name: "stale-result", label: "Stale result" }]
+                : remoteQuery === "fast"
+                  ? [{ name: "fast-result", label: "Fast result" }]
+                  : [{ name: "server-result", label: "Server result" }],
   );
   async function selectRemote(value: string): Promise<void> {
-    if (value === "slow-result") {
+    if (value === "slow-result" || value === "stale-result") {
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
+    if (value === "stale-result") return;
     remoteValue = value;
   }
 
