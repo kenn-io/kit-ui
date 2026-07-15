@@ -24,7 +24,11 @@
               children: [{ name: "server-child", label: "Server child" }],
             },
           ]
-        : [{ name: "server-result", label: "Server result" }],
+        : remoteQuery === "updated"
+          ? [{ name: "server-result", label: "Updated server result" }]
+          : remoteQuery === "other"
+            ? [{ name: "other-result", label: "Other result" }]
+            : [{ name: "server-result", label: "Server result" }],
   );
 
   let owner = $state("");

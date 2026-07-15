@@ -195,13 +195,13 @@
   }
 
   function updateQuery(nextQuery: string): void {
+    rememberSelectedLabel();
     query = nextQuery;
     onquery?.(nextQuery);
   }
 
   async function openDropdown() {
     if (disabled) return;
-    rememberSelectedLabel();
     updateQuery("");
     open = true;
     // The trigger button unmounts as the input mounts; focus briefly lands on
@@ -220,7 +220,6 @@
   // input would otherwise drop focus on <body>. Focusout-driven closes must
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
-    rememberSelectedLabel();
     open = false;
     updateQuery("");
     // Invalidate in-flight selections: a slow onselect from this (or an

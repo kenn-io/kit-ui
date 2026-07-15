@@ -49,6 +49,23 @@ test("remote mode retains a controlled preselection when opening clears its opti
   await expect(trigger).toContainText("Server result");
 });
 
+test("remote mode refreshes the selected label from an intermediate result set", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+
+  await input.fill("updated");
+  await expect(page.getByRole("option", { name: "Updated server result" })).toBeVisible();
+  await input.fill("other");
+  await expect(page.getByRole("option", { name: "Other result" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(trigger).toContainText("Updated server result");
+});
+
 test("remote grouped results retain keyboard expansion while a query is present", async ({
   page,
 }) => {
