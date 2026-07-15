@@ -9,8 +9,8 @@
 </script>
 
 <DemoSection
-  title="Overlay scroll indicator"
-  description="The native scrollbar is hidden; a thin overlay thumb appears while scrolling and fades out 700ms after the last scroll event. The viewport is a labelled, focusable region, so keyboard users can scroll it with arrow keys."
+  title="Native vertical scroller"
+  description="The browser and operating system render the vertical scrollbar and provide its native interactions. The viewport is also a labelled, focusable region, so keyboard users can scroll it with arrow keys."
   code={`<ScrollBox label="Activity feed" bind:viewport onscroll={handleScroll}>
   {#each lines as line}
     <p>{line}</p>
@@ -33,7 +33,7 @@
 
 <DemoSection
   title="Content that fits"
-  description="When the content is shorter than the viewport, the indicator never shows — scrolling produces no thumb."
+  description="When the content is shorter than the viewport, the browser does not need to present a scrollbar."
 >
   <div class="host host--short">
     <ScrollBox label="Short list">

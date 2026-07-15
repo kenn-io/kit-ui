@@ -60,10 +60,6 @@ export {
 } from "./components/date-range.js";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as ScrollBox } from "./components/ScrollBox.svelte";
-export {
-  getScrollIndicatorGeometry,
-  type ScrollIndicatorGeometry,
-} from "./components/scroll-indicator.js";
 export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";
 export type {

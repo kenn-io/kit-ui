@@ -1,14 +1,8 @@
 # ScrollBox
 
-Vertical scroller with the native scrollbar hidden and a thin overlay
-indicator instead: a thumb appears while scrolling and fades out 700ms after
-the last scroll event (no fade under `prefers-reduced-motion`; `CanvasText`
-thumb under forced colors). The viewport is a labelled focusable
+Vertical scroller that preserves the browser and operating system's native
+scrollbar rendering and interactions. The viewport is a labelled focusable
 `role="region"`, so keyboard users can tab to it and scroll with arrow keys.
-
-The thumb geometry is exported as a pure function
-(`getScrollIndicatorGeometry`) — unit-tested in
-`checks/scroll-indicator.test.ts` and reusable for custom overlay scrollers.
 
 ```svelte
 <script lang="ts">
@@ -31,7 +25,7 @@ The thumb geometry is exported as a pure function
 | `label`    | `string`                    | required | `aria-label` for the scroll region — it's a focusable keyboard target and must be announced with a name |
 | `class`    | `ClassValue`                | `""`     | Applied to the outer wrapper                                                                            |
 | `dataTest` | `string`                    | —        | `data-test` attribute on the outer wrapper                                                              |
-| `onscroll` | `(event: Event) => void`    | —        | Fires on every viewport scroll (after the indicator state updates)                                      |
+| `onscroll` | `(event: Event) => void`    | —        | Fires on every viewport scroll                                                                          |
 | `viewport` | `HTMLDivElement` (bindable) | —        | The scrolling element — bind it to read/set `scrollTop` or observe scroll position                      |
 | `children` | `Snippet`                   | required |                                                                                                         |
 
@@ -42,8 +36,9 @@ focusable ancestor already owns keyboard scrolling.
 ## Layout
 
 The wrapper is `flex: 1; min-height: 0`, sized by its flex parent — give the
-parent a bounded height or the viewport never overflows and the indicator
-stays hidden. Content shorter than the viewport never shows a thumb.
+parent a bounded height or the viewport never overflows. The browser decides
+whether and how to present its native scrollbar based on overflow and the
+user's platform settings.
 
 ScrollBox is vertical-only. Horizontal strips (tab bars) should stay native
 scrollers with their own affordances.
@@ -52,11 +47,4 @@ scrollers with their own affordances.
 
 Stable class names for tests and `closest()` lookups: `kit-scrollbox`
 (wrapper), `kit-scrollbox__viewport` (scrolling element, carries the
-`aria-label`), `kit-scrollbox__indicator` / `--visible`, `kit-scrollbox__thumb`.
-
-## `getScrollIndicatorGeometry(viewportHeight, contentHeight, scrollTop)`
-
-Returns `{ scrollable, height, top }`: `scrollable` is false when content
-fits (or the viewport is unmeasured), thumb `height` is proportional to the
-visible fraction with a 24px minimum, and `top` maps the (overscroll-clamped)
-scroll position onto the thumb's travel range.
+`aria-label`).

@@ -517,6 +517,7 @@ describe("hand-rolled components", () => {
     const findings = checkSource(src, "A.svelte", ["hand-rolled-scroll-box"]);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("ScrollBox");
+    expect(findings[0]!.message).toContain("native scrollbar");
   });
 
   test("scroll-box: shorthand overflow counts, horizontal strips are exempt", () => {
