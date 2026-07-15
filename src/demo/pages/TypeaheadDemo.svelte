@@ -28,8 +28,16 @@
           ? [{ name: "server-result", label: "Updated server result" }]
           : remoteQuery === "other"
             ? [{ name: "other-result", label: "Other result" }]
-            : [{ name: "server-result", label: "Server result" }],
+            : remoteQuery === "slow"
+              ? [{ name: "slow-result", label: "Slow result" }]
+              : [{ name: "server-result", label: "Server result" }],
   );
+  async function selectRemote(value: string): Promise<void> {
+    if (value === "slow-result") {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    remoteValue = value;
+  }
 
   let owner = $state("");
   const owners: TypeaheadOption[] = [
@@ -146,9 +154,7 @@
     onquery={(query) => {
       remoteQuery = query;
     }}
-    onselect={(value) => {
-      remoteValue = value;
-    }}
+    onselect={selectRemote}
   />
   <span>query: <code data-demo="remote-query">{remoteQuery || "(empty)"}</code></span>
   <span>value: <code data-demo="remote-value">{remoteValue || "(none)"}</code></span>

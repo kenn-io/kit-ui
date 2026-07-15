@@ -243,11 +243,11 @@
     const selectedLabel = option?.displayLabel ?? option?.label;
     try {
       const vetoed = (await onselect(name)) === false;
-      if (!vetoed && seq === selectSeq) {
+      if (!vetoed) {
         if (remote && selectedLabel !== undefined) {
           selectedLabelCache = { name, label: selectedLabel };
         }
-        void closeDropdown(true);
+        if (seq === selectSeq) void closeDropdown(true);
       }
     } catch {
       // Keep the list open so the caller can surface its own error state

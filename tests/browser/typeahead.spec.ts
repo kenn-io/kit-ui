@@ -66,6 +66,21 @@ test("remote mode refreshes the selected label from an intermediate result set",
   await expect(trigger).toContainText("Updated server result");
 });
 
+test("remote mode retains the label when async selection succeeds after closing", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  await page.getByRole("combobox", { name: "Search remote options…" }).fill("slow");
+
+  await page.getByRole("option", { name: "Slow result" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("slow-result");
+
+  await expect(trigger).toContainText("Slow result");
+});
+
 test("remote grouped results retain keyboard expansion while a query is present", async ({
   page,
 }) => {
