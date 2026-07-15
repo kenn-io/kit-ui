@@ -55,7 +55,10 @@ panes.
 `SplitResizeEvent` carries `orientation`, `delta`, `start`, `current`, and the
 raw pointer or keyboard `event`. Horizontal handles use Left/Right; vertical
 handles use Up/Down. The handle accepts one active pointer at a time. Pointer
-cancellation commits the last resize event that was delivered, so consumers do
-not jump to a cancellation coordinate. Axis-specific `touch-action` preserves
-perpendicular page scrolling while keeping the resize axis under pointer
-control. Keyboard presses fire start/resize/end as one atomic step.
+cancellation or unexpected capture loss commits the most recent resize sample,
+so consumers do not jump to an interruption coordinate. If interruption occurs
+before the first move, `onResizeEnd` receives the zero-delta sample derived from
+the original `pointerdown`; after a move it receives the same sample and raw
+`pointermove` event last sent to `onResize`. Axis-specific `touch-action`
+preserves perpendicular page scrolling while keeping the resize axis under
+pointer control. Keyboard presses fire start/resize/end as one atomic step.

@@ -38,6 +38,7 @@ test("resizes horizontal and vertical panes on their active axes", async ({ page
   await page.keyboard.press("ArrowRight");
   await expect(vertical).toHaveAttribute("aria-valuenow", "112");
 
+  await vertical.hover();
   const box = await vertical.boundingBox();
   if (!box) throw new Error("Vertical split handle is not visible");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -78,4 +79,37 @@ test("keeps one active pointer and commits the last valid delta on cancellation"
   await page.mouse.up();
 
   await expect(vertical).toHaveAttribute("aria-valuenow", "112");
+});
+
+test("ends the active resize when pointer capture is lost", async ({ page }) => {
+  await gotoPage(page, "split-resize");
+
+  const vertical = page.getByRole("separator", { name: "Resize top pane" });
+  const box = await vertical.boundingBox();
+  if (!box) throw new Error("Vertical split handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 24);
+  await vertical.evaluate((element) => {
+    const handle = element as HTMLButtonElement;
+    if (!handle.hasPointerCapture(1)) throw new Error("Expected pointer capture");
+    handle.releasePointerCapture(1);
+  });
+  await page.mouse.move(x + 100, y + 100);
+  await page.mouse.up();
+  await expect(vertical).toHaveAttribute("aria-valuenow", "112");
+
+  const resizedBox = await vertical.boundingBox();
+  if (!resizedBox) throw new Error("Vertical split handle is not visible after capture loss");
+  await page.mouse.move(resizedBox.x + resizedBox.width / 2, resizedBox.y + resizedBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    resizedBox.x + resizedBox.width / 2,
+    resizedBox.y + resizedBox.height / 2 + 24,
+  );
+  await page.mouse.up();
+  await expect(vertical).toHaveAttribute("aria-valuenow", "136");
 });

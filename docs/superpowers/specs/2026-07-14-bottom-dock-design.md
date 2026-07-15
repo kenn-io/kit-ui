@@ -51,6 +51,12 @@ leaves the four-pixel handle. It also supports `disabled`, `ariaValueMin`,
 the physical separator: horizontal pane layouts render a vertical separator,
 while vertical pane layouts render a horizontal separator.
 
+Only one pointer owns a resize at a time, and the active orientation is
+snapshotted at pointerdown. Pointer cancellation and unexpected capture loss
+end the resize using the latest valid sample rather than the interruption
+coordinate. Before any move, that sample is the zero-delta pointerdown event;
+after a move, it is the same pointermove-backed sample last sent to `onResize`.
+
 This is an intentional breaking replacement for the previously exported and
 documented `deltaX`, `startX`, and `currentX` fields. The package remains
 pre-1.0 and source consumers migrate directly to the axis-neutral fields; there
@@ -125,21 +131,28 @@ nextHeight = startHeight - event.delta;
 This inversion is required because the resize handle is on the dock's top
 edge: dragging upward or pressing ArrowUp increases the dock height, while
 dragging downward or pressing ArrowDown decreases it. CSS `min-height` and
-`max-height` enforce arbitrary CSS-length limits. A `ResizeObserver` tracks the
-actual rendered pixel height for `aria-valuenow`, including when CSS clamps the
-requested height or the containing viewport changes.
+`max-height` enforce valid CSS length-percentage limits. The dock resolves each
+limit by applying it as a temporary height to its own layout box, measuring the
+used pixel value in the real containing block, and restoring the requested
+height before paint. This handles `%`, viewport units, CSS variables, and
+`calc()` without parsing CSS serialization.
 
-The dock resolves its computed CSS minimum and maximum heights to pixels and
-passes those values with the current rendered height to `aria-valuemin`,
-`aria-valuemax`, and `aria-valuenow`. All three separator values therefore use
-one consistent unit even when callers supplied viewport-relative CSS lengths.
+The measurement refreshes when the limit props change, when the dock or its
+containing block resizes, when the viewport resizes, and when ancestor
+class/style changes can alter inherited CSS values. It passes the resolved
+minimum and maximum with the current rendered height to `aria-valuemin`,
+`aria-valuemax`, and `aria-valuenow`, so all three values remain in one pixel
+unit even when the dock itself stays at the same height.
 
 ## Checker and Documentation
 
 The hand-rolled splitter rule will detect both `col-resize` and `row-resize`.
-The hand-rolled drawer guidance will recommend `DetailDrawer` for overlay side
-sheets and `BottomDock` for inline bottom panels. Checker documentation and the
-component-to-rule matrix will list the new component.
+The hand-rolled drawer rule will detect existing drawer structures plus the
+explicit inline class patterns `bottom-dock`, `bottom-panel`, and `bottom-tray`,
+while leaving generic `dock` names alone. Its guidance recommends
+`DetailDrawer` for overlay side sheets and `BottomDock` for inline bottom
+panels. Checker documentation and the component-to-rule matrix will list the
+new component.
 
 `docs/components/bottom-dock.md` will document the controlled-open contract,
 CSS-length height props, snippet regions, resize direction, and the deliberate

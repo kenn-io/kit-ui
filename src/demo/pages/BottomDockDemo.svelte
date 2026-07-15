@@ -8,6 +8,7 @@
   import DemoSection from "../DemoSection.svelte";
 
   type DockTab = "review" | "log" | "prompt";
+  type LimitMode = "pixels" | "container" | "viewport";
 
   const tabs: SegmentedControlOption[] = [
     { value: "review", label: "Review" },
@@ -18,6 +19,15 @@
 
   let open = $state(true);
   let activeTab = $state<DockTab>("review");
+  let initialHeight = $state("260px");
+  let limitMode = $state<LimitMode>("pixels");
+  let workspaceTall = $state(false);
+  const minHeight = $derived(
+    limitMode === "container" ? "25%" : limitMode === "viewport" ? "20vh" : "180px",
+  );
+  const maxHeight = $derived(
+    limitMode === "container" ? "calc(75% - 10px)" : limitMode === "viewport" ? "80vh" : "360px",
+  );
 </script>
 
 <DemoSection
@@ -36,12 +46,16 @@
 </BottomDock>`}
 >
   <div class="dock-controls">
+    <Button label="Use container limits" onclick={() => (limitMode = "container")} />
+    <Button label="Use viewport limits" onclick={() => (limitMode = "viewport")} />
+    <Button label="Make workspace taller" onclick={() => (workspaceTall = true)} />
+    <Button label="Set initial height to 300px" onclick={() => (initialHeight = "300px")} />
     {#if !open}
       <Button label="Open dock" onclick={() => (open = true)} />
     {/if}
   </div>
 
-  <div class="workspace-surface">
+  <div class={["workspace-surface", workspaceTall && "workspace-surface--tall"]}>
     <div class="workspace-content">
       <strong>Workspace content</strong>
       <span>The dock occupies layout space instead of covering this area.</span>
@@ -50,9 +64,9 @@
     <BottomDock
       {open}
       ariaLabel="Review details"
-      initialHeight="260px"
-      minHeight="180px"
-      maxHeight="360px"
+      {initialHeight}
+      {minHeight}
+      {maxHeight}
       onclose={() => (open = false)}
     >
       {#snippet header()}
@@ -93,6 +107,8 @@
     min-height: 28px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
   }
 
   .workspace-surface {
@@ -103,6 +119,10 @@
     background: var(--bg-primary);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
+  }
+
+  .workspace-surface--tall {
+    height: 600px;
   }
 
   .workspace-content {

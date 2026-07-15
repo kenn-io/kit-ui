@@ -149,14 +149,21 @@ Update `SplitResizeHandle.svelte` so it:
 - imports `SplitResizeOrientation`;
 - defaults `orientation` to `"horizontal"`;
 - reads `clientX` for horizontal and `clientY` for vertical;
-- uses pointer events and pointer capture;
+- uses pointer events, pointer capture, pointer-ID filtering, and one active
+  pointer at a time;
+- snapshots the active orientation for the full drag;
 - emits axis-neutral resize events;
 - accepts only Left/Right for horizontal and Up/Down for vertical;
 - renders `role="separator"` with the physical separator ARIA orientation;
 - binds required separator values and native `disabled`;
-- uses `kit-split-resize-handle--horizontal` and `--vertical` modifiers for 4px col-resize and row-resize handles.
+- uses `kit-split-resize-handle--horizontal` and `--vertical` modifiers for 4px
+  col-resize and row-resize handles with axis-specific `touch-action`.
 
-Use the exact callback behavior in the approved design: pointer end and pointer cancel both call `onResizeEnd`, keyboard presses call start/resize/end atomically, and teardown removes every installed listener.
+Use the exact callback behavior in the approved design: pointer end calls
+`onResizeEnd` with its final coordinate; pointer cancel or unexpected capture
+loss calls it with the most recent valid sample (the zero-delta pointerdown
+sample when no move occurred); keyboard presses call start/resize/end
+atomically; and teardown removes every installed listener.
 
 - [ ] **Step 9: Update consumers and the demo**
 
@@ -228,7 +235,18 @@ await expect(page.getByText("Review body item 20")).toBeAttached();
 await expect(page.getByText("Ready to merge")).toBeVisible();
 ```
 
-Then measure the dock, press ArrowUp and assert a 24px increase, press ArrowDown and assert the original height, press Escape and assert the dock remains visible, drag upward and assert growth, drag beyond both limits and assert 360px maximum and 180px minimum, verify the body has `scrollHeight > clientHeight`, click `Close panel`, assert the dock disappears, click `Open dock`, and assert the dock returns at its retained height.
+Then measure the dock, press ArrowUp and assert a 24px increase, press ArrowDown
+and assert the original height, press Escape and assert the dock remains
+visible, drag upward and assert growth, drag beyond both limits and assert
+360px maximum and 180px minimum, verify the body has
+`scrollHeight > clientHeight`, click `Close panel`, assert the dock disappears,
+click `Open dock`, and assert the dock returns at its retained height.
+
+Add a second focused case that switches the live component to `%` and `calc()`
+limits, resizes the containing block without changing the dock height, switches
+to viewport-unit limits, and resizes the viewport. Assert that
+`aria-valuemin/max` track each used pixel value while `aria-valuenow` remains
+stable.
 
 - [ ] **Step 2: Run the browser test and verify RED**
 
@@ -242,18 +260,10 @@ Use this state and behavior:
 
 ```ts
 let requestedHeight = $derived(initialHeight);
-let measuredHeight = $state<number | undefined>();
+let measuredHeight = $state(0);
+let measuredMinHeight = $state(0);
+let measuredMaxHeight = $state(100);
 let startHeight = 0;
-
-const observeHeight: Attachment<HTMLElement> = (element) => {
-  const update = () => {
-    measuredHeight = Math.round(element.getBoundingClientRect().height);
-  };
-  update();
-  const observer = new ResizeObserver(update);
-  observer.observe(element);
-  return () => observer.disconnect();
-};
 
 function handleResizeStart(): void {
   startHeight = measuredHeight ?? 0;
@@ -264,12 +274,19 @@ function handleResize(event: SplitResizeEvent): void {
 }
 ```
 
+Implement the attachment as a reactive factory keyed by `minHeight` and
+`maxHeight`. Resolve each constraint by temporarily applying it as the dock's
+height with min/max disabled, measuring the real layout box, then restoring the
+original inline styles synchronously. Observe the dock and containing block,
+listen for viewport resize, and observe ancestor class/style mutations so
+responsive or inherited limits refresh even when the dock height is unchanged.
+
 The prop defaults must match the approved spec. When `open` is true, render a named `<section>` with:
 
 - `style:height={requestedHeight}`;
 - `style:min-height={minHeight}`;
 - `style:max-height={maxHeight}`;
-- the `ResizeObserver` attachment;
+- the responsive constraint-measurement attachment;
 - a top vertical `SplitResizeHandle` using `ariaLabel`, `keyboardStep`, and the measured minimum, maximum, and current heights;
 - an optional header wrapper with caller content and the built-in `IconButton` containing the Lucide X icon;
 - a flexible scrollable body;
@@ -319,10 +336,16 @@ Expected: FAIL because the message only recommends `DetailDrawer`.
 Change the drawer message to:
 
 ```js
-"drawer markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui";
+"drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui";
 ```
 
-Document `BottomDock` as a `hand-rolled-drawer` replacement for inline panels, add it to the component enforcement matrix and migration ordering, and create `docs/components/bottom-dock.md` with the full prop table, snippets, resizing direction, CSS-length constraints, controlled-open example, and explicit statement that Escape belongs to the parent application.
+Extend the rule to detect exact `bottom-dock`, `bottom-panel`, and
+`bottom-tray` class patterns while exempting `kit-bottom-dock` and generic
+`dock` names. Document `BottomDock` as a `hand-rolled-drawer` replacement for
+inline panels, add it to the component enforcement matrix and migration
+ordering, and create `docs/components/bottom-dock.md` with the full prop table,
+snippets, resizing direction, CSS-length constraints, controlled-open example,
+and explicit statement that Escape belongs to the parent application.
 
 - [ ] **Step 9: Autofix and verify Task 2**
 

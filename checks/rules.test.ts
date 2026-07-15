@@ -451,6 +451,21 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
   });
 
+  test("drawer: explicit inline bottom-panel classes", () => {
+    const src = svelte(
+      `.bottom-panel { height: 240px; } .bottom-tray { overflow: auto; }`,
+      `<div class="bottom-dock"></div><div class="kit-bottom-dock"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]!.message).toContain("BottomDock");
+  });
+
+  test("drawer: generic dock names remain exempt", () => {
+    const src = svelte(`.dock { display: flex; }`, `<nav class="dock-item"></nav>`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
+  });
+
   test("find bar: class match, kit-find-bar exempt", () => {
     const bad = svelte(`.find-bar { display: flex; }`, `<div class="find-bar"></div>`);
     expect(checkSource(bad, "A.svelte", ["hand-rolled-find-bar"])).toHaveLength(2);

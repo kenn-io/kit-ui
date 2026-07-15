@@ -59,3 +59,79 @@ test("renders and resizes a controlled inline bottom dock", async ({ page }) => 
   await expect(dock).toBeVisible();
   await expect.poll(() => renderedHeight(dock)).toBe(180);
 });
+
+test("resolves responsive limits and refreshes them when the sizing context changes", async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Review details" });
+  const separator = page.getByRole("separator", { name: "Review details" });
+  const workspace = page.locator(".workspace-surface");
+
+  await page.getByRole("button", { name: "Use container limits" }).click();
+  const containerHeight = await workspace.evaluate((element) => element.clientHeight);
+  await expect(separator).toHaveAttribute(
+    "aria-valuemin",
+    String(Math.round(containerHeight * 0.25)),
+  );
+  await expect(separator).toHaveAttribute(
+    "aria-valuemax",
+    String(Math.round(containerHeight * 0.75 - 10)),
+  );
+  await expect(separator).toHaveAttribute("aria-valuenow", "260");
+
+  await page.getByRole("button", { name: "Make workspace taller" }).click();
+  const tallerContainerHeight = await workspace.evaluate((element) => element.clientHeight);
+  await expect(separator).toHaveAttribute(
+    "aria-valuemin",
+    String(Math.round(tallerContainerHeight * 0.25)),
+  );
+  await expect(separator).toHaveAttribute(
+    "aria-valuemax",
+    String(Math.round(tallerContainerHeight * 0.75 - 10)),
+  );
+  await expect(separator).toHaveAttribute("aria-valuenow", "260");
+
+  await page.getByRole("button", { name: "Use viewport limits" }).click();
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error("Bottom dock test requires a viewport");
+  await expect(separator).toHaveAttribute(
+    "aria-valuemin",
+    String(Math.round(viewport.height * 0.2)),
+  );
+  await expect(separator).toHaveAttribute(
+    "aria-valuemax",
+    String(Math.round(viewport.height * 0.8)),
+  );
+
+  const resizedViewport = { width: viewport.width, height: viewport.height + 80 };
+  await page.setViewportSize(resizedViewport);
+  await expect(separator).toHaveAttribute(
+    "aria-valuemin",
+    String(Math.round(resizedViewport.height * 0.2)),
+  );
+  await expect(separator).toHaveAttribute(
+    "aria-valuemax",
+    String(Math.round(resizedViewport.height * 0.8)),
+  );
+  await expect.poll(() => renderedHeight(dock)).toBe(260);
+  expect(pageErrors).toEqual([]);
+});
+
+test("replaces a local resize override when initialHeight changes", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Review details" });
+  const separator = page.getByRole("separator", { name: "Review details" });
+
+  await separator.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect.poll(() => renderedHeight(dock)).toBe(284);
+
+  await page.getByRole("button", { name: "Set initial height to 300px" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(300);
+  await expect(separator).toHaveAttribute("aria-valuenow", "300");
+});

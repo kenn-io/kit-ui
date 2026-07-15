@@ -504,15 +504,15 @@ export function checkHandRolledToast(source) {
   return findings;
 }
 
-/** Hand-rolled slide-in drawers duplicate DetailDrawer. Matches the bare
- * drawer class and the structural compounds agentsview converged on —
- * other drawer-* names (e.g. content classes on a composed DetailDrawer)
- * are left alone, and kit-detail-drawer* is exempt. */
+/** Hand-rolled slide-in drawers and explicit inline bottom-panel patterns
+ * duplicate DetailDrawer or BottomDock. Other drawer-* and generic dock names
+ * are left alone; kit component classes are exempt. */
 export function checkHandRolledDrawer(source) {
   const findings = [];
-  const part = "drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))";
+  const part =
+    "(?:drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))|bottom-(?:dock|panel|tray)\\b)";
   const re = new RegExp(
-    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${part}|\\.(?<!kit-detail-)${part}`,
+    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${part}|\\.(?<!kit-)(?<!kit-detail-)${part}`,
     "g",
   );
   let match;
@@ -521,7 +521,7 @@ export function checkHandRolledDrawer(source) {
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),
       message:
-        "drawer markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
     });
   }
   return findings;

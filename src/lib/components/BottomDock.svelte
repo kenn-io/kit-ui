@@ -46,23 +46,78 @@
   let measuredMaxHeight = $state(100);
   let startHeight = 0;
 
-  const observeHeight: Attachment<HTMLElement> = (element) => {
-    const update = () => {
-      const styles = getComputedStyle(element);
-      const height = Math.round(element.getBoundingClientRect().height);
-      const min = Number.parseFloat(styles.minHeight);
-      const max = Number.parseFloat(styles.maxHeight);
-      measuredHeight = height;
-      measuredMinHeight = Number.isFinite(min) ? Math.round(min) : 0;
-      measuredMaxHeight = Number.isFinite(max)
-        ? Math.max(measuredMinHeight, Math.round(max))
-        : Math.max(measuredMinHeight, height);
+  /* Resolve CSS lengths through the dock's real containing block. */
+  function measureHeights(
+    element: HTMLElement,
+    minimum: string,
+    maximum: string,
+  ): { height: number; min: number; max: number } {
+    const originalStyle = element.getAttribute("style");
+    let min = 0;
+    let max = 0;
+
+    try {
+      element.style.setProperty("transition", "none", "important");
+      element.style.minHeight = "0px";
+      element.style.maxHeight = "none";
+
+      element.style.height = minimum;
+      min = Math.round(element.getBoundingClientRect().height);
+
+      element.style.height = maximum;
+      max = Math.round(element.getBoundingClientRect().height);
+    } finally {
+      if (originalStyle === null) element.removeAttribute("style");
+      else element.setAttribute("style", originalStyle);
+    }
+
+    const height = Math.round(element.getBoundingClientRect().height);
+    return { height, min, max: Math.max(min, max) };
+  }
+
+  function observeHeight(minimum: string, maximum: string): Attachment<HTMLElement> {
+    return (element) => {
+      let frame: number | null = null;
+
+      const update = () => {
+        frame = null;
+        const measured = measureHeights(element, minimum, maximum);
+        measuredHeight = measured.height;
+        measuredMinHeight = measured.min;
+        measuredMaxHeight = measured.max;
+      };
+
+      const scheduleUpdate = () => {
+        if (frame !== null) return;
+        frame = requestAnimationFrame(update);
+      };
+
+      update();
+      const resizeObserver = new ResizeObserver(scheduleUpdate);
+      resizeObserver.observe(element);
+      if (element.parentElement) resizeObserver.observe(element.parentElement);
+
+      const mutationObserver = new MutationObserver(scheduleUpdate);
+      mutationObserver.observe(element, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+      for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        mutationObserver.observe(ancestor, {
+          attributes: true,
+          attributeFilter: ["class", "style"],
+        });
+      }
+
+      window.addEventListener("resize", scheduleUpdate);
+      return () => {
+        resizeObserver.disconnect();
+        mutationObserver.disconnect();
+        window.removeEventListener("resize", scheduleUpdate);
+        if (frame !== null) cancelAnimationFrame(frame);
+      };
     };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => observer.disconnect();
-  };
+  }
 
   function handleResizeStart(): void {
     startHeight = measuredHeight ?? 0;
@@ -80,7 +135,7 @@
     style:height={requestedHeight}
     style:min-height={minHeight}
     style:max-height={maxHeight}
-    {@attach observeHeight}
+    {@attach observeHeight(minHeight, maxHeight)}
   >
     <SplitResizeHandle
       {ariaLabel}

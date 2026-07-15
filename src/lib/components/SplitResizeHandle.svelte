@@ -93,13 +93,19 @@
       finish(cancelEvent, true);
     }
 
+    function onLostPointerCapture(lostEvent: PointerEvent): void {
+      finish(lostEvent, true);
+    }
+
     handle.addEventListener("pointermove", onMove);
     handle.addEventListener("pointerup", onUp);
     handle.addEventListener("pointercancel", onCancel);
+    handle.addEventListener("lostpointercapture", onLostPointerCapture);
     cleanup = () => {
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onUp);
       handle.removeEventListener("pointercancel", onCancel);
+      handle.removeEventListener("lostpointercapture", onLostPointerCapture);
       if (handle.hasPointerCapture(pointerId)) {
         handle.releasePointerCapture(pointerId);
       }

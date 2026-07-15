@@ -50,9 +50,13 @@ ArrowUp increases the dock height; dragging downward or pressing ArrowDown
 decreases it. The component accepts CSS lengths for its initial, minimum, and
 maximum heights, so full-page and container-sized hosts can use the same
 contract. CSS enforces the limits, while `aria-valuenow` reports the rendered
-pixel height. The resolved computed minimum and maximum are exposed through
+pixel height. `BottomDock` resolves valid CSS length-percentage expressions,
+including `%`, viewport units, CSS variables, and `calc()`, through its live
+layout box. The resulting minimum and maximum are exposed through
 `aria-valuemin` and `aria-valuemax`, keeping all separator range values in the
-same pixel unit.
+same pixel unit. Bounds refresh when the props, containing block, viewport, or
+ancestor class/style context changes without requiring the dock itself to
+resize.
 
 `open` is controlled. The built-in close `IconButton` calls `onclose`; the
 parent changes `open`. Closing and reopening the same component instance keeps
@@ -66,8 +70,8 @@ its most recently requested height.
 | `onclose`        | `() => void` | required        | Called by the built-in close control                    |
 | `ariaLabel`      | `string`     | required        | Names both the dock region and its resize separator     |
 | `initialHeight`  | `string`     | `"50vh"`        | Initial CSS height; prop changes replace local override |
-| `minHeight`      | `string`     | `"200px"`       | CSS minimum height                                      |
-| `maxHeight`      | `string`     | `"80vh"`        | CSS maximum height                                      |
+| `minHeight`      | `string`     | `"200px"`       | Valid CSS length-percentage minimum                     |
+| `maxHeight`      | `string`     | `"80vh"`        | Valid CSS length-percentage maximum                     |
 | `keyboardStep`   | `number`     | `24`            | Pixels per Up/Down key press                            |
 | `closable`       | `boolean`    | `true`          | Renders the shared close `IconButton`                   |
 | `closeTitle`     | `string`     | `"Close panel"` | Close-button tooltip                                    |

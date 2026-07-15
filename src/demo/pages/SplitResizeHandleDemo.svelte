@@ -27,6 +27,9 @@
   code={`<SplitResizeHandle
   ariaLabel="Resize left pane"
   orientation="horizontal"
+  ariaValueMin={120}
+  ariaValueMax={400}
+  ariaValueNow={width}
   onResizeStart={() => (startWidth = width)}
   onResize={(e) => (dragWidth = clampWidth(e))}
   onResizeEnd={(e) => { committedWidth = clampWidth(e); dragWidth = null; }}
