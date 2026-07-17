@@ -48,7 +48,7 @@ centered ⌘K search trigger, icon-button cluster on the right).
 
 | Prop             | Type                   | Default     | Notes                                                                                                                                                                                                                                                                                             |
 | ---------------- | ---------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tabs`           | `TopBarTab[]`          | `[]`        | `{ id, label, disabled? }`; omit for a tabless bar                                                                                                                                                                                                                                                |
+| `tabs`           | `TopBarTab[]`          | `[]`        | `{ id, label, disabled?, indicator? }`; omit for a tabless bar                                                                                                                                                                                                                                    |
 | `active`         | `string` (bindable)    | `""`        | Active tab id. A disabled tab is never rendered as current — unset, unknown, or disabled values fall back to the first **enabled** tab in both modes. With every tab disabled there is no current tab: expanded buttons show none active, and the collapsed dropdown renders disabled showing "—" |
 | `onchange`       | `(id: string) => void` | —           | Fires on tab/dropdown selection                                                                                                                                                                                                                                                                   |
 | `collapsed`      | `boolean` (bindable)   | `false`     | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label)                                                                                                                                                                                                            |
@@ -59,6 +59,46 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | `searchMinWidth` | `number`               | —           | Opt the search region into the flexible middle (grows to absorb all slack); this value is what tab-collapse measurement charges the region. Non-finite or negative values behave like unset (default shrink-wrapped slot). See below                                                              |
 | `right`          | `Snippet`              | —           | Reserved trailing region: actions, theme, settings                                                                                                                                                                                                                                                |
 | `class`          | `string`               | `""`        |                                                                                                                                                                                                                                                                                                   |
+
+## Tab indicators
+
+A tab can carry a small status dot after its label:
+
+```ts
+interface TopBarTab {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  indicator?: TopBarTabIndicator; // { tone?, title? }
+}
+
+interface TopBarTabIndicator {
+  /** "neutral" (default) | "info" | "success" | "warning" | "danger" */
+  tone?: TopBarTabIndicatorTone;
+  /** Tooltip / accessible description of what the dot signals. */
+  title?: string;
+}
+```
+
+```ts
+{ id: "reviews", label: "Reviews",
+  indicator: daemonDown ? { title: "roborev daemon unreachable" } : undefined }
+```
+
+- The dot follows the tab everywhere it renders: the expanded tab button,
+  the collapsed dropdown's option row, and the closed dropdown trigger while
+  that tab is the selection (via
+  [`SelectDropdownOption.indicator`](select-dropdown.md), the same shape —
+  `TopBarTabIndicator` is an alias).
+- It is included in the hidden measurement probe, so adding or removing an
+  indicator participates in the collapse math like any label change.
+- `tone` defaults to **neutral** — a muted dot (`--text-muted`) for "worth a
+  glance, not alarming" signals. The semantic tones resolve through the
+  shared `data-kit-tone` accent map in `theme.css`.
+- Color must not carry the meaning alone: give the dot a `title`. It shows
+  as a tooltip and joins the tab's accessible name (on the collapsed trigger
+  it's appended to the trigger's aria-label). A titleless dot is treated as
+  decorative and hidden from assistive tech.
 
 ## Layout contract
 

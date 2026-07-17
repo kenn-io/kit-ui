@@ -48,6 +48,8 @@ values, veto, meta text) and grouped options.
 | `triggerPrefix` | `string`                                                        | —               | Dim text before the value on the closed trigger                                                         |
 | `loading`       | `boolean`                                                       | `false`         | Replaces option rows with `loadingLabel` (async sources)                                                |
 | `loadingLabel`  | `string`                                                        | `"Loading…"`    |                                                                                                         |
+| `remote`        | `boolean`                                                       | `false`         | Disables local option filtering for caller-supplied remote results                                      |
+| `onquery`       | `(query: string) => void`                                       | —               | Reports input changes and `""` when the picker opens or closes                                          |
 | `error`         | `string`                                                        | —               | Error row above the options, which stay selectable (clear it in `onselect`)                             |
 | `header`        | `Snippet`                                                       | —               | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher)                       |
 
@@ -74,6 +76,14 @@ filtering, groups are forced open and shown only when they or a descendant
 match; a group whose own label matches keeps all its descendants. When any
 option has children the list uses `role="tree"` semantics
 (`treeitem`/`aria-expanded`/`aria-level`) instead of a flat listbox.
+
+## Remote option sources
+
+Set `remote` when the caller fetches and replaces `options` from an external
+source. Local filtering is disabled, while `onquery` reports each input change
+so the caller can debounce requests and reject stale responses. The callback
+also receives `""` whenever the picker opens or closes, allowing caller-owned
+results, loading state, and errors to reset consistently.
 
 ## Veto and error rows
 

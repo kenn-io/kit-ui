@@ -284,18 +284,18 @@ export function checkKbd(source) {
   return findings;
 }
 
-/** A col-resize cursor in styles is a hand-rolled pane splitter. */
+/** A pane-resize cursor in styles is a hand-rolled pane splitter. */
 export function checkHandRolledSplitter(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const re = /cursor:\s*col-resize/g;
+    const re = /cursor:\s*(?:col|row)-resize/g;
     let match;
     while ((match = re.exec(css)) !== null) {
       findings.push({
         rule: "hand-rolled-splitter",
         line: lineOfIndex(source, offset + match.index),
         message:
-          "col-resize divider — use SplitResizeHandle (or CollapsibleSidebar) from @kenn-io/kit-ui",
+          "pane-resize divider — use SplitResizeHandle (or CollapsibleSidebar) from @kenn-io/kit-ui",
       });
     }
   }
@@ -504,15 +504,15 @@ export function checkHandRolledToast(source) {
   return findings;
 }
 
-/** Hand-rolled slide-in drawers duplicate DetailDrawer. Matches the bare
- * drawer class and the structural compounds agentsview converged on —
- * other drawer-* names (e.g. content classes on a composed DetailDrawer)
- * are left alone, and kit-detail-drawer* is exempt. */
+/** Hand-rolled slide-in drawers and explicit inline bottom-panel patterns
+ * duplicate DetailDrawer or BottomDock. Other drawer-* and generic dock names
+ * are left alone; kit component classes are exempt. */
 export function checkHandRolledDrawer(source) {
   const findings = [];
-  const part = "drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))";
+  const drawerPart =
+    "drawer(?:-(?:panel|backdrop|overlay|header|body|footer|title|content)\\b|\\b(?!-))";
   const re = new RegExp(
-    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${part}|\\.(?<!kit-detail-)${part}`,
+    `class=["'][^"']*(?<!kit-)(?<!kit-detail-)\\b${drawerPart}|\\.(?<!kit-detail-)${drawerPart}`,
     "g",
   );
   let match;
@@ -520,7 +520,30 @@ export function checkHandRolledDrawer(source) {
     findings.push({
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),
-      message: "drawer markup — use DetailDrawer from @kenn-io/kit-ui",
+      message:
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+    });
+  }
+
+  const bottomClasses = new Set(["bottom-dock", "bottom-panel", "bottom-tray"]);
+  const classRe = /class=["']([^"']*)["']/g;
+  while ((match = classRe.exec(source)) !== null) {
+    if (!match[1].split(/\s+/).some((name) => bottomClasses.has(name))) continue;
+    findings.push({
+      rule: "hand-rolled-drawer",
+      line: lineOfIndex(source, match.index),
+      message:
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+    });
+  }
+
+  const bottomSelectorRe = /\.(?:bottom-dock|bottom-panel|bottom-tray)(?=$|[\s),.#:[>+~{])/g;
+  while ((match = bottomSelectorRe.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-drawer",
+      line: lineOfIndex(source, match.index),
+      message:
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -778,6 +801,29 @@ export function checkHandRolledVirtualization(source) {
   return findings;
 }
 
+/** A vertical scroller with its native scrollbar hidden should use ScrollBox,
+ * which preserves the native control and adds the accessible region contract.
+ * Horizontal strips (overflow-x) are exempt — ScrollBox is vertical-only. */
+export function checkHandRolledScrollBox(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const blockRe = /\{[^{}]*\}/g;
+    let block;
+    while ((block = blockRe.exec(css)) !== null) {
+      const hidden = /scrollbar-width:\s*none/.exec(block[0]);
+      if (!hidden) continue;
+      if (!/overflow(?:-y)?:\s*(?:auto|scroll)/.test(block[0])) continue;
+      findings.push({
+        rule: "hand-rolled-scroll-box",
+        line: lineOfIndex(source, offset + block.index + hidden.index),
+        message:
+          "vertical scroller with hidden native scrollbar — use ScrollBox from @kenn-io/kit-ui (native scrollbar, labelled keyboard-accessible region)",
+      });
+    }
+  }
+  return findings;
+}
+
 /** Direct markdown/sanitizer imports duplicate the markdown pipeline,
  * which bundles sanitization and code highlighting. */
 export function checkHandRolledMarkdown(source) {
@@ -980,6 +1026,7 @@ export const ALL_RULES = {
   "hand-rolled-sidebar-toggle": checkHandRolledSidebarToggle,
   "hand-rolled-sr-only": checkHandRolledSrOnly,
   "hand-rolled-virtualization": checkHandRolledVirtualization,
+  "hand-rolled-scroll-box": checkHandRolledScrollBox,
   "hand-rolled-markdown": checkHandRolledMarkdown,
   "hand-rolled-mermaid": checkHandRolledMermaid,
   "hand-rolled-focus-trap": checkHandRolledFocusTrap,

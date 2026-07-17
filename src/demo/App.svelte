@@ -13,6 +13,7 @@
     ThemeToggle,
     Toggle,
   } from "../lib/index.js";
+  import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
   import CardDemo from "./pages/CardDemo.svelte";
@@ -40,6 +41,7 @@
   import ModalDemo from "./pages/ModalDemo.svelte";
   import DateRangePickerDemo from "./pages/DateRangePickerDemo.svelte";
   import RefreshControlDemo from "./pages/RefreshControlDemo.svelte";
+  import ScrollBoxDemo from "./pages/ScrollBoxDemo.svelte";
   import SegmentedControlDemo from "./pages/SegmentedControlDemo.svelte";
   import SelectDropdownDemo from "./pages/SelectDropdownDemo.svelte";
   import SettingsLayoutDemo from "./pages/SettingsLayoutDemo.svelte";
@@ -80,6 +82,7 @@
   ];
 
   const componentPages: Page[] = [
+    { id: "bottom-dock", label: "BottomDock", component: BottomDockDemo },
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "card", label: "Card", component: CardDemo },
@@ -105,6 +108,7 @@
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
+    { id: "scroll-box", label: "ScrollBox", component: ScrollBoxDemo },
     { id: "segmented-control", label: "SegmentedControl", component: SegmentedControlDemo },
     { id: "select-dropdown", label: "SelectDropdown", component: SelectDropdownDemo },
     { id: "settings-layout", label: "SettingsLayout", component: SettingsLayoutDemo },

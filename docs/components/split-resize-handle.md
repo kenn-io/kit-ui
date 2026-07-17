@@ -1,9 +1,9 @@
 # SplitResizeHandle
 
-Keyboard-accessible pane divider from middleman. It owns no layout — it
-reports horizontal deltas (mouse drag, or arrow keys in `keyboardStep`
-increments) and the panes apply/clamp them. `CollapsibleSidebar` uses it
-internally; reach for it directly when building custom split layouts.
+Keyboard-accessible pane divider from middleman. It owns no layout; it reports
+deltas along the active axis and the panes apply and clamp them. The default
+`horizontal` orientation is for side-by-side panes; use `vertical` for stacked
+panes.
 
 ```svelte
 <script lang="ts">
@@ -14,17 +14,21 @@ internally; reach for it directly when building custom split layouts.
   let startWidth = 0;
   const width = $derived(drag ?? committed);
 
-  const clamp = (e: SplitResizeEvent) => Math.max(200, Math.min(600, startWidth + e.deltaX));
+  const clamp = (event: SplitResizeEvent) => Math.max(200, Math.min(600, startWidth + event.delta));
 </script>
 
 <div class="split">
   <div class="pane" style:width="{width}px">…</div>
   <SplitResizeHandle
     ariaLabel="Resize left pane"
+    orientation="horizontal"
+    ariaValueMin={200}
+    ariaValueMax={600}
+    ariaValueNow={width}
     onResizeStart={() => (startWidth = width)}
-    onResize={(e) => (drag = clamp(e))}
-    onResizeEnd={(e) => {
-      committed = clamp(e);
+    onResize={(event) => (drag = clamp(event))}
+    onResizeEnd={(event) => {
+      committed = clamp(event);
       drag = null;
     }}
   />
@@ -34,14 +38,27 @@ internally; reach for it directly when building custom split layouts.
 
 ## Props
 
-| Prop            | Type                                | Default  | Notes                                              |
-| --------------- | ----------------------------------- | -------- | -------------------------------------------------- |
-| `ariaLabel`     | `string`                            | required | e.g. "Resize sidebar"                              |
-| `keyboardStep`  | `number`                            | `24`     | Pixels per arrow-key press                         |
-| `onResizeStart` | `(event) => void`                   | —        | Snapshot the starting width here                   |
-| `onResize`      | `(event: SplitResizeEvent) => void` | —        | Fires on every mousemove; apply as transient width |
-| `onResizeEnd`   | `(event: SplitResizeEvent) => void` | —        | Commit/persist the final width                     |
-| `class`         | `string`                            | `""`     |                                                    |
+| Prop            | Type                                | Default        | Notes                                        |
+| --------------- | ----------------------------------- | -------------- | -------------------------------------------- |
+| `ariaLabel`     | `string`                            | required       | e.g. "Resize sidebar"                        |
+| `orientation`   | `"horizontal" \| "vertical"`        | `"horizontal"` | Pane layout direction and active resize axis |
+| `keyboardStep`  | `number`                            | `24`           | Pixels per matching arrow-key press          |
+| `disabled`      | `boolean`                           | `false`        | Disables pointer and keyboard resizing       |
+| `ariaValueMin`  | `number`                            | required       | Separator minimum value                      |
+| `ariaValueMax`  | `number`                            | required       | Separator maximum value                      |
+| `ariaValueNow`  | `number`                            | required       | Current separator value                      |
+| `onResizeStart` | `(event) => void`                   | —              | Snapshot the starting dimension here         |
+| `onResize`      | `(event: SplitResizeEvent) => void` | —              | Fires on every pointer move or keyboard step |
+| `onResizeEnd`   | `(event: SplitResizeEvent) => void` | —              | Commit and persist the final dimension       |
+| `class`         | `string`                            | `""`           |                                              |
 
-`SplitResizeEvent` carries `deltaX`, `startX`, `currentX`, and the raw `event`.
-Keyboard presses fire start/resize/end as one atomic step.
+`SplitResizeEvent` carries `orientation`, `delta`, `start`, `current`, and the
+raw pointer or keyboard `event`. Horizontal handles use Left/Right; vertical
+handles use Up/Down. The handle accepts one active pointer at a time. Pointer
+cancellation or unexpected capture loss commits the most recent resize sample,
+so consumers do not jump to an interruption coordinate. If interruption occurs
+before the first move, `onResizeEnd` receives the zero-delta sample derived from
+the original `pointerdown`; after a move it receives the same sample and raw
+`pointermove` event last sent to `onResize`. Axis-specific `touch-action`
+preserves perpendicular page scrolling while keeping the resize axis under
+pointer control. Keyboard presses fire start/resize/end as one atomic step.

@@ -2,6 +2,7 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick, type Snippet } from "svelte";
+  import { SvelteMap } from "svelte/reactivity";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { TypeaheadOption } from "./typeahead.js";
@@ -32,6 +33,10 @@
     /** Replace the option rows with a loading row (async option sources). */
     loading?: boolean;
     loadingLabel?: string;
+    /** Disable local filtering when the caller supplies remotely filtered options. */
+    remote?: boolean;
+    /** Called when the open input query changes, including reset on open and close. */
+    onquery?: (query: string) => void;
     /** Error row rendered above the options, which stay selectable so the
      * user can retry (clear it in `onselect`). */
     error?: string;
@@ -59,6 +64,8 @@
     triggerPrefix = "",
     loading = false,
     loadingLabel = "Loading…",
+    remote = false,
+    onquery,
     error = "",
     header,
     onselect,
@@ -76,6 +83,12 @@
   let opening = false;
   // Group rows the user has toggled away from their initial state.
   let expansionOverrides = $state<Record<string, boolean>>({});
+  // Remote result sets are commonly cleared when the picker closes. Retain
+  // labels by option name so the controlled value still has meaningful trigger
+  // text after its source row disappears. Versions prevent an older async
+  // selection from replacing a newer label for the same option.
+  const selectedLabelCache = new SvelteMap<string, { label: string; version: number }>();
+  let labelSeq = 0;
 
   const uid = $props.id();
   const listId = `${uid}-list`;
@@ -141,7 +154,8 @@
     return rows;
   }
 
-  const rows = $derived(buildRows(options, 0, query.trim().toLowerCase(), false));
+  const filterQuery = $derived(remote ? "" : query.trim().toLowerCase());
+  const rows = $derived(buildRows(options, 0, filterQuery, false));
   const grouped = $derived(options.some((o) => o.children));
   const clearOffset = $derived(allowClear ? 1 : 0);
   const exactOption = $derived(findByName(options, query.trim()));
@@ -172,18 +186,37 @@
   const displayValue = $derived(
     selectedOption?.displayLabel ??
       selectedOption?.label ??
+      (remote ? selectedLabelCache.get(value)?.label : undefined) ??
       (allowCustom && value !== "" ? value : fallbackLabel),
   );
 
+  function cacheSelectedLabel(name: string, label: string, version = ++labelSeq): void {
+    const cached = selectedLabelCache.get(name);
+    if (!cached || cached.version <= version) {
+      selectedLabelCache.set(name, { label, version });
+    }
+  }
+
+  function rememberSelectedLabel(): void {
+    if (!remote || !selectedOption) return;
+    cacheSelectedLabel(selectedOption.name, selectedOption.displayLabel ?? selectedOption.label);
+  }
+
+  function updateQuery(nextQuery: string): void {
+    rememberSelectedLabel();
+    query = nextQuery;
+    onquery?.(nextQuery);
+  }
+
   async function openDropdown() {
     if (disabled) return;
-    query = "";
+    updateQuery("");
     open = true;
     // The trigger button unmounts as the input mounts; focus briefly lands on
     // <body> and would fire focusout on the container. Suppress dismissal
     // until we've handed focus to the input.
     opening = true;
-    highlightIndex = rows.length > 0 ? clearOffset : 0;
+    highlightIndex = clearOffset;
     await tick();
     positionPanel();
     inputEl?.focus();
@@ -196,7 +229,7 @@
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
     open = false;
-    query = "";
+    updateQuery("");
     // Invalidate in-flight selections: a slow onselect from this (or an
     // earlier) open instance must not close a menu the user reopens later.
     selectSeq += 1;
@@ -214,9 +247,17 @@
 
   async function select(name: string) {
     const seq = ++selectSeq;
+    const option = findByName(options, name);
+    const selectedLabel = option?.displayLabel ?? option?.label;
+    const selectedLabelVersion = ++labelSeq;
     try {
       const vetoed = (await onselect(name)) === false;
-      if (!vetoed && seq === selectSeq) void closeDropdown(true);
+      if (!vetoed) {
+        if (remote && selectedLabel !== undefined) {
+          cacheSelectedLabel(name, selectedLabel, selectedLabelVersion);
+        }
+        if (seq === selectSeq) void closeDropdown(true);
+      }
     } catch {
       // Keep the list open so the caller can surface its own error state
       // (e.g. the `error` prop) without losing the attempted value.
@@ -278,13 +319,13 @@
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       highlightIndex = Math.max(activeIndex - 1, 0);
-    } else if (e.key === "ArrowRight" && grouped && query === "") {
+    } else if (e.key === "ArrowRight" && grouped && filterQuery === "") {
       const row = rows[activeIndex - clearOffset];
       if (row?.group && !row.expanded) {
         e.preventDefault();
         toggleExpand(row.option);
       }
-    } else if (e.key === "ArrowLeft" && grouped && query === "") {
+    } else if (e.key === "ArrowLeft" && grouped && filterQuery === "") {
       const idx = activeIndex - clearOffset;
       const row = rows[idx];
       if (!row) return;
@@ -358,9 +399,17 @@
       class="kit-typeahead__input"
       type="text"
       role="combobox"
-      bind:value={query}
-      oninput={() =>
-        (highlightIndex = customValue !== "" ? customOffset : rows.length > 0 ? clearOffset : 0)}
+      value={query}
+      oninput={(event) => {
+        updateQuery(event.currentTarget.value);
+        highlightIndex = remote
+          ? clearOffset
+          : customValue !== ""
+            ? customOffset
+            : rows.length > 0
+              ? clearOffset
+              : 0;
+      }}
       onkeydown={handleKeydown}
       {placeholder}
       {disabled}

@@ -10,6 +10,68 @@
     { name: "kenn-io/infra", label: "kenn-io/infra", displayLabel: "infra" },
   ];
 
+  let remoteValue = $state("server-result");
+  let remoteQuery = $state("initial");
+  let remoteOptionsQuery = $state("initial");
+  let remoteOpenResetCountdown = 0;
+  const remoteOptions = $derived<TypeaheadOption[]>(
+    remoteOptionsQuery === ""
+      ? []
+      : remoteOptionsQuery === "group"
+        ? [
+            {
+              name: "server-group",
+              label: "Server group",
+              expanded: false,
+              children: [{ name: "server-child", label: "Server child" }],
+            },
+          ]
+        : remoteOptionsQuery === "updated"
+          ? [{ name: "server-result", label: "Updated server result" }]
+          : remoteOptionsQuery === "other"
+            ? [{ name: "other-result", label: "Other result" }]
+            : remoteOptionsQuery === "slow"
+              ? [{ name: "slow-result", label: "Slow result" }]
+              : remoteOptionsQuery === "old"
+                ? [{ name: "shared-result", label: "Old result" }]
+                : remoteOptionsQuery === "new"
+                  ? [{ name: "shared-result", label: "New result" }]
+                  : [{ name: "server-result", label: "Server result" }],
+  );
+  function updateRemoteQuery(query: string): void {
+    remoteQuery = query;
+    if (query === "async-open") {
+      remoteOptionsQuery = "";
+      remoteOpenResetCountdown = 2;
+      return;
+    }
+    if (query === "" && remoteOpenResetCountdown > 0) {
+      remoteOptionsQuery = "";
+      remoteOpenResetCountdown -= 1;
+      if (remoteOpenResetCountdown === 0) {
+        setTimeout(() => {
+          if (remoteQuery === "") remoteOptionsQuery = "new";
+        }, 100);
+      }
+      return;
+    }
+    if (query !== "async") {
+      remoteOptionsQuery = query;
+      return;
+    }
+    remoteOptionsQuery = "";
+    setTimeout(() => {
+      if (remoteQuery === "async") remoteOptionsQuery = "new";
+    }, 100);
+  }
+  async function selectRemote(value: string): Promise<void> {
+    const selectionQuery = remoteQuery;
+    if (value === "slow-result" || selectionQuery === "old") {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    remoteValue = value;
+  }
+
   let owner = $state("");
   const owners: TypeaheadOption[] = [
     { name: "project-alpha", label: "project-alpha", meta: "example project" },
@@ -98,6 +160,40 @@
     }}
   />
   <span>value: <code data-demo="repo-value">{repo || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Remote option source"
+  description="remote disables local filtering while onquery reports input changes so a caller can fetch and replace the option source. Opening, closing, and selection reset the reported query."
+  code={`<Typeahead
+  remote
+  allowClear
+  options={remoteOptions}
+  value={remoteValue}
+  fallbackLabel="Select remote result"
+  placeholder="Search remote options…"
+  onquery={(query) => {
+    remoteQuery = query;
+  }}
+  onselect={(value) => {
+    remoteValue = value;
+  }}
+/>`}
+>
+  <Typeahead
+    remote
+    allowClear
+    options={remoteOptions}
+    value={remoteValue}
+    fallbackLabel="Select remote result"
+    placeholder="Search remote options…"
+    onquery={(query) => {
+      updateRemoteQuery(query);
+    }}
+    onselect={selectRemote}
+  />
+  <span>query: <code data-demo="remote-query">{remoteQuery || "(empty)"}</code></span>
+  <span>value: <code data-demo="remote-value">{remoteValue || "(none)"}</code></span>
 </DemoSection>
 
 <DemoSection

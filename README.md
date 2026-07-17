@@ -42,6 +42,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 
 | Component                                                    | Origin                              | Purpose                                                                                       |
 | ------------------------------------------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| [BottomDock](docs/components/bottom-dock.md)                 | middleman                           | Inline resizable bottom panel with composable regions                                         |
 | [Button](docs/components/button.md)                          | middleman `ActionButton`            | Action button with tone × surface × size variants                                             |
 | [Calendar](docs/components/calendar.md)                      | new (DateRangePicker's month grid)  | Single-month date grid with range highlight and month paging                                  |
 | [Chip](docs/components/chip.md)                              | middleman `Chip`                    | Status/label badge, optionally interactive                                                    |
@@ -64,6 +65,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Modal](docs/components/modal.md)                            | both (consolidated)                 | Dialog primitive: overlay, header, body, footer snippet                                       |
 | [DateRangePicker](docs/components/date-range-picker.md)      | agentsview                          | Relative / calendar / custom date-range popover with `resolveRange()`                         |
 | [RefreshControl](docs/components/refresh-control.md)         | agentsview                          | Refresh button + "Updated Xm ago" label with auto-refresh                                     |
+| [ScrollBox](docs/components/scroll-box.md)                   | middleman `ScrollBox`               | Labelled keyboard-accessible vertical scroller with the native scrollbar                      |
 | [SearchInput](docs/components/text-input.md)                 | new (TextInput preset)              | Filter field: search icon, clear button, optional ⌘K hint                                     |
 | [SegmentedControl](docs/components/segmented-control.md)     | middleman (inline pattern)          | "All / PRs / Issues" style value selector                                                     |
 | [SelectDropdown](docs/components/select-dropdown.md)         | middleman                           | Accessible single-select combobox                                                             |

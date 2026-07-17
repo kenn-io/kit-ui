@@ -150,11 +150,14 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-kbd"])).toHaveLength(1);
   });
 
-  test("splitter: col-resize cursor", () => {
-    const src = svelte(`.divider { width: 4px; cursor: col-resize; }`);
+  test("splitter: pane-resize cursors", () => {
+    const src = svelte(
+      `.columns { width: 4px; cursor: col-resize; }\n.rows { height: 4px; cursor: row-resize; }`,
+    );
     const findings = checkSource(src, "A.svelte", ["hand-rolled-splitter"]);
-    expect(findings).toHaveLength(1);
+    expect(findings).toHaveLength(2);
     expect(findings[0]!.message).toContain("SplitResizeHandle");
+    expect(findings[1]!.message).toContain("SplitResizeHandle");
   });
 
   test("segmented: seg-btn / segmented-control classes", () => {
@@ -429,6 +432,7 @@ describe("hand-rolled components", () => {
     const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
     expect(findings).toHaveLength(3);
     expect(findings[0]!.message).toContain("DetailDrawer");
+    expect(findings[0]!.message).toContain("BottomDock");
   });
 
   test("drawer: does not match kit-detail-drawer", () => {
@@ -443,6 +447,24 @@ describe("hand-rolled components", () => {
     const src = svelte(
       `.drawer-demo-body { padding: 8px; }`,
       `<div class="drawer-demo-body"></div><ul class="drawer-list"></ul>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
+  });
+
+  test("drawer: explicit inline bottom-panel classes", () => {
+    const src = svelte(
+      `.bottom-panel { height: 240px; } .bottom-tray { overflow: auto; } :is(.bottom-panel) :not(.bottom-tray) { display: block; }`,
+      `<div class="bottom-dock"></div><div class="kit-bottom-dock"></div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
+    expect(findings).toHaveLength(5);
+    expect(findings[0]!.message).toContain("BottomDock");
+  });
+
+  test("drawer: generic dock names remain exempt", () => {
+    const src = svelte(
+      `.dock { display: flex; } .editor-bottom-panel { height: 10rem; } .bottom-tray-content { overflow: auto; }`,
+      `<nav class="dock-item"></nav><div class="editor-bottom-dock"></div><div class="bottom-panel-content"></div><div class="sm:bottom-panel bottom-panel/item"></div>`,
     );
     expect(checkSource(src, "A.svelte", ["hand-rolled-drawer"])).toHaveLength(0);
   });
@@ -488,6 +510,23 @@ describe("hand-rolled components", () => {
   test("virtualization: scans .ts sources too", () => {
     const src = `import VirtualList from "svelte-tiny-virtual-list";`;
     expect(checkSource(src, "list.ts", ["hand-rolled-virtualization"])).toHaveLength(1);
+  });
+
+  test("scroll-box: vertical scroller with hidden scrollbar", () => {
+    const src = svelte(`.feed { overflow-y: auto; scrollbar-width: none; }`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-scroll-box"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("ScrollBox");
+    expect(findings[0]!.message).toContain("native scrollbar");
+  });
+
+  test("scroll-box: shorthand overflow counts, horizontal strips are exempt", () => {
+    const both = svelte(`.pane { overflow: auto; scrollbar-width: none; }`);
+    expect(checkSource(both, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(1);
+    const tabs = svelte(`.tabs { overflow-x: auto; scrollbar-width: none; }`);
+    expect(checkSource(tabs, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
+    const separate = svelte(`.a { overflow-y: auto; }\n.b { scrollbar-width: none; }`);
+    expect(checkSource(separate, "A.svelte", ["hand-rolled-scroll-box"])).toHaveLength(0);
   });
 
   test("markdown: direct marked/dompurify imports", () => {

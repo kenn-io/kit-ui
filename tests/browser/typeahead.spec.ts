@@ -17,6 +17,135 @@ test("filters, highlights matches, and selects", async ({ page }) => {
   await expect(page.locator('[data-demo="repo-value"]')).toHaveText("kenn-io/agentsview");
 });
 
+test("remote mode reports queries without filtering caller-supplied options", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+  await input.fill("does not match the result");
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("does not match the result");
+  await expect(page.getByRole("option", { name: "Server result" })).toBeVisible();
+
+  await page.getByRole("option", { name: "Server result" }).click();
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("server-result");
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+  await expect(page.getByRole("button", { name: "Search remote options…" })).toContainText(
+    "Server result",
+  );
+});
+
+test("remote results move Enter past the clear row after an empty loading state", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await input.fill("async");
+  await expect(page.getByRole("option", { name: "New result" })).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
+});
+
+test("remote results move Enter past the clear row when they arrive after opening", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  await page.getByRole("combobox", { name: "Search remote options…" }).fill("async-open");
+  await page.keyboard.press("Escape");
+
+  await trigger.click();
+  await expect(page.getByRole("option", { name: "New result" })).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
+});
+
+test("remote mode retains a controlled preselection when opening clears its options", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await expect(trigger).toContainText("Server result");
+
+  await trigger.click();
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+  await page.keyboard.press("Escape");
+
+  await expect(trigger).toContainText("Server result");
+});
+
+test("remote mode refreshes the selected label from an intermediate result set", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+
+  await input.fill("updated");
+  await expect(page.getByRole("option", { name: "Updated server result" })).toBeVisible();
+  await input.fill("other");
+  await expect(page.getByRole("option", { name: "Other result" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(trigger).toContainText("Updated server result");
+});
+
+test("remote mode retains the label when async selection succeeds after closing", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  await page.getByRole("combobox", { name: "Search remote options…" }).fill("slow");
+
+  await page.getByRole("option", { name: "Slow result" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("slow-result");
+
+  await expect(trigger).toContainText("Slow result");
+});
+
+test("an older async selection cannot replace a newer label for the same option", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.click();
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+
+  await input.fill("old");
+  await page.getByRole("option", { name: "Old result" }).click();
+  await input.fill("new");
+  await page.getByRole("option", { name: "New result" }).click();
+  await expect(page.locator('[data-demo="remote-value"]')).toHaveText("shared-result");
+  await page.waitForTimeout(400);
+
+  await expect(trigger).toContainText("New result");
+});
+
+test("remote grouped results retain keyboard expansion while a query is present", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await input.fill("group");
+  const group = page.getByRole("treeitem", { name: "Server group" });
+  await expect(group).toHaveAttribute("aria-expanded", "false");
+  await group.hover();
+  await page.keyboard.press("ArrowRight");
+
+  await expect(group).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("treeitem", { name: "Server child" })).toBeVisible();
+});
+
 test("clear row selects the empty value and meta text is searched", async ({ page }) => {
   await gotoPage(page, "typeahead");
   const trigger = page.getByRole("button", { name: /^owner:/ });
