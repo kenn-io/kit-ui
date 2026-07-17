@@ -35,7 +35,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
   },
   webServer: {
-    command: `bunx vite --port ${port} --strictPort`,
+    command: `vp run dev --port ${port} --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
   },
