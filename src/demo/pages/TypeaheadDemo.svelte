@@ -74,6 +74,7 @@
 
   let owner = $state("");
   const owners: TypeaheadOption[] = [
+    { name: "project-alpha", label: "project-alpha", meta: "example project" },
     { name: "marius", label: "marius", meta: "42 open" },
     { name: "sam", label: "sam", meta: "7 open" },
     { name: "dana", label: "dana", meta: "on leave" },
@@ -197,7 +198,7 @@
 
 <DemoSection
   title="Clear row, custom values, meta"
-  description="allowClear prepends a row that selects the empty value; allowCustom lets Enter submit free text with no match; option meta is searched and rendered dim; triggerPrefix labels the closed trigger."
+  description="allowClear prepends a row that selects the empty value; allowCustom lets Enter submit non-empty free text that is not an exact option name, even alongside partial matches; option meta is searched and rendered dim; triggerPrefix labels the closed trigger."
   code={`<Typeahead
   options={owners}
   value={owner}

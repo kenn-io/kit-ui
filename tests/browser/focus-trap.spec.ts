@@ -5,6 +5,14 @@ import { gotoPage } from "./helpers.js";
 // Tab-cycle containment in both directions, and restore-on-close.
 
 test.describe("Modal focus trap", () => {
+  test("custom close label names and dismisses the dialog", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await page.getByRole("button", { name: "Open modal" }).click();
+
+    await page.getByRole("button", { name: "Dismiss example dialog" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
   test("focus enters, Tab cycles inside, Escape restores the trigger", async ({ page }) => {
     await gotoPage(page, "modal");
     const trigger = page.getByRole("button", { name: "Open modal" });

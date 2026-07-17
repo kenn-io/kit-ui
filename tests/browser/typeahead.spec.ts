@@ -154,10 +154,11 @@ test("clear row selects the empty value and meta text is searched", async ({ pag
   // Meta ("on leave") is searched; the matching row is dana's.
   await page.getByRole("combobox", { name: "Filter owners…" }).fill("leave");
   const options = page.locator(".kit-typeahead__option");
-  // The clear row stays put above the single meta match.
-  await expect(options).toHaveCount(2);
+  // The clear row stays put above the single meta match and the custom row.
+  await expect(options).toHaveCount(3);
   await expect(options.nth(0)).toHaveText("None");
-  await options.nth(1).click();
+  await expect(page.getByRole("option", { name: 'Use "leave"' })).toBeVisible();
+  await page.getByRole("option", { name: /dana/ }).click();
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("dana");
 
   await trigger.click();
@@ -165,21 +166,21 @@ test("clear row selects the empty value and meta text is searched", async ({ pag
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("(none)");
 });
 
-test("a custom value renders as a real row that Enter commits", async ({ page }) => {
+test("a custom value coexists with partial matches and Enter commits it", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: /^owner:/ }).click();
   const input = page.getByRole("combobox", { name: "Filter owners…" });
-  await input.fill("someone-new");
+  await input.fill("project-al");
 
   // The custom value is a highlighted row named by aria-activedescendant —
   // Enter commits exactly what a screen reader hears as active, never a
   // hidden fallback.
-  const customRow = page.locator(".kit-typeahead__option", { hasText: 'Use "someone-new"' });
+  const customRow = page.getByRole("option", { name: 'Use "project-al"' });
   await expect(customRow).toBeVisible();
   const activeId = await input.getAttribute("aria-activedescendant");
-  await expect(page.locator(`[id="${activeId}"]`)).toContainText('Use "someone-new"');
+  await expect(page.locator(`[id="${activeId}"]`)).toContainText('Use "project-al"');
   await page.keyboard.press("Enter");
-  await expect(page.locator('[data-demo="owner-value"]')).toHaveText("someone-new");
+  await expect(page.locator('[data-demo="owner-value"]')).toHaveText("project-al");
 });
 
 test("Enter honors a deliberately highlighted clear row while filtering", async ({ page }) => {

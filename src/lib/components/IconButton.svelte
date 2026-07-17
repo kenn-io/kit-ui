@@ -16,6 +16,8 @@
     /** Accent applied on hover (and to the pressed state). */
     tone?: IconButtonTone;
     disabled?: boolean;
+    /** Keep the button focusable while exposing and enforcing an unavailable state. */
+    ariaDisabled?: boolean;
     /** For menu/popover triggers. */
     ariaExpanded?: boolean;
     /** For menu/popover triggers: the kind of popup (e.g. "menu", "dialog",
@@ -38,6 +40,7 @@
     size = "md",
     tone = "neutral",
     disabled = false,
+    ariaDisabled = false,
     ariaExpanded = undefined,
     ariaHaspopup = undefined,
     ariaControls = undefined,
@@ -59,7 +62,15 @@
   aria-haspopup={ariaHaspopup}
   aria-controls={ariaControls}
   aria-pressed={ariaPressed}
-  {onclick}
+  aria-disabled={ariaDisabled || undefined}
+  onclick={(event) => {
+    if (ariaDisabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onclick?.(event);
+  }}
 >
   {@render children()}
 </button>
@@ -91,7 +102,7 @@
     height: 28px;
   }
 
-  .kit-icon-button:hover:not(:disabled) {
+  .kit-icon-button:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }
@@ -101,27 +112,28 @@
     color: var(--text-primary);
   }
 
-  .kit-icon-button:disabled {
+  .kit-icon-button:disabled,
+  .kit-icon-button[aria-disabled="true"] {
     opacity: var(--opacity-disabled);
     cursor: default;
   }
 
-  .kit-icon-button--success:hover:not(:disabled) {
+  .kit-icon-button--success:hover:not(:disabled):not([aria-disabled="true"]) {
     color: var(--accent-green);
     background: color-mix(in srgb, var(--accent-green) 10%, transparent);
   }
 
-  .kit-icon-button--danger:hover:not(:disabled) {
+  .kit-icon-button--danger:hover:not(:disabled):not([aria-disabled="true"]) {
     color: var(--accent-red);
     background: color-mix(in srgb, var(--accent-red) 10%, transparent);
   }
 
-  .kit-icon-button--info:hover:not(:disabled) {
+  .kit-icon-button--info:hover:not(:disabled):not([aria-disabled="true"]) {
     color: var(--accent-blue);
     background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
   }
 
-  .kit-icon-button--workflow:hover:not(:disabled) {
+  .kit-icon-button--workflow:hover:not(:disabled):not([aria-disabled="true"]) {
     color: var(--accent-purple);
     background: color-mix(in srgb, var(--accent-purple) 10%, transparent);
   }

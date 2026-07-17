@@ -24,6 +24,7 @@ kept hand-rolling (`.icon-btn`). Transparent at rest, surface tint on hover,
 | `size`         | `"sm" \| "md"`                                                   | `"md"`      | 24px / 28px square (a size-13/14 icon fits both)                                                                                                                 |
 | `tone`         | `"neutral" \| "success" \| "danger" \| "info" \| "workflow"`     | `"neutral"` | Accent applied on hover + pressed; rest state stays muted                                                                                                        |
 | `disabled`     | `boolean`                                                        | `false`     |                                                                                                                                                                  |
+| `ariaDisabled` | `boolean`                                                        | `false`     | Renders `aria-disabled="true"`, remains focusable, and suppresses click and keyboard activation                                                                  |
 | `ariaExpanded` | `boolean`                                                        | —           | Expanded state for menu/popover triggers                                                                                                                         |
 | `ariaHaspopup` | `"menu" \| "listbox" \| "dialog" \| "grid" \| "tree" \| boolean` | —           | Popup kind for menu/popover triggers                                                                                                                             |
 | `ariaControls` | `string`                                                         | —           | id of the controlled element (pairs with `ariaExpanded`)                                                                                                         |
@@ -40,6 +41,9 @@ kept hand-rolling (`.icon-btn`). Transparent at rest, surface tint on hover,
   conventional (settings gear, close X, sync arrows).
 - When wrapping in [Tooltip](tooltip.md), pass `title=""` to suppress the
   native title so hover doesn't show both.
+- Use `ariaDisabled` instead of `disabled` when keyboard users still need to
+  encounter the unavailable action in the tab order. The component prevents
+  its `onclick` callback from running.
 - Focus is a 2px `--accent-blue` outline on `:focus-visible` only.
 - For a labelled action that degrades to icon-only under pressure, prefer
   [FitStages](fit-stages.md) with a `Button` stage and an `IconButton`

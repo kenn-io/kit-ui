@@ -11,6 +11,7 @@
   import DemoSection from "../DemoSection.svelte";
 
   let pinned = $state(false);
+  let activationCount = $state(0);
 </script>
 
 <DemoSection
@@ -45,9 +46,12 @@
 
 <DemoSection
   title="Tones"
-  description="Tones color the hover state (and a pressed toggle) toward the accent — the rest state stays muted so toolbars don't turn into rainbows."
+  description="Tones color the hover state (and a pressed toggle) toward the accent — the rest state stays muted so toolbars don't turn into rainbows. Use ariaDisabled when an unavailable action must remain in the tab order."
   code={`<IconButton tone="danger" ariaLabel="Delete"><Trash2Icon size="14" /></IconButton>
-<IconButton tone="success" ariaLabel="Approve"><CheckIcon size="14" /></IconButton>`}
+<IconButton tone="success" ariaLabel="Approve"><CheckIcon size="14" /></IconButton>
+<IconButton ariaLabel="Unavailable action" ariaDisabled onclick={attemptAction}>
+  <Trash2Icon size="14" />
+</IconButton>`}
 >
   <div class="row">
     <IconButton tone="success" ariaLabel="Approve" onclick={() => showFlash("Approved")}>
@@ -66,6 +70,12 @@
     <IconButton ariaLabel="Disabled example" disabled>
       <Trash2Icon size="14" strokeWidth="2" aria-hidden="true" />
     </IconButton>
+    <IconButton ariaLabel="Unavailable action" ariaDisabled onclick={() => (activationCount += 1)}>
+      <Trash2Icon size="14" strokeWidth="2" aria-hidden="true" />
+    </IconButton>
+    <span class="readout"
+      >activations: <code data-testid="activation-count">{activationCount}</code></span
+    >
   </div>
 </DemoSection>
 

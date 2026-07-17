@@ -30,14 +30,18 @@
   title="Basic modal"
   description="Render conditionally with an {'{#if}'} block; the component handles overlay, Escape, and the close button via onclose."
   code={`{#if open}
-  <Modal title="About" onclose={() => (open = false)}>
+  <Modal title="About" closeLabel="Dismiss example dialog" onclose={() => (open = false)}>
     <p>Any content.</p>
   </Modal>
 {/if}`}
 >
   <Button label="Open modal" onclick={() => (basicOpen = true)} />
   {#if basicOpen}
-    <Modal title="About kit-ui" onclose={() => (basicOpen = false)}>
+    <Modal
+      title="About kit-ui"
+      closeLabel="Dismiss example dialog"
+      onclose={() => (basicOpen = false)}
+    >
       <p>Shared Svelte 5 components consolidated from the middleman and agentsview frontends.</p>
     </Modal>
   {/if}
