@@ -30,26 +30,26 @@ values, veto, meta text) and grouped options.
 
 ## Props
 
-| Prop            | Type                                                            | Default         | Notes                                                                             |
-| --------------- | --------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------- |
-| `options`       | `TypeaheadOption[]`                                             | required        |                                                                                   |
-| `value`         | `string`                                                        | required        | Matches `option.name`; unmatched shows `fallbackLabel`                            |
-| `fallbackLabel` | `string`                                                        | required        | Trigger text when nothing is selected                                             |
-| `placeholder`   | `string`                                                        | required        | Search input placeholder + aria-label                                             |
-| `onselect`      | `(name: string) => void \| boolean \| Promise<void \| boolean>` | required        | Return `false` (or throw) to veto: the list stays open                            |
-| `title`         | `string`                                                        | —               | Trigger tooltip                                                                   |
-| `emptyLabel`    | `string`                                                        | `"No matches"`  |                                                                                   |
-| `disabled`      | `boolean`                                                       | `false`         |                                                                                   |
-| `allowClear`    | `boolean`                                                       | `false`         | Prepends a row that selects `""`                                                  |
-| `clearLabel`    | `string`                                                        | `"None"`        | Label of the clear row                                                            |
-| `allowCustom`   | `boolean`                                                       | `false`         | With no matching option, offers a row that selects the trimmed query              |
-| `customLabel`   | `string`                                                        | `Use "{query}"` | Label of the custom-value row; `{query}` is replaced with the trimmed query       |
-| `placement`     | `"auto" \| "top" \| "bottom"`                                   | `"auto"`        | Force the list above/below; auto flips near the viewport bottom                   |
-| `triggerPrefix` | `string`                                                        | —               | Dim text before the value on the closed trigger                                   |
-| `loading`       | `boolean`                                                       | `false`         | Replaces option rows with `loadingLabel` (async sources)                          |
-| `loadingLabel`  | `string`                                                        | `"Loading…"`    |                                                                                   |
-| `error`         | `string`                                                        | —               | Error row above the options, which stay selectable (clear it in `onselect`)       |
-| `header`        | `Snippet`                                                       | —               | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher) |
+| Prop            | Type                                                            | Default         | Notes                                                                                                   |
+| --------------- | --------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------- |
+| `options`       | `TypeaheadOption[]`                                             | required        |                                                                                                         |
+| `value`         | `string`                                                        | required        | Matches `option.name`; unmatched shows `fallbackLabel`                                                  |
+| `fallbackLabel` | `string`                                                        | required        | Trigger text when nothing is selected                                                                   |
+| `placeholder`   | `string`                                                        | required        | Search input placeholder + aria-label                                                                   |
+| `onselect`      | `(name: string) => void \| boolean \| Promise<void \| boolean>` | required        | Return `false` (or throw) to veto: the list stays open                                                  |
+| `title`         | `string`                                                        | —               | Trigger tooltip                                                                                         |
+| `emptyLabel`    | `string`                                                        | `"No matches"`  |                                                                                                         |
+| `disabled`      | `boolean`                                                       | `false`         |                                                                                                         |
+| `allowClear`    | `boolean`                                                       | `false`         | Prepends a row that selects `""`                                                                        |
+| `clearLabel`    | `string`                                                        | `"None"`        | Label of the clear row                                                                                  |
+| `allowCustom`   | `boolean`                                                       | `false`         | Offers a trimmed non-empty query that is not an exact option name, including when partial matches exist |
+| `customLabel`   | `string`                                                        | `Use "{query}"` | Label of the custom-value row; `{query}` is replaced with the trimmed query                             |
+| `placement`     | `"auto" \| "top" \| "bottom"`                                   | `"auto"`        | Force the list above/below; auto flips near the viewport bottom                                         |
+| `triggerPrefix` | `string`                                                        | —               | Dim text before the value on the closed trigger                                                         |
+| `loading`       | `boolean`                                                       | `false`         | Replaces option rows with `loadingLabel` (async sources)                                                |
+| `loadingLabel`  | `string`                                                        | `"Loading…"`    |                                                                                                         |
+| `error`         | `string`                                                        | —               | Error row above the options, which stay selectable (clear it in `onselect`)                             |
+| `header`        | `Snippet`                                                       | —               | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher)                       |
 
 ## Option shape
 
@@ -100,9 +100,10 @@ component do not steal focus back.
 
 Enter always commits exactly the row `aria-activedescendant` names — the
 clear row clears even while filtering, and a custom value (`allowCustom`)
-appears as a real "Use \"query\"" row when nothing matches instead of being
-hidden Enter behavior, so screen-reader users are never told one row is
-active while Enter selects another. Concurrent async `onselect` calls are
+appears as a real "Use \"query\"" row whenever the query is not an exact option
+name, including alongside partial matches, instead of being hidden Enter
+behavior. Screen-reader users are therefore never told one row is active while
+Enter selects another. Concurrent async `onselect` calls are
 ordered: only the latest attempt may close the list, so a slow earlier
 selection can't dismiss a newer veto/error.
 

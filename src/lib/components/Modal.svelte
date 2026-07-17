@@ -18,6 +18,8 @@
     onclose?: () => void;
     /** Render the X button in the header. */
     closable?: boolean;
+    /** Accessible label for the close button. */
+    closeLabel?: string;
     /** Dismiss when the overlay backdrop is clicked (default true). */
     closeOnOverlayClick?: boolean;
     width?: string;
@@ -33,6 +35,7 @@
     tone = "neutral",
     onclose = undefined,
     closable = true,
+    closeLabel = "Close",
     closeOnOverlayClick = true,
     width = "auto",
     maxWidth = "min(480px, calc(100vw - 32px))",
@@ -72,7 +75,7 @@
           <IconButton
             size="sm"
             class="kit-modal-close"
-            ariaLabel="Close"
+            ariaLabel={closeLabel}
             onclick={() => onclose?.()}
           >
             <XIcon size="14" strokeWidth="2" aria-hidden="true" />

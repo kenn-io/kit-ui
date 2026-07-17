@@ -18,8 +18,8 @@
      * `fallbackLabel` when nothing matches the value. */
     allowClear?: boolean;
     clearLabel?: string;
-    /** With no matching option, offer a row that selects the trimmed query
-     * verbatim. */
+    /** Offer any non-empty trimmed query that is not an exact option name as
+     * a row that selects the query verbatim. */
     allowCustom?: boolean;
     /** Label of the custom-value row; `{query}` is replaced with the trimmed
      * query. */
@@ -144,10 +144,11 @@
   const rows = $derived(buildRows(options, 0, query.trim().toLowerCase(), false));
   const grouped = $derived(options.some((o) => o.children));
   const clearOffset = $derived(allowClear ? 1 : 0);
-  // With no matches, the custom value is a real row (at index `clearOffset`)
-  // rather than hidden Enter behavior, so aria-activedescendant always names
-  // the row Enter will commit.
-  const customValue = $derived(allowCustom && rows.length === 0 ? query.trim() : "");
+  const exactOption = $derived(findByName(options, query.trim()));
+  const customValue = $derived(
+    allowCustom && query.trim() !== "" && !exactOption ? query.trim() : "",
+  );
+  const customOffset = $derived(clearOffset + rows.length);
   const rowCount = $derived(rows.length + clearOffset + (customValue !== "" ? 1 : 0));
 
   // Async option/header swaps can shrink the list under the highlight, so
@@ -238,7 +239,7 @@
       void select("");
       return;
     }
-    if (customValue !== "" && activeIndex === clearOffset) {
+    if (customValue !== "" && activeIndex === customOffset) {
       void select(customValue);
       return;
     }
@@ -358,7 +359,8 @@
       type="text"
       role="combobox"
       bind:value={query}
-      oninput={() => (highlightIndex = rows.length > 0 || customValue !== "" ? clearOffset : 0)}
+      oninput={() =>
+        (highlightIndex = customValue !== "" ? customOffset : rows.length > 0 ? clearOffset : 0)}
       onkeydown={handleKeydown}
       {placeholder}
       {disabled}
@@ -445,27 +447,26 @@
                 </span>
               {/if}
             </li>
-          {:else}
-            {#if customValue !== ""}
-              <li
-                class="kit-typeahead__option"
-                class:highlighted={activeIndex === clearOffset}
-                class:selected={customValue === value}
-                id={`${listId}-row-${clearOffset}`}
-                role={grouped ? "treeitem" : "option"}
-                aria-selected={customValue === value}
-                aria-level={grouped ? 1 : undefined}
-                onmousedown={() => void select(customValue)}
-                onmouseenter={() => (highlightIndex = clearOffset)}
-              >
-                <span class="kit-typeahead__option-label">
-                  {customLabel.replace("{query}", customValue)}
-                </span>
-              </li>
-            {:else}
-              <li class="kit-typeahead__empty" role="presentation">{emptyLabel}</li>
-            {/if}
           {/each}
+          {#if customValue !== ""}
+            <li
+              class="kit-typeahead__option"
+              class:highlighted={activeIndex === customOffset}
+              class:selected={customValue === value}
+              id={`${listId}-row-${customOffset}`}
+              role={grouped ? "treeitem" : "option"}
+              aria-selected={customValue === value}
+              aria-level={grouped ? 1 : undefined}
+              onmousedown={() => void select(customValue)}
+              onmouseenter={() => (highlightIndex = customOffset)}
+            >
+              <span class="kit-typeahead__option-label">
+                {customLabel.replace("{query}", customValue)}
+              </span>
+            </li>
+          {:else if rows.length === 0}
+            <li class="kit-typeahead__empty" role="presentation">{emptyLabel}</li>
+          {/if}
         {/if}
       </ul>
     </div>
