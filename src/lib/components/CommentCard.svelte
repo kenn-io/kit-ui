@@ -60,6 +60,10 @@
 {/if}
 
 <style>
+  :global(.kit-card.kit-comment-card) {
+    gap: 0;
+  }
+
   /* Comment prose runs a step smaller and looser than UI chrome
    * (middleman's .event-body). */
   :global(.kit-comment-card) .kit-comment-card__body {
