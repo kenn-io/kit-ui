@@ -13,7 +13,7 @@ comment-card anatomy on top of `Card`.
 
 <Timeline ariaLabel="Pull request activity">
   <TimelineItem tone="info">
-    <CommentCard typeLabel="comment" tone="info" author="marius" time="3h ago">
+    <CommentCard typeLabel="comment" tone="info" author="marius" time="3h ago" bodyGap="none">
       {#snippet actions()}<IconButton ariaLabel="Edit" size="sm">…</IconButton>{/snippet}
       <Markdown source={body} />
     </CommentCard>
@@ -46,6 +46,11 @@ touch-accessibility trap), and a body at `--font-size-sm` / 1.6
 line-height. Omit children for a one-line system-event row. Render
 markdown by passing the `Markdown` component as children — CommentCard
 deliberately doesn't render markdown itself.
+
+`bodyGap` defaults to `"sm"`, the standard 8px `Card` gap. Set it to
+`"none"` when a rich-content wrapper already owns its outer spacing so
+the two gaps do not stack. This does not change spacing inside the
+supplied content.
 
 ## Scope
 

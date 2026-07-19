@@ -27,7 +27,7 @@
   description="The presentational compound behind PR/issue conversation views: Timeline + TimelineItem draw the rail (toned dot, halo, connector), CommentCard carries the comment anatomy (type eyebrow, author, time, actions, body). System events are header-only rows."
   code={`<Timeline ariaLabel="Pull request activity">
   <TimelineItem tone="info">
-    <CommentCard typeLabel="comment" tone="info" author="marius" time="3h ago">
+    <CommentCard typeLabel="comment" tone="info" author="marius" time="3h ago" bodyGap="none">
       {#snippet actions()}<IconButton ariaLabel="Edit">…</IconButton>{/snippet}
       Body — render Markdown here in a real app.
     </CommentCard>
@@ -40,7 +40,14 @@
   <div class="feed">
     <Timeline ariaLabel="Pull request activity">
       <TimelineItem tone="info">
-        <CommentCard typeLabel="comment" tone="info" author="marius" time="3h ago">
+        <CommentCard
+          typeLabel="comment"
+          tone="info"
+          author="marius"
+          time="3h ago"
+          bodyGap="none"
+          class="demo-rich-comment"
+        >
           {#snippet actions()}
             <IconButton ariaLabel="Edit comment" size="sm">
               <PencilIcon size="13" aria-hidden="true" />
@@ -49,8 +56,10 @@
               <LinkIcon size="13" aria-hidden="true" />
             </IconButton>
           {/snippet}
-          The reconnect storm happens because every client backs off on the same schedule. Adding jitter
-          to the retry delay should spread them out.
+          <div class="demo-rich-comment__body">
+            The reconnect storm happens because every client backs off on the same schedule. Adding
+            jitter to the retry delay should spread them out.
+          </div>
         </CommentCard>
       </TimelineItem>
 
@@ -109,6 +118,10 @@
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
+  }
+
+  .demo-rich-comment__body {
+    margin-top: var(--space-4);
   }
 
   .tone-row {
