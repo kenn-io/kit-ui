@@ -10,6 +10,8 @@
     author?: string | undefined;
     /** Pre-formatted timestamp ("2h ago") — the app owns formatting/i18n. */
     time?: string | undefined;
+    /** Header-to-body spacing. Use `none` when rich content owns its outer spacing. */
+    bodyGap?: "none" | "sm";
     class?: string;
     /** Trailing header content — edit / copy-link icon buttons. */
     actions?: Snippet;
@@ -23,10 +25,17 @@
     tone = undefined,
     author = undefined,
     time = undefined,
+    bodyGap = "sm",
     class: className = "",
     actions,
     children,
   }: Props = $props();
+
+  const classes = $derived(
+    ["kit-comment-card", `kit-comment-card--body-gap-${bodyGap}`, className]
+      .filter(Boolean)
+      .join(" "),
+  );
 </script>
 
 {#if children}
@@ -38,7 +47,7 @@
     title={author}
     meta={time}
     {actions}
-    class={["kit-comment-card", className].filter(Boolean).join(" ")}
+    class={classes}
   >
     <div class="kit-comment-card__body">
       {@render children()}
@@ -55,12 +64,12 @@
     title={author}
     meta={time}
     {actions}
-    class={["kit-comment-card", className].filter(Boolean).join(" ")}
+    class={classes}
   />
 {/if}
 
 <style>
-  :global(.kit-card.kit-comment-card) {
+  :global(.kit-card.kit-comment-card--body-gap-none) {
     gap: 0;
   }
 
