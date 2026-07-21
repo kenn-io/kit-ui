@@ -11,6 +11,8 @@
     onclose: () => void;
     ariaLabel: string;
     initialHeight?: string;
+    height?: string;
+    onHeightChange?: (height: string) => void;
     minHeight?: string;
     maxHeight?: string;
     keyboardStep?: number;
@@ -28,6 +30,8 @@
     onclose,
     ariaLabel,
     initialHeight = "50vh",
+    height,
+    onHeightChange,
     minHeight = "200px",
     maxHeight = "80vh",
     keyboardStep = 24,
@@ -40,7 +44,8 @@
     footer,
   }: Props = $props();
 
-  let requestedHeight = $derived(initialHeight);
+  let internalHeight = $derived(initialHeight);
+  const requestedHeight = $derived(height ?? internalHeight);
   let measuredHeight = $state(0);
   let measuredMinHeight = $state(0);
   let measuredMaxHeight = $state(100);
@@ -197,6 +202,11 @@
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
   }
 
+  function applyUserHeight(next: string): void {
+    onHeightChange?.(next);
+    if (height === undefined) internalHeight = next;
+  }
+
   function handleResize(event: SplitResizeEvent): void {
     ownResizePending = true;
     if (ownResizeResetFrame !== null) cancelAnimationFrame(ownResizeResetFrame);
@@ -211,7 +221,7 @@
         }
       });
     });
-    requestedHeight = `${Math.max(0, startHeight - event.delta)}px`;
+    applyUserHeight(`${Math.max(0, startHeight - event.delta)}px`);
   }
 </script>
 

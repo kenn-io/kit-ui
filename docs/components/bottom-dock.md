@@ -64,24 +64,57 @@ content-sized.
 parent changes `open`. Closing and reopening the same component instance keeps
 its most recently requested height.
 
+## Uncontrolled vs. controlled height
+
+By default the dock owns its own height: `initialHeight` seeds it, and
+pointer or keyboard resizes update it internally. A prop change to
+`initialHeight` replaces any local resize override.
+
+Pass `height` to make the parent own the value instead — the dock always
+renders exactly what `height` says, regardless of prior resizes, and updates
+whenever the parent updates the prop. In that mode, user resizes no longer
+apply themselves: every pointer or keyboard resize instead calls
+`onHeightChange` with the requested CSS height string, and the dock's
+rendered height stays at `height` until the parent passes the new value back
+(after persisting it, clamping it, or otherwise deciding to accept it).
+`onHeightChange` fires in both modes; only the self-apply behavior differs.
+
+```svelte
+<script lang="ts">
+  let height = $state("320px");
+</script>
+
+<BottomDock
+  {open}
+  ariaLabel="Review details"
+  {height}
+  onHeightChange={(next) => (height = next)}
+  onclose={() => (open = false)}
+>
+  ...
+</BottomDock>
+```
+
 ## Props
 
-| Prop             | Type         | Default         | Notes                                                   |
-| ---------------- | ------------ | --------------- | ------------------------------------------------------- |
-| `open`           | `boolean`    | required        | Controls whether the inline panel renders               |
-| `onclose`        | `() => void` | required        | Called by the built-in close control                    |
-| `ariaLabel`      | `string`     | required        | Names both the dock region and its resize separator     |
-| `initialHeight`  | `string`     | `"50vh"`        | Initial CSS height; prop changes replace local override |
-| `minHeight`      | `string`     | `"200px"`       | Valid CSS length-percentage minimum                     |
-| `maxHeight`      | `string`     | `"80vh"`        | Valid CSS length-percentage maximum                     |
-| `keyboardStep`   | `number`     | `24`            | Pixels per Up/Down key press                            |
-| `closable`       | `boolean`    | `true`          | Renders the shared close `IconButton`                   |
-| `closeTitle`     | `string`     | `"Close panel"` | Close-button tooltip                                    |
-| `closeAriaLabel` | `string`     | `"Close panel"` | Close-button accessible name                            |
-| `class`          | `string`     | `""`            | Additional class on the dock region                     |
-| `header`         | `Snippet`    | —               | Header content before the close button                  |
-| `children`       | `Snippet`    | —               | Flexible, vertically scrollable body                    |
-| `footer`         | `Snippet`    | —               | Pinned footer content                                   |
+| Prop             | Type                       | Default         | Notes                                                         |
+| ---------------- | -------------------------- | --------------- | ------------------------------------------------------------- |
+| `open`           | `boolean`                  | required        | Controls whether the inline panel renders                     |
+| `onclose`        | `() => void`               | required        | Called by the built-in close control                          |
+| `ariaLabel`      | `string`                   | required        | Names both the dock region and its resize separator           |
+| `initialHeight`  | `string`                   | `"50vh"`        | Uncontrolled seed height; prop changes replace local override |
+| `height`         | `string`                   | —               | Controlled height; wins over internal state when provided     |
+| `onHeightChange` | `(height: string) => void` | —               | Called with the requested CSS height after every user resize  |
+| `minHeight`      | `string`                   | `"200px"`       | Valid CSS length-percentage minimum                           |
+| `maxHeight`      | `string`                   | `"80vh"`        | Valid CSS length-percentage maximum                           |
+| `keyboardStep`   | `number`                   | `24`            | Pixels per Up/Down key press                                  |
+| `closable`       | `boolean`                  | `true`          | Renders the shared close `IconButton`                         |
+| `closeTitle`     | `string`                   | `"Close panel"` | Close-button tooltip                                          |
+| `closeAriaLabel` | `string`                   | `"Close panel"` | Close-button accessible name                                  |
+| `class`          | `string`                   | `""`            | Additional class on the dock region                           |
+| `header`         | `Snippet`                  | —               | Header content before the close button                        |
+| `children`       | `Snippet`                  | —               | Flexible, vertically scrollable body                          |
+| `footer`         | `Snippet`                  | —               | Pinned footer content                                         |
 
 ## Escape ownership
 

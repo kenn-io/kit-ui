@@ -53,7 +53,7 @@ test("renders and resizes a controlled inline bottom dock", async ({ page }) => 
 
   expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
 
-  await page.getByRole("button", { name: "Close panel" }).click();
+  await dock.getByRole("button", { name: "Close panel" }).click();
   await expect(dock).not.toBeAttached();
   await page.getByRole("button", { name: "Open dock" }).click();
   await expect(dock).toBeVisible();
@@ -136,6 +136,45 @@ test("replaces a local resize override when initialHeight changes", async ({ pag
   await expect(separator).toHaveAttribute("aria-valuenow", "300");
 });
 
+test("controlled height wins over resizes and follows prop updates", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Controlled dock" });
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+
+  await expect.poll(() => renderedHeight(dock)).toBe(240);
+
+  await dragSeparator(page, separator, -40);
+  await expect.poll(() => renderedHeight(dock)).toBe(240);
+
+  await page.getByRole("button", { name: "Set height to 400px" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(400);
+});
+
+test("reports resizes via onHeightChange without self-applying in controlled mode", async ({
+  page,
+}) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Controlled dock" });
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+
+  await expect(lastRequested).toHaveText("none");
+
+  await separator.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect.poll(() => renderedHeight(dock)).toBe(240);
+
+  await page.getByRole("button", { name: "Apply last requested height" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(264);
+
+  await dragSeparator(page, separator, -40);
+  await expect(lastRequested).toHaveText("304px");
+  await expect.poll(() => renderedHeight(dock)).toBe(264);
+});
+
 test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page }) => {
   await gotoPage(page, "bottom-dock");
 
@@ -154,7 +193,9 @@ test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page 
 test("keeps body scroll position while measuring responsive limits", async ({ page }) => {
   await gotoPage(page, "bottom-dock");
 
-  const body = page.locator(".kit-bottom-dock__body");
+  const body = page
+    .getByRole("region", { name: "Review details" })
+    .locator(".kit-bottom-dock__body");
   await body.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
