@@ -159,12 +159,15 @@ test("reports resizes via onHeightChange without self-applying in controlled mod
   const dock = page.getByRole("region", { name: "Controlled dock" });
   const separator = page.getByRole("separator", { name: "Controlled dock" });
   const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
 
   await expect(lastRequested).toHaveText("none");
+  await expect(changeCount).toHaveText("0");
 
   await separator.focus();
   await page.keyboard.press("ArrowUp");
   await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("1");
   await expect.poll(() => renderedHeight(dock)).toBe(240);
 
   await page.getByRole("button", { name: "Apply last requested height" }).click();
@@ -173,6 +176,9 @@ test("reports resizes via onHeightChange without self-applying in controlled mod
   await dragSeparator(page, separator, -40);
   await expect(lastRequested).toHaveText("304px");
   await expect.poll(() => renderedHeight(dock)).toBe(264);
+  // The pointer-up event resolves to the same position as the last pointer-move, so
+  // onResizeEnd repeats the identical requested height: it must not be re-reported.
+  await expect(changeCount).toHaveText("2");
 });
 
 test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page }) => {

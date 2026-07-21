@@ -26,9 +26,15 @@
   let controlledOpen = $state(true);
   let controlledHeight = $state("240px");
   let lastRequestedHeight = $state("");
+  let controlledChangeCount = $state(0);
 
   function applyLastRequestedHeight(): void {
     if (lastRequestedHeight) controlledHeight = lastRequestedHeight;
+  }
+
+  function recordControlledHeightChange(next: string): void {
+    lastRequestedHeight = next;
+    controlledChangeCount += 1;
   }
   const minHeight = $derived(
     limitMode === "container"
@@ -156,6 +162,8 @@ let lastRequested = $state("");
   <p class="dock-status-line">
     Last requested height:
     <code data-testid="controlled-last-requested">{lastRequestedHeight || "none"}</code>
+    · onHeightChange calls:
+    <code data-testid="controlled-change-count">{controlledChangeCount}</code>
   </p>
 
   <div class="controlled-workspace-surface">
@@ -171,7 +179,7 @@ let lastRequested = $state("");
         height={controlledHeight}
         minHeight="150px"
         maxHeight="450px"
-        onHeightChange={(next) => (lastRequestedHeight = next)}
+        onHeightChange={recordControlledHeightChange}
         onclose={() => (controlledOpen = false)}
       >
         {#snippet header()}

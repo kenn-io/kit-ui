@@ -78,6 +78,9 @@ apply themselves: every pointer or keyboard resize instead calls
 rendered height stays at `height` until the parent passes the new value back
 (after persisting it, clamping it, or otherwise deciding to accept it).
 `onHeightChange` fires in both modes; only the self-apply behavior differs.
+It fires once per height change — consecutive duplicate values (for example
+the repeated report a pointer-up delivers immediately after the last
+pointer-move at the same position) are not re-reported.
 
 ```svelte
 <script lang="ts">

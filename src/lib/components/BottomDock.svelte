@@ -202,7 +202,11 @@
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
   }
 
+  let lastReportedHeight: string | null = null;
+
   function applyUserHeight(next: string): void {
+    if (next === lastReportedHeight) return;
+    lastReportedHeight = next;
     onHeightChange?.(next);
     if (height === undefined) internalHeight = next;
   }
