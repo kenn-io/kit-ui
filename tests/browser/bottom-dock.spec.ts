@@ -181,6 +181,26 @@ test("reports resizes via onHeightChange without self-applying in controlled mod
   await expect(changeCount).toHaveText("2");
 });
 
+test("ignores a zero-movement click on the separator", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(changeCount).toHaveText("0");
+
+  // A plain click is a pointerdown+pointerup with no pointermove between them.
+  // SplitResizeHandle still fires onResizeEnd with a zero-delta event; that must not
+  // be reported, or a controlled parent's responsive height (e.g. "50%") could be
+  // silently replaced by the currently measured pixel height on a stray click.
+  await separator.click();
+  await expect(changeCount).toHaveText("0");
+
+  // A genuine drag afterward must still report normally.
+  await dragSeparator(page, separator, -40);
+  await expect(changeCount).toHaveText("1");
+});
+
 test("reports every keystroke even when the parent never adopts the requested height", async ({
   page,
 }) => {

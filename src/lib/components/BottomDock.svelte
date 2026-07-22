@@ -199,6 +199,7 @@
   }
 
   let lastReportedHeight: string | null = null;
+  let gestureResized = false;
 
   /*
    * SplitResizeHandle calls onResizeStart once per gesture: at pointerdown for
@@ -206,11 +207,15 @@
    * that keydown's onResize/onResizeEnd pair). Resetting the dedup guard here
    * scopes it to exactly one gesture, so a value repeated across separate
    * gestures (a rejected controlled height, or an uncontrolled resize that
-   * lands back on a prior report) is still reported.
+   * lands back on a prior report) is still reported. gestureResized tracks
+   * whether this gesture produced a genuine onResize (pointer movement or a
+   * keyboard step); a pointerdown+pointerup with no movement between them
+   * still fires onResizeEnd with a zero-delta event, which must not report.
    */
   function handleResizeStart(): void {
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
     lastReportedHeight = null;
+    gestureResized = false;
   }
 
   function applyUserHeight(next: string): void {
@@ -220,7 +225,7 @@
     if (height === undefined) internalHeight = next;
   }
 
-  function handleResize(event: SplitResizeEvent): void {
+  function reportResize(event: SplitResizeEvent): void {
     ownResizePending = true;
     if (ownResizeResetFrame !== null) cancelAnimationFrame(ownResizeResetFrame);
     /* Keep the marker through ResizeObserver delivery, which may follow the next animation frame. */
@@ -235,6 +240,16 @@
       });
     });
     applyUserHeight(`${Math.max(0, startHeight - event.delta)}px`);
+  }
+
+  function handleResize(event: SplitResizeEvent): void {
+    gestureResized = true;
+    reportResize(event);
+  }
+
+  function handleResizeEnd(event: SplitResizeEvent): void {
+    if (!gestureResized) return;
+    reportResize(event);
   }
 </script>
 
@@ -256,7 +271,7 @@
       ariaValueNow={measuredHeight}
       onResizeStart={handleResizeStart}
       onResize={handleResize}
-      onResizeEnd={handleResize}
+      onResizeEnd={handleResizeEnd}
     />
 
     {#if header || closable}
