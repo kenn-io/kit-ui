@@ -181,6 +181,58 @@ test("reports resizes via onHeightChange without self-applying in controlled mod
   await expect(changeCount).toHaveText("2");
 });
 
+test("reports every keystroke even when the parent never adopts the requested height", async ({
+  page,
+}) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  // The parent never clicks "Apply", so every keystroke starts from the same unapplied
+  // 240px base and recomputes the identical "264px" request. The dedup guard only
+  // collapses the onResize/onResizeEnd pair within one keystroke, not across separate
+  // keystrokes, so each press must still fire onHeightChange.
+  await separator.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("1");
+
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("2");
+
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("3");
+});
+
+test("uncontrolled resize still applies after initialHeight changes to a value adjacent to a prior report", async ({
+  page,
+}) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Review details" });
+  const separator = page.getByRole("separator", { name: "Review details" });
+
+  await expect.poll(() => renderedHeight(dock)).toBe(260);
+
+  // Report "300px" once via a normal drag.
+  await dragSeparator(page, separator, -40);
+  await expect.poll(() => renderedHeight(dock)).toBe(300);
+
+  // A prop-driven initialHeight change to an unrelated base does not touch the dedup
+  // guard left over from the previous gesture.
+  await page.getByRole("button", { name: "Set initial height to 340px" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(340);
+
+  // This drag's target ("300px") coincidentally matches the stale report from the
+  // earlier gesture. It must still apply: the dedup guard is scoped to one gesture.
+  await dragSeparator(page, separator, 40);
+  await expect.poll(() => renderedHeight(dock)).toBe(300);
+});
+
 test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page }) => {
   await gotoPage(page, "bottom-dock");
 

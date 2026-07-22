@@ -78,6 +78,7 @@
     <Button label="Switch dock limit theme" onclick={() => setThemeName("control-room")} />
     <Button label="Make workspace taller" onclick={() => (workspaceTall = true)} />
     <Button label="Set initial height to 300px" onclick={() => (initialHeight = "300px")} />
+    <Button label="Set initial height to 340px" onclick={() => (initialHeight = "340px")} />
     {#if !open}
       <Button label="Open dock" onclick={() => (open = true)} />
     {/if}

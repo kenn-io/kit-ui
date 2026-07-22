@@ -198,11 +198,20 @@
     };
   }
 
+  let lastReportedHeight: string | null = null;
+
+  /*
+   * SplitResizeHandle calls onResizeStart once per gesture: at pointerdown for
+   * drags, and again at the top of every keydown for keyboard steps (before
+   * that keydown's onResize/onResizeEnd pair). Resetting the dedup guard here
+   * scopes it to exactly one gesture, so a value repeated across separate
+   * gestures (a rejected controlled height, or an uncontrolled resize that
+   * lands back on a prior report) is still reported.
+   */
   function handleResizeStart(): void {
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
+    lastReportedHeight = null;
   }
-
-  let lastReportedHeight: string | null = null;
 
   function applyUserHeight(next: string): void {
     if (next === lastReportedHeight) return;
