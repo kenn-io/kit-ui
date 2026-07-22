@@ -261,6 +261,39 @@ test("ignores orthogonal pointer jitter before any active-axis movement", async 
   await expect(changeCount).toHaveText("1");
 });
 
+test("reports a displaced pointer-up that had no intervening pointer-move", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(changeCount).toHaveText("0");
+
+  // Coalesced or dropped pointer input can deliver pointerdown followed directly by a
+  // displaced pointerup with no pointermove between them. SplitResizeHandle derives the
+  // final resize from the pointer-up coordinates, so the gesture's only nonzero-delta
+  // sample arrives at onResizeEnd — it must still be reported, not discarded as jitter.
+  await separator.scrollIntoViewIfNeeded();
+  const box = await separator.boundingBox();
+  if (!box) throw new Error("Bottom dock resize handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await separator.dispatchEvent("pointerup", {
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true,
+    clientX: x,
+    clientY: y - 40,
+  });
+  await page.mouse.up();
+
+  await expect(lastRequested).toHaveText("280px");
+  await expect(changeCount).toHaveText("1");
+});
+
 test("reports a drag that returns to its starting position", async ({ page }) => {
   await gotoPage(page, "bottom-dock");
 

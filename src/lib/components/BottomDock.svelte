@@ -215,6 +215,10 @@
    * zero-delta event, which must not report until a real move has occurred.
    * Once a gesture has moved, a return to delta 0 (back to the start height)
    * is a genuine report, not jitter, so the guard only gates the first event.
+   * The pointer-up sample can itself be the gesture's first nonzero delta
+   * (pointerdown followed directly by a displaced pointerup, with no
+   * pointermove delivered in between), so onResizeEnd only ignores zero-delta
+   * ends of gestures that never moved.
    */
   function handleResizeStart(): void {
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
@@ -253,7 +257,7 @@
   }
 
   function handleResizeEnd(event: SplitResizeEvent): void {
-    if (!gestureResized) return;
+    if (!gestureResized && event.delta === 0) return;
     reportResize(event);
   }
 </script>
