@@ -6,6 +6,7 @@ async function renderedHeight(locator: Locator): Promise<number> {
 }
 
 async function dragSeparator(page: Page, separator: Locator, deltaY: number): Promise<void> {
+  await separator.scrollIntoViewIfNeeded();
   const box = await separator.boundingBox();
   if (!box) throw new Error("Bottom dock resize handle is not visible");
   const x = box.x + box.width / 2;
@@ -13,6 +14,44 @@ async function dragSeparator(page: Page, separator: Locator, deltaY: number): Pr
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x, y + deltaY);
+  await page.mouse.up();
+}
+
+/* Moves through each active-axis (y) offset in turn before releasing, so a drag can
+ * revisit an earlier offset (including the start position, delta 0) within one gesture. */
+async function dragSeparatorThroughPath(
+  page: Page,
+  separator: Locator,
+  deltasY: number[],
+): Promise<void> {
+  await separator.scrollIntoViewIfNeeded();
+  const box = await separator.boundingBox();
+  if (!box) throw new Error("Bottom dock resize handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (const deltaY of deltasY) {
+    await page.mouse.move(x, y + deltaY);
+  }
+  await page.mouse.up();
+}
+
+/* Moves the pointer on the orthogonal (x) axis only, holding the vertical separator's
+ * active axis (y) fixed — jitter that must not be reported as a resize. */
+async function jitterSeparatorOrthogonally(
+  page: Page,
+  separator: Locator,
+  deltaX: number,
+): Promise<void> {
+  await separator.scrollIntoViewIfNeeded();
+  const box = await separator.boundingBox();
+  if (!box) throw new Error("Bottom dock resize handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + deltaX, y);
   await page.mouse.up();
 }
 
@@ -53,7 +92,7 @@ test("renders and resizes a controlled inline bottom dock", async ({ page }) => 
 
   expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
 
-  await page.getByRole("button", { name: "Close panel" }).click();
+  await dock.getByRole("button", { name: "Close panel" }).click();
   await expect(dock).not.toBeAttached();
   await page.getByRole("button", { name: "Open dock" }).click();
   await expect(dock).toBeVisible();
@@ -136,6 +175,192 @@ test("replaces a local resize override when initialHeight changes", async ({ pag
   await expect(separator).toHaveAttribute("aria-valuenow", "300");
 });
 
+test("controlled height wins over resizes and follows prop updates", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Controlled dock" });
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+
+  await expect.poll(() => renderedHeight(dock)).toBe(240);
+
+  await dragSeparator(page, separator, -40);
+  await expect.poll(() => renderedHeight(dock)).toBe(240);
+
+  await page.getByRole("button", { name: "Set height to 400px" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(400);
+});
+
+test("reports resizes via onHeightChange without self-applying in controlled mode", async ({
+  page,
+}) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Controlled dock" });
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(lastRequested).toHaveText("none");
+  await expect(changeCount).toHaveText("0");
+
+  await separator.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("1");
+  await expect.poll(() => renderedHeight(dock)).toBe(240);
+
+  await page.getByRole("button", { name: "Apply last requested height" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(264);
+
+  await dragSeparator(page, separator, -40);
+  await expect(lastRequested).toHaveText("304px");
+  await expect.poll(() => renderedHeight(dock)).toBe(264);
+  // The pointer-up event resolves to the same position as the last pointer-move, so
+  // onResizeEnd repeats the identical requested height: it must not be re-reported.
+  await expect(changeCount).toHaveText("2");
+});
+
+test("ignores a zero-movement click on the separator", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(changeCount).toHaveText("0");
+
+  // A plain click is a pointerdown+pointerup with no pointermove between them.
+  // SplitResizeHandle still fires onResizeEnd with a zero-delta event; that must not
+  // be reported, or a controlled parent's responsive height (e.g. "50%") could be
+  // silently replaced by the currently measured pixel height on a stray click.
+  await separator.click();
+  await expect(changeCount).toHaveText("0");
+
+  // A genuine drag afterward must still report normally.
+  await dragSeparator(page, separator, -40);
+  await expect(changeCount).toHaveText("1");
+});
+
+test("ignores orthogonal pointer jitter before any active-axis movement", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(changeCount).toHaveText("0");
+
+  // The vertical separator's active axis is y; moving only on x produces zero-delta
+  // onResize events. Those must not be reported, for the same reason a zero-movement
+  // click must not be: the dedup guard resets on pointerdown, so without an explicit
+  // "has this gesture actually moved" check, jitter alone would report the currently
+  // measured height and could clobber a controlled parent's responsive value.
+  await jitterSeparatorOrthogonally(page, separator, 30);
+  await expect(changeCount).toHaveText("0");
+
+  // A genuine drag afterward must still report normally.
+  await dragSeparator(page, separator, -40);
+  await expect(changeCount).toHaveText("1");
+});
+
+test("reports a displaced pointer-up that had no intervening pointer-move", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(changeCount).toHaveText("0");
+
+  // Coalesced or dropped pointer input can deliver pointerdown followed directly by a
+  // displaced pointerup with no pointermove between them. SplitResizeHandle derives the
+  // final resize from the pointer-up coordinates, so the gesture's only nonzero-delta
+  // sample arrives at onResizeEnd — it must still be reported, not discarded as jitter.
+  await separator.scrollIntoViewIfNeeded();
+  const box = await separator.boundingBox();
+  if (!box) throw new Error("Bottom dock resize handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await separator.dispatchEvent("pointerup", {
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true,
+    clientX: x,
+    clientY: y - 40,
+  });
+  await page.mouse.up();
+
+  await expect(lastRequested).toHaveText("280px");
+  await expect(changeCount).toHaveText("1");
+});
+
+test("reports a drag that returns to its starting position", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  // Once a gesture has produced a genuine nonzero-delta move, a later move back to
+  // delta 0 (the start height) is a real report, not jitter — the zero-delta guard
+  // only gates the very first event of a gesture.
+  await dragSeparatorThroughPath(page, separator, [-40, 0]);
+  await expect(lastRequested).toHaveText("240px");
+  await expect(changeCount).toHaveText("2");
+});
+
+test("reports every keystroke even when the parent never adopts the requested height", async ({
+  page,
+}) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  // The parent never clicks "Apply", so every keystroke starts from the same unapplied
+  // 240px base and recomputes the identical "264px" request. The dedup guard only
+  // collapses the onResize/onResizeEnd pair within one keystroke, not across separate
+  // keystrokes, so each press must still fire onHeightChange.
+  await separator.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("1");
+
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("2");
+
+  await page.keyboard.press("ArrowUp");
+  await expect(lastRequested).toHaveText("264px");
+  await expect(changeCount).toHaveText("3");
+});
+
+test("uncontrolled resize still applies after initialHeight changes to a value adjacent to a prior report", async ({
+  page,
+}) => {
+  await gotoPage(page, "bottom-dock");
+
+  const dock = page.getByRole("region", { name: "Review details" });
+  const separator = page.getByRole("separator", { name: "Review details" });
+
+  await expect.poll(() => renderedHeight(dock)).toBe(260);
+
+  // Report "300px" once via a normal drag.
+  await dragSeparator(page, separator, -40);
+  await expect.poll(() => renderedHeight(dock)).toBe(300);
+
+  // A prop-driven initialHeight change to an unrelated base does not touch the dedup
+  // guard left over from the previous gesture.
+  await page.getByRole("button", { name: "Set initial height to 340px" }).click();
+  await expect.poll(() => renderedHeight(dock)).toBe(340);
+
+  // This drag's target ("300px") coincidentally matches the stale report from the
+  // earlier gesture. It must still apply: the dedup guard is scoped to one gesture.
+  await dragSeparator(page, separator, 40);
+  await expect.poll(() => renderedHeight(dock)).toBe(300);
+});
+
 test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page }) => {
   await gotoPage(page, "bottom-dock");
 
@@ -154,7 +379,9 @@ test("refreshes CSS-variable limits when data-kit-theme changes", async ({ page 
 test("keeps body scroll position while measuring responsive limits", async ({ page }) => {
   await gotoPage(page, "bottom-dock");
 
-  const body = page.locator(".kit-bottom-dock__body");
+  const body = page
+    .getByRole("region", { name: "Review details" })
+    .locator(".kit-bottom-dock__body");
   await body.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

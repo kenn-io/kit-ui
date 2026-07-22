@@ -11,6 +11,8 @@
     onclose: () => void;
     ariaLabel: string;
     initialHeight?: string;
+    height?: string;
+    onHeightChange?: (height: string) => void;
     minHeight?: string;
     maxHeight?: string;
     keyboardStep?: number;
@@ -28,6 +30,8 @@
     onclose,
     ariaLabel,
     initialHeight = "50vh",
+    height,
+    onHeightChange,
     minHeight = "200px",
     maxHeight = "80vh",
     keyboardStep = 24,
@@ -40,7 +44,8 @@
     footer,
   }: Props = $props();
 
-  let requestedHeight = $derived(initialHeight);
+  let internalHeight = $derived(initialHeight);
+  const requestedHeight = $derived(height ?? internalHeight);
   let measuredHeight = $state(0);
   let measuredMinHeight = $state(0);
   let measuredMaxHeight = $state(100);
@@ -193,11 +198,42 @@
     };
   }
 
+  let lastReportedHeight: string | null = null;
+  let gestureResized = false;
+
+  /*
+   * SplitResizeHandle calls onResizeStart once per gesture: at pointerdown for
+   * drags, and again at the top of every keydown for keyboard steps (before
+   * that keydown's onResize/onResizeEnd pair). Resetting the dedup guard here
+   * scopes it to exactly one gesture, so a value repeated across separate
+   * gestures (a rejected controlled height, or an uncontrolled resize that
+   * lands back on a prior report) is still reported. gestureResized tracks
+   * whether this gesture produced a genuine, nonzero-delta onResize (real
+   * pointer movement on the active axis, or a keyboard step, which always has
+   * a nonzero delta); a pointerdown+pointerup with no movement, or pointer
+   * jitter on the orthogonal axis only, fires onResize/onResizeEnd with a
+   * zero-delta event, which must not report until a real move has occurred.
+   * Once a gesture has moved, a return to delta 0 (back to the start height)
+   * is a genuine report, not jitter, so the guard only gates the first event.
+   * The pointer-up sample can itself be the gesture's first nonzero delta
+   * (pointerdown followed directly by a displaced pointerup, with no
+   * pointermove delivered in between), so onResizeEnd only ignores zero-delta
+   * ends of gestures that never moved.
+   */
   function handleResizeStart(): void {
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
+    lastReportedHeight = null;
+    gestureResized = false;
   }
 
-  function handleResize(event: SplitResizeEvent): void {
+  function applyUserHeight(next: string): void {
+    if (next === lastReportedHeight) return;
+    lastReportedHeight = next;
+    onHeightChange?.(next);
+    if (height === undefined) internalHeight = next;
+  }
+
+  function reportResize(event: SplitResizeEvent): void {
     ownResizePending = true;
     if (ownResizeResetFrame !== null) cancelAnimationFrame(ownResizeResetFrame);
     /* Keep the marker through ResizeObserver delivery, which may follow the next animation frame. */
@@ -211,7 +247,18 @@
         }
       });
     });
-    requestedHeight = `${Math.max(0, startHeight - event.delta)}px`;
+    applyUserHeight(`${Math.max(0, startHeight - event.delta)}px`);
+  }
+
+  function handleResize(event: SplitResizeEvent): void {
+    if (!gestureResized && event.delta === 0) return;
+    gestureResized = true;
+    reportResize(event);
+  }
+
+  function handleResizeEnd(event: SplitResizeEvent): void {
+    if (!gestureResized && event.delta === 0) return;
+    reportResize(event);
   }
 </script>
 
@@ -233,7 +280,7 @@
       ariaValueNow={measuredHeight}
       onResizeStart={handleResizeStart}
       onResize={handleResize}
-      onResizeEnd={handleResize}
+      onResizeEnd={handleResizeEnd}
     />
 
     {#if header || closable}

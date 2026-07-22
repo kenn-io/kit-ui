@@ -23,6 +23,19 @@
   let initialHeight = $state("260px");
   let limitMode = $state<LimitMode>("pixels");
   let workspaceTall = $state(false);
+  let controlledOpen = $state(true);
+  let controlledHeight = $state("240px");
+  let lastRequestedHeight = $state("");
+  let controlledChangeCount = $state(0);
+
+  function applyLastRequestedHeight(): void {
+    if (lastRequestedHeight) controlledHeight = lastRequestedHeight;
+  }
+
+  function recordControlledHeightChange(next: string): void {
+    lastRequestedHeight = next;
+    controlledChangeCount += 1;
+  }
   const minHeight = $derived(
     limitMode === "container"
       ? "25%"
@@ -65,6 +78,7 @@
     <Button label="Switch dock limit theme" onclick={() => setThemeName("control-room")} />
     <Button label="Make workspace taller" onclick={() => (workspaceTall = true)} />
     <Button label="Set initial height to 300px" onclick={() => (initialHeight = "300px")} />
+    <Button label="Set initial height to 340px" onclick={() => (initialHeight = "340px")} />
     {#if !open}
       <Button label="Open dock" onclick={() => (open = true)} />
     {/if}
@@ -123,6 +137,66 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Controlled height"
+  description="Pass height to make the parent own the dock's size — the dock renders exactly that value. User resizes (pointer or keyboard) call onHeightChange with the requested height instead of applying it; the parent decides whether and when to adopt it."
+  code={`let height = $state("240px");
+let lastRequested = $state("");
+
+<BottomDock
+  {open}
+  ariaLabel="Controlled dock"
+  {height}
+  onHeightChange={(next) => (lastRequested = next)}
+  onclose={() => (open = false)}
+>
+  ...
+</BottomDock>`}
+>
+  <div class="dock-controls">
+    <Button label="Set height to 400px" onclick={() => (controlledHeight = "400px")} />
+    <Button label="Apply last requested height" onclick={applyLastRequestedHeight} />
+    {#if !controlledOpen}
+      <Button label="Open controlled dock" onclick={() => (controlledOpen = true)} />
+    {/if}
+  </div>
+  <p class="dock-status-line">
+    Last requested height:
+    <code data-testid="controlled-last-requested">{lastRequestedHeight || "none"}</code>
+    · onHeightChange calls:
+    <code data-testid="controlled-change-count">{controlledChangeCount}</code>
+  </p>
+
+  <div class="controlled-workspace-surface">
+    <div class="workspace-content">
+      <strong>Controlled workspace</strong>
+      <span>The parent owns this dock's height.</span>
+    </div>
+
+    <div class="dock-layout-context">
+      <BottomDock
+        open={controlledOpen}
+        ariaLabel="Controlled dock"
+        height={controlledHeight}
+        minHeight="150px"
+        maxHeight="450px"
+        onHeightChange={recordControlledHeightChange}
+        onclose={() => (controlledOpen = false)}
+      >
+        {#snippet header()}
+          <strong>Controlled review</strong>
+        {/snippet}
+
+        <div class="review-body">
+          {#each bodyItems as item (item)}
+            <div class="review-row">Controlled body item {item}</div>
+          {/each}
+        </div>
+      </BottomDock>
+    </div>
+  </div>
+</DemoSection>
+
 <style>
   :global(:root) {
     --kit-demo-dock-min-height: 150px;
@@ -142,7 +216,14 @@
     gap: var(--space-3);
   }
 
-  .workspace-surface {
+  .dock-status-line {
+    margin: var(--space-3) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .workspace-surface,
+  .controlled-workspace-surface {
     height: 520px;
     display: flex;
     flex-direction: column;
