@@ -6,6 +6,7 @@ async function renderedHeight(locator: Locator): Promise<number> {
 }
 
 async function dragSeparator(page: Page, separator: Locator, deltaY: number): Promise<void> {
+  await separator.scrollIntoViewIfNeeded();
   const box = await separator.boundingBox();
   if (!box) throw new Error("Bottom dock resize handle is not visible");
   const x = box.x + box.width / 2;
@@ -13,6 +14,44 @@ async function dragSeparator(page: Page, separator: Locator, deltaY: number): Pr
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x, y + deltaY);
+  await page.mouse.up();
+}
+
+/* Moves through each active-axis (y) offset in turn before releasing, so a drag can
+ * revisit an earlier offset (including the start position, delta 0) within one gesture. */
+async function dragSeparatorThroughPath(
+  page: Page,
+  separator: Locator,
+  deltasY: number[],
+): Promise<void> {
+  await separator.scrollIntoViewIfNeeded();
+  const box = await separator.boundingBox();
+  if (!box) throw new Error("Bottom dock resize handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (const deltaY of deltasY) {
+    await page.mouse.move(x, y + deltaY);
+  }
+  await page.mouse.up();
+}
+
+/* Moves the pointer on the orthogonal (x) axis only, holding the vertical separator's
+ * active axis (y) fixed — jitter that must not be reported as a resize. */
+async function jitterSeparatorOrthogonally(
+  page: Page,
+  separator: Locator,
+  deltaX: number,
+): Promise<void> {
+  await separator.scrollIntoViewIfNeeded();
+  const box = await separator.boundingBox();
+  if (!box) throw new Error("Bottom dock resize handle is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + deltaX, y);
   await page.mouse.up();
 }
 
@@ -199,6 +238,42 @@ test("ignores a zero-movement click on the separator", async ({ page }) => {
   // A genuine drag afterward must still report normally.
   await dragSeparator(page, separator, -40);
   await expect(changeCount).toHaveText("1");
+});
+
+test("ignores orthogonal pointer jitter before any active-axis movement", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  await expect(changeCount).toHaveText("0");
+
+  // The vertical separator's active axis is y; moving only on x produces zero-delta
+  // onResize events. Those must not be reported, for the same reason a zero-movement
+  // click must not be: the dedup guard resets on pointerdown, so without an explicit
+  // "has this gesture actually moved" check, jitter alone would report the currently
+  // measured height and could clobber a controlled parent's responsive value.
+  await jitterSeparatorOrthogonally(page, separator, 30);
+  await expect(changeCount).toHaveText("0");
+
+  // A genuine drag afterward must still report normally.
+  await dragSeparator(page, separator, -40);
+  await expect(changeCount).toHaveText("1");
+});
+
+test("reports a drag that returns to its starting position", async ({ page }) => {
+  await gotoPage(page, "bottom-dock");
+
+  const separator = page.getByRole("separator", { name: "Controlled dock" });
+  const lastRequested = page.getByTestId("controlled-last-requested");
+  const changeCount = page.getByTestId("controlled-change-count");
+
+  // Once a gesture has produced a genuine nonzero-delta move, a later move back to
+  // delta 0 (the start height) is a real report, not jitter — the zero-delta guard
+  // only gates the very first event of a gesture.
+  await dragSeparatorThroughPath(page, separator, [-40, 0]);
+  await expect(lastRequested).toHaveText("240px");
+  await expect(changeCount).toHaveText("2");
 });
 
 test("reports every keystroke even when the parent never adopts the requested height", async ({

@@ -208,9 +208,13 @@
    * scopes it to exactly one gesture, so a value repeated across separate
    * gestures (a rejected controlled height, or an uncontrolled resize that
    * lands back on a prior report) is still reported. gestureResized tracks
-   * whether this gesture produced a genuine onResize (pointer movement or a
-   * keyboard step); a pointerdown+pointerup with no movement between them
-   * still fires onResizeEnd with a zero-delta event, which must not report.
+   * whether this gesture produced a genuine, nonzero-delta onResize (real
+   * pointer movement on the active axis, or a keyboard step, which always has
+   * a nonzero delta); a pointerdown+pointerup with no movement, or pointer
+   * jitter on the orthogonal axis only, fires onResize/onResizeEnd with a
+   * zero-delta event, which must not report until a real move has occurred.
+   * Once a gesture has moved, a return to delta 0 (back to the start height)
+   * is a genuine report, not jitter, so the guard only gates the first event.
    */
   function handleResizeStart(): void {
     startHeight = Math.round(dockElement?.getBoundingClientRect().height ?? measuredHeight);
@@ -243,6 +247,7 @@
   }
 
   function handleResize(event: SplitResizeEvent): void {
+    if (!gestureResized && event.delta === 0) return;
     gestureResized = true;
     reportResize(event);
   }
