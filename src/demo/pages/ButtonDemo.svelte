@@ -74,6 +74,15 @@
       <Button label="Close" tone="danger" surface="outline" size="sm">
         <XIcon size="14" strokeWidth="2.2" aria-hidden="true" />
       </Button>
+      <Button
+        label="Merge workflow request"
+        tone="success"
+        surface="solid"
+        size="sm"
+        class="glyph-safety__constrained"
+      >
+        <GitMergeIcon size="14" strokeWidth="2.2" aria-hidden="true" />
+      </Button>
     </div>
     <div class="glyph-safety__row">
       <Button label="Approve" tone="success" surface="soft" />
@@ -183,6 +192,10 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .glyph-safety :global(.glyph-safety__constrained .kit-button__label) {
+    max-width: 52px;
   }
 
   .centering-lab {

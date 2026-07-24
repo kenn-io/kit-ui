@@ -13,18 +13,51 @@ test("renders the centering approaches at one compact height", async ({ page }) 
   expect(new Set(heights)).toEqual(new Set([24]));
 });
 
+test("renders an ellipsis when a label is constrained", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  const source = page.locator('[data-demo="button-glyph-safety"] .kit-button').nth(1);
+  await source.evaluate((element) => {
+    const probe = element.cloneNode(true) as HTMLButtonElement;
+    probe.dataset.ellipsisProbe = "true";
+    probe.style.position = "fixed";
+    probe.style.left = "300px";
+    probe.style.top = "100px";
+    const label = probe.querySelector<HTMLElement>(".kit-button__label");
+    const text = probe.querySelector<HTMLElement>(".kit-button__label-text");
+    if (!label || !text) throw new Error("probe label is missing");
+    label.style.maxWidth = "52px";
+    text.textContent = "Merge workflow request";
+    document.body.append(probe);
+  });
+
+  const probe = page.locator("[data-ellipsis-probe]");
+  const clippingLayer = probe.locator(".kit-button__label-text");
+  await expect(clippingLayer).toHaveCount(1);
+  expect(await clippingLayer.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+    true,
+  );
+
+  const ellipsis = await probe.screenshot({ scale: "css" });
+  await clippingLayer.evaluate((element) => {
+    element.style.textOverflow = "clip";
+  });
+  const hardClip = await probe.screenshot({ scale: "css" });
+  expect(ellipsis.equals(hardClip)).toBe(false);
+});
+
 test("centers lowercase ink and keeps descenders inside clipped labels", async ({ page }) => {
   await gotoPage(page, "button");
   await page.evaluate(() => document.fonts.ready);
 
   const glyphSafetyButtons = page.locator('[data-demo="button-glyph-safety"] .kit-button');
-  await expect(glyphSafetyButtons).toHaveCount(6);
-  await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(6);
+  await expect(glyphSafetyButtons).toHaveCount(7);
+  await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
   expect(
     await glyphSafetyButtons.evaluateAll((buttons) =>
       buttons.map((button) => button.getBoundingClientRect().height),
     ),
-  ).toEqual([24, 24, 24, 28, 28, 28]);
+  ).toEqual([24, 24, 24, 24, 28, 28, 28]);
 
   async function measureGlyph(button: Locator, glyph: "o" | "g") {
     const geometry = await button.evaluate((element, targetGlyph) => {

@@ -155,9 +155,17 @@
     display: inline-flex;
     align-items: center;
     block-size: 1lh;
+    min-width: 0;
   }
 
   .kit-button__label-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+    overflow-y: visible;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     text-box-trim: trim-both;
     text-box-edge: ex alphabetic;
   }
