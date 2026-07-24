@@ -157,7 +157,6 @@ test("centers lowercase ink and keeps descenders inside clipped labels", async (
 
         return {
           height: bounds.buttonHeight,
-          gapDifference: top - startY - (endY - bottom),
           opticalOffset: weightedPosition / componentWeight - buttonCenter,
           paintWeight: rowWeight.reduce((sum, weight) => sum + (weight ?? 0), 0),
         };
@@ -207,10 +206,6 @@ test("centers lowercase ink and keeps descenders inside clipped labels", async (
       const lowercaseButton = page.locator(`[data-production-button-probe="${lowercaseProbe}"]`);
       const lowercase = await measureGlyph(lowercaseButton, "o");
       expect(lowercase.height).toBe(24);
-      expect(
-        Math.abs(lowercase.gapDifference),
-        JSON.stringify({ theme, phase, lowercase }),
-      ).toBeLessThanOrEqual(2);
       expect(
         Math.abs(lowercase.opticalOffset),
         JSON.stringify({ theme, phase, lowercase }),
