@@ -82,10 +82,12 @@
     {@render children()}
   {/if}
   {#if label}
-    <span class="kit-button__label">{label}</span>
+    <span class="kit-button__label"><span class="kit-button__label-text">{label}</span></span>
   {/if}
   {#if shortLabel}
-    <span class="kit-button__short-label">{shortLabel}</span>
+    <span class="kit-button__short-label"
+      ><span class="kit-button__label-text">{shortLabel}</span></span
+    >
   {/if}
   {#if trailing}
     {@render trailing()}
@@ -103,7 +105,10 @@
     font-family: inherit;
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-medium, 500);
-    padding: 6px 14px;
+    /* A real line box protects ascenders and descenders when consumers clip
+     * labels for responsive ellipsis. The reduced block padding keeps the
+     * desktop control exactly 28px tall instead of growing it. */
+    padding: 5px 14px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     /* Neutral-outline appearance as the base so every tone × surface combo
@@ -120,7 +125,7 @@
       transform var(--transition-fast) var(--transition-ease, ease),
       opacity var(--transition-fast) var(--transition-ease, ease);
     white-space: nowrap;
-    line-height: 1;
+    line-height: normal;
   }
 
   .kit-button:active:not(:disabled) {
@@ -133,14 +138,28 @@
   }
 
   .kit-button--sm {
+    /* The 24px floor contains the protected line box, a 14px icon, and both
+     * borders. Touch type remains free to grow the auto block size above it. */
     min-height: 24px;
-    padding: 4px 12px;
+    padding: 2px 12px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
   }
 
   .kit-button :global(svg) {
     flex-shrink: 0;
+  }
+
+  .kit-button__label,
+  .kit-button__short-label {
+    display: inline-flex;
+    align-items: center;
+    block-size: 1lh;
+  }
+
+  .kit-button__label-text {
+    text-box-trim: trim-both;
+    text-box-edge: ex alphabetic;
   }
 
   .kit-button__short-label {
