@@ -30,6 +30,7 @@
   import FindBarDemo from "./pages/FindBarDemo.svelte";
   import FitStagesDemo from "./pages/FitStagesDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
+  import FormFieldDemo from "./pages/FormFieldDemo.svelte";
   import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
@@ -39,6 +40,8 @@
   import MobileDemo from "./pages/MobileDemo.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
+  import NoticeDemo from "./pages/NoticeDemo.svelte";
+  import PageFrameDemo from "./pages/PageFrameDemo.svelte";
   import DateRangePickerDemo from "./pages/DateRangePickerDemo.svelte";
   import RefreshControlDemo from "./pages/RefreshControlDemo.svelte";
   import ScrollBoxDemo from "./pages/ScrollBoxDemo.svelte";
@@ -99,6 +102,7 @@
     { id: "find-bar", label: "FindBar", component: FindBarDemo },
     { id: "fit-stages", label: "FitStages", component: FitStagesDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
+    { id: "form-field", label: "FormField", component: FormFieldDemo },
     { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
@@ -106,6 +110,8 @@
     { id: "mention-textarea", label: "MentionTextarea", component: MentionTextareaDemo },
     { id: "mermaid", label: "Mermaid", component: MermaidDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
+    { id: "notice", label: "Notice", component: NoticeDemo },
+    { id: "page-frame", label: "PageFrame", component: PageFrameDemo },
     { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
     { id: "scroll-box", label: "ScrollBox", component: ScrollBoxDemo },

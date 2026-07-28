@@ -1,5 +1,5 @@
 <script module lang="ts">
-  export type TextInputSize = "sm" | "md";
+  export type TextInputSize = "sm" | "md" | "lg";
 </script>
 
 <script lang="ts">
@@ -32,12 +32,14 @@
     ariaControls?: string;
     ariaActivedescendant?: string;
     ariaAutocomplete?: "list" | "inline" | "both" | "none";
+    ariaDescribedby?: string;
     /** Focus the input when it mounts. */
     autofocus?: boolean;
     autocomplete?: HTMLInputElement["autocomplete"];
     oninput?: (value: string) => void;
     onchange?: (value: string) => void;
     onkeydown?: (event: KeyboardEvent) => void;
+    onblur?: () => void;
     /** Leading adornment inside the border (icon, unit). */
     prefix?: Snippet;
     /** Trailing adornment inside the border (icon, clear button, kbd). */
@@ -64,11 +66,13 @@
     ariaControls = undefined,
     ariaActivedescendant = undefined,
     ariaAutocomplete = undefined,
+    ariaDescribedby = undefined,
     autofocus = false,
     autocomplete = undefined,
     oninput = undefined,
     onchange = undefined,
     onkeydown = undefined,
+    onblur = undefined,
     prefix = undefined,
     suffix = undefined,
     inputEl = $bindable(undefined),
@@ -116,9 +120,11 @@
     aria-controls={ariaControls}
     aria-activedescendant={ariaActivedescendant}
     aria-autocomplete={ariaAutocomplete}
+    aria-describedby={ariaDescribedby}
     oninput={handleInput}
     onchange={(event) => onchange?.((event.currentTarget as HTMLInputElement).value)}
     {onkeydown}
+    {onblur}
     {@attach focusOnMount}
   />
   {#if suffix}
@@ -152,6 +158,12 @@
     font-size: var(--font-size-sm);
   }
 
+  .kit-text-input--lg {
+    height: 44px;
+    padding: 0 var(--space-5);
+    font-size: var(--font-size-md);
+  }
+
   .kit-text-input--block {
     display: flex;
     width: 100%;
@@ -159,6 +171,11 @@
 
   .kit-text-input:focus-within {
     border-color: var(--accent-blue);
+  }
+
+  .kit-text-input:has(.kit-text-input__control:focus-visible) {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
   }
 
   .kit-text-input--invalid,
