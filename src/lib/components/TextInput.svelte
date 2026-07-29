@@ -1,5 +1,5 @@
 <script module lang="ts">
-  export type TextInputSize = "sm" | "md";
+  export type TextInputSize = "sm" | "md" | "lg";
 </script>
 
 <script lang="ts">
@@ -18,6 +18,7 @@
     invalid?: boolean;
     disabled?: boolean;
     readonly?: boolean;
+    required?: boolean;
     /** Stretch to the container width (default shrink-wraps ~180px). */
     block?: boolean;
     id?: string;
@@ -32,12 +33,14 @@
     ariaControls?: string;
     ariaActivedescendant?: string;
     ariaAutocomplete?: "list" | "inline" | "both" | "none";
+    ariaDescribedby?: string;
     /** Focus the input when it mounts. */
     autofocus?: boolean;
     autocomplete?: HTMLInputElement["autocomplete"];
     oninput?: (value: string) => void;
     onchange?: (value: string) => void;
     onkeydown?: (event: KeyboardEvent) => void;
+    onblur?: () => void;
     /** Leading adornment inside the border (icon, unit). */
     prefix?: Snippet;
     /** Trailing adornment inside the border (icon, clear button, kbd). */
@@ -55,6 +58,7 @@
     invalid = false,
     disabled = false,
     readonly = false,
+    required = false,
     block = false,
     id = undefined,
     name = undefined,
@@ -64,11 +68,13 @@
     ariaControls = undefined,
     ariaActivedescendant = undefined,
     ariaAutocomplete = undefined,
+    ariaDescribedby = undefined,
     autofocus = false,
     autocomplete = undefined,
     oninput = undefined,
     onchange = undefined,
     onkeydown = undefined,
+    onblur = undefined,
     prefix = undefined,
     suffix = undefined,
     inputEl = $bindable(undefined),
@@ -106,6 +112,7 @@
     {placeholder}
     {disabled}
     {readonly}
+    {required}
     {id}
     {name}
     {autocomplete}
@@ -116,9 +123,11 @@
     aria-controls={ariaControls}
     aria-activedescendant={ariaActivedescendant}
     aria-autocomplete={ariaAutocomplete}
+    aria-describedby={ariaDescribedby}
     oninput={handleInput}
     onchange={(event) => onchange?.((event.currentTarget as HTMLInputElement).value)}
     {onkeydown}
+    {onblur}
     {@attach focusOnMount}
   />
   {#if suffix}
@@ -152,6 +161,12 @@
     font-size: var(--font-size-sm);
   }
 
+  .kit-text-input--lg {
+    height: 44px;
+    padding: 0 var(--space-5);
+    font-size: var(--font-size-md);
+  }
+
   .kit-text-input--block {
     display: flex;
     width: 100%;
@@ -182,8 +197,24 @@
     color: inherit;
   }
 
-  .kit-text-input__control:focus {
+  .kit-text-input__control:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .kit-text-input__control:focus:not(:focus-visible) {
     outline: none;
+  }
+
+  @supports selector(:has(*)) {
+    .kit-text-input:has(.kit-text-input__control:focus-visible) {
+      outline: var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    .kit-text-input__control:focus-visible {
+      outline: none;
+    }
   }
 
   .kit-text-input__control::placeholder {

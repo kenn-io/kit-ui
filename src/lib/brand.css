@@ -1,0 +1,134 @@
+/* Generated from brand.json by scripts/generate-brand.mjs. Do not edit. */
+:root {
+  --bg-primary: #f5f6f8;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f0f1f4;
+  --bg-inset: #ecedf2;
+  --border-default: #d8dae2;
+  --border-muted: #e4e6ec;
+  --text-primary: #181b24;
+  --text-secondary: #555b6e;
+  --text-muted: #878ea0;
+  --accent-blue: #2563eb;
+  --accent-amber: #d97706;
+  --accent-purple: #7c3aed;
+  --accent-green: #059669;
+  --accent-red: #dc2626;
+  --accent-teal: #0891b2;
+  --status-waiting: #a48a55;
+  --kit-brand-hc-light-border-default: #6b7080;
+  --kit-brand-hc-light-border-muted: #7d8290;
+  --kit-brand-hc-light-text-primary: #000000;
+  --kit-brand-hc-light-text-secondary: #2a2f3a;
+  --kit-brand-hc-light-text-muted: #44495a;
+  --kit-brand-hc-light-accent-blue: #0a47c2;
+  --kit-brand-hc-dark-border-default: #8a8f9e;
+  --kit-brand-hc-dark-border-muted: #6e7282;
+  --kit-brand-hc-dark-text-primary: #ffffff;
+  --kit-brand-hc-dark-text-secondary: #d4d8e0;
+  --kit-brand-hc-dark-text-muted: #b8bdc9;
+  --kit-brand-hc-dark-accent-blue: #8ab8ff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --focus-ring: 2px solid var(--accent-blue);
+  --transition-fast: 0.12s;
+  --opacity-disabled: 0.5;
+  --border-width: 1px;
+  --press-transform: translateY(1px);
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --font-size-2xs: 0.625rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-sm: 0.75rem;
+  --font-size-md: 0.8125rem;
+  --font-size-lg: 0.875rem;
+  --font-size-xl: 1.125rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-root: var(--font-size-md);
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --header-height: 44px;
+  --status-bar-height: 24px;
+  --z-popover: 1000;
+  --z-overlay: 1000;
+  --z-tooltip: 1100;
+  color-scheme: light;
+}
+
+:root.dark {
+  --bg-primary: #0d0d12;
+  --bg-surface: #16161e;
+  --bg-surface-hover: #1f1f2a;
+  --bg-inset: #111116;
+  --border-default: #333345;
+  --border-muted: #2a2a3a;
+  --text-primary: #ececf1;
+  --text-secondary: #b4bcd0;
+  --text-muted: #8b93a8;
+  --accent-blue: #60a5fa;
+  --accent-amber: #fbbf24;
+  --accent-purple: #a78bfa;
+  --accent-green: #4ade80;
+  --accent-red: #f87171;
+  --accent-teal: #22d3ee;
+  --status-waiting: #c4a76a;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  :root {
+    --font-size-2xs: 0.75rem;
+    --font-size-xs: 0.875rem;
+    --font-size-sm: 0.9375rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.0625rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.75rem;
+  }
+}
+
+:root.kit-type-touch {
+  --font-size-2xs: 0.75rem;
+  --font-size-xs: 0.875rem;
+  --font-size-sm: 0.9375rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.0625rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.75rem;
+}
+
+:root.high-contrast {
+  --border-default: var(--kit-brand-hc-light-border-default);
+  --border-muted: var(--kit-brand-hc-light-border-muted);
+  --text-primary: var(--kit-brand-hc-light-text-primary);
+  --text-secondary: var(--kit-brand-hc-light-text-secondary);
+  --text-muted: var(--kit-brand-hc-light-text-muted);
+  --accent-blue: var(--kit-brand-hc-light-accent-blue);
+}
+
+:root.dark.high-contrast {
+  --border-default: var(--kit-brand-hc-dark-border-default);
+  --border-muted: var(--kit-brand-hc-dark-border-muted);
+  --text-primary: var(--kit-brand-hc-dark-text-primary);
+  --text-secondary: var(--kit-brand-hc-dark-text-secondary);
+  --text-muted: var(--kit-brand-hc-dark-text-muted);
+  --accent-blue: var(--kit-brand-hc-dark-accent-blue);
+}

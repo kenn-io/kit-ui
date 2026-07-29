@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "colors": {
+    "light": {
+      "backgroundPrimary": "#f5f6f8",
+      "backgroundSurface": "#ffffff",
+      "backgroundSurfaceHover": "#f0f1f4",
+      "backgroundInset": "#ecedf2",
+      "borderDefault": "#d8dae2",
+      "borderMuted": "#e4e6ec",
+      "textPrimary": "#181b24",
+      "textSecondary": "#555b6e",
+      "textMuted": "#878ea0",
+      "action": "#2563eb",
+      "warning": "#d97706",
+      "purple": "#7c3aed",
+      "success": "#059669",
+      "danger": "#dc2626",
+      "teal": "#0891b2",
+      "waiting": "#a48a55"
+    },
+    "dark": {
+      "backgroundPrimary": "#0d0d12",
+      "backgroundSurface": "#16161e",
+      "backgroundSurfaceHover": "#1f1f2a",
+      "backgroundInset": "#111116",
+      "borderDefault": "#333345",
+      "borderMuted": "#2a2a3a",
+      "textPrimary": "#ececf1",
+      "textSecondary": "#b4bcd0",
+      "textMuted": "#8b93a8",
+      "action": "#60a5fa",
+      "warning": "#fbbf24",
+      "purple": "#a78bfa",
+      "success": "#4ade80",
+      "danger": "#f87171",
+      "teal": "#22d3ee",
+      "waiting": "#c4a76a"
+    },
+    "highContrastLight": {
+      "textPrimary": "#000000",
+      "textSecondary": "#2a2f3a",
+      "textMuted": "#44495a",
+      "borderDefault": "#6b7080",
+      "borderMuted": "#7d8290",
+      "action": "#0a47c2"
+    },
+    "highContrastDark": {
+      "textPrimary": "#ffffff",
+      "textSecondary": "#d4d8e0",
+      "textMuted": "#b8bdc9",
+      "borderDefault": "#8a8f9e",
+      "borderMuted": "#6e7282",
+      "action": "#8ab8ff"
+    }
+  },
+  "typography": {
+    "families": {
+      "sans": "Inter",
+      "mono": "JetBrains Mono"
+    },
+    "fallbacks": {
+      "sans": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Helvetica, Arial, sans-serif",
+      "mono": "\"SF Mono\", Menlo, Consolas, monospace"
+    },
+    "weights": {
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "desktop": {
+      "2xs": "0.625rem",
+      "xs": "0.6875rem",
+      "sm": "0.75rem",
+      "md": "0.8125rem",
+      "lg": "0.875rem",
+      "xl": "1.125rem",
+      "2xl": "1.5rem"
+    },
+    "touch": {
+      "2xs": "0.75rem",
+      "xs": "0.875rem",
+      "sm": "0.9375rem",
+      "md": "1rem",
+      "lg": "1.0625rem",
+      "xl": "1.25rem",
+      "2xl": "1.75rem"
+    },
+    "root": "md"
+  },
+  "spacing": {
+    "1": "2px",
+    "2": "4px",
+    "3": "6px",
+    "4": "8px",
+    "5": "12px",
+    "6": "16px",
+    "7": "24px",
+    "8": "32px"
+  },
+  "radii": {
+    "sm": "4px",
+    "md": "6px",
+    "lg": "8px"
+  },
+  "effects": {
+    "light": {
+      "shadowSm": "0 1px 2px rgba(0, 0, 0, 0.05)",
+      "shadowMd": "0 2px 8px rgba(0, 0, 0, 0.08)",
+      "shadowLg": "0 4px 16px rgba(0, 0, 0, 0.1)",
+      "overlay": "rgba(0, 0, 0, 0.3)"
+    },
+    "dark": {
+      "shadowSm": "0 1px 2px rgba(0, 0, 0, 0.25)",
+      "shadowMd": "0 2px 8px rgba(0, 0, 0, 0.35)",
+      "shadowLg": "0 4px 16px rgba(0, 0, 0, 0.4)",
+      "overlay": "rgba(0, 0, 0, 0.6)"
+    }
+  },
+  "interaction": {
+    "focusRing": "2px solid var(--accent-blue)",
+    "transitionFast": "0.12s",
+    "opacityDisabled": 0.5,
+    "borderWidth": "1px",
+    "pressTransform": "translateY(1px)"
+  },
+  "layout": {
+    "headerHeight": "44px",
+    "statusBarHeight": "24px",
+    "zPopover": 1000,
+    "zOverlay": 1000,
+    "zTooltip": 1100
+  },
+  "assets": {
+    "logo": {
+      "path": "brand-assets/logo.svg",
+      "mediaType": "image/svg+xml",
+      "sha256": "c4fb50fa2d311b6657be094251f7340047c3de49139038f0ba0d6e15cc8b32ca"
+    },
+    "favicon": {
+      "path": "brand-assets/favicon.svg",
+      "mediaType": "image/svg+xml",
+      "sha256": "c4fb50fa2d311b6657be094251f7340047c3de49139038f0ba0d6e15cc8b32ca"
+    },
+    "sansFont": {
+      "path": "fonts/inter-var.woff2",
+      "mediaType": "font/woff2",
+      "sha256": "c940764593d0fe5d596be327ca7558855e018039fb78509aa21921fd3644c3e4"
+    },
+    "monoFont": {
+      "path": "fonts/jetbrains-mono-var.woff2",
+      "mediaType": "font/woff2",
+      "sha256": "1e06740a02a443fb7f3eeda8fcaa685a0f6c620e3f01e6666e847295469ce3ad"
+    }
+  }
+}

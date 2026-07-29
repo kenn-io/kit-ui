@@ -871,20 +871,19 @@
 }
 
 /*
- * High contrast beats every theme. These re-assert the theme.css
- * high-contrast values at higher specificity than any theme block, so
- * accessibility wins regardless of the active identity. Values mirror
- * :root.high-contrast / :root.dark.high-contrast in theme.css. Canvas
+ * High contrast beats every theme. These re-assert the generated
+ * high-contrast source variables at higher specificity than any theme
+ * block, so contract changes flow through every active identity. Canvas
  * decor is also stripped: texture behind text is exactly what a
  * high-contrast user asked to not have.
  */
 :root.high-contrast[data-kit-theme] {
-  --text-primary: #000000;
-  --text-secondary: #2a2f3a;
-  --text-muted: #44495a;
-  --border-default: #6b7080;
-  --border-muted: #7d8290;
-  --accent-blue: #0a47c2;
+  --text-primary: var(--kit-brand-hc-light-text-primary);
+  --text-secondary: var(--kit-brand-hc-light-text-secondary);
+  --text-muted: var(--kit-brand-hc-light-text-muted);
+  --border-default: var(--kit-brand-hc-light-border-default);
+  --border-muted: var(--kit-brand-hc-light-border-muted);
+  --accent-blue: var(--kit-brand-hc-light-accent-blue);
   --focus-ring: 2px solid var(--accent-blue);
   /* Graphite's 0.5px hairline is the one identity border that can drop
    * below visibility thresholds; high contrast restores full-width edges
@@ -897,12 +896,12 @@
 }
 
 :root.dark.high-contrast[data-kit-theme] {
-  --text-primary: #ffffff;
-  --text-secondary: #d4d8e0;
-  --text-muted: #b8bdc9;
-  --border-default: #8a8f9e;
-  --border-muted: #6e7282;
-  --accent-blue: #8ab8ff;
+  --text-primary: var(--kit-brand-hc-dark-text-primary);
+  --text-secondary: var(--kit-brand-hc-dark-text-secondary);
+  --text-muted: var(--kit-brand-hc-dark-text-muted);
+  --border-default: var(--kit-brand-hc-dark-border-default);
+  --border-muted: var(--kit-brand-hc-dark-border-muted);
+  --accent-blue: var(--kit-brand-hc-dark-accent-blue);
 }
 
 :root.high-contrast[data-kit-theme] body {

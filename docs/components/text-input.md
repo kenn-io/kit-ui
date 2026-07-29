@@ -25,9 +25,9 @@ with content, and an optional shortcut hint while empty.
 | `value`                                                                                | `string` (bindable)                                             | `""`     |                                                                                                                                              |
 | `type`                                                                                 | `"text" \| "search" \| "email" \| "url" \| "password" \| "tel"` | `"text"` | Text-like types only; date/checkbox/etc. keep native chrome elsewhere                                                                        |
 | `placeholder`                                                                          | `string`                                                        | —        |                                                                                                                                              |
-| `size`                                                                                 | `"sm" \| "md"`                                                  | `"md"`   | 24px / 28px tall — matches Button/IconButton heights                                                                                         |
+| `size`                                                                                 | `"sm" \| "md" \| "lg"`                                          | `"md"`   | 24px / 28px toolbar controls; 44px `lg` form control                                                                                         |
 | `invalid`                                                                              | `boolean`                                                       | `false`  | Red border + `aria-invalid`                                                                                                                  |
-| `disabled` / `readonly`                                                                | `boolean`                                                       | `false`  |                                                                                                                                              |
+| `disabled` / `readonly` / `required`                                                   | `boolean`                                                       | `false`  | Forwarded to the native input                                                                                                                |
 | `block`                                                                                | `boolean`                                                       | `false`  | Stretch to container width (default is a 180px inline field)                                                                                 |
 | `id` / `name`                                                                          | `string`                                                        | —        | For `<label for>` / forms                                                                                                                    |
 | `ariaLabel`                                                                            | `string`                                                        | —        | Required in spirit when no `<label>` is associated                                                                                           |
@@ -36,14 +36,21 @@ with content, and an optional shortcut hint while empty.
 | `role` / `ariaExpanded` / `ariaControls` / `ariaActivedescendant` / `ariaAutocomplete` | combobox wiring                                                 | —        | For fields that drive a listbox (CommandPalette): `role="combobox"` plus pointers at the list and highlighted option                         |
 | `oninput` / `onchange`                                                                 | `(value: string) => void`                                       | —        | Called with the new value                                                                                                                    |
 | `onkeydown`                                                                            | `(event: KeyboardEvent) => void`                                | —        |                                                                                                                                              |
+| `onblur`                                                                               | `() => void`                                                    | —        | Called when the control loses focus                                                                                                          |
+| `ariaDescribedby`                                                                      | `string`                                                        | —        | Connects supporting or error text to the native input                                                                                        |
 | `prefix` / `suffix`                                                                    | `Snippet`                                                       | —        | Adornments inside the border (icon, unit, kbd, button). Interactive suffix actions must handle `disabled` themselves — the wrapper only dims |
 | `inputEl`                                                                              | `HTMLInputElement` (bindable)                                   | —        | The underlying input, for focus management                                                                                                   |
 | `class`                                                                                | `string`                                                        | `""`     |                                                                                                                                              |
 
-Focus renders as an `--accent-blue` border on the wrapper
-(`:focus-within`), invalid as `--accent-red`; both follow the FindBar card
-convention. The native webkit search-cancel button is suppressed — the
-wrapper owns the clear affordance.
+Focus renders as an `--accent-blue` border and visible focus ring, while invalid
+renders as `--accent-red`; both follow the FindBar card convention. Browsers
+with `:has()` enhance the ring onto the wrapper, while older engines keep an
+input-level or native outline fallback. The native webkit search-cancel button
+is suppressed — the wrapper owns the clear affordance.
+
+`FormField` composes the `lg` size with a persistent label and accessible
+error message. Use `TextInput` directly when the surrounding form owns those
+elements.
 
 ## SearchInput props
 
