@@ -18,6 +18,7 @@
     invalid?: boolean;
     disabled?: boolean;
     readonly?: boolean;
+    required?: boolean;
     /** Stretch to the container width (default shrink-wraps ~180px). */
     block?: boolean;
     id?: string;
@@ -57,6 +58,7 @@
     invalid = false,
     disabled = false,
     readonly = false,
+    required = false,
     block = false,
     id = undefined,
     name = undefined,
@@ -110,6 +112,7 @@
     {placeholder}
     {disabled}
     {readonly}
+    {required}
     {id}
     {name}
     {autocomplete}

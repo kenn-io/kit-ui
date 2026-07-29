@@ -123,6 +123,18 @@ function cssLength(value, field) {
   cssMatch(value, field, new RegExp(String.raw`^${CSS_NONNEGATIVE_LENGTH}$`), "a CSS length");
 }
 
+function cssTypographySize(value, field) {
+  safeCssText(value, field);
+  const match = new RegExp(String.raw`^(${CSS_NUMBER})rem$`, "i").exec(value);
+  if (!match || Number(match[1]) <= 0) {
+    throw new Error(`${field} must be a positive CSS rem length`);
+  }
+}
+
+function cssSpacing(value, field) {
+  cssMatch(value, field, new RegExp(String.raw`^${CSS_NUMBER}px$`, "i"), "a CSS pixel length");
+}
+
 function cssRadius(value, field) {
   cssMatch(
     value,
@@ -265,13 +277,13 @@ export async function validateBrandContract(contract, { assetRoot }) {
   for (const key of ["medium", "semibold", "bold"]) {
     integer(contract.typography.weights[key], `typography.weights.${key}`, 1, 1000);
   }
-  validateSet(contract.typography.desktop, SIZE_KEYS, "typography.desktop", cssLength);
-  validateSet(contract.typography.touch, SIZE_KEYS, "typography.touch", cssLength);
+  validateSet(contract.typography.desktop, SIZE_KEYS, "typography.desktop", cssTypographySize);
+  validateSet(contract.typography.touch, SIZE_KEYS, "typography.touch", cssTypographySize);
   if (!SIZE_KEYS.includes(contract.typography.root)) {
     throw new Error("typography.root must name a typography size");
   }
 
-  validateSet(contract.spacing, ["1", "2", "3", "4", "5", "6", "7", "8"], "spacing", cssLength);
+  validateSet(contract.spacing, ["1", "2", "3", "4", "5", "6", "7", "8"], "spacing", cssSpacing);
   validateSet(contract.radii, ["sm", "md", "lg"], "radii", cssRadius);
   exactKeys(contract.effects, ["light", "dark"], "effects");
   for (const mode of ["light", "dark"]) {

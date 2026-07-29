@@ -19,6 +19,7 @@
     name?: string;
     placeholder?: string;
     autocomplete?: HTMLInputElement["autocomplete"];
+    required?: boolean;
     oninput?: (value: string) => void;
     onblur?: () => void;
   }
@@ -29,6 +30,7 @@
     name = undefined,
     placeholder = undefined,
     autocomplete = undefined,
+    required = false,
     oninput = undefined,
     onblur = undefined,
   }: Props = $props();
@@ -45,6 +47,7 @@
     value={field.value}
     {placeholder}
     {autocomplete}
+    {required}
     disabled={field.disabled}
     invalid={!!field.error}
     block

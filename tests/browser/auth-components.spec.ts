@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { contrastOf, gotoPage, setTheme } from "./helpers";
 
-test("FormField keeps validation and callbacks connected to its control", async ({ page }) => {
+test("FormField keeps native validation and callbacks connected to its control", async ({
+  page,
+}) => {
   await gotoPage(page, "form-field");
 
   const email = page.getByLabel("Work email");
@@ -14,10 +16,15 @@ test("FormField keeps validation and callbacks connected to its control", async 
   await expect(control).toHaveCSS("height", "44px");
   await expect(email).toHaveAttribute("aria-invalid", "true");
   await expect(email).toHaveAttribute("aria-describedby", errorId!);
+  await expect(email).toHaveAttribute("required", "");
+
+  await email.fill("");
+  expect(await email.evaluate((element: HTMLInputElement) => element.checkValidity())).toBe(false);
 
   await email.fill("person@example.com");
   await email.blur();
 
+  expect(await email.evaluate((element: HTMLInputElement) => element.checkValidity())).toBe(true);
   await expect(page.getByTestId("auth-field-value")).toHaveText("person@example.com");
   await expect(page.getByTestId("auth-input-callbacks")).not.toHaveText("0");
   await expect(page.getByTestId("auth-blur-callbacks")).toHaveText("1");

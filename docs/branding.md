@@ -14,7 +14,8 @@ To change the look:
 The generator rejects unknown fields, CSS values outside each token's grammar,
 comment and control-character injection, missing font names, and asset files
 whose bytes do not match their recorded hash. Tests also fail when the
-checked-in CSS is stale.
+checked-in CSS is stale. Typography sizes must be positive `rem` lengths;
+spacing values must use `px`.
 
 Consumers can import the pieces separately:
 

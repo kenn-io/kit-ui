@@ -20,12 +20,13 @@
 <DemoSection
   title="FormField"
   description="A persistent label and accessible error message around the shared large TextInput control. Applications own validation and field state."
-  code={`<FormField field={email} type="email" oninput={updateEmail} />`}
+  code={`<FormField field={email} type="email" required oninput={updateEmail} />`}
 >
   <div class="form-field-demo">
     <FormField
       field={email}
       type="email"
+      required
       autocomplete="email"
       oninput={updateEmail}
       onblur={() => (blurCallbacks += 1)}

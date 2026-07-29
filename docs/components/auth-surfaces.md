@@ -34,10 +34,10 @@ without changing its authored case.
 ## FormField
 
 `FormField` accepts the shared `FieldState`, a text-like input type, standard
-input metadata, and `oninput` and `onblur` callbacks. `error` controls the
-visible message and accessibility links; `disabled` reaches the native input.
-It composes the shared 44px `TextInput` form size rather than implementing a
-second input primitive.
+input metadata, native `required`, and `oninput` and `onblur` callbacks. `error`
+controls the visible message and accessibility links; `disabled` and `required`
+reach the native input. It composes the shared 44px `TextInput` form size rather
+than implementing a second input primitive.
 
 ```ts
 export interface FieldState {

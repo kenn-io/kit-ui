@@ -47,6 +47,22 @@ describe("portable brand generation", () => {
     );
   });
 
+  test("rejects typography sizes that are not positive rem lengths", async () => {
+    const contract = await realContract();
+    contract.typography.desktop.md = "16px";
+
+    await expect(validateBrandContract(contract, { assetRoot })).rejects.toThrow(
+      "typography.desktop.md",
+    );
+  });
+
+  test("rejects spacing values that are not pixel lengths", async () => {
+    const contract = await realContract();
+    contract.spacing["1"] = "0.25rem";
+
+    await expect(validateBrandContract(contract, { assetRoot })).rejects.toThrow("spacing.1");
+  });
+
   test("rejects CSS comment markers and control characters", async () => {
     for (const value of [
       "Arial/*",
