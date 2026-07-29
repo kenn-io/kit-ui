@@ -42,6 +42,41 @@ test("PageFrame preserves a custom brand's authored case in its mark", async ({ 
   await expect(page.getByRole("heading", { name: "Continue to acme" })).toBeVisible();
 });
 
+test("PageFrame does not add a second main landmark inside an app", async ({ page }) => {
+  await gotoPage(page, "page-frame");
+
+  await expect(page.locator("main")).toHaveCount(1);
+});
+
+test("PageFrame instances generate distinct heading relationships", async ({ page }) => {
+  await gotoPage(page, "page-frame");
+  await page.evaluate(async () => {
+    const sveltePath = "/node_modules/.vite/deps/svelte.js";
+    const componentPath = "/src/lib/PageFrame.svelte";
+    const [{ mount }, { default: PageFrame }] = await Promise.all([
+      import(sveltePath),
+      import(componentPath),
+    ]);
+    const target = document.createElement("div");
+    document.body.append(target);
+    mount(PageFrame, { target, props: { title: "Second frame", brandName: "acme" } });
+  });
+
+  const relationships = await page.locator(".kit-page-frame__card").evaluateAll((cards) =>
+    cards.map((card) => {
+      const headingId = card.getAttribute("aria-labelledby");
+      const headingCount = headingId
+        ? Array.from(document.querySelectorAll("[id]")).filter(({ id }) => id === headingId).length
+        : 0;
+      return { headingId, headingCount };
+    }),
+  );
+
+  expect(relationships).toHaveLength(2);
+  expect(new Set(relationships.map(({ headingId }) => headingId)).size).toBe(2);
+  expect(relationships.every(({ headingCount }) => headingCount === 1)).toBe(true);
+});
+
 test("keeps the PageFrame brand readable in every base theme", async ({ page }) => {
   await gotoPage(page, "page-frame");
 

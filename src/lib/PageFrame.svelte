@@ -13,13 +13,16 @@
     footer?: Snippet;
   }
 
+  const componentId = $props.id();
+  const generatedHeadingId = `kit-page-frame-title-${componentId}`;
+
   let {
     title,
     description = undefined,
     brandName = "Kenn",
     logoSrc = undefined,
     logoAlt = "",
-    headingId = "kit-page-frame-title",
+    headingId = generatedHeadingId,
     class: className = "",
     children = undefined,
     footer = undefined,
@@ -28,7 +31,7 @@
   const brandMark = $derived(Array.from(brandName.trim())[0] ?? "");
 </script>
 
-<main class={["kit-page-frame", className]}>
+<div class={["kit-page-frame", className]}>
   <section class="kit-page-frame__card" aria-labelledby={headingId}>
     <header class="kit-page-frame__header">
       <div class="kit-page-frame__brand">
@@ -55,7 +58,7 @@
       <footer class="kit-page-frame__footer">{@render footer()}</footer>
     {/if}
   </section>
-</main>
+</div>
 
 <style>
   .kit-page-frame {

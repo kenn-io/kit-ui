@@ -26,8 +26,10 @@ validation policy, and submission stay in the consuming application.
 
 `PageFrame` accepts `title`, optional `description`, brand text or a logo URL,
 and `children` and `footer` snippets. It owns only the centered page and card
-layout. Without a logo, its visual mark is derived from the first character of
-`brandName` without changing its authored case.
+layout without adding a page landmark. Its heading relationship gets a unique
+default ID, while `headingId` remains available as an explicit override. Without
+a logo, its visual mark is derived from the first character of `brandName`
+without changing its authored case.
 
 ## FormField
 
