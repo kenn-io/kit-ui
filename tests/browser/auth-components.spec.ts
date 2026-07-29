@@ -34,7 +34,7 @@ test("Notice exposes its severity and action", async ({ page }) => {
   await expect(page.getByTestId("auth-notice-callbacks")).toHaveText("1");
 });
 
-test("PageFrame renders the Kenn account shell", async ({ page }) => {
+test("PageFrame renders the account shell", async ({ page }) => {
   await gotoPage(page, "page-frame");
 
   await expect(page.getByText("Kenn", { exact: true })).toBeVisible();

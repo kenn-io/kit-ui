@@ -1,6 +1,6 @@
 # Brand Contract
 
-`src/lib/brand.json` is the editable source for Kenn colors, type, spacing,
+`src/lib/brand.json` is the editable source for brand colors, type, spacing,
 shape, effects, and shared assets. `src/lib/brand.css` is generated from it.
 Do not edit the CSS by hand.
 

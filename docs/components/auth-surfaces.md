@@ -1,9 +1,9 @@
 # Auth Surfaces
 
 `PageFrame`, `FormField`, and `Notice` share the visual structure used by
-Kenn-owned account pages and Auth0-hosted screens. They only render data and
-forward callbacks. Authentication, routing, permissions, validation policy,
-and submission stay in the consuming application.
+application-owned account pages and hosted authentication screens. They only
+render data and forward callbacks. Authentication, routing, permissions,
+validation policy, and submission stay in the consuming application.
 
 ```svelte
 <script lang="ts">
