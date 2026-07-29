@@ -34,12 +34,12 @@ test("Notice exposes its severity and action", async ({ page }) => {
   await expect(page.getByTestId("auth-notice-callbacks")).toHaveText("1");
 });
 
-test("PageFrame derives its mark from a custom brand", async ({ page }) => {
+test("PageFrame preserves a custom brand's authored case in its mark", async ({ page }) => {
   await gotoPage(page, "page-frame");
 
-  await expect(page.locator(".kit-page-frame__mark")).toHaveText("A");
-  await expect(page.getByText("Acme", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Continue to Acme" })).toBeVisible();
+  await expect(page.locator(".kit-page-frame__mark")).toHaveText("a");
+  await expect(page.getByText("acme", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Continue to acme" })).toBeVisible();
 });
 
 test("keeps the PageFrame brand readable in every base theme", async ({ page }) => {

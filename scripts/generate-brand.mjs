@@ -70,7 +70,7 @@ function safeCssText(value, field) {
   nonemptyString(value, field);
   if (
     /[{};]/.test(value) ||
-    /\/\*|\*\/|<!--|-->/.test(value) ||
+    /\/\*|\*\/|<!--|--!?>/.test(value) ||
     Array.from(value).some((character) => {
       const codePoint = character.codePointAt(0);
       return (

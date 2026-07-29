@@ -25,7 +25,7 @@
     footer = undefined,
   }: Props = $props();
 
-  const brandMark = $derived(Array.from(brandName.trim())[0]?.toLocaleUpperCase() ?? "");
+  const brandMark = $derived(Array.from(brandName.trim())[0] ?? "");
 </script>
 
 <main class={["kit-page-frame", className]}>

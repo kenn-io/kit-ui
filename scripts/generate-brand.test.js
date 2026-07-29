@@ -47,9 +47,10 @@ describe("portable brand generation", () => {
     );
   });
 
-  test("rejects stylesheet-breaking comment and control syntax", async () => {
+  test("rejects CSS comment markers and control characters", async () => {
     for (const value of [
       "Arial/*",
+      '"Arial--!>"',
       "Arial\n--injected: red",
       '"Arial\u0085Injected"',
       '"Arial\u2028Injected"',

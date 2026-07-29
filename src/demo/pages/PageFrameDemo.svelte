@@ -20,9 +20,9 @@
 >
   <div class="page-frame-demo">
     <PageFrame
-      title="Continue to Acme"
-      description="Use your Acme account to continue."
-      brandName="Acme"
+      title="Continue to acme"
+      description="Use your acme account to continue."
+      brandName="acme"
     >
       <div class="page-frame-demo__stack">
         <Notice

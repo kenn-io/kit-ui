@@ -39,7 +39,7 @@ jobs:
         run: bun run check
 
       - name: Unit tests
-        run: bun test checks/
+        run: bun test ./checks ./scripts
 
       - name: Checker dogfood (kit-ui-check on src/demo)
         run: bun run check:usage
