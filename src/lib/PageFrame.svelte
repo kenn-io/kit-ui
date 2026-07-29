@@ -24,6 +24,8 @@
     children = undefined,
     footer = undefined,
   }: Props = $props();
+
+  const brandMark = $derived(Array.from(brandName.trim())[0]?.toLocaleUpperCase() ?? "");
 </script>
 
 <main class={["kit-page-frame", className]}>
@@ -32,8 +34,8 @@
       <div class="kit-page-frame__brand">
         {#if logoSrc}
           <img class="kit-page-frame__logo" src={logoSrc} alt={logoAlt} />
-        {:else}
-          <span class="kit-page-frame__mark" aria-hidden="true">K</span>
+        {:else if brandMark}
+          <span class="kit-page-frame__mark" aria-hidden="true">{brandMark}</span>
         {/if}
         <span class="kit-page-frame__brand-name">{brandName}</span>
       </div>

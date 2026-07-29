@@ -66,9 +66,115 @@ function nonemptyString(value, field) {
   }
 }
 
-function cssValue(value, field) {
+function safeCssText(value, field) {
   nonemptyString(value, field);
-  if (/[{};]/.test(value)) throw new Error(`${field} contains unsafe CSS`);
+  if (
+    /[{};]/.test(value) ||
+    /\/\*|\*\/|<!--|-->/.test(value) ||
+    Array.from(value).some((character) => {
+      const codePoint = character.codePointAt(0);
+      return (
+        codePoint !== undefined &&
+        (codePoint <= 0x1f ||
+          (codePoint >= 0x7f && codePoint <= 0x9f) ||
+          codePoint === 0x2028 ||
+          codePoint === 0x2029)
+      );
+    })
+  ) {
+    throw new Error(`${field} contains unsafe CSS`);
+  }
+}
+
+const CSS_NUMBER = String.raw`(?:0|(?:\d+(?:\.\d+)?|\.\d+))`;
+const CSS_SIGNED_NUMBER = String.raw`-?${CSS_NUMBER}`;
+const CSS_LENGTH = String.raw`(?:0|${CSS_SIGNED_NUMBER}(?:px|rem|em))`;
+const CSS_NONNEGATIVE_LENGTH = String.raw`(?:0|${CSS_NUMBER}(?:px|rem|em))`;
+const CSS_LAYOUT_LENGTH = String.raw`(?:0|${CSS_NUMBER}(?:px|rem|em|vh|dvh))`;
+const CSS_CUSTOM_PROPERTY = String.raw`var\(--[a-z][a-z0-9-]*\)`;
+const CSS_HEX_COLOR = String.raw`#[0-9a-f]{6}`;
+const CSS_CHANNEL = String.raw`(?:25[0-5]|2[0-4]\d|1?\d?\d)`;
+const CSS_ALPHA = String.raw`(?:0(?:\.\d+)?|1(?:\.0+)?)`;
+const CSS_RGBA_COLOR = String.raw`rgba\(\s*${CSS_CHANNEL}\s*,\s*${CSS_CHANNEL}\s*,\s*${CSS_CHANNEL}\s*,\s*${CSS_ALPHA}\s*\)`;
+const CSS_COLOR = String.raw`(?:${CSS_HEX_COLOR}|${CSS_RGBA_COLOR}|${CSS_CUSTOM_PROPERTY})`;
+const CSS_FONT_FAMILY = String.raw`(?:"[^"\\]+"|'[^'\\]+'|-?[A-Za-z][A-Za-z0-9 -]*)`;
+const CSS_SHADOW_PART = String.raw`(?:inset\s+)?${CSS_LENGTH}(?:\s+${CSS_LENGTH}){1,3}\s+${CSS_COLOR}`;
+const CSS_TRANSFORM_FUNCTION = String.raw`(?:translate(?:X|Y)?\(\s*${CSS_LENGTH}\s*\)|scale(?:X|Y)?\(\s*${CSS_SIGNED_NUMBER}\s*\)|rotate\(\s*${CSS_SIGNED_NUMBER}(?:deg|rad|turn)\s*\))`;
+
+function cssMatch(value, field, pattern, expected) {
+  safeCssText(value, field);
+  if (!pattern.test(value)) throw new Error(`${field} must be ${expected}`);
+}
+
+function fontFamilyName(value, field) {
+  cssMatch(value, field, /^[A-Za-z][A-Za-z0-9 _-]*$/, "a font family name");
+}
+
+function fontFamilyList(value, field) {
+  cssMatch(
+    value,
+    field,
+    new RegExp(String.raw`^${CSS_FONT_FAMILY}(?:\s*,\s*${CSS_FONT_FAMILY})*$`),
+    "a comma-separated font family list",
+  );
+}
+
+function cssLength(value, field) {
+  cssMatch(value, field, new RegExp(String.raw`^${CSS_NONNEGATIVE_LENGTH}$`), "a CSS length");
+}
+
+function cssRadius(value, field) {
+  cssMatch(
+    value,
+    field,
+    new RegExp(String.raw`^(?:${CSS_NONNEGATIVE_LENGTH}|${CSS_NUMBER}%)$`),
+    "a CSS length or percentage",
+  );
+}
+
+function cssShadow(value, field) {
+  cssMatch(
+    value,
+    field,
+    new RegExp(String.raw`^(?:none|${CSS_SHADOW_PART}(?:\s*,\s*${CSS_SHADOW_PART})*)$`, "i"),
+    "a box-shadow value",
+  );
+}
+
+function cssColor(value, field) {
+  cssMatch(value, field, new RegExp(String.raw`^${CSS_COLOR}$`, "i"), "a CSS color");
+}
+
+function cssOutline(value, field) {
+  cssMatch(
+    value,
+    field,
+    new RegExp(
+      String.raw`^${CSS_NONNEGATIVE_LENGTH}\s+(?:solid|dashed|dotted|double)\s+${CSS_COLOR}$`,
+      "i",
+    ),
+    "an outline width, style, and color",
+  );
+}
+
+function cssDuration(value, field) {
+  cssMatch(value, field, new RegExp(String.raw`^${CSS_NUMBER}(?:ms|s)$`, "i"), "a CSS duration");
+}
+
+function cssTransform(value, field) {
+  cssMatch(
+    value,
+    field,
+    new RegExp(
+      String.raw`^(?:none|${CSS_TRANSFORM_FUNCTION}(?:\s+${CSS_TRANSFORM_FUNCTION})*)$`,
+      "i",
+    ),
+    "a supported CSS transform",
+  );
+}
+
+function cssLayoutLength(value, field) {
+  cssMatch(value, field, new RegExp(String.raw`^${CSS_LAYOUT_LENGTH}$`), "a layout length");
 }
 
 function color(value, field) {
@@ -77,9 +183,12 @@ function color(value, field) {
   }
 }
 
-function integer(value, field, minimum = 0) {
-  if (!Number.isInteger(value) || value < minimum) {
-    throw new Error(`${field} must be an integer at least ${minimum}`);
+function integer(value, field, minimum = 0, maximum = Number.POSITIVE_INFINITY) {
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    const range = Number.isFinite(maximum)
+      ? `between ${minimum} and ${maximum}`
+      : `at least ${minimum}`;
+    throw new Error(`${field} must be an integer ${range}`);
   }
 }
 
@@ -94,9 +203,9 @@ function validateColorSet(value, keys, field) {
   for (const key of keys) color(value[key], `${field}.${key}`);
 }
 
-function validateCssSet(value, keys, field) {
+function validateSet(value, keys, field, validator) {
   exactKeys(value, keys, field);
-  for (const key of keys) cssValue(value[key], `${field}.${key}`);
+  for (const key of keys) validator(value[key], `${field}.${key}`);
 }
 
 async function validateAsset(value, field, assetRoot) {
@@ -150,39 +259,41 @@ export async function validateBrandContract(contract, { assetRoot }) {
   exactKeys(contract.typography.fallbacks, ["sans", "mono"], "typography.fallbacks");
   exactKeys(contract.typography.weights, ["medium", "semibold", "bold"], "typography.weights");
   for (const key of ["sans", "mono"]) {
-    nonemptyString(contract.typography.families[key], `typography.families.${key}`);
-    cssValue(contract.typography.fallbacks[key], `typography.fallbacks.${key}`);
+    fontFamilyName(contract.typography.families[key], `typography.families.${key}`);
+    fontFamilyList(contract.typography.fallbacks[key], `typography.fallbacks.${key}`);
   }
   for (const key of ["medium", "semibold", "bold"]) {
-    integer(contract.typography.weights[key], `typography.weights.${key}`, 1);
+    integer(contract.typography.weights[key], `typography.weights.${key}`, 1, 1000);
   }
-  validateCssSet(contract.typography.desktop, SIZE_KEYS, "typography.desktop");
-  validateCssSet(contract.typography.touch, SIZE_KEYS, "typography.touch");
+  validateSet(contract.typography.desktop, SIZE_KEYS, "typography.desktop", cssLength);
+  validateSet(contract.typography.touch, SIZE_KEYS, "typography.touch", cssLength);
   if (!SIZE_KEYS.includes(contract.typography.root)) {
     throw new Error("typography.root must name a typography size");
   }
 
-  validateCssSet(contract.spacing, ["1", "2", "3", "4", "5", "6", "7", "8"], "spacing");
-  validateCssSet(contract.radii, ["sm", "md", "lg"], "radii");
+  validateSet(contract.spacing, ["1", "2", "3", "4", "5", "6", "7", "8"], "spacing", cssLength);
+  validateSet(contract.radii, ["sm", "md", "lg"], "radii", cssRadius);
   exactKeys(contract.effects, ["light", "dark"], "effects");
-  validateCssSet(
-    contract.effects.light,
-    ["shadowSm", "shadowMd", "shadowLg", "overlay"],
-    "effects.light",
-  );
-  validateCssSet(
-    contract.effects.dark,
-    ["shadowSm", "shadowMd", "shadowLg", "overlay"],
-    "effects.dark",
-  );
+  for (const mode of ["light", "dark"]) {
+    exactKeys(
+      contract.effects[mode],
+      ["shadowSm", "shadowMd", "shadowLg", "overlay"],
+      `effects.${mode}`,
+    );
+    for (const key of ["shadowSm", "shadowMd", "shadowLg"]) {
+      cssShadow(contract.effects[mode][key], `effects.${mode}.${key}`);
+    }
+    cssColor(contract.effects[mode].overlay, `effects.${mode}.overlay`);
+  }
   exactKeys(
     contract.interaction,
     ["focusRing", "transitionFast", "opacityDisabled", "borderWidth", "pressTransform"],
     "interaction",
   );
-  for (const key of ["focusRing", "transitionFast", "borderWidth", "pressTransform"]) {
-    cssValue(contract.interaction[key], `interaction.${key}`);
-  }
+  cssOutline(contract.interaction.focusRing, "interaction.focusRing");
+  cssDuration(contract.interaction.transitionFast, "interaction.transitionFast");
+  cssLength(contract.interaction.borderWidth, "interaction.borderWidth");
+  cssTransform(contract.interaction.pressTransform, "interaction.pressTransform");
   numberInRange(contract.interaction.opacityDisabled, "interaction.opacityDisabled", 0, 1);
 
   exactKeys(
@@ -190,8 +301,8 @@ export async function validateBrandContract(contract, { assetRoot }) {
     ["headerHeight", "statusBarHeight", "zPopover", "zOverlay", "zTooltip"],
     "layout",
   );
-  cssValue(contract.layout.headerHeight, "layout.headerHeight");
-  cssValue(contract.layout.statusBarHeight, "layout.statusBarHeight");
+  cssLayoutLength(contract.layout.headerHeight, "layout.headerHeight");
+  cssLayoutLength(contract.layout.statusBarHeight, "layout.statusBarHeight");
   for (const key of ["zPopover", "zOverlay", "zTooltip"]) {
     integer(contract.layout[key], `layout.${key}`);
   }
@@ -236,8 +347,26 @@ function colorDeclarations(colors) {
   return declarations(COLOR_VARIABLES.map(([key, variable]) => [variable, colors[key]]));
 }
 
-function contrastDeclarations(colors) {
-  return declarations(CONTRAST_VARIABLES.map(([key, variable]) => [variable, colors[key]]));
+function contrastSourceVariable(mode, variable) {
+  return `--kit-brand-hc-${mode}-${variable.slice(2)}`;
+}
+
+function contrastSourceDeclarations(mode, colors) {
+  return declarations(
+    CONTRAST_VARIABLES.map(([key, variable]) => [
+      contrastSourceVariable(mode, variable),
+      colors[key],
+    ]),
+  );
+}
+
+function contrastDeclarations(mode) {
+  return declarations(
+    CONTRAST_VARIABLES.map(([, variable]) => [
+      variable,
+      `var(${contrastSourceVariable(mode, variable)})`,
+    ]),
+  );
 }
 
 function sizeDeclarations(sizes, indent = "  ") {
@@ -282,6 +411,8 @@ export function generateBrandCss(contract) {
   return `/* Generated from brand.json by scripts/generate-brand.mjs. Do not edit. */
 :root {
 ${colorDeclarations(colors.light)}
+${contrastSourceDeclarations("light", colors.highContrastLight)}
+${contrastSourceDeclarations("dark", colors.highContrastDark)}
 ${declarations(lightExtras)}
   color-scheme: light;
 }
@@ -308,11 +439,11 @@ ${sizeDeclarations(typography.touch)}
 }
 
 :root.high-contrast {
-${contrastDeclarations(colors.highContrastLight)}
+${contrastDeclarations("light")}
 }
 
 :root.dark.high-contrast {
-${contrastDeclarations(colors.highContrastDark)}
+${contrastDeclarations("dark")}
 }
 `;
 }

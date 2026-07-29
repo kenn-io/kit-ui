@@ -47,6 +47,62 @@ describe("portable brand generation", () => {
     );
   });
 
+  test("rejects stylesheet-breaking comment and control syntax", async () => {
+    for (const value of [
+      "Arial/*",
+      "Arial\n--injected: red",
+      '"Arial\u0085Injected"',
+      '"Arial\u2028Injected"',
+    ]) {
+      const contract = await realContract();
+      contract.typography.fallbacks.sans = value;
+
+      await expect(validateBrandContract(contract, { assetRoot })).rejects.toThrow(
+        "typography.fallbacks.sans",
+      );
+    }
+  });
+
+  test("rejects CSS values outside each field's grammar", async () => {
+    const cases = [
+      ["typography.families.sans", (contract) => (contract.typography.families.sans = "Inter()")],
+      [
+        "typography.fallbacks.sans",
+        (contract) => (contract.typography.fallbacks.sans = "Arial url(font.woff2)"),
+      ],
+      ["typography.weights.bold", (contract) => (contract.typography.weights.bold = 1001)],
+      ["typography.desktop.md", (contract) => (contract.typography.desktop.md = "calc(1rem)")],
+      ["spacing.1", (contract) => (contract.spacing["1"] = "auto")],
+      ["radii.sm", (contract) => (contract.radii.sm = "round")],
+      [
+        "effects.light.shadowSm",
+        (contract) => (contract.effects.light.shadowSm = "drop-shadow(0 0 1px #000000)"),
+      ],
+      [
+        "effects.light.overlay",
+        (contract) => (contract.effects.light.overlay = "linear-gradient(#000000, #ffffff)"),
+      ],
+      [
+        "interaction.focusRing",
+        (contract) => (contract.interaction.focusRing = "2px solid url(example)"),
+      ],
+      ["interaction.transitionFast", (contract) => (contract.interaction.transitionFast = "fast")],
+      ["interaction.borderWidth", (contract) => (contract.interaction.borderWidth = "thin")],
+      [
+        "interaction.pressTransform",
+        (contract) => (contract.interaction.pressTransform = "paint(example)"),
+      ],
+      ["layout.headerHeight", (contract) => (contract.layout.headerHeight = "auto")],
+    ];
+
+    for (const [field, mutate] of cases) {
+      const contract = await realContract();
+      mutate(contract);
+
+      await expect(validateBrandContract(contract, { assetRoot })).rejects.toThrow(field);
+    }
+  });
+
   test("rejects asset bytes that do not match the recorded hash", async () => {
     const contract = await realContract();
     contract.assets.logo.sha256 = "0".repeat(64);

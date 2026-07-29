@@ -11,9 +11,10 @@ To change the look:
 1. Run `bun run generate:brand`.
 1. Run `bun run test` and `bun run check`.
 
-The generator rejects unknown fields, unsafe color values, missing font names,
-and asset files whose bytes do not match their recorded hash. Tests also fail
-when the checked-in CSS is stale.
+The generator rejects unknown fields, CSS values outside each token's grammar,
+comment and control-character injection, missing font names, and asset files
+whose bytes do not match their recorded hash. Tests also fail when the
+checked-in CSS is stale.
 
 Consumers can import the pieces separately:
 

@@ -34,11 +34,12 @@ test("Notice exposes its severity and action", async ({ page }) => {
   await expect(page.getByTestId("auth-notice-callbacks")).toHaveText("1");
 });
 
-test("PageFrame renders the account shell", async ({ page }) => {
+test("PageFrame derives its mark from a custom brand", async ({ page }) => {
   await gotoPage(page, "page-frame");
 
-  await expect(page.getByText("Kenn", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Continue to Kenn" })).toBeVisible();
+  await expect(page.locator(".kit-page-frame__mark")).toHaveText("A");
+  await expect(page.getByText("Acme", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Continue to Acme" })).toBeVisible();
 });
 
 test("keeps the PageFrame brand readable in every base theme", async ({ page }) => {
@@ -48,6 +49,36 @@ test("keeps the PageFrame brand readable in every base theme", async ({ page }) 
   for (const dark of [false, true]) {
     await setTheme(page, { dark });
     expect(await contrastOf(brandName)).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
+test("the theme pack preserves generated high-contrast colors", async ({ page }) => {
+  await gotoPage(page, "page-frame");
+
+  const root = page.locator("html");
+  const brandName = page.locator(".kit-page-frame__brand-name");
+  await root.evaluate((element) => element.setAttribute("data-kit-theme", "control-room"));
+
+  for (const { dark, source, value, expected } of [
+    {
+      dark: false,
+      source: "--kit-brand-hc-light-text-primary",
+      value: "#123456",
+      expected: "rgb(18, 52, 86)",
+    },
+    {
+      dark: true,
+      source: "--kit-brand-hc-dark-text-primary",
+      value: "#fedcba",
+      expected: "rgb(254, 220, 186)",
+    },
+  ]) {
+    await setTheme(page, { dark, highContrast: true });
+    await root.evaluate((element, token) => element.style.setProperty(token.source, token.value), {
+      source,
+      value,
+    });
+    await expect(brandName).toHaveCSS("color", expected);
   }
 });
 

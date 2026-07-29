@@ -173,11 +173,6 @@
     border-color: var(--accent-blue);
   }
 
-  .kit-text-input:has(.kit-text-input__control:focus-visible) {
-    outline: var(--focus-ring);
-    outline-offset: 2px;
-  }
-
   .kit-text-input--invalid,
   .kit-text-input--invalid:focus-within {
     border-color: var(--accent-red);
@@ -199,8 +194,24 @@
     color: inherit;
   }
 
-  .kit-text-input__control:focus {
+  .kit-text-input__control:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .kit-text-input__control:focus:not(:focus-visible) {
     outline: none;
+  }
+
+  @supports selector(:has(*)) {
+    .kit-text-input:has(.kit-text-input__control:focus-visible) {
+      outline: var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    .kit-text-input__control:focus-visible {
+      outline: none;
+    }
   }
 
   .kit-text-input__control::placeholder {

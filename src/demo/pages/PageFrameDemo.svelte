@@ -1,6 +1,5 @@
 <script lang="ts">
   import { FormField, Notice, PageFrame, type FieldState } from "../../lib/index.js";
-  import logoUrl from "../../lib/brand-assets/logo.svg";
   import DemoSection from "../DemoSection.svelte";
 
   let email = $state<FieldState>({
@@ -21,10 +20,9 @@
 >
   <div class="page-frame-demo">
     <PageFrame
-      title="Continue to Kenn"
-      description="Use your work account to continue."
-      logoSrc={logoUrl}
-      logoAlt=""
+      title="Continue to Acme"
+      description="Use your Acme account to continue."
+      brandName="Acme"
     >
       <div class="page-frame-demo__stack">
         <Notice

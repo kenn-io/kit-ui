@@ -42,10 +42,11 @@ with content, and an optional shortcut hint while empty.
 | `inputEl`                                                                              | `HTMLInputElement` (bindable)                                   | —        | The underlying input, for focus management                                                                                                   |
 | `class`                                                                                | `string`                                                        | `""`     |                                                                                                                                              |
 
-Focus renders as an `--accent-blue` border and visible focus ring on the
-wrapper, while invalid renders as `--accent-red`; both follow the FindBar card
-convention. The native webkit search-cancel button is suppressed — the wrapper
-owns the clear affordance.
+Focus renders as an `--accent-blue` border and visible focus ring, while invalid
+renders as `--accent-red`; both follow the FindBar card convention. Browsers
+with `:has()` enhance the ring onto the wrapper, while older engines keep an
+input-level or native outline fallback. The native webkit search-cancel button
+is suppressed — the wrapper owns the clear affordance.
 
 `FormField` composes the `lg` size with a persistent label and accessible
 error message. Use `TextInput` directly when the surrounding form owns those
