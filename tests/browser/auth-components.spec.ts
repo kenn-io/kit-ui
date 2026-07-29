@@ -34,12 +34,11 @@ test("Notice exposes its severity and action", async ({ page }) => {
   await expect(page.getByTestId("auth-notice-callbacks")).toHaveText("1");
 });
 
-test("PageFrame keeps organization selection outside the credential screen", async ({ page }) => {
+test("PageFrame renders the Kenn account shell", async ({ page }) => {
   await gotoPage(page, "page-frame");
 
   await expect(page.getByText("Kenn", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Continue to Kenn" })).toBeVisible();
-  await expect(page.getByLabel("Organization")).toHaveCount(0);
 });
 
 test("keeps the PageFrame brand readable in every base theme", async ({ page }) => {

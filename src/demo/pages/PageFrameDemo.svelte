@@ -17,7 +17,7 @@
 
 <DemoSection
   title="PageFrame"
-  description="The centered Kenn account-page shell. Applications keep routing, authentication, organization selection, and submit behavior."
+  description="The centered Kenn account-page shell. Applications keep routing, authentication, and submit behavior."
 >
   <div class="page-frame-demo">
     <PageFrame

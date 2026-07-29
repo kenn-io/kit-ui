@@ -5,9 +5,6 @@ Kenn-owned account pages and Auth0-hosted screens. They only render data and
 forward callbacks. Authentication, routing, permissions, validation policy,
 and submission stay in the consuming application.
 
-Organization selection belongs to the application's picker flow, not the
-credential screen.
-
 ```svelte
 <script lang="ts">
   import { FormField, Notice, PageFrame, type FieldState } from "@kenn-io/kit-ui";
