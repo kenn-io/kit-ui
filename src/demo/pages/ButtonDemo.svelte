@@ -160,6 +160,14 @@
 </DemoSection>
 
 <DemoSection
+  title="Navigation"
+  description="Use href when an action moves to another page so the control keeps native link behavior."
+  code={`<Button label="Return to sign in" href="/demo/sign-in" tone="info" surface="solid" />`}
+>
+  <Button label="Return to sign in" href="/demo/sign-in" tone="info" surface="solid" />
+</DemoSection>
+
+<DemoSection
   title="Icon and trailing content"
   description="Use the children snippet for leading content (icons) and the trailing snippet after the label."
   code={`<Button label="Next" tone="info" surface="solid">

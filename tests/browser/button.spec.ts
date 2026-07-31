@@ -34,6 +34,16 @@ test("large buttons share the form control height", async ({ page }) => {
   expect(largeHeight).toBeLessThan(40);
 });
 
+// If href actions render as buttons, people lose native link behavior such as
+// copying the destination or opening it in another tab.
+test("renders navigation actions as links with button styling", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  const link = page.getByRole("link", { name: "Return to sign in" });
+  await expect(link).toHaveAttribute("href", "/demo/sign-in");
+  await expect(link).toHaveClass(/kit-button--solid/);
+});
+
 test("large controls keep shared metrics through inherited line-height resets", async ({
   page,
 }) => {

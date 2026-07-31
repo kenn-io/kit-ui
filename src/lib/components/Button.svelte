@@ -11,6 +11,7 @@
     tone?: ButtonTone;
     surface?: ButtonSurface;
     size?: ButtonSize;
+    href?: string | undefined;
     type?: "button" | "submit" | "reset";
     disabled?: boolean;
     title?: string | undefined;
@@ -29,6 +30,7 @@
     tone = "neutral",
     surface = "outline",
     size = "md",
+    href = undefined,
     type = "button",
     disabled = false,
     title = undefined,
@@ -60,24 +62,14 @@
   // themes.css). Fires only while the pointer is over this button; themes
   // that don't read the vars pay nothing beyond the property write.
   function trackPointer(event: PointerEvent) {
-    const el = event.currentTarget as HTMLButtonElement;
+    const el = event.currentTarget as HTMLElement;
     const rect = el.getBoundingClientRect();
     el.style.setProperty("--kit-pointer-x", `${event.clientX - rect.left}px`);
     el.style.setProperty("--kit-pointer-y", `${event.clientY - rect.top}px`);
   }
 </script>
 
-<button
-  {type}
-  class={classes}
-  {disabled}
-  {title}
-  aria-expanded={ariaExpanded}
-  aria-label={ariaLabel ?? (label && shortLabel ? label : undefined)}
-  aria-describedby={ariaDescribedby}
-  {onclick}
-  onpointermove={trackPointer}
->
+{#snippet content()}
   {#if children}
     {@render children()}
   {/if}
@@ -92,7 +84,38 @@
   {#if trailing}
     {@render trailing()}
   {/if}
-</button>
+{/snippet}
+
+{#if href !== undefined}
+  <a
+    href={disabled ? undefined : href}
+    class={classes}
+    {title}
+    aria-expanded={ariaExpanded}
+    aria-label={ariaLabel ?? (label && shortLabel ? label : undefined)}
+    aria-describedby={ariaDescribedby}
+    aria-disabled={disabled}
+    tabindex={disabled ? -1 : undefined}
+    {onclick}
+    onpointermove={trackPointer}
+  >
+    {@render content()}
+  </a>
+{:else}
+  <button
+    {type}
+    class={classes}
+    {disabled}
+    {title}
+    aria-expanded={ariaExpanded}
+    aria-label={ariaLabel ?? (label && shortLabel ? label : undefined)}
+    aria-describedby={ariaDescribedby}
+    {onclick}
+    onpointermove={trackPointer}
+  >
+    {@render content()}
+  </button>
+{/if}
 
 <style>
   .kit-button {
@@ -126,6 +149,7 @@
       opacity var(--transition-fast) var(--transition-ease, ease);
     white-space: nowrap;
     line-height: normal;
+    text-decoration: none;
   }
 
   .kit-button:active:not(:disabled) {
@@ -135,6 +159,12 @@
   .kit-button:disabled {
     opacity: var(--opacity-disabled);
     cursor: not-allowed;
+  }
+
+  .kit-button[aria-disabled="true"] {
+    opacity: var(--opacity-disabled);
+    cursor: not-allowed;
+    pointer-events: none;
   }
 
   .kit-button--sm {

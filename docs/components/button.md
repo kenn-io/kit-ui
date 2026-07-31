@@ -11,6 +11,7 @@ variants. Extracted from middleman's `ActionButton`.
 <Button label="Save" tone="info" surface="solid" onclick={save} />
 <Button label="Cancel" />
 <Button label="Delete" tone="danger" surface="solid" />
+<Button label="Return to sign in" href="/sign-in" tone="info" surface="solid" />
 ```
 
 ## Props
@@ -22,6 +23,7 @@ variants. Extracted from middleman's `ActionButton`.
 | `size`                                                  | `"sm" \| "md" \| "lg"`                                       | `"md"`      | 24px / 28px controls; 36px-minimum `lg` control                              |
 | `label`                                                 | `string`                                                     | —           | Button text                                                                  |
 | `shortLabel`                                            | `string`                                                     | —           | Alternate compact label (hidden by default; reveal via CSS at narrow widths) |
+| `href`                                                  | `string`                                                     | —           | Renders a native link with button styling                                    |
 | `type`                                                  | `"button" \| "submit" \| "reset"`                            | `"button"`  |                                                                              |
 | `disabled`                                              | `boolean`                                                    | `false`     |                                                                              |
 | `title`, `ariaLabel`, `ariaDescribedby`, `ariaExpanded` |                                                              | —           | Accessibility passthroughs                                                   |
