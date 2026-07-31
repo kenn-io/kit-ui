@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from "./Button.svelte";
   import ProviderBrandMark from "./ProviderBrandMark.svelte";
   import type { ProviderBrand } from "./provider-brand.js";
 
@@ -33,39 +34,33 @@
   );
 </script>
 
-<button {type} class={classes} {disabled} {title} aria-label={ariaLabel} {onclick}>
+<Button
+  tone="neutral"
+  surface="outline"
+  size="lg"
+  {type}
+  {disabled}
+  {title}
+  {ariaLabel}
+  class={classes}
+  {onclick}
+  {label}
+>
   <ProviderBrandMark {provider} {iconUrl} />
-  <span class="kit-provider-button__label">{label}</span>
-</button>
+</Button>
 
 <style>
-  .kit-provider-button {
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  :global(.kit-button.kit-button--outline.kit-provider-button) {
     min-height: var(--provider-button-height, 40px);
-    padding: var(--provider-button-padding, 0 var(--space-5));
-    gap: var(--provider-button-gap, var(--space-5));
-    border: var(--border-width) solid
-      var(--provider-button-border, var(--provider-button-default-border));
+    padding: var(--provider-button-padding, 5px var(--space-5));
+    gap: var(--provider-button-gap, 6px);
+    border-color: var(--provider-button-border, var(--provider-button-default-border));
     border-radius: var(--provider-button-radius, var(--radius-sm));
     background: var(--provider-button-background, var(--provider-button-default-background));
     color: var(--provider-button-color, var(--provider-button-default-color));
-    font-family: inherit;
-    font-size: var(--font-size-md);
-    font-weight: var(--font-weight-medium);
-    line-height: normal;
-    cursor: pointer;
-    white-space: nowrap;
-    transition:
-      background-color var(--transition-fast) var(--transition-ease, ease),
-      border-color var(--transition-fast) var(--transition-ease, ease),
-      color var(--transition-fast) var(--transition-ease, ease),
-      transform var(--transition-fast) var(--transition-ease, ease);
   }
 
-  .kit-provider-button--google {
+  :global(.kit-provider-button--google) {
     --provider-button-default-background: var(--provider-google-button-background);
     --provider-button-default-border: var(--provider-google-button-border);
     --provider-button-default-color: var(--provider-google-button-color);
@@ -75,7 +70,7 @@
     --provider-button-default-disabled-color: var(--provider-google-button-disabled-color);
   }
 
-  .kit-provider-button--sso {
+  :global(.kit-provider-button--sso) {
     --provider-button-default-background: var(--bg-inset);
     --provider-button-default-border: var(--border-default);
     --provider-button-default-color: var(--text-secondary);
@@ -85,23 +80,15 @@
     --provider-button-default-disabled-color: var(--text-muted);
   }
 
-  .kit-provider-button:hover:not(:disabled) {
+  :global(.kit-button.kit-provider-button:hover:not(:disabled)) {
     background: var(
       --provider-button-hover-background,
       var(--provider-button-default-hover-background)
     );
   }
 
-  .kit-provider-button:active:not(:disabled) {
-    transform: var(--press-transform);
-  }
-
-  .kit-provider-button:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 2px;
-  }
-
-  .kit-provider-button:disabled {
+  :global(.kit-button.kit-provider-button:disabled) {
+    opacity: 1;
     background: var(
       --provider-button-disabled-background,
       var(--provider-button-background, var(--provider-button-default-disabled-background))
@@ -115,10 +102,5 @@
       var(--provider-button-color, var(--provider-button-default-disabled-color))
     );
     cursor: not-allowed;
-  }
-
-  .kit-provider-button__label {
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 </style>

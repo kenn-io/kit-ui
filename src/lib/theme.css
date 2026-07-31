@@ -19,9 +19,9 @@
 :root {
   --provider-google-button-background: #ffffff;
   --provider-google-button-hover-background: #ffffff;
-  --provider-google-button-border: #747775;
+  --provider-google-button-border: var(--border-default);
   --provider-google-button-color: #1f1f1f;
-  --provider-google-button-disabled-border: rgba(31, 31, 31, 0.2);
+  --provider-google-button-disabled-border: var(--border-muted);
   --provider-google-button-disabled-color: rgba(31, 31, 31, 0.38);
 }
 

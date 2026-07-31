@@ -1,11 +1,30 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { gotoPage, setTheme } from "./helpers";
+
+const actionSystemProperties = [
+  "height",
+  "borderRadius",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "columnGap",
+  "paddingInlineStart",
+  "paddingInlineEnd",
+  "borderColor",
+] as const;
+
+async function actionSystemStyle(button: Locator): Promise<Record<string, string>> {
+  return button.evaluate((element, properties) => {
+    const style = getComputedStyle(element);
+    return Object.fromEntries(properties.map((property) => [property, style[property]]));
+  }, actionSystemProperties);
+}
 
 test("provider marks choose official, configured, and neutral sources", async ({ page }) => {
   await gotoPage(page, "provider-brand");
 
   const google = page.getByRole("img", { name: "Google" });
-  await expect(google.locator("img")).toHaveAttribute("src", /google-sign-in-mark\.svg/);
+  await expect(google.locator("img")).toHaveAttribute("src", /^data:image\/svg\+xml/);
   await expect(google).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   const enterprise = page.getByRole("img", { name: "Enterprise SSO" });
@@ -29,6 +48,7 @@ test("provider buttons keep a coherent Google surface in every state", async ({ 
   await expect(enabled).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(disabled).toBeDisabled();
   await expect(disabled).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(disabled).toHaveCSS("opacity", "1");
 
   for (const button of [enabled, disabled]) {
     const mark = button.locator(".kit-provider-brand-mark");
@@ -39,6 +59,18 @@ test("provider buttons keep a coherent Google surface in every state", async ({ 
   await enabled.click();
   await disabled.click({ force: true });
   await expect(page.locator('[data-demo="provider-activations"]')).toHaveText("1");
+});
+
+test("provider buttons use the large kit action geometry and type", async ({ page }) => {
+  await gotoPage(page, "button");
+  const systemStyle = await actionSystemStyle(
+    page.getByRole("button", { name: "Large", exact: true }),
+  );
+
+  await gotoPage(page, "provider-brand");
+  const provider = page.getByRole("button", { name: "Continue with Google" });
+  await expect(provider).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  expect(await actionSystemStyle(provider)).toEqual(systemStyle);
 });
 
 test("configured image failure and public surface variables remain functional", async ({

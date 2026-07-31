@@ -23,7 +23,7 @@
 
 <DemoSection
   title="Provider buttons"
-  description="Google defaults to one coherent white surface. Callers can restyle the full control through a class and public CSS variables."
+  description="Provider actions use the large kit button geometry and type. Google keeps one coherent white surface, and callers can restyle the full control through public CSS variables."
   code={`<ProviderButton provider="google" label="Continue with Google" onclick={continueWithGoogle} />
 <ProviderButton provider="sso" label="Continue with Enterprise SSO" iconUrl={configuredIconUrl} />`}
 >

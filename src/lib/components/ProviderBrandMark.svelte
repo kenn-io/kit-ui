@@ -1,6 +1,6 @@
 <script lang="ts">
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
-  import googleMark from "../assets/google-sign-in-mark.svg";
+  import googleMark from "../assets/google-sign-in-mark.svg?inline";
   import type { ProviderBrand } from "./provider-brand.js";
 
   interface Props {

@@ -30,7 +30,9 @@ provider name: the component renders no initials, monograms, tiles, or chips.
 The Google artwork is derived from the official Android and Web light square
 asset in Google's [sign-in asset bundle](https://developers.google.com/static/identity/images/signin-assets.zip).
 Only the supplied button background and border were removed. The full-color
-mark geometry, masks, gradients, and colors are unchanged.
+mark geometry, masks, gradients, and colors are unchanged. The SVG is inlined
+into the component bundle, so rendering the mark never requires another asset
+request.
 
 ## ProviderButton
 
@@ -50,6 +52,11 @@ Google uses one coherent 40px white button by default in light and dark
 themes. The mark itself has no background, so there is no separate white tile.
 Disabled Google buttons stay white and keep the full-color mark at full
 opacity; border, text, and cursor communicate the disabled state.
+
+The control composes kit-ui's large neutral `Button`, so its height, radius,
+type, label rendering, spacing, focus, and press behavior stay aligned with the
+surrounding action system. Google overrides only the coherent white surface and
+dark readable text; its border follows the active kit theme.
 
 White is the Google default, not a locked presentation. Apply a class and set
 the public properties below to restyle the entire surface. These properties do
