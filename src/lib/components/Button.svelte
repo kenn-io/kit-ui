@@ -1,7 +1,7 @@
 <script module lang="ts">
   export type ButtonTone = "neutral" | "success" | "danger" | "info" | "workflow";
   export type ButtonSurface = "outline" | "soft" | "solid";
-  export type ButtonSize = "sm" | "md";
+  export type ButtonSize = "sm" | "md" | "lg";
 </script>
 
 <script lang="ts">
@@ -144,6 +144,11 @@
     padding: 2px 12px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
+  }
+
+  .kit-button--lg {
+    min-height: 36px;
+    padding-inline: var(--space-5);
   }
 
   .kit-button :global(svg) {

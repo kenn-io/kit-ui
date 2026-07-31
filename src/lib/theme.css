@@ -13,6 +13,18 @@
  * app can retheme by overriding them.
  */
 
+/* Google's current sign-in mark is designed for a white action surface.
+ * These fixed brand defaults remain white in dark mode; ProviderButton's
+ * public surface variables allow deliberate caller overrides. */
+:root {
+  --provider-google-button-background: #ffffff;
+  --provider-google-button-hover-background: #ffffff;
+  --provider-google-button-border: var(--border-default);
+  --provider-google-button-color: #1f1f1f;
+  --provider-google-button-disabled-border: var(--border-muted);
+  --provider-google-button-disabled-color: rgba(31, 31, 31, 0.38);
+}
+
 :root.high-contrast :focus-visible {
   outline-width: 3px;
   outline-offset: 2px;

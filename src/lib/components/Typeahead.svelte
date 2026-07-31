@@ -98,6 +98,8 @@
     depth: number;
     group: boolean;
     expanded: boolean;
+    posInSet: number;
+    setSize: number;
   }
 
   // Fixed positioning (same contract as SelectDropdown) so the list is
@@ -138,20 +140,34 @@
    * forced open and shown only when they (or a descendant) match; a group
    * whose own label matches keeps all its descendants. */
   function buildRows(opts: TypeaheadOption[], depth: number, q: string, force: boolean): Row[] {
-    const rows: Row[] = [];
+    const visible: {
+      option: TypeaheadOption;
+      group: boolean;
+      expanded: boolean;
+      children: Row[];
+    }[] = [];
     for (const option of opts) {
       if (option.children) {
         const selfMatch = q !== "" && matches(option, q);
         const kids = buildRows(option.children, depth + 1, selfMatch ? "" : q, force || selfMatch);
         if (q !== "" && !selfMatch && kids.length === 0) continue;
         const expanded = q !== "" || force ? true : isExpanded(option);
-        rows.push({ option, depth, group: true, expanded });
-        if (expanded) rows.push(...kids);
+        visible.push({ option, group: true, expanded, children: kids });
       } else if (q === "" || matches(option, q)) {
-        rows.push({ option, depth, group: false, expanded: false });
+        visible.push({ option, group: false, expanded: false, children: [] });
       }
     }
-    return rows;
+    return visible.flatMap(({ option, group, expanded, children }, index) => {
+      const row = {
+        option,
+        depth,
+        group,
+        expanded,
+        posInSet: index + 1,
+        setSize: visible.length,
+      };
+      return group && expanded ? [row, ...children] : [row];
+    });
   }
 
   const filterQuery = $derived(remote ? "" : query.trim().toLowerCase());
@@ -164,6 +180,9 @@
   );
   const customOffset = $derived(clearOffset + rows.length);
   const rowCount = $derived(rows.length + clearOffset + (customValue !== "" ? 1 : 0));
+  const rootTreeSize = $derived(
+    rows.filter((row) => row.depth === 0).length + clearOffset + (customValue !== "" ? 1 : 0),
+  );
 
   // Async option/header swaps can shrink the list under the highlight, so
   // rendering, aria-activedescendant, and selection all read this clamped
@@ -416,6 +435,7 @@
       aria-label={placeholder}
       aria-expanded="true"
       aria-controls={listId}
+      aria-haspopup={grouped ? "tree" : "listbox"}
       aria-autocomplete="list"
       aria-activedescendant={!loading && rowCount > 0 ? `${listId}-row-${activeIndex}` : undefined}
       autocomplete="off"
@@ -456,6 +476,9 @@
               id={`${listId}-row-0`}
               role={grouped ? "treeitem" : "option"}
               aria-selected={value === ""}
+              aria-level={grouped ? 1 : undefined}
+              aria-posinset={grouped ? 1 : undefined}
+              aria-setsize={grouped ? rootTreeSize : undefined}
               onmousedown={() => void select("")}
               onmouseenter={() => (highlightIndex = 0)}
             >
@@ -466,6 +489,8 @@
             <li
               class="kit-typeahead__option"
               class:kit-typeahead__option--group={row.group}
+              class:kit-typeahead__option--root-group={row.group && row.depth === 0}
+              class:kit-typeahead__option--nested={row.depth > 0}
               class:highlighted={i + clearOffset === activeIndex}
               class:selected={!row.group && row.option.name === value}
               id={`${listId}-row-${i + clearOffset}`}
@@ -473,6 +498,10 @@
               aria-selected={row.group ? undefined : row.option.name === value}
               aria-expanded={row.group ? row.expanded : undefined}
               aria-level={grouped ? row.depth + 1 : undefined}
+              aria-posinset={grouped
+                ? row.posInSet + (row.depth === 0 ? clearOffset : 0)
+                : undefined}
+              aria-setsize={grouped ? (row.depth === 0 ? rootTreeSize : row.setSize) : undefined}
               style:--typeahead-depth={row.depth}
               onmousedown={() => activateRow(row)}
               onmouseenter={() => (highlightIndex = i + clearOffset)}
@@ -506,6 +535,8 @@
               role={grouped ? "treeitem" : "option"}
               aria-selected={customValue === value}
               aria-level={grouped ? 1 : undefined}
+              aria-posinset={grouped ? rootTreeSize : undefined}
+              aria-setsize={grouped ? rootTreeSize : undefined}
               onmousedown={() => void select(customValue)}
               onmouseenter={() => (highlightIndex = customOffset)}
             >
@@ -546,13 +577,14 @@
 <style>
   .kit-typeahead {
     position: relative;
-    min-width: var(--typeahead-min-width, 180px);
+    min-width: min(100%, var(--typeahead-min-width, 180px));
     max-width: var(--typeahead-max-width, 300px);
   }
 
   .kit-typeahead__trigger {
     height: var(--typeahead-control-height, 26px);
     width: 100%;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -649,6 +681,7 @@
   }
 
   .kit-typeahead__option {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -677,8 +710,18 @@
   }
 
   .kit-typeahead__option--group {
+    gap: var(--space-2);
     color: var(--text-primary);
     font-weight: var(--font-weight-semibold, 600);
+  }
+
+  .kit-typeahead__option--root-group {
+    margin-top: var(--space-1);
+    background-color: color-mix(in srgb, var(--bg-inset) 55%, transparent);
+  }
+
+  .kit-typeahead__option--nested {
+    padding-left: calc(var(--space-7) + (var(--typeahead-depth) - 1) * var(--space-6));
   }
 
   :global(.kit-typeahead__group-chevron) {
@@ -705,7 +748,7 @@
     background: color-mix(in srgb, var(--accent-blue) 40%, transparent);
     color: var(--accent-blue);
     font-weight: var(--font-weight-semibold, 600);
-    border-radius: 1px;
+    border-radius: var(--radius-sm);
   }
 
   .kit-typeahead__empty,

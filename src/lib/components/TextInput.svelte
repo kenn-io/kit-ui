@@ -162,8 +162,8 @@
   }
 
   .kit-text-input--lg {
-    height: 44px;
-    padding: 0 var(--space-5);
+    min-height: 36px;
+    padding: 5px var(--space-5);
     font-size: var(--font-size-md);
   }
 
@@ -194,6 +194,7 @@
     background: transparent;
     font-family: inherit;
     font-size: inherit;
+    line-height: normal;
     color: inherit;
   }
 

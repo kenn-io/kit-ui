@@ -13,6 +13,66 @@ test("renders the centering approaches at one compact height", async ({ page }) 
   expect(new Set(heights)).toEqual(new Set([24]));
 });
 
+test("large buttons share the form control height", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  const mediumHeight = await page
+    .getByRole("button", { name: "Medium", exact: true })
+    .evaluate((element) => element.getBoundingClientRect().height);
+  const largeHeight = await page
+    .getByRole("button", { name: "Large", exact: true })
+    .evaluate((element) => element.getBoundingClientRect().height);
+
+  await gotoPage(page, "form-field");
+  const formHeight = await page
+    .getByLabel("Work email")
+    .locator("xpath=..")
+    .evaluate((element) => element.getBoundingClientRect().height);
+
+  expect(largeHeight).toBe(formHeight);
+  expect(largeHeight).toBeGreaterThan(mediumHeight);
+  expect(largeHeight).toBeLessThan(40);
+});
+
+test("large controls keep shared metrics through inherited line-height resets", async ({
+  page,
+}) => {
+  await gotoPage(page, "button");
+  await page.locator("html").evaluate((element) => {
+    element.style.fontSize = "200%";
+  });
+
+  const largeGeometry = await page
+    .getByRole("button", { name: "Large", exact: true })
+    .evaluate((element) => ({
+      height: element.getBoundingClientRect().height,
+      lineHeight: getComputedStyle(element).lineHeight,
+    }));
+
+  await gotoPage(page, "form-field");
+  await page.locator("html").evaluate((element) => {
+    element.style.fontSize = "200%";
+  });
+  await page.addStyleTag({
+    content: `
+      body { line-height: 1.5; }
+      input { line-height: inherit; }
+    `,
+  });
+
+  const input = page.getByLabel("Work email");
+  const inputGeometry = await input.evaluate((element) => ({
+    formHeight: element.parentElement?.getBoundingClientRect().height,
+    lineHeight: getComputedStyle(element).lineHeight,
+    contentFits: element.scrollHeight <= element.clientHeight,
+  }));
+
+  expect(inputGeometry.formHeight).toBe(largeGeometry.height);
+  expect(inputGeometry.formHeight).toBeGreaterThan(36);
+  expect(inputGeometry.lineHeight).toBe(largeGeometry.lineHeight);
+  expect(inputGeometry.contentFits).toBe(true);
+});
+
 test("renders an ellipsis when a label is constrained", async ({ page }) => {
   await gotoPage(page, "button");
 

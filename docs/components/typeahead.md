@@ -75,7 +75,11 @@ expands, ArrowLeft collapses (or, on a leaf, jumps to the parent row). While
 filtering, groups are forced open and shown only when they or a descendant
 match; a group whose own label matches keeps all its descendants. When any
 option has children the list uses `role="tree"` semantics
-(`treeitem`/`aria-expanded`/`aria-level`) instead of a flat listbox.
+(`treeitem`/`aria-expanded`/`aria-level`) instead of a flat listbox. The input
+advertises the matching popup type through `aria-haspopup`, and visible tree
+rows expose their position and sibling count through `aria-posinset` and
+`aria-setsize`. Filtering recalculates that metadata for the visible result
+tree while retaining the path to a deep match.
 
 ## Remote option sources
 
@@ -119,7 +123,8 @@ selection can't dismiss a newer veto/error.
 
 ## CSS knobs
 
-`--typeahead-min-width` (180px), `--typeahead-max-width` (300px),
+`--typeahead-min-width` (180px preferred, capped by the available container width),
+`--typeahead-max-width` (300px),
 `--typeahead-control-height` (26px), `--typeahead-control-padding` (0 8px),
 `--typeahead-control-font-size` (var(--font-size-xs)).
 
