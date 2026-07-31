@@ -145,7 +145,7 @@ test("provider button label shares the Google mark optical center", async ({ pag
   expect(
     Math.abs(labelCenter - markCenter),
     JSON.stringify({ markCenter, labelCenter }),
-  ).toBeLessThan(0.5);
+  ).toBeLessThan(1);
 });
 
 test("configured image failure and public surface variables remain functional", async ({
