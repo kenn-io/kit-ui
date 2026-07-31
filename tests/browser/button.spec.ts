@@ -34,7 +34,9 @@ test("large buttons share the form control height", async ({ page }) => {
   expect(largeHeight).toBeLessThan(40);
 });
 
-test("large controls keep shared metrics through inherited line-height resets", async ({ page }) => {
+test("large controls keep shared metrics through inherited line-height resets", async ({
+  page,
+}) => {
   await gotoPage(page, "button");
   await page.locator("html").evaluate((element) => {
     element.style.fontSize = "200%";
