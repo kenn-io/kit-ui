@@ -709,6 +709,7 @@
   }
 
   .kit-typeahead__option--group {
+    gap: var(--space-2);
     color: var(--text-primary);
     font-weight: var(--font-weight-semibold, 600);
   }
@@ -719,10 +720,7 @@
   }
 
   .kit-typeahead__option--nested {
-    background-image: linear-gradient(var(--border-muted), var(--border-muted));
-    background-repeat: no-repeat;
-    background-position: calc(var(--space-4) + (var(--typeahead-depth) - 1) * var(--space-6)) center;
-    background-size: 1px 100%;
+    padding-left: calc(var(--space-7) + (var(--typeahead-depth) - 1) * var(--space-6));
   }
 
   :global(.kit-typeahead__group-chevron) {

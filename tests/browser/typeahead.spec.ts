@@ -1,9 +1,49 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
 // Typeahead acceptance (docs/components/typeahead.md): the ry18 extensions
 // (clear row, custom values, meta search, veto/error, header snippet,
 // loading row, forced placement) and the t662 grouped-option tree.
+
+async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    const target = document.createElement("div");
+    target.id = "nested-typeahead-fixture";
+    document.body.append(target);
+    mount(Typeahead, {
+      target,
+      props: {
+        options: [
+          {
+            name: "github.com",
+            label: "github.com",
+            children: [
+              {
+                name: "github.com/kenn-io",
+                label: "kenn-io",
+                children: [
+                  { name: "github.com/kenn-io/middleman", label: "middleman" },
+                  { name: "github.com/kenn-io/agentsview", label: "agentsview" },
+                ],
+              },
+            ],
+          },
+        ],
+        value: "",
+        fallbackLabel: "All repositories",
+        placeholder: "Filter nested repositories…",
+        onselect: (value: string) => {
+          target.dataset.value = value;
+        },
+      },
+    });
+  });
+}
 
 test("filters, highlights matches, and selects", async ({ page }) => {
   await gotoPage(page, "typeahead");
@@ -322,6 +362,26 @@ test("collapsed groups expand and select by mouse", async ({ page }) => {
   await expect(page.locator('[data-demo="grouped-value"]')).toHaveText("gitlab.com/kenn-io/mirror");
 });
 
+// If nested labels drift from their group label, a short hierarchy reads like
+// unrelated indentation levels instead of one section with selectable rows.
+test("nested leaves align with their group label", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Filter grouped repos…" }).click();
+
+  const groupLabel = page
+    .getByRole("treeitem", { name: "github.com" })
+    .locator(".kit-typeahead__option-label");
+  const leafLabel = page
+    .getByRole("treeitem", { name: "kenn-io/middleman" })
+    .locator(".kit-typeahead__option-label");
+  const groupBox = await groupLabel.boundingBox();
+  const leafBox = await leafLabel.boundingBox();
+
+  expect(groupBox).not.toBeNull();
+  expect(leafBox).not.toBeNull();
+  expect(Math.abs(groupBox!.x - leafBox!.x)).toBeLessThan(1);
+});
+
 test("filtering forces groups open and keeps matching subtrees", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter grouped repos…" }).click();
@@ -331,6 +391,37 @@ test("filtering forces groups open and keeps matching subtrees", async ({ page }
   await expect(options).toHaveCount(2);
   await expect(options.nth(0)).toContainText("gitlab.com");
   await expect(options.nth(1)).toContainText("kenn-io/mirror");
+});
+
+test("nested repository groups expose deep levels and parent navigation", async ({ page }) => {
+  await mountNestedRepositoryTypeahead(page);
+  const fixture = page.locator("#nested-typeahead-fixture");
+  await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
+  const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
+  const organization = fixture.getByRole("treeitem", { name: "kenn-io" });
+  const middleman = fixture.getByRole("treeitem", { name: "middleman" });
+  await expect(organization).toHaveAttribute("aria-level", "2");
+  await expect(middleman).toHaveAttribute("aria-level", "3");
+
+  await organization.hover();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowLeft");
+  const parentId = await input.getAttribute("aria-activedescendant");
+  await expect(page.locator(`[id="${parentId}"]`)).toContainText("kenn-io");
+});
+
+test("filtering nested repository groups keeps ancestry and selects the leaf", async ({ page }) => {
+  await mountNestedRepositoryTypeahead(page);
+  const fixture = page.locator("#nested-typeahead-fixture");
+  await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
+  const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
+  await input.fill("agentsview");
+  const rows = fixture.locator(".kit-typeahead__option");
+  await expect(rows).toHaveCount(3);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
 });
 
 test("header snippet drives the option source through the loading row", async ({ page }) => {
