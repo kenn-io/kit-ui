@@ -34,6 +34,33 @@ test("large buttons share the form control height", async ({ page }) => {
   expect(largeHeight).toBeLessThan(40);
 });
 
+test("large buttons and inputs grow together with enlarged root type", async ({ page }) => {
+  await gotoPage(page, "button");
+  await page.locator("html").evaluate((element) => {
+    element.style.fontSize = "200%";
+  });
+
+  const largeHeight = await page
+    .getByRole("button", { name: "Large", exact: true })
+    .evaluate((element) => element.getBoundingClientRect().height);
+
+  await gotoPage(page, "form-field");
+  await page.locator("html").evaluate((element) => {
+    element.style.fontSize = "200%";
+  });
+
+  const input = page.getByLabel("Work email");
+  const formHeight = await input
+    .locator("xpath=..")
+    .evaluate((element) => element.getBoundingClientRect().height);
+
+  expect(formHeight).toBe(largeHeight);
+  expect(formHeight).toBeGreaterThan(36);
+  expect(await input.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
+    true,
+  );
+});
+
 test("renders an ellipsis when a label is constrained", async ({ page }) => {
   await gotoPage(page, "button");
 

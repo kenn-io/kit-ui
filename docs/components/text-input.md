@@ -25,7 +25,7 @@ with content, and an optional shortcut hint while empty.
 | `value`                                                                                | `string` (bindable)                                             | `""`     |                                                                                                                                              |
 | `type`                                                                                 | `"text" \| "search" \| "email" \| "url" \| "password" \| "tel"` | `"text"` | Text-like types only; date/checkbox/etc. keep native chrome elsewhere                                                                        |
 | `placeholder`                                                                          | `string`                                                        | —        |                                                                                                                                              |
-| `size`                                                                                 | `"sm" \| "md" \| "lg"`                                          | `"md"`   | 24px / 28px toolbar controls; 36px `lg` form control                                                                                         |
+| `size`                                                                                 | `"sm" \| "md" \| "lg"`                                          | `"md"`   | 24px / 28px toolbar controls; 36px-minimum `lg` form control                                                                                 |
 | `invalid`                                                                              | `boolean`                                                       | `false`  | Red border + `aria-invalid`                                                                                                                  |
 | `disabled` / `readonly` / `required`                                                   | `boolean`                                                       | `false`  | Forwarded to the native input                                                                                                                |
 | `block`                                                                                | `boolean`                                                       | `false`  | Stretch to container width (default is a 180px inline field)                                                                                 |
@@ -49,8 +49,9 @@ input-level or native outline fallback. The native webkit search-cancel button
 is suppressed — the wrapper owns the clear affordance.
 
 `FormField` composes the `lg` size with a persistent label and accessible
-error message. Use `TextInput` directly when the surrounding form owns those
-elements.
+error message. Large inputs and buttons share a 36px minimum height and grow
+with the user's type size. Use `TextInput` directly when the surrounding form
+owns those elements.
 
 ## SearchInput props
 
