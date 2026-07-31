@@ -16,10 +16,22 @@ test("renders the centering approaches at one compact height", async ({ page }) 
 test("large buttons share the form control height", async ({ page }) => {
   await gotoPage(page, "button");
 
-  await expect(page.getByRole("button", { name: "Large", exact: true })).toHaveCSS(
-    "height",
-    "40px",
-  );
+  const mediumHeight = await page
+    .getByRole("button", { name: "Medium", exact: true })
+    .evaluate((element) => element.getBoundingClientRect().height);
+  const largeHeight = await page
+    .getByRole("button", { name: "Large", exact: true })
+    .evaluate((element) => element.getBoundingClientRect().height);
+
+  await gotoPage(page, "form-field");
+  const formHeight = await page
+    .getByLabel("Work email")
+    .locator("xpath=..")
+    .evaluate((element) => element.getBoundingClientRect().height);
+
+  expect(largeHeight).toBe(formHeight);
+  expect(largeHeight).toBeGreaterThan(mediumHeight);
+  expect(largeHeight).toBeLessThan(40);
 });
 
 test("renders an ellipsis when a label is constrained", async ({ page }) => {

@@ -162,7 +162,7 @@
   }
 
   .kit-text-input--lg {
-    height: 40px;
+    height: 36px;
     padding: 0 var(--space-5);
     font-size: var(--font-size-md);
   }

@@ -147,7 +147,7 @@
   }
 
   .kit-button--lg {
-    min-height: 40px;
+    min-height: 36px;
     padding-inline: var(--space-5);
   }
 

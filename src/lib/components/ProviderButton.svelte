@@ -51,7 +51,7 @@
 
 <style>
   :global(.kit-button.kit-button--outline.kit-provider-button) {
-    min-height: var(--provider-button-height, 40px);
+    min-height: var(--provider-button-height, 36px);
     padding: var(--provider-button-padding, 5px var(--space-5));
     gap: var(--provider-button-gap, 6px);
     border-color: var(--provider-button-border, var(--provider-button-default-border));

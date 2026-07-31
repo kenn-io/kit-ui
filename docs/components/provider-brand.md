@@ -48,7 +48,7 @@ request.
 | `class`     | `string`                          | —          | Additional class on the button         |
 | `onclick`   | `(event: MouseEvent) => void`     | —          | Caller-owned action                    |
 
-Google uses one coherent 40px white button by default in light and dark
+Google uses one coherent 36px white button by default in light and dark
 themes. The mark itself has no background, so there is no separate white tile.
 Disabled Google buttons stay white and keep the full-color mark at full
 opacity; border, text, and cursor communicate the disabled state.

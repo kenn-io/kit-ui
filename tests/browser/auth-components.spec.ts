@@ -7,13 +7,11 @@ test("FormField keeps native validation and callbacks connected to its control",
   await gotoPage(page, "form-field");
 
   const email = page.getByLabel("Work email");
-  const control = email.locator("xpath=..");
   const error = page.getByText("Enter a complete email address.");
   const errorId = await error.getAttribute("id");
 
   expect(errorId).not.toBeNull();
   await expect(email).toHaveValue("name@");
-  await expect(control).toHaveCSS("height", "40px");
   await expect(email).toHaveAttribute("aria-invalid", "true");
   await expect(email).toHaveAttribute("aria-describedby", errorId!);
   await expect(email).toHaveAttribute("required", "");

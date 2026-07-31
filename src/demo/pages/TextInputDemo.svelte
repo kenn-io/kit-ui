@@ -13,7 +13,7 @@
 
 <DemoSection
   title="TextInput"
-  description="The bordered field primitive: compact 24px and 28px toolbar sizes plus a 40px form size, with focus and invalid states on the wrapper and prefix/suffix snippets inside the border."
+  description="The bordered field primitive: compact 24px and 28px toolbar sizes plus a 36px form size, with focus and invalid states on the wrapper and prefix/suffix snippets inside the border."
   code={`<TextInput bind:value placeholder="Display name" />
 <TextInput bind:value={email} type="email" invalid={emailInvalid} ariaLabel="Email">
   {#snippet prefix()}<AtSignIcon size="13" />{/snippet}
@@ -40,7 +40,7 @@
     <div class="row">
       <TextInput size="sm" placeholder="sm (24px)" ariaLabel="Small example" />
       <TextInput size="md" placeholder="md (28px)" ariaLabel="Medium example" />
-      <TextInput size="lg" placeholder="lg (40px)" ariaLabel="Large form example" />
+      <TextInput size="lg" placeholder="lg (36px)" ariaLabel="Large form example" />
       <TextInput placeholder="disabled" disabled ariaLabel="Disabled example" />
     </div>
   </div>
