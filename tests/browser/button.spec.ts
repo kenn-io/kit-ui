@@ -13,6 +13,15 @@ test("renders the centering approaches at one compact height", async ({ page }) 
   expect(new Set(heights)).toEqual(new Set([24]));
 });
 
+test("large buttons share the form control height", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  await expect(page.getByRole("button", { name: "Large", exact: true })).toHaveCSS(
+    "height",
+    "40px",
+  );
+});
+
 test("renders an ellipsis when a label is constrained", async ({ page }) => {
   await gotoPage(page, "button");
 

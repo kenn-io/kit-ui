@@ -150,10 +150,12 @@
   title="Sizes and states"
   code={`<Button label="Small" size="sm" />
 <Button label="Medium" size="md" />
+<Button label="Large" size="lg" />
 <Button label="Disabled" disabled />`}
 >
   <Button label="Small" size="sm" />
   <Button label="Medium" size="md" />
+  <Button label="Large" size="lg" />
   <Button label="Disabled" disabled />
 </DemoSection>
 

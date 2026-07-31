@@ -40,7 +40,7 @@
     <div class="row">
       <TextInput size="sm" placeholder="sm (24px)" ariaLabel="Small example" />
       <TextInput size="md" placeholder="md (28px)" ariaLabel="Medium example" />
-      <TextInput size="lg" placeholder="lg (44px)" ariaLabel="Large form example" />
+      <TextInput size="lg" placeholder="lg (40px)" ariaLabel="Large form example" />
       <TextInput placeholder="disabled" disabled ariaLabel="Disabled example" />
     </div>
   </div>

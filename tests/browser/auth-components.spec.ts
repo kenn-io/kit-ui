@@ -13,7 +13,7 @@ test("FormField keeps native validation and callbacks connected to its control",
 
   expect(errorId).not.toBeNull();
   await expect(email).toHaveValue("name@");
-  await expect(control).toHaveCSS("height", "44px");
+  await expect(control).toHaveCSS("height", "40px");
   await expect(email).toHaveAttribute("aria-invalid", "true");
   await expect(email).toHaveAttribute("aria-describedby", errorId!);
   await expect(email).toHaveAttribute("required", "");
