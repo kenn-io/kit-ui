@@ -194,6 +194,7 @@
     background: transparent;
     font-family: inherit;
     font-size: inherit;
+    line-height: normal;
     color: inherit;
   }
 

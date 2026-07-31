@@ -34,31 +34,41 @@ test("large buttons share the form control height", async ({ page }) => {
   expect(largeHeight).toBeLessThan(40);
 });
 
-test("large buttons and inputs grow together with enlarged root type", async ({ page }) => {
+test("large controls keep shared metrics through inherited line-height resets", async ({ page }) => {
   await gotoPage(page, "button");
   await page.locator("html").evaluate((element) => {
     element.style.fontSize = "200%";
   });
 
-  const largeHeight = await page
+  const largeGeometry = await page
     .getByRole("button", { name: "Large", exact: true })
-    .evaluate((element) => element.getBoundingClientRect().height);
+    .evaluate((element) => ({
+      height: element.getBoundingClientRect().height,
+      lineHeight: getComputedStyle(element).lineHeight,
+    }));
 
   await gotoPage(page, "form-field");
   await page.locator("html").evaluate((element) => {
     element.style.fontSize = "200%";
   });
+  await page.addStyleTag({
+    content: `
+      body { line-height: 1.5; }
+      input { line-height: inherit; }
+    `,
+  });
 
   const input = page.getByLabel("Work email");
-  const formHeight = await input
-    .locator("xpath=..")
-    .evaluate((element) => element.getBoundingClientRect().height);
+  const inputGeometry = await input.evaluate((element) => ({
+    formHeight: element.parentElement?.getBoundingClientRect().height,
+    lineHeight: getComputedStyle(element).lineHeight,
+    contentFits: element.scrollHeight <= element.clientHeight,
+  }));
 
-  expect(formHeight).toBe(largeHeight);
-  expect(formHeight).toBeGreaterThan(36);
-  expect(await input.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
-    true,
-  );
+  expect(inputGeometry.formHeight).toBe(largeGeometry.height);
+  expect(inputGeometry.formHeight).toBeGreaterThan(36);
+  expect(inputGeometry.lineHeight).toBe(largeGeometry.lineHeight);
+  expect(inputGeometry.contentFits).toBe(true);
 });
 
 test("renders an ellipsis when a label is constrained", async ({ page }) => {
