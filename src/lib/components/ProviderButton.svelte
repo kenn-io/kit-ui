@@ -65,6 +65,7 @@
     --provider-button-default-border: var(--provider-google-button-border);
     --provider-button-default-color: var(--provider-google-button-color);
     --provider-button-default-hover-background: var(--provider-google-button-hover-background);
+    --provider-button-default-hover-color: var(--provider-google-button-color);
     --provider-button-default-disabled-background: var(--provider-google-button-background);
     --provider-button-default-disabled-border: var(--provider-google-button-disabled-border);
     --provider-button-default-disabled-color: var(--provider-google-button-disabled-color);
@@ -75,15 +76,20 @@
     --provider-button-default-border: var(--border-default);
     --provider-button-default-color: var(--text-secondary);
     --provider-button-default-hover-background: var(--bg-surface-hover);
+    --provider-button-default-hover-color: var(--text-primary);
     --provider-button-default-disabled-background: var(--bg-inset);
     --provider-button-default-disabled-border: var(--border-muted);
     --provider-button-default-disabled-color: var(--text-muted);
   }
 
-  :global(.kit-button.kit-provider-button:hover:not(:disabled)) {
+  :global(.kit-button.kit-button--outline.kit-provider-button:hover:not(:disabled)) {
     background: var(
       --provider-button-hover-background,
       var(--provider-button-default-hover-background)
+    );
+    color: var(
+      --provider-button-hover-color,
+      var(--provider-button-color, var(--provider-button-default-hover-color))
     );
   }
 

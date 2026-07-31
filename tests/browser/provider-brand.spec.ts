@@ -46,6 +46,10 @@ test("provider buttons keep a coherent Google surface in every state", async ({ 
   const enabled = page.getByRole("button", { name: "Continue with Google" });
   const disabled = page.getByRole("button", { name: "Unavailable Google" });
   await expect(enabled).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  const restingColor = await enabled.evaluate((element) => getComputedStyle(element).color);
+  await enabled.hover();
+  await expect(enabled).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(enabled).toHaveCSS("color", restingColor);
   await expect(disabled).toBeDisabled();
   await expect(disabled).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(disabled).toHaveCSS("opacity", "1");

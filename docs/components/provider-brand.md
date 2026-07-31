@@ -67,6 +67,7 @@ are responsible for following current Google brand rules.
 - `--provider-button-border`
 - `--provider-button-color`
 - `--provider-button-hover-background`
+- `--provider-button-hover-color`
 - `--provider-button-disabled-background`
 - `--provider-button-disabled-border`
 - `--provider-button-disabled-color`
