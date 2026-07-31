@@ -75,6 +75,7 @@ are responsible for following current Google brand rules.
 - `--provider-button-padding`
 - `--provider-button-gap`
 - `--provider-button-radius`
+- `--provider-button-mark-offset-y`
 
 Enterprise SSO defaults to kit-ui's neutral outline surface. Both providers use
 the shared keyboard focus ring and native disabled click suppression.

@@ -71,6 +71,10 @@
     --provider-button-default-disabled-color: var(--provider-google-button-disabled-color);
   }
 
+  :global(.kit-provider-button--google .kit-provider-brand-mark) {
+    transform: translateY(var(--provider-button-mark-offset-y, calc(var(--space-1) * -1)));
+  }
+
   :global(.kit-provider-button--sso) {
     --provider-button-default-background: var(--bg-inset);
     --provider-button-default-border: var(--border-default);

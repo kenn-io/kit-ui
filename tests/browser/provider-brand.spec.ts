@@ -20,6 +20,63 @@ async function actionSystemStyle(button: Locator): Promise<Record<string, string
   }, actionSystemProperties);
 }
 
+async function paintedVerticalCenter(button: Locator, selector: string): Promise<number> {
+  const rendered = await button.screenshot({ scale: "css" });
+  const target = button.locator(selector);
+  await target.evaluate((element) => {
+    (element as HTMLElement).style.visibility = "hidden";
+  });
+  const withoutTarget = await button.screenshot({ scale: "css" });
+  await target.evaluate((element) => {
+    (element as HTMLElement).style.visibility = "";
+  });
+
+  return button.page().evaluate(
+    async ({ renderedUrl, withoutTargetUrl }) => {
+      const decode = async (url: string) => {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        return image;
+      };
+      const renderedImage = await decode(renderedUrl);
+      const withoutTargetImage = await decode(withoutTargetUrl);
+      const canvas = document.createElement("canvas");
+      canvas.width = renderedImage.width;
+      canvas.height = renderedImage.height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("canvas context is unavailable");
+
+      context.drawImage(renderedImage, 0, 0);
+      const renderedPixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(withoutTargetImage, 0, 0);
+      const backgroundPixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+
+      let totalWeight = 0;
+      let weightedPosition = 0;
+      for (let y = 0; y < canvas.height; y += 1) {
+        for (let x = 0; x < canvas.width; x += 1) {
+          const offset = (y * canvas.width + x) * 4;
+          const red = renderedPixels[offset]! - backgroundPixels[offset]!;
+          const green = renderedPixels[offset + 1]! - backgroundPixels[offset + 1]!;
+          const blue = renderedPixels[offset + 2]! - backgroundPixels[offset + 2]!;
+          const weight = Math.sqrt(red * red + green * green + blue * blue);
+          totalWeight += weight;
+          weightedPosition += (y + 0.5) * weight;
+        }
+      }
+
+      if (totalWeight === 0) throw new Error(`no painted pixels found for ${selector}`);
+      return weightedPosition / totalWeight;
+    },
+    {
+      renderedUrl: `data:image/png;base64,${rendered.toString("base64")}`,
+      withoutTargetUrl: `data:image/png;base64,${withoutTarget.toString("base64")}`,
+    },
+  );
+}
+
 test("provider marks choose official, configured, and neutral sources", async ({ page }) => {
   await gotoPage(page, "provider-brand");
 
@@ -75,6 +132,20 @@ test("provider buttons use the large kit action geometry and type", async ({ pag
   const provider = page.getByRole("button", { name: "Continue with Google" });
   await expect(provider).toHaveCSS("background-color", "rgb(255, 255, 255)");
   expect(await actionSystemStyle(provider)).toEqual(systemStyle);
+});
+
+test("provider button label shares the Google mark optical center", async ({ page }) => {
+  await gotoPage(page, "provider-brand");
+  await page.evaluate(() => document.fonts.ready);
+
+  const provider = page.locator(".kit-provider-button--google").first();
+  const markCenter = await paintedVerticalCenter(provider, ".kit-provider-brand-mark");
+  const labelCenter = await paintedVerticalCenter(provider, ".kit-button__label-text");
+
+  expect(
+    Math.abs(labelCenter - markCenter),
+    JSON.stringify({ markCenter, labelCenter }),
+  ).toBeLessThan(0.5);
 });
 
 test("configured image failure and public surface variables remain functional", async ({
