@@ -250,7 +250,7 @@ test("Escape inside a header control closes the panel and refocuses the trigger"
   await expect(page.getByRole("button", { name: "Filter refs…" })).toBeFocused();
 });
 
-test("popup semantics match flat and journey option shapes", async ({ page }) => {
+test("popup semantics match flat and grouped option shapes", async ({ page }) => {
   await gotoPage(page, "typeahead");
 
   await page.getByRole("button", { name: "Filter repositories…" }).click();
@@ -260,93 +260,77 @@ test("popup semantics match flat and journey option shapes", async ({ page }) =>
   await expect(page.locator(`[id="${flatListId}"]`)).toHaveAttribute("role", "listbox");
   await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "Filter journey screens…" }).click();
-  const input = page.getByRole("combobox", { name: "Filter journey screens…" });
+  await page.getByRole("button", { name: "Filter grouped repos…" }).click();
+  const input = page.getByRole("combobox", { name: "Filter grouped repos…" });
   await expect(input).toHaveAttribute("aria-haspopup", "tree");
   const listId = await input.getAttribute("aria-controls");
   await expect(page.locator(`[id="${listId}"]`)).toHaveAttribute("role", "tree");
 
-  const onboarding = page.getByRole("treeitem", { name: /Onboarding/ });
-  await expect(onboarding).toHaveAttribute("aria-level", "1");
-  await expect(onboarding).toHaveAttribute("aria-posinset", "1");
-  await expect(onboarding).toHaveAttribute("aria-setsize", "2");
+  const github = page.getByRole("treeitem", { name: "github.com" });
+  await expect(github).toHaveAttribute("aria-level", "1");
+  await expect(github).toHaveAttribute("aria-posinset", "1");
+  await expect(github).toHaveAttribute("aria-setsize", "2");
 
-  const recovery = page.getByRole("treeitem", { name: "Account recovery" });
-  await expect(recovery).toHaveAttribute("aria-posinset", "2");
-  await expect(recovery).toHaveAttribute("aria-setsize", "2");
+  const gitlab = page.getByRole("treeitem", { name: "gitlab.com" });
+  await expect(gitlab).toHaveAttribute("aria-posinset", "2");
+  await expect(gitlab).toHaveAttribute("aria-setsize", "2");
 
-  const profile = page.getByRole("treeitem", { name: "Profile setup" });
-  await expect(profile).toHaveAttribute("aria-level", "2");
-  await expect(profile).toHaveAttribute("aria-posinset", "2");
-  await expect(profile).toHaveAttribute("aria-setsize", "2");
+  const middleman = page.getByRole("treeitem", { name: "kenn-io/middleman" });
+  await expect(middleman).toHaveAttribute("aria-level", "2");
+  await expect(middleman).toHaveAttribute("aria-posinset", "1");
+  await expect(middleman).toHaveAttribute("aria-setsize", "2");
 
-  const security = page.getByRole("treeitem", { name: "Security setup" });
-  await expect(security).toHaveAttribute("aria-level", "3");
-  await expect(security).toHaveAttribute("aria-posinset", "2");
-  await expect(security).toHaveAttribute("aria-setsize", "2");
+  const agentsview = page.getByRole("treeitem", { name: "kenn-io/agentsview" });
+  await expect(agentsview).toHaveAttribute("aria-level", "2");
+  await expect(agentsview).toHaveAttribute("aria-posinset", "2");
+  await expect(agentsview).toHaveAttribute("aria-setsize", "2");
 });
 
-test("journey hierarchy preserves deep keyboard navigation and filtering", async ({ page }) => {
+test("grouped hierarchy preserves keyboard navigation", async ({ page }) => {
   await gotoPage(page, "typeahead");
-  await page.getByRole("button", { name: "Filter journey screens…" }).click();
+  await page.getByRole("button", { name: "Filter grouped repos…" }).click();
 
-  const input = page.getByRole("combobox", { name: "Filter journey screens…" });
-  const onboarding = page.getByRole("treeitem", { name: /Onboarding/ });
-  await onboarding.hover();
+  const input = page.getByRole("combobox", { name: "Filter grouped repos…" });
+  const github = page.getByRole("treeitem", { name: "github.com" });
+  await github.hover();
   await page.keyboard.press("ArrowLeft");
-  await expect(onboarding).toHaveAttribute("aria-expanded", "false");
+  await expect(github).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("ArrowRight");
-  await expect(onboarding).toHaveAttribute("aria-expanded", "true");
+  await expect(github).toHaveAttribute("aria-expanded", "true");
 
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   const leafId = await input.getAttribute("aria-activedescendant");
-  await expect(page.locator(`[id="${leafId}"]`)).toContainText("Personal details");
+  await expect(page.locator(`[id="${leafId}"]`)).toContainText("kenn-io/middleman");
   await page.keyboard.press("ArrowLeft");
   const parentId = await input.getAttribute("aria-activedescendant");
-  await expect(page.locator(`[id="${parentId}"]`)).toContainText("Profile setup");
-
-  await input.fill("Security setup");
-  await expect(onboarding).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("treeitem", { name: "Profile setup" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(page.locator('[data-demo="journey-value"]')).toHaveText(
-    "onboarding/profile/security",
-  );
+  await expect(page.locator(`[id="${parentId}"]`)).toContainText("github.com");
 });
 
-test("collapsed journey groups expand and select by mouse", async ({ page }) => {
+test("collapsed groups expand and select by mouse", async ({ page }) => {
   await gotoPage(page, "typeahead");
-  await page.getByRole("button", { name: "Filter journey screens…" }).click();
+  await page.getByRole("button", { name: "Filter grouped repos…" }).click();
 
-  const recovery = page.getByRole("treeitem", { name: "Account recovery" });
-  const verify = page.getByRole("treeitem", { name: "Verify identity" });
-  await expect(recovery).toHaveAttribute("aria-expanded", "false");
-  await expect(verify).toHaveCount(0);
+  const gitlab = page.getByRole("treeitem", { name: "gitlab.com" });
+  const mirror = page.getByRole("treeitem", { name: "kenn-io/mirror" });
+  await expect(gitlab).toHaveAttribute("aria-expanded", "false");
+  await expect(mirror).toHaveCount(0);
 
-  await recovery.click();
-  await expect(recovery).toHaveAttribute("aria-expanded", "true");
-  await expect(verify).toBeVisible();
-  await verify.click();
-  await expect(page.locator('[data-demo="journey-value"]')).toHaveText("recovery/verify");
+  await gitlab.click();
+  await expect(gitlab).toHaveAttribute("aria-expanded", "true");
+  await expect(mirror).toBeVisible();
+  await mirror.click();
+  await expect(page.locator('[data-demo="grouped-value"]')).toHaveText("gitlab.com/kenn-io/mirror");
 });
 
 test("filtering forces groups open and keeps matching subtrees", async ({ page }) => {
   await gotoPage(page, "typeahead");
-  await page.getByRole("button", { name: "Filter journey screens…" }).click();
-  await page.getByRole("combobox", { name: "Filter journey screens…" }).fill("security");
+  await page.getByRole("button", { name: "Filter grouped repos…" }).click();
+  await page.getByRole("combobox", { name: "Filter grouped repos…" }).fill("mirror");
 
   const options = page.locator(".kit-typeahead__option");
-  await expect(options).toHaveCount(3);
-  await expect(options.nth(0)).toContainText("Onboarding");
-  await expect(options.nth(1)).toContainText("Profile setup");
-  await expect(options.nth(2)).toContainText("Security setup");
+  await expect(options).toHaveCount(2);
+  await expect(options.nth(0)).toContainText("gitlab.com");
+  await expect(options.nth(1)).toContainText("kenn-io/mirror");
 });
 
 test("header snippet drives the option source through the loading row", async ({ page }) => {

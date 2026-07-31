@@ -97,29 +97,21 @@
     return true;
   }
 
-  let journey = $state("");
-  const journeyOptions: TypeaheadOption[] = [
+  let grouped = $state("");
+  const groupedOptions: TypeaheadOption[] = [
     {
-      name: "onboarding",
-      label: "Onboarding",
-      meta: "3 screens",
+      name: "github.com",
+      label: "github.com",
       children: [
-        { name: "onboarding/welcome", label: "Welcome", meta: "Start" },
-        {
-          name: "onboarding/profile",
-          label: "Profile setup",
-          children: [
-            { name: "onboarding/profile/details", label: "Personal details" },
-            { name: "onboarding/profile/security", label: "Security setup" },
-          ],
-        },
+        { name: "github.com/kenn-io/middleman", label: "kenn-io/middleman" },
+        { name: "github.com/kenn-io/agentsview", label: "kenn-io/agentsview" },
       ],
     },
     {
-      name: "recovery",
-      label: "Account recovery",
+      name: "gitlab.com",
+      label: "gitlab.com",
       expanded: false,
-      children: [{ name: "recovery/verify", label: "Verify identity" }],
+      children: [{ name: "gitlab.com/kenn-io/mirror", label: "kenn-io/mirror" }],
     },
   ];
 
@@ -259,36 +251,31 @@
 </DemoSection>
 
 <DemoSection
-  title="Journey hierarchy"
-  description="Nested options keep journeys and screens together without slowing search: ArrowRight expands, ArrowLeft collapses or returns to a parent, and filtering keeps the full path to a matching screen."
+  title="Grouped options"
+  description="Options with children render as expand/collapse groups: ArrowRight expands, ArrowLeft collapses (or jumps to the parent), Enter toggles a group and selects a leaf. Filtering searches leaves and keeps their group headers."
   code={`const options: TypeaheadOption[] = [
   {
-    name: "onboarding",
-    label: "Onboarding",
+    name: "github.com",
+    label: "github.com",
     children: [
-      { name: "onboarding/welcome", label: "Welcome" },
-      {
-        name: "onboarding/profile",
-        label: "Profile setup",
-        children: [{ name: "onboarding/profile/security", label: "Security setup" }],
-      },
+      { name: "github.com/kenn-io/middleman", label: "kenn-io/middleman" },
     ],
   },
-  { name: "recovery", label: "Account recovery", expanded: false, children: [...] },
+  { name: "gitlab.com", label: "gitlab.com", expanded: false, children: [...] },
 ];
 
-<Typeahead options={options} value={journey} … />`}
+<Typeahead options={options} value={grouped} … />`}
 >
   <Typeahead
-    options={journeyOptions}
-    value={journey}
-    fallbackLabel="All screens"
-    placeholder="Filter journey screens…"
+    options={groupedOptions}
+    value={grouped}
+    fallbackLabel="All repos"
+    placeholder="Filter grouped repos…"
     onselect={(v) => {
-      journey = v;
+      grouped = v;
     }}
   />
-  <span>value: <code data-demo="journey-value">{journey || "(none)"}</code></span>
+  <span>value: <code data-demo="grouped-value">{grouped || "(none)"}</code></span>
 </DemoSection>
 
 <DemoSection
