@@ -123,7 +123,8 @@ selection can't dismiss a newer veto/error.
 
 ## CSS knobs
 
-`--typeahead-min-width` (180px), `--typeahead-max-width` (300px),
+`--typeahead-min-width` (180px preferred, capped by the available container width),
+`--typeahead-max-width` (300px),
 `--typeahead-control-height` (26px), `--typeahead-control-padding` (0 8px),
 `--typeahead-control-font-size` (var(--font-size-xs)).
 

@@ -577,7 +577,7 @@
 <style>
   .kit-typeahead {
     position: relative;
-    min-width: var(--typeahead-min-width, 180px);
+    min-width: min(100%, var(--typeahead-min-width, 180px));
     max-width: var(--typeahead-max-width, 300px);
   }
 

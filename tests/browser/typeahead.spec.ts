@@ -45,6 +45,55 @@ async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
   });
 }
 
+// If the component's preferred desktop width becomes a hard minimum again,
+// narrow sidebars force the whole page to scroll horizontally at high zoom.
+test("shrinks to a narrow container without widening the document", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await gotoPage(page, "typeahead");
+  const desktopWidth = await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    document.body.replaceChildren();
+    document.body.style.margin = "0";
+    const target = document.createElement("div");
+    target.id = "responsive-typeahead-fixture";
+    target.style.width = "400px";
+    document.body.append(target);
+    mount(Typeahead, {
+      target,
+      props: {
+        options: [{ name: "reset-password", label: "Reset password" }],
+        value: "reset-password",
+        fallbackLabel: "Choose an option",
+        placeholder: "Filter options…",
+        onselect: () => undefined,
+      },
+    });
+    return target.querySelector(".kit-typeahead")!.getBoundingClientRect().width;
+  });
+
+  expect(desktopWidth).toBe(300);
+
+  const narrowLayout = await page.evaluate(() => {
+    document.documentElement.style.zoom = "2";
+    const target = document.querySelector<HTMLElement>("#responsive-typeahead-fixture")!;
+    target.style.width = "148px";
+    target.style.marginLeft = "212px";
+    const typeahead = target.querySelector<HTMLElement>(".kit-typeahead")!;
+    return {
+      containerWidth: target.getBoundingClientRect().width,
+      layoutRight: target.getBoundingClientRect().right,
+      typeaheadWidth: typeahead.getBoundingClientRect().width,
+      documentWidth: document.documentElement.scrollWidth,
+    };
+  });
+
+  expect(narrowLayout.typeaheadWidth).toBeLessThanOrEqual(narrowLayout.containerWidth);
+  expect(narrowLayout.documentWidth).toBeLessThanOrEqual(narrowLayout.layoutRight);
+});
+
 test("filters, highlights matches, and selects", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter repositories…" }).click();
