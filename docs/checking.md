@@ -117,6 +117,7 @@ everything and aren't repeated per row.
 | IconButton                                | `hand-rolled-icon-button`                                                                                                           |
 | TopBar                                    | `hand-rolled-top-bar`                                                                                                               |
 | Button, ChipStack                         | no rule — generic button/badge markup has no reliable signature; token rules catch the styling drift                                |
+| ProviderBrandMark, ProviderButton         | no rule — provider images and action buttons overlap ordinary image/button markup; class or label heuristics would false-positive   |
 | Chip                                      | `chip-label-override` (CSS reaching into the internal label span); hand-rolled badge markup itself has no reliable signature        |
 | StatusDot                                 | `hand-rolled-status-dot`                                                                                                            |
 | Checkbox                                  | `hand-rolled-checkbox` (bare native checkboxes and `accent-color` styling)                                                          |
