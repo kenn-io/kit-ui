@@ -61,6 +61,13 @@ test("shrinks to a narrow container without widening the document", async ({ pag
     target.id = "responsive-typeahead-fixture";
     target.style.width = "400px";
     document.body.append(target);
+    const consumerStyles = document.createElement("style");
+    consumerStyles.textContent = `
+      :where(#responsive-typeahead-fixture, #responsive-typeahead-fixture *) {
+        box-sizing: content-box;
+      }
+    `;
+    document.head.append(consumerStyles);
     mount(Typeahead, {
       target,
       props: {
@@ -82,15 +89,18 @@ test("shrinks to a narrow container without widening the document", async ({ pag
     target.style.width = "148px";
     target.style.marginLeft = "212px";
     const typeahead = target.querySelector<HTMLElement>(".kit-typeahead")!;
+    const trigger = target.querySelector<HTMLElement>(".kit-typeahead__trigger")!;
     return {
       containerWidth: target.getBoundingClientRect().width,
       layoutRight: target.getBoundingClientRect().right,
       typeaheadWidth: typeahead.getBoundingClientRect().width,
+      triggerWidth: trigger.getBoundingClientRect().width,
       documentWidth: document.documentElement.scrollWidth,
     };
   });
 
   expect(narrowLayout.typeaheadWidth).toBeLessThanOrEqual(narrowLayout.containerWidth);
+  expect(narrowLayout.triggerWidth).toBeLessThanOrEqual(narrowLayout.containerWidth);
   expect(narrowLayout.documentWidth).toBeLessThanOrEqual(narrowLayout.layoutRight);
 });
 

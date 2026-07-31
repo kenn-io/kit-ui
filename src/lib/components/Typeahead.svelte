@@ -584,6 +584,7 @@
   .kit-typeahead__trigger {
     height: var(--typeahead-control-height, 26px);
     width: 100%;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 4px;
