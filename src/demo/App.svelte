@@ -55,6 +55,7 @@
   import StatusBarDemo from "./pages/StatusBarDemo.svelte";
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
+  import TerminalDemo from "./pages/TerminalDemo.svelte";
   import TextInputDemo from "./pages/TextInputDemo.svelte";
   import TimelineDemo from "./pages/TimelineDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
@@ -126,6 +127,7 @@
     { id: "status-bar", label: "StatusBar", component: StatusBarDemo },
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
     { id: "table", label: "Table", component: TableDemo },
+    { id: "terminal", label: "Terminal", component: TerminalDemo },
     { id: "text-input", label: "TextInput", component: TextInputDemo },
     { id: "timeline", label: "Timeline", component: TimelineDemo },
     { id: "toggle", label: "Toggle", component: ToggleDemo },

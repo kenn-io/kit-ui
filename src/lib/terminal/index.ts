@@ -5,6 +5,18 @@
 // here is framework-plain TypeScript (no Effect); hosts with an effect
 // system adapt at the TerminalTransport boundary.
 
+export { default as XtermTerminalPane } from "./XtermTerminalPane.svelte";
+export type {
+  TerminalPaneError,
+  TerminalPaneErrorKind,
+  TerminalPaneInstrumentation,
+  TerminalPaneProps,
+  TerminalPaneSettings,
+} from "./XtermTerminalPane.svelte";
+export {
+  createAnimationFrameScheduler,
+  type AnimationFrameScheduler,
+} from "./animationFrameScheduler.js";
 export {
   createBracketedPastePayload,
   createTerminalPastePayload,

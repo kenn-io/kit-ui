@@ -73,6 +73,12 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
 - **Exports**: every new component/type/util must be added to
   `src/lib/index.ts`, given a demo page in `src/demo/pages/` (and registered in
   `src/demo/App.svelte`), and documented in `docs/components/`.
+- **Terminal subpath exception**: `src/lib/terminal/` is exported only as
+  `@kenn-io/kit-ui/terminal` and stays out of the root barrel — it peers on
+  `@xterm/*` (optional peers) and is opt-in for terminal-embedding apps. It is
+  Effect-free plain TypeScript; hosts adapt at the `TerminalTransport`
+  boundary (docs/components/terminal.md). Its unit tests run under
+  `bun run test:unit` (vp test, jsdom), not `bun test`.
 
 ## Provenance
 
