@@ -43,9 +43,9 @@ export interface TerminalTransportHandlers {
   onData(data: Uint8Array): void;
   onControl(message: TerminalControlMessage): void;
   /**
-   * The connection ended. `opened` distinguishes a lost connection from one
-   * that never became usable — the reconnect machine retries the former with
-   * backoff and treats the latter as permanent when nothing ever opened.
+   * The connection ended. `opened` distinguishes a lost connection (fixed
+   * short reconnect delay) from one that never became usable (capped
+   * exponential backoff in the reconnect machine).
    * Called exactly once, after which no other handler fires.
    */
   onClose(info: { opened: boolean }): void;

@@ -16,16 +16,22 @@ import type { TerminalControlMessage } from "./terminal-control-message.js";
 // `connected -> disconnected -> connected` with preserved parse state is not
 // a legal sequence.
 //
-// Retry policy, preserved from the original Effect implementation's covered
+// Retry policy, preserved from the original Effect implementation's
 // semantics:
 // - A connection that closes after opening reconnects on a short fixed delay,
 //   and every successful open resets the retry backoff.
-// - Reconnect attempts that fail before opening retry with exponential
-//   backoff capped at 30 seconds.
+// - Attempts that fail before opening — including the very first attempt, so
+//   a transient startup or network race never strands a fresh terminal —
+//   retry with exponential backoff capped at 30 seconds, indefinitely by
+//   default. A host that must not hammer an unattachable target can bound
+//   this with `preOpenRetryLimit`; exhausting it parks the machine as
+//   `failed` permanently.
 // - A "restart" message decision (process exited, restart wanted) reconnects
 //   after a longer fixed delay; "stop" parks the machine as `exited`.
-// - A machine whose connection NEVER opened fails permanently (`failed`) —
-//   an unattachable target must not be hammered with retries.
+// - A target known to be unattachable up front (`attachable: false`) or a
+//   transport with no current target (connect() returns null) parks as
+//   `idle` without connecting — the original guard against hammering a
+//   host that rejects the attachment outright.
 //
 // Transports must not invoke handlers synchronously from within connect();
 // the machine finishes wiring the attempt when connect() returns.
@@ -61,10 +67,17 @@ export interface TerminalSessionOptions {
   readonly reconnectDelayMs?: number;
   /** Delay before reconnecting after a "restart" decision. */
   readonly restartDelayMs?: number;
-  /** First backoff delay for reconnect attempts that fail before opening. */
+  /** First backoff delay for attempts that fail before opening. */
   readonly initialBackoffMs?: number;
-  /** Backoff cap for reconnect attempts that fail before opening. */
+  /** Backoff cap for attempts that fail before opening. */
   readonly maxBackoffMs?: number;
+  /**
+   * Maximum consecutive retries after pre-open failures before the machine
+   * parks as `failed` permanently. Unset retries indefinitely (with capped
+   * backoff), matching the original behavior; every successful open resets
+   * the count.
+   */
+  readonly preOpenRetryLimit?: number;
 }
 
 export interface TerminalSessionController {
@@ -89,8 +102,7 @@ export function createTerminalSessionController(
   let disposed = false;
   let connection: TerminalTransportConnection | null = null;
   let connected = false;
-  let everOpened = false;
-  let consecutiveNeverOpened = 0;
+  let consecutivePreOpenFailures = 0;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
   function setState(next: TerminalSessionState): void {
@@ -126,8 +138,7 @@ export function createTerminalSessionController(
     const created = options.transport.connect(request, {
       onOpen() {
         if (disposed || finished) return;
-        everOpened = true;
-        consecutiveNeverOpened = 0;
+        consecutivePreOpenFailures = 0;
         connected = true;
         setState("connected");
         options.onOpen?.();
@@ -161,15 +172,18 @@ export function createTerminalSessionController(
           scheduleAttempt(reconnectDelayMs);
           return;
         }
-        if (!everOpened) {
-          // Never-opened attachments fail permanently: the target is not
-          // attachable, and retrying would hammer the host.
+        // Pre-open failure: retry with capped exponential backoff so a
+        // transient startup or network race never strands the terminal.
+        consecutivePreOpenFailures += 1;
+        if (
+          options.preOpenRetryLimit !== undefined &&
+          consecutivePreOpenFailures > options.preOpenRetryLimit
+        ) {
           setState("failed");
           return;
         }
-        consecutiveNeverOpened += 1;
         const backoff = Math.min(
-          initialBackoffMs * 2 ** (consecutiveNeverOpened - 1),
+          initialBackoffMs * 2 ** (consecutivePreOpenFailures - 1),
           maxBackoffMs,
         );
         scheduleAttempt(backoff);

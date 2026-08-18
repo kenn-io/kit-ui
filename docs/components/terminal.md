@@ -36,23 +36,23 @@ sockets.
 
 ### Props
 
-| Prop                      | Type                              | Default                 | Notes                                                                                                                                            |
-| ------------------------- | --------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `transport`               | `TerminalTransport`               | required                | Carries bytes and control messages; see below                                                                                                   |
-| `settings`                | `TerminalPaneSettings`            | `{}`                    | fontFamily/fontSize/scrollback/lineHeight/letterSpacing/cursorBlink/fontLigatures; the default font stack comes from the `--font-mono` token     |
-| `attachable`              | `boolean`                         | `true`                  | `false` renders `detachedMessage` and never connects (the host knows the process already exited)                                                |
-| `detachedMessage`         | `string`                          | `"Session unavailable"` | Banner written when not attachable                                                                                                              |
-| `reconnectOnExit`         | `boolean`                         | `true`                  | Whether a process-exit control message reconnects (restart) or parks (stop)                                                                     |
-| `active`                  | `boolean`                         | `true`                  | Painted split leaves are active; inactive panes hold no resize authority                                                                        |
-| `renderingEnabled`        | `boolean`                         | `true`                  | `false` parks the WebGL renderer (retained pane pooling) while keeping the parsed buffer and socket                                             |
-| `autoFocus`               | `boolean`                         | `true`                  | Focus on creation only when the mount-time focus context is still current and not a dialog/menu/input                                           |
-| `cursorWheelInput`        | `boolean`                         | `false`                 | Send wheel gestures as cursor keys to TUIs that own no scrollback                                                                               |
-| `disabled`                | `boolean`                         | `false`                 | Blocks stdin, paste, and clipboard authority                                                                                                    |
-| `onExit`                  | `(code: number) => void`          | —                       | Fired on the `exited` control message                                                                                                           |
-| `onConnectionChange`      | `(connected: boolean) => void`    | —                       | Socket-level connectivity                                                                                                                       |
-| `onError`                 | `(error: TerminalPaneError) => void` | —                    | `clipboard-write-blocked`, `connect-failed`, `terminal-start-failed`; hosts surface these however they surface errors                            |
-| `instrumentation`         | `TerminalPaneInstrumentation`     | —                       | Optional startup/switch timing hook (`terminal-constructed`, `socket-open`, `fonts-ready`, `first-bytes`, `first-paint`)                        |
-| `clipboardServerFallback` | `(text: string) => Promise<void>` | —                       | Host loopback clipboard write used when the browser denies every in-page path; see `createTerminalClipboardServerFallback`                      |
+| Prop                      | Type                                 | Default                 | Notes                                                                                                                                        |
+| ------------------------- | ------------------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport`               | `TerminalTransport`                  | required                | Carries bytes and control messages; see below                                                                                                |
+| `settings`                | `TerminalPaneSettings`               | `{}`                    | fontFamily/fontSize/scrollback/lineHeight/letterSpacing/cursorBlink/fontLigatures; the default font stack comes from the `--font-mono` token |
+| `attachable`              | `boolean`                            | `true`                  | `false` renders `detachedMessage` and never connects (the host knows the process already exited)                                             |
+| `detachedMessage`         | `string`                             | `"Session unavailable"` | Banner written when not attachable                                                                                                           |
+| `reconnectOnExit`         | `boolean`                            | `true`                  | Whether a process-exit control message reconnects (restart) or parks (stop)                                                                  |
+| `active`                  | `boolean`                            | `true`                  | Painted split leaves are active; inactive panes hold no resize authority                                                                     |
+| `renderingEnabled`        | `boolean`                            | `true`                  | `false` parks the WebGL renderer (retained pane pooling) while keeping the parsed buffer and socket                                          |
+| `autoFocus`               | `boolean`                            | `true`                  | Focus on creation only when the mount-time focus context is still current and not a dialog/menu/input                                        |
+| `cursorWheelInput`        | `boolean`                            | `false`                 | Send wheel gestures as cursor keys to TUIs that own no scrollback                                                                            |
+| `disabled`                | `boolean`                            | `false`                 | Blocks stdin, paste, and clipboard authority                                                                                                 |
+| `onExit`                  | `(code: number) => void`             | —                       | Fired on the `exited` control message                                                                                                        |
+| `onConnectionChange`      | `(connected: boolean) => void`       | —                       | Socket-level connectivity                                                                                                                    |
+| `onError`                 | `(error: TerminalPaneError) => void` | —                       | `clipboard-write-blocked`, `connect-failed`, `terminal-start-failed`; hosts surface these however they surface errors                        |
+| `instrumentation`         | `TerminalPaneInstrumentation`        | —                       | Optional startup/switch timing hook (`terminal-constructed`, `socket-open`, `fonts-ready`, `first-bytes`, `first-paint`)                     |
+| `clipboardServerFallback` | `(text: string) => Promise<void>`    | —                       | Host loopback clipboard write used when the browser denies every in-page path; see `createTerminalClipboardServerFallback`                   |
 
 Exported methods (via `bind:this`): `focus()`, `sendInput(data)`,
 `sendPastedInput(data, suffix?)`.
@@ -79,7 +79,10 @@ control messages; the pane and reconnect machine are transport-blind.
 ```ts
 interface TerminalTransport {
   readonly capabilities: { supportsReplayBoundary: boolean };
-  connect(request: TerminalConnectRequest, handlers: TerminalTransportHandlers): TerminalTransportConnection | null;
+  connect(
+    request: TerminalConnectRequest,
+    handlers: TerminalTransportHandlers,
+  ): TerminalTransportConnection | null;
 }
 ```
 
@@ -114,29 +117,33 @@ Retry policy:
 
 - close after open → reconnect on a fixed short delay (default 1s); every
   successful open resets backoff
-- reconnect attempts failing before open → exponential backoff capped at 30s
+- attempts failing before open — including the very first, so a transient
+  startup or network race never strands a fresh terminal → exponential
+  backoff capped at 30s, indefinitely by default
 - message decision `restart` (process exited, reconnect wanted) → fixed 2s
   delay; `stop` → parks as `exited`
-- a connection that **never** opened → permanent `failed` (an unattachable
-  target must not be hammered)
+- `preOpenRetryLimit` optionally bounds consecutive pre-open retries;
+  exhausting it parks as permanent `failed` (for hosts that must not hammer
+  an unattachable target). `attachable: false` and a transport with no
+  target never connect at all (`idle`)
 
 ## Utilities in the subpath
 
-| Module                                | Exports                                                                                     |
-| ------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `bracketedPaste`                      | Paste sanitization and bracketed-paste payload construction                                  |
-| `osc52Clipboard`                      | Bounded, validating OSC 52 write parser (rejects reads, non-`c` selections, oversize, bad UTF-8) |
-| `terminalClipboardWriter`             | Gesture-gated clipboard capability machine + browser port                                    |
-| `terminalClipboardFallback`           | `createTerminalClipboardServerFallback({ url, fetch })` — host-decorated JSON POST           |
-| `tmuxMouseDragAutoscroll`             | Clamped edge wheel/drag reports for tmux SGR drags leaving the pane                          |
-| `sharedTerminalTextureAtlas`          | Repaint siblings after clearing xterm's shared WebGL atlas                                   |
-| `terminalFontFamily`                  | Font stack merging; primary-face extraction for `document.fonts.load`                        |
-| `terminalGeometryIntent`              | Short-lived "user is deliberately resizing" window shared across panes                       |
-| `terminal-focus`                      | Initial-focus intent that never steals focus from dialogs/menus/inputs                       |
-| `terminal-layout`                     | Pane split-tree and workflow-tab tree algebra, persistence parsing/normalizing               |
-| `terminal-drag`                       | Token-based drag payloads for sessions/tabs; `bindExternalTerminalDragEnd` hooks a host drag system |
-| `embeddedWebSocket`                   | Resolve a ws path against an embedder-provided base URL (host owns how the base reaches the page) |
-| `animationFrameScheduler`             | Coalesce work bursts to one callback per frame                                               |
+| Module                       | Exports                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| `bracketedPaste`             | Paste sanitization and bracketed-paste payload construction                                         |
+| `osc52Clipboard`             | Bounded, validating OSC 52 write parser (rejects reads, non-`c` selections, oversize, bad UTF-8)    |
+| `terminalClipboardWriter`    | Gesture-gated clipboard capability machine + browser port                                           |
+| `terminalClipboardFallback`  | `createTerminalClipboardServerFallback({ url, fetch })` — host-decorated JSON POST                  |
+| `tmuxMouseDragAutoscroll`    | Clamped edge wheel/drag reports for tmux SGR drags leaving the pane                                 |
+| `sharedTerminalTextureAtlas` | Repaint siblings after clearing xterm's shared WebGL atlas                                          |
+| `terminalFontFamily`         | Font stack merging; primary-face extraction for `document.fonts.load`                               |
+| `terminalGeometryIntent`     | Short-lived "user is deliberately resizing" window shared across panes                              |
+| `terminal-focus`             | Initial-focus intent that never steals focus from dialogs/menus/inputs                              |
+| `terminal-layout`            | Pane split-tree and workflow-tab tree algebra, persistence parsing/normalizing                      |
+| `terminal-drag`              | Token-based drag payloads for sessions/tabs; `bindExternalTerminalDragEnd` hooks a host drag system |
+| `embeddedWebSocket`          | Resolve a ws path against an embedder-provided base URL (host owns how the base reaches the page)   |
+| `animationFrameScheduler`    | Coalesce work bursts to one callback per frame                                                      |
 
 ## Selectors
 

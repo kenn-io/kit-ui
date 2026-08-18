@@ -61,6 +61,7 @@ interface HarnessOptions {
   onData?: (data: Uint8Array) => TerminalMessageDecision;
   onControl?: (message: TerminalControlMessage) => TerminalMessageDecision;
   openTimeoutMs?: number;
+  preOpenRetryLimit?: number;
 }
 
 function makeHarness(options: HarnessOptions = {}): Harness {
@@ -81,6 +82,7 @@ function makeHarness(options: HarnessOptions = {}): Harness {
   const controller = createTerminalSessionController({
     transport,
     attachable: options.attachable,
+    preOpenRetryLimit: options.preOpenRetryLimit,
     connectRequest: () => ({
       size: { cols: 80, rows: 24 },
       replayBoundary: false,
@@ -192,21 +194,21 @@ describe("terminal socket reconnect", () => {
     harness.controller.dispose();
   });
 
-  it("retries never-opened reconnect attempts with capped exponential backoff", () => {
+  it("retries pre-open reconnect failures with capped exponential backoff", () => {
     const harness = makeHarness();
     harness.sockets[0]?.open();
     harness.sockets[0]?.peerClose();
     vi.advanceTimersByTime(1_000);
     expect(harness.sockets).toHaveLength(2);
 
-    // First never-opened failure: 1s backoff.
+    // First pre-open failure: 1s backoff.
     harness.sockets[1]?.peerClose();
     vi.advanceTimersByTime(999);
     expect(harness.sockets).toHaveLength(2);
     vi.advanceTimersByTime(1);
     expect(harness.sockets).toHaveLength(3);
 
-    // Second consecutive never-opened failure: 2s backoff.
+    // Second consecutive pre-open failure: 2s backoff.
     harness.sockets[2]?.peerClose();
     vi.advanceTimersByTime(1_999);
     expect(harness.sockets).toHaveLength(3);
@@ -223,13 +225,13 @@ describe("terminal socket reconnect", () => {
     harness.controller.dispose();
   });
 
-  it("caps never-opened reconnect backoff at thirty seconds", () => {
+  it("caps pre-open reconnect backoff at thirty seconds", () => {
     const harness = makeHarness();
     harness.sockets[0]?.open();
     harness.sockets[0]?.peerClose();
     vi.advanceTimersByTime(1_000);
 
-    // Six consecutive never-opened failures reach the 30s cap (1,2,4,8,16,30).
+    // Six consecutive pre-open failures reach the 30s cap (1,2,4,8,16,30).
     for (let failure = 0; failure < 6; failure += 1) {
       harness.sockets.at(-1)?.peerClose();
       vi.advanceTimersByTime(Math.min(1_000 * 2 ** failure, 30_000));
@@ -347,25 +349,70 @@ describe("terminal process restart", () => {
 });
 
 describe("terminal session attach failures", () => {
-  it("fails permanently when the first connection never opens", () => {
+  it("retries a first connection that fails before opening and recovers when a later attempt opens", () => {
     const harness = makeHarness();
     harness.sockets[0]?.peerClose();
 
-    expect(harness.controller.state()).toBe("failed");
-    vi.advanceTimersByTime(120_000);
+    // First pre-open failure: still connecting, retry after 1s backoff.
+    expect(harness.controller.state()).toBe("connecting");
+    vi.advanceTimersByTime(999);
     expect(harness.sockets).toHaveLength(1);
-    expect(harness.disconnects()).toBe(1);
+    vi.advanceTimersByTime(1);
+    expect(harness.sockets).toHaveLength(2);
+
+    // Second consecutive pre-open failure: 2s backoff.
+    harness.sockets[1]?.peerClose();
+    vi.advanceTimersByTime(1_999);
+    expect(harness.sockets).toHaveLength(2);
+    vi.advanceTimersByTime(1);
+    expect(harness.sockets).toHaveLength(3);
+
+    // A later attempt opening connects normally and resets the backoff.
+    harness.sockets[2]?.open();
+    expect(harness.controller.isConnected()).toBe(true);
+    expect(harness.controller.state()).toBe("connected");
+    harness.sockets[2]?.peerClose();
+    vi.advanceTimersByTime(1_000);
+    harness.sockets[3]?.peerClose();
+    vi.advanceTimersByTime(999);
+    expect(harness.sockets).toHaveLength(4);
+    vi.advanceTimersByTime(1);
+    expect(harness.sockets).toHaveLength(5);
+
+    harness.controller.dispose();
   });
 
-  it("abandons a connection that does not open within the open timeout", () => {
+  it("parks as failed only when a configured pre-open retry limit is exhausted", () => {
+    const harness = makeHarness({ preOpenRetryLimit: 2 });
+    harness.sockets[0]?.peerClose();
+    expect(harness.controller.state()).toBe("connecting");
+    vi.advanceTimersByTime(1_000);
+    harness.sockets[1]?.peerClose();
+    expect(harness.controller.state()).toBe("connecting");
+    vi.advanceTimersByTime(2_000);
+    harness.sockets[2]?.peerClose();
+
+    expect(harness.controller.state()).toBe("failed");
+    vi.advanceTimersByTime(120_000);
+    expect(harness.sockets).toHaveLength(3);
+    expect(harness.disconnects()).toBe(3);
+  });
+
+  it("retries after the open timeout abandons a connection that never opened", () => {
     const harness = makeHarness({ openTimeoutMs: 10_000 });
 
     vi.advanceTimersByTime(9_999);
     expect(harness.controller.state()).toBe("connecting");
     vi.advanceTimersByTime(1);
-
     expect(harness.sockets[0]?.closeCount).toBe(1);
-    expect(harness.controller.state()).toBe("failed");
+    expect(harness.controller.state()).toBe("connecting");
+
+    vi.advanceTimersByTime(1_000);
+    expect(harness.sockets).toHaveLength(2);
+    harness.sockets[1]?.open();
+    expect(harness.controller.isConnected()).toBe(true);
+
+    harness.controller.dispose();
   });
 
   it("never connects when the session is not attachable", () => {
