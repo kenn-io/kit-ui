@@ -139,19 +139,22 @@ export function webSocketTerminalTransport(
         finish();
       }, openTimeoutMs);
 
-      socket.addEventListener(
-        "open",
-        () => {
-          if (closed || opened) return;
-          opened = true;
-          if (openTimeout !== undefined) {
-            clearTimeout(openTimeout);
-            openTimeout = undefined;
-          }
-          handlers.onOpen();
-        },
-        { signal: listeners.signal },
-      );
+      function handleOpen(): void {
+        if (closed || opened) return;
+        opened = true;
+        if (openTimeout !== undefined) {
+          clearTimeout(openTimeout);
+          openTimeout = undefined;
+        }
+        handlers.onOpen();
+      }
+
+      socket.addEventListener("open", handleOpen, { signal: listeners.signal });
+      // A constructor-injected socket may already be open (readyState OPEN is
+      // 1 per spec); it will never fire another open event.
+      if (socket.readyState === 1) {
+        queueMicrotask(handleOpen);
+      }
       socket.addEventListener(
         "message",
         (event: MessageEvent) => {
@@ -187,11 +190,11 @@ export function webSocketTerminalTransport(
 
       return {
         send(data) {
-          if (closed || socket.readyState !== WebSocket.OPEN) return;
+          if (closed || !opened) return;
           socket.send(data);
         },
         sendControl(message) {
-          if (closed || socket.readyState !== WebSocket.OPEN) return;
+          if (closed || !opened) return;
           socket.send(encodeControl(message));
         },
         close() {

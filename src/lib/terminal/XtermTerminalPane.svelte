@@ -65,6 +65,7 @@
 </script>
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Terminal } from "@xterm/xterm";
   import type { ILinkHandler } from "@xterm/xterm";
   import { FitAddon } from "@xterm/addon-fit";
@@ -1061,8 +1062,13 @@
 
   function attachTerminalPane(node: HTMLElement) {
     containerEl = node;
-    void start().catch((cause: unknown) => {
-      if (!disposed) onError?.({ kind: "terminal-start-failed", cause });
+    // Svelte runs an attachment as one reactive scope: without untrack, a
+    // synchronous start (no async font wait) reads the `terminal` state it
+    // just wrote and the attachment tears itself down and reattaches forever.
+    untrack(() => {
+      void start().catch((cause: unknown) => {
+        if (!disposed) onError?.({ kind: "terminal-start-failed", cause });
+      });
     });
     return cleanup;
   }
