@@ -25,4 +25,12 @@ export default defineConfig({
       },
     },
   },
+  // Unit tests for the terminal subpath (`vp test run`). The library's other
+  // unit tests live in checks/ under `bun test`; the terminal modules moved
+  // in from a vitest project with DOM-dependent suites, so they run under the
+  // vite-plus test runner with jsdom instead.
+  test: {
+    environment: "jsdom",
+    include: ["src/lib/terminal/**/*.test.ts"],
+  },
 });
