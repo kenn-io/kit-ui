@@ -1,3 +1,24 @@
+import type { HTMLInputAttributes } from "svelte/elements";
+
+type TypeaheadOwnedInputAttribute =
+  | "aria-activedescendant"
+  | "aria-autocomplete"
+  | "aria-controls"
+  | "aria-expanded"
+  | "aria-haspopup"
+  | "aria-label"
+  | "autocomplete"
+  | "class"
+  | "disabled"
+  | "oninput"
+  | "onkeydown"
+  | "placeholder"
+  | "role"
+  | "type"
+  | "value";
+
+export type TypeaheadInputAttributes = Omit<HTMLInputAttributes, TypeaheadOwnedInputAttribute>;
+
 export interface TypeaheadOption {
   name: string;
   label: string;
