@@ -5,13 +5,16 @@
   import { SvelteMap } from "svelte/reactivity";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { TypeaheadOption } from "./typeahead.js";
+  import type { TypeaheadInputAttributes, TypeaheadOption } from "./typeahead.js";
 
   interface Props {
     options: TypeaheadOption[];
     value: string;
     fallbackLabel: string;
     placeholder: string;
+    /** Native attributes for the open search input. Typeahead-owned behavior
+     * and ARIA attributes take precedence. */
+    inputAttributes?: TypeaheadInputAttributes;
     title?: string;
     emptyLabel?: string;
     disabled?: boolean;
@@ -53,6 +56,7 @@
     value,
     fallbackLabel,
     placeholder,
+    inputAttributes = {},
     title,
     emptyLabel = "No matches",
     disabled = false,
@@ -414,6 +418,7 @@
 <div class="kit-typeahead" bind:this={containerEl} onfocusout={handleFocusOut}>
   {#if open}
     <input
+      {...inputAttributes}
       bind:this={inputEl}
       class="kit-typeahead__input"
       type="text"

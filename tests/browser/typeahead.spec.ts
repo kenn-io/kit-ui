@@ -116,6 +116,16 @@ test("filters, highlights matches, and selects", async ({ page }) => {
   await expect(page.locator('[data-demo="repo-value"]')).toHaveText("kenn-io/agentsview");
 });
 
+test("forwards consumer attributes to the search input", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Filter repositories…" }).click();
+
+  await expect(page.getByRole("combobox", { name: "Filter repositories…" })).toHaveAttribute(
+    "data-1p-ignore",
+    "true",
+  );
+});
+
 test("remote mode reports queries without filtering caller-supplied options", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Search remote options…" }).click();

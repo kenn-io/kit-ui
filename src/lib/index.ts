@@ -109,7 +109,7 @@ export type {
   TopBarTabIndicatorTone,
 } from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
-export type { TypeaheadOption } from "./components/typeahead.js";
+export type { TypeaheadInputAttributes, TypeaheadOption } from "./components/typeahead.js";
 export { default as VirtualList } from "./components/VirtualList.svelte";
 export {
   offsetOfIndex,
