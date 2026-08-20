@@ -91,6 +91,9 @@ export type { SplitResizeEvent, SplitResizeOrientation } from "./components/spli
 export { default as StatusBar } from "./components/StatusBar.svelte";
 export { default as StatusDot } from "./components/StatusDot.svelte";
 export type { StatusDotStatus } from "./components/StatusDot.svelte";
+export { default as StructuredList } from "./components/StructuredList.svelte";
+export type { StructuredListLevel } from "./components/StructuredList.svelte";
+export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export type { SortDirection } from "./components/TableHeaderCell.svelte";
