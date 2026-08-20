@@ -3,8 +3,13 @@
 </script>
 
 <script lang="ts">
+  import { setContext } from "svelte";
   import type { Snippet } from "svelte";
   import Card from "./Card.svelte";
+  import {
+    structuredListLabelsContext,
+    type StructuredListLabels,
+  } from "./structured-list-context.js";
 
   interface Props {
     ariaLabel: string;
@@ -25,6 +30,21 @@
     level = "default",
     children,
   }: Props = $props();
+
+  setContext<StructuredListLabels>(structuredListLabelsContext, {
+    get primary() {
+      return primaryLabel;
+    },
+    get secondary() {
+      return secondaryLabel;
+    },
+    get description() {
+      return descriptionLabel;
+    },
+    get status() {
+      return statusLabel;
+    },
+  });
 </script>
 
 <Card {level} padding="none" class="kit-structured-list">

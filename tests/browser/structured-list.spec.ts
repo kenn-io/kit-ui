@@ -31,7 +31,7 @@ test.describe("StructuredList", () => {
 
     const disclosure = rows.first().locator("summary");
     await expect(disclosure).toHaveAccessibleName(
-      /Show details for Package registry.*Package registry.*example-project.*1.4.2 is current.*Current/,
+      /Show details for Package registry.*Target.*Package registry.*Identity.*example-project.*Observation.*1.4.2 is current.*Status.*Current/,
     );
     await expect(page.getByText("Last checked 2 minutes ago")).toBeHidden();
     await disclosure.click();

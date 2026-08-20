@@ -1,6 +1,11 @@
 <script lang="ts">
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import { getContext } from "svelte";
   import type { Snippet } from "svelte";
+  import {
+    structuredListLabelsContext,
+    type StructuredListLabels,
+  } from "./structured-list-context.js";
 
   interface Props {
     primary: Snippet;
@@ -12,6 +17,7 @@
   }
 
   let { primary, secondary, description, status, detail, ariaLabel = undefined }: Props = $props();
+  const labels = getContext<StructuredListLabels | undefined>(structuredListLabelsContext);
 </script>
 
 <div class="kit-structured-list-row" role="listitem">
@@ -22,14 +28,28 @@
           {#if ariaLabel}<span class="kit-structured-list-row__hint">{ariaLabel}. </span>{/if}
           <ChevronRightIcon size="15" strokeWidth="2" aria-hidden="true" />
         </span>
-        <span class="kit-structured-list-row__primary">{@render primary()}</span>
+        <span class="kit-structured-list-row__primary">
+          {#if labels?.primary}<span class="kit-structured-list-row__label"
+              >{labels.primary}:
+            </span>{/if}
+          {@render primary()}
+        </span>
         <span class="kit-structured-list-row__secondary">
+          {#if labels?.secondary}<span class="kit-structured-list-row__label"
+              >{labels.secondary}:
+            </span>{/if}
           {#if secondary}{@render secondary()}{/if}
         </span>
         <span class="kit-structured-list-row__description">
+          {#if labels?.description}<span class="kit-structured-list-row__label"
+              >{labels.description}:
+            </span>{/if}
           {#if description}{@render description()}{/if}
         </span>
         <span class="kit-structured-list-row__status">
+          {#if labels?.status}<span class="kit-structured-list-row__label"
+              >{labels.status}:
+            </span>{/if}
           {#if status}{@render status()}{/if}
         </span>
       </summary>
@@ -38,14 +58,28 @@
   {:else}
     <div class="kit-structured-list-row__summary kit-structured-list-row__summary--static">
       <span class="kit-structured-list-row__chevron" aria-hidden="true"></span>
-      <span class="kit-structured-list-row__primary">{@render primary()}</span>
+      <span class="kit-structured-list-row__primary">
+        {#if labels?.primary}<span class="kit-structured-list-row__label"
+            >{labels.primary}:
+          </span>{/if}
+        {@render primary()}
+      </span>
       <span class="kit-structured-list-row__secondary">
+        {#if labels?.secondary}<span class="kit-structured-list-row__label"
+            >{labels.secondary}:
+          </span>{/if}
         {#if secondary}{@render secondary()}{/if}
       </span>
       <span class="kit-structured-list-row__description">
+        {#if labels?.description}<span class="kit-structured-list-row__label"
+            >{labels.description}:
+          </span>{/if}
         {#if description}{@render description()}{/if}
       </span>
       <span class="kit-structured-list-row__status">
+        {#if labels?.status}<span class="kit-structured-list-row__label"
+            >{labels.status}:
+          </span>{/if}
         {#if status}{@render status()}{/if}
       </span>
     </div>
@@ -110,7 +144,8 @@
     transition: transform var(--transition-fast) var(--transition-ease, ease);
   }
 
-  .kit-structured-list-row__hint {
+  .kit-structured-list-row__hint,
+  .kit-structured-list-row__label {
     position: absolute;
     width: 1px;
     height: 1px;
