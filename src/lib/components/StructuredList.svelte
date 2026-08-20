@@ -29,6 +29,7 @@
 
 <Card {level} padding="none" class="kit-structured-list">
   <div class="kit-structured-list__header" aria-hidden="true">
+    <span></span>
     <span>{primaryLabel}</span>
     <span>{secondaryLabel}</span>
     <span>{descriptionLabel}</span>
@@ -41,12 +42,17 @@
 
 <style>
   :global(.kit-structured-list) {
+    --kit-structured-list-columns: 15px minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 2fr)
+      minmax(6rem, 0.6fr);
+
+    container-name: kit-structured-list;
+    container-type: inline-size;
     overflow: clip;
   }
 
   .kit-structured-list__header {
     display: grid;
-    grid-template-columns: minmax(8rem, 0.9fr) minmax(9rem, 1.1fr) minmax(14rem, 2fr) auto;
+    grid-template-columns: var(--kit-structured-list-columns);
     gap: var(--space-5);
     align-items: center;
     min-height: 32px;
@@ -67,7 +73,7 @@
     min-width: 0;
   }
 
-  @media (max-width: 760px) {
+  @container kit-structured-list (max-width: 640px) {
     .kit-structured-list__header {
       display: none;
     }

@@ -24,9 +24,9 @@
 </StructuredList>
 ```
 
-The desktop header and rows share a fixed four-column layout. Below the `760px` breakpoint, the header is hidden and rows stack their secondary and description content beneath the primary/status line.
+The desktop header and rows share one five-track layout, including a disclosure track and a consistently sized status track. When the component's own inline size is `640px` or less, the header is hidden and rows stack their secondary and description content beneath the primary/status line.
 
-Rows with a `detail` snippet use native `details` and `summary` disclosure semantics. Rows without detail render as static records and omit the disclosure affordance. `ariaLabel` should describe the disclosure action when the visible row text is not sufficient.
+Rows with a `detail` snippet use native `details` and `summary` disclosure semantics. Rows without detail render as static records and omit the disclosure affordance. `ariaLabel` adds a visually hidden action hint to the visible row content; it does not replace the row's accessible name.
 
 ## Props
 

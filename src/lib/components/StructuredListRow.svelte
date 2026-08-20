@@ -17,9 +17,10 @@
 <div class="kit-structured-list-row" role="listitem">
   {#if detail}
     <details class="kit-structured-list-row__disclosure">
-      <summary class="kit-structured-list-row__summary" aria-label={ariaLabel}>
-        <span class="kit-structured-list-row__chevron" aria-hidden="true">
-          <ChevronRightIcon size="15" strokeWidth="2" />
+      <summary class="kit-structured-list-row__summary">
+        <span class="kit-structured-list-row__chevron">
+          {#if ariaLabel}<span class="kit-structured-list-row__hint">{ariaLabel}. </span>{/if}
+          <ChevronRightIcon size="15" strokeWidth="2" aria-hidden="true" />
         </span>
         <span class="kit-structured-list-row__primary">{@render primary()}</span>
         <span class="kit-structured-list-row__secondary">
@@ -68,7 +69,7 @@
   .kit-structured-list-row__summary {
     box-sizing: border-box;
     display: grid;
-    grid-template-columns: 15px minmax(8rem, 0.9fr) minmax(9rem, 1.1fr) minmax(14rem, 2fr) auto;
+    grid-template-columns: var(--kit-structured-list-columns);
     gap: var(--space-5);
     align-items: center;
     min-height: 40px;
@@ -109,6 +110,18 @@
     transition: transform var(--transition-fast) var(--transition-ease, ease);
   }
 
+  .kit-structured-list-row__hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .kit-structured-list-row__disclosure[open] .kit-structured-list-row__chevron :global(svg) {
     transform: rotate(90deg);
   }
@@ -146,7 +159,7 @@
     font-size: var(--font-size-sm);
   }
 
-  @media (max-width: 760px) {
+  @container kit-structured-list (max-width: 640px) {
     .kit-structured-list-row__summary {
       grid-template-columns: 15px minmax(0, 1fr) auto;
       gap: var(--space-2) var(--space-3);
