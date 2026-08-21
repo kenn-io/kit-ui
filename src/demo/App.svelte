@@ -54,6 +54,7 @@
   import SplitResizeHandleDemo from "./pages/SplitResizeHandleDemo.svelte";
   import StatusBarDemo from "./pages/StatusBarDemo.svelte";
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
+  import StructuredListDemo from "./pages/StructuredListDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
   import TextInputDemo from "./pages/TextInputDemo.svelte";
   import TimelineDemo from "./pages/TimelineDemo.svelte";
@@ -125,6 +126,7 @@
     { id: "split-resize", label: "SplitResizeHandle", component: SplitResizeHandleDemo },
     { id: "status-bar", label: "StatusBar", component: StatusBarDemo },
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
+    { id: "structured-list", label: "StructuredList", component: StructuredListDemo },
     { id: "table", label: "Table", component: TableDemo },
     { id: "text-input", label: "TextInput", component: TextInputDemo },
     { id: "timeline", label: "Timeline", component: TimelineDemo },

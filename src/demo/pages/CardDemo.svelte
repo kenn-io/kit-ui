@@ -1,6 +1,6 @@
 <script lang="ts">
   import PencilIcon from "@lucide/svelte/icons/pencil";
-  import { Button, Card, Chip, IconButton } from "../../lib/index.js";
+  import { Button, Card, Chip, IconButton, MetricCard } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let clicks = $state(0);
@@ -24,6 +24,26 @@
     <Card level="raised" title="Raised" meta="level 3">
       The page-level panel: summary cards, dashboards, standalone sections.
     </Card>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Metric summary"
+  description="A calm four-part hierarchy for dashboard metrics: label and metadata, a prominent value, supporting detail, and a separated observation footer."
+  code={`<MetricCard label="Build health" value="98% successful" meta="24 hours">
+  One check failed in the last 24 hours.
+  {#snippet footer()}Observed 2 minutes ago{/snippet}
+</MetricCard>`}
+>
+  <div class="grid">
+    <MetricCard label="Build health" value="98% successful" meta="24 hours">
+      One check failed in the last 24 hours.
+      {#snippet footer()}Observed 2 minutes ago{/snippet}
+    </MetricCard>
+    <MetricCard label="Published version" value="v2.8.0" meta="3 days ago" tone="success">
+      Available from every required channel.
+      {#snippet footer()}Registry data is current{/snippet}
+    </MetricCard>
   </div>
 </DemoSection>
 
