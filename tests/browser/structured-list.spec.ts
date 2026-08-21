@@ -46,10 +46,20 @@ test.describe("StructuredList", () => {
     await expect(list).toBeVisible();
     await expect(page.locator(".kit-structured-list__header")).toBeHidden();
 
-    const overflows = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    );
-    expect(overflows).toBe(false);
+    const bounds = await list.evaluate((element) => {
+      const listBox = element.getBoundingClientRect();
+      const cells = Array.from(
+        element.querySelectorAll(".kit-structured-list-row__summary > span"),
+      );
+      return {
+        left: Math.min(...cells.map((cell) => cell.getBoundingClientRect().left)),
+        right: Math.max(...cells.map((cell) => cell.getBoundingClientRect().right)),
+        listLeft: listBox.left,
+        listRight: listBox.right,
+      };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(bounds.listLeft);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.listRight);
   });
 
   test("stacks inside a narrow container on a wide viewport", async ({ page }) => {
