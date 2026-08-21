@@ -9,7 +9,7 @@ test.describe("StructuredList", () => {
     await expect(list).toBeVisible();
 
     const rows = list.getByRole("listitem");
-    await expect(rows).toHaveCount(3);
+    await expect(rows).toHaveCount(4);
 
     const headerCells = page.locator(".kit-structured-list__header > span");
     const rowCells = rows.first().locator(".kit-structured-list-row__summary > span");
@@ -36,6 +36,23 @@ test.describe("StructuredList", () => {
     await expect(page.getByText("Last checked 2 minutes ago")).toBeHidden();
     await disclosure.click();
     await expect(page.getByText("Last checked 2 minutes ago")).toBeVisible();
+  });
+
+  test("omits empty optional cells from a sparse compact row", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await gotoPage(page, "structured-list");
+
+    const row = page.getByRole("listitem").last();
+    const disclosure = row.locator("summary");
+    await expect(disclosure).toHaveAccessibleName(
+      /Show details for Sparse target.*Target.*Sparse target/,
+    );
+    await expect(disclosure).not.toHaveAccessibleName(/Identity|Observation|Status/);
+    await expect(disclosure.locator(".kit-structured-list-row__secondary")).toHaveCount(0);
+    await expect(disclosure.locator(".kit-structured-list-row__description")).toHaveCount(0);
+    await expect(disclosure.locator(".kit-structured-list-row__status")).toHaveCount(0);
+    const height = await disclosure.evaluate((element) => element.getBoundingClientRect().height);
+    expect(height).toBeLessThanOrEqual(56);
   });
 
   test("stacks without horizontal overflow on a narrow viewport", async ({ page }) => {

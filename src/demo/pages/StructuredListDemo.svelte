@@ -56,6 +56,10 @@
           {#snippet detail()}<p>{target.detail}</p>{/snippet}
         </StructuredListRow>
       {/each}
+      <StructuredListRow ariaLabel="Show details for Sparse target">
+        {#snippet primary()}Sparse target{/snippet}
+        {#snippet detail()}<p>No optional values were supplied.</p>{/snippet}
+      </StructuredListRow>
     </StructuredList>
   </div>
 </DemoSection>

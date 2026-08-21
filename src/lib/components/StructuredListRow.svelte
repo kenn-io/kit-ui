@@ -34,24 +34,30 @@
             </span>{/if}
           {@render primary()}
         </span>
-        <span class="kit-structured-list-row__secondary">
-          {#if labels?.secondary}<span class="kit-structured-list-row__label"
-              >{labels.secondary}:
-            </span>{/if}
-          {#if secondary}{@render secondary()}{/if}
-        </span>
-        <span class="kit-structured-list-row__description">
-          {#if labels?.description}<span class="kit-structured-list-row__label"
-              >{labels.description}:
-            </span>{/if}
-          {#if description}{@render description()}{/if}
-        </span>
-        <span class="kit-structured-list-row__status">
-          {#if labels?.status}<span class="kit-structured-list-row__label"
-              >{labels.status}:
-            </span>{/if}
-          {#if status}{@render status()}{/if}
-        </span>
+        {#if secondary}
+          <span class="kit-structured-list-row__secondary">
+            {#if labels?.secondary}<span class="kit-structured-list-row__label"
+                >{labels.secondary}:
+              </span>{/if}
+            {@render secondary()}
+          </span>
+        {/if}
+        {#if description}
+          <span class="kit-structured-list-row__description">
+            {#if labels?.description}<span class="kit-structured-list-row__label"
+                >{labels.description}:
+              </span>{/if}
+            {@render description()}
+          </span>
+        {/if}
+        {#if status}
+          <span class="kit-structured-list-row__status">
+            {#if labels?.status}<span class="kit-structured-list-row__label"
+                >{labels.status}:
+              </span>{/if}
+            {@render status()}
+          </span>
+        {/if}
       </summary>
       <div class="kit-structured-list-row__detail">{@render detail()}</div>
     </details>
@@ -64,24 +70,30 @@
           </span>{/if}
         {@render primary()}
       </span>
-      <span class="kit-structured-list-row__secondary">
-        {#if labels?.secondary}<span class="kit-structured-list-row__label"
-            >{labels.secondary}:
-          </span>{/if}
-        {#if secondary}{@render secondary()}{/if}
-      </span>
-      <span class="kit-structured-list-row__description">
-        {#if labels?.description}<span class="kit-structured-list-row__label"
-            >{labels.description}:
-          </span>{/if}
-        {#if description}{@render description()}{/if}
-      </span>
-      <span class="kit-structured-list-row__status">
-        {#if labels?.status}<span class="kit-structured-list-row__label"
-            >{labels.status}:
-          </span>{/if}
-        {#if status}{@render status()}{/if}
-      </span>
+      {#if secondary}
+        <span class="kit-structured-list-row__secondary">
+          {#if labels?.secondary}<span class="kit-structured-list-row__label"
+              >{labels.secondary}:
+            </span>{/if}
+          {@render secondary()}
+        </span>
+      {/if}
+      {#if description}
+        <span class="kit-structured-list-row__description">
+          {#if labels?.description}<span class="kit-structured-list-row__label"
+              >{labels.description}:
+            </span>{/if}
+          {@render description()}
+        </span>
+      {/if}
+      {#if status}
+        <span class="kit-structured-list-row__status">
+          {#if labels?.status}<span class="kit-structured-list-row__label"
+              >{labels.status}:
+            </span>{/if}
+          {@render status()}
+        </span>
+      {/if}
     </div>
   {/if}
 </div>
@@ -162,6 +174,7 @@
   }
 
   .kit-structured-list-row__primary {
+    grid-column: 2;
     min-width: 0;
     overflow: hidden;
     color: var(--text-primary);
@@ -178,7 +191,16 @@
     white-space: nowrap;
   }
 
+  .kit-structured-list-row__secondary {
+    grid-column: 3;
+  }
+
+  .kit-structured-list-row__description {
+    grid-column: 4;
+  }
+
   .kit-structured-list-row__status {
+    grid-column: 5;
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
