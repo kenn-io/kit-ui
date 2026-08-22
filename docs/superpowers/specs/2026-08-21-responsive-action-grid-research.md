@@ -146,9 +146,8 @@ Layout Level 2, track sizing](https://www.w3.org/TR/css-grid-2/#track-sizing)
 
 WCAG 2.2 requires pointer targets to be at least 24 by 24 CSS pixels unless a
 listed spacing or presentation exception applies. Material's 48 by 48 dp rule
-is a better touch design target for the compact stage. The disclosure trigger
-and compact action targets should use the existing kit-ui touch sizing to aim
-for that larger footprint while never falling below the WCAG minimum. [WCAG
+is a useful target for the disclosure trigger. Nested actions keep kit-ui's
+32px touch control height and remain above the WCAG minimum. [WCAG
 2.2 Understanding SC 2.5.8, Target Size
 Minimum](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html),
 [Material Design 3 toolbar
@@ -173,14 +172,18 @@ to target private classes.
 type AdaptiveActionGridMode = "row" | "grid" | "compact";
 type AdaptiveActionGridRadius = "none" | "sm" | "md" | "lg" | "pill";
 type AdaptiveActionGridSpace = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+interface AdaptiveActionGridItem {
+  id: string; // stable and unique within the grid
+  content: Snippet;
+}
 
 interface AdaptiveActionGridProps {
-  items: Snippet[];
+  items: AdaptiveActionGridItem[];
   ariaLabel: string;
   compactLabel?: string; // "Actions"
   open?: boolean; // bindable, default false
   onopenchange?: (open: boolean) => void;
-  mode?: AdaptiveActionGridMode; // bindable, measured presentation
+  onmodechange?: (mode: AdaptiveActionGridMode) => void;
   collapseBelow?: number; // component pixels, default 640
   minTrackWidth?: number; // CSS pixels, default 200
   radius?: AdaptiveActionGridRadius;
@@ -226,7 +229,11 @@ An example with a nested selector:
 {/snippet}
 
 <AdaptiveActionGrid
-  items={[refreshAction, viewSelector, exportAction]}
+  items={[
+    { id: "refresh", content: refreshAction },
+    { id: "view", content: viewSelector },
+    { id: "export", content: exportAction },
+  ]}
   ariaLabel="Result actions"
   compactLabel="Result actions"
 />
@@ -241,9 +248,11 @@ An example with a nested selector:
 | Compact | Row does not fit and host is below `collapseBelow`    | One disclosure button followed by the same item grid when open |
 
 The grid can use `repeat(auto-fit, minmax(min(100%, var(--minimum-track)),
-1fr))`. An item whose own minimum is wider naturally claims a larger track or
-row. The DOM order must stay the visual and keyboard order. Do not use CSS
-`order` to pack gaps.
+1fr))`. Tracks stay equal and reduce to fewer columns as the container narrows.
+A wider child does not enlarge one track: kit controls truncate single-line
+labels, and custom controls must define their own wrapping or truncation. The
+DOM order must stay the visual and keyboard order. Do not use CSS `order` to
+pack gaps.
 
 Keep one content subtree mounted across all states. Hidden measurement copies
 are a poor fit here because nested controls can hold state, install effects,
@@ -269,7 +278,7 @@ FitStages](../../components/fit-stages.md)
 - Give the disclosure trigger a visible text label. Child icon buttons retain
   their own accessible names and tooltips.
 - Preserve at least the WCAG 24 CSS px target minimum and spacing. In touch
-  mode, aim for Material's 48 by 48 target footprint.
+  mode, use a 48px disclosure trigger and kit-ui's 32px nested control height.
 
 ### Why disclosure, not menu or popover
 

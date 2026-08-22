@@ -19,27 +19,65 @@ test("moves between row, grid, and compact without replacing nested state", asyn
   const openRadio = grid.getByRole("radio", { name: "Open" });
 
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+  await openRadio.evaluate((element) => element.setAttribute("data-node-identity", "original"));
   await openRadio.focus();
   await page.keyboard.press("ArrowRight");
   await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute("aria-checked", "true");
+  await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute(
+    "data-node-identity",
+    "original",
+  );
 
   await setSlider(slider, 520);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
   await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute("aria-checked", "true");
 
   await slider.focus();
-  await setSlider(slider, 450);
+  await setSlider(slider, 460);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
   const trigger = grid.getByRole("button", { name: /Filters and actions/ });
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute("aria-checked", "true");
+  await trigger.focus();
+  await page.keyboard.press("Tab");
+  await expect(grid.getByRole("radio", { name: "Open" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(grid.getByRole("button", { name: "Project" })).toBeFocused();
 
   await setSlider(slider, 860);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
   await expect(trigger).toHaveCount(0);
   await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute("aria-checked", "true");
+  await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute(
+    "data-node-identity",
+    "original",
+  );
+});
+
+test("remeasures changed labels in grid and compact modes", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  const slider = page.locator('input[type="range"]').first();
+  const concise = page.getByRole("button", { name: "Use concise labels" });
+
+  await setSlider(slider, 545);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+  await concise.click();
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+
+  await page.getByRole("button", { name: "Use full labels" }).click();
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+
+  await setSlider(slider, 460);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
+  await concise.click();
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+
+  await page.getByRole("button", { name: "Use full labels" }).click();
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
 });
 
 test("settles at a row-to-grid boundary instead of oscillating", async ({ page }) => {
@@ -111,6 +149,24 @@ test("harmonizes the default type and height of nested kit controls", async ({ p
   expect(new Set(borderWidths)).toEqual(new Set(["1px"]));
 });
 
+test("gives the compact disclosure a 48px coarse-pointer target", async ({ browser }) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    viewport: { width: 1280, height: 800 },
+  });
+  const page = await context.newPage();
+  await gotoPage(page, "adaptive-action-grid");
+
+  await setSlider(page.locator('input[type="range"]').first(), 450);
+  const triggerHeight = await page
+    .locator(".demo-action-grid")
+    .getByRole("button", { name: /Filters and actions/ })
+    .evaluate((element) => element.getBoundingClientRect().height);
+  expect(triggerHeight).toBe(48);
+
+  await context.close();
+});
+
 test("keeps a focused child visible when resize enters compact mode", async ({ page }) => {
   await gotoPage(page, "adaptive-action-grid");
 
@@ -130,6 +186,25 @@ test("keeps a focused child visible when resize enters compact mode", async ({ p
   await setSlider(slider, 860);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
   await expect(grid.getByRole("radio", { name: "All" })).toBeFocused();
+});
+
+test("returns focus to the trigger when bound state closes the compact panel", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  await setSlider(page.locator('input[type="range"]').first(), 450);
+  const trigger = grid.getByRole("button", { name: /Filters and actions/ });
+  await trigger.click();
+
+  const project = grid.getByRole("button", { name: "Project" });
+  await project.focus();
+  await expect(project).toBeFocused();
+  await page
+    .getByRole("button", { name: "Close compact panel" })
+    .evaluate((element: HTMLButtonElement) => element.click());
+
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
 });
 
 test("zero-gap geometry forms one joined grid", async ({ page }) => {

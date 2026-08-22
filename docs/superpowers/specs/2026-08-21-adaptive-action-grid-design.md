@@ -58,10 +58,14 @@ export type AdaptiveActionGridMode = "row" | "grid" | "compact";
 export type AdaptiveActionGridFrame = "none" | "outline";
 export type AdaptiveActionGridRadius = "none" | "sm" | "md" | "lg" | "pill";
 export type AdaptiveActionGridSpace = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export interface AdaptiveActionGridItem {
+  id: string;
+  content: Snippet;
+}
 
 interface Props {
   /** Atomic top-level controls, in visual and keyboard order. */
-  items: Snippet[];
+  items: AdaptiveActionGridItem[];
   /** Accessible name for the complete control group. */
   ariaLabel: string;
   /** Visible compact trigger label. Defaults to ariaLabel. */
@@ -71,8 +75,7 @@ interface Props {
   /** Compact disclosure state. Bindable; defaults to false. */
   open?: boolean;
   onopenchange?: (open: boolean) => void;
-  /** Current measured presentation. Bindable, read-only in spirit. */
-  mode?: AdaptiveActionGridMode;
+  /** Reports measured presentation changes. */
   onmodechange?: (mode: AdaptiveActionGridMode) => void;
   /** Host width below which a wrapping row becomes compact. */
   collapseBelow?: number;
@@ -94,7 +97,7 @@ interface Props {
 }
 ```
 
-Defaults are `compactLabel={ariaLabel}`, `open={false}`, `mode="row"`,
+Defaults are `compactLabel={ariaLabel}`, `open={false}`, with internal mode `row`,
 `collapseBelow={640}`, `minTrackWidth={200}`, `frame="outline"`,
 `radius="md"`, `itemRadius="sm"`, `rowGap={3}`, `columnGap={3}`, and `padding={2}`.
 Invalid numeric measurement values fall back to their defaults.
@@ -153,12 +156,16 @@ semantics.
 {/snippet}
 
 <AdaptiveActionGrid
-  items={[viewSelector, projectFilter, refreshAction]}
+  items={[
+    { id: "view", content: viewSelector },
+    { id: "project", content: projectFilter },
+    { id: "refresh", content: refreshAction },
+  ]}
   ariaLabel="Result controls"
   compactLabel="Filters and actions"
   summary={activeSummary}
   bind:open
-  bind:mode={layout}
+  onmodechange={(next) => (layout = next)}
 />
 ```
 
@@ -168,8 +175,9 @@ or reset `view`.
 
 ## Layout and measurement
 
-The host uses `ResizeObserver` on itself and its item wrappers. Measurement
-uses the real item subtree:
+The host uses `ResizeObserver` on itself and its item wrappers, plus a
+`MutationObserver` for item content changes. Measurement uses the real item
+subtree:
 
 1. Apply a temporary internal no-wrap row layout.
 2. Compare the item region's `scrollWidth` with its `clientWidth`.
@@ -179,8 +187,11 @@ uses the real item subtree:
 5. Otherwise choose `grid`.
 
 The measuring layout changes CSS only. It does not clone, detach, or remount
-the items. A mode callback fires only when the selected mode changes, which
-prevents a ResizeObserver feedback loop from producing duplicate events.
+the items. The component repeats this intrinsic read in every mode when the
+container, item geometry, identity, text, or markup changes. A mode callback
+fires only when the selected mode changes, which prevents observer feedback
+from producing duplicate events. Callers receive mode through the callback but
+cannot assign it back to the component.
 
 `grid` and the open compact panel use:
 
@@ -267,10 +278,10 @@ They are validation cases for the component contract.
 
 ## Scope
 
-The first implementation includes the component, exported mode type, demo,
-component reference, browser coverage, and a checker rule for repeated
-row-to-grid-to-disclosure toolbar markup if a reliable low-noise signature can
-be found.
+The first implementation includes the component, exported mode and item types,
+demo, component reference, and browser coverage. It omits checker enforcement
+because ordinary wrapping toolbars do not provide a reliable low-noise
+signature for the full row-to-grid-to-disclosure behavior.
 
 It does not include:
 

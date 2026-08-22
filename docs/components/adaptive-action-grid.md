@@ -41,10 +41,13 @@ focus behavior while the layout changes.
 {/snippet}
 
 <AdaptiveActionGrid
-  items={[stateSelector, refreshAction]}
+  items={[
+    { id: "state", content: stateSelector },
+    { id: "refresh", content: refreshAction },
+  ]}
   ariaLabel="Result controls"
   compactLabel="Filters and actions"
-  bind:mode
+  onmodechange={(next) => (mode = next)}
 />
 ```
 
@@ -52,14 +55,13 @@ focus behavior while the layout changes.
 
 | Prop            | Type                                        | Default     | Notes                                                                            |
 | --------------- | ------------------------------------------- | ----------- | -------------------------------------------------------------------------------- |
-| `items`         | `Snippet[]`                                 | required    | Atomic controls in visual and keyboard order                                     |
+| `items`         | `AdaptiveActionGridItem[]`                  | required    | Atomic controls with stable unique IDs, in visual and keyboard order             |
 | `ariaLabel`     | `string`                                    | required    | Names the outer `role="group"`                                                   |
 | `compactLabel`  | `string`                                    | `ariaLabel` | Visible disclosure label                                                         |
 | `summary`       | `Snippet`                                   | none        | Optional text, icon, or count in the disclosure trigger; must not be interactive |
 | `open`          | `boolean` (bindable)                        | `false`     | Compact disclosure state                                                         |
 | `onopenchange`  | `(open: boolean) => void`                   | none        | Fires for component-owned disclosure changes                                     |
-| `mode`          | `"row" \| "grid" \| "compact"` (bindable)   | `"row"`     | Measured layout, read-only in spirit                                             |
-| `onmodechange`  | `(mode) => void`                            | none        | Fires only when measurement changes the mode                                     |
+| `onmodechange`  | `(mode) => void`                            | none        | Reports each measured mode change; callers cannot set the mode                   |
 | `collapseBelow` | `number`                                    | `640`       | Component width in CSS pixels; compact mode still requires row overflow          |
 | `minTrackWidth` | `number`                                    | `200`       | Minimum equal grid-track width in CSS pixels                                     |
 | `frame`         | `"none" \| "outline"`                       | `"outline"` | Removes or draws the outer background and border                                 |
@@ -70,9 +72,15 @@ focus behavior while the layout changes.
 | `padding`       | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `2`         | Spacing-ladder step inside the frame                                             |
 | `class`         | `string`                                    | `""`        | Additional class on the outer group                                              |
 
-`mode` lets a compound child change its own presentation without replacing
-it. For example, `block={mode !== "row"}` makes a `SegmentedControl` share its
-grid track evenly while keeping its selected value.
+Each item has an `id` and a `content` snippet. IDs must be unique and stable
+while the item remains the same logical control. This lets the grid preserve
+the correct DOM node when callers insert, remove, or reorder items, even when
+two entries intentionally render the same snippet.
+
+`onmodechange` lets a compound child change its own presentation without
+giving the caller control of layout state. For example,
+`block={mode !== "row"}` makes a `SegmentedControl` share its grid track evenly
+while keeping its selected value.
 
 ## Geometry
 
@@ -119,6 +127,16 @@ Mixed kit controls inherit a shared 28px desktop height and 32px touch-type
 height, plus the `--font-size-md` text scale. In grid and compact modes, their
 resting borders, fills, and alignment also match so equal tracks read as one
 control group. Explicit variants such as `Button size="sm"` keep their own size.
+These inherited control-context properties are documented in the
+[theming guide](../theming.md#control-context).
+
+`minTrackWidth` is the preferred lower bound for equal tracks. The grid reduces
+to fewer columns as its container narrows, and the `min(100%, ...)` bound keeps
+one track inside the container when even that preferred width does not fit.
+Tracks do not expand for a wider child. Kit controls keep their single-line
+labels inside the assigned track and truncate where needed. Custom controls
+must define their own wrapping or truncation and must not rely on intrinsic
+width to widen a track.
 
 ## Responsive behavior
 
@@ -129,6 +147,11 @@ resizable sidebars, drawers, cards, and split panes.
 2. If the row fits, `mode` is `row` at any width.
 3. If it overflows at or above `collapseBelow`, `mode` is `grid`.
 4. If it overflows below `collapseBelow`, `mode` is `compact`.
+
+The grid repeats that intrinsic measurement when item text, markup, identity,
+or geometry changes. Content can therefore move an existing grid or compact
+layout back to a row without a container resize. Measurement changes CSS on
+the mounted subtree only; it never clones or remounts a control.
 
 The compact panel is an inline disclosure, not a menu or popover. Its native
 button exposes `aria-expanded` and `aria-controls`; opening reveals the
@@ -146,9 +169,10 @@ Arrow, while the existing horizontal radio group in `SegmentedControl` uses
 the same keys. Each nested control therefore retains its normal keyboard
 contract.
 
-The compact trigger grows to a 48px minimum target on coarse pointers. Custom
-item controls remain responsible for meeting the 24 by 24 CSS pixel WCAG
-minimum.
+The compact disclosure trigger grows to a 48px minimum target on coarse
+pointers. Nested kit controls use the library's 32px touch control height.
+Custom item controls remain responsible for meeting the 24 by 24 CSS pixel
+WCAG minimum.
 
 ## Choosing between layout components
 

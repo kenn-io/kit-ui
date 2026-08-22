@@ -1,8 +1,16 @@
 <script module lang="ts">
+  import type { Snippet } from "svelte";
+
   export type AdaptiveActionGridMode = "row" | "grid" | "compact";
   export type AdaptiveActionGridFrame = "none" | "outline";
   export type AdaptiveActionGridRadius = "none" | "sm" | "md" | "lg" | "pill";
   export type AdaptiveActionGridSpace = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  export interface AdaptiveActionGridItem {
+    /** Stable unique key for this item. */
+    id: string;
+    /** Control or compound control rendered in the item wrapper. */
+    content: Snippet;
+  }
 
   const RADIUS_VALUES: Record<AdaptiveActionGridRadius, string> = {
     none: "0px",
@@ -27,11 +35,11 @@
 
 <script lang="ts">
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import { tick, type Snippet } from "svelte";
+  import { tick } from "svelte";
 
   interface Props {
     /** Atomic top-level controls, in visual and keyboard order. */
-    items: Snippet[];
+    items: AdaptiveActionGridItem[];
     /** Accessible name for the complete control group. */
     ariaLabel: string;
     /** Visible compact trigger label. Defaults to ariaLabel. */
@@ -41,8 +49,7 @@
     /** Compact disclosure state. */
     open?: boolean;
     onopenchange?: (open: boolean) => void;
-    /** Current measured layout, bindable for presentation changes in children. */
-    mode?: AdaptiveActionGridMode;
+    /** Reports the measured layout. The component remains the sole mode owner. */
     onmodechange?: (mode: AdaptiveActionGridMode) => void;
     /** Host width below which an overflowing row becomes compact. */
     collapseBelow?: number;
@@ -70,7 +77,6 @@
     summary = undefined,
     open = $bindable(false),
     onopenchange = undefined,
-    mode = $bindable<AdaptiveActionGridMode>("row"),
     onmodechange = undefined,
     collapseBelow = 640,
     minTrackWidth = 200,
@@ -90,7 +96,7 @@
   let triggerEl = $state<HTMLButtonElement>();
   let itemsEl = $state<HTMLDivElement>();
   let itemEls = $state<HTMLDivElement[]>([]);
-  let requiredRowWidth = 0;
+  let mode = $state<AdaptiveActionGridMode>("row");
 
   const safeCollapseBelow = $derived(
     Number.isFinite(collapseBelow) && collapseBelow >= 0 ? collapseBelow : 640,
@@ -104,6 +110,7 @@
   const columnGapValue = $derived(SPACE_VALUES[columnGap]);
   const paddingValue = $derived(SPACE_VALUES[padding]);
   const joined = $derived(rowGap === 0 && columnGap === 0 && padding === 0);
+  const itemKeys = $derived(items.map((item) => item.id).join("\u0000"));
 
   function setOpen(next: boolean): void {
     if (next === open) return;
@@ -138,19 +145,14 @@
       return;
     }
 
-    // Measure the mounted controls in a temporary no-wrap row. The attribute
-    // is removed in the same frame, so no alternate control subtree or probe
-    // copy is needed for stateful children.
-    if (mode === "row" || requiredRowWidth === 0) {
-      itemsEl.dataset.measuring = "";
-      requiredRowWidth = itemsEl.scrollWidth;
-      delete itemsEl.dataset.measuring;
-    }
+    // Measure the mounted controls in a temporary no-wrap row on every pass.
+    // This keeps content changes authoritative in grid and compact modes while
+    // avoiding a cloned control subtree. The measuring CSS removes stretched
+    // grid widths before scrollWidth is read.
+    itemsEl.dataset.measuring = "";
+    const requiredRowWidth = itemsEl.scrollWidth;
+    delete itemsEl.dataset.measuring;
 
-    // Children may deliberately change presentation from `mode`, such as a
-    // SegmentedControl becoming block-width in grid mode. Keep testing against
-    // the last genuine row measurement so that stretched grid widths cannot
-    // feed back into the mode decision.
     const rowFits = requiredRowWidth <= itemsEl.clientWidth + 1;
 
     if (rowFits) {
@@ -168,7 +170,7 @@
     void rowGapValue;
     void columnGapValue;
     void paddingValue;
-    void items.length;
+    void itemKeys;
 
     if (!hostEl || !itemsEl) return;
     let frame = 0;
@@ -177,14 +179,23 @@
       frame = requestAnimationFrame(measure);
     };
     const observer = new ResizeObserver(schedule);
+    const contentObserver = new MutationObserver(schedule);
     observer.observe(hostEl);
     for (const itemEl of itemEls) {
-      if (itemEl) observer.observe(itemEl);
+      if (!itemEl) continue;
+      observer.observe(itemEl);
+      contentObserver.observe(itemEl, {
+        attributes: true,
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
     }
     schedule();
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      contentObserver.disconnect();
     };
   });
 
@@ -247,9 +258,9 @@
     inert={mode === "compact" && !open ? true : undefined}
     bind:this={itemsEl}
   >
-    {#each items as item, index (item)}
+    {#each items as item, index (item.id)}
       <div class="kit-adaptive-action-grid__item" bind:this={itemEls[index]}>
-        {@render item()}
+        {@render item.content()}
       </div>
     {/each}
   </div>
@@ -394,6 +405,24 @@
     width: max-content;
   }
 
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-button),
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-icon-button),
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-filter-dropdown),
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-select-dropdown),
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-segmented) {
+    width: max-content;
+  }
+
   /* Fill direct controls and compound-control wrappers in grid modes without
    * reaching into transient popovers. */
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
@@ -431,6 +460,8 @@
     > :global(.kit-segmented__btn) {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Equal tracks need equal control silhouettes. Compound controls keep their

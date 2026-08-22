@@ -7,6 +7,7 @@ export { default as PageFrame } from "./PageFrame.svelte";
 export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.svelte";
 export type {
   AdaptiveActionGridFrame,
+  AdaptiveActionGridItem,
   AdaptiveActionGridMode,
   AdaptiveActionGridRadius,
   AdaptiveActionGridSpace,

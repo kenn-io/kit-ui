@@ -11,6 +11,7 @@
     SelectDropdown,
     showFlash,
     type AdaptiveActionGridFrame,
+    type AdaptiveActionGridItem,
     type AdaptiveActionGridMode,
     type AdaptiveActionGridRadius,
     type AdaptiveActionGridSpace,
@@ -23,6 +24,7 @@
   let view = $state("all");
   let projectActive = $state(false);
   let modelActive = $state(false);
+  let conciseLabels = $state(false);
   let frame = $state<AdaptiveActionGridFrame>("none");
   let radius = $state<AdaptiveActionGridRadius>("md");
   let itemRadius = $state<AdaptiveActionGridRadius>("sm");
@@ -55,9 +57,9 @@
 {#snippet stateSelector()}
   <SegmentedControl
     options={[
-      { value: "all", label: "All" },
-      { value: "open", label: "Open" },
-      { value: "closed", label: "Closed" },
+      { value: "all", label: conciseLabels ? "Any" : "All" },
+      { value: "open", label: conciseLabels ? "On" : "Open" },
+      { value: "closed", label: conciseLabels ? "Off" : "Closed" },
     ]}
     value={view}
     onchange={(next) => (view = next)}
@@ -69,7 +71,7 @@
 
 {#snippet projectFilter()}
   <FilterDropdown
-    label="Project"
+    label={conciseLabels ? "Repo" : "Project"}
     active={projectActive}
     badgeCount={projectActive ? 1 : 0}
     sections={[
@@ -89,7 +91,7 @@
 
 {#snippet modelFilter()}
   <FilterDropdown
-    label="Model"
+    label={conciseLabels ? "AI" : "Model"}
     active={modelActive}
     badgeCount={modelActive ? 1 : 0}
     sections={[
@@ -108,13 +110,23 @@
 {/snippet}
 
 {#snippet refreshAction()}
-  <Button label="Refresh" tone="success" surface="soft" onclick={() => notify("Refreshed results")}>
+  <Button
+    label={conciseLabels ? "Sync" : "Refresh"}
+    tone="success"
+    surface="soft"
+    onclick={() => notify("Refreshed results")}
+  >
     <RefreshCwIcon size={13} strokeWidth={2} aria-hidden="true" />
   </Button>
 {/snippet}
 
 {#snippet exportAction()}
-  <Button label="Export CSV" tone="info" surface="solid" onclick={() => notify("Export started")}>
+  <Button
+    label={conciseLabels ? "CSV" : "Export CSV"}
+    tone="info"
+    surface="solid"
+    onclick={() => notify("Export started")}
+  >
     <DownloadIcon size={13} strokeWidth={2} aria-hidden="true" />
   </Button>
 {/snippet}
@@ -137,9 +149,15 @@
   title="Container-aware actions"
   description="The same controls move from a row to an equal-track grid, then into an inline disclosure. Drag the width and change the geometry."
   code={`<AdaptiveActionGrid
-  items={[stateSelector, projectFilter, modelFilter, refreshAction, exportAction]}
+  items={[
+    { id: "state", content: stateSelector },
+    { id: "project", content: projectFilter },
+    { id: "model", content: modelFilter },
+    { id: "refresh", content: refreshAction },
+    { id: "export", content: exportAction },
+  ]}
   ariaLabel="Result controls"
-  bind:mode
+  onmodechange={(next) => (mode = next)}
   bind:open
   frame="none"
   radius="md"
@@ -214,6 +232,25 @@
       <span>Outer padding <output>{spaceLabels[padding]}</output></span>
       <input type="range" min="0" max="8" step="1" bind:value={padding} />
     </label>
+    <div class="parameter-control">
+      <span>Label length</span>
+      <Button
+        label={conciseLabels ? "Use full labels" : "Use concise labels"}
+        onclick={() => (conciseLabels = !conciseLabels)}
+      />
+    </div>
+    <div class="parameter-control">
+      <span>Compact panel</span>
+      <Button
+        label={mode !== "compact"
+          ? "Compact only"
+          : open
+            ? "Close compact panel"
+            : "Open compact panel"}
+        disabled={mode !== "compact"}
+        onclick={() => (open = !open)}
+      />
+    </div>
     <span class="mode-readout">Current layout <code>{mode}</code></span>
   </div>
 
@@ -221,18 +258,18 @@
     <AdaptiveActionGrid
       class="demo-action-grid"
       items={[
-        stateSelector,
-        projectFilter,
-        modelFilter,
-        refreshAction,
-        exportAction,
-        settingsAction,
-      ]}
+        { id: "state", content: stateSelector },
+        { id: "project", content: projectFilter },
+        { id: "model", content: modelFilter },
+        { id: "refresh", content: refreshAction },
+        { id: "export", content: exportAction },
+        { id: "settings", content: settingsAction },
+      ] satisfies AdaptiveActionGridItem[]}
       ariaLabel="Result controls"
       compactLabel="Filters and actions"
       summary={compactSummary}
-      bind:mode
       bind:open
+      onmodechange={(next) => (mode = next)}
       collapseBelow={480}
       minTrackWidth={180}
       {frame}
@@ -265,7 +302,12 @@
   title="Zero-gap mobile control"
   description="Square item corners, no padding, and no gaps turn separate buttons into one clipped control slab. The outer radius still follows the active theme."
   code={`<AdaptiveActionGrid
-  items={[todayAction, weekAction, monthAction, allTimeAction]}
+  items={[
+    { id: "today", content: todayAction },
+    { id: "week", content: weekAction },
+    { id: "month", content: monthAction },
+    { id: "all", content: allTimeAction },
+  ]}
   ariaLabel="Date range"
   radius="md"
   itemRadius="none"
@@ -277,7 +319,12 @@
   <div class="mobile-pane">
     <AdaptiveActionGrid
       class="joined-action-grid"
-      items={[todayAction, weekAction, monthAction, allTimeAction]}
+      items={[
+        { id: "today", content: todayAction },
+        { id: "week", content: weekAction },
+        { id: "month", content: monthAction },
+        { id: "all", content: allTimeAction },
+      ]}
       ariaLabel="Date range"
       compactLabel="Date range"
       collapseBelow={0}
