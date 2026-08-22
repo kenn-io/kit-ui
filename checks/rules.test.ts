@@ -186,6 +186,28 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-segmented"])).toHaveLength(1);
   });
 
+  test("adaptive action grid: wrapping toolbar rule", () => {
+    const src = svelte(`.usage-toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-adaptive-action-grid"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("AdaptiveActionGrid");
+  });
+
+  test("adaptive action grid: ignores unrelated wrapping rows and split rules", () => {
+    const src = svelte(`
+      .button-row { display: flex; flex-wrap: wrap; }
+      .analytics-toolbar { display: flex; }
+      .analytics-toolbar { flex-wrap: wrap; }
+      .kit-toolbar { display: flex; flex-wrap: wrap; }
+    `);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-adaptive-action-grid"])).toHaveLength(0);
+  });
+
   test("table sort: aria-sort attribute", () => {
     const src = svelte(``, `<th aria-sort="ascending"><button>ID</button></th>`);
     const findings = checkSource(src, "A.svelte", ["hand-rolled-table-sort"]);

@@ -13,6 +13,7 @@
     ThemeToggle,
     Toggle,
   } from "../lib/index.js";
+  import AdaptiveActionGridDemo from "./pages/AdaptiveActionGridDemo.svelte";
   import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
@@ -87,6 +88,11 @@
   ];
 
   const componentPages: Page[] = [
+    {
+      id: "adaptive-action-grid",
+      label: "AdaptiveActionGrid",
+      component: AdaptiveActionGridDemo,
+    },
     { id: "bottom-dock", label: "BottomDock", component: BottomDockDemo },
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },

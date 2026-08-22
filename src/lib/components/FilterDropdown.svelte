@@ -289,18 +289,18 @@
     gap: 5px;
     padding: 3px 10px;
     font-family: inherit;
-    font-size: var(--font-size-xs);
+    font-size: var(--kit-control-font-size, var(--font-size-xs));
     font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
     background: var(--bg-inset);
     border: var(--border-width) solid var(--border-muted);
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-control-radius, var(--radius-sm));
     cursor: pointer;
     transition:
       border-color var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease);
     position: relative;
-    min-height: 24px;
+    min-height: var(--kit-control-height, 24px);
   }
 
   .kit-filter-dropdown__btn:hover:not(:disabled) {

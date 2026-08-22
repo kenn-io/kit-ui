@@ -23,9 +23,12 @@
     {/if}
   </Card>
   {#if code}
-    <Card level="inset" padding="none" class="demo-section__code">
-      <pre><code>{code}</code></pre>
-    </Card>
+    <details class="demo-section__code-disclosure">
+      <summary>Example code</summary>
+      <Card level="inset" padding="none" class="demo-section__code">
+        <pre><code>{code}</code></pre>
+      </Card>
+    </details>
   {/if}
 </section>
 
@@ -57,8 +60,23 @@
     gap: var(--space-5);
   }
 
-  .demo-section :global(.demo-section__code) {
+  .demo-section__code-disclosure {
     margin-top: 8px;
+  }
+
+  .demo-section__code-disclosure summary {
+    width: max-content;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+
+  .demo-section__code-disclosure summary:hover {
+    color: var(--text-secondary);
+  }
+
+  .demo-section__code-disclosure[open] :global(.demo-section__code) {
+    margin-top: var(--space-3);
   }
 
   .demo-section pre {

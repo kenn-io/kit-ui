@@ -302,7 +302,7 @@ export function checkHandRolledSplitter(source, filename) {
   return findings;
 }
 
-/** The segmented-control/seg-btn pattern Forge repeats inline. Matches
+/** A segmented-control/seg-btn pattern that consumer apps repeat inline. Matches
  * only class attributes and CSS selectors, not prose or identifiers. */
 export function checkHandRolledSegmented(source) {
   const findings = [];
@@ -422,7 +422,7 @@ export function checkHandRolledEmptyState(source) {
 }
 
 /** Hand-rolled image preview panels duplicate ImagePreview. Matches
- * image-preview class names (Forge's diff-image-preview included);
+ * image-preview class names (including prefixed diff-image-preview);
  * kit-image-preview is exempt. */
 export function checkHandRolledImagePreview(source) {
   const findings = [];
@@ -455,7 +455,7 @@ export function checkHandRolledTableSort(source) {
 }
 
 /** Hand-rolled search inputs duplicate SearchInput. type="search" is the
- * reliable marker; the class names are the ones Forge converged on.
+ * reliable marker; the class names are established consumer patterns.
  * kit-search-input (the library's own class) is exempt. */
 export function checkHandRolledSearchInput(source) {
   const findings = [];
