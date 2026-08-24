@@ -12,7 +12,7 @@
   let view = $state("active");
 
   const sessions = [
-    { name: "middleman #1204", status: "working", detail: "Refactoring diff view" },
+    { name: "Forge #1204", status: "working", detail: "Refactoring diff view" },
     { name: "agentsview #88", status: "waiting", detail: "Your turn — review plan" },
     { name: "kit-ui #3", status: "idle", detail: "Idle for 12 minutes" },
     { name: "infra #41", status: "stale", detail: "No activity since Friday" },

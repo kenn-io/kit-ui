@@ -1,7 +1,7 @@
 # Card
 
 Bordered surface container with three hierarchy levels. Consolidates the
-recipes middleman's hand-rolled cards converged on (`.inset-box`, the
+recipes Forge's hand-rolled cards converged on (`.inset-box`, the
 timeline `.event-card`, `RepoSummaryCard`); the `hand-rolled-card` checker
 rule steers external projects to it.
 

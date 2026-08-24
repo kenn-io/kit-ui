@@ -3,7 +3,7 @@
 /*
  * kit-ui design tokens.
  *
- * Consolidated from the middleman and agentsview frontends, which share the
+ * Consolidated from Forge and agentsview, which share the
  * same palette. Import once at the app entry point:
  *
  *   import "@kenn-io/kit-ui/theme.css";

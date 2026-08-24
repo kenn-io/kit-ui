@@ -3,7 +3,7 @@
 ## Goal
 
 Provide the shared primitives needed for side-by-side and stacked resizable
-layouts without coupling kit-ui to Middleman's review data or application
+layouts without coupling kit-ui to Forge's review data or application
 state. The work covers kata tasks `jvxt` and `ba3w` inside kit-ui only.
 
 ## Scope
@@ -15,7 +15,7 @@ This change will:
 - export and document both public contracts;
 - add gallery examples, browser coverage, and checker parity.
 
-This change will not edit Middleman, migrate `ReviewDrawer`, introduce a
+This change will not edit Forge, migrate `ReviewDrawer`, introduce a
 generic split-pane layout container, or add an inline mode to `DetailDrawer`.
 
 ## SplitResizeHandle Contract

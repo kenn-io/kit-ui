@@ -28,7 +28,7 @@
 
 <DemoSection
   title="Basic"
-  description="middleman's TreeCheckbox recipe, consolidated: 16px drawn box over a real focusable input, accent fill, surface-colored SVG check."
+  description="Forge's TreeCheckbox recipe, consolidated: 16px drawn box over a real focusable input, accent fill, surface-colored SVG check."
   code={`<Checkbox bind:checked={subscribed} label="Subscribe to run alerts" />`}
 >
   <div class="col">

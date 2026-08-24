@@ -1,6 +1,6 @@
 # SegmentedControl
 
-Inline value selector (the "All / PRs / Issues" pattern middleman repeated as
+Inline value selector (the "All / PRs / Issues" pattern Forge repeated as
 `segmented-control`/`seg-btn` markup in ActivityFeed, ActivitySettings, and the
 repo browser). Radio-group semantics: arrow keys move the selection with roving
 focus.

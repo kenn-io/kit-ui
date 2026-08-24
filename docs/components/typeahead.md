@@ -3,7 +3,7 @@
 Filterable select: the closed state is a trigger button; clicking it swaps in a
 search input with a match-highlighted option list. Arrow keys navigate, Enter
 selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
-extended with middleman's `TypeaheadTrigger` features (clear row, custom
+extended with Forge's `TypeaheadTrigger` features (clear row, custom
 values, veto, meta text) and grouped options.
 
 ```svelte
@@ -12,7 +12,7 @@ values, veto, meta text) and grouped options.
 
   let repo = $state("");
   const repos: TypeaheadOption[] = [
-    { name: "kenn-io/middleman", label: "kenn-io/middleman", displayLabel: "middleman" },
+    { name: "kenn-io/forge", label: "kenn-io/forge", displayLabel: "Forge" },
     { name: "kenn-io/agentsview", label: "kenn-io/agentsview", displayLabel: "agentsview" },
   ];
 </script>

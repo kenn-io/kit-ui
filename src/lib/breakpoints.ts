@@ -1,5 +1,5 @@
 /**
- * Canonical responsive breakpoints, formalized from middleman's mobile work.
+ * Canonical responsive breakpoints, formalized from Forge's mobile work.
  *
  * CSS media queries cannot read custom properties, so components must write
  * the pixel values inline — but only these values. `kit-ui-check` flags any

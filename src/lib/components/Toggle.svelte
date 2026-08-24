@@ -89,7 +89,7 @@
     z-index: 1;
   }
 
-  /* middleman's DiffToolbar switch: 36×20 track, 16px knob on a 2px
+  /* Forge's DiffToolbar switch: 36×20 track, 16px knob on a 2px
    * inset, 16px travel. Track/knob corners follow the square themes via
    * the same fallback tokens as the status dots. */
   .kit-toggle__track {
@@ -140,7 +140,7 @@
     outline-offset: 2px;
   }
 
-  /* Knob stays white in both modes on purpose (middleman's annotated
+  /* Knob stays white in both modes on purpose (Forge's annotated
    * choice): it must read against border-default off AND every theme's
    * accent on. --kit-toggle-knob is the override hook. */
   .kit-toggle__knob {

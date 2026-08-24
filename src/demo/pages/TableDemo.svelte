@@ -11,10 +11,10 @@
   }
 
   const jobs: Job[] = [
-    { id: 412, repo: "kenn-io/middleman", status: "done", elapsed: 312, cost: 1.42 },
+    { id: 412, repo: "kenn-io/forge", status: "done", elapsed: 312, cost: 1.42 },
     { id: 413, repo: "kenn-io/agentsview", status: "running", elapsed: 128, cost: 0.61 },
     { id: 414, repo: "kenn-io/kit-ui", status: "done", elapsed: 87, cost: 0.22 },
-    { id: 415, repo: "kenn-io/middleman", status: "failed", elapsed: 45, cost: 0.19 },
+    { id: 415, repo: "kenn-io/forge", status: "failed", elapsed: 45, cost: 0.19 },
     { id: 416, repo: "kenn-io/infra", status: "done", elapsed: 561, cost: 2.08 },
   ];
 

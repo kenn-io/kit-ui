@@ -2,7 +2,7 @@
 
 Accessible single-select combobox (ARIA `combobox` + `listbox`) with full
 keyboard navigation: arrows move the highlight, Enter/Space selects, Escape
-closes and refocuses the trigger. Extracted from middleman.
+closes and refocuses the trigger. Extracted from Forge.
 
 ```svelte
 <script lang="ts">

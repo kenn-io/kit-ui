@@ -74,7 +74,7 @@
   }
 
   /* Comment prose runs a step smaller and looser than UI chrome
-   * (middleman's .event-body). */
+   * (Forge's .event-body). */
   :global(.kit-comment-card) .kit-comment-card__body {
     font-size: var(--font-size-sm);
     line-height: var(--line-height-prose, 1.6);

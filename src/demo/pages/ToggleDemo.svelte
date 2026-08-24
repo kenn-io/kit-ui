@@ -15,7 +15,7 @@
 
 <DemoSection
   title="Basic"
-  description="middleman's diff-toolbar switch, consolidated: 36×20 track, 16px knob, accent on-state, role=switch semantics on a real input."
+  description="Forge's diff-toolbar switch, consolidated: 36×20 track, 16px knob, accent on-state, role=switch semantics on a real input."
   code={`<Toggle bind:checked={notifications} label="Desktop notifications" />`}
 >
   <div class="col">

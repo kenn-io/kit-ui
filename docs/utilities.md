@@ -172,7 +172,7 @@ hashColor("x", ["var(--accent-red)"]); // custom palette
 ```
 
 Deterministic name → color mapping (djb2 hash) for repos, projects, users —
-consolidated from middleman's `repoColor` and agentsview's `projectColor`.
+consolidated from Forge's `repoColor` and agentsview's `projectColor`.
 `DEFAULT_HASH_PALETTE` is the deduped union of both palettes; entries beyond
 kit-ui's core six accents carry hex fallbacks (`var(--accent-rose, #e11d48)`)
 so they render even where an app doesn't define the extra accent tokens.

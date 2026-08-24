@@ -18,7 +18,7 @@
 
   let reviewsIndicator = $state(true);
 
-  const middlemanTabs = $derived<TopBarTab[]>([
+  const forgeTabs = $derived<TopBarTab[]>([
     { id: "activity", label: "Activity" },
     { id: "repos", label: "Repos" },
     { id: "pulls", label: "Pulls" },
@@ -27,7 +27,7 @@
       id: "reviews",
       label: "Reviews",
       // Neutral (tone-less) indicator: the muted "something is off but not
-      // alarming" dot — middleman shows this when its review daemon is down.
+      // alarming" dot — Forge shows this when its review daemon is down.
       indicator: reviewsIndicator ? { title: "roborev daemon unreachable" } : undefined,
     },
     { id: "workspaces", label: "Workspaces" },
@@ -45,9 +45,9 @@
     { id: "insights", label: "Insights" },
   ];
 
-  let mmActive = $state("activity");
-  let mmCollapsed = $state(false);
-  let mmWidth = $state(920);
+  let forgeActive = $state("activity");
+  let forgeCollapsed = $state(false);
+  let forgeWidth = $state(920);
   let repo = $state("all");
 
   let avActive = $state("sessions");
@@ -76,10 +76,10 @@
 {/snippet}
 
 <DemoSection
-  title="middleman-style: brand + centered tabs + actions"
+  title="Forge-style: brand + centered tabs + actions"
   description="Reserved left/right regions never shrink; the tab group collapses into a SelectDropdown the moment the full row stops fitting (measured, not a breakpoint). The Reviews tab carries a per-tab indicator dot — it follows the tab into the collapsed dropdown's options and trigger. Drag the slider."
   code={`<TopBar tabs={TABS} bind:active bind:collapsed centerTabs>
-  {#snippet left()}<span class="brand">middleman</span><SelectDropdown … />{/snippet}
+  {#snippet left()}<span class="brand">Forge</span><SelectDropdown … />{/snippet}
   {#snippet right()}<IconButton ariaLabel="Search"><Search /></IconButton>…{/snippet}
 </TopBar>
 
@@ -91,33 +91,33 @@ const TABS: TopBarTab[] = [
 >
   <div class="controls">
     <label class="control">
-      Width {mmWidth}px
-      <input type="range" min="360" max="920" bind:value={mmWidth} />
+      Width {forgeWidth}px
+      <input type="range" min="360" max="920" bind:value={forgeWidth} />
     </label>
     <Checkbox bind:checked={reviewsIndicator} label="Reviews indicator" />
     <span class="control-note"
-      >collapsed: <code>{mmCollapsed}</code>, active: <code>{mmActive}</code></span
+      >collapsed: <code>{forgeCollapsed}</code>, active: <code>{forgeActive}</code></span
     >
   </div>
-  <div class="bar-host" style:width="{mmWidth}px">
+  <div class="bar-host" style:width="{forgeWidth}px">
     <TopBar
-      tabs={middlemanTabs}
-      bind:active={mmActive}
-      bind:collapsed={mmCollapsed}
+      tabs={forgeTabs}
+      bind:active={forgeActive}
+      bind:collapsed={forgeCollapsed}
       centerTabs
-      ariaLabel="middleman pages"
+      ariaLabel="Forge pages"
     >
       {#snippet left()}
         <span class="brand">
           <span class="brand-dot"></span>
-          middleman
+          Forge
         </span>
         <SelectDropdown
           value={repo}
           options={[
             { value: "all", label: "All repos" },
             { value: "kit-ui", label: "kenn-io/kit-ui" },
-            { value: "middleman", label: "kenn-io/middleman" },
+            { value: "forge", label: "kenn-io/forge" },
           ]}
           onchange={(v) => (repo = v)}
           title="Repository"

@@ -1,7 +1,7 @@
 # FlashBanner
 
 Transient toast banner driven by a module-level store. Extracted from
-middleman.
+Forge.
 
 Mount the banner once near the app root, then call `showFlash` from anywhere:
 

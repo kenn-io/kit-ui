@@ -1,6 +1,6 @@
 # Table + TableHeaderCell
 
-Data-table primitives consolidating middleman's `JobTable` and agentsview's
+Data-table primitives consolidating Forge's `JobTable` and agentsview's
 `SessionsTable` header patterns: `Table` is the shell (scroll wrapper, sticky
 header, zebra striping, row hover); `TableHeaderCell` is a header cell with
 optional sort button and `aria-sort`. Sorting logic stays in your code — the

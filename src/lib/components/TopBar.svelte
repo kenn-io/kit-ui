@@ -31,7 +31,7 @@
     /** True while the tabs are collapsed into the dropdown (bindable,
      * read-only in spirit) — lets the app hide labels etc. in its snippets. */
     collapsed?: boolean;
-    /** Center the tab group between the side regions (middleman style)
+    /** Center the tab group between the side regions (Forge style)
      * instead of packing it after the left region. */
     centerTabs?: boolean;
     /** aria-label for the tab nav / collapsed dropdown. */

@@ -73,6 +73,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
+    "deploy:demo": "bunx vercel@59.1.3 deploy --prod --yes --scope kenn-software --project kit-ui",
     "preview": "vp preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "generate:brand": "node scripts/generate-brand.mjs",

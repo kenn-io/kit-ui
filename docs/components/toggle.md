@@ -1,6 +1,6 @@
 # Toggle
 
-The on/off switch from middleman's diff toolbar, consolidated: a 36×20
+The on/off switch from Forge's diff toolbar, consolidated: a 36×20
 track with a 16px knob on a 2px inset and 16px of travel, accent-blue when
 on. Built on a real `<input type="checkbox" role="switch">` so it carries
 form semantics, `bind:checked`, and the shared focus ring (drawn on the

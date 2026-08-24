@@ -1,6 +1,6 @@
 # kit-ui
 
-Shared Svelte 5 component library for kenn-io frontends (middleman,
+Shared Svelte 5 component library for kenn-io frontends (Forge,
 agentsview). Consumed as source: `package.json` exports point at
 `src/lib/index.ts`; there is no library build step. `vite build` bundles the
 demo gallery only.
@@ -15,7 +15,7 @@ Breaking API changes are 100% acceptable.
 bun install
 bun run dev      # demo gallery (Vite dev server)
 bun run check    # svelte-check — must stay at 0 errors / 0 warnings
-bun run fmt      # vp fmt (oxfmt, .oxfmtrc.json) — same Vite+ setup as middleman
+bun run fmt      # vp fmt (oxfmt, .oxfmtrc.json) — same Vite+ setup as Forge
 bun run fmt:check && bun run lint   # CI-enforced format + lint (vite-plus)
 bun run build    # builds the demo gallery
 bun test         # unit tests (checks/*.test.ts — rules, windowing, shortcuts, markdown)
@@ -39,7 +39,7 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
   its spec updated in the same commit
 - `docs/` — per-component reference (`docs/components/*.md`), `theming.md`,
   `utilities.md`
-- `skills/` — Svelte 5 skills replicated from middleman, symlinked into
+- `skills/` — Svelte 5 skills replicated from Forge, symlinked into
   `.claude/skills/`
 
 ## Conventions
@@ -76,6 +76,6 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
 
 ## Provenance
 
-Components were consolidated from `../middleman` (`packages/ui`) and
+Components were consolidated from `../forge` (`frontend/src/lib`) and
 `../agentsview` (`frontend/src/lib`). When changing a component's API, check
 whether those apps have since diverged before renaming props.

@@ -156,6 +156,6 @@ validation, not one big-bang switch:
 4. **Overlays and layout**: Modal, dropdowns/Typeahead, DetailDrawer,
    BottomDock, FlashBanner, sidebars/splitters, StatusBar, SettingsLayout.
 5. **Utilities and theme store**: formatters, `debounce`, `hashColor`
-   (note: colors shift vs middleman's old `repoColor`), `initTheme`.
+   (note: colors shift vs Forge's old `repoColor`), `initTheme`.
 6. **Enforce**: burn down the remaining findings per rule
    (`--rules raw-color`, etc.), then drop `--warn` so the checker blocks.

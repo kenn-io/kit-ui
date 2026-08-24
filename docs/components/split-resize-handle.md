@@ -1,6 +1,6 @@
 # SplitResizeHandle
 
-Keyboard-accessible pane divider from middleman. It owns no layout; it reports
+Keyboard-accessible pane divider from Forge. It owns no layout; it reports
 deltas along the active axis and the panes apply and clamp them. The default
 `horizontal` orientation is for side-by-side panes; use `vertical` for stacked
 panes.

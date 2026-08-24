@@ -2,7 +2,7 @@
 
 Image file preview panel: a contain-fit image centered on a checkerboard
 backdrop, with click-to-expand into a full-viewport lightbox and a built-in
-failure state. Extracted from middleman's diff rich preview
+failure state. Extracted from Forge's diff rich preview
 (`.diff-image-preview`) plus its markdown-image lightbox enhancer
 (`markdownImages.ts`), consolidated into one component.
 

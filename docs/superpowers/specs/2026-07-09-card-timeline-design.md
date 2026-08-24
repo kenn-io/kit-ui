@@ -1,11 +1,11 @@
 # Card + Timeline compounds — design
 
-Approved 2026-07-09. Consolidates middleman's hand-rolled card recipes and
+Approved 2026-07-09. Consolidates Forge's hand-rolled card recipes and
 the presentational layer of its PR/issue `EventTimeline` into kit-ui.
 
 ## Card
 
-Three hierarchy levels (`level` prop), matching the recipes middleman
+Three hierarchy levels (`level` prop), matching the recipes Forge
 already converged on:
 
 | Level     | Recipe                                              | Replaces                 |
@@ -18,12 +18,12 @@ API: `level`, `padding ("none"|"sm"|"md")`, structured header —
 `eyebrow` + `eyebrowTone` (ChipTone vocabulary, chip ink recipe),
 `title`, `meta` (right-aligned muted), `actions` snippet — plus
 `children` and a divided `footer` snippet. `href` renders `<a>`,
-`onclick` renders `<button>`; either gets middleman's launch-card hover
+`onclick` renders `<button>`; either gets Forge's launch-card hover
 (accent border + 6% tint). Class namespace `kit-card`.
 
 ## Timeline / TimelineItem
 
-Presentational only; middleman's EventTimeline migrates onto these and
+Presentational only; Forge's EventTimeline migrates onto these and
 keeps its app coupling (stores, diff threads, suggestions, editing).
 
 - `Timeline`: the `<ol class="kit-timeline">` wrapper.

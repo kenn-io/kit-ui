@@ -2,7 +2,7 @@
 
 Collapsing row for chips, badges, or small buttons: items past `maxVisible`
 fold behind a "+N" expander chip that toggles them open. Formalizes the ad-hoc
-`slice(0, n)` truncation middleman's compact label rows and mobile views do —
+`slice(0, n)` truncation Forge's compact label rows and mobile views do —
 but reversible, keyboard-accessible, and reusable for building denser panels.
 
 ```svelte

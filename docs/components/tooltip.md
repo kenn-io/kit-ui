@@ -1,6 +1,6 @@
 # Tooltip
 
-Hover/focus tooltip with rich-content support, generalized from middleman's
+Hover/focus tooltip with rich-content support, generalized from Forge's
 diff-summary popover on the PR page. Viewport-aware fixed positioning (flips
 above the trigger when there's no room below, arrow follows), open/close
 delays for hover intent, Escape to dismiss, `role="tooltip"` +

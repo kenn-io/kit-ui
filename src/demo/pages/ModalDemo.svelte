@@ -42,7 +42,7 @@
       closeLabel="Dismiss example dialog"
       onclose={() => (basicOpen = false)}
     >
-      <p>Shared Svelte 5 components consolidated from the middleman and agentsview frontends.</p>
+      <p>Shared Svelte 5 components consolidated from Forge and agentsview.</p>
     </Modal>
   {/if}
 </DemoSection>

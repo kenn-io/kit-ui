@@ -1,7 +1,7 @@
 # DiffStats
 
 The `+N −M` added/removed line counts, tabular-nums in the mono font, with
-compact formatting past 1k (`+12.3k`). From middleman.
+compact formatting past 1k (`+12.3k`). From Forge.
 
 ```svelte
 <DiffStats additions={1480} deletions={322} />

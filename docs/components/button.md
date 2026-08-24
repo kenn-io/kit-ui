@@ -1,7 +1,7 @@
 # Button
 
 Action button with semantic **tone** × visual-weight **surface** × **size**
-variants. Extracted from middleman's `ActionButton`.
+variants. Extracted from Forge's `ActionButton`.
 
 ```svelte
 <script lang="ts">

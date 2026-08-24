@@ -79,7 +79,7 @@ components:
 **Creative North Star: "The Workbench"**
 
 kit-ui is the shared component vocabulary for kenn-io's developer tools
-(middleman, agentsview): a calm, dense tool surface where everything is within
+(Forge, agentsview): a calm, dense tool surface where everything is within
 reach and nothing is decorative. The 13px UI base, the px spacing ladder, and
 the restrained accent discipline all serve one goal — the tool disappears into
 the task. Density is a feature: tables carry many rows, chrome bars are 44px

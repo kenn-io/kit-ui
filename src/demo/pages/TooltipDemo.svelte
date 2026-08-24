@@ -32,7 +32,7 @@
 
 <DemoSection
   title="Rich content — the PR diff-stats case"
-  description="The content snippet takes arbitrary markup. This recreates middleman's diff-summary popover: a stats chip whose tooltip breaks the counts down by file kind."
+  description="The content snippet takes arbitrary markup. This recreates Forge's diff-summary popover: a stats chip whose tooltip breaks the counts down by file kind."
   code={`<Tooltip>
   {#snippet content()}
     <div class="rows">

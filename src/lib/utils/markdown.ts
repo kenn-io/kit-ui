@@ -1,7 +1,7 @@
 /**
  * Markdown rendering pipeline: marked (GFM) → shiki-highlighted code
- * fences → DOMPurify sanitization. Consolidated from middleman's
- * packages/ui markdown util and agentsview's renderer; the app-specific
+ * fences → DOMPurify sanitization. Consolidated from Forge's
+ * frontend/src/lib/api/docs/markdown.ts and agentsview's renderer; the app-specific
  * pieces those carried (issue/PR reference linking, bash-wrapper tags,
  * interactive task lists) stay app-side, injected through the
  * `extensions` / `codeFence` options instead of being baked in.

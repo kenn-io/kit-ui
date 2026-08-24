@@ -1,7 +1,7 @@
 # DetailDrawer
 
 Right-side slide-in detail panel over a dimmed overlay — the "click a row,
-inspect the item" pattern. Ported from middleman's `DetailDrawer`,
+inspect the item" pattern. Ported from Forge's `DetailDrawer`,
 genericized: content comes in via snippets instead of hard-wired detail
 views.
 

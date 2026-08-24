@@ -1,7 +1,7 @@
 # Mermaid diagrams (`utils/markdown-mermaid`)
 
 Opt-in mermaid rendering for markdown documents, consolidated from
-middleman's frontend. Two pieces that layer on the
+Forge's frontend. Two pieces that layer on the
 [markdown pipeline](code-block.md): a `codeFence` interceptor that turns
 ` ```mermaid ` fences into `<pre class="mermaid">` blocks, and an
 imperative post-processor that renders those blocks into themed pan/zoom
@@ -115,11 +115,11 @@ keep in sync with `IconButton.svelte`) and render the same lucide icons
 the components use (`copy`/`check`, `x`), loaded with the mermaid chunk
 and falling back to text glyphs if that load fails. Only the lightbox
 scrim keeps a fixed theme-invariant color (`--viewer-scrim`, shared
-with middleman's image lightbox).
+with Forge's image lightbox).
 
 ## Migrating the apps
 
-middleman's `frontend/src/lib/utils/markdownMermaid.ts` is this module
+Forge's `frontend/src/lib/utils/markdownMermaid.ts` is this module
 (selectors generalized from `.markdown-body`/`.doc-markdown` to any
 `pre.mermaid`; viewer classes renamed `mermaid-viewer__*` →
 `kit-mermaid-viewer__*`, lightbox → `kit-mermaid-lightbox*` — any CSS
@@ -135,7 +135,7 @@ dropped). Migrate in reviewable steps, in this order:
 4. Delete `markdownMermaid.ts` + its viewer CSS and update e2e selectors
    to the `kit-mermaid-*` classes. This step also brings the budget caps
    back under test coverage (their unit tests currently live only in
-   middleman's suite).
+   Forge's suite).
 5. Only then take the kit-ui version with the `hand-rolled-mermaid`
    checker rule — it fires on the legacy copy, so adopting it earlier
    fails CI mid-migration (or suppress the legacy file's import lines

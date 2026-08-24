@@ -4,7 +4,7 @@ Textarea with inline mention autocomplete: typing the trigger character at a
 word boundary opens a menu anchored under the field, the text between the
 trigger and the caret is handed to an app-provided search function, and
 selecting a result inserts `trigger + insert + " "` in place of the query.
-Extracted from middleman's `TaskReferenceTextarea` (`#ref` issue completion),
+Extracted from Forge's `TaskReferenceTextarea` (`#ref` issue completion),
 generalized to any trigger/search/row-rendering.
 
 ```svelte

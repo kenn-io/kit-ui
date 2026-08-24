@@ -1,5 +1,5 @@
 /*
- * Deterministic name → accent color mapping, consolidated from middleman's
+ * Deterministic name → accent color mapping, consolidated from Forge's
  * repo-color.ts and agentsview's projectColor.ts. The default palette is the
  * deduped union of both sources; accents beyond kit-ui's core six carry hex
  * fallbacks (agentsview's light values) so the mapping works even where a
