@@ -11,15 +11,9 @@ focus behavior while the layout changes.
 
 ```svelte
 <script lang="ts">
-  import {
-    AdaptiveActionGrid,
-    Button,
-    SegmentedControl,
-    type AdaptiveActionGridMode,
-  } from "@kenn-io/kit-ui";
+  import { AdaptiveActionGrid, Button, SegmentedControl } from "@kenn-io/kit-ui";
 
   let state = $state("all");
-  let mode = $state<AdaptiveActionGridMode>("row");
 </script>
 
 {#snippet stateSelector()}
@@ -32,7 +26,6 @@ focus behavior while the layout changes.
     value={state}
     onchange={(next) => (state = next)}
     ariaLabel="Result state"
-    block={mode !== "row"}
   />
 {/snippet}
 
@@ -47,40 +40,41 @@ focus behavior while the layout changes.
   ]}
   ariaLabel="Result controls"
   compactLabel="Filters and actions"
-  onmodechange={(next) => (mode = next)}
 />
 ```
 
 ## Props
 
-| Prop            | Type                                        | Default     | Notes                                                                            |
-| --------------- | ------------------------------------------- | ----------- | -------------------------------------------------------------------------------- |
-| `items`         | `AdaptiveActionGridItem[]`                  | required    | Atomic controls with stable unique IDs, in visual and keyboard order             |
-| `ariaLabel`     | `string`                                    | required    | Names the outer `role="group"`                                                   |
-| `compactLabel`  | `string`                                    | `ariaLabel` | Visible disclosure label                                                         |
-| `summary`       | `Snippet`                                   | none        | Optional text, icon, or count in the disclosure trigger; must not be interactive |
-| `open`          | `boolean` (bindable)                        | `false`     | Compact disclosure state                                                         |
-| `onopenchange`  | `(open: boolean) => void`                   | none        | Fires for component-owned disclosure changes                                     |
-| `onmodechange`  | `(mode) => void`                            | none        | Reports each measured mode change; callers cannot set the mode                   |
-| `collapseBelow` | `number`                                    | `640`       | Component width in CSS pixels; compact mode still requires row overflow          |
-| `minTrackWidth` | `number`                                    | `200`       | Minimum equal grid-track width in CSS pixels                                     |
-| `frame`         | `"none" \| "outline"`                       | `"outline"` | Removes or draws the outer background and border                                 |
-| `radius`        | `"none" \| "sm" \| "md" \| "lg" \| "pill"`  | `"md"`      | Outer frame radius; named values follow theme radius tokens                      |
-| `itemRadius`    | same radius type                            | `"sm"`      | Corner radius inherited by kit control items                                     |
-| `rowGap`        | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`         | Spacing-ladder step between rows                                                 |
-| `columnGap`     | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`         | Spacing-ladder step between columns                                              |
-| `padding`       | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `2`         | Spacing-ladder step inside the frame                                             |
-| `class`         | `string`                                    | `""`        | Additional class on the outer group                                              |
+| Prop            | Type                                        | Default     | Notes                                                                               |
+| --------------- | ------------------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `items`         | `AdaptiveActionGridItem[]`                  | required    | Atomic controls with stable unique IDs, in visual and keyboard order                |
+| `ariaLabel`     | `string`                                    | required    | Names the outer `role="group"`                                                      |
+| `compactLabel`  | `string`                                    | `ariaLabel` | Visible disclosure label                                                            |
+| `summary`       | `Snippet`                                   | none        | Optional text, icon, or count in the disclosure trigger; must not be interactive    |
+| `open`          | `boolean` (bindable)                        | `false`     | Compact disclosure state                                                            |
+| `onopenchange`  | `(open: boolean) => void`                   | none        | Fires for component-owned disclosure changes                                        |
+| `onmodechange`  | `(mode) => void`                            | none        | Observes measured mode changes; callers cannot set the mode or resize items from it |
+| `collapseBelow` | `number`                                    | `640`       | Component width in CSS pixels; compact mode still requires row overflow             |
+| `minTrackWidth` | `number`                                    | `200`       | Minimum equal grid-track width in CSS pixels                                        |
+| `frame`         | `"none" \| "outline"`                       | `"outline"` | Removes or draws the outer background and border                                    |
+| `radius`        | `"none" \| "sm" \| "md" \| "lg" \| "pill"`  | `"md"`      | Outer frame radius; named values follow theme radius tokens                         |
+| `itemRadius`    | same radius type                            | `"sm"`      | Corner radius inherited by kit control items                                        |
+| `rowGap`        | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`         | Spacing-ladder step between rows                                                    |
+| `columnGap`     | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`         | Spacing-ladder step between columns                                                 |
+| `padding`       | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `2`         | Spacing-ladder step inside the frame                                                |
+| `class`         | `string`                                    | `""`        | Additional class on the outer group                                                 |
 
 Each item has an `id` and a `content` snippet. IDs must be unique and stable
 while the item remains the same logical control. This lets the grid preserve
 the correct DOM node when callers insert, remove, or reorder items, even when
 two entries intentionally render the same snippet.
 
-`onmodechange` lets a compound child change its own presentation without
-giving the caller control of layout state. For example,
-`block={mode !== "row"}` makes a `SegmentedControl` share its grid track evenly
-while keeping its selected value.
+`onmodechange` is an observational callback for status or analytics. Do not use
+it to change item labels, padding, or other intrinsic dimensions according to
+the reported mode: that creates a measurement feedback loop. The grid stretches
+supported kit controls, including `SegmentedControl`, without caller-managed
+presentation changes. Content changes that are independent of the measured mode
+still trigger normal remeasurement.
 
 ## Geometry
 
@@ -149,9 +143,10 @@ resizable sidebars, drawers, cards, and split panes.
 4. If it overflows below `collapseBelow`, `mode` is `compact`.
 
 The grid repeats that intrinsic measurement when item text, markup, identity,
-or geometry changes. Content can therefore move an existing grid or compact
-layout back to a row without a container resize. Measurement changes CSS on
-the mounted subtree only; it never clones or remounts a control.
+geometry, inherited ancestor styles, or loaded fonts change. Content can
+therefore move an existing grid or compact layout back to a row without a
+container resize. Measurement changes CSS on the mounted subtree only; it never
+clones or remounts a control.
 
 The compact panel is an inline disclosure, not a menu or popover. Its native
 button exposes `aria-expanded` and `aria-controls`; opening reveals the

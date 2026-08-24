@@ -85,22 +85,37 @@ test("settles at a row-to-grid boundary instead of oscillating", async ({ page }
 
   const grid = page.locator(".demo-action-grid");
   const slider = page.locator('input[type="range"]').first();
-  await setSlider(slider, 545);
+  for (const width of [545, 560, 575]) {
+    await setSlider(slider, width);
+    await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+
+    const modeChanges = await grid.evaluate(
+      (element) =>
+        new Promise<number>((resolve) => {
+          let count = 0;
+          const observer = new MutationObserver(() => count++);
+          observer.observe(element, { attributes: true, attributeFilter: ["class"] });
+          setTimeout(() => {
+            observer.disconnect();
+            resolve(count);
+          }, 100);
+        }),
+    );
+    expect(modeChanges).toBe(0);
+  }
+});
+
+test("remeasures after an inherited font change", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  await setSlider(page.locator('input[type="range"]').first(), 560);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
 
-  const modeChanges = await grid.evaluate(
-    (element) =>
-      new Promise<number>((resolve) => {
-        let count = 0;
-        const observer = new MutationObserver(() => count++);
-        observer.observe(element, { attributes: true, attributeFilter: ["class"] });
-        setTimeout(() => {
-          observer.disconnect();
-          resolve(count);
-        }, 200);
-      }),
-  );
-  expect(modeChanges).toBe(0);
+  await grid.evaluate((element) => {
+    if (element.parentElement) element.parentElement.style.fontFamily = "Times New Roman";
+  });
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
 });
 
 test("harmonizes the default type and height of nested kit controls", async ({ page }) => {
@@ -173,6 +188,8 @@ test("keeps a focused child visible when resize enters compact mode", async ({ p
   const grid = page.locator(".demo-action-grid");
   const slider = page.locator('input[type="range"]').first();
   const project = grid.getByRole("button", { name: "Project" });
+  const openRadio = grid.getByRole("radio", { name: "Open" });
+  await openRadio.click();
   await project.focus();
   await expect(project).toBeFocused();
 
@@ -185,7 +202,8 @@ test("keeps a focused child visible when resize enters compact mode", async ({ p
   await trigger.focus();
   await setSlider(slider, 860);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
-  await expect(grid.getByRole("radio", { name: "All" })).toBeFocused();
+  await expect(openRadio).toBeFocused();
+  await expect(openRadio).toHaveAttribute("tabindex", "0");
 });
 
 test("returns focus to the trigger when bound state closes the compact panel", async ({ page }) => {

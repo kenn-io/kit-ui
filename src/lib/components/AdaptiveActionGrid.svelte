@@ -49,7 +49,8 @@
     /** Compact disclosure state. */
     open?: boolean;
     onopenchange?: (open: boolean) => void;
-    /** Reports the measured layout. The component remains the sole mode owner. */
+    /** Reports the measured layout for observation only. The callback must not
+     * change an item's intrinsic width based on the reported mode. */
     onmodechange?: (mode: AdaptiveActionGridMode) => void;
     /** Host width below which an overflowing row becomes compact. */
     collapseBelow?: number;
@@ -120,8 +121,15 @@
 
   async function focusFirstItem(): Promise<void> {
     await tick();
-    const first = itemsEl?.querySelector<HTMLElement>(
-      'button:not(:disabled):not([aria-disabled="true"]), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+    const candidates = itemsEl?.querySelectorAll<HTMLElement>(
+      "button, input, select, textarea, [href], [tabindex]",
+    );
+    const first = [...(candidates ?? [])].find(
+      (element) =>
+        element.tabIndex >= 0 &&
+        !element.matches(':disabled, [aria-disabled="true"]') &&
+        element.getClientRects().length > 0 &&
+        getComputedStyle(element).visibility !== "hidden",
     );
     (first ?? hostEl)?.focus();
   }
@@ -180,6 +188,7 @@
     };
     const observer = new ResizeObserver(schedule);
     const contentObserver = new MutationObserver(schedule);
+    const ancestorObserver = new MutationObserver(schedule);
     observer.observe(hostEl);
     for (const itemEl of itemEls) {
       if (!itemEl) continue;
@@ -191,11 +200,22 @@
         subtree: true,
       });
     }
+    for (let ancestor = hostEl.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      ancestorObserver.observe(ancestor, {
+        attributes: true,
+        attributeFilter: ["class", "style"],
+      });
+    }
+    document.fonts.addEventListener("loadingdone", schedule);
+    document.fonts.addEventListener("loadingerror", schedule);
     schedule();
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
       contentObserver.disconnect();
+      ancestorObserver.disconnect();
+      document.fonts.removeEventListener("loadingdone", schedule);
+      document.fonts.removeEventListener("loadingerror", schedule);
     };
   });
 
@@ -441,6 +461,13 @@
     .kit-adaptive-action-grid__item
     > :global(.kit-segmented) {
     width: 100%;
+  }
+
+  .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__items:not([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-select-dropdown) {
+    min-width: 0;
   }
 
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)

@@ -75,7 +75,7 @@ interface Props {
   /** Compact disclosure state. Bindable; defaults to false. */
   open?: boolean;
   onopenchange?: (open: boolean) => void;
-  /** Reports measured presentation changes. */
+  /** Reports measured presentation changes for observation only. */
   onmodechange?: (mode: AdaptiveActionGridMode) => void;
   /** Host width below which a wrapping row becomes compact. */
   collapseBelow?: number;
@@ -116,17 +116,10 @@ semantics.
 
 ```svelte
 <script lang="ts">
-  import {
-    AdaptiveActionGrid,
-    Button,
-    FilterDropdown,
-    SegmentedControl,
-    type AdaptiveActionGridMode,
-  } from "@kenn-io/kit-ui";
+  import { AdaptiveActionGrid, Button, FilterDropdown, SegmentedControl } from "@kenn-io/kit-ui";
 
   let view = $state("all");
   let open = $state(false);
-  let layout = $state<AdaptiveActionGridMode>("row");
 </script>
 
 {#snippet viewSelector()}
@@ -139,7 +132,6 @@ semantics.
     value={view}
     onchange={(next) => (view = next)}
     ariaLabel="Result state"
-    block={layout !== "row"}
   />
 {/snippet}
 
@@ -165,13 +157,12 @@ semantics.
   compactLabel="Filters and actions"
   summary={activeSummary}
   bind:open
-  onmodechange={(next) => (layout = next)}
 />
 ```
 
-State stays above the layout container. Switching modes changes
-`SegmentedControl`'s `block` presentation, but it does not replace the selector
-or reset `view`.
+State stays above the layout container. The grid stretches `SegmentedControl`
+in grid and compact modes without caller-managed presentation changes, and it
+does not replace the selector or reset `view`.
 
 ## Layout and measurement
 
@@ -188,10 +179,12 @@ subtree:
 
 The measuring layout changes CSS only. It does not clone, detach, or remount
 the items. The component repeats this intrinsic read in every mode when the
-container, item geometry, identity, text, or markup changes. A mode callback
-fires only when the selected mode changes, which prevents observer feedback
-from producing duplicate events. Callers receive mode through the callback but
-cannot assign it back to the component.
+container, item geometry, identity, text, markup, inherited ancestor styles, or
+loaded fonts change. A mode callback fires only when the selected mode changes.
+It is observational: callers must not use it to change an item's intrinsic
+dimensions according to the reported mode, because that would feed the
+measurement result back into its input. Callers receive mode through the
+callback but cannot assign it back to the component.
 
 `grid` and the open compact panel use:
 

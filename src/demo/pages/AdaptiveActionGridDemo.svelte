@@ -64,7 +64,6 @@
     value={view}
     onchange={(next) => (view = next)}
     ariaLabel="Result state"
-    block={mode !== "row"}
     variant="borderless"
   />
 {/snippet}
