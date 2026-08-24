@@ -1,7 +1,7 @@
 # Timeline, TimelineItem, CommentCard
 
 The presentational compound behind PR/issue conversation views
-(middleman's `EventTimeline` anatomy, extracted): `Timeline` is the list,
+(Forge's `EventTimeline` anatomy, extracted): `Timeline` is the list,
 `TimelineItem` draws the rail — a 10px toned dot punched out of a 2px
 connector by a halo of the canvas color — and `CommentCard` carries the
 comment-card anatomy on top of `Card`.
@@ -55,4 +55,4 @@ supplied content.
 ## Scope
 
 App concerns stay in the app: reply threading, comment editing, diff
-snippets, and event ordering are middleman's, not the library's.
+snippets, and event ordering are Forge's, not the library's.

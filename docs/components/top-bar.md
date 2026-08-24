@@ -12,7 +12,7 @@ current probe width** — the probe never changes with collapse state, so
 adaptive snippets can't set up a collapse/expand loop, while adding or
 removing tabs still moves the re-expand threshold in both directions.
 
-Consolidated from middleman's `AppHeader` (centered tab group, tabs →
+Consolidated from Forge's `AppHeader` (centered tab group, tabs →
 dropdown when narrow) and agentsview's `AppHeader` (nav next to the brand,
 centered ⌘K search trigger, icon-button cluster on the right).
 
@@ -52,7 +52,7 @@ centered ⌘K search trigger, icon-button cluster on the right).
 | `active`         | `string` (bindable)    | `""`        | Active tab id. A disabled tab is never rendered as current — unset, unknown, or disabled values fall back to the first **enabled** tab in both modes. With every tab disabled there is no current tab: expanded buttons show none active, and the collapsed dropdown renders disabled showing "—" |
 | `onchange`       | `(id: string) => void` | —           | Fires on tab/dropdown selection                                                                                                                                                                                                                                                                   |
 | `collapsed`      | `boolean` (bindable)   | `false`     | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label)                                                                                                                                                                                                            |
-| `centerTabs`     | `boolean`              | `false`     | Center the expanded tab group **in the free space between the reserved regions** (middleman style; not viewport-centered). Ignored when a `search` snippet is present — search owns the flexible middle. The collapsed dropdown always packs after `left`                                         |
+| `centerTabs`     | `boolean`              | `false`     | Center the expanded tab group **in the free space between the reserved regions** (Forge style; not viewport-centered). Ignored when a `search` snippet is present — search owns the flexible middle. The collapsed dropdown always packs after `left`                                             |
 | `ariaLabel`      | `string`               | `"Primary"` | Label for the nav / collapsed dropdown                                                                                                                                                                                                                                                            |
 | `left`           | `Snippet`              | —           | Reserved leading region: brand, sidebar toggle, context pickers                                                                                                                                                                                                                                   |
 | `search`         | `Snippet`              | —           | Centered flexible slot, e.g. a command-palette trigger                                                                                                                                                                                                                                            |

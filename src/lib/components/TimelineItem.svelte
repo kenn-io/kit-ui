@@ -38,7 +38,7 @@
   }
 
   /* The rail: a 10px toned dot punched out of a 2px connector by a halo of
-   * the canvas color (middleman's .event-rail anatomy). The halo assumes
+   * the canvas color (Forge's .event-rail anatomy). The halo assumes
    * the timeline sits on --bg-primary; on another surface, override
    * --kit-timeline-halo. */
   .kit-timeline-item__rail {

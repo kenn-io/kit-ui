@@ -27,7 +27,7 @@ async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
                 name: "github.com/kenn-io",
                 label: "kenn-io",
                 children: [
-                  { name: "github.com/kenn-io/middleman", label: "middleman" },
+                  { name: "github.com/kenn-io/forge", label: "Forge" },
                   { name: "github.com/kenn-io/agentsview", label: "agentsview" },
                 ],
               },
@@ -384,10 +384,10 @@ test("popup semantics match flat and grouped option shapes", async ({ page }) =>
   await expect(gitlab).toHaveAttribute("aria-posinset", "2");
   await expect(gitlab).toHaveAttribute("aria-setsize", "2");
 
-  const middleman = page.getByRole("treeitem", { name: "kenn-io/middleman" });
-  await expect(middleman).toHaveAttribute("aria-level", "2");
-  await expect(middleman).toHaveAttribute("aria-posinset", "1");
-  await expect(middleman).toHaveAttribute("aria-setsize", "2");
+  const forge = page.getByRole("treeitem", { name: "kenn-io/forge" });
+  await expect(forge).toHaveAttribute("aria-level", "2");
+  await expect(forge).toHaveAttribute("aria-posinset", "1");
+  await expect(forge).toHaveAttribute("aria-setsize", "2");
 
   const agentsview = page.getByRole("treeitem", { name: "kenn-io/agentsview" });
   await expect(agentsview).toHaveAttribute("aria-level", "2");
@@ -409,7 +409,7 @@ test("grouped hierarchy preserves keyboard navigation", async ({ page }) => {
 
   await page.keyboard.press("ArrowDown");
   const leafId = await input.getAttribute("aria-activedescendant");
-  await expect(page.locator(`[id="${leafId}"]`)).toContainText("kenn-io/middleman");
+  await expect(page.locator(`[id="${leafId}"]`)).toContainText("kenn-io/forge");
   await page.keyboard.press("ArrowLeft");
   const parentId = await input.getAttribute("aria-activedescendant");
   await expect(page.locator(`[id="${parentId}"]`)).toContainText("github.com");
@@ -441,7 +441,7 @@ test("nested leaves align with their group label", async ({ page }) => {
     .getByRole("treeitem", { name: "github.com" })
     .locator(".kit-typeahead__option-label");
   const leafLabel = page
-    .getByRole("treeitem", { name: "kenn-io/middleman" })
+    .getByRole("treeitem", { name: "kenn-io/forge" })
     .locator(".kit-typeahead__option-label");
   const groupBox = await groupLabel.boundingBox();
   const leafBox = await leafLabel.boundingBox();
@@ -468,9 +468,9 @@ test("nested repository groups expose deep levels and parent navigation", async 
   await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
   const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
   const organization = fixture.getByRole("treeitem", { name: "kenn-io" });
-  const middleman = fixture.getByRole("treeitem", { name: "middleman" });
+  const forge = fixture.getByRole("treeitem", { name: "Forge" });
   await expect(organization).toHaveAttribute("aria-level", "2");
-  await expect(middleman).toHaveAttribute("aria-level", "3");
+  await expect(forge).toHaveAttribute("aria-level", "3");
 
   await organization.hover();
   await page.keyboard.press("ArrowDown");

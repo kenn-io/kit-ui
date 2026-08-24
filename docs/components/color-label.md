@@ -1,7 +1,7 @@
 # ColorLabel
 
 Pill label with an arbitrary hex background (GitHub-label style) that picks
-dark or white text by WCAG contrast ratio. Extracted from middleman's
+dark or white text by WCAG contrast ratio. Extracted from Forge's
 `GitHubLabels`, reduced to a single label — compose rows with
 [ChipStack](chip-stack.md).
 

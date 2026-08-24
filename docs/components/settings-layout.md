@@ -2,7 +2,7 @@
 
 Categorized settings shell: a sidebar of categories on the left and a
 scrollable content pane on the right, with an optional footer pinned below the
-content (save/cancel actions). Generalizes middleman's `SettingsPage` —
+content (save/cancel actions). Generalizes Forge's `SettingsPage` —
 category rendering is left to the `panel` snippet, which receives the active
 category id. Below 760px the sidebar collapses to a horizontal strip above the
 content (labels only: group headings and summaries are hidden there).
@@ -93,7 +93,7 @@ order); a category's summary is part of its button's accessible name.
 # SettingsSection
 
 One bordered settings card: title header, optional muted description, and a
-column of rows (12px gap). Ported from middleman's `SettingsSection`.
+column of rows (12px gap). Ported from Forge's `SettingsSection`.
 
 ```svelte
 <SettingsSection title="Sync" description="Background refresh behavior.">

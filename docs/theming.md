@@ -77,7 +77,7 @@ class to `<html>`.
 - px is still right for borders, radii, and most fixed chrome — the rem rule
   is for text.
 
-**Migrating from the old middleman two-scale system** (`--font-size-mobile-*`
+**Migrating from the old Forge two-scale system** (`--font-size-mobile-*`
 is retired; `kit-ui-check` flags it as `legacy-mobile-type`): delete the
 media-query swap and use the standard token —
 
@@ -91,7 +91,7 @@ media-query swap and use the standard token —
 
 ## Spacing
 
-A small ladder for flex/grid gaps and padding — the values middleman's
+A small ladder for flex/grid gaps and padding — the values Forge's
 hand-written gaps already converge on:
 
 | Token       | Value | Token       | Value |
@@ -239,7 +239,7 @@ Two other shared rules live alongside it in theme.css: `.kit-sr-only`
 
 CSS custom properties can't parameterize media queries, so the shared
 breakpoints live in code (`src/lib/breakpoints.ts`) and by convention in CSS.
-These come from middleman's mobile work and are the **only** widths that should
+These come from Forge's mobile work and are the **only** widths that should
 appear in `@media` rules (`kit-ui-check` enforces this):
 
 | Name      | Width   | Meaning                                      |

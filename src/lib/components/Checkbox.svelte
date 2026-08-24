@@ -4,7 +4,7 @@
   interface Props {
     /** Checked state (bindable). */
     checked?: boolean;
-    /** Tri-state "some children selected" dash (middleman's TreeCheckbox).
+    /** Tri-state "some children selected" dash (Forge's TreeCheckbox).
      * Purely visual on top of `checked`; the consumer owns clearing it. */
     indeterminate?: boolean;
     disabled?: boolean;
@@ -105,7 +105,7 @@
     z-index: 1;
   }
 
-  /* middleman's TreeCheckbox recipe: 16px box, 1.5px edge, 5px corner.
+  /* Forge's TreeCheckbox recipe: 16px box, 1.5px edge, 5px corner.
    * Radius follows the theme but is capped so pebble's 10px --radius-sm
    * can't turn the box into a blob; the border floor keeps the edge
    * readable at this size when a theme thins --border-width. */

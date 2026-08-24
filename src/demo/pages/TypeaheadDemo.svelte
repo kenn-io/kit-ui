@@ -4,7 +4,7 @@
 
   let repo = $state("");
   const repos = [
-    { name: "kenn-io/middleman", label: "kenn-io/middleman", displayLabel: "middleman" },
+    { name: "kenn-io/forge", label: "kenn-io/forge", displayLabel: "Forge" },
     { name: "kenn-io/agentsview", label: "kenn-io/agentsview", displayLabel: "agentsview" },
     { name: "kenn-io/kit-ui", label: "kenn-io/kit-ui", displayLabel: "kit-ui" },
     { name: "kenn-io/infra", label: "kenn-io/infra", displayLabel: "infra" },
@@ -103,7 +103,7 @@
       name: "github.com",
       label: "github.com",
       children: [
-        { name: "github.com/kenn-io/middleman", label: "kenn-io/middleman" },
+        { name: "github.com/kenn-io/forge", label: "kenn-io/forge" },
         { name: "github.com/kenn-io/agentsview", label: "kenn-io/agentsview" },
       ],
     },
@@ -260,7 +260,7 @@
     name: "github.com",
     label: "github.com",
     children: [
-      { name: "github.com/kenn-io/middleman", label: "kenn-io/middleman" },
+      { name: "github.com/kenn-io/forge", label: "kenn-io/forge" },
     ],
   },
   { name: "gitlab.com", label: "gitlab.com", expanded: false, children: [...] },

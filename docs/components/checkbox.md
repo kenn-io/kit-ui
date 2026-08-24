@@ -1,6 +1,6 @@
 # Checkbox
 
-middleman's `TreeCheckbox` recipe, consolidated: a 16px drawn box layered
+Forge's `TreeCheckbox` recipe, consolidated: a 16px drawn box layered
 over a real focusable `<input type="checkbox">`, accent-blue fill, and a
 surface-colored SVG check (the solid-button ink discipline, so it clears
 contrast in both modes). Unlike the original, the input is keyboard

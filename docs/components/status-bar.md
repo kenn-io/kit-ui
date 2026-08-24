@@ -2,7 +2,7 @@
 
 Fixed-height bottom app bar: `var(--status-bar-height)` (24px) tall, surface
 background, top border, muted `--font-size-2xs` text. Consolidates the
-`.status-bar` footer both middleman and agentsview hand-roll. Content is
+`.status-bar` footer both Forge and agentsview hand-roll. Content is
 entirely snippet-driven — counts, sync state, separators (`·`), and accent
 colors stay in the app.
 

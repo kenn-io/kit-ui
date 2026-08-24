@@ -3,8 +3,8 @@
 Three pieces that compose: a **markdown pipeline**
 (`utils/markdown` — marked → shiki → DOMPurify), a **CodeBlock**
 component for standalone code, and a **Markdown** component that renders
-a whole document. Consolidated from middleman's `packages/ui` markdown
-util and agentsview's renderer; the app-specific parts those carried
+a whole document. Consolidated from Forge's
+`frontend/src/lib/api/docs/markdown.ts` and agentsview's renderer; the app-specific parts those carried
 (issue/PR reference linking, bash-wrapper tags, interactive task lists)
 stay app-side, injected through options.
 
@@ -149,11 +149,11 @@ grammar-fetch protection). Constants are exported
 
 ## Migrating the apps
 
-- **middleman** `renderMarkdown(raw, repo, opts)` → a
+- **Forge** `renderMarkdown(raw, repo, opts)` → a
   `createMarkdownRenderer({ extensions: [providerItemRefExtension(repo)] })`
   per repo context; interactive task lists (checkbox indexes, drag
-  handles) remain a middleman renderer concern layered on top. The block
-  slicer (`renderMarkdownBlocks`) is middleman-specific and stays there.
+  handles) remain a Forge renderer concern layered on top. The block
+  slicer (`renderMarkdownBlocks`) is Forge-specific and stays there.
 - **agentsview** `renderMarkdown(text)` → default renderer plus its
   bash-wrapper tokenizer extensions via `extensions`; `asset://` URL
   resolution stays an app-side pre-pass; per-message `CodeBlock` swaps to

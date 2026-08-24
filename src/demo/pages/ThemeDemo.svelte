@@ -59,7 +59,7 @@ setThemeMode("dark"); // or wire up <ThemeToggle />`}
 
 <DemoSection
   title="Breakpoints"
-  description="Shared responsive breakpoints (formalized from middleman's mobile work). Use the pixel values in CSS @media rules and the MEDIA strings with svelte/reactivity's MediaQuery in code — kit-ui-check flags any other width. Resize this window to see the matches flip."
+  description="Shared responsive breakpoints (formalized from Forge's mobile work). Use the pixel values in CSS @media rules and the MEDIA strings with svelte/reactivity's MediaQuery in code — kit-ui-check flags any other width. Resize this window to see the matches flip."
   code={`import { MediaQuery } from "svelte/reactivity";
 import { BREAKPOINTS, MEDIA } from "@kenn-io/kit-ui";
 
@@ -105,7 +105,7 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
   <div class="type-scale">
     {#each typeScale as row (row.token)}
       <div class="type-row">
-        <span class="type-sample" style:font-size="var({row.token})">Middleman</span>
+        <span class="type-sample" style:font-size="var({row.token})">Forge</span>
         <code>{row.token}</code>
         <span class="type-values">{row.desktop} · {row.compact} touch</span>
       </div>

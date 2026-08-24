@@ -1,4 +1,4 @@
-# Migrating middleman / agentsview to kit-ui
+# Migrating Forge and agentsview to kit-ui
 
 A step-by-step guide for an agent (or human) converting an app to consume
 `@kenn-io/kit-ui` instead of its local copies of these components. kit-ui was
@@ -71,14 +71,14 @@ Requirements the app must satisfy:
    (`BREAKPOINTS` / `MEDIA` from kit-ui), and **only for layout** — never
    for type sizes. `kit-ui-check` flags anything else.
 
-## 3. Component mapping — middleman (`packages/ui` → kit-ui)
+## 3. Component mapping — Forge (`frontend/src/lib` → kit-ui)
 
-| middleman                             | kit-ui                               | Deltas to handle                                                                                                                                                                                                                                                                                                                                            |
+| Forge                                 | kit-ui                               | Deltas to handle                                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ActionButton`                        | `Button`                             | Variants are `tone` (neutral/success/danger/info/workflow) × `surface` (outline/soft/solid) × `size` (sm/md). Map old kind/variant props onto tone+surface; icon goes in the default snippet before `label`                                                                                                                                                 |
 | `Chip`                                | `Chip`                               | Sizes are now a strict ladder (xs=10px, sm=11px, md=12px); check call sites that assumed xs==sm rendering                                                                                                                                                                                                                                                   |
 | `GitHubLabels`                        | `ColorLabel`                         | One pill per label; contrast-picked text color is built in                                                                                                                                                                                                                                                                                                  |
-| `AppHeader`                           | `TopBar`                             | Tabs auto-collapse by measurement — delete the app's width breakpoint. Use `centerTabs` for middleman's centered group; `bind:collapsed` to adapt snippets. Unknown `active` falls back to first enabled tab                                                                                                                                                |
+| `AppHeader`                           | `TopBar`                             | Tabs auto-collapse by measurement — delete the app's width breakpoint. Use `centerTabs` for Forge's centered group; `bind:collapsed` to adapt snippets. Unknown `active` falls back to first enabled tab                                                                                                                                                    |
 | `SettingsPage`                        | `SettingsLayout` + `SettingsSection` | Categories are data (`SettingsCategory[]`); footer is a pinned snippet                                                                                                                                                                                                                                                                                      |
 | flash store + banner                  | `showFlash` / `FlashBanner`          | Stack caps at 5 and renders as one card. `dismissFlash(id)` dismisses one flash; `dismissFlash()` — **or passing the function directly as an event handler**, which receives the event object — dismisses all. Per-flash close buttons must use `onclick={() => dismissFlash(id)}`. Mount `<FlashBanner top="…" />` once; `top` should clear the app header |
 | `Modal`                               | `Modal`                              | New `tone` prop tints the header (default is a neutral inset header distinct from the body); focus trap + scroll lock built in — remove app-side body-overflow hacks                                                                                                                                                                                        |
@@ -127,7 +127,7 @@ Requirements the app must satisfy:
 
 - **`hashColor` output differs** from both apps' old hash palettes — any UI
   keyed on "my repo is green" changes color once.
-- **`dismissFlash` semantics**: bare call = dismiss all. Old middleman code
+- **`dismissFlash` semantics**: bare call = dismiss all. Old Forge code
   that passed it directly as `onclick` now dismisses everything — pass
   `() => dismissFlash(id)`.
 - **Fixed-position popovers** (`SelectDropdown`, `Tooltip`): an ancestor

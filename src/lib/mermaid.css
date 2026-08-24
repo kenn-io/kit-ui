@@ -33,7 +33,7 @@
   --mermaid-note-border: #d4a72c;
 
   /* Lightbox scrim: fixed GitHub-dark glass regardless of app theme.
-   * Shared name with middleman's image lightbox by design. */
+   * Shared name with Forge's image lightbox by design. */
   --viewer-scrim: rgba(1, 4, 9, 0.72);
 }
 
@@ -211,7 +211,7 @@ pre.mermaid.kit-mermaid-viewer .edgeLabel div,
 }
 
 /* Panel chrome matches the kit dialog surfaces (Modal, DetailDrawer):
- * 1px default border + standard shadow, not middleman's heavier glass. */
+ * 1px default border + standard shadow, not Forge's heavier glass. */
 .kit-mermaid-lightbox__panel {
   position: relative;
   width: min(96vw, 1540px);

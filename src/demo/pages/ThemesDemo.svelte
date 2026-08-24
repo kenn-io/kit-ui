@@ -152,7 +152,7 @@ setThemeName(null); // back to the default pair`}
       <div class="sample-menu__item sample-menu__item--danger">Archive</div>
     </div>
     <Card level="raised" padding="none" class="sample-rows">
-      {#each [{ name: "fix: retry websocket backoff", meta: "middleman · 2m ago", status: "working" }, { name: "Pluggable theme support", meta: "kit-ui · waiting on you", status: "waiting" }, { name: "Bump playwright to 1.61", meta: "agentsview · 3h ago", status: "idle" }] as row (row.name)}
+      {#each [{ name: "fix: retry websocket backoff", meta: "Forge · 2m ago", status: "working" }, { name: "Pluggable theme support", meta: "kit-ui · waiting on you", status: "waiting" }, { name: "Bump playwright to 1.61", meta: "agentsview · 3h ago", status: "idle" }] as row (row.name)}
         <div class="sample-row">
           <StatusDot status={row.status as "working" | "waiting" | "idle"} />
           <div class="sample-row__text">

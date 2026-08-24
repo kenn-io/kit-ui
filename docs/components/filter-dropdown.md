@@ -1,7 +1,7 @@
 # FilterDropdown
 
 Sectioned filter/sort/menu popover with an active badge, optional search,
-per-item counts, bulk actions, and a reset row. Consolidated from middleman's
+per-item counts, bulk actions, and a reset row. Consolidated from Forge's
 `FilterDropdown` (sections, floating positioning, reset) and agentsview's
 (search, select all/deselect all, counts).
 

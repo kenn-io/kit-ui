@@ -27,7 +27,7 @@
 
 <DemoSection
   title="Collapsing chip row"
-  description="Renders items through a snippet; anything past maxVisible collapses behind a +N chip that toggles expansion. This formalizes the ad-hoc slice(0, n) truncation middleman's compact label rows and mobile views do — but reversible."
+  description="Renders items through a snippet; anything past maxVisible collapses behind a +N chip that toggles expansion. This formalizes the ad-hoc slice(0, n) truncation Forge's compact label rows and mobile views do — but reversible."
   code={`<ChipStack items={labels} maxVisible={4} key={(l) => l.name} ariaLabel="Labels">
   {#snippet chip(label)}
     <Chip tone={label.tone} size="sm">{label.name}</Chip>

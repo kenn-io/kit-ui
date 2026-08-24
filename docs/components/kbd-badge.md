@@ -1,7 +1,7 @@
 # KbdBadge
 
 Keyboard-shortcut badge. Hidden automatically on touch devices
-(`@media (pointer: coarse)`). Simplified from middleman's keyspec-bound
+(`@media (pointer: coarse)`). Simplified from Forge's keyspec-bound
 version — it takes plain glyph strings.
 
 ```svelte

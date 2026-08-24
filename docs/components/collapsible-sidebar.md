@@ -1,6 +1,6 @@
 # CollapsibleSidebar + SidebarToggle
 
-Sidebar-plus-main layout from middleman: resizable via a `SplitResizeHandle`
+Sidebar-plus-main layout from Forge: resizable via a `SplitResizeHandle`
 divider, collapsible to a thin strip with an expand toggle. The parent owns the
 collapse state and the persisted width.
 

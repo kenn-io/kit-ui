@@ -132,7 +132,7 @@
     text-decoration: none;
   }
 
-  /* The three hierarchy levels — the recipes middleman's hand-rolled cards
+  /* The three hierarchy levels — the recipes Forge's hand-rolled cards
    * converged on (.inset-box / .event-card / RepoSummaryCard). */
   .kit-card--inset {
     --kit-card-bg: var(--bg-inset);
@@ -167,7 +167,7 @@
     padding: var(--space-5) var(--space-6);
   }
 
-  /* Clickable cards (a/button) get the accent hover middleman's
+  /* Clickable cards (a/button) get the accent hover Forge's
    * launch-card established. */
   .kit-card--clickable {
     font-family: inherit;

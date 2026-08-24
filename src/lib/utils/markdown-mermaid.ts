@@ -1,6 +1,6 @@
 /**
  * Mermaid diagram rendering for markdown documents, consolidated from
- * middleman's frontend. Two pieces:
+ * Forge's frontend. Two pieces:
  *
  * - `mermaidCodeFence` — a `codeFence` interceptor for
  *   `createMarkdownRenderer` that turns ```mermaid fences into

@@ -1,7 +1,7 @@
 # Chip
 
 Small status/label badge. Renders a `<span>`, or a `<button>` when
-`interactive`. Extracted from middleman.
+`interactive`. Extracted from Forge.
 
 ```svelte
 <script lang="ts">

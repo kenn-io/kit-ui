@@ -25,7 +25,7 @@
 
 <DemoSection
   title="Value selector"
-  description="Radio-group semantics with roving focus (arrow keys move selection). This replaces the segmented-control/seg-btn pattern repeated inline across middleman."
+  description="Radio-group semantics with roving focus (arrow keys move selection). This replaces the segmented-control/seg-btn pattern repeated inline across Forge."
   code={`<SegmentedControl
   options={[
     { value: "all", label: "All" },
@@ -152,7 +152,7 @@
 
 <DemoSection
   title="Block width and disabled options"
-  description="block stretches the group to its container, segments sharing space equally (middleman's compact/mobile treatment)."
+  description="block stretches the group to its container, segments sharing space equally (Forge's compact/mobile treatment)."
   code={`<SegmentedControl block options={ranges} value={range} onchange={...} />`}
 >
   <div style="width: 100%">

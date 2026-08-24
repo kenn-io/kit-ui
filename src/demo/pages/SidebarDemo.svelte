@@ -45,7 +45,7 @@
             />
           </div>
           <ul class="fake-list">
-            <li>middleman #1204</li>
+            <li>Forge #1204</li>
             <li>agentsview #88</li>
             <li>kit-ui #3</li>
           </ul>
@@ -92,7 +92,7 @@
             />
           </div>
           <ul class="fake-list">
-            <li>middleman #1204</li>
+            <li>Forge #1204</li>
             <li>agentsview #88</li>
             <li>kit-ui #3</li>
           </ul>
