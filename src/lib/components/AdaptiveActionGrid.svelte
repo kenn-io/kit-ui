@@ -179,6 +179,28 @@
     flushSync(() => setOpen(true));
   }
 
+  function styleWithoutPointerPosition(style: string | null): string {
+    return (style ?? "")
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter(
+        (declaration) =>
+          !declaration.startsWith("--kit-pointer-x:") &&
+          !declaration.startsWith("--kit-pointer-y:"),
+      )
+      .join(";");
+  }
+
+  function needsMeasurement(mutations: MutationRecord[]): boolean {
+    return mutations.some((mutation) => {
+      if (mutation.type !== "attributes" || mutation.attributeName !== "style") return true;
+      const currentStyle = (mutation.target as Element).getAttribute("style");
+      return (
+        styleWithoutPointerPosition(mutation.oldValue) !== styleWithoutPointerPosition(currentStyle)
+      );
+    });
+  }
+
   function measure(): void {
     if (!hostEl || !itemsEl || items.length === 0) {
       setMode("row");
@@ -220,7 +242,9 @@
       frame = requestAnimationFrame(measure);
     };
     const observer = new ResizeObserver(schedule);
-    const contentObserver = new MutationObserver(schedule);
+    const contentObserver = new MutationObserver((mutations) => {
+      if (needsMeasurement(mutations)) schedule();
+    });
     const ancestorObserver = new MutationObserver(schedule);
     observer.observe(hostEl);
     for (const itemEl of itemEls) {
@@ -228,6 +252,7 @@
       observer.observe(itemEl);
       contentObserver.observe(itemEl, {
         attributes: true,
+        attributeOldValue: true,
         characterData: true,
         childList: true,
         subtree: true,
@@ -564,6 +589,10 @@
   }
 
   .kit-adaptive-action-grid--joined .kit-adaptive-action-grid__item :global(:focus-visible) {
+    outline-offset: -2px;
+  }
+
+  .kit-adaptive-action-grid--joined .kit-adaptive-action-grid__trigger:focus-visible {
     outline-offset: -2px;
   }
 

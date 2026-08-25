@@ -134,6 +134,58 @@ test("remeasures when its class prop changes inherited styles", async ({ page })
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
 });
 
+test("does not remeasure for pointer-position style updates", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const result = await page.evaluate(async () => {
+    const grid = document.querySelector(".demo-action-grid");
+    const items = grid?.querySelector(".kit-adaptive-action-grid__items");
+    const button = [...(grid?.querySelectorAll("button") ?? [])].find((candidate) =>
+      candidate.textContent?.includes("Refresh"),
+    );
+    if (!(items instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) return null;
+
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    let measurements = 0;
+    const observer = new MutationObserver((mutations) => {
+      measurements += mutations.filter(
+        (mutation) => mutation.attributeName === "data-measuring" && mutation.oldValue === null,
+      ).length;
+    });
+    observer.observe(items, {
+      attributes: true,
+      attributeFilter: ["data-measuring"],
+      attributeOldValue: true,
+    });
+
+    const box = button.getBoundingClientRect();
+    for (let index = 0; index < 4; index += 1) {
+      button.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          clientX: box.left + index + 1,
+          clientY: box.top + index + 1,
+        }),
+      );
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+    }
+    observer.disconnect();
+
+    return {
+      measurements,
+      pointerX: button.style.getPropertyValue("--kit-pointer-x"),
+      pointerY: button.style.getPropertyValue("--kit-pointer-y"),
+    };
+  });
+
+  expect(result).not.toBeNull();
+  expect(result?.pointerX).not.toBe("");
+  expect(result?.pointerY).not.toBe("");
+  expect(result?.measurements).toBe(0);
+});
+
 test("harmonizes the default type and height of nested kit controls", async ({ page }) => {
   await gotoPage(page, "adaptive-action-grid");
 
@@ -294,6 +346,25 @@ test("zero-gap geometry forms one joined grid", async ({ page }) => {
   );
   expect(Math.abs(boxes[0]!.right - boxes[1]!.left)).toBeLessThan(0.5);
   expect(Math.abs(boxes[0]!.bottom - boxes[2]!.top)).toBeLessThan(0.5);
+});
+
+test("keeps the compact button keyboard focus border inside a zero-gap grid", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const ranges = page.locator('input[type="range"]');
+  await setSlider(ranges.first(), 450);
+  await setSlider(ranges.nth(1), 0);
+  await setSlider(ranges.nth(2), 0);
+
+  const grid = page.locator(".demo-action-grid");
+  const trigger = grid.getByRole("button", { name: /Filters and actions/ });
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--joined/);
+
+  await page.keyboard.press("Tab");
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveCSS("outline-offset", "-2px");
 });
 
 test("shrinks a long filter trigger without sizing its floating panel", async ({ page }) => {
