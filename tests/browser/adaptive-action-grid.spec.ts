@@ -222,6 +222,30 @@ test("keeps a focused child visible when resize enters compact mode", async ({ p
   await expect(openRadio).toHaveAttribute("tabindex", "0");
 });
 
+test("restores focus to the checked native radio in sequential Tab order", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  const slider = page.locator('input[type="range"]').first();
+  await grid
+    .locator(".kit-adaptive-action-grid__item")
+    .first()
+    .evaluate((element) => {
+      element.innerHTML = `
+        <label><input type="radio" name="native-state" /> First</label>
+        <label><input type="radio" name="native-state" checked /> Checked</label>
+      `;
+    });
+
+  await setSlider(slider, 460);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
+  await grid.getByRole("button", { name: /Filters and actions/ }).focus();
+
+  await setSlider(slider, 860);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+  await expect(grid.getByRole("radio", { name: "Checked" })).toBeFocused();
+});
+
 test("returns focus to the trigger when bound state closes the compact panel", async ({ page }) => {
   await gotoPage(page, "adaptive-action-grid");
 

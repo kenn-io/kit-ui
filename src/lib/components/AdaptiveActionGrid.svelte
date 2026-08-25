@@ -124,13 +124,40 @@
     const candidates = itemsEl?.querySelectorAll<HTMLElement>(
       "button, input, select, textarea, [href], [tabindex]",
     );
-    const first = [...(candidates ?? [])].find(
+    const focusable = [...(candidates ?? [])].filter(
       (element) =>
         element.tabIndex >= 0 &&
         !element.matches(':disabled, [aria-disabled="true"]') &&
         element.getClientRects().length > 0 &&
         getComputedStyle(element).visibility !== "hidden",
     );
+    const sequential = focusable.filter((element) => {
+      if (
+        !(element instanceof HTMLInputElement) ||
+        element.type !== "radio" ||
+        element.checked ||
+        element.name === ""
+      ) {
+        return true;
+      }
+
+      return !focusable.some(
+        (candidate) =>
+          candidate instanceof HTMLInputElement &&
+          candidate.type === "radio" &&
+          candidate.checked &&
+          candidate.name === element.name &&
+          candidate.form === element.form &&
+          candidate.getRootNode() === element.getRootNode(),
+      );
+    });
+    const first = sequential
+      .map((element, index) => ({ element, index }))
+      .sort((a, b) => {
+        const aOrder = a.element.tabIndex > 0 ? a.element.tabIndex : Number.MAX_SAFE_INTEGER;
+        const bOrder = b.element.tabIndex > 0 ? b.element.tabIndex : Number.MAX_SAFE_INTEGER;
+        return aOrder - bOrder || a.index - b.index;
+      })[0]?.element;
     (first ?? hostEl)?.focus();
   }
 
