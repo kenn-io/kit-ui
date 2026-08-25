@@ -184,6 +184,7 @@
     void columnGapValue;
     void paddingValue;
     void itemKeys;
+    void className;
 
     if (!hostEl || !itemsEl) return;
     let frame = 0;

@@ -321,7 +321,7 @@
 
   <div class="sizing-pane" style:width="{paneWidth}px">
     <AdaptiveActionGrid
-      class="demo-action-grid"
+      class={`demo-action-grid demo-action-grid--radius-${radius}`}
       items={actionItems}
       ariaLabel="Result controls"
       compactLabel="Filters and actions"

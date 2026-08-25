@@ -118,6 +118,22 @@ test("remeasures after an inherited font change", async ({ page }) => {
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
 });
 
+test("remeasures when its class prop changes inherited styles", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  await setSlider(page.locator('input[type="range"]').first(), 560);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+
+  await page.addStyleTag({
+    content: '.demo-action-grid--radius-lg { font-family: "Times New Roman"; }',
+  });
+  await page.getByRole("combobox", { name: "Outer corner radius: Medium radius" }).click();
+  await page.getByRole("option", { name: "Large radius" }).click();
+
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+});
+
 test("harmonizes the default type and height of nested kit controls", async ({ page }) => {
   await gotoPage(page, "adaptive-action-grid");
 
