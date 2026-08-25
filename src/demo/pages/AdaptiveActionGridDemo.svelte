@@ -352,6 +352,9 @@
     ariaLabel="Query controls"
     compactLabel="Query controls"
     collapseBelow={400}
+    rowGap={0}
+    columnGap={0}
+    padding={0}
   />
   <Button type="submit" label="Submit form" />
 </form>`}
@@ -373,6 +376,9 @@
       compactLabel="Query controls"
       collapseBelow={400}
       minTrackWidth={180}
+      rowGap={0}
+      columnGap={0}
+      padding={0}
       bind:open={validationOpen}
     />
     <Button type="submit" label="Submit form" tone="info" surface="solid" />

@@ -298,6 +298,34 @@ test("restores focus to the checked native radio in sequential Tab order", async
   await expect(grid.getByRole("radio", { name: "Checked" })).toBeFocused();
 });
 
+test("skips an unchecked grid radio when its group is checked elsewhere", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  const slider = page.locator('input[type="range"]').first();
+  await grid
+    .locator(".kit-adaptive-action-grid__item")
+    .first()
+    .evaluate((element) => {
+      element.innerHTML = `
+        <label><input type="radio" name="shared-state" /> Inside grid</label>
+      `;
+      const checked = document.createElement("input");
+      checked.type = "radio";
+      checked.name = "shared-state";
+      checked.checked = true;
+      document.body.append(checked);
+    });
+
+  await setSlider(slider, 460);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
+  await grid.getByRole("button", { name: /Filters and actions/ }).focus();
+
+  await setSlider(slider, 860);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+  await expect(grid.getByRole("button", { name: "Project" })).toBeFocused();
+});
+
 test("returns focus to the trigger when bound state closes the compact panel", async ({ page }) => {
   await gotoPage(page, "adaptive-action-grid");
 
@@ -365,6 +393,20 @@ test("keeps the compact button keyboard focus border inside a zero-gap grid", as
   await trigger.focus();
   await expect(trigger).toBeFocused();
   await expect(trigger).toHaveCSS("outline-offset", "-2px");
+});
+
+test("keeps a text field keyboard focus border inside a zero-gap grid", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".validation-action-grid");
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--joined/);
+  await grid.getByRole("button", { name: "Query controls" }).click();
+
+  const input = grid.getByRole("textbox", { name: "Required query" });
+  await page.keyboard.press("Tab");
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect(grid.locator(".kit-text-input")).toHaveCSS("outline-offset", "-2px");
 });
 
 test("shrinks a long filter trigger without sizing its floating panel", async ({ page }) => {

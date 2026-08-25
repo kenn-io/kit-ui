@@ -119,37 +119,44 @@
     onopenchange?.(next);
   }
 
+  function isSequentiallyFocusable(element: HTMLElement): boolean {
+    return (
+      element.tabIndex >= 0 &&
+      !element.matches(':disabled, [aria-disabled="true"]') &&
+      element.getClientRects().length > 0 &&
+      getComputedStyle(element).visibility !== "hidden"
+    );
+  }
+
+  function radioGroupTabStop(radio: HTMLInputElement): HTMLInputElement | undefined {
+    if (radio.name === "") return radio;
+    const root = radio.getRootNode();
+    const candidates = radio.form
+      ? [...radio.form.elements]
+      : root instanceof Document || root instanceof DocumentFragment
+        ? [...root.querySelectorAll('input[type="radio"]')]
+        : [];
+    const group = candidates.filter(
+      (candidate): candidate is HTMLInputElement =>
+        candidate instanceof HTMLInputElement &&
+        candidate.type === "radio" &&
+        candidate.name === radio.name &&
+        candidate.form === radio.form &&
+        candidate.getRootNode() === root &&
+        isSequentiallyFocusable(candidate),
+    );
+    return group.find((candidate) => candidate.checked) ?? group[0];
+  }
+
   async function focusFirstItem(): Promise<void> {
     await tick();
     const candidates = itemsEl?.querySelectorAll<HTMLElement>(
       "button, input, select, textarea, [href], [tabindex]",
     );
-    const focusable = [...(candidates ?? [])].filter(
-      (element) =>
-        element.tabIndex >= 0 &&
-        !element.matches(':disabled, [aria-disabled="true"]') &&
-        element.getClientRects().length > 0 &&
-        getComputedStyle(element).visibility !== "hidden",
-    );
+    const focusable = [...(candidates ?? [])].filter(isSequentiallyFocusable);
     const sequential = focusable.filter((element) => {
-      if (
-        !(element instanceof HTMLInputElement) ||
-        element.type !== "radio" ||
-        element.checked ||
-        element.name === ""
-      ) {
-        return true;
-      }
-
-      return !focusable.some(
-        (candidate) =>
-          candidate instanceof HTMLInputElement &&
-          candidate.type === "radio" &&
-          candidate.checked &&
-          candidate.name === element.name &&
-          candidate.form === element.form &&
-          candidate.getRootNode() === element.getRootNode(),
-      );
+      if (!(element instanceof HTMLInputElement) || element.type !== "radio") return true;
+      return radioGroupTabStop(element) === element;
     });
     const first = sequential
       .map((element, index) => ({ element, index }))
@@ -593,6 +600,12 @@
   }
 
   .kit-adaptive-action-grid--joined .kit-adaptive-action-grid__trigger:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .kit-adaptive-action-grid--joined
+    .kit-adaptive-action-grid__item
+    :global(.kit-text-input:has(.kit-text-input__control:focus-visible)) {
     outline-offset: -2px;
   }
 
