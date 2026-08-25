@@ -124,6 +124,14 @@ bun run dev     # interactive gallery at http://localhost:5173
 
 Every component has a live page with usage snippets and a light/dark toggle.
 
+Deploy the current worktree to [kit-ui.vercel.app](https://kit-ui.vercel.app):
+
+```bash
+bun run deploy:demo
+```
+
+The command requires a Vercel login with deployment access.
+
 ## Development
 
 ```bash
