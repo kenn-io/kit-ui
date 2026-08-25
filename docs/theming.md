@@ -77,7 +77,7 @@ class to `<html>`.
 - px is still right for borders, radii, and most fixed chrome — the rem rule
   is for text.
 
-**Migrating from the old Forge two-scale system** (`--font-size-mobile-*`
+**Migrating from an older two-scale system** (`--font-size-mobile-*`
 is retired; `kit-ui-check` flags it as `legacy-mobile-type`): delete the
 media-query swap and use the standard token —
 
@@ -91,8 +91,8 @@ media-query swap and use the standard token —
 
 ## Spacing
 
-A small ladder for flex/grid gaps and padding — the values Forge's
-hand-written gaps already converge on:
+A small ladder for flex/grid gaps and padding. The values match the spacing
+already used by consumer apps:
 
 | Token       | Value | Token       | Value |
 | ----------- | ----- | ----------- | ----- |
@@ -116,6 +116,26 @@ the gyp8 normalization pass):
 | `--focus-ring`       | `2px solid var(--accent-blue)` | THE keyboard focus indicator             |
 | `--transition-fast`  | `0.12s`                        | hover/press color+background transitions |
 | `--opacity-disabled` | `0.5`                          | disabled controls                        |
+
+### Control context
+
+Three inherited properties let a compound layout align mixed kit controls.
+They are context inputs, not root theme tokens. A container sets them on the
+item wrapper, and supported controls use their normal metrics when the
+property is absent.
+
+| Property                  | Role                                                 |
+| ------------------------- | ---------------------------------------------------- |
+| `--kit-control-height`    | Shared default control height                        |
+| `--kit-control-font-size` | Shared default label size                            |
+| `--kit-control-radius`    | Shared corner radius for the control's resting frame |
+
+`AdaptiveActionGrid` owns these values for its children. `Button`,
+`IconButton`, `SegmentedControl`, `FilterDropdown`, and `SelectDropdown` read
+the properties. Explicit `Button` and `IconButton` size variants keep their
+own height and type metrics. A consumer-defined compound layout may set the
+same properties on a narrow wrapper, but apps should not define them on
+`:root` because they are local control-group geometry.
 
 ### Identity tokens
 
@@ -239,7 +259,7 @@ Two other shared rules live alongside it in theme.css: `.kit-sr-only`
 
 CSS custom properties can't parameterize media queries, so the shared
 breakpoints live in code (`src/lib/breakpoints.ts`) and by convention in CSS.
-These come from Forge's mobile work and are the **only** widths that should
+These come from established consumer layouts and are the **only** widths that should
 appear in `@media` rules (`kit-ui-check` enforces this):
 
 | Name      | Width   | Meaning                                      |

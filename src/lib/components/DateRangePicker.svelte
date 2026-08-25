@@ -317,7 +317,7 @@
       }),
       // Tab switches / calendar paging change the panel's height — track it
       // so a picker opened near the viewport bottom doesn't keep a stale top.
-      autoReposition(() => panelEl, positionPanel),
+      autoReposition(() => [panelEl, triggerEl, containerEl], positionPanel),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   });

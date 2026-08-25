@@ -84,7 +84,7 @@
     padding: 0;
     border: 0;
     background: transparent;
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-control-radius, var(--radius-sm));
     color: var(--text-muted);
     cursor: pointer;
     transition:
@@ -98,8 +98,8 @@
   }
 
   .kit-icon-button--md {
-    width: 28px;
-    height: 28px;
+    width: var(--kit-control-height, 28px);
+    height: var(--kit-control-height, 28px);
   }
 
   .kit-icon-button:hover:not(:disabled):not([aria-disabled="true"]) {

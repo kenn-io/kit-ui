@@ -101,15 +101,15 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 28px;
+    min-height: var(--kit-control-height, 28px);
     font-family: inherit;
-    font-size: var(--font-size-md);
+    font-size: var(--kit-control-font-size, var(--font-size-md));
     font-weight: var(--font-weight-medium, 500);
     /* A real line box protects ascenders and descenders when consumers clip
      * labels for responsive ellipsis. The reduced block padding keeps the
      * desktop control exactly 28px tall instead of growing it. */
     padding: 5px 14px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-control-radius, var(--radius-sm));
     cursor: pointer;
     /* Neutral-outline appearance as the base so every tone × surface combo
      * has a sane look — without this, a combo missing a rule below renders
@@ -142,7 +142,7 @@
      * borders. Touch type remains free to grow the auto block size above it. */
     min-height: 24px;
     padding: 2px 12px;
-    border-radius: var(--radius-md);
+    border-radius: var(--kit-control-radius, var(--radius-md));
     font-size: var(--font-size-sm);
   }
 

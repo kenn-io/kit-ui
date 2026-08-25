@@ -49,14 +49,14 @@ export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions
 /**
  * Keep a floating panel positioned while open: window resize, scroll in any
  * ancestor (capture phase — the panel is position: fixed, so every nested
- * scroll container moves the trigger under it), and panel size changes
- * (async content, tab switches). Repositions are coalesced to one per
- * animation frame: each event's handler does a layout read + style write,
- * which would force synchronous layout when interleaved per-event with
- * other frame work.
+ * scroll container moves the trigger under it), and observed element size
+ * changes (panel content, trigger stretching, or layout-host resizing).
+ * Repositions are coalesced to one per animation frame: each event's handler
+ * does a layout read + style write, which would force synchronous layout when
+ * interleaved per-event with other frame work.
  */
 export function autoReposition(
-  panel: () => Element | null | undefined,
+  observedElements: () => (Element | null | undefined)[],
   reposition: () => void,
 ): () => void {
   let frame = 0;
@@ -70,8 +70,9 @@ export function autoReposition(
   }
 
   const observer = new ResizeObserver(schedule);
-  const el = panel();
-  if (el) observer.observe(el);
+  for (const element of observedElements()) {
+    if (element) observer.observe(element);
+  }
 
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", schedule, true);

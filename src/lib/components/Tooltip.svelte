@@ -102,7 +102,7 @@
 
     // Dynamic tooltip content resizes the bubble — reposition.
     const stopRepositioning = autoReposition(
-      () => popoverEl,
+      () => [popoverEl, triggerEl],
       () => void position(),
     );
 

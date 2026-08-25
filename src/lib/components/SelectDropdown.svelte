@@ -62,8 +62,8 @@
         dismiss: () => (open = false),
         escapeFocus: () => buttonEl,
       }),
-      // Async option changes resize the list — keep the flip/clamp current.
-      autoReposition(() => listEl, positionList),
+      // Follow async list changes and container-driven trigger reflow.
+      autoReposition(() => [listEl, buttonEl, containerEl], positionList),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   });
@@ -256,15 +256,15 @@
     align-items: center;
     gap: 6px;
     width: 100%;
-    height: 26px;
+    height: var(--kit-control-height, 26px);
     padding: 0 8px;
     background: var(--bg-inset);
     border: var(--border-width) solid var(--border-muted);
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-control-radius, var(--radius-sm));
     color: var(--text-secondary);
     cursor: pointer;
     font-family: inherit;
-    font-size: var(--font-size-xs);
+    font-size: var(--kit-control-font-size, var(--font-size-xs));
     font-weight: var(--font-weight-semibold, 600);
     text-align: left;
     transition:

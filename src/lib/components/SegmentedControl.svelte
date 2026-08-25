@@ -114,11 +114,14 @@
 
 <style>
   .kit-segmented {
+    --kit-segmented-radius: var(--kit-control-radius, var(--radius-sm));
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
+    min-height: var(--kit-control-height, 24px);
     gap: 1px;
     background: var(--bg-inset);
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-segmented-radius);
     padding: 2px;
   }
 
@@ -138,10 +141,10 @@
     border: 0;
     background: transparent;
     font-family: inherit;
-    font-size: var(--font-size-xs);
+    font-size: var(--kit-control-font-size, var(--font-size-xs));
     font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
-    border-radius: calc(var(--radius-sm) - 1px);
+    border-radius: max(0px, calc(var(--kit-segmented-radius) - 1px));
     cursor: pointer;
     transition:
       background var(--transition-fast) var(--transition-ease, ease),
@@ -201,6 +204,7 @@
 
   .kit-segmented--borderless .kit-segmented__btn {
     position: relative;
+    min-height: var(--kit-control-height, 24px);
     padding: 4px 10px;
     border: var(--border-width) solid var(--border-default);
     border-radius: 0;
@@ -218,17 +222,17 @@
   }
 
   .kit-segmented--borderless .kit-segmented__btn:first-child {
-    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    border-radius: var(--kit-segmented-radius) 0 0 var(--kit-segmented-radius);
   }
 
   .kit-segmented--borderless .kit-segmented__btn:last-child {
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    border-radius: 0 var(--kit-segmented-radius) var(--kit-segmented-radius) 0;
   }
 
   /* A lone segment matches first- and last-child; last-child's radius
    * would square the left corners without this. */
   .kit-segmented--borderless .kit-segmented__btn:only-child {
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-segmented-radius);
   }
 
   /* Toned segments carry their color while inactive too: tinted border

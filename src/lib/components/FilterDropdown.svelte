@@ -108,8 +108,8 @@
         dismiss: closeDropdown,
         escapeFocus: () => buttonRef,
       }),
-      // Searching filters the item list and resizes the panel — reposition.
-      autoReposition(() => dropdownRef, positionDropdown),
+      // Follow panel content changes and container-driven trigger reflow.
+      autoReposition(() => [dropdownRef, buttonRef], positionDropdown),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   });
@@ -281,6 +281,7 @@
 <style>
   .kit-filter-dropdown {
     position: relative;
+    min-width: 0;
   }
 
   .kit-filter-dropdown__btn {
@@ -289,18 +290,18 @@
     gap: 5px;
     padding: 3px 10px;
     font-family: inherit;
-    font-size: var(--font-size-xs);
+    font-size: var(--kit-control-font-size, var(--font-size-xs));
     font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
     background: var(--bg-inset);
     border: var(--border-width) solid var(--border-muted);
-    border-radius: var(--radius-sm);
+    border-radius: var(--kit-control-radius, var(--radius-sm));
     cursor: pointer;
     transition:
       border-color var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease);
     position: relative;
-    min-height: 24px;
+    min-height: var(--kit-control-height, 24px);
   }
 
   .kit-filter-dropdown__btn:hover:not(:disabled) {
@@ -316,6 +317,14 @@
   .kit-filter-dropdown__btn--active {
     color: var(--accent-blue);
     border-color: var(--accent-blue);
+  }
+
+  .kit-filter-dropdown__trigger-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .kit-filter-dropdown__trigger-detail {
