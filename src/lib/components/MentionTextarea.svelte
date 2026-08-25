@@ -104,7 +104,7 @@
   $effect(() => {
     if (!open) return;
     positionMenu();
-    return autoReposition(() => menuEl, positionMenu);
+    return autoReposition(() => [menuEl, wrapEl], positionMenu);
   });
 
   /** Index of the trigger character governing the caret, or -1: the trigger

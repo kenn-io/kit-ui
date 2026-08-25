@@ -156,6 +156,10 @@ When resize enters compact mode while an item owns focus, the disclosure opens
 instead of hiding that item. If externally bound state closes the panel while
 focus is inside, focus returns to the trigger first.
 
+If native form validation fails for a control inside a closed compact panel,
+the disclosure opens before the browser focuses the invalid control. Required
+inputs therefore remain visible and reachable when submission is blocked.
+
 ## Accessibility
 
 The outer container uses `role="group"` and normal Tab order. It deliberately

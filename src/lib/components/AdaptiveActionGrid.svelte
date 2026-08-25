@@ -35,7 +35,7 @@
 
 <script lang="ts">
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import { tick } from "svelte";
+  import { flushSync, tick } from "svelte";
 
   interface Props {
     /** Atomic top-level controls, in visual and keyboard order. */
@@ -145,6 +145,11 @@
     onmodechange?.(next);
 
     if (previous === "compact" && focusOnTrigger) void focusFirstItem();
+  }
+
+  function handleInvalid(event: Event): void {
+    if (mode !== "compact" || open || !itemsEl?.contains(event.target as Node)) return;
+    flushSync(() => setOpen(true));
   }
 
   function measure(): void {
@@ -277,6 +282,7 @@
     aria-hidden={mode === "compact" && !open ? "true" : undefined}
     inert={mode === "compact" && !open ? true : undefined}
     bind:this={itemsEl}
+    oninvalidcapture={handleInvalid}
   >
     {#each items as item, index (item.id)}
       <div class="kit-adaptive-action-grid__item" bind:this={itemEls[index]}>
@@ -430,9 +436,6 @@
     > :global(.kit-button),
   .kit-adaptive-action-grid__items:global([data-measuring])
     .kit-adaptive-action-grid__item
-    > :global(.kit-icon-button),
-  .kit-adaptive-action-grid__items:global([data-measuring])
-    .kit-adaptive-action-grid__item
     > :global(.kit-filter-dropdown),
   .kit-adaptive-action-grid__items:global([data-measuring])
     .kit-adaptive-action-grid__item
@@ -443,21 +446,38 @@
     width: max-content;
   }
 
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-icon-button--sm) {
+    width: 24px;
+  }
+
+  .kit-adaptive-action-grid__items:global([data-measuring])
+    .kit-adaptive-action-grid__item
+    > :global(.kit-icon-button--md) {
+    width: var(--kit-control-height, 28px);
+  }
+
   /* Fill direct controls and compound-control wrappers in grid modes without
    * reaching into transient popovers. */
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__items:not([data-measuring])
     .kit-adaptive-action-grid__item
     > :global(.kit-button),
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__items:not([data-measuring])
     .kit-adaptive-action-grid__item
     > :global(.kit-icon-button),
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__items:not([data-measuring])
     .kit-adaptive-action-grid__item
     > :global(.kit-filter-dropdown),
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__items:not([data-measuring])
     .kit-adaptive-action-grid__item
     > :global(.kit-select-dropdown),
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__items:not([data-measuring])
     .kit-adaptive-action-grid__item
     > :global(.kit-segmented) {
     width: 100%;

@@ -62,8 +62,8 @@
         dismiss: () => (open = false),
         escapeFocus: () => buttonEl,
       }),
-      // Async option changes resize the list — keep the flip/clamp current.
-      autoReposition(() => listEl, positionList),
+      // Follow async list changes and container-driven trigger reflow.
+      autoReposition(() => [listEl, buttonEl, containerEl], positionList),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   });

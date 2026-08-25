@@ -9,6 +9,7 @@
     IconButton,
     SegmentedControl,
     SelectDropdown,
+    TextInput,
     showFlash,
     type AdaptiveActionGridFrame,
     type AdaptiveActionGridItem,
@@ -25,6 +26,11 @@
   let projectActive = $state(false);
   let modelActive = $state(false);
   let conciseLabels = $state(false);
+  let longFilterLabel = $state(false);
+  let archiveIncluded = $state(false);
+  let reverseItems = $state(false);
+  let requiredQuery = $state("");
+  let validationOpen = $state(false);
   let frame = $state<AdaptiveActionGridFrame>("none");
   let radius = $state<AdaptiveActionGridRadius>("md");
   let itemRadius = $state<AdaptiveActionGridRadius>("sm");
@@ -33,6 +39,18 @@
   let padding = $state<AdaptiveActionGridSpace>(0);
 
   const activeFilters = $derived(Number(projectActive) + Number(modelActive));
+  const actionItems = $derived.by(() => {
+    const next: AdaptiveActionGridItem[] = [
+      { id: "state", content: stateSelector },
+      { id: "project", content: projectFilter },
+      { id: "model", content: modelFilter },
+      { id: "refresh", content: refreshAction },
+      { id: "export", content: exportAction },
+      { id: "settings", content: settingsAction },
+    ];
+    if (archiveIncluded) next.push({ id: "archive", content: archiveAction });
+    return reverseItems ? next.reverse() : next;
+  });
 
   const frameOptions = [
     { value: "none", label: "None" },
@@ -70,7 +88,11 @@
 
 {#snippet projectFilter()}
   <FilterDropdown
-    label={conciseLabels ? "Repo" : "Project"}
+    label={longFilterLabel
+      ? "Project assignment across every connected workspace"
+      : conciseLabels
+        ? "Repo"
+        : "Project"}
     active={projectActive}
     badgeCount={projectActive ? 1 : 0}
     sections={[
@@ -138,6 +160,29 @@
   >
     <Settings2Icon size={14} strokeWidth={2} aria-hidden="true" />
   </IconButton>
+{/snippet}
+
+{#snippet archiveAction()}
+  <Button
+    label="Archive selected results"
+    tone="workflow"
+    surface="soft"
+    onclick={() => notify("Archived selected results")}
+  />
+{/snippet}
+
+{#snippet requiredQueryAction()}
+  <TextInput
+    bind:value={requiredQuery}
+    name="query"
+    ariaLabel="Required query"
+    placeholder="Required query"
+    required
+  />
+{/snippet}
+
+{#snippet savedQueryAction()}
+  <Button label="Use saved query" onclick={() => (requiredQuery = "is:open")} />
 {/snippet}
 
 {#snippet compactSummary()}
@@ -239,6 +284,27 @@
       />
     </div>
     <div class="parameter-control">
+      <span>Filter label</span>
+      <Button
+        label={longFilterLabel ? "Use regular filter label" : "Use long filter label"}
+        onclick={() => (longFilterLabel = !longFilterLabel)}
+      />
+    </div>
+    <div class="parameter-control">
+      <span>Item set</span>
+      <Button
+        label={archiveIncluded ? "Remove archive action" : "Add archive action"}
+        onclick={() => (archiveIncluded = !archiveIncluded)}
+      />
+    </div>
+    <div class="parameter-control">
+      <span>Item order</span>
+      <Button
+        label={reverseItems ? "Restore item order" : "Reverse item order"}
+        onclick={() => (reverseItems = !reverseItems)}
+      />
+    </div>
+    <div class="parameter-control">
       <span>Compact panel</span>
       <Button
         label={mode !== "compact"
@@ -256,14 +322,7 @@
   <div class="sizing-pane" style:width="{paneWidth}px">
     <AdaptiveActionGrid
       class="demo-action-grid"
-      items={[
-        { id: "state", content: stateSelector },
-        { id: "project", content: projectFilter },
-        { id: "model", content: modelFilter },
-        { id: "refresh", content: refreshAction },
-        { id: "export", content: exportAction },
-        { id: "settings", content: settingsAction },
-      ] satisfies AdaptiveActionGridItem[]}
+      items={actionItems}
       ariaLabel="Result controls"
       compactLabel="Filters and actions"
       summary={compactSummary}
@@ -277,6 +336,73 @@
       {rowGap}
       {columnGap}
       {padding}
+    />
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Validated compact controls"
+  description="A native validation error opens the inline disclosure before the browser focuses the required field."
+  code={`<form onsubmit={save}>
+  <AdaptiveActionGrid
+    items={[
+      { id: "query", content: requiredQueryAction },
+      { id: "saved", content: savedQueryAction },
+    ]}
+    ariaLabel="Query controls"
+    compactLabel="Query controls"
+    collapseBelow={400}
+  />
+  <Button type="submit" label="Submit form" />
+</form>`}
+>
+  <form
+    class="validation-form"
+    onsubmit={(event) => {
+      event.preventDefault();
+      notify(`Submitted query: ${requiredQuery}`);
+    }}
+  >
+    <AdaptiveActionGrid
+      class="validation-action-grid"
+      items={[
+        { id: "query", content: requiredQueryAction },
+        { id: "saved", content: savedQueryAction },
+      ]}
+      ariaLabel="Query controls"
+      compactLabel="Query controls"
+      collapseBelow={400}
+      minTrackWidth={180}
+      bind:open={validationOpen}
+    />
+    <Button type="submit" label="Submit form" tone="info" surface="solid" />
+  </form>
+</DemoSection>
+
+<DemoSection
+  title="Icon-only actions"
+  description="Square icon buttons keep their full control width when the container decides whether the row fits."
+  code={`<AdaptiveActionGrid
+  items={iconActions}
+  ariaLabel="Icon actions"
+  collapseBelow={0}
+  minTrackWidth={28}
+/>`}
+>
+  <div class="icon-pane">
+    <AdaptiveActionGrid
+      class="icon-action-grid"
+      items={[
+        { id: "one", content: settingsAction },
+        { id: "two", content: settingsAction },
+        { id: "three", content: settingsAction },
+        { id: "four", content: settingsAction },
+        { id: "five", content: settingsAction },
+        { id: "six", content: settingsAction },
+      ]}
+      ariaLabel="Icon actions"
+      collapseBelow={0}
+      minTrackWidth={28}
     />
   </div>
 </DemoSection>
@@ -402,5 +528,16 @@
 
   .mobile-pane :global(.kit-adaptive-action-grid) {
     width: 100%;
+  }
+
+  .validation-form {
+    display: grid;
+    width: min(100%, 280px);
+    justify-items: stretch;
+    gap: var(--space-4);
+  }
+
+  .icon-pane {
+    width: min(100%, 198px);
   }
 </style>

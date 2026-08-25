@@ -108,8 +108,8 @@
         dismiss: closeDropdown,
         escapeFocus: () => buttonRef,
       }),
-      // Searching filters the item list and resizes the panel — reposition.
-      autoReposition(() => dropdownRef, positionDropdown),
+      // Follow panel content changes and container-driven trigger reflow.
+      autoReposition(() => [dropdownRef, buttonRef], positionDropdown),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   });
@@ -281,6 +281,7 @@
 <style>
   .kit-filter-dropdown {
     position: relative;
+    min-width: 0;
   }
 
   .kit-filter-dropdown__btn {
@@ -316,6 +317,14 @@
   .kit-filter-dropdown__btn--active {
     color: var(--accent-blue);
     border-color: var(--accent-blue);
+  }
+
+  .kit-filter-dropdown__trigger-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .kit-filter-dropdown__trigger-detail {

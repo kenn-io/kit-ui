@@ -71,7 +71,7 @@ test("remeasures changed labels in grid and compact modes", async ({ page }) => 
   await page.getByRole("button", { name: "Use full labels" }).click();
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
 
-  await setSlider(slider, 460);
+  await setSlider(slider, 465);
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
   await concise.click();
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
@@ -254,4 +254,136 @@ test("zero-gap geometry forms one joined grid", async ({ page }) => {
   );
   expect(Math.abs(boxes[0]!.right - boxes[1]!.left)).toBeLessThan(0.5);
   expect(Math.abs(boxes[0]!.bottom - boxes[2]!.top)).toBeLessThan(0.5);
+});
+
+test("shrinks a long filter trigger without sizing its floating panel", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  await setSlider(page.locator('input[type="range"]').first(), 520);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+  await page.getByRole("button", { name: "Use long filter label" }).click();
+
+  const trigger = grid.getByRole("button", {
+    name: "Project assignment across every connected workspace",
+  });
+  const label = trigger.locator(".kit-filter-dropdown__trigger-label");
+  const triggerGeometry = await label.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    overflow: getComputedStyle(element).overflow,
+    textOverflow: getComputedStyle(element).textOverflow,
+    whiteSpace: getComputedStyle(element).whiteSpace,
+    height: element.parentElement?.getBoundingClientRect().height,
+  }));
+  expect(triggerGeometry.scrollWidth).toBeGreaterThan(triggerGeometry.clientWidth);
+  expect(triggerGeometry).toMatchObject({
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    height: 28,
+  });
+
+  await trigger.click();
+  const panel = grid.locator(".kit-filter-dropdown__panel");
+  await expect(panel).toBeVisible();
+  const widths = {
+    trigger: await trigger.evaluate((element) => element.getBoundingClientRect().width),
+    panel: await panel.evaluate((element) => element.getBoundingClientRect().width),
+  };
+  expect(widths.panel).toBeGreaterThanOrEqual(200);
+  expect(widths.panel).not.toBe(widths.trigger);
+});
+
+test("preserves item identity, measurement, and order across item changes", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  const slider = page.locator('input[type="range"]').first();
+  await setSlider(slider, 700);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+
+  const selectedState = grid.getByRole("radio", { name: "All" });
+  const settings = grid.getByRole("button", { name: "View settings" });
+  await selectedState.evaluate((element) => element.setAttribute("data-node-identity", "state"));
+  await settings.evaluate((element) => element.setAttribute("data-node-identity", "settings"));
+
+  await page.getByRole("button", { name: "Add archive action" }).click();
+  await expect(grid.getByRole("button", { name: "Archive selected results" })).toBeVisible();
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+  await expect(selectedState).toHaveAttribute("data-node-identity", "state");
+  await expect(settings).toHaveAttribute("data-node-identity", "settings");
+
+  await page.getByRole("button", { name: "Remove archive action" }).click();
+  await expect(grid.getByRole("button", { name: "Archive selected results" })).toHaveCount(0);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
+  await expect(selectedState).toHaveAttribute("data-node-identity", "state");
+  await expect(settings).toHaveAttribute("data-node-identity", "settings");
+
+  await page.getByRole("button", { name: "Reverse item order" }).click();
+  await expect(
+    grid.locator(".kit-adaptive-action-grid__item").first().getByRole("button", {
+      name: "View settings",
+    }),
+  ).toBeVisible();
+  await expect(selectedState).toHaveAttribute("data-node-identity", "state");
+  await expect(settings).toHaveAttribute("data-node-identity", "settings");
+
+  await settings.focus();
+  await page.keyboard.press("Tab");
+  await expect(grid.getByRole("button", { name: "Export CSV" })).toBeFocused();
+});
+
+test("measures icon-only rows at their full control width", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".icon-action-grid");
+  const items = grid.locator(".kit-adaptive-action-grid__items");
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+  await expect(grid.getByRole("button", { name: "View settings" })).toHaveCount(6);
+  const geometry = await items.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+});
+
+test("keeps an open dropdown attached during container-only reflow", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".demo-action-grid");
+  const slider = page.locator('input[type="range"]').first();
+  await setSlider(slider, 860);
+  const trigger = grid.getByRole("button", { name: "Model" });
+  await trigger.click();
+  const panel = grid.locator(".kit-filter-dropdown__panel");
+  await expect(panel).toBeVisible();
+
+  await setSlider(slider, 520);
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+  await expect
+    .poll(async () => {
+      const triggerBox = await trigger.boundingBox();
+      const panelBox = await panel.boundingBox();
+      if (!triggerBox || !panelBox) return null;
+      return {
+        horizontalOffset: Math.round(panelBox.x - triggerBox.x),
+        verticalGap: Math.round(panelBox.y - (triggerBox.y + triggerBox.height)),
+      };
+    })
+    .toEqual({ horizontalOffset: 0, verticalGap: 4 });
+});
+
+test("opens compact content before focusing an invalid form control", async ({ page }) => {
+  await gotoPage(page, "adaptive-action-grid");
+
+  const grid = page.locator(".validation-action-grid");
+  const trigger = grid.getByRole("button", { name: "Query controls" });
+  const input = grid.getByRole("textbox", { name: "Required query" });
+  await expect(grid).toHaveClass(/kit-adaptive-action-grid--compact/);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+  await page.getByRole("button", { name: "Submit form" }).click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(input).toBeFocused();
 });

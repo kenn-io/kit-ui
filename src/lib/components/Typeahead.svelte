@@ -127,7 +127,7 @@
   // current. No dismissable() here: the typeahead closes on blur instead.
   $effect(() => {
     if (!open) return;
-    return autoReposition(() => panelEl, positionPanel);
+    return autoReposition(() => [panelEl, triggerEl, containerEl], positionPanel);
   });
 
   function matches(option: TypeaheadOption, q: string): boolean {
