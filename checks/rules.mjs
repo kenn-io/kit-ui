@@ -127,24 +127,76 @@ function selectorTargetsControlState(selector, state) {
   return lastCompound.includes(":active");
 }
 
+/** Return leaf CSS rules with source offsets in one pass. Leaf rules match the
+ * old `selector { declarations }` behavior while also working inside at-rules.
+ * Comments, strings, and escapes cannot contribute structural braces. */
+function leafCssRules(css) {
+  const rules = [];
+  const stack = [];
+  let segmentStart = 0;
+  let i = 0;
+
+  while (i < css.length) {
+    const ch = css[i];
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === "/" && css[i + 1] === "*") {
+      const close = css.indexOf("*/", i + 2);
+      i = close === -1 ? css.length : close + 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < css.length && css[j] !== ch) {
+        if (css[j] === "\\") j += 1;
+        j += 1;
+      }
+      i = Math.min(j + 1, css.length);
+      continue;
+    }
+    if (ch === "{") {
+      if (stack.length > 0) stack[stack.length - 1].hasChild = true;
+      stack.push({
+        selector: css.slice(segmentStart, i),
+        bodyStart: i + 1,
+        hasChild: false,
+      });
+      segmentStart = i + 1;
+    } else if (ch === "}") {
+      const rule = stack.pop();
+      if (rule && !rule.hasChild) {
+        rules.push({
+          selector: rule.selector,
+          body: css.slice(rule.bodyStart, i),
+          bodyStart: rule.bodyStart,
+        });
+      }
+      segmentStart = i + 1;
+    }
+    i += 1;
+  }
+
+  return rules;
+}
+
 /** Literal disabled opacity drifts from the shared state token. Only inspect
  * selectors that target the disabled control itself; dimming a descendant is
  * a separate visual treatment. */
 export function checkHandRolledDisabledState(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
-    let rule;
-    while ((rule = ruleRe.exec(css)) !== null) {
-      const selectors = rule[1].split(",");
+    for (const rule of leafCssRules(css)) {
+      const selectors = rule.selector.split(",");
       if (!selectors.some((selector) => selectorTargetsControlState(selector, "disabled"))) {
         continue;
       }
-      const opacity = rule[2].match(/opacity:\s*([0-9]*\.?[0-9]+%?)/);
+      const opacity = rule.body.match(/opacity:\s*([0-9]*\.?[0-9]+%?)/);
       if (!opacity) continue;
       findings.push({
         rule: "hand-rolled-disabled-state",
-        line: lineOfIndex(source, offset + rule.index + rule[0].indexOf(opacity[0])),
+        line: lineOfIndex(source, offset + rule.bodyStart + opacity.index),
         message: `literal disabled opacity ${opacity[1]} — add kit-control-states to the native control or use var(--opacity-disabled) for a deliberate local rule`,
       });
     }
@@ -156,16 +208,14 @@ export function checkHandRolledDisabledState(source, filename) {
 export function checkHandRolledPressState(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
-    let rule;
-    while ((rule = ruleRe.exec(css)) !== null) {
-      const selectors = rule[1].split(",");
+    for (const rule of leafCssRules(css)) {
+      const selectors = rule.selector.split(",");
       if (!selectors.some((selector) => selectorTargetsControlState(selector, "active"))) continue;
-      const transform = rule[2].match(/transform:\s*([^;}]+)/);
+      const transform = rule.body.match(/transform:\s*([^;}]+)/);
       if (!transform || transform[1].trim() === "var(--press-transform)") continue;
       findings.push({
         rule: "hand-rolled-press-state",
-        line: lineOfIndex(source, offset + rule.index + rule[0].indexOf(transform[0])),
+        line: lineOfIndex(source, offset + rule.bodyStart + transform.index),
         message: `custom active transform ${transform[1].trim()} — add kit-control-states to the native control or use var(--press-transform)`,
       });
     }

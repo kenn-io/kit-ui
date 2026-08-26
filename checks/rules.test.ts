@@ -136,6 +136,18 @@ describe("shared control states", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("scale(0.95)");
   });
+
+  test("scans nested rules without treating quoted or commented braces as structure", () => {
+    const src = svelte(`
+      .label::before { content: "{"; }
+      /* } */
+      @media (min-width: 640px) {
+        .menu-item:disabled { opacity: 0.62; }
+      }
+    `);
+
+    expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(1);
+  });
 });
 
 describe("hand-rolled components", () => {
