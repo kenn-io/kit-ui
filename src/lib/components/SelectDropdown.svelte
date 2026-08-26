@@ -178,7 +178,7 @@
 <div class={["kit-select-dropdown", className]} bind:this={containerEl} onfocusout={onFocusout}>
   <button
     bind:this={buttonEl}
-    class="kit-select-dropdown__trigger"
+    class="kit-select-dropdown__trigger kit-control-states"
     type="button"
     role="combobox"
     onclick={openDropdown}
@@ -216,7 +216,7 @@
           id={optionID(index)}
           type="button"
           tabindex="-1"
-          class="kit-select-dropdown__option"
+          class="kit-select-dropdown__option kit-control-states"
           class:highlighted={index === highlightedIndex}
           class:selected={option.value === value}
           role="option"

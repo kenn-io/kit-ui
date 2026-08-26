@@ -109,8 +109,12 @@
     >{@render inner()}</a
   >
 {:else if onclick !== undefined}
-  <button type="button" class={classes} {onclick} aria-pressed={selected} aria-label={ariaLabel}
-    >{@render inner()}</button
+  <button
+    type="button"
+    class={[classes, "kit-control-states"]}
+    {onclick}
+    aria-pressed={selected}
+    aria-label={ariaLabel}>{@render inner()}</button
   >
 {:else}
   <div class={classes} aria-label={ariaLabel}>{@render inner()}</div>

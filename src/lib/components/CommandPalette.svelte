@@ -223,7 +223,7 @@
                  perceivable to screen readers; run() guards activation. -->
             <button
               type="button"
-              class="kit-command-palette__option"
+              class="kit-command-palette__option kit-control-states"
               class:highlighted={index === highlighted}
               id="{uid}-option-{index}"
               role="option"

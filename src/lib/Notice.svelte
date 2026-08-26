@@ -43,7 +43,7 @@
     <p class="kit-notice__message">{message}</p>
   </div>
   {#if actionLabel && onaction}
-    <button type="button" onclick={onaction}>{actionLabel}</button>
+    <button class="kit-control-states" type="button" onclick={onaction}>{actionLabel}</button>
   {/if}
 </div>
 

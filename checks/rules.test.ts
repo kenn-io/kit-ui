@@ -104,30 +104,37 @@ describe("raw-color", () => {
   });
 });
 
-describe("raw-button", () => {
-  test("flags native button markup in consuming Svelte files", () => {
-    const src = svelte(``, `<button type="button" role="menuitem">Move issue</button>`);
-    const findings = checkSource(src, "Menu.svelte", ["raw-button"]);
+describe("shared control states", () => {
+  test("flags literal opacity on a disabled control", () => {
+    const src = svelte(`.menu-item:disabled { opacity: 0.62; }`);
+    const findings = checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"]);
 
     expect(findings).toHaveLength(1);
-    expect(findings[0]!.message).toContain("ButtonBase");
+    expect(findings[0]!.message).toContain("kit-control-states");
   });
 
-  test("allows kit-ui button components and ignores comments", () => {
-    const src = svelte(
-      ``,
-      `<!-- Native <button> markup belongs behind kit-ui. -->
-      <Button label="Save" />
-      <ButtonBase role="menuitem">Move issue</ButtonBase>`,
-    );
-
-    expect(checkSource(src, "Menu.svelte", ["raw-button"])).toHaveLength(0);
+  test("flags literal opacity on an aria-disabled control", () => {
+    const src = svelte(`.menu-item[aria-disabled="true"] { opacity: 60%; }`);
+    expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(1);
   });
 
-  test("does not scan non-Svelte sources", () => {
-    expect(checkSource(`const template = "<button>";`, "fixture.ts", ["raw-button"])).toHaveLength(
-      0,
-    );
+  test("allows the disabled token and descendant dimming", () => {
+    const src = svelte(`
+      .menu-item:disabled { opacity: var(--opacity-disabled); }
+      .menu-item:disabled .shortcut { opacity: 0.7; }
+    `);
+    expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(0);
+  });
+
+  test("flags a custom active transform and allows the shared transform", () => {
+    const src = svelte(`
+      .menu-item:active { transform: scale(0.95); }
+      .toolbar-button:active:not(:disabled) { transform: var(--press-transform); }
+    `);
+    const findings = checkSource(src, "Menu.svelte", ["hand-rolled-press-state"]);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("scale(0.95)");
   });
 });
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ButtonBase, showFlash, VirtualList } from "../../lib/index.js";
+  import { showFlash, VirtualList } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   interface Row {
@@ -46,9 +46,13 @@
       Jump to
       <input type="number" min="0" max="9999" bind:value={jump} />
     </label>
-    <ButtonBase class="jump-btn" onclick={() => list?.scrollToIndex(jump)}>
+    <button
+      class="jump-btn kit-control-states"
+      type="button"
+      onclick={() => list?.scrollToIndex(jump)}
+    >
       scrollToIndex
-    </ButtonBase>
+    </button>
     <span class="control-note">
       rendered: <code>{range[0]}–{range[1]}</code>, active: <code>{active}</code>
     </span>
@@ -84,15 +88,16 @@
 <VirtualList {items} itemHeight={28} bind:activeIndex={active} ariaLabel="Restored selection">…</VirtualList>`}
 >
   <div class="controls">
-    <ButtonBase
-      class="jump-btn"
+    <button
+      class="jump-btn kit-control-states"
+      type="button"
       onclick={() => {
         initialActive = 500;
         showInitial = !showInitial;
       }}
     >
       {showInitial ? "Unmount" : "Mount with active row #500"}
-    </ButtonBase>
+    </button>
     {#if showInitial}
       <span class="control-note">active: <code>{initialActive}</code></span>
     {/if}
@@ -144,7 +149,7 @@
     padding: 0 var(--space-3);
   }
 
-  :global(.jump-btn) {
+  .jump-btn {
     height: 24px;
     padding: 0 var(--space-4);
     border: var(--border-width) solid var(--border-default);
@@ -156,7 +161,7 @@
     cursor: pointer;
   }
 
-  :global(.jump-btn:hover) {
+  .jump-btn:hover {
     color: var(--text-primary);
     background: var(--bg-surface-hover);
   }

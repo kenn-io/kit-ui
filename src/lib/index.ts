@@ -15,7 +15,6 @@ export type {
 export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
-export { default as ButtonBase } from "./components/ButtonBase.svelte";
 export { default as Calendar } from "./components/Calendar.svelte";
 export { default as Checkbox } from "./components/Checkbox.svelte";
 export { default as Card } from "./components/Card.svelte";
@@ -44,6 +43,14 @@ export type { IconButtonSize, IconButtonTone } from "./components/IconButton.sve
 export { default as ImagePreview } from "./components/ImagePreview.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Markdown } from "./components/Markdown.svelte";
+export { default as Menu } from "./components/Menu.svelte";
+export { default as MenuContent } from "./components/MenuContent.svelte";
+export { default as MenuItem } from "./components/MenuItem.svelte";
+export { default as MenuRadioGroup } from "./components/MenuRadioGroup.svelte";
+export { default as MenuRadioItem } from "./components/MenuRadioItem.svelte";
+export { default as MenuSeparator } from "./components/MenuSeparator.svelte";
+export { default as MenuTrigger } from "./components/MenuTrigger.svelte";
+export type { MenuAlign } from "./components/menu.js";
 export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
 export type { MentionOption } from "./components/mention.js";
 export { default as MetricCard } from "./components/MetricCard.svelte";

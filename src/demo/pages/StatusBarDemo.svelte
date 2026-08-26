@@ -1,6 +1,6 @@
 <script lang="ts">
   import StatusBar from "../../lib/components/StatusBar.svelte";
-  import { ButtonBase, dismissable } from "../../lib/index.js";
+  import { dismissable } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let synced = $state(true);
@@ -41,9 +41,9 @@
         <span>3 repos</span>
       {/snippet}
       {#snippet right()}
-        <ButtonBase class="bar-btn" onclick={() => (synced = !synced)}>
+        <button class="bar-btn kit-control-states" type="button" onclick={() => (synced = !synced)}>
           {synced ? "synced 2m ago" : "sync now"}
-        </ButtonBase>
+        </button>
         <span class="sep">&middot;</span>
         <span class="mono">v1.4.2</span>
       {/snippet}
@@ -84,9 +84,15 @@
   {/snippet}
   {#snippet right()}
     <span class="anchor" bind:this={anchorEl}>
-      <ButtonBase onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>
+      <button
+        class="kit-control-states"
+        type="button"
+        onclick={() => (open = !open)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
         api budget
-      </ButtonBase>
+      </button>
       {#if open}
         <div class="popover kit-popover-card" role="dialog" aria-label="API budget">…</div>
       {/if}
@@ -106,15 +112,16 @@
       {/snippet}
       {#snippet right()}
         <span class="popover-anchor" bind:this={budgetAnchor}>
-          <ButtonBase
-            class="bar-btn"
-            bind:element={budgetTrigger}
+          <button
+            class="bar-btn kit-control-states"
+            type="button"
+            bind:this={budgetTrigger}
             aria-haspopup="dialog"
             aria-expanded={budgetOpen}
             onclick={() => (budgetOpen = !budgetOpen)}
           >
             api budget · 64%
-          </ButtonBase>
+          </button>
           {#if budgetOpen}
             <div class="budget-popover kit-popover-card" role="dialog" aria-label="API budget">
               <div class="budget-popover__title">API budget</div>
@@ -172,7 +179,7 @@
     font-family: var(--font-mono);
   }
 
-  :global(.bar-btn) {
+  .bar-btn {
     padding: 0;
     border: 0;
     background: transparent;
@@ -181,7 +188,7 @@
     cursor: pointer;
   }
 
-  :global(.bar-btn:hover) {
+  .bar-btn:hover {
     color: var(--text-primary);
   }
 

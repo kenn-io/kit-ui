@@ -217,7 +217,7 @@
           {#each tabs as tab (tab.id)}
             <button
               type="button"
-              class="kit-top-bar__tab"
+              class="kit-top-bar__tab kit-control-states"
               class:active={tab.id === effectiveActive}
               disabled={tab.disabled}
               aria-current={tab.id === effectiveActive ? "page" : undefined}

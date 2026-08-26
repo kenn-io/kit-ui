@@ -148,7 +148,12 @@
 <!-- A separator is an adjustable widget; the button supplies native focus and disabled semantics. -->
 <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
 <button
-  class={["kit-split-resize-handle", `kit-split-resize-handle--${orientation}`, className]
+  class={[
+    "kit-split-resize-handle",
+    "kit-control-states",
+    `kit-split-resize-handle--${orientation}`,
+    className,
+  ]
     .filter(Boolean)
     .join(" ")}
   type="button"
@@ -165,6 +170,8 @@
 
 <style>
   .kit-split-resize-handle {
+    --press-transform: none;
+
     background: var(--border-muted);
     appearance: none;
     border: 0;
@@ -191,6 +198,6 @@
 
   .kit-split-resize-handle:disabled {
     cursor: default;
-    opacity: 0.6;
+    opacity: var(--opacity-disabled);
   }
 </style>

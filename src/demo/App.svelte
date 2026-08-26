@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { Component } from "svelte";
   import {
-    ButtonBase,
     FlashBanner,
     getHighContrast,
     getThemeName,
@@ -37,6 +36,7 @@
   import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MarkdownDemo from "./pages/MarkdownDemo.svelte";
+  import MenuDemo from "./pages/MenuDemo.svelte";
   import MentionTextareaDemo from "./pages/MentionTextareaDemo.svelte";
   import MermaidDemo from "./pages/MermaidDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
@@ -116,6 +116,7 @@
     { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
+    { id: "menu", label: "Menu", component: MenuDemo },
     { id: "mention-textarea", label: "MentionTextarea", component: MentionTextareaDemo },
     { id: "mermaid", label: "Mermaid", component: MermaidDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
@@ -180,12 +181,14 @@
 {/if}
 
 {#snippet navLink(page: Page)}
-  <ButtonBase
-    class={["sidebar__link", page.id === activeId && "active"]}
+  <button
+    class="sidebar__link kit-control-states"
+    class:active={page.id === activeId}
+    type="button"
     onclick={() => navigate(page.id)}
   >
     {page.label}
-  </ButtonBase>
+  </button>
 {/snippet}
 
 {#snippet gallery()}
@@ -303,7 +306,7 @@
     color: var(--text-muted);
   }
 
-  :global(.sidebar__link) {
+  .sidebar__link {
     display: block;
     width: 100%;
     padding: 5px 8px;
@@ -317,12 +320,12 @@
     cursor: pointer;
   }
 
-  :global(.sidebar__link:hover) {
+  .sidebar__link:hover {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }
 
-  :global(.sidebar__link.active) {
+  .sidebar__link.active {
     background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
     color: var(--accent-blue);
     font-weight: 600;

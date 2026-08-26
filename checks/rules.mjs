@@ -115,28 +115,60 @@ export function checkRawColors(source, filename) {
   return findings;
 }
 
-/** Native buttons bypass the shared focus, disabled, press, and theme-pointer
- * behavior. Button covers standard action chrome; ButtonBase covers controls
- * whose structure and resting appearance belong to the consuming app. */
-export function checkRawButton(source, filename) {
-  if (!filename.endsWith(".svelte")) return [];
+function selectorTargetsControlState(selector, state) {
+  const lastCompound =
+    selector
+      .trim()
+      .split(/[\s>+~]+/)
+      .at(-1) ?? "";
+  if (state === "disabled") {
+    return lastCompound.includes(":disabled") || lastCompound.includes("[aria-disabled");
+  }
+  return lastCompound.includes(":active");
+}
 
-  // Preserve offsets while masking regions where `<button` is text rather
-  // than markup. The checker reports source line numbers after this pass.
-  const markup = source.replace(
-    /<!--[\s\S]*?-->|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/gi,
-    (region) => region.replace(/[^\n]/g, " "),
-  );
+/** Literal disabled opacity drifts from the shared state token. Only inspect
+ * selectors that target the disabled control itself; dimming a descendant is
+ * a separate visual treatment. */
+export function checkHandRolledDisabledState(source, filename) {
   const findings = [];
-  const re = /<button\b/g;
-  let match;
-  while ((match = re.exec(markup)) !== null) {
-    findings.push({
-      rule: "raw-button",
-      line: lineOfIndex(source, match.index),
-      message:
-        "native <button> bypasses Kit interaction and theme behavior — use Button for action chrome or ButtonBase for structural controls",
-    });
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+    let rule;
+    while ((rule = ruleRe.exec(css)) !== null) {
+      const selectors = rule[1].split(",");
+      if (!selectors.some((selector) => selectorTargetsControlState(selector, "disabled"))) {
+        continue;
+      }
+      const opacity = rule[2].match(/opacity:\s*([0-9]*\.?[0-9]+%?)/);
+      if (!opacity) continue;
+      findings.push({
+        rule: "hand-rolled-disabled-state",
+        line: lineOfIndex(source, offset + rule.index + rule[0].indexOf(opacity[0])),
+        message: `literal disabled opacity ${opacity[1]} — add kit-control-states to the native control or use var(--opacity-disabled) for a deliberate local rule`,
+      });
+    }
+  }
+  return findings;
+}
+
+/** Custom transforms on the active control bypass the shared press motion. */
+export function checkHandRolledPressState(source, filename) {
+  const findings = [];
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+    let rule;
+    while ((rule = ruleRe.exec(css)) !== null) {
+      const selectors = rule[1].split(",");
+      if (!selectors.some((selector) => selectorTargetsControlState(selector, "active"))) continue;
+      const transform = rule[2].match(/transform:\s*([^;}]+)/);
+      if (!transform || transform[1].trim() === "var(--press-transform)") continue;
+      findings.push({
+        rule: "hand-rolled-press-state",
+        line: lineOfIndex(source, offset + rule.index + rule[0].indexOf(transform[0])),
+        message: `custom active transform ${transform[1].trim()} — add kit-control-states to the native control or use var(--press-transform)`,
+      });
+    }
   }
   return findings;
 }
@@ -1024,7 +1056,8 @@ export function checkChipLabelOverride(source, filename) {
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
   "raw-color": checkRawColors,
-  "raw-button": checkRawButton,
+  "hand-rolled-disabled-state": checkHandRolledDisabledState,
+  "hand-rolled-press-state": checkHandRolledPressState,
   "hand-rolled-modal": checkHandRolledModal,
   "hand-rolled-spinner": checkHandRolledSpinner,
   "hand-rolled-clipboard": checkClipboard,

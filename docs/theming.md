@@ -149,7 +149,7 @@ and each call site keeps its own tuned default until a theme opts in.
 | Token                                | Default                      | Used for                                                                                                                                           |
 | ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--border-width`                     | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
-| `--press-transform`                  | `translateY(1px)` (declared) | `:active` on Button and clickable Card                                                                                                             |
+| `--press-transform`                  | `translateY(1px)` (declared) | `:active` on controls carrying `kit-control-states`                                                                                                |
 | `--font-weight-medium/semibold/bold` | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
 | `--transition-ease`                  | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
 | `--transition-medium`                | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
@@ -178,6 +178,25 @@ box-shadows would miss that. Text-entry fields are the one exception:
 their _wrapper_ signals focus with an `--accent-blue` border via
 `:focus-within` (TextInput, FindBar) since a ring around a chromeless inner
 input reads as double chrome.
+
+**Control states**: add `.kit-control-states` to a native button or other
+native control whose layout and resting appearance belong to the consuming
+component. The class applies `--press-transform` while active and
+`--opacity-disabled` plus a disabled cursor for both native `disabled` and
+`aria-disabled="true"`. It deliberately does not reset browser chrome or set a
+transition. The consuming component keeps its native element, scoped styles,
+actions, bindings, geometry, hover treatment, and transition properties.
+
+```svelte
+<button class="project-row kit-control-states" type="button" role="menuitem" onclick={moveProject}>
+  Move to project
+</button>
+```
+
+Use `Button` for ordinary actions. Prefer a purpose-built kit-ui component such
+as `TableHeaderCell`, `SegmentedControl`, or `MenuItem` when the interaction
+pattern already has one. `kit-ui-check` flags literal disabled opacity and
+custom active transforms rather than rejecting native buttons.
 
 **Popover chrome**: every transient floating surface (dropdown menus,
 typeahead lists, filter panels, the range-picker panel, tooltips, toasts,

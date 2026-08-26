@@ -330,7 +330,7 @@
   <div class="kit-date-range-picker__pills" role="group" aria-label={groupLabel}>
     {#each items as item (item.key)}
       <button
-        class="kit-date-range-picker__pill"
+        class="kit-date-range-picker__pill kit-control-states"
         class:active={item.active}
         type="button"
         onclick={item.pick}
@@ -349,7 +349,7 @@
   aria-busy={busy}
 >
   <button
-    class="kit-date-range-picker__trigger"
+    class="kit-date-range-picker__trigger kit-control-states"
     class:open
     type="button"
     title={label}

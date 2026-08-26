@@ -46,6 +46,7 @@
   const classes = $derived(
     [
       "kit-button",
+      "kit-control-states",
       `kit-button--${tone}`,
       `kit-button--${surface}`,
       `kit-button--${size}`,
@@ -126,15 +127,6 @@
       opacity var(--transition-fast) var(--transition-ease, ease);
     white-space: nowrap;
     line-height: normal;
-  }
-
-  .kit-button:active:not(:disabled) {
-    transform: var(--press-transform);
-  }
-
-  .kit-button:disabled {
-    opacity: var(--opacity-disabled);
-    cursor: not-allowed;
   }
 
   .kit-button--sm {

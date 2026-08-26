@@ -48,6 +48,23 @@
   outline-offset: 1px;
 }
 
+/* Shared interaction states for native controls whose layout and resting
+ * appearance stay with the owning component. Keep the native element in the
+ * consumer's template so scoped styles, actions, and bind:this keep working.
+ * Explicit component state rules can override these shared defaults. */
+.kit-control-states:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: var(--press-transform);
+}
+
+/* Repeat the class so these states beat a Svelte-scoped base rule such as
+ * `.control.svelte-hash { cursor: pointer }`. A scoped disabled rule still
+ * has equal specificity and loads later, so components can opt out. */
+.kit-control-states.kit-control-states:disabled,
+.kit-control-states.kit-control-states[aria-disabled="true"] {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
 /* The popover card: the one chrome for transient floating surfaces
  * (dropdown menus, typeahead lists, filter panels, the date-range panel,
  * tooltips, the command palette, floating FindBar). Chrome only —

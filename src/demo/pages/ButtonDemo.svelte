@@ -2,13 +2,7 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import GitMergeIcon from "@lucide/svelte/icons/git-merge";
   import XIcon from "@lucide/svelte/icons/x";
-  import {
-    Button,
-    ButtonBase,
-    showFlash,
-    type ButtonSurface,
-    type ButtonTone,
-  } from "../../lib/index.js";
+  import { Button, showFlash, type ButtonSurface, type ButtonTone } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const tones: ButtonTone[] = ["neutral", "info", "success", "danger", "workflow"];
@@ -66,21 +60,23 @@
 
 <DemoSection
   title="Structural controls"
-  description="ButtonBase keeps native button semantics and Kit interaction states while the caller owns layout and resting appearance. It forwards native attributes and exposes the element for focus or popover positioning."
-  code={`<ButtonBase
-  bind:element={trigger}
-  class="project-row"
+  description="Keep consumer-owned structural controls as native buttons and add kit-control-states for Kit's pressed, disabled, and focus behavior. Native bindings, actions, class directives, and scoped styles keep working."
+  code={`<button
+  bind:this={trigger}
+  class="project-row kit-control-states"
+  type="button"
   role="menuitemcheckbox"
   aria-checked={selected}
   data-project={project.uid}
 >
   {project.name}
-</ButtonBase>`}
+</button>`}
 >
   <div role="menu" aria-label="Project actions">
-    <ButtonBase
-      bind:element={structuralElement}
-      class="structural-control"
+    <button
+      bind:this={structuralElement}
+      class="structural-control kit-control-states"
+      type="button"
       role="menuitemcheckbox"
       aria-label="Move to project"
       aria-checked={structuralSelected}
@@ -90,9 +86,9 @@
     >
       <span>Move to project</span>
       <span aria-hidden="true">→</span>
-    </ButtonBase>
+    </button>
   </div>
-  <span class="kit-sr-only" data-testid="button-base-element-status">
+  <span class="kit-sr-only" data-testid="control-states-element-status">
     {structuralElement ? "bound" : "unbound"}
   </span>
 </DemoSection>
@@ -213,18 +209,25 @@
 </DemoSection>
 
 <style>
-  :global(.structural-control) {
+  .structural-control {
+    box-sizing: border-box;
+    appearance: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 280px;
     max-width: 100%;
     padding: var(--space-3) var(--space-4);
+    border: 0;
     border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--text-secondary);
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
   }
 
-  :global(.structural-control:hover) {
+  .structural-control:hover {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }

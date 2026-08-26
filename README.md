@@ -45,7 +45,6 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [AdaptiveActionGrid](docs/components/adaptive-action-grid.md) | new (agentsview toolbar patterns)  | Container-aware row, grid, and inline disclosure for mixed controls                           |
 | [BottomDock](docs/components/bottom-dock.md)                  | consumer app                       | Inline resizable bottom panel with composable regions                                         |
 | [Button](docs/components/button.md)                           | consumer app `ActionButton`        | Action button with tone × surface × size variants                                             |
-| [ButtonBase](docs/components/button-base.md)                  | new                                | Themed native-button behavior for consumer-owned structural controls                          |
 | [Calendar](docs/components/calendar.md)                       | new (DateRangePicker's month grid) | Single-month date grid with range highlight and month paging                                  |
 | [Chip](docs/components/chip.md)                               | consumer app `Chip`                | Status/label badge, optionally interactive                                                    |
 | [ChipStack](docs/components/chip-stack.md)                    | new (consumer mobile-view pattern) | Collapsing chip/button row with "+N" expansion                                                |
@@ -64,6 +63,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [IconButton](docs/components/icon-button.md)                  | both (hand-rolled `.icon-btn`)     | Square ghost button for a lone icon, required aria-label                                      |
 | [KbdBadge](docs/components/kbd-badge.md)                      | consumer app                       | Keyboard-shortcut badge, hidden on touch devices                                              |
 | [Markdown](docs/components/code-block.md)                     | both (consolidated)                | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
+| [Menu](docs/components/menu.md)                               | consumer app action menus          | Compositional action and single-choice menus with APG keyboard behavior                       |
 | [Modal](docs/components/modal.md)                             | both (consolidated)                | Dialog primitive: overlay, header, body, footer snippet                                       |
 | [DateRangePicker](docs/components/date-range-picker.md)       | agentsview                         | Relative / calendar / custom date-range popover with `resolveRange()`                         |
 | [RefreshControl](docs/components/refresh-control.md)          | agentsview                         | Refresh button + "Updated Xm ago" label with auto-refresh                                     |

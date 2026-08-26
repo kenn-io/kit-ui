@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
-test("ButtonBase forwards structural semantics and keeps Kit interaction states", async ({
+test("kit-control-states preserves native structural controls and shared interaction states", async ({
   page,
 }) => {
   await gotoPage(page, "button");
@@ -29,7 +29,13 @@ test("ButtonBase forwards structural semantics and keeps Kit interaction states"
 
   await button.click();
   await expect(button).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByTestId("button-base-element-status")).toHaveText("bound");
+  await expect(page.getByTestId("control-states-element-status")).toHaveText("bound");
+
+  const disabled = page.getByRole("button", { name: "Disabled" });
+  await expect(disabled).toHaveCSS("cursor", "not-allowed");
+  expect(
+    Number(await disabled.evaluate((element) => getComputedStyle(element).opacity)),
+  ).toBeLessThan(1);
 });
 
 test("renders the centering approaches at one compact height", async ({ page }) => {

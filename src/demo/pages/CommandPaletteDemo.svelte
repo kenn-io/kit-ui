@@ -1,7 +1,6 @@
 <script lang="ts">
   import {
     appShortcuts,
-    ButtonBase,
     CommandPalette,
     formatShortcutKeys,
     initShortcuts,
@@ -62,9 +61,9 @@ appShortcuts.register("mod+k", () => (open = true));
 <CommandPalette bind:open {commands} recentIds={recent} onrun={run} />`}
 >
   <div class="row">
-    <ButtonBase class="open-btn" onclick={() => (open = true)}>
+    <button class="open-btn kit-control-states" type="button" onclick={() => (open = true)}>
       Open palette <KbdBadge keys={formatShortcutKeys("mod+k")} />
-    </ButtonBase>
+    </button>
     <span class="readout">
       page shortcut <code>g</code> fired: <code>{pageShortcutFires}</code>
       (suspended while the palette is open)
@@ -81,7 +80,7 @@ appShortcuts.register("mod+k", () => (open = true));
     flex-wrap: wrap;
   }
 
-  :global(.open-btn) {
+  .open-btn {
     display: inline-flex;
     align-items: center;
     gap: var(--space-3);
@@ -96,7 +95,7 @@ appShortcuts.register("mod+k", () => (open = true));
     cursor: pointer;
   }
 
-  :global(.open-btn:hover) {
+  .open-btn:hover {
     background: var(--bg-surface-hover);
   }
 

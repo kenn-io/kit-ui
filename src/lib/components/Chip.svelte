@@ -57,6 +57,7 @@
     type="button"
     class={[
       "kit-chip",
+      "kit-control-states",
       `kit-chip--${size}`,
       tone ? `kit-chip--tone-${tone}` : undefined,
       {

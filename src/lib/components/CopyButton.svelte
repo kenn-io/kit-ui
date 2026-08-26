@@ -54,7 +54,12 @@
 
 <button
   type="button"
-  class={["kit-copy-btn", { "kit-copy-btn--reveal": revealOnHover }, className]}
+  class={[
+    "kit-copy-btn",
+    "kit-control-states",
+    { "kit-copy-btn--reveal": revealOnHover },
+    className,
+  ]}
   aria-label={showCopied ? copiedAriaLabel : ariaLabel}
   title={showCopied ? copiedTitle : title}
   onclick={handleClick}

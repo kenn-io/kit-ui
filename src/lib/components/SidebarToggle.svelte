@@ -28,7 +28,7 @@
 </script>
 
 <button
-  class={["kit-sidebar-toggle", `kit-sidebar-toggle--${state}`, className]}
+  class={["kit-sidebar-toggle", "kit-control-states", `kit-sidebar-toggle--${state}`, className]}
   {onclick}
   title={accessibleLabel}
   aria-label={accessibleLabel}

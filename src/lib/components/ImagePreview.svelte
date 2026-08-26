@@ -44,7 +44,7 @@
   {:else if expandable}
     <button
       type="button"
-      class="kit-image-preview__trigger"
+      class="kit-image-preview__trigger kit-control-states"
       aria-label={triggerLabel}
       title={triggerLabel}
       onclick={() => (expanded = true)}
