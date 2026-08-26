@@ -3,6 +3,11 @@
 Action button with semantic **tone** × visual-weight **surface** × **size**
 variants. Extracted from Forge's `ActionButton`.
 
+Use [ButtonBase](button-base.md) instead when the button is itself a structural
+control such as a navigation row, menu item, sortable header, or graph node.
+ButtonBase keeps Kit's shared interaction behavior without applying action
+button layout or chrome.
+
 ```svelte
 <script lang="ts">
   import { Button } from "@kenn-io/kit-ui";

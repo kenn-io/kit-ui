@@ -1,6 +1,37 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
+test("ButtonBase forwards structural semantics and keeps Kit interaction states", async ({
+  page,
+}) => {
+  await gotoPage(page, "button");
+
+  const button = page.getByRole("menuitemcheckbox", { name: "Move to project" });
+  await expect(button).toHaveAttribute("aria-checked", "false");
+  await expect(button).toHaveAttribute("aria-busy", "false");
+  await expect(button).toHaveAttribute("data-structural-control", "move-project");
+
+  await button.focus();
+  const styles = await button.evaluate((element) => ({
+    outlineStyle: getComputedStyle(element).outlineStyle,
+    backgroundColor: getComputedStyle(element).backgroundColor,
+    borderWidth: getComputedStyle(element).borderTopWidth,
+    paddingTop: getComputedStyle(element).paddingTop,
+    width: element.getBoundingClientRect().width,
+  }));
+  expect(styles).toMatchObject({
+    outlineStyle: "solid",
+    backgroundColor: "rgba(0, 0, 0, 0)",
+    borderWidth: "0px",
+  });
+  expect(parseFloat(styles.paddingTop)).toBeGreaterThan(0);
+  expect(styles.width).toBeGreaterThan(200);
+
+  await button.click();
+  await expect(button).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("button-base-element-status")).toHaveText("bound");
+});
+
 test("renders the centering approaches at one compact height", async ({ page }) => {
   await gotoPage(page, "button");
 

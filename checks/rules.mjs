@@ -115,6 +115,32 @@ export function checkRawColors(source, filename) {
   return findings;
 }
 
+/** Native buttons bypass the shared focus, disabled, press, and theme-pointer
+ * behavior. Button covers standard action chrome; ButtonBase covers controls
+ * whose structure and resting appearance belong to the consuming app. */
+export function checkRawButton(source, filename) {
+  if (!filename.endsWith(".svelte")) return [];
+
+  // Preserve offsets while masking regions where `<button` is text rather
+  // than markup. The checker reports source line numbers after this pass.
+  const markup = source.replace(
+    /<!--[\s\S]*?-->|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/gi,
+    (region) => region.replace(/[^\n]/g, " "),
+  );
+  const findings = [];
+  const re = /<button\b/g;
+  let match;
+  while ((match = re.exec(markup)) !== null) {
+    findings.push({
+      rule: "raw-button",
+      line: lineOfIndex(source, match.index),
+      message:
+        "native <button> bypasses Kit interaction and theme behavior — use Button for action chrome or ButtonBase for structural controls",
+    });
+  }
+  return findings;
+}
+
 /** A fixed full-viewport overlay is almost always a hand-rolled modal. */
 export function checkHandRolledModal(source, filename) {
   const findings = [];
@@ -998,6 +1024,7 @@ export function checkChipLabelOverride(source, filename) {
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
   "raw-color": checkRawColors,
+  "raw-button": checkRawButton,
   "hand-rolled-modal": checkHandRolledModal,
   "hand-rolled-spinner": checkHandRolledSpinner,
   "hand-rolled-clipboard": checkClipboard,

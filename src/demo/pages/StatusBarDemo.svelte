@@ -1,6 +1,6 @@
 <script lang="ts">
   import StatusBar from "../../lib/components/StatusBar.svelte";
-  import { dismissable } from "../../lib/index.js";
+  import { ButtonBase, dismissable } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let synced = $state(true);
@@ -41,9 +41,9 @@
         <span>3 repos</span>
       {/snippet}
       {#snippet right()}
-        <button class="bar-btn" type="button" onclick={() => (synced = !synced)}>
+        <ButtonBase class="bar-btn" onclick={() => (synced = !synced)}>
           {synced ? "synced 2m ago" : "sync now"}
-        </button>
+        </ButtonBase>
         <span class="sep">&middot;</span>
         <span class="mono">v1.4.2</span>
       {/snippet}
@@ -84,9 +84,9 @@
   {/snippet}
   {#snippet right()}
     <span class="anchor" bind:this={anchorEl}>
-      <button onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>
+      <ButtonBase onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>
         api budget
-      </button>
+      </ButtonBase>
       {#if open}
         <div class="popover kit-popover-card" role="dialog" aria-label="API budget">…</div>
       {/if}
@@ -106,16 +106,15 @@
       {/snippet}
       {#snippet right()}
         <span class="popover-anchor" bind:this={budgetAnchor}>
-          <button
+          <ButtonBase
             class="bar-btn"
-            type="button"
-            bind:this={budgetTrigger}
+            bind:element={budgetTrigger}
             aria-haspopup="dialog"
             aria-expanded={budgetOpen}
             onclick={() => (budgetOpen = !budgetOpen)}
           >
             api budget · 64%
-          </button>
+          </ButtonBase>
           {#if budgetOpen}
             <div class="budget-popover kit-popover-card" role="dialog" aria-label="API budget">
               <div class="budget-popover__title">API budget</div>
@@ -173,7 +172,7 @@
     font-family: var(--font-mono);
   }
 
-  .bar-btn {
+  :global(.bar-btn) {
     padding: 0;
     border: 0;
     background: transparent;
@@ -182,7 +181,7 @@
     cursor: pointer;
   }
 
-  .bar-btn:hover {
+  :global(.bar-btn:hover) {
     color: var(--text-primary);
   }
 

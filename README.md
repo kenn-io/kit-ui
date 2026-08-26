@@ -45,6 +45,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [AdaptiveActionGrid](docs/components/adaptive-action-grid.md) | new (agentsview toolbar patterns)  | Container-aware row, grid, and inline disclosure for mixed controls                           |
 | [BottomDock](docs/components/bottom-dock.md)                  | consumer app                       | Inline resizable bottom panel with composable regions                                         |
 | [Button](docs/components/button.md)                           | consumer app `ActionButton`        | Action button with tone × surface × size variants                                             |
+| [ButtonBase](docs/components/button-base.md)                  | new                                | Themed native-button behavior for consumer-owned structural controls                          |
 | [Calendar](docs/components/calendar.md)                       | new (DateRangePicker's month grid) | Single-month date grid with range highlight and month paging                                  |
 | [Chip](docs/components/chip.md)                               | consumer app `Chip`                | Status/label badge, optionally interactive                                                    |
 | [ChipStack](docs/components/chip-stack.md)                    | new (consumer mobile-view pattern) | Collapsing chip/button row with "+N" expansion                                                |

@@ -5,6 +5,7 @@
   import SearchIcon from "@lucide/svelte/icons/search";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import {
+    ButtonBase,
     Checkbox,
     FitStages,
     IconButton,
@@ -57,14 +58,14 @@
 </script>
 
 {#snippet searchFull()}
-  <button
+  <ButtonBase
     class="search-hint search-hint--span"
     onclick={() => showFlash("Command palette would open")}
   >
     <SearchIcon size="12" strokeWidth="2" aria-hidden="true" />
     <span>Search sessions</span>
     <span class="search-hint__kbd"><KbdBadge keys={["⌘", "K"]} /></span>
-  </button>
+  </ButtonBase>
 {/snippet}
 
 {#snippet searchCompact()}
@@ -264,7 +265,7 @@ const TABS: TopBarTab[] = [
     background: var(--accent-blue);
   }
 
-  .search-hint {
+  :global(.search-hint) {
     height: 26px;
     display: flex;
     align-items: center;
@@ -283,7 +284,7 @@ const TABS: TopBarTab[] = [
       box-shadow 0.15s;
   }
 
-  .search-hint:hover {
+  :global(.search-hint:hover) {
     border-color: var(--border-default);
     box-shadow: var(--shadow-sm);
   }
@@ -294,7 +295,7 @@ const TABS: TopBarTab[] = [
     width: 100%;
   }
 
-  .search-hint--span {
+  :global(.search-hint--span) {
     box-sizing: border-box;
     width: 100%;
     min-width: 220px;

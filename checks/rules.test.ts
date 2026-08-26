@@ -104,6 +104,33 @@ describe("raw-color", () => {
   });
 });
 
+describe("raw-button", () => {
+  test("flags native button markup in consuming Svelte files", () => {
+    const src = svelte(``, `<button type="button" role="menuitem">Move issue</button>`);
+    const findings = checkSource(src, "Menu.svelte", ["raw-button"]);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("ButtonBase");
+  });
+
+  test("allows kit-ui button components and ignores comments", () => {
+    const src = svelte(
+      ``,
+      `<!-- Native <button> markup belongs behind kit-ui. -->
+      <Button label="Save" />
+      <ButtonBase role="menuitem">Move issue</ButtonBase>`,
+    );
+
+    expect(checkSource(src, "Menu.svelte", ["raw-button"])).toHaveLength(0);
+  });
+
+  test("does not scan non-Svelte sources", () => {
+    expect(checkSource(`const template = "<button>";`, "fixture.ts", ["raw-button"])).toHaveLength(
+      0,
+    );
+  });
+});
+
 describe("hand-rolled components", () => {
   test("modal: fixed + inset 0 overlay", () => {
     const src = svelte(`.overlay { position: fixed; inset: 0; background: var(--overlay-bg); }`);

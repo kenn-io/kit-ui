@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Component } from "svelte";
   import {
+    ButtonBase,
     FlashBanner,
     getHighContrast,
     getThemeName,
@@ -179,14 +180,12 @@
 {/if}
 
 {#snippet navLink(page: Page)}
-  <button
-    class="sidebar__link"
-    class:active={page.id === activeId}
-    type="button"
+  <ButtonBase
+    class={["sidebar__link", page.id === activeId && "active"]}
     onclick={() => navigate(page.id)}
   >
     {page.label}
-  </button>
+  </ButtonBase>
 {/snippet}
 
 {#snippet gallery()}
@@ -304,7 +303,7 @@
     color: var(--text-muted);
   }
 
-  .sidebar__link {
+  :global(.sidebar__link) {
     display: block;
     width: 100%;
     padding: 5px 8px;
@@ -318,12 +317,12 @@
     cursor: pointer;
   }
 
-  .sidebar__link:hover {
+  :global(.sidebar__link:hover) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }
 
-  .sidebar__link.active {
+  :global(.sidebar__link.active) {
     background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
     color: var(--accent-blue);
     font-weight: 600;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Typeahead, type TypeaheadOption } from "../../lib/index.js";
+  import { ButtonBase, Typeahead, type TypeaheadOption } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let repo = $state("");
@@ -295,8 +295,8 @@
   }}
 >
   {#snippet header()}
-    <button onclick={() => switchRefKind("branches")}>Branches</button>
-    <button onclick={() => switchRefKind("tags")}>Tags</button>
+    <ButtonBase onclick={() => switchRefKind("branches")}>Branches</ButtonBase>
+    <ButtonBase onclick={() => switchRefKind("tags")}>Tags</ButtonBase>
   {/snippet}
 </Typeahead>`}
 >
@@ -313,22 +313,18 @@
   >
     {#snippet header()}
       <div class="ref-tabs" data-demo="ref-tabs">
-        <button
-          type="button"
-          class="ref-tab"
-          class:active={refKind === "branches"}
+        <ButtonBase
+          class={["ref-tab", refKind === "branches" && "active"]}
           onclick={() => switchRefKind("branches")}
         >
           Branches
-        </button>
-        <button
-          type="button"
-          class="ref-tab"
-          class:active={refKind === "tags"}
+        </ButtonBase>
+        <ButtonBase
+          class={["ref-tab", refKind === "tags" && "active"]}
           onclick={() => switchRefKind("tags")}
         >
           Tags
-        </button>
+        </ButtonBase>
       </div>
     {/snippet}
   </Typeahead>
@@ -341,7 +337,7 @@
     gap: 2px;
   }
 
-  .ref-tab {
+  :global(.ref-tab) {
     flex: 1;
     padding: 3px 8px;
     background: transparent;
@@ -353,11 +349,11 @@
     cursor: pointer;
   }
 
-  .ref-tab:hover {
+  :global(.ref-tab:hover) {
     background: var(--bg-surface-hover);
   }
 
-  .ref-tab.active {
+  :global(.ref-tab.active) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
     font-weight: 600;

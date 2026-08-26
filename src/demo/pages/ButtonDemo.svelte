@@ -2,11 +2,19 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import GitMergeIcon from "@lucide/svelte/icons/git-merge";
   import XIcon from "@lucide/svelte/icons/x";
-  import { Button, showFlash, type ButtonSurface, type ButtonTone } from "../../lib/index.js";
+  import {
+    Button,
+    ButtonBase,
+    showFlash,
+    type ButtonSurface,
+    type ButtonTone,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const tones: ButtonTone[] = ["neutral", "info", "success", "danger", "workflow"];
   const surfaces: ButtonSurface[] = ["outline", "soft", "solid"];
+  let structuralSelected = $state(false);
+  let structuralElement = $state<HTMLButtonElement>();
   const centeringCode = '<Button label="info soft" size="sm" />';
   const centeringApproaches = [
     { id: "line-1", name: "Legacy line-height: 1", offset: "1.14px", gap: "2 / 3px", loss: "5.0%" },
@@ -54,6 +62,39 @@
   <Button label="Close" tone="danger" surface="outline" />
   <Button label="Delete" tone="danger" surface="solid" />
   <Button label="Run workflow" tone="workflow" surface="soft" />
+</DemoSection>
+
+<DemoSection
+  title="Structural controls"
+  description="ButtonBase keeps native button semantics and Kit interaction states while the caller owns layout and resting appearance. It forwards native attributes and exposes the element for focus or popover positioning."
+  code={`<ButtonBase
+  bind:element={trigger}
+  class="project-row"
+  role="menuitemcheckbox"
+  aria-checked={selected}
+  data-project={project.uid}
+>
+  {project.name}
+</ButtonBase>`}
+>
+  <div role="menu" aria-label="Project actions">
+    <ButtonBase
+      bind:element={structuralElement}
+      class="structural-control"
+      role="menuitemcheckbox"
+      aria-label="Move to project"
+      aria-checked={structuralSelected}
+      aria-busy="false"
+      data-structural-control="move-project"
+      onclick={() => (structuralSelected = !structuralSelected)}
+    >
+      <span>Move to project</span>
+      <span aria-hidden="true">→</span>
+    </ButtonBase>
+  </div>
+  <span class="kit-sr-only" data-testid="button-base-element-status">
+    {structuralElement ? "bound" : "unbound"}
+  </span>
 </DemoSection>
 
 <DemoSection
@@ -172,6 +213,22 @@
 </DemoSection>
 
 <style>
+  :global(.structural-control) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 280px;
+    max-width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+  }
+
+  :global(.structural-control:hover) {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
   .button-matrix {
     display: grid;
     grid-template-columns: repeat(5, max-content);
