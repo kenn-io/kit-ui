@@ -184,6 +184,7 @@ Borders first, shadows whisper. Resting structure is drawn entirely with 1px bor
 - **Secondary (neutral outline):** Inset Well fill, 1px Edge Default border, Ink Secondary text.
 - **Hover / Focus:** 0.12s background/border/color transitions; keyboard focus is the global 2px Action Blue outline ring, 1px offset; press nudges `translateY(1px)`.
 - **Tones × surfaces:** neutral/success/danger/info/workflow × outline/soft/solid, all derived from accent tokens through the shared tone mixes.
+- **Structural controls:** Keep the native element in the owning component and add `kit-control-states` for shared disabled and pressed behavior. Consumers own the control's geometry and use theme tokens for resting and hover styles.
 
 ### Chips
 

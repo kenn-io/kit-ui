@@ -7,6 +7,8 @@
 
   const tones: ButtonTone[] = ["neutral", "info", "success", "danger", "workflow"];
   const surfaces: ButtonSurface[] = ["outline", "soft", "solid"];
+  let structuralSelected = $state(false);
+  let structuralElement = $state<HTMLButtonElement>();
   const centeringCode = '<Button label="info soft" size="sm" />';
   const centeringApproaches = [
     { id: "line-1", name: "Legacy line-height: 1", offset: "1.14px", gap: "2 / 3px", loss: "5.0%" },
@@ -54,6 +56,41 @@
   <Button label="Close" tone="danger" surface="outline" />
   <Button label="Delete" tone="danger" surface="solid" />
   <Button label="Run workflow" tone="workflow" surface="soft" />
+</DemoSection>
+
+<DemoSection
+  title="Structural controls"
+  description="Keep consumer-owned structural controls as native buttons and add kit-control-states for Kit's pressed, disabled, and focus behavior. Native bindings, actions, class directives, and scoped styles keep working."
+  code={`<button
+  bind:this={trigger}
+  class="project-row kit-control-states"
+  type="button"
+  role="menuitemcheckbox"
+  aria-checked={selected}
+  data-project={project.uid}
+>
+  {project.name}
+</button>`}
+>
+  <div role="menu" aria-label="Project actions">
+    <button
+      bind:this={structuralElement}
+      class="structural-control kit-control-states"
+      type="button"
+      role="menuitemcheckbox"
+      aria-label="Move to project"
+      aria-checked={structuralSelected}
+      aria-busy="false"
+      data-structural-control="move-project"
+      onclick={() => (structuralSelected = !structuralSelected)}
+    >
+      <span>Move to project</span>
+      <span aria-hidden="true">→</span>
+    </button>
+  </div>
+  <span class="kit-sr-only" data-testid="control-states-element-status">
+    {structuralElement ? "bound" : "unbound"}
+  </span>
 </DemoSection>
 
 <DemoSection
@@ -172,6 +209,29 @@
 </DemoSection>
 
 <style>
+  .structural-control {
+    box-sizing: border-box;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 280px;
+    max-width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+
+  .structural-control:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
   .button-matrix {
     display: grid;
     grid-template-columns: repeat(5, max-content);

@@ -54,7 +54,13 @@
 
 <button
   {type}
-  class={["kit-icon-button", `kit-icon-button--${size}`, `kit-icon-button--${tone}`, className]}
+  class={[
+    "kit-icon-button",
+    "kit-control-states",
+    `kit-icon-button--${size}`,
+    `kit-icon-button--${tone}`,
+    className,
+  ]}
   {disabled}
   title={title ?? ariaLabel}
   aria-label={ariaLabel}

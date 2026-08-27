@@ -104,6 +104,52 @@ describe("raw-color", () => {
   });
 });
 
+describe("shared control states", () => {
+  test("flags literal opacity on a disabled control", () => {
+    const src = svelte(`.menu-item:disabled { opacity: 0.62; }`);
+    const findings = checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"]);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("kit-control-states");
+  });
+
+  test("flags literal opacity on an aria-disabled control", () => {
+    const src = svelte(`.menu-item[aria-disabled="true"] { opacity: 60%; }`);
+    expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(1);
+  });
+
+  test("allows the disabled token and descendant dimming", () => {
+    const src = svelte(`
+      .menu-item:disabled { opacity: var(--opacity-disabled); }
+      .menu-item:disabled .shortcut { opacity: 0.7; }
+    `);
+    expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(0);
+  });
+
+  test("flags a custom active transform and allows the shared transform", () => {
+    const src = svelte(`
+      .menu-item:active { transform: scale(0.95); }
+      .toolbar-button:active:not(:disabled) { transform: var(--press-transform); }
+    `);
+    const findings = checkSource(src, "Menu.svelte", ["hand-rolled-press-state"]);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("scale(0.95)");
+  });
+
+  test("scans nested rules without treating quoted or commented braces as structure", () => {
+    const src = svelte(`
+      .label::before { content: "{"; }
+      /* } */
+      @media (min-width: 640px) {
+        .menu-item:disabled { opacity: 0.62; }
+      }
+    `);
+
+    expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(1);
+  });
+});
+
 describe("hand-rolled components", () => {
   test("modal: fixed + inset 0 overlay", () => {
     const src = svelte(`.overlay { position: fixed; inset: 0; background: var(--overlay-bg); }`);

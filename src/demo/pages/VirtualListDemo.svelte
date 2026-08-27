@@ -46,7 +46,11 @@
       Jump to
       <input type="number" min="0" max="9999" bind:value={jump} />
     </label>
-    <button class="jump-btn" type="button" onclick={() => list?.scrollToIndex(jump)}>
+    <button
+      class="jump-btn kit-control-states"
+      type="button"
+      onclick={() => list?.scrollToIndex(jump)}
+    >
       scrollToIndex
     </button>
     <span class="control-note">
@@ -85,7 +89,7 @@
 >
   <div class="controls">
     <button
-      class="jump-btn"
+      class="jump-btn kit-control-states"
       type="button"
       onclick={() => {
         initialActive = 500;
@@ -160,11 +164,6 @@
   .jump-btn:hover {
     color: var(--text-primary);
     background: var(--bg-surface-hover);
-  }
-
-  .jump-btn:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 
   .control-note {

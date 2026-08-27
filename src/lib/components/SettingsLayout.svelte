@@ -87,6 +87,7 @@
           <button
             class={[
               "kit-settings__nav-item",
+              "kit-control-states",
               resolvedActive === category.id && "kit-settings__nav-item--active",
             ]}
             type="button"

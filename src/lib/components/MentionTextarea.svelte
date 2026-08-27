@@ -252,7 +252,7 @@
         {#each results as item, index (item.id)}
           <button
             type="button"
-            class="kit-mention__option"
+            class="kit-mention__option kit-control-states"
             class:active={index === highlight}
             id={`${listId}-opt-${index}`}
             role="option"

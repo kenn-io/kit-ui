@@ -172,7 +172,7 @@
 
 <div class="kit-filter-dropdown">
   <button
-    class="kit-filter-dropdown__btn"
+    class="kit-filter-dropdown__btn kit-control-states"
     class:kit-filter-dropdown__btn--active={isActive}
     bind:this={buttonRef}
     onclick={toggleOpen}
@@ -213,14 +213,14 @@
         <div class="kit-filter-dropdown__bulk-actions">
           {#if onSelectAll}
             <button
-              class="kit-filter-dropdown__bulk-btn"
+              class="kit-filter-dropdown__bulk-btn kit-control-states"
               type="button"
               onclick={() => onSelectAll?.()}>{selectAllLabel}</button
             >
           {/if}
           {#if onDeselectAll}
             <button
-              class="kit-filter-dropdown__bulk-btn"
+              class="kit-filter-dropdown__bulk-btn kit-control-states"
               type="button"
               onclick={() => onDeselectAll?.()}>{deselectAllLabel}</button
             >
@@ -236,7 +236,7 @@
         {/if}
         {#each section.items as item (item.id)}
           <button
-            class="kit-filter-dropdown__item"
+            class="kit-filter-dropdown__item kit-control-states"
             class:active={item.active}
             onclick={() => handleSelect(item)}
             disabled={disabled || item.disabled}
@@ -270,7 +270,12 @@
         <div class="kit-filter-dropdown__empty">{emptyLabel}</div>
       {/each}
       {#if hasReset}
-        <button class="kit-filter-dropdown__reset" onclick={handleReset} {disabled} type="button">
+        <button
+          class="kit-filter-dropdown__reset kit-control-states"
+          onclick={handleReset}
+          {disabled}
+          type="button"
+        >
           {resetLabel}
         </button>
       {/if}

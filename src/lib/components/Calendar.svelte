@@ -177,7 +177,7 @@
 <div class={["kit-calendar", className]}>
   <div class="kit-calendar__header">
     <button
-      class="kit-calendar__nav"
+      class="kit-calendar__nav kit-control-states"
       type="button"
       onclick={() => navStep(-1)}
       aria-label={nav.prevLabel}
@@ -191,7 +191,7 @@
       </span>
     {:else}
       <button
-        class="kit-calendar__month kit-calendar__month--button"
+        class="kit-calendar__month kit-calendar__month--button kit-control-states"
         type="button"
         aria-live="polite"
         aria-label="{nav.headerLabel}. {nav.headerHint}"
@@ -201,7 +201,7 @@
       </button>
     {/if}
     <button
-      class="kit-calendar__nav"
+      class="kit-calendar__nav kit-control-states"
       type="button"
       disabled={nav.nextDisabled}
       onclick={() => navStep(1)}
@@ -222,7 +222,7 @@
       {#each cells as date, i (date)}
         {@const selectedDay = inRange(date)}
         <button
-          class="kit-calendar__day"
+          class="kit-calendar__day kit-control-states"
           class:outside={!date.startsWith(monthPrefix)}
           class:today={date === today}
           class:selected={selectedDay}
@@ -243,7 +243,7 @@
     <div class="kit-calendar__unit-grid">
       {#each unitCells as cell (cell.label)}
         <button
-          class="kit-calendar__unit"
+          class="kit-calendar__unit kit-control-states"
           class:current={cell.current}
           type="button"
           disabled={cell.disabled}

@@ -90,7 +90,7 @@
 >
   {#each options as option (option.value)}
     <button
-      class="kit-segmented__btn"
+      class="kit-segmented__btn kit-control-states"
       class:active={option.value === value}
       data-kit-tone={option.tone}
       type="button"

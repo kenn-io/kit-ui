@@ -58,7 +58,8 @@
 
 {#snippet searchFull()}
   <button
-    class="search-hint search-hint--span"
+    class="search-hint search-hint--span kit-control-states"
+    type="button"
     onclick={() => showFlash("Command palette would open")}
   >
     <SearchIcon size="12" strokeWidth="2" aria-hidden="true" />

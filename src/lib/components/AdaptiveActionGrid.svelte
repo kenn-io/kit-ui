@@ -316,7 +316,7 @@
 >
   {#if mode === "compact"}
     <button
-      class="kit-adaptive-action-grid__trigger"
+      class="kit-adaptive-action-grid__trigger kit-control-states"
       type="button"
       aria-expanded={open}
       aria-controls={panelId}

@@ -63,6 +63,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [IconButton](docs/components/icon-button.md)                  | both (hand-rolled `.icon-btn`)     | Square ghost button for a lone icon, required aria-label                                      |
 | [KbdBadge](docs/components/kbd-badge.md)                      | consumer app                       | Keyboard-shortcut badge, hidden on touch devices                                              |
 | [Markdown](docs/components/code-block.md)                     | both (consolidated)                | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
+| [Menu](docs/components/menu.md)                               | consumer app action menus          | Compositional action and single-choice menus with APG keyboard behavior                       |
 | [Modal](docs/components/modal.md)                             | both (consolidated)                | Dialog primitive: overlay, header, body, footer snippet                                       |
 | [DateRangePicker](docs/components/date-range-picker.md)       | agentsview                         | Relative / calendar / custom date-range popover with `resolveRange()`                         |
 | [RefreshControl](docs/components/refresh-control.md)          | agentsview                         | Refresh button + "Updated Xm ago" label with auto-refresh                                     |

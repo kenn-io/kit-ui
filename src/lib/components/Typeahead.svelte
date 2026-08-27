@@ -558,7 +558,7 @@
   {:else}
     <button
       bind:this={triggerEl}
-      class="kit-typeahead__trigger"
+      class="kit-typeahead__trigger kit-control-states"
       type="button"
       onclick={openDropdown}
       {title}

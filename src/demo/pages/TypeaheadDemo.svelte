@@ -295,8 +295,12 @@
   }}
 >
   {#snippet header()}
-    <button onclick={() => switchRefKind("branches")}>Branches</button>
-    <button onclick={() => switchRefKind("tags")}>Tags</button>
+    <button class="kit-control-states" type="button" onclick={() => switchRefKind("branches")}>
+      Branches
+    </button>
+    <button class="kit-control-states" type="button" onclick={() => switchRefKind("tags")}>
+      Tags
+    </button>
   {/snippet}
 </Typeahead>`}
 >
@@ -314,17 +318,17 @@
     {#snippet header()}
       <div class="ref-tabs" data-demo="ref-tabs">
         <button
-          type="button"
-          class="ref-tab"
+          class="ref-tab kit-control-states"
           class:active={refKind === "branches"}
+          type="button"
           onclick={() => switchRefKind("branches")}
         >
           Branches
         </button>
         <button
-          type="button"
-          class="ref-tab"
+          class="ref-tab kit-control-states"
           class:active={refKind === "tags"}
+          type="button"
           onclick={() => switchRefKind("tags")}
         >
           Tags

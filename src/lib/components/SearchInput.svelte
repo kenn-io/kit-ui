@@ -119,7 +119,7 @@
   {#snippet suffix()}
     {#if value !== "" && !disabled && !readonly}
       <button
-        class="kit-search-input__clear"
+        class="kit-search-input__clear kit-control-states"
         type="button"
         title={clearLabel}
         aria-label={clearLabel}

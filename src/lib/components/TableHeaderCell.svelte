@@ -41,7 +41,7 @@
 
 <th class={["kit-th", { "kit-th--numeric": numeric }, className]} scope="col" aria-sort={ariaSort}>
   {#if sortable}
-    <button class="kit-th__sort-btn" type="button" onclick={() => onsort?.()}>
+    <button class="kit-th__sort-btn kit-control-states" type="button" onclick={() => onsort?.()}>
       {#if label}{label}{/if}
       {#if children}{@render children()}{/if}
       <span class="kit-th__indicator" class:on={sortDirection}>

@@ -41,7 +41,7 @@
         <span>3 repos</span>
       {/snippet}
       {#snippet right()}
-        <button class="bar-btn" type="button" onclick={() => (synced = !synced)}>
+        <button class="bar-btn kit-control-states" type="button" onclick={() => (synced = !synced)}>
           {synced ? "synced 2m ago" : "sync now"}
         </button>
         <span class="sep">&middot;</span>
@@ -84,7 +84,13 @@
   {/snippet}
   {#snippet right()}
     <span class="anchor" bind:this={anchorEl}>
-      <button onclick={() => (open = !open)} aria-haspopup="dialog" aria-expanded={open}>
+      <button
+        class="kit-control-states"
+        type="button"
+        onclick={() => (open = !open)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
         api budget
       </button>
       {#if open}
@@ -107,7 +113,7 @@
       {#snippet right()}
         <span class="popover-anchor" bind:this={budgetAnchor}>
           <button
-            class="bar-btn"
+            class="bar-btn kit-control-states"
             type="button"
             bind:this={budgetTrigger}
             aria-haspopup="dialog"

@@ -61,7 +61,7 @@ appShortcuts.register("mod+k", () => (open = true));
 <CommandPalette bind:open {commands} recentIds={recent} onrun={run} />`}
 >
   <div class="row">
-    <button class="open-btn" type="button" onclick={() => (open = true)}>
+    <button class="open-btn kit-control-states" type="button" onclick={() => (open = true)}>
       Open palette <KbdBadge keys={formatShortcutKeys("mod+k")} />
     </button>
     <span class="readout">
@@ -97,11 +97,6 @@ appShortcuts.register("mod+k", () => (open = true));
 
   .open-btn:hover {
     background: var(--bg-surface-hover);
-  }
-
-  .open-btn:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
   }
 
   .readout {

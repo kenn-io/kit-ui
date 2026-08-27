@@ -118,7 +118,7 @@
 
   <div class="kit-find-bar__nav">
     <button
-      class="kit-find-bar__nav-btn"
+      class="kit-find-bar__nav-btn kit-control-states"
       type="button"
       title={previousLabel}
       disabled={!hasMatches}
@@ -128,7 +128,7 @@
       <ChevronUpIcon size="11" strokeWidth="2.4" aria-hidden="true" />
     </button>
     <button
-      class="kit-find-bar__nav-btn"
+      class="kit-find-bar__nav-btn kit-control-states"
       type="button"
       title={nextLabel}
       disabled={!hasMatches}
@@ -142,7 +142,7 @@
   <div class="kit-find-bar__divider"></div>
 
   <button
-    class="kit-find-bar__close"
+    class="kit-find-bar__close kit-control-states"
     type="button"
     title={closeLabel}
     onclick={() => onclose?.()}
