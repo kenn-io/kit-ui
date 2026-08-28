@@ -11,6 +11,10 @@
       "svelte": "./src/lib/index.ts",
       "default": "./src/lib/index.ts"
     },
+    "./date-range-picker": {
+      "svelte": "./src/lib/date-range-picker.ts",
+      "default": "./src/lib/date-range-picker.ts"
+    },
     "./theme.css": "./src/lib/theme.css",
     "./brand.json": "./src/lib/brand.json",
     "./brand.css": "./src/lib/brand.css",
