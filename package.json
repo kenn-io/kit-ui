@@ -15,6 +15,18 @@
       "svelte": "./src/lib/date-range-picker.ts",
       "default": "./src/lib/date-range-picker.ts"
     },
+    "./search-input": {
+      "svelte": "./src/lib/search-input.ts",
+      "default": "./src/lib/search-input.ts"
+    },
+    "./select-dropdown": {
+      "svelte": "./src/lib/select-dropdown.ts",
+      "default": "./src/lib/select-dropdown.ts"
+    },
+    "./toggle": {
+      "svelte": "./src/lib/toggle.ts",
+      "default": "./src/lib/toggle.ts"
+    },
     "./theme.css": "./src/lib/theme.css",
     "./brand.json": "./src/lib/brand.json",
     "./brand.css": "./src/lib/brand.css",
