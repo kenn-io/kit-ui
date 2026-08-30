@@ -228,7 +228,11 @@
     const maxColumns = Math.max(1, Math.min(fit, count));
     let columns = maxColumns;
     if (count % maxColumns !== 0) {
-      for (let candidate = maxColumns - 1; candidate >= 2 && candidate * 2 >= maxColumns; candidate -= 1) {
+      for (
+        let candidate = maxColumns - 1;
+        candidate >= 2 && candidate * 2 >= maxColumns;
+        candidate -= 1
+      ) {
         if (count % candidate === 0) {
           columns = candidate;
           break;
@@ -531,7 +535,8 @@
   }
 
   .kit-adaptive-action-grid--filled.kit-adaptive-action-grid--grid .kit-adaptive-action-grid__items,
-  .kit-adaptive-action-grid--filled.kit-adaptive-action-grid--compact .kit-adaptive-action-grid__items {
+  .kit-adaptive-action-grid--filled.kit-adaptive-action-grid--compact
+    .kit-adaptive-action-grid__items {
     grid-template-columns: repeat(var(--kit-action-grid-columns, 1), minmax(0, 1fr));
   }
 
