@@ -8,3 +8,6 @@ dist/
 # playwright
 /test-results/
 /playwright-report/
+
+# generated artifacts
+/output/
