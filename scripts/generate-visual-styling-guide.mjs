@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 
 const outputPath = "output/pdf/kit-ui-visual-styling-guide.pdf";
@@ -40,6 +40,8 @@ const html = String.raw`<!doctype html>
 
       .page {
         position: relative;
+        display: flex;
+        flex-direction: column;
         min-height: 11in;
         padding: 0.55in 0.58in 0.5in;
         border-top: 8px solid var(--blue);
@@ -127,12 +129,9 @@ const html = String.raw`<!doctype html>
       }
 
       footer {
-        position: absolute;
-        right: 0.58in;
-        bottom: 0.2in;
-        left: 0.58in;
         display: flex;
         justify-content: space-between;
+        margin-top: auto;
         padding-top: 7px;
         border-top: 1px solid var(--line);
         color: var(--text-muted);
@@ -170,7 +169,11 @@ bun install</pre>
           <tr><td>Gallery-only styling</td><td><code>src/demo/demo.css</code></td></tr>
         </tbody>
       </table>
-      <div class="note">Do not edit <code>src/lib/brand.css</code>. The project generates it from <code>brand.json</code>.</div>
+      <div class="note">
+        Do not edit <code>src/lib/brand.css</code>. The project generates it from <code>brand.json</code>.
+        When replacing the logo, favicon, or default sans/mono font, update its asset path and SHA-256 in
+        <code>brand.json</code>, then run <code>bun run generate:brand</code>.
+      </div>
 
       <h2>Preview your changes</h2>
       <p>If you changed <code>brand.json</code>, regenerate the CSS first. Then start the component gallery:</p>
@@ -197,6 +200,14 @@ bun run preview</pre>
     </main>
   </body>
 </html>`;
+
+try {
+  await access(chromium.executablePath());
+} catch {
+  throw new Error(
+    "Playwright Chromium is not installed. Run `bunx playwright install chromium`, then run this command again.",
+  );
+}
 
 await mkdir("output/pdf", { recursive: true });
 
