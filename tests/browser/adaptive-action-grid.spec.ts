@@ -540,3 +540,60 @@ test("opens compact content before focusing an invalid form control", async ({ p
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(input).toBeFocused();
 });
+
+test.describe("filled grid layout", () => {
+  async function cellWidths(page: import("@playwright/test").Page): Promise<number[]> {
+    return page
+      .locator(".filled-action-grid .kit-adaptive-action-grid__item")
+      .evaluateAll((items) => items.map((item) => Math.round(item.getBoundingClientRect().width)));
+  }
+
+  async function rows(page: import("@playwright/test").Page): Promise<number[]> {
+    return page
+      .locator(".filled-action-grid .kit-adaptive-action-grid__item")
+      .evaluateAll((items) => {
+        const tops = items.map((item) => Math.round(item.getBoundingClientRect().top));
+        return [...new Set(tops)].map((top) => tops.filter((t) => t === top).length);
+      });
+  }
+
+  test("fills the container with equal tracks even when a row would fit", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    const grid = page.locator(".filled-action-grid");
+    await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+    const width = await grid.evaluate((el) => Math.round(el.getBoundingClientRect().width));
+    const widths = await cellWidths(page);
+    expect(widths).toHaveLength(4);
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
+    expect(widths.reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(width - 4);
+    expect(await rows(page)).toEqual([4]);
+  });
+
+  test("balances four items into 2x2 when only three tracks fit", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    await setSlider(page.locator(".filled-width"), 450);
+    const grid = page.locator(".filled-action-grid");
+    await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+    await expect.poll(() => rows(page)).toEqual([2, 2]);
+    const widths = await cellWidths(page);
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
+  });
+
+  test("spans a leftover item across the last row instead of orphaning it", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    await page.getByRole("button", { name: "Five actions" }).click();
+    await setSlider(page.locator(".filled-width"), 620);
+    await expect.poll(() => rows(page)).toEqual([4, 1]);
+    const widths = await cellWidths(page);
+    const gridWidth = await page
+      .locator(".filled-action-grid")
+      .evaluate((el) => Math.round(el.getBoundingClientRect().width));
+    expect(widths[4]).toBeGreaterThanOrEqual(gridWidth - 4);
+  });
+
+  test("stacks to one full-width column when a single track fits", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    await setSlider(page.locator(".filled-width"), 260);
+    await expect.poll(() => rows(page)).toEqual([1, 1, 1, 1]);
+  });
+});

@@ -8,6 +8,7 @@ export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.s
 export type {
   AdaptiveActionGridFrame,
   AdaptiveActionGridItem,
+  AdaptiveActionGridLayout,
   AdaptiveActionGridMode,
   AdaptiveActionGridRadius,
   AdaptiveActionGridSpace,
