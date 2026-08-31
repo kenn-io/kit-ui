@@ -5,6 +5,7 @@
   export type AdaptiveActionGridFrame = "none" | "outline";
   export type AdaptiveActionGridRadius = "none" | "sm" | "md" | "lg" | "pill";
   export type AdaptiveActionGridSpace = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  export type AdaptiveActionGridLayout = "adaptive" | "grid";
   export interface AdaptiveActionGridItem {
     /** Stable unique key for this item. */
     id: string;
@@ -52,6 +53,10 @@
     /** Reports the measured layout for observation only. The callback must not
      * change an item's intrinsic width based on the reported mode. */
     onmodechange?: (mode: AdaptiveActionGridMode) => void;
+    /** Layout policy. "adaptive" keeps a natural-width row while it fits;
+     * "grid" always fills the container with equal tracks and balanced rows,
+     * so the group reads as one full-width control at any width. */
+    layout?: AdaptiveActionGridLayout;
     /** Host width below which an overflowing row becomes compact. */
     collapseBelow?: number;
     /** Minimum equal grid-track width in CSS pixels. */
@@ -79,6 +84,7 @@
     open = $bindable(false),
     onopenchange = undefined,
     onmodechange = undefined,
+    layout = "adaptive",
     collapseBelow = 640,
     minTrackWidth = 200,
     frame = "outline",
@@ -98,6 +104,9 @@
   let itemsEl = $state<HTMLDivElement>();
   let itemEls = $state<HTMLDivElement[]>([]);
   let mode = $state<AdaptiveActionGridMode>("row");
+  /** Filled-grid column plan: track count plus the span of each item. */
+  let gridColumns = $state(0);
+  let gridSpans = $state<number[]>([]);
 
   const safeCollapseBelow = $derived(
     Number.isFinite(collapseBelow) && collapseBelow >= 0 ? collapseBelow : 640,
@@ -208,9 +217,67 @@
     });
   }
 
+  /**
+   * Choose equal columns for the filled grid. Columns never exceed what
+   * minTrackWidth allows. A balanced divisor wins when it keeps rows within
+   * twice the minimum, so four items in a three-track container form 2x2
+   * rather than 3+1. Otherwise the last row's items span the leftover
+   * tracks so no cell is orphaned at a fraction of the width.
+   */
+  function planColumns(count: number, fit: number): { columns: number; spans: number[] } {
+    const maxColumns = Math.max(1, Math.min(fit, count));
+    let columns = maxColumns;
+    if (count % maxColumns !== 0) {
+      for (
+        let candidate = maxColumns - 1;
+        candidate >= 2 && candidate * 2 >= maxColumns;
+        candidate -= 1
+      ) {
+        if (count % candidate === 0) {
+          columns = candidate;
+          break;
+        }
+      }
+    }
+    const spans = Array.from({ length: count }, () => 1);
+    const remainder = count % columns;
+    if (remainder !== 0) {
+      const lastRowStart = count - remainder;
+      const base = Math.floor(columns / remainder);
+      let extra = columns - base * remainder;
+      for (let index = lastRowStart; index < count; index += 1) {
+        spans[index] = base + (extra > 0 ? 1 : 0);
+        if (extra > 0) extra -= 1;
+      }
+    }
+    return { columns, spans };
+  }
+
+  function updateGridPlan(): void {
+    if (!itemsEl) return;
+    const styles = getComputedStyle(itemsEl);
+    const inner =
+      itemsEl.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+    const gap = parseFloat(styles.columnGap) || 0;
+    const fit = Math.max(1, Math.floor((inner + gap) / (safeTrackWidth + gap)));
+    const plan = planColumns(items.length, fit);
+    if (plan.columns !== gridColumns) gridColumns = plan.columns;
+    if (plan.spans.join(",") !== gridSpans.join(",")) gridSpans = plan.spans;
+  }
+
   function measure(): void {
     if (!hostEl || !itemsEl || items.length === 0) {
       setMode("row");
+      return;
+    }
+
+    if (layout === "grid") {
+      updateGridPlan();
+      itemsEl.dataset.measuring = "";
+      const requiredRowWidth = itemsEl.scrollWidth;
+      delete itemsEl.dataset.measuring;
+      const rowFits = requiredRowWidth <= itemsEl.clientWidth + 1;
+      setMode(!rowFits && hostEl.clientWidth < safeCollapseBelow ? "compact" : "grid");
       return;
     }
 
@@ -236,6 +303,7 @@
   $effect(() => {
     void safeCollapseBelow;
     void safeTrackWidth;
+    void layout;
     void rowGapValue;
     void columnGapValue;
     void paddingValue;
@@ -300,6 +368,7 @@
       "kit-adaptive-action-grid--open": open,
       "kit-adaptive-action-grid--joined": joined,
       "kit-adaptive-action-grid--frameless": frame === "none",
+      "kit-adaptive-action-grid--filled": layout === "grid",
     },
     className,
   ]}
@@ -343,9 +412,16 @@
     inert={mode === "compact" && !open ? true : undefined}
     bind:this={itemsEl}
     oninvalidcapture={handleInvalid}
+    style:--kit-action-grid-columns={layout === "grid" && gridColumns > 0 ? gridColumns : undefined}
   >
     {#each items as item, index (item.id)}
-      <div class="kit-adaptive-action-grid__item" bind:this={itemEls[index]}>
+      <div
+        class="kit-adaptive-action-grid__item"
+        bind:this={itemEls[index]}
+        style:grid-column={layout === "grid" && (gridSpans[index] ?? 1) > 1
+          ? `span ${gridSpans[index]}`
+          : undefined}
+      >
         {@render item.content()}
       </div>
     {/each}
@@ -456,6 +532,12 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--kit-action-grid-track)), 1fr));
     align-items: stretch;
+  }
+
+  .kit-adaptive-action-grid--filled.kit-adaptive-action-grid--grid .kit-adaptive-action-grid__items,
+  .kit-adaptive-action-grid--filled.kit-adaptive-action-grid--compact
+    .kit-adaptive-action-grid__items {
+    grid-template-columns: repeat(var(--kit-action-grid-columns, 1), minmax(0, 1fr));
   }
 
   .kit-adaptive-action-grid--compact:not(.kit-adaptive-action-grid--open)

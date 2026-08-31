@@ -37,6 +37,19 @@
   let rowGap = $state<AdaptiveActionGridSpace>(3);
   let columnGap = $state<AdaptiveActionGridSpace>(3);
   let padding = $state<AdaptiveActionGridSpace>(0);
+  let filledWidth = $state(700);
+  let filledFive = $state(false);
+
+  const filledItems = $derived.by(() => {
+    const next: AdaptiveActionGridItem[] = [
+      { id: "approve", content: filledApprove },
+      { id: "merge", content: filledMerge },
+      { id: "close", content: filledClose },
+      { id: "workspace", content: filledWorkspace },
+    ];
+    if (filledFive) next.push({ id: "labels", content: filledLabels });
+    return next;
+  });
 
   const activeFilters = $derived(Number(projectActive) + Number(modelActive));
   const actionItems = $derived.by(() => {
@@ -71,6 +84,26 @@
     showFlash(message);
   }
 </script>
+
+{#snippet filledApprove()}
+  <Button label="Approve" tone="success" surface="soft" />
+{/snippet}
+
+{#snippet filledMerge()}
+  <Button label="Squash and merge" tone="success" surface="solid" />
+{/snippet}
+
+{#snippet filledClose()}
+  <Button label="Close" tone="danger" surface="outline" />
+{/snippet}
+
+{#snippet filledWorkspace()}
+  <Button label="Create Workspace" tone="info" surface="soft" />
+{/snippet}
+
+{#snippet filledLabels()}
+  <Button label="Labels" />
+{/snippet}
 
 {#snippet stateSelector()}
   <SegmentedControl
@@ -336,6 +369,52 @@
       {rowGap}
       {columnGap}
       {padding}
+    />
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Filled grid layout"
+  description="layout=&quot;grid&quot; never renders a natural-width row: equal tracks fill the container at every width, rows stay balanced, and a leftover item spans the remaining tracks."
+  code={`<AdaptiveActionGrid
+  items={phoneActions}
+  ariaLabel="Pull request actions"
+  layout="grid"
+  collapseBelow={0}
+  minTrackWidth={140}
+  radius="md"
+  itemRadius="none"
+  rowGap={0}
+  columnGap={0}
+  padding={0}
+/>`}
+>
+  <div class="parameter-grid">
+    <label class="parameter-control">
+      <span>Container width</span>
+      <input class="filled-width" type="range" min="240" max="900" bind:value={filledWidth} />
+    </label>
+    <div class="parameter-control">
+      <span>Item count</span>
+      <Button
+        label={filledFive ? "Four actions" : "Five actions"}
+        onclick={() => (filledFive = !filledFive)}
+      />
+    </div>
+  </div>
+  <div class="sizing-pane" style:width="{filledWidth}px">
+    <AdaptiveActionGrid
+      class="filled-action-grid"
+      items={filledItems}
+      ariaLabel="Pull request actions"
+      layout="grid"
+      collapseBelow={0}
+      minTrackWidth={140}
+      radius="md"
+      itemRadius="none"
+      rowGap={0}
+      columnGap={0}
+      padding={0}
     />
   </div>
 </DemoSection>

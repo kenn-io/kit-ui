@@ -45,24 +45,25 @@ focus behavior while the layout changes.
 
 ## Props
 
-| Prop            | Type                                        | Default     | Notes                                                                               |
-| --------------- | ------------------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
-| `items`         | `AdaptiveActionGridItem[]`                  | required    | Atomic controls with stable unique IDs, in visual and keyboard order                |
-| `ariaLabel`     | `string`                                    | required    | Names the outer `role="group"`                                                      |
-| `compactLabel`  | `string`                                    | `ariaLabel` | Visible disclosure label                                                            |
-| `summary`       | `Snippet`                                   | none        | Optional text, icon, or count in the disclosure trigger; must not be interactive    |
-| `open`          | `boolean` (bindable)                        | `false`     | Compact disclosure state                                                            |
-| `onopenchange`  | `(open: boolean) => void`                   | none        | Fires for component-owned disclosure changes                                        |
-| `onmodechange`  | `(mode) => void`                            | none        | Observes measured mode changes; callers cannot set the mode or resize items from it |
-| `collapseBelow` | `number`                                    | `640`       | Component width in CSS pixels; compact mode still requires row overflow             |
-| `minTrackWidth` | `number`                                    | `200`       | Minimum equal grid-track width in CSS pixels                                        |
-| `frame`         | `"none" \| "outline"`                       | `"outline"` | Removes or draws the outer background and border                                    |
-| `radius`        | `"none" \| "sm" \| "md" \| "lg" \| "pill"`  | `"md"`      | Outer frame radius; named values follow theme radius tokens                         |
-| `itemRadius`    | same radius type                            | `"sm"`      | Corner radius inherited by kit control items                                        |
-| `rowGap`        | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`         | Spacing-ladder step between rows                                                    |
-| `columnGap`     | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`         | Spacing-ladder step between columns                                                 |
-| `padding`       | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `2`         | Spacing-ladder step inside the frame                                                |
-| `class`         | `string`                                    | `""`        | Additional class on the outer group                                                 |
+| Prop            | Type                                        | Default      | Notes                                                                               |
+| --------------- | ------------------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
+| `items`         | `AdaptiveActionGridItem[]`                  | required     | Atomic controls with stable unique IDs, in visual and keyboard order                |
+| `ariaLabel`     | `string`                                    | required     | Names the outer `role="group"`                                                      |
+| `compactLabel`  | `string`                                    | `ariaLabel`  | Visible disclosure label                                                            |
+| `summary`       | `Snippet`                                   | none         | Optional text, icon, or count in the disclosure trigger; must not be interactive    |
+| `open`          | `boolean` (bindable)                        | `false`      | Compact disclosure state                                                            |
+| `onopenchange`  | `(open: boolean) => void`                   | none         | Fires for component-owned disclosure changes                                        |
+| `onmodechange`  | `(mode) => void`                            | none         | Observes measured mode changes; callers cannot set the mode or resize items from it |
+| `layout`        | `"adaptive" \| "grid"`                      | `"adaptive"` | `grid` skips the natural-width row and always fills the container with equal tracks |
+| `collapseBelow` | `number`                                    | `640`        | Component width in CSS pixels; compact mode still requires row overflow             |
+| `minTrackWidth` | `number`                                    | `200`        | Minimum equal grid-track width in CSS pixels                                        |
+| `frame`         | `"none" \| "outline"`                       | `"outline"`  | Removes or draws the outer background and border                                    |
+| `radius`        | `"none" \| "sm" \| "md" \| "lg" \| "pill"`  | `"md"`       | Outer frame radius; named values follow theme radius tokens                         |
+| `itemRadius`    | same radius type                            | `"sm"`       | Corner radius inherited by kit control items                                        |
+| `rowGap`        | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`          | Spacing-ladder step between rows                                                    |
+| `columnGap`     | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `3`          | Spacing-ladder step between columns                                                 |
+| `padding`       | `0 \| 1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8` | `2`          | Spacing-ladder step inside the frame                                                |
+| `class`         | `string`                                    | `""`         | Additional class on the outer group                                                 |
 
 Each item has an `id` and a `content` snippet. IDs must be unique and stable
 while the item remains the same logical control. This lets the grid preserve
@@ -131,6 +132,37 @@ Tracks do not expand for a wider child. Kit controls keep their single-line
 labels inside the assigned track and truncate where needed. Custom controls
 must define their own wrapping or truncation and must not rely on intrinsic
 width to widen a track.
+
+## Filled grid layout
+
+`layout="grid"` is for a persistent full-width control such as a phone
+action bar. The component never uses the natural-width row: at every width
+it renders equal tracks that fill the container, so the group reads as one
+control instead of buttons floating at their own widths. The compact
+disclosure still applies when even one track per item overflows below
+`collapseBelow`; pass `collapseBelow={0}` to disable it.
+
+Columns are the number of `minTrackWidth` tracks that fit, capped at the item
+count. Rows are balanced: four items in a three-track container form 2x2
+rather than 3+1, because the divisor keeps rows within twice the minimum.
+When no balanced divisor exists, the items in the last row span the leftover
+tracks (five items in four tracks render 4 + one full-width item), so no cell
+is orphaned at a fraction of the width.
+
+```svelte
+<AdaptiveActionGrid
+  {items}
+  ariaLabel="Pull request actions"
+  layout="grid"
+  collapseBelow={0}
+  minTrackWidth={140}
+  radius="md"
+  itemRadius="none"
+  rowGap={0}
+  columnGap={0}
+  padding={0}
+/>
+```
 
 ## Responsive behavior
 
