@@ -54,7 +54,7 @@ focus behavior while the layout changes.
 | `open`          | `boolean` (bindable)                        | `false`      | Compact disclosure state                                                            |
 | `onopenchange`  | `(open: boolean) => void`                   | none         | Fires for component-owned disclosure changes                                        |
 | `onmodechange`  | `(mode) => void`                            | none         | Observes measured mode changes; callers cannot set the mode or resize items from it |
-| `layout`        | `"adaptive" \| "fill"`                      | `"adaptive"` | `fill` packs rows by natural width and stretches each row to span the container       |
+| `layout`        | `"adaptive" \| "fill"`                      | `"adaptive"` | `fill` packs rows by natural width and stretches each row to span the container     |
 | `collapseBelow` | `number`                                    | `640`        | Component width in CSS pixels; compact mode still requires row overflow             |
 | `minTrackWidth` | `number`                                    | `200`        | Minimum equal grid-track width in CSS pixels                                        |
 | `frame`         | `"none" \| "outline"`                       | `"outline"`  | Removes or draws the outer background and border                                    |
