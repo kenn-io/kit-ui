@@ -1,0 +1,45 @@
+minimum_prek_version = "0.4.0"
+default_install_hook_types = ["pre-commit"]
+default_stages = ["pre-commit"]
+
+# Hooks with the same priority run concurrently. File fixers run before the
+# read-only project checks so those checks always inspect the final content.
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "check-case-conflict", priority = 0 },
+  { id = "check-merge-conflict", args = [
+    "--assume-in-merge",
+  ], priority = 0 },
+  { id = "detect-private-key", priority = 0 },
+  { id = "no-commit-to-branch", priority = 0 },
+  { id = "check-added-large-files", args = [
+    "--maxkb=1024",
+  ], priority = 0 },
+  { id = "check-json", priority = 0 },
+  { id = "check-toml", priority = 0 },
+  { id = "check-yaml", priority = 0 },
+  { id = "trailing-whitespace", args = [
+    "--markdown-linebreak-ext=md",
+  ], priority = 1 },
+  { id = "end-of-file-fixer", priority = 2 },
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "dependencies", name = "install locked dependencies", language = "system", entry = "bun install --frozen-lockfile", always_run = true, pass_filenames = false, priority = 3 },
+  { id = "format", name = "format repository", language = "system", entry = "bun run fmt", always_run = true, pass_filenames = false, priority = 4 },
+  { id = "format-check", name = "check formatting", language = "system", entry = "bun run fmt:check", always_run = true, pass_filenames = false, priority = 10 },
+  { id = "lint", name = "lint", language = "system", entry = "bun run lint", always_run = true, pass_filenames = false, priority = 10 },
+  { id = "svelte-check", name = "check Svelte and TypeScript", language = "system", entry = "bun run check", always_run = true, pass_filenames = false, priority = 10 },
+  { id = "unit-tests", name = "run unit tests", language = "system", entry = "bun test ./checks ./scripts", always_run = true, pass_filenames = false, priority = 10 },
+  { id = "usage-check", name = "check demo component usage", language = "system", entry = "bun run check:usage", always_run = true, pass_filenames = false, priority = 10 },
+]
+
+[[repos]]
+repo = "meta"
+hooks = [
+  { id = "check-hooks-apply", priority = 0 },
+  { id = "check-useless-excludes", priority = 0 },
+]
