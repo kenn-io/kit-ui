@@ -374,19 +374,17 @@
 </DemoSection>
 
 <DemoSection
-  title="Filled grid layout"
-  description="layout=&quot;grid&quot; never renders a natural-width row: equal tracks fill the container at every width, rows stay balanced, and a leftover item spans the remaining tracks."
+  title="Filled layout"
+  description="layout=&quot;fill&quot; packs buttons into rows by their natural width and stretches each row to the container, so the group spans the width at every size and no label is cut off."
   code={`<AdaptiveActionGrid
   items={phoneActions}
   ariaLabel="Pull request actions"
-  layout="grid"
+  layout="fill"
   collapseBelow={0}
-  minTrackWidth={140}
-  radius="md"
-  itemRadius="none"
-  rowGap={0}
-  columnGap={0}
+  frame="none"
   padding={0}
+  rowGap={2}
+  columnGap={2}
 />`}
 >
   <div class="parameter-grid">
@@ -407,14 +405,12 @@
       class="filled-action-grid"
       items={filledItems}
       ariaLabel="Pull request actions"
-      layout="grid"
+      layout="fill"
       collapseBelow={0}
-      minTrackWidth={140}
-      radius="md"
-      itemRadius="none"
-      rowGap={0}
-      columnGap={0}
+      frame="none"
       padding={0}
+      rowGap={2}
+      columnGap={2}
     />
   </div>
 </DemoSection>

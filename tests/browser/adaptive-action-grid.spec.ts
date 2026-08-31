@@ -541,59 +541,79 @@ test("opens compact content before focusing an invalid form control", async ({ p
   await expect(input).toBeFocused();
 });
 
-test.describe("filled grid layout", () => {
-  async function cellWidths(page: import("@playwright/test").Page): Promise<number[]> {
-    return page
-      .locator(".filled-action-grid .kit-adaptive-action-grid__item")
-      .evaluateAll((items) => items.map((item) => Math.round(item.getBoundingClientRect().width)));
+test.describe("filled layout", () => {
+  type Page = import("@playwright/test").Page;
+  const items = (page: Page) => page.locator(".filled-action-grid .kit-adaptive-action-grid__item");
+
+  async function rows(page: Page): Promise<number[][]> {
+    return items(page).evaluateAll((els) => {
+      const byTop = new Map<number, number[]>();
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        const top = Math.round(r.top);
+        byTop.set(top, [...(byTop.get(top) ?? []), Math.round(r.width)]);
+      }
+      return [...byTop.entries()].sort((a, b) => a[0] - b[0]).map(([, widths]) => widths);
+    });
   }
 
-  async function rows(page: import("@playwright/test").Page): Promise<number[]> {
+  async function gridWidth(page: Page): Promise<number> {
     return page
-      .locator(".filled-action-grid .kit-adaptive-action-grid__item")
-      .evaluateAll((items) => {
-        const tops = items.map((item) => Math.round(item.getBoundingClientRect().top));
-        return [...new Set(tops)].map((top) => tops.filter((t) => t === top).length);
-      });
-  }
-
-  test("fills the container with equal tracks even when a row would fit", async ({ page }) => {
-    await gotoPage(page, "adaptive-action-grid");
-    const grid = page.locator(".filled-action-grid");
-    await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
-    const width = await grid.evaluate((el) => Math.round(el.getBoundingClientRect().width));
-    const widths = await cellWidths(page);
-    expect(widths).toHaveLength(4);
-    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
-    expect(widths.reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(width - 4);
-    expect(await rows(page)).toEqual([4]);
-  });
-
-  test("balances four items into 2x2 when only three tracks fit", async ({ page }) => {
-    await gotoPage(page, "adaptive-action-grid");
-    await setSlider(page.locator(".filled-width"), 450);
-    const grid = page.locator(".filled-action-grid");
-    await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
-    await expect.poll(() => rows(page)).toEqual([2, 2]);
-    const widths = await cellWidths(page);
-    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
-  });
-
-  test("spans a leftover item across the last row instead of orphaning it", async ({ page }) => {
-    await gotoPage(page, "adaptive-action-grid");
-    await page.getByRole("button", { name: "Five actions" }).click();
-    await setSlider(page.locator(".filled-width"), 620);
-    await expect.poll(() => rows(page)).toEqual([4, 1]);
-    const widths = await cellWidths(page);
-    const gridWidth = await page
       .locator(".filled-action-grid")
       .evaluate((el) => Math.round(el.getBoundingClientRect().width));
-    expect(widths[4]).toBeGreaterThanOrEqual(gridWidth - 4);
+  }
+
+  async function expectNoTruncation(page: Page): Promise<void> {
+    const clipped = await page
+      .locator(".filled-action-grid .kit-button__label")
+      .evaluateAll((labels) => labels.filter((l) => l.scrollWidth > l.clientWidth + 1).length);
+    expect(clipped).toBe(0);
+  }
+
+  function rowSpan(row: number[]): number {
+    return row.reduce((a, b) => a + b, 0) + 4 * (row.length - 1);
+  }
+
+  test("stretches a single fitting row to the container width", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    const grid = page.locator(".filled-action-grid");
+    await expect(grid).toHaveClass(/kit-adaptive-action-grid--grid/);
+    const laidOut = await rows(page);
+    expect(laidOut).toHaveLength(1);
+    expect(rowSpan(laidOut[0])).toBeGreaterThanOrEqual((await gridWidth(page)) - 2);
+    await expectNoTruncation(page);
   });
 
-  test("stacks to one full-width column when a single track fits", async ({ page }) => {
+  test("packs each row independently by natural width and fills every row", async ({ page }) => {
     await gotoPage(page, "adaptive-action-grid");
-    await setSlider(page.locator(".filled-width"), 260);
-    await expect.poll(() => rows(page)).toEqual([1, 1, 1, 1]);
+    await setSlider(page.locator(".filled-width"), 450);
+    await expect.poll(() => rows(page).then((r) => r.length)).toBeGreaterThan(1);
+    const laidOut = await rows(page);
+    const width = await gridWidth(page);
+    for (const row of laidOut) expect(rowSpan(row)).toBeGreaterThanOrEqual(width - 2);
+    await expectNoTruncation(page);
+  });
+
+  test("keeps every label whole across many narrow rows", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    await page.getByRole("button", { name: "Five actions" }).click();
+    await setSlider(page.locator(".filled-width"), 300);
+    await expect.poll(() => rows(page).then((r) => r.length)).toBeGreaterThanOrEqual(2);
+    const laidOut = await rows(page);
+    const width = await gridWidth(page);
+    for (const row of laidOut) expect(rowSpan(row)).toBeGreaterThanOrEqual(width - 2);
+    await expectNoTruncation(page);
+  });
+
+  test("gives a row with a single item the full width", async ({ page }) => {
+    await gotoPage(page, "adaptive-action-grid");
+    await setSlider(page.locator(".filled-width"), 240);
+    await expect.poll(() => rows(page).then((r) => r.length)).toBeGreaterThanOrEqual(2);
+    const laidOut = await rows(page);
+    const width = await gridWidth(page);
+    const single = laidOut.find((row) => row.length === 1);
+    if (single) expect(single[0]).toBeGreaterThanOrEqual(width - 2);
+    for (const row of laidOut) expect(rowSpan(row)).toBeGreaterThanOrEqual(width - 2);
+    await expectNoTruncation(page);
   });
 });
