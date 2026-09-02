@@ -5,11 +5,17 @@ import { gotoPage } from "./helpers.js";
 // Calendar (first click starts the range, an earlier second click swaps the
 // ends) — no native date inputs.
 
-const now = new Date();
+// The picker seeds "today" from the browser clock, and these tests click
+// specific days of the visible month and count selected cells for rolling
+// presets. Pin the date mid-month so a 7-day preset never straddles the
+// month boundary (it did, and failed, in the first week of a real month).
+// Noon keeps the local date identical in every runner timezone.
+const now = new Date(2026, 5, 15, 12, 0, 0);
 const yyyy = now.getFullYear();
 const mm = String(now.getMonth() + 1).padStart(2, "0");
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(now);
   await gotoPage(page, "date-range-picker");
 });
 
