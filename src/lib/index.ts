@@ -39,14 +39,14 @@ export type { FilterDropdownItem, FilterDropdownSection } from "./components/Fil
 export { default as FindBar } from "./components/FindBar.svelte";
 export { default as FitStages } from "./components/FitStages.svelte";
 export { default as FlashBanner } from "./components/FlashBanner.svelte";
-export { default as HarnessMark } from "./components/HarnessMark.svelte";
+export { default as HarnessIcon } from "./components/HarnessIcon.svelte";
 export {
-  HARNESSES,
-  harnessInfo,
-  isHarnessId,
-  type HarnessId,
-  type HarnessInfo,
-} from "./components/harness-mark.js";
+  HARNESS_ICONS,
+  harnessIconInfo,
+  isHarnessIconId,
+  type HarnessIconId,
+  type HarnessIconInfo,
+} from "./components/harness-icon.js";
 export { default as IconButton } from "./components/IconButton.svelte";
 export type { IconButtonSize, IconButtonTone } from "./components/IconButton.svelte";
 export { default as ImagePreview } from "./components/ImagePreview.svelte";

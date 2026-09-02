@@ -60,7 +60,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [FindBar](docs/components/find-bar.md)                        | agentsview `SessionFindBar`        | In-content find bar with N-of-M counter and match navigation                                  |
 | [FitStages](docs/components/fit-stages.md)                    | new (TopBar collapse pattern)      | Multi-breakpoint wrapper: renders the richest of N stage snippets that fits, by measurement   |
 | [FlashBanner](docs/components/flash-banner.md)                | consumer app                       | Transient toast banner driven by the `showFlash` store                                        |
-| [HarnessMark](docs/components/harness-mark.md)                | agentsview docs site               | Coding-agent harness wordmarks (Claude Code, Codex, Gemini, …), themeable and mono-capable    |
+| [HarnessIcon](docs/components/harness-icon.md)                | agentsview docs site               | Coding-agent harness glyphs (Claude, OpenAI, Gemini, …), square and monochrome                |
 | [IconButton](docs/components/icon-button.md)                  | both (hand-rolled `.icon-btn`)     | Square ghost button for a lone icon, required aria-label                                      |
 | [KbdBadge](docs/components/kbd-badge.md)                      | consumer app                       | Keyboard-shortcut badge, hidden on touch devices                                              |
 | [Markdown](docs/components/code-block.md)                     | both (consolidated)                | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
