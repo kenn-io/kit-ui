@@ -32,6 +32,7 @@
   import FitStagesDemo from "./pages/FitStagesDemo.svelte";
   import FlashBannerDemo from "./pages/FlashBannerDemo.svelte";
   import FormFieldDemo from "./pages/FormFieldDemo.svelte";
+  import HarnessMarkDemo from "./pages/HarnessMarkDemo.svelte";
   import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
@@ -112,6 +113,7 @@
     { id: "fit-stages", label: "FitStages", component: FitStagesDemo },
     { id: "flash-banner", label: "FlashBanner", component: FlashBannerDemo },
     { id: "form-field", label: "FormField", component: FormFieldDemo },
+    { id: "harness-mark", label: "HarnessMark", component: HarnessMarkDemo },
     { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
