@@ -8,9 +8,11 @@
     /** Accessible label / tooltip; defaults to the status name. */
     label?: string;
     size?: number;
+    /** Opt into compositor-friendly motion for working and waiting states. */
+    animated?: boolean;
   }
 
-  let { status, label = undefined, size = 6 }: Props = $props();
+  let { status, label = undefined, size = 6, animated = false }: Props = $props();
 
   const effectiveLabel = $derived(label ?? (status === "quiet" ? "" : status));
 </script>
@@ -32,7 +34,7 @@
        center, regardless of the tail. Sized to match the dots
        (no overflow, no flex centering complications). -->
   <svg
-    class="kit-status-bubble"
+    class={["kit-status-bubble", animated && "kit-status-bubble--animated"]}
     viewBox="-256 -224 512 448"
     width="10"
     height="10"
@@ -48,7 +50,7 @@
   </svg>
 {:else}
   <span
-    class="kit-status-dot kit-status-dot--{status}"
+    class={["kit-status-dot", `kit-status-dot--${status}`, animated && "kit-status-dot--animated"]}
     style:width="{size}px"
     style:height="{size}px"
     title={effectiveLabel}
@@ -65,16 +67,29 @@
     box-sizing: border-box;
   }
 
-  /* Working — something is happening right now. Filled green dot
-     with a pulsing glow so it draws the eye. */
+  /* Working — something is happening right now. The solid green dot
+     communicates the state without keeping the page in a paint loop. */
   .kit-status-dot--working {
     background: var(--accent-green, #22c55e);
-    animation: kit-status-pulse 2.4s ease-in-out infinite;
-    will-change: box-shadow;
+    position: relative;
+  }
+
+  /* Paint the glow once, then fade the cached layer. Animating the
+     box-shadow itself would repaint the row on every display frame. */
+  .kit-status-dot--working.kit-status-dot--animated::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 6px 3px color-mix(in srgb, var(--accent-green, #22c55e) 50%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    animation: kit-status-glow 2.4s ease-in-out infinite;
+    will-change: opacity;
   }
 
   /* Recently active but no positive "waiting" signal. Smaller
-     filled dot using a muted green so it sits below pulse in
+     filled dot using a muted green so it sits below working in
      visual weight but stays readable. */
   .kit-status-dot--idle {
     background: color-mix(in srgb, var(--accent-green, #22c55e) 55%, transparent);
@@ -93,16 +108,17 @@
     background: transparent;
   }
 
-  /* Waiting on user input — a small speech bubble, dimmed and slowly
-     breathing. The pulse is opacity-only (no glow) so it reads as a
-     calm "your turn" rather than competing with the working green's
-     attention-grabbing halo. */
+  /* Waiting on user input — a small speech bubble whose shape and
+     Waiting Gold color distinguish it from the working dot. */
   .kit-status-bubble {
     display: inline-block;
     flex-shrink: 0;
     vertical-align: middle;
     overflow: visible;
     color: var(--status-waiting, #a48a55);
+  }
+
+  .kit-status-bubble--animated {
     animation: kit-icon-breathe 2.6s ease-in-out infinite;
     will-change: opacity;
   }
@@ -117,13 +133,20 @@
     }
   }
 
-  @keyframes kit-status-pulse {
+  @keyframes kit-status-glow {
     0%,
     100% {
-      box-shadow: 0 0 0 0 transparent;
+      opacity: 0;
     }
     50% {
-      box-shadow: 0 0 6px 3px color-mix(in srgb, var(--accent-green, #22c55e) 50%, transparent);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kit-status-dot--working.kit-status-dot--animated::after,
+    .kit-status-bubble--animated {
+      animation: none;
     }
   }
 </style>
