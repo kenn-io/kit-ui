@@ -209,7 +209,7 @@ Borders first, shadows whisper. Resting structure is drawn entirely with 1px bor
 
 ### StatusDot (signature)
 
-Session-state at a glance: colored dot plus optional pulsing "waiting for user" bubble in Waiting Gold — the one place the palette breathes.
+Session-state at a glance: a colored dot plus a distinct "waiting for user" bubble in Waiting Gold. Shape, color, and accessible labels carry the state without continuous motion by default; consumers can opt into compositor-friendly emphasis.
 
 ## 6. Do's and Don'ts
 
