@@ -186,11 +186,11 @@ export function formatShortcutKeys(combo: string, isMac: boolean = isMacPlatform
   const parsed = parseShortcut(combo);
   const labels = isMac ? MAC_LABELS : PC_LABELS;
   const keys: string[] = [];
-  if (parsed.ctrl) keys.push(labels.ctrl!);
-  if (parsed.alt) keys.push(labels.alt!);
-  if (parsed.shift) keys.push(labels.shift!);
-  if (parsed.meta) keys.push(labels.meta!);
-  if (parsed.mod) keys.push(labels.mod!);
+  if (parsed.ctrl) keys.push(labels["ctrl"]!);
+  if (parsed.alt) keys.push(labels["alt"]!);
+  if (parsed.shift) keys.push(labels["shift"]!);
+  if (parsed.meta) keys.push(labels["meta"]!);
+  if (parsed.mod) keys.push(labels["mod"]!);
   keys.push(
     KEY_LABELS[parsed.key] ?? (parsed.key.length === 1 ? parsed.key.toUpperCase() : parsed.key),
   );

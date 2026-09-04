@@ -140,7 +140,7 @@ interface CodeHighlightPlan {
 }
 
 function isCodeToken(token: Tokens.Generic): token is Tokens.Code {
-  return token.type === "code" && typeof token.text === "string";
+  return token.type === "code" && typeof token["text"] === "string";
 }
 
 /** Walk lexed tokens and pick which fences get highlighted within the
