@@ -46,7 +46,7 @@
     /** Trailing adornment inside the border (icon, clear button, kbd). */
     suffix?: Snippet;
     /** The underlying input element (bindable) — for focus management. */
-    inputEl?: HTMLInputElement;
+    inputEl?: HTMLInputElement | undefined;
     class?: string;
   }
 

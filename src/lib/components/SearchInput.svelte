@@ -36,7 +36,7 @@
     clearLabel?: string;
     /** The underlying input element (bindable) — e.g. for app shortcut
      * handlers that focus the search field. */
-    inputEl?: HTMLInputElement;
+    inputEl?: HTMLInputElement | undefined;
     class?: string;
   }
 
