@@ -107,20 +107,26 @@
   }
 
   // Fixed positioning (same contract as SelectDropdown) so the list is
-  // never clipped by an overflow-hidden ancestor; width pins to the
-  // trigger so long labels keep truncating instead of widening the menu.
+  // never clipped by an overflow-hidden ancestor. The list is as wide as the
+  // trigger so long labels keep truncating instead of widening the menu,
+  // unless `--typeahead-panel-min-width` asks for more room (a compact
+  // trigger over long option labels). The wider list is positioned with its
+  // real width, so it slides left to stay inside the viewport instead of
+  // hanging past the right edge.
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
     const trigger = containerEl.getBoundingClientRect();
+    const minWidth = parseFloat(getComputedStyle(panelEl).minWidth) || 0;
+    const width = Math.max(trigger.width, minWidth);
     panelStyle = `${floatingPopoverStyle({
       trigger,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
-      popoverWidth: trigger.width,
+      popoverWidth: width,
       popoverHeight: panelEl.offsetHeight,
       triggerGap: 2,
       placement: placement === "top" ? "above" : placement === "bottom" ? "below" : "auto",
-    })}; width: ${Math.round(trigger.width)}px`;
+    })}; width: ${Math.round(width)}px`;
   }
 
   // Filtering/expansion changes the panel's height — keep the flip/clamp
@@ -211,6 +217,15 @@
       selectedOption?.label ??
       (remote ? selectedLabelCache.get(value)?.label : undefined) ??
       (allowCustom && value !== "" ? value : fallbackLabel),
+  );
+  // The closed trigger's accessible name carries the current selection, so a
+  // screen reader hears "Time zone: UTC" rather than only the placeholder.
+  const triggerName = $derived(
+    triggerPrefix
+      ? `${triggerPrefix} ${displayValue}`
+      : displayValue && displayValue !== placeholder
+        ? `${placeholder}: ${displayValue}`
+        : placeholder,
   );
 
   function cacheSelectedLabel(name: string, label: string, version = ++labelSeq): void {
@@ -563,7 +578,7 @@
       onclick={openDropdown}
       {title}
       {disabled}
-      aria-label={triggerPrefix ? `${triggerPrefix} ${displayValue}` : placeholder}
+      aria-label={triggerName}
     >
       <span class="kit-typeahead__value">
         {#if triggerPrefix}<span class="kit-typeahead__prefix">{triggerPrefix}</span>{/if}
@@ -664,6 +679,9 @@
   .kit-typeahead__panel {
     position: fixed;
     box-sizing: border-box;
+    /* Never wider than the viewport minus the popover edge gaps, so the
+       positioning clamp can always keep the list on screen. */
+    min-width: min(var(--typeahead-panel-min-width, 0px), calc(100vw - 16px));
     display: flex;
     flex-direction: column;
     max-height: 50vh;

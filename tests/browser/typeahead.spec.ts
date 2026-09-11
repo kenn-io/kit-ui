@@ -512,3 +512,92 @@ test("header snippet drives the option source through the loading row", async ({
   await tag.click();
   await expect(page.locator('[data-demo="ref-value"]')).toHaveText("v1.0.0");
 });
+
+// A compact trigger over long labels (a time zone picker) asks for a wider
+// list through --typeahead-panel-min-width. The list must open at that width
+// and still sit inside the viewport when the trigger hugs the right edge.
+test("a wider list stays inside the viewport beside the right edge", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 800 });
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    document.body.replaceChildren();
+    document.body.style.margin = "0";
+    const target = document.createElement("div");
+    target.id = "wide-panel-fixture";
+    target.style.cssText =
+      "position: fixed; right: 8px; top: 40px; width: 120px; --typeahead-min-width: 0; --typeahead-panel-min-width: 18rem;";
+    document.body.append(target);
+    mount(Typeahead, {
+      target,
+      props: {
+        options: [
+          { name: "America/Argentina/Buenos_Aires", label: "America/Argentina/Buenos_Aires" },
+          { name: "Europe/Berlin", label: "Europe/Berlin" },
+        ],
+        value: "Europe/Berlin",
+        fallbackLabel: "Server time",
+        placeholder: "Time zone",
+        onselect: () => undefined,
+      },
+    });
+  });
+
+  const trigger = page.getByRole("button", { name: "Time zone: Europe/Berlin", exact: true });
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  const panel = page.locator(".kit-typeahead__panel");
+  await expect(panel).toBeVisible();
+  const box = (await panel.boundingBox())!;
+  const rootFontSize = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.documentElement).fontSize),
+  );
+  expect(box.width).toBeGreaterThanOrEqual(18 * rootFontSize - 1);
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(600);
+  await expect(page.getByRole("option", { name: "America/Argentina/Buenos_Aires" })).toBeVisible();
+});
+
+// With nothing selected the trigger shows the fallback label, which names
+// the effective state ("Server time" is what a schedule really uses), so the
+// spoken name carries it too. Without a fallback there is nothing to add.
+test("the closed trigger speaks the fallback label, or only the placeholder without one", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    for (const [id, fallbackLabel] of [
+      ["bare-trigger-fixture", undefined],
+      ["fallback-trigger-fixture", "Server time"],
+    ] as const) {
+      const target = document.createElement("div");
+      target.id = id;
+      document.body.append(target);
+      mount(Typeahead, {
+        target,
+        props: {
+          options: [{ name: "a", label: "Alpha" }],
+          value: "",
+          fallbackLabel,
+          placeholder: id === "bare-trigger-fixture" ? "Pick one" : "Time zone",
+          onselect: () => undefined,
+        },
+      });
+    }
+  });
+  await expect(
+    page.locator("#bare-trigger-fixture").getByRole("button", { name: "Pick one", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#fallback-trigger-fixture")
+      .getByRole("button", { name: "Time zone: Server time", exact: true }),
+  ).toBeVisible();
+});

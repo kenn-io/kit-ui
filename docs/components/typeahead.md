@@ -35,7 +35,7 @@ values, veto, meta text) and grouped options.
 | `options`         | `TypeaheadOption[]`                                             | required        |                                                                                                         |
 | `value`           | `string`                                                        | required        | Matches `option.name`; unmatched shows `fallbackLabel`                                                  |
 | `fallbackLabel`   | `string`                                                        | required        | Trigger text when nothing is selected                                                                   |
-| `placeholder`     | `string`                                                        | required        | Search input placeholder + aria-label                                                                   |
+| `placeholder`     | `string`                                                        | required        | Search input placeholder + aria-label; the closed trigger is named `"<placeholder>: <selected label>"`  |
 | `inputAttributes` | `TypeaheadInputAttributes`                                      | `{}`            | Native attributes for the open search input; excludes Typeahead-owned behavior and ARIA attributes      |
 | `onselect`        | `(name: string) => void \| boolean \| Promise<void \| boolean>` | required        | Return `false` (or throw) to veto: the list stays open                                                  |
 | `title`           | `string`                                                        | —               | Trigger tooltip                                                                                         |
@@ -126,6 +126,7 @@ selection can't dismiss a newer veto/error.
 
 `--typeahead-min-width` (180px preferred, capped by the available container width),
 `--typeahead-max-width` (300px),
+`--typeahead-panel-min-width` (0, the list is only as wide as the trigger),
 `--typeahead-control-height` (26px), `--typeahead-control-padding` (0 8px),
 `--typeahead-control-font-size` (var(--font-size-xs)).
 
@@ -135,5 +136,8 @@ The option list is `position: fixed` via `floatingPopoverStyle` (shared
 popover contract): it escapes overflow-hidden ancestors, repositions on
 scroll/resize/filter changes, and flips above the trigger near the viewport
 bottom (override with `placement`). Its width pins to the trigger width so
-long labels truncate instead of widening the menu — the old
-`--typeahead-list-min-width` knob is retired (size the trigger instead).
+long labels truncate instead of widening the menu. A compact trigger over
+long labels (a time zone picker) can set `--typeahead-panel-min-width` on the
+component; the list then opens at least that wide, positioned with its real
+width so it slides left to stay inside the viewport rather than hanging past
+the right edge. The list is never wider than the viewport minus the edge gaps.
