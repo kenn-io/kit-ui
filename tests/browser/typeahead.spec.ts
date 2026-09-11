@@ -592,8 +592,12 @@ test("the closed trigger speaks the fallback label, or only the placeholder with
       });
     }
   });
-  await expect(page.getByRole("button", { name: "Pick one", exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Time zone: Server time", exact: true }),
+    page.locator("#bare-trigger-fixture").getByRole("button", { name: "Pick one", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#fallback-trigger-fixture")
+      .getByRole("button", { name: "Time zone: Server time", exact: true }),
   ).toBeVisible();
 });
