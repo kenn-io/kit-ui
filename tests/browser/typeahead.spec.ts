@@ -561,7 +561,10 @@ test("a wider list stays inside the viewport beside the right edge", async ({ pa
   await expect(page.getByRole("option", { name: "America/Argentina/Buenos_Aires" })).toBeVisible();
 });
 
-test("the closed trigger keeps only the placeholder as its name until something is selected", async ({
+// With nothing selected the trigger shows the fallback label, which names
+// the effective state ("Server time" is what a schedule really uses), so the
+// spoken name carries it too. Without a fallback there is nothing to add.
+test("the closed trigger speaks the fallback label, or only the placeholder without one", async ({
   page,
 }) => {
   await gotoPage(page, "typeahead");
@@ -570,18 +573,27 @@ test("the closed trigger keeps only the placeholder as its name until something 
       import("/node_modules/.vite/deps/svelte.js"),
       import("/src/lib/components/Typeahead.svelte"),
     ]);
-    const target = document.createElement("div");
-    target.id = "bare-trigger-fixture";
-    document.body.append(target);
-    mount(Typeahead, {
-      target,
-      props: {
-        options: [{ name: "a", label: "Alpha" }],
-        value: "",
-        placeholder: "Pick one",
-        onselect: () => undefined,
-      },
-    });
+    for (const [id, fallbackLabel] of [
+      ["bare-trigger-fixture", undefined],
+      ["fallback-trigger-fixture", "Server time"],
+    ] as const) {
+      const target = document.createElement("div");
+      target.id = id;
+      document.body.append(target);
+      mount(Typeahead, {
+        target,
+        props: {
+          options: [{ name: "a", label: "Alpha" }],
+          value: "",
+          fallbackLabel,
+          placeholder: id === "bare-trigger-fixture" ? "Pick one" : "Time zone",
+          onselect: () => undefined,
+        },
+      });
+    }
   });
   await expect(page.getByRole("button", { name: "Pick one", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Time zone: Server time", exact: true }),
+  ).toBeVisible();
 });
