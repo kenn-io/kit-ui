@@ -73,6 +73,17 @@
   }
 
   let owner = $state("");
+  let zone = $state("");
+  const zones: TypeaheadOption[] = [
+    { name: "UTC", label: "UTC", meta: "GMT+0" },
+    {
+      name: "America/Argentina/Buenos_Aires",
+      label: "America/Argentina/Buenos_Aires",
+      meta: "GMT-3",
+    },
+    { name: "Europe/Berlin", label: "Europe/Berlin", meta: "GMT+2" },
+    { name: "Asia/Tokyo", label: "Asia/Tokyo", meta: "GMT+9" },
+  ];
   const owners: TypeaheadOption[] = [
     { name: "project-alpha", label: "project-alpha", meta: "example project" },
     { name: "marius", label: "marius", meta: "42 open" },
@@ -162,6 +173,35 @@
     }}
   />
   <span>value: <code data-demo="repo-value">{repo || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Compact trigger, wide list"
+  description="--typeahead-panel-min-width lets a narrow trigger open a list wide enough for long labels. The list is positioned with its real width, so it stays inside the viewport."
+  code={`<div style="width: 9rem; --typeahead-min-width: 0; --typeahead-panel-min-width: 18rem">
+  <Typeahead
+    options={zones}
+    value={zone}
+    fallbackLabel="Server time"
+    placeholder="Time zone"
+    onselect={(v) => {
+      zone = v;
+    }}
+  />
+</div>`}
+>
+  <div style="width: 9rem; --typeahead-min-width: 0; --typeahead-panel-min-width: 18rem">
+    <Typeahead
+      options={zones}
+      value={zone}
+      fallbackLabel="Server time"
+      placeholder="Time zone"
+      onselect={(v) => {
+        zone = v;
+      }}
+    />
+  </div>
+  <span>value: <code data-demo="zone-value">{zone || "(server time)"}</code></span>
 </DemoSection>
 
 <DemoSection
