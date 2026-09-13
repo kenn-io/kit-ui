@@ -24,6 +24,10 @@
     closeOnOverlayClick?: boolean;
     width?: string;
     maxWidth?: string;
+    /** Cap on the panel's height. Defaults to the small viewport height less
+     * a margin, so the whole dialog, footer included, is on screen even on a
+     * phone showing its URL bar. */
+    maxHeight?: string;
     ariaLabel?: string;
     children?: Snippet;
     /** Optional footer row, typically action buttons. */
@@ -39,6 +43,7 @@
     closeOnOverlayClick = true,
     width = "auto",
     maxWidth = "min(480px, calc(100vw - 32px))",
+    maxHeight = "calc(100svh - 64px)",
     ariaLabel = undefined,
     children,
     footer,
@@ -64,6 +69,7 @@
     class:kit-modal-panel--headered={!!title || closable}
     style:width
     style:max-width={maxWidth}
+    style:max-height={maxHeight}
     {@attach trapFocus}
   >
     {#if title || closable}
@@ -119,6 +125,20 @@
      * own corners instead. */
     display: flex;
     flex-direction: column;
+    /* The fallback, not the cap. maxHeight is applied inline and inline wins,
+     * so this is what a browser too old for svh is left with: without it, such
+     * a browser drops the inline declaration as invalid and the panel ends up
+     * with no cap at all, which is worse than the bug below.
+     *
+     * The cap itself is the maxHeight prop. It defaults to
+     * svh rather than vh because on a mobile browser 100vh is the height the
+     * page gets when the URL bar is hidden, so a panel capped with it can be
+     * taller than what is on screen and the footer is what goes: measured
+     * through Emulation.setSmallViewportHeightDifferenceOverride at a 120px
+     * allowance, 100vh reports 784 where 664 is visible. svh is the height
+     * visible whenever the bar is shown, which is the one height always on
+     * screen; dvh is the height right now, and a panel using it resizes as
+     * the bar hides and reappears, moving a dialog while it is in use. */
     max-height: calc(100vh - 64px);
   }
 
