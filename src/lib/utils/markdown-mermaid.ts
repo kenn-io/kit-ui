@@ -252,9 +252,16 @@ function setMermaidButtonIcon(button: HTMLButtonElement, icon: MermaidButtonIcon
 
 async function loadMermaid(): Promise<MarkdownMermaidAPI> {
   if (!mermaidPromise) {
-    mermaidPromise = Promise.all([import("mermaid"), import("mermaid/package.json")])
-      .then(([module, packageModule]): MarkdownMermaidAPI => {
-        const mermaid = module.default;
+    mermaidPromise = Promise.all([
+      import("mermaid").then(({ default: mermaid }) => {
+        // Own rendering before metadata or viewer icons finish loading:
+        // Mermaid's window.load handler must not claim our pending diagrams.
+        mermaid.startOnLoad = false;
+        return mermaid;
+      }),
+      import("mermaid/package.json"),
+    ])
+      .then(([mermaid, packageModule]): MarkdownMermaidAPI => {
         const version = mermaidPackageVersion(packageModule as MermaidPackageModule);
         if (version) {
           Object.defineProperty(mermaid, "version", {
