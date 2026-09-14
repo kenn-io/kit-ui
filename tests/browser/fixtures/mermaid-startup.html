@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mermaid startup</title>
+    <link rel="stylesheet" href="/src/lib/theme.css" />
+    <link rel="stylesheet" href="/src/lib/mermaid.css" />
+  </head>
+  <body>
+    <img hidden alt="" src="./startup-load.svg" />
+    <main>
+      <pre class="mermaid">
+graph LR
+        A[Start] --> B[Finish]</pre
+      >
+    </main>
+    <script type="module">
+      // Put Mermaid's load listener in place before the page finishes loading.
+      import mermaid from "mermaid";
+      import { initMarkdownMermaidRendering } from "/src/lib/utils/markdown-mermaid.ts";
+
+      const initialize = mermaid.initialize;
+      mermaid.initialize = (config) => {
+        initialize(config);
+        document.body.dataset.mermaidInitialized = "true";
+      };
+      initMarkdownMermaidRendering(document.querySelector("main"));
+      // Let the default loader's import continuation run before releasing load.
+      queueMicrotask(async () => {
+        await import("mermaid");
+        document.body.dataset.mermaidLoaded = "true";
+      });
+    </script>
+  </body>
+</html>
