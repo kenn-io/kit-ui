@@ -5,6 +5,7 @@
   let basicOpen = $state(false);
   let confirmOpen = $state(false);
   let toneOpen = $state<ModalTone | null>(null);
+  let tallOpen = $state(false);
 
   const tones: { tone: ModalTone; title: string; body: string }[] = [
     {
@@ -24,6 +25,13 @@
       body: "Destructive confirmation — pair with a solid danger button.",
     },
   ];
+
+  const paragraphs = Array.from(
+    { length: 12 },
+    (_, i) =>
+      `Paragraph ${i + 1}. A dialog taller than the window scrolls its body, ` +
+      `and its footer stays where it can be reached.`,
+  );
 </script>
 
 <DemoSection
@@ -91,6 +99,27 @@
             showFlash("Deleted (not really)");
           }}
         />
+      {/snippet}
+    </Modal>
+  {/if}
+</DemoSection>
+
+<DemoSection
+  title="Taller than the window"
+  description="The body scrolls and the footer stays on screen. maxHeight caps the panel, and its default is the small viewport height: on a phone 100vh is the height the page gets when the URL bar is hidden, so a panel capped with that can be taller than the screen."
+  code={`<Modal title="Release notes" maxHeight="calc(100svh - 64px)" onclose={close}>
+  …long content…
+{#snippet footer()}<Button label="Done" onclick={close} />{/snippet}
+</Modal>`}
+>
+  <Button label="Open tall modal" onclick={() => (tallOpen = true)} />
+  {#if tallOpen}
+    <Modal title="Release notes" onclose={() => (tallOpen = false)}>
+      {#each paragraphs as text (text)}
+        <p>{text}</p>
+      {/each}
+      {#snippet footer()}
+        <Button label="Done" onclick={() => (tallOpen = false)} />
       {/snippet}
     </Modal>
   {/if}
