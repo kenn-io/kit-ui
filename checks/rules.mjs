@@ -118,6 +118,7 @@ export function checkRawColors(source, filename) {
 function selectorTargetsControlState(selector, state) {
   const lastCompound =
     selector
+      .replace(/:not\([^()]*\)/g, "")
       .trim()
       .split(/[\s>+~]+/)
       .at(-1) ?? "";

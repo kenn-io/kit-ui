@@ -126,6 +126,17 @@ describe("shared control states", () => {
     expect(checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state"])).toHaveLength(0);
   });
 
+  test("allows rules that exclude the control state", () => {
+    const src = svelte(`
+      .menu-item:hover:not(:disabled) { opacity: 0.9; }
+      .menu-item:not([aria-disabled="true"]) { opacity: 0.9; }
+      .menu-item:not(:active) { transform: scale(0.95); }
+    `);
+    expect(
+      checkSource(src, "Menu.svelte", ["hand-rolled-disabled-state", "hand-rolled-press-state"]),
+    ).toHaveLength(0);
+  });
+
   test("flags a custom active transform and allows the shared transform", () => {
     const src = svelte(`
       .menu-item:active { transform: scale(0.95); }
