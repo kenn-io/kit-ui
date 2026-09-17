@@ -277,7 +277,7 @@ test("invalid diagrams keep their escaped source visible", async ({ page }) => {
   await expect(failed.locator("svg")).toHaveCount(0);
 });
 
-test("skips mermaid.run when the runtime version is below the supported floor", async ({
+test("skips mermaid.run when the runtime version differs from the pinned release", async ({
   page,
 }) => {
   const result = await page.evaluate(async () => {
@@ -291,7 +291,7 @@ test("skips mermaid.run when the runtime version is below the supported floor", 
     try {
       await renderMarkdownMermaidDiagrams(root, {
         load: async () => ({
-          version: "11.14.0",
+          version: "11.15.0",
           initialize() {},
           async run() {
             runCalls += 1;
@@ -310,7 +310,7 @@ test("skips mermaid.run when the runtime version is below the supported floor", 
     };
   });
 
-  expect(result.message).toContain(">=11.15.0 <12");
+  expect(result.message).toContain("requires mermaid 12.0.0");
   expect(result.rendered).toBeNull();
   expect(result.runCalls).toBe(0);
   expect(result.source).toBe("graph LR\nA-->B");
@@ -342,7 +342,7 @@ test("loader-level failures leave diagrams retryable", async ({ page }) => {
     };
     const renderedCount = await renderMarkdownMermaidDiagrams(root, {
       load: async () => ({
-        version: "11.15.0",
+        version: "12.0.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
@@ -398,7 +398,7 @@ test("retry budget uses same-node source changes after transient failures", asyn
     node.textContent = `graph LR\nA["${"x".repeat(200_001)}"]`;
     const renderedCount = await renderMarkdownMermaidDiagrams(root, {
       load: async () => ({
-        version: "11.15.0",
+        version: "12.0.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
@@ -439,7 +439,7 @@ test("run-level failures leave diagrams retryable", async ({ page }) => {
     try {
       await renderMarkdownMermaidDiagrams(root, {
         load: async () => ({
-          version: "11.15.0",
+          version: "12.0.0",
           initialize() {},
           async run() {
             runCalls += 1;
@@ -457,7 +457,7 @@ test("run-level failures leave diagrams retryable", async ({ page }) => {
     };
     const renderedCount = await renderMarkdownMermaidDiagrams(root, {
       load: async () => ({
-        version: "11.15.0",
+        version: "12.0.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
@@ -504,7 +504,7 @@ test("budget caps: excess diagrams and over-budget sources stay plain blocks", a
     }
     let runNodeCounts: number[] = [];
     const fakeLoad = async () => ({
-      version: "11.15.0",
+      version: "12.0.0",
       initialize() {},
       async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
         runNodeCounts.push(nodes.length);
@@ -604,7 +604,7 @@ test("a controller settles after a run failure that mutated the node", async ({ 
     let runCalls = 0;
     const controller = initMarkdownMermaidRendering(host, {
       load: async () => ({
-        version: "11.15.0",
+        version: "12.0.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
