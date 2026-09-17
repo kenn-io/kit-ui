@@ -103,8 +103,7 @@ const MAX_MERMAID_DIAGRAMS_PER_DOCUMENT = 25;
 const MAX_MERMAID_SOURCE_BYTES_PER_DOCUMENT = 200_000;
 const MERMAID_MAX_TEXT_SIZE = 50_000;
 const MERMAID_MAX_EDGES = 500;
-const MINIMUM_SUPPORTED_MERMAID_VERSION = "11.15.0";
-const SUPPORTED_MERMAID_VERSION_RANGE = `>=${MINIMUM_SUPPORTED_MERMAID_VERSION} <13`;
+const SUPPORTED_MERMAID_VERSION = "12.0.0";
 const MERMAID_SECURE_CONFIG = [
   "secure",
   "securityLevel",
@@ -286,23 +285,11 @@ function mermaidPackageVersion(packageModule: MermaidPackageModule): string | un
 
 function assertSupportedMermaidVersion(mermaid: MarkdownMermaidAPI): void {
   const version = mermaid.version;
-  if (!version || !mermaidVersionIsSupported(version)) {
+  if (version !== SUPPORTED_MERMAID_VERSION) {
     throw new Error(
-      `Unsupported Mermaid runtime version ${version ?? "unknown"}; @kenn-io/kit-ui requires mermaid ${SUPPORTED_MERMAID_VERSION_RANGE}.`,
+      `Unsupported Mermaid runtime version ${version ?? "unknown"}; @kenn-io/kit-ui requires mermaid ${SUPPORTED_MERMAID_VERSION}.`,
     );
   }
-}
-
-function mermaidVersionIsSupported(version: string): boolean {
-  const match = /^(\d+)\.(\d+)\.(\d+)(?:\+.*)?$/.exec(version);
-  if (!match) return false;
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  const patch = Number(match[3]);
-  if (major === 12) return true;
-  if (major !== 11) return false;
-  if (minor > 15) return true;
-  return minor === 15 && patch >= 0;
 }
 
 export async function renderMarkdownMermaidDiagrams(

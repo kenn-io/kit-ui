@@ -27,8 +27,7 @@ const renderer = createMarkdownRenderer({ codeFence: mermaidCodeFence });
 const controller = initMarkdownMermaidRendering(appRoot); // once at startup
 ```
 
-and install the peer: `bun add mermaid@^12.0.0`. Mermaid 11.15 and later 11.x
-releases remain supported.
+and install the pinned peer: `bun add --exact mermaid@12.0.0`.
 
 ## How it works
 
@@ -67,10 +66,10 @@ mermaidCodeFence(code: string, lang: string): string | undefined
 
 `MarkdownMermaidOptions`:
 
-| Option           | Default                                         | Notes                                                                                                                  |
-| ---------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `load`           | dynamic `import("mermaid")`                     | Injectable loader (tests, custom bundling); custom loaders must expose `version` for the `>=11.15.0 <13` runtime guard |
-| `onLightboxOpen` | push `"kit-mermaid-lightbox"` on `appShortcuts` | Suspend app keyboard handling while the lightbox is open; returns the restore function. Hook a modal stack in here     |
+| Option           | Default                                         | Notes                                                                                                              |
+| ---------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `load`           | dynamic `import("mermaid")`                     | Injectable loader (tests, custom bundling); custom loaders must expose `version: "12.0.0"` for the runtime guard   |
+| `onLightboxOpen` | push `"kit-mermaid-lightbox"` on `appShortcuts` | Suspend app keyboard handling while the lightbox is open; returns the restore function. Hook a modal stack in here |
 
 ## Security model
 
