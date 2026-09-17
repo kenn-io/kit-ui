@@ -28,8 +28,7 @@ const controller = initMarkdownMermaidRendering(appRoot); // once at startup
 ```
 
 and install the peer: `bun add mermaid@^12.0.0`. Mermaid 11.15 and later 11.x
-releases remain supported. Kit UI sets the dagre layout and classic look
-explicitly so Mermaid 12 keeps the existing diagram appearance.
+releases remain supported.
 
 ## How it works
 

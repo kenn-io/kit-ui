@@ -59,8 +59,6 @@ interface MarkdownMermaidConfig {
   fontFamily: string;
   altFontFamily: string;
   theme: "base";
-  layout: "dagre";
-  look: "classic";
   themeVariables: MermaidThemeVariables;
 }
 
@@ -547,8 +545,6 @@ function initializeMermaidForCurrentTheme(mermaid: MarkdownMermaidAPI): void {
     fontFamily,
     altFontFamily: fontFamily,
     theme: "base",
-    layout: "dagre",
-    look: "classic",
     themeVariables,
   });
   initializedMermaidTheme.set(mermaid, theme);
