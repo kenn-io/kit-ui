@@ -59,6 +59,8 @@ interface MarkdownMermaidConfig {
   fontFamily: string;
   altFontFamily: string;
   theme: "base";
+  layout: "dagre";
+  look: "classic";
   themeVariables: MermaidThemeVariables;
 }
 
@@ -104,7 +106,7 @@ const MAX_MERMAID_SOURCE_BYTES_PER_DOCUMENT = 200_000;
 const MERMAID_MAX_TEXT_SIZE = 50_000;
 const MERMAID_MAX_EDGES = 500;
 const MINIMUM_SUPPORTED_MERMAID_VERSION = "11.15.0";
-const SUPPORTED_MERMAID_VERSION_RANGE = `>=${MINIMUM_SUPPORTED_MERMAID_VERSION} <12`;
+const SUPPORTED_MERMAID_VERSION_RANGE = `>=${MINIMUM_SUPPORTED_MERMAID_VERSION} <13`;
 const MERMAID_SECURE_CONFIG = [
   "secure",
   "securityLevel",
@@ -299,6 +301,7 @@ function mermaidVersionIsSupported(version: string): boolean {
   const major = Number(match[1]);
   const minor = Number(match[2]);
   const patch = Number(match[3]);
+  if (major === 12) return true;
   if (major !== 11) return false;
   if (minor > 15) return true;
   return minor === 15 && patch >= 0;
@@ -544,6 +547,8 @@ function initializeMermaidForCurrentTheme(mermaid: MarkdownMermaidAPI): void {
     fontFamily,
     altFontFamily: fontFamily,
     theme: "base",
+    layout: "dagre",
+    look: "classic",
     themeVariables,
   });
   initializedMermaidTheme.set(mermaid, theme);

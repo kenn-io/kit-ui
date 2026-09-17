@@ -310,7 +310,7 @@ test("skips mermaid.run when the runtime version is below the supported floor", 
     };
   });
 
-  expect(result.message).toContain(">=11.15.0 <12");
+  expect(result.message).toContain(">=11.15.0 <13");
   expect(result.rendered).toBeNull();
   expect(result.runCalls).toBe(0);
   expect(result.source).toBe("graph LR\nA-->B");
