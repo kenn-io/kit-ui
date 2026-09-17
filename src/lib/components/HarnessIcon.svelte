@@ -48,6 +48,11 @@
   import workbuddy from "../assets/harness-icons/workbuddy.svg?raw";
   import windsurf from "../assets/harness-icons/windsurf.svg?raw";
   import devin from "../assets/harness-icons/devin.svg?raw";
+  import cline from "../assets/harness-icons/cline.svg?raw";
+  import crush from "../assets/harness-icons/crush.svg?raw";
+  import evener from "../assets/harness-icons/evener.svg?raw";
+  import opencodereview from "../assets/harness-icons/opencodereview.svg?raw";
+  import tau from "../assets/harness-icons/tau.svg?raw";
   import { harnessIconInfo, type HarnessIconId } from "./harness-icon.js";
 
   interface Props {
@@ -121,6 +126,11 @@
     workbuddy,
     windsurf,
     devin,
+    cline,
+    crush,
+    evener,
+    opencodereview,
+    tau,
   };
 
   const info = $derived(harnessIconInfo(harness));

@@ -43,57 +43,62 @@ AgentsView docs draw with it, in the order the docs present them.
 products: Codex draws `openai`, Cortex Code draws `snowflake`, and Positron
 draws `posit`. Map product names on the consumer side.
 
-| Id             | Brand         | Agents                                 |
-| -------------- | ------------- | -------------------------------------- |
-| `claude`       | Claude        | Claude Code, OpenClaude, Claude Cowork |
-| `openai`       | OpenAI        | Codex                                  |
-| `gemini`       | Gemini        | Gemini                                 |
-| `copilot`      | Copilot       | Copilot                                |
-| `vscode`       | VS Code       | VS Code Copilot                        |
-| `visualstudio` | Visual Studio | Visual Studio Copilot                  |
-| `cursor`       | Cursor        | Cursor, Cursor IDE                     |
-| `warp`         | Warp          | Warp                                   |
-| `qwen`         | Qwen          | Qwen Code, QwenPaw                     |
-| `deepseek`     | DeepSeek      | DeepSeek TUI, DeepSeek Harness         |
-| `mistral`      | Mistral       | Mistral Vibe                           |
-| `zed`          | Zed           | Zed                                    |
-| `posit`        | Posit         | Positron, Posit Assistant              |
-| `sourcegraph`  | Sourcegraph   | Amp (historical)                       |
-| `opencode`     | OpenCode      | OpenCode                               |
-| `antigravity`  | Antigravity   | Antigravity                            |
-| `kilo`         | Kilo          | Kilo, Kilo (legacy)                    |
-| `kimi`         | Kimi          | Kimi, Kimi Work                        |
-| `kiro`         | Kiro          | Kiro                                   |
-| `openhands`    | OpenHands     | OpenHands                              |
-| `zencoder`     | Zencoder      | Zencoder                               |
-| `snowflake`    | Snowflake     | Cortex Code                            |
-| `goose`        | Goose         | Goose                                  |
-| `grok`         | Grok          | Grok                                   |
-| `hermes`       | Hermes        | Hermes                                 |
-| `xiaomi`       | Xiaomi        | MiMoCode                               |
-| `openclaw`     | OpenClaw      | OpenClaw                               |
-| `pi`           | Pi            | Pi                                     |
-| `poolside`     | Poolside      | Poolside                               |
-| `qoder`        | Qoder         | Qoder                                  |
-| `roocode`      | RooCode       | RooCode                                |
-| `trae`         | Trae          | Trae, TraeX                            |
-| `aider`        | Aider         | Aider                                  |
-| `gptme`        | gptme         | gptme                                  |
-| `omnigent`     | Omnigent      | Omnigent                               |
-| `zai`          | Z.ai          | ZCode                                  |
-| `commandcode`  | Command Code  | Command Code                           |
-| `codebuff`     | Codebuff      | Codebuff, Freebuff                     |
-| `forge`        | Forge         | Forge                                  |
-| `iflow`        | iFlow         | iFlow                                  |
-| `omp`          | OhMyPi        | OhMyPi                                 |
-| `prime`        | Prime Agent   | Prime Agent                            |
-| `piebald`      | Piebald       | Piebald                                |
-| `tencent`      | Tencent       | QClaw                                  |
-| `reasonix`     | Reasonix      | Reasonix                               |
-| `shelley`      | Shelley       | Shelley                                |
-| `workbuddy`    | WorkBuddy     | WorkBuddy                              |
-| `windsurf`     | Windsurf      | Windsurf                               |
-| `devin`        | Devin         | Devin CLI                              |
+| Id               | Brand            | Agents                                 |
+| ---------------- | ---------------- | -------------------------------------- |
+| `claude`         | Claude           | Claude Code, OpenClaude, Claude Cowork |
+| `openai`         | OpenAI           | Codex                                  |
+| `gemini`         | Gemini           | Gemini                                 |
+| `copilot`        | Copilot          | Copilot                                |
+| `vscode`         | VS Code          | VS Code Copilot                        |
+| `visualstudio`   | Visual Studio    | Visual Studio Copilot                  |
+| `cursor`         | Cursor           | Cursor, Cursor IDE                     |
+| `warp`           | Warp             | Warp                                   |
+| `qwen`           | Qwen             | Qwen Code, QwenPaw                     |
+| `deepseek`       | DeepSeek         | DeepSeek TUI, DeepSeek Harness         |
+| `mistral`        | Mistral          | Mistral Vibe                           |
+| `zed`            | Zed              | Zed                                    |
+| `posit`          | Posit            | Positron, Posit Assistant              |
+| `sourcegraph`    | Sourcegraph      | Amp (historical)                       |
+| `opencode`       | OpenCode         | OpenCode                               |
+| `antigravity`    | Antigravity      | Antigravity                            |
+| `kilo`           | Kilo             | Kilo, Kilo (legacy)                    |
+| `kimi`           | Kimi             | Kimi, Kimi Work                        |
+| `kiro`           | Kiro             | Kiro                                   |
+| `openhands`      | OpenHands        | OpenHands                              |
+| `zencoder`       | Zencoder         | Zencoder                               |
+| `snowflake`      | Snowflake        | Cortex Code                            |
+| `goose`          | Goose            | Goose                                  |
+| `grok`           | Grok             | Grok                                   |
+| `hermes`         | Hermes           | Hermes                                 |
+| `xiaomi`         | Xiaomi           | MiMoCode                               |
+| `openclaw`       | OpenClaw         | OpenClaw                               |
+| `pi`             | Pi               | Pi                                     |
+| `poolside`       | Poolside         | Poolside                               |
+| `qoder`          | Qoder            | Qoder                                  |
+| `roocode`        | RooCode          | RooCode                                |
+| `trae`           | Trae             | Trae, TraeX                            |
+| `aider`          | Aider            | Aider                                  |
+| `gptme`          | gptme            | gptme                                  |
+| `omnigent`       | Omnigent         | Omnigent                               |
+| `zai`            | Z.ai             | ZCode                                  |
+| `commandcode`    | Command Code     | Command Code                           |
+| `codebuff`       | Codebuff         | Codebuff, Freebuff                     |
+| `forge`          | Forge            | Forge                                  |
+| `iflow`          | iFlow            | iFlow                                  |
+| `omp`            | OhMyPi           | OhMyPi                                 |
+| `prime`          | Prime Agent      | Prime Agent                            |
+| `piebald`        | Piebald          | Piebald                                |
+| `tencent`        | Tencent          | QClaw                                  |
+| `reasonix`       | Reasonix         | Reasonix                               |
+| `shelley`        | Shelley          | Shelley                                |
+| `workbuddy`      | WorkBuddy        | WorkBuddy                              |
+| `windsurf`       | Windsurf         | Windsurf                               |
+| `devin`          | Devin            | Devin CLI                              |
+| `cline`          | Cline            | Cline                                  |
+| `crush`          | Crush            | Crush                                  |
+| `evener`         | Evener           | Evener                                 |
+| `opencodereview` | Open Code Review | Open Code Review                       |
+| `tau`            | Tau              | Tau                                    |
 
 ## Provenance
 
