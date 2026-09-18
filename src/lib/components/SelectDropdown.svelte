@@ -73,12 +73,20 @@
   // flipped above when there is no room below.
   function positionList(): void {
     if (!buttonEl || !listEl) return;
-    const trigger = buttonEl.getBoundingClientRect();
+    // Fixed offsets and offsetWidth/Height use the menu's unzoomed CSS units.
+    const zoom = listEl.currentCSSZoom;
+    const rect = buttonEl.getBoundingClientRect();
+    const trigger = new DOMRect(
+      rect.x / zoom,
+      rect.y / zoom,
+      rect.width / zoom,
+      rect.height / zoom,
+    );
     const width = Math.max(listEl.offsetWidth, trigger.width);
     listStyle = `${floatingPopoverStyle({
       trigger,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth / zoom,
+      viewportHeight: window.innerHeight / zoom,
       popoverWidth: width,
       popoverHeight: listEl.offsetHeight,
       align,

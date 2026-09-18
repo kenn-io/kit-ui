@@ -115,13 +115,21 @@
   // hanging past the right edge.
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
-    const trigger = containerEl.getBoundingClientRect();
+    // Fixed offsets and offsetWidth/Height use the menu's unzoomed CSS units.
+    const zoom = panelEl.currentCSSZoom;
+    const rect = containerEl.getBoundingClientRect();
+    const trigger = new DOMRect(
+      rect.x / zoom,
+      rect.y / zoom,
+      rect.width / zoom,
+      rect.height / zoom,
+    );
     const minWidth = parseFloat(getComputedStyle(panelEl).minWidth) || 0;
     const width = Math.max(trigger.width, minWidth);
     panelStyle = `${floatingPopoverStyle({
       trigger,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth / zoom,
+      viewportHeight: window.innerHeight / zoom,
       popoverWidth: width,
       popoverHeight: panelEl.offsetHeight,
       triggerGap: 2,
