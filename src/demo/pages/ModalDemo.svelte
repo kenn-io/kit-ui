@@ -26,8 +26,10 @@
     },
   ];
 
+  // Enough copy that the body still overflows when `font-display: optional`
+  // skips the webfont and the fallback face is more compact.
   const paragraphs = Array.from(
-    { length: 12 },
+    { length: 24 },
     (_, i) =>
       `Paragraph ${i + 1}. A dialog taller than the window scrolls its body, ` +
       `and its footer stays where it can be reached.`,

@@ -455,7 +455,7 @@ paint its own pointer-reactive treatment without touching components.
 
 The theme voices above lean on platform-native faces (Avenir, Seravek,
 Iowan…), which only exist on some OSes. The opt-in `fonts.css` bundles open
-(SIL OFL) equivalents — latin subsets, ~290KB total, `font-display: swap` —
+(SIL OFL) equivalents — latin subsets, ~290KB total, `font-display: optional` —
 and each theme stack lists its bundled face ahead of the native stand-ins:
 
 ```ts

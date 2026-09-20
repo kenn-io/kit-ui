@@ -586,7 +586,9 @@ test.describe("filled layout", () => {
 
   test("packs each row independently by natural width and fills every row", async ({ page }) => {
     await gotoPage(page, "adaptive-action-grid");
-    await setSlider(page.locator(".filled-width"), 450);
+    // 450px wraps Inter but not a skipped-webfont fallback under
+    // `font-display: optional`. 360px wraps both.
+    await setSlider(page.locator(".filled-width"), 360);
     await expect.poll(() => rows(page).then((r) => r.length)).toBeGreaterThan(1);
     const laidOut = await rows(page);
     const width = await gridWidth(page);
