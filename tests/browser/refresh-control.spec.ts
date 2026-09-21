@@ -81,7 +81,7 @@ test("detail box keeps one width from empty through the widest unit", async ({ p
   await gotoPage(page, "refresh-control");
   const control = fixedWidthControl(page);
 
-  await page.getByRole("button", { name: "Detail: none" }).click();
+  await page.getByRole("button", { name: "Detail: empty" }).click();
   await expect(control.detailText).toHaveText("");
   const emptyBox = await widthOf(control.detail);
   const markerAtEmpty = await leftOf(control.marker);

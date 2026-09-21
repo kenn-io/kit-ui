@@ -30,7 +30,7 @@
     "long status": -1,
   } as const;
   type AgeVariant = keyof typeof AGE_VARIANTS;
-  const DETAIL_VARIANTS = ["8 ms", "59.9 s", "12m 05s", "none"] as const;
+  const DETAIL_VARIANTS = ["8 ms", "59.9 s", "12m 05s", "empty"] as const;
   type DetailVariant = (typeof DETAIL_VARIANTS)[number];
 
   let ageVariant = $state<AgeVariant>("just now");
@@ -46,7 +46,7 @@
     const minutes = Math.floor((now - at) / 60_000);
     return minutes < 1 ? "Updated just now" : `Updated ${minutes}m ago`;
   }
-  const fixedDetail = $derived(detailVariant === "none" ? undefined : detailVariant);
+  const fixedDetail = $derived(detailVariant === "empty" ? undefined : detailVariant);
 </script>
 
 <DemoSection

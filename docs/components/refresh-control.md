@@ -38,9 +38,9 @@ refetching.
 | `intervalMs`         | `number`                                                 | `300000` (5 min)   | Read once at mount                                    |
 | `formatAge`          | `(lastUpdatedAt: number \| null, now: number) => string` | `formatRefreshAge` | Renders the age label; see below                      |
 | `locale`             | `string`                                                 | browser locale     | BCP 47 tag for the timestamp tooltip on the age label |
-| `detail`             | `string`                                                 | none               | Extra readout right of the age label; see below       |
-| `ageWidthSamples`    | `readonly string[]`                                      | none               | Reserves the age box width; see below                 |
-| `detailWidthSamples` | `readonly string[]`                                      | none               | Reserves the detail box width; see below              |
+| `detail`             | `string`                                                 | not rendered       | Extra readout right of the age label; see below       |
+| `ageWidthSamples`    | `readonly string[]`                                      | content width      | Reserves the age box width; see below                 |
+| `detailWidthSamples` | `readonly string[]`                                      | content width      | Reserves the detail box width; see below              |
 
 ## Localization
 
