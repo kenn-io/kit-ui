@@ -116,7 +116,10 @@
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
     // Fixed offsets and offsetWidth/Height use the menu's unzoomed CSS units.
-    const zoom = panelEl.currentCSSZoom;
+    // Engines without currentCSSZoom (WebKit's Linux ports) get the
+    // pre-zoom-aware maths; dividing by undefined would NaN the whole style
+    // and leave the panel unpositioned and unsized.
+    const zoom = panelEl.currentCSSZoom ?? 1;
     const rect = containerEl.getBoundingClientRect();
     const trigger = new DOMRect(
       rect.x / zoom,

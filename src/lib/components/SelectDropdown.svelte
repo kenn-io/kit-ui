@@ -74,7 +74,10 @@
   function positionList(): void {
     if (!buttonEl || !listEl) return;
     // Fixed offsets and offsetWidth/Height use the menu's unzoomed CSS units.
-    const zoom = listEl.currentCSSZoom;
+    // Engines without currentCSSZoom (WebKit's Linux ports) get the
+    // pre-zoom-aware maths; dividing by undefined would NaN the whole style
+    // and leave the list unpositioned and unsized.
+    const zoom = listEl.currentCSSZoom ?? 1;
     const rect = buttonEl.getBoundingClientRect();
     const trigger = new DOMRect(
       rect.x / zoom,
