@@ -1,7 +1,8 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-  import { onMount, untrack } from "svelte";
+  import { onMount, untrack, type Snippet } from "svelte";
   import IconButton from "./IconButton.svelte";
+  import Tooltip from "./Tooltip.svelte";
   import {
     createRefreshScheduler,
     DEFAULT_REFRESH_INTERVAL_MS,
@@ -37,6 +38,16 @@
      * browser locale. Must be a valid tag — `toLocaleString` throws on
      * malformed input. */
     locale?: string | undefined;
+    /** Strings the age box must be able to show without changing width.
+     * The box reserves the width of the widest sample and clips anything
+     * longer with an ellipsis, so swapping label variants ("Updated just
+     * now" -> "Updated 3m ago") never moves whatever is laid out after the
+     * control. Omitted = the box hugs its content. */
+    ageWidthSamples?: readonly string[] | undefined;
+    /** Rich hover/focus content for the age label, e.g. a per-step
+     * breakdown of the last fetch. Replaces the label's default timestamp
+     * `title`, so include the timestamp in the snippet if it still matters. */
+    ageTooltip?: Snippet | undefined;
   }
 
   let {
@@ -48,7 +59,11 @@
     intervalMs = DEFAULT_REFRESH_INTERVAL_MS,
     formatAge = formatRefreshAge,
     locale = undefined,
+    ageWidthSamples = undefined,
+    ageTooltip = undefined,
   }: Props = $props();
+
+  const ageReserved = $derived(ageWidthSamples !== undefined && ageWidthSamples.length > 0);
 
   // The page owns the initial load — it alone knows when its URL/filter state
   // is hydrated — so this control only keeps the data fresh afterward. Arm the
@@ -99,13 +114,33 @@
     <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
   </IconButton>
   <div class="kit-refresh-control__status">
-    <span
-      title={lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString(locale)}
-    >
-      {ageLabel}
-    </span>
+    {#if ageTooltip}
+      <Tooltip content={ageTooltip} focusable class="kit-refresh-control__tooltip">
+        {@render ageBox(undefined)}
+      </Tooltip>
+    {:else}
+      {@render ageBox(
+        lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString(locale),
+      )}
+    {/if}
   </div>
 </div>
+
+{#snippet ageBox(title: string | undefined)}
+  <span
+    class={ageReserved
+      ? "kit-refresh-control__age kit-refresh-control__box kit-refresh-control__box--reserved"
+      : "kit-refresh-control__age kit-refresh-control__box"}
+    {title}
+  >
+    <span class="kit-refresh-control__text">{ageLabel}</span>
+    {#if ageReserved}
+      {#each ageWidthSamples ?? [] as sample}
+        <span class="kit-refresh-control__sample" aria-hidden="true">{sample}</span>
+      {/each}
+    {/if}
+  </span>
+{/snippet}
 
 <style>
   .kit-refresh-control {
@@ -135,5 +170,40 @@
     color: var(--text-muted);
     font-size: var(--font-size-xs);
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The age box is a one-cell grid: the visible text and the hidden width
+   * samples all occupy cell 1/1, so the box is as wide as the widest of
+   * them and never changes when the text does. */
+  .kit-refresh-control__box {
+    display: inline-grid;
+    min-width: 0;
+  }
+
+  .kit-refresh-control__box > * {
+    grid-area: 1 / 1;
+  }
+
+  /* Rich label tooltips (a per-step breakdown, a waterfall) size to their
+   * content; the 280px cap on text tooltips would wrap or clip them. */
+  .kit-refresh-control :global(.kit-refresh-control__tooltip) {
+    max-width: calc(100vw - 32px);
+  }
+
+  .kit-refresh-control__sample {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* With samples present the text contributes nothing to the box's
+   * intrinsic width (width: 0) and then stretches to the sample-set width
+   * (min-width: 100%), so even a string longer than every sample cannot
+   * grow the box; it clips with an ellipsis instead. */
+  .kit-refresh-control__box--reserved > .kit-refresh-control__text {
+    width: 0;
+    min-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 </style>
