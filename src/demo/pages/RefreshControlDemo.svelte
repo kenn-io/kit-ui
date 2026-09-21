@@ -13,7 +13,7 @@
     }, 800);
   }
 
-  // Fixed-width section: the boxes reserve the widest sample so cycling
+  // Fixed-width section: the box reserves the widest sample so cycling
   // through variants never moves the marker rendered after the control.
   const AGE_SAMPLES = [
     "Not updated",
@@ -22,7 +22,6 @@
     "Updated 23h ago",
     "Updated 999d ago",
   ];
-  const DETAIL_SAMPLES = ["999 ms", "59.9 s", "99m 59s"];
   const AGE_VARIANTS = {
     "not updated": null,
     "just now": 0,
@@ -30,11 +29,8 @@
     "long status": -1,
   } as const;
   type AgeVariant = keyof typeof AGE_VARIANTS;
-  const DETAIL_VARIANTS = ["8 ms", "59.9 s", "12m 05s", "empty"] as const;
-  type DetailVariant = (typeof DETAIL_VARIANTS)[number];
 
   let ageVariant = $state<AgeVariant>("just now");
-  let detailVariant = $state<DetailVariant>("8 ms");
   const fixedNow = Date.now();
   const fixedAt = $derived.by(() => {
     const offset = AGE_VARIANTS[ageVariant];
@@ -46,7 +42,6 @@
     const minutes = Math.floor((now - at) / 60_000);
     return minutes < 1 ? "Updated just now" : `Updated ${minutes}m ago`;
   }
-  const fixedDetail = $derived(detailVariant === "empty" ? undefined : detailVariant);
 </script>
 
 <DemoSection
@@ -63,14 +58,12 @@
 </DemoSection>
 
 <DemoSection
-  title="Fixed-width boxes with a detail readout"
-  description="ageWidthSamples and detailWidthSamples reserve the widest string each box can show, so swapping variants never shifts the detail box or the element after the control. Text longer than every sample clips with an ellipsis instead of growing the box."
+  title="Fixed-width age label"
+  description="ageWidthSamples reserves the widest string the label can show, so swapping variants never shifts the element after the control. Text longer than every sample clips with an ellipsis instead of growing the box."
   code={`<RefreshControl
   {lastUpdatedAt}
   onRefresh={refresh}
-  detail="42 ms"
   ageWidthSamples={["Not updated", "Updated just now", "Updated 999d ago"]}
-  detailWidthSamples={["999 ms", "59.9 s", "99m 59s"]}
 />`}
 >
   <div class="refresh-demo">
@@ -80,9 +73,7 @@
         onRefresh={() => {}}
         label="Refresh fixed-width demo"
         formatAge={fixedFormatAge}
-        detail={fixedDetail}
         ageWidthSamples={AGE_SAMPLES}
-        detailWidthSamples={DETAIL_SAMPLES}
       />
       <span class="refresh-demo__marker" data-testid="fixed-width-marker">next control</span>
     </div>
@@ -94,17 +85,6 @@
           onclick={() => (ageVariant = variant as AgeVariant)}
         >
           Age: {variant}
-        </Button>
-      {/each}
-    </div>
-    <div class="refresh-demo__controls" role="group" aria-label="Detail variant">
-      {#each DETAIL_VARIANTS as variant (variant)}
-        <Button
-          size="sm"
-          surface={detailVariant === variant ? "solid" : "outline"}
-          onclick={() => (detailVariant = variant)}
-        >
-          Detail: {variant}
         </Button>
       {/each}
     </div>

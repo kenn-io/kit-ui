@@ -37,18 +37,12 @@
      * browser locale. Must be a valid tag — `toLocaleString` throws on
      * malformed input. */
     locale?: string | undefined;
-    /** Extra readout rendered to the right of the age label, e.g. how long
-     * the last fetch took. Rendered in its own box so it can be
-     * width-reserved independently (see `detailWidthSamples`). */
-    detail?: string | undefined;
     /** Strings the age box must be able to show without changing width.
      * The box reserves the width of the widest sample and clips anything
      * longer with an ellipsis, so swapping label variants ("Updated just
-     * now" -> "Updated 3m ago") never moves the detail box or whatever is
-     * laid out after the control. Omitted = the box hugs its content. */
+     * now" -> "Updated 3m ago") never moves whatever is laid out after the
+     * control. Omitted = the box hugs its content. */
     ageWidthSamples?: readonly string[] | undefined;
-    /** Same reservation for the detail box. */
-    detailWidthSamples?: readonly string[] | undefined;
   }
 
   let {
@@ -60,16 +54,10 @@
     intervalMs = DEFAULT_REFRESH_INTERVAL_MS,
     formatAge = formatRefreshAge,
     locale = undefined,
-    detail = undefined,
     ageWidthSamples = undefined,
-    detailWidthSamples = undefined,
   }: Props = $props();
 
   const ageReserved = $derived(ageWidthSamples !== undefined && ageWidthSamples.length > 0);
-  const detailReserved = $derived(
-    detailWidthSamples !== undefined && detailWidthSamples.length > 0,
-  );
-  const showDetail = $derived(detail !== undefined || detailReserved);
 
   // The page owns the initial load — it alone knows when its URL/filter state
   // is hydrated — so this control only keeps the data fresh afterward. Arm the
@@ -133,20 +121,6 @@
         {/each}
       {/if}
     </span>
-    {#if showDetail}
-      <span
-        class={detailReserved
-          ? "kit-refresh-control__detail kit-refresh-control__box kit-refresh-control__box--reserved"
-          : "kit-refresh-control__detail kit-refresh-control__box"}
-      >
-        <span class="kit-refresh-control__text">{detail ?? ""}</span>
-        {#if detailReserved}
-          {#each detailWidthSamples ?? [] as sample}
-            <span class="kit-refresh-control__sample" aria-hidden="true">{sample}</span>
-          {/each}
-        {/if}
-      </span>
-    {/if}
   </div>
 </div>
 
@@ -181,7 +155,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Each box is a one-cell grid: the visible text and the hidden width
+  /* The age box is a one-cell grid: the visible text and the hidden width
    * samples all occupy cell 1/1, so the box is as wide as the widest of
    * them and never changes when the text does. */
   .kit-refresh-control__box {
@@ -207,11 +181,5 @@
     min-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  /* Numbers read as a column: the unit suffix and right edge stay put and
-   * the digits grow leftward. */
-  .kit-refresh-control__detail {
-    text-align: end;
   }
 </style>
