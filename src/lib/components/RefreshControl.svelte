@@ -115,7 +115,7 @@
   </IconButton>
   <div class="kit-refresh-control__status">
     {#if ageTooltip}
-      <Tooltip content={ageTooltip} focusable>
+      <Tooltip content={ageTooltip} focusable class="kit-refresh-control__tooltip">
         {@render ageBox(undefined)}
       </Tooltip>
     {:else}
@@ -183,6 +183,12 @@
 
   .kit-refresh-control__box > * {
     grid-area: 1 / 1;
+  }
+
+  /* Rich label tooltips (a per-step breakdown, a waterfall) size to their
+   * content; the 280px cap on text tooltips would wrap or clip them. */
+  .kit-refresh-control :global(.kit-refresh-control__tooltip) {
+    max-width: calc(100vw - 32px);
   }
 
   .kit-refresh-control__sample {

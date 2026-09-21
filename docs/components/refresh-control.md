@@ -91,7 +91,8 @@ The label uses tabular figures, so digits of different values line up.
 The age label carries the full timestamp as a native `title`. Pass an
 `ageTooltip` snippet to show rich content instead, rendered through
 [Tooltip](tooltip.md) on hover and keyboard focus. The snippet replaces the
-timestamp, so include it yourself if it still matters:
+timestamp, so include it yourself if it still matters. The panel sizes to the
+snippet's content instead of the 280px text-tooltip cap:
 
 ```svelte
 <RefreshControl {lastUpdatedAt} onRefresh={refresh}>
