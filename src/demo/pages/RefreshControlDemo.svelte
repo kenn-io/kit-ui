@@ -42,6 +42,14 @@
     const minutes = Math.floor((now - at) / 60_000);
     return minutes < 1 ? "Updated just now" : `Updated ${minutes}m ago`;
   }
+
+  // Tooltip section: a per-step breakdown of the last fetch on hover/focus.
+  const STEPS = [
+    { name: "Summary", duration: "120 ms" },
+    { name: "Activity", duration: "85 ms" },
+    { name: "Heatmap", duration: "1 s" },
+    { name: "Top sessions", duration: "2 s" },
+  ];
 </script>
 
 <DemoSection
@@ -91,7 +99,54 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Age label tooltip"
+  description="ageTooltip renders rich content on hover or focus of the age label, replacing its default timestamp title. Here: how long each step of the last fetch took."
+  code={`<RefreshControl {lastUpdatedAt} onRefresh={refresh}>
+  {#snippet ageTooltip()}
+    <dl class="steps">
+      {#each steps as step}
+        <dt>{step.name}</dt>
+        <dd>{step.duration}</dd>
+      {/each}
+    </dl>
+  {/snippet}
+</RefreshControl>`}
+>
+  <div class="refresh-demo__row" data-testid="tooltip-row">
+    <RefreshControl lastUpdatedAt={fixedNow} onRefresh={() => {}} label="Refresh with breakdown">
+      {#snippet ageTooltip()}
+        <dl class="refresh-demo__steps">
+          {#each STEPS as step (step.name)}
+            <dt>{step.name}</dt>
+            <dd>{step.duration}</dd>
+          {/each}
+        </dl>
+      {/snippet}
+    </RefreshControl>
+  </div>
+</DemoSection>
+
 <style>
+  .refresh-demo__steps {
+    display: grid;
+    grid-template-columns: auto max-content;
+    column-gap: var(--space-4);
+    row-gap: var(--space-1);
+    margin: 0;
+    font-size: var(--font-size-xs);
+  }
+
+  .refresh-demo__steps dt {
+    color: var(--text-secondary);
+  }
+
+  .refresh-demo__steps dd {
+    margin: 0;
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+
   .refresh-demo {
     display: flex;
     flex-direction: column;

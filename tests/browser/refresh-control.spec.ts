@@ -74,3 +74,22 @@ test("age box keeps one width across the narrowest, widest, and overlong labels"
   expect(markerAtWide).toBeCloseTo(markerAtNarrow, 1);
   expect(markerAtOverlong).toBeCloseTo(markerAtNarrow, 1);
 });
+
+test("age label opens its tooltip on hover and keeps the reserved layout", async ({ page }) => {
+  await gotoPage(page, "refresh-control");
+  const row = page.getByTestId("tooltip-row");
+  const label = row.locator(".kit-refresh-control__age");
+  const marker = page.getByTestId("fixed-width-marker");
+  const markerBefore = await leftOf(marker);
+
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await label.hover();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText("Top sessions");
+  await expect(tooltip).toContainText("2 s");
+  expect(await leftOf(marker)).toBeCloseTo(markerBefore, 1);
+
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});

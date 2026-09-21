@@ -1,7 +1,8 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-  import { onMount, untrack } from "svelte";
+  import { onMount, untrack, type Snippet } from "svelte";
   import IconButton from "./IconButton.svelte";
+  import Tooltip from "./Tooltip.svelte";
   import {
     createRefreshScheduler,
     DEFAULT_REFRESH_INTERVAL_MS,
@@ -43,6 +44,10 @@
      * now" -> "Updated 3m ago") never moves whatever is laid out after the
      * control. Omitted = the box hugs its content. */
     ageWidthSamples?: readonly string[] | undefined;
+    /** Rich hover/focus content for the age label, e.g. a per-step
+     * breakdown of the last fetch. Replaces the label's default timestamp
+     * `title`, so include the timestamp in the snippet if it still matters. */
+    ageTooltip?: Snippet | undefined;
   }
 
   let {
@@ -55,6 +60,7 @@
     formatAge = formatRefreshAge,
     locale = undefined,
     ageWidthSamples = undefined,
+    ageTooltip = undefined,
   }: Props = $props();
 
   const ageReserved = $derived(ageWidthSamples !== undefined && ageWidthSamples.length > 0);
@@ -108,21 +114,33 @@
     <RefreshCwIcon size="14" strokeWidth="2" aria-hidden="true" />
   </IconButton>
   <div class="kit-refresh-control__status">
-    <span
-      class={ageReserved
-        ? "kit-refresh-control__age kit-refresh-control__box kit-refresh-control__box--reserved"
-        : "kit-refresh-control__age kit-refresh-control__box"}
-      title={lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString(locale)}
-    >
-      <span class="kit-refresh-control__text">{ageLabel}</span>
-      {#if ageReserved}
-        {#each ageWidthSamples ?? [] as sample}
-          <span class="kit-refresh-control__sample" aria-hidden="true">{sample}</span>
-        {/each}
-      {/if}
-    </span>
+    {#if ageTooltip}
+      <Tooltip content={ageTooltip} focusable>
+        {@render ageBox(undefined)}
+      </Tooltip>
+    {:else}
+      {@render ageBox(
+        lastUpdatedAt === null ? undefined : new Date(lastUpdatedAt).toLocaleString(locale),
+      )}
+    {/if}
   </div>
 </div>
+
+{#snippet ageBox(title: string | undefined)}
+  <span
+    class={ageReserved
+      ? "kit-refresh-control__age kit-refresh-control__box kit-refresh-control__box--reserved"
+      : "kit-refresh-control__age kit-refresh-control__box"}
+    {title}
+  >
+    <span class="kit-refresh-control__text">{ageLabel}</span>
+    {#if ageReserved}
+      {#each ageWidthSamples ?? [] as sample}
+        <span class="kit-refresh-control__sample" aria-hidden="true">{sample}</span>
+      {/each}
+    {/if}
+  </span>
+{/snippet}
 
 <style>
   .kit-refresh-control {

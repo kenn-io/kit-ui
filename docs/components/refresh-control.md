@@ -85,3 +85,23 @@ produce, and remember that a localized formatter needs localized samples:
 ```
 
 The label uses tabular figures, so digits of different values line up.
+
+## Age label tooltip
+
+The age label carries the full timestamp as a native `title`. Pass an
+`ageTooltip` snippet to show rich content instead, rendered through
+[Tooltip](tooltip.md) on hover and keyboard focus. The snippet replaces the
+timestamp, so include it yourself if it still matters:
+
+```svelte
+<RefreshControl {lastUpdatedAt} onRefresh={refresh}>
+  {#snippet ageTooltip()}
+    <dl>
+      {#each steps as step}
+        <dt>{step.name}</dt>
+        <dd>{step.duration}</dd>
+      {/each}
+    </dl>
+  {/snippet}
+</RefreshControl>
+```
