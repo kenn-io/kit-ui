@@ -1,0 +1,43 @@
+/**
+ * Canonical responsive breakpoints, formalized from Forge's mobile work.
+ *
+ * CSS media queries cannot read custom properties, so components must write
+ * the pixel values inline — but only these values. `kit-ui-check` flags any
+ * other width in an `@media` rule of a consuming project.
+ *
+ *   compact  ≤ 640px — phones; single-column layouts. (Type sizing is NOT
+ *                      width-based — the theme.css tokens resize on handheld
+ *                      touch devices via MEDIA.handheld.)
+ *   medium   ≤ 760px — small tablets / split panels collapse
+ *   wide     ≤ 900px — narrow desktop; secondary sidebars collapse
+ *
+ * In JS, prefer `MediaQuery` from svelte/reactivity over manual matchMedia:
+ *
+ *   import { MediaQuery } from "svelte/reactivity";
+ *   import { MEDIA } from "@kenn-io/kit-ui";
+ *
+ *   const compact = new MediaQuery(MEDIA.compact);
+ *   // compact.current is reactive
+ */
+export declare const BREAKPOINTS: {
+    readonly compact: 640;
+    readonly medium: 760;
+    readonly wide: 900;
+};
+export type BreakpointName = keyof typeof BREAKPOINTS;
+/** Media-query strings for matchMedia / svelte/reactivity MediaQuery. The
+ * width queries are mobile-first "at or below" checks matching the CSS
+ * convention (`@media (max-width: 640px)`). */
+export declare const MEDIA: {
+    readonly compact: "(max-width: 640px)";
+    readonly medium: "(max-width: 760px)";
+    readonly wide: "(max-width: 900px)";
+    /** Touch-first device: no hover affordances, larger hit targets. OR-form —
+     * matches if either signal is present. */
+    readonly touch: "(hover: none), (pointer: coarse)";
+    /** True handheld (both signals): what the theme.css touch type scale keys
+     * on. Force it in tests/demos with the `kit-type-touch` root class. */
+    readonly handheld: "(hover: none) and (pointer: coarse)";
+    /** Guard animations/transitions behind this. */
+    readonly reducedMotion: "(prefers-reduced-motion: reduce)";
+};

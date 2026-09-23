@@ -3,7 +3,12 @@
 Shared Svelte 5 component library for kenn-io frontends (Forge,
 agentsview). Consumed as source: `package.json` exports point at
 `src/lib/index.ts`; there is no library build step. `vite build` bundles the
-demo gallery only.
+demo gallery only. Type declarations are the exception: `types/` holds
+generated `.d.ts` files, committed because git dependencies get no install-time
+build, and every code entry in `package.json` `exports` lists a `types`
+condition pointing into it. Consumers type-checking with
+`svelte-check --tsgo` only transpile `.svelte` files in their own workspace,
+so without these declarations kit-ui components lose their prop types there.
 
 ## API stability
 
@@ -15,6 +20,8 @@ Breaking API changes are 100% acceptable.
 bun install
 bun run dev      # demo gallery (Vite dev server)
 bun run check    # svelte-check — must stay at 0 errors / 0 warnings
+bun run generate:types     # regenerate the committed types/ declarations
+bun run check:types        # CI/hook guard: declarations present, fresh, exported
 bun run fmt      # vp fmt (oxfmt, .oxfmtrc.json) — same Vite+ setup as Forge
 bun run fmt:check && bun run lint   # CI-enforced format + lint (vite-plus)
 bun run build    # builds the demo gallery
@@ -37,6 +44,8 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
 - `tests/browser/` — Playwright specs driving the demo gallery
   (docs/testing.md); specs depend on demo hooks, so a demo change may need
   its spec updated in the same commit
+- `types/` — generated declarations (`bun run generate:types`); never edit
+  by hand
 - `docs/` — per-component reference (`docs/components/*.md`), `theming.md`,
   `utilities.md`
 - `skills/` — Svelte 5 skills replicated from Forge, symlinked into
@@ -72,7 +81,9 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
   external projects get steered to it.
 - **Exports**: every new component/type/util must be added to
   `src/lib/index.ts`, given a demo page in `src/demo/pages/` (and registered in
-  `src/demo/App.svelte`), and documented in `docs/components/`.
+  `src/demo/App.svelte`), and documented in `docs/components/`. Any source
+  change under `src/lib/` or `checks/rules.mjs` needs `bun run generate:types`;
+  a new `package.json` export needs a `types` condition listed first.
 
 ## Provenance
 

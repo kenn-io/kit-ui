@@ -38,6 +38,9 @@ jobs:
       - name: svelte-check (0 errors / 0 warnings)
         run: bun run check
 
+      - name: Type declarations (present, fresh, exported)
+        run: bun run check:types
+
       - name: Unit tests
         run: bun test ./checks ./scripts
 

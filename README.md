@@ -8,7 +8,9 @@ Svelte, TypeScript strict.
 
 The package is consumed as source: add it as a workspace/path dependency and
 make sure your bundler compiles Svelte from `node_modules` (the `svelte` export
-condition points at `src/lib/index.ts`).
+condition points at `src/lib/index.ts`). TypeScript resolves the `types`
+condition to committed declarations in `types/`, so `svelte-check --tsgo` in a
+consuming app sees real component types.
 
 ```jsonc
 // package.json

@@ -4,10 +4,11 @@
   "license": "Apache-2.0",
   "type": "module",
   "main": "src/lib/index.ts",
-  "types": "src/lib/index.ts",
+  "types": "./types/index.d.ts",
   "svelte": "src/lib/index.ts",
   "exports": {
     ".": {
+      "types": "./types/index.d.ts",
       "svelte": "./src/lib/index.ts",
       "default": "./src/lib/index.ts"
     },
@@ -20,45 +21,59 @@
     "./fonts.css": "./src/lib/fonts.css",
     "./mermaid.css": "./src/lib/mermaid.css",
     "./breakpoints": {
+      "types": "./types/breakpoints.d.ts",
       "default": "./src/lib/breakpoints.ts"
     },
     "./check/rules": {
+      "types": "./types/check/rules.d.mts",
       "default": "./checks/rules.mjs"
     },
     "./utils/clipboard": {
+      "types": "./types/utils/clipboard.d.ts",
       "default": "./src/lib/utils/clipboard.ts"
     },
     "./utils/color-hash": {
+      "types": "./types/utils/color-hash.d.ts",
       "default": "./src/lib/utils/color-hash.ts"
     },
     "./utils/debounce": {
+      "types": "./types/utils/debounce.d.ts",
       "default": "./src/lib/utils/debounce.ts"
     },
     "./utils/focus-trap": {
+      "types": "./types/utils/focus-trap.d.ts",
       "default": "./src/lib/utils/focus-trap.ts"
     },
     "./utils/format": {
+      "types": "./types/utils/format.d.ts",
       "default": "./src/lib/utils/format.ts"
     },
     "./utils/markdown": {
+      "types": "./types/utils/markdown.d.ts",
       "default": "./src/lib/utils/markdown.ts"
     },
     "./utils/markdown-mermaid": {
+      "types": "./types/utils/markdown-mermaid.d.ts",
       "default": "./src/lib/utils/markdown-mermaid.ts"
     },
     "./utils/overlay": {
+      "types": "./types/utils/overlay.d.ts",
       "default": "./src/lib/utils/overlay.ts"
     },
     "./utils/popover": {
+      "types": "./types/utils/popover.d.ts",
       "default": "./src/lib/utils/popover.ts"
     },
     "./utils/refresh": {
+      "types": "./types/utils/refresh.d.ts",
       "default": "./src/lib/utils/refresh.ts"
     },
     "./utils/shortcuts": {
+      "types": "./types/utils/shortcuts.d.ts",
       "default": "./src/lib/utils/shortcuts.ts"
     },
     "./utils/time": {
+      "types": "./types/utils/time.d.ts",
       "default": "./src/lib/utils/time.ts"
     }
   },
@@ -67,6 +82,7 @@
   },
   "files": [
     "src/lib",
+    "types",
     "bin",
     "checks/rules.mjs"
   ],
@@ -76,11 +92,13 @@
     "deploy:demo": "bunx vercel@59.1.3 deploy --prod --yes --scope kenn-software --project kit-ui",
     "preview": "vp preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check:types": "node scripts/declarations.mjs check",
     "generate:brand": "node scripts/generate-brand.mjs",
     "generate:visual-guide": "node scripts/generate-visual-styling-guide.mjs",
+    "generate:types": "node scripts/declarations.mjs generate",
     "check:usage": "node bin/kit-ui-check.mjs src/demo",
-    "fmt": "vp fmt -c .oxfmtrc.json . '!dist/**' '!test-results/**' --no-error-on-unmatched-pattern",
-    "fmt:check": "vp fmt --check -c .oxfmtrc.json . '!dist/**' '!test-results/**' --no-error-on-unmatched-pattern",
+    "fmt": "vp fmt -c .oxfmtrc.json . '!dist/**' '!types/**' '!test-results/**' --no-error-on-unmatched-pattern",
+    "fmt:check": "vp fmt --check -c .oxfmtrc.json . '!dist/**' '!types/**' '!test-results/**' --no-error-on-unmatched-pattern",
     "lint": "vp lint . --no-error-on-unmatched-pattern",
     "test": "bun test ./checks ./scripts",
     "test:browser": "playwright test",
@@ -96,6 +114,7 @@
     "mermaid": "12.0.0",
     "svelte": "5.56.3",
     "svelte-check": "4.6.0",
+    "svelte2tsx": "0.7.61",
     "typescript": "^5.9.0",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4",
     "vite-plus": "0.2.4"
