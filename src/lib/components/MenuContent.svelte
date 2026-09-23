@@ -53,12 +53,22 @@
   function positionContent(): void {
     const trigger = menu.triggerElement();
     if (!trigger || !element) return;
-    const triggerRect = trigger.getBoundingClientRect();
+    // Fixed offsets and offsetWidth/Height use the menu's unzoomed CSS units.
+    // Engines without currentCSSZoom (WebKit's Linux ports) get the
+    // pre-zoom-aware maths; dividing by undefined would NaN the whole style.
+    const zoom = element.currentCSSZoom ?? 1;
+    const rect = trigger.getBoundingClientRect();
+    const triggerRect = new DOMRect(
+      rect.x / zoom,
+      rect.y / zoom,
+      rect.width / zoom,
+      rect.height / zoom,
+    );
     const width = Math.max(element.offsetWidth, triggerRect.width);
     position = `${floatingPopoverStyle({
       trigger: triggerRect,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth / zoom,
+      viewportHeight: window.innerHeight / zoom,
       popoverWidth: width,
       popoverHeight: element.offsetHeight,
       align: menu.align,
