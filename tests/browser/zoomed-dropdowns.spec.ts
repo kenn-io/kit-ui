@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
-type Component = "SelectDropdown" | "Typeahead";
+type Component = "SelectDropdown" | "Typeahead" | "Menu";
 
 // Mounts one control alone in a fixed, CSS-zoomed box at the bottom-right
 // of the viewport, where an unzoomed-coordinate bug pushes the menu off
@@ -14,7 +14,9 @@ async function mountZoomed(page: Page, component: Component, zoom: number): Prom
       const { default: Control } =
         component === "SelectDropdown"
           ? await import("/src/lib/components/SelectDropdown.svelte")
-          : await import("/src/lib/components/Typeahead.svelte");
+          : component === "Menu"
+            ? await import("/tests/browser/fixtures/ZoomedMenu.svelte")
+            : await import("/src/lib/components/Typeahead.svelte");
       document.body.replaceChildren();
       const target = document.createElement("div");
       target.id = "zoomed-control";
@@ -26,26 +28,28 @@ async function mountZoomed(page: Page, component: Component, zoom: number): Prom
       mount(Control, {
         target,
         props:
-          component === "SelectDropdown"
-            ? {
-                title: "Model",
-                value: "balanced",
-                onchange: select,
-                options: [
-                  { value: "balanced", label: "Balanced" },
-                  { value: "deep", label: "Deep" },
-                ],
-              }
-            : {
-                value: "balanced",
-                onselect: select,
-                placeholder: "Model",
-                triggerPrefix: "Model:",
-                options: [
-                  { name: "balanced", label: "Balanced" },
-                  { name: "deep", label: "Deep" },
-                ],
-              },
+          component === "Menu"
+            ? { onchange: select }
+            : component === "SelectDropdown"
+              ? {
+                  title: "Model",
+                  value: "balanced",
+                  onchange: select,
+                  options: [
+                    { value: "balanced", label: "Balanced" },
+                    { value: "deep", label: "Deep" },
+                  ],
+                }
+              : {
+                  value: "balanced",
+                  onselect: select,
+                  placeholder: "Model",
+                  triggerPrefix: "Model:",
+                  options: [
+                    { name: "balanced", label: "Balanced" },
+                    { name: "deep", label: "Deep" },
+                  ],
+                },
       });
     },
     { component, zoom },
@@ -53,32 +57,38 @@ async function mountZoomed(page: Page, component: Component, zoom: number): Prom
 }
 
 function trigger(page: Page, component: Component) {
-  return component === "SelectDropdown"
-    ? page.getByRole("combobox")
-    : page.getByRole("button", { name: /Balanced/ });
+  if (component === "SelectDropdown") return page.getByRole("combobox");
+  if (component === "Menu") return page.getByRole("button", { name: "Model: balanced" });
+  return page.getByRole("button", { name: /Balanced/ });
 }
 
 function menu(page: Page, component: Component) {
-  return component === "Typeahead"
-    ? page.locator(".kit-typeahead__panel")
-    : page.getByRole("listbox");
+  if (component === "Typeahead") return page.locator(".kit-typeahead__panel");
+  if (component === "Menu") return page.getByRole("menu", { name: "Model" });
+  return page.getByRole("listbox");
 }
 
-for (const component of ["SelectDropdown", "Typeahead"] as const) {
+function choice(page: Page, component: Component) {
+  return component === "Menu"
+    ? page.getByRole("menuitemradio", { name: "Deep", exact: true })
+    : page.getByRole("option", { name: "Deep", exact: true });
+}
+
+for (const component of ["SelectDropdown", "Typeahead", "Menu"] as const) {
   for (const zoom of [0.75, 1.3]) {
     test(`${component} stays aligned and selectable at CSS zoom ${zoom}`, async ({ page }) => {
       await mountZoomed(page, component, zoom);
       const control = trigger(page, component);
       const triggerBounds = await control.boundingBox();
       await control.click();
-      await expect(page.getByRole("listbox")).toBeVisible();
+      await expect(menu(page, component)).toBeVisible();
       const menuBounds = await menu(page, component).boundingBox();
       if (!triggerBounds || !menuBounds) throw new Error("Control did not render");
       expect(Math.abs(menuBounds.x - triggerBounds.x)).toBeLessThan(2);
       expect(menuBounds.y).toBeGreaterThanOrEqual(0);
       expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(triggerBounds.y + 1);
       expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(1280);
-      await page.getByRole("option", { name: "Deep", exact: true }).click();
+      await choice(page, component).click();
       await expect(page.locator("#zoomed-control")).toHaveAttribute("data-value", "deep");
     });
   }
@@ -95,13 +105,13 @@ for (const component of ["SelectDropdown", "Typeahead"] as const) {
     const control = trigger(page, component);
     const triggerBounds = await control.boundingBox();
     await control.click();
-    await expect(page.getByRole("listbox")).toBeVisible();
+    await expect(menu(page, component)).toBeVisible();
     const menuBounds = await menu(page, component).boundingBox();
     if (!triggerBounds || !menuBounds) throw new Error("Control did not render");
     expect(Math.abs(menuBounds.x - triggerBounds.x)).toBeLessThan(2);
     expect(menuBounds.width).toBeGreaterThanOrEqual(triggerBounds.width - 1);
     expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(triggerBounds.y + 1);
-    await page.getByRole("option", { name: "Deep", exact: true }).click();
+    await choice(page, component).click();
     await expect(page.locator("#zoomed-control")).toHaveAttribute("data-value", "deep");
   });
 }
