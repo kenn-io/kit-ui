@@ -613,3 +613,27 @@ test("the closed trigger speaks the fallback label, or only the placeholder with
       .getByRole("button", { name: "Time zone: Server time", exact: true }),
   ).toBeVisible();
 });
+
+test("optional icons follow options and the selected value through search", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const picker = page.getByTestId("typeahead-icons");
+  const trigger = picker.getByRole("button", { name: "Search agents: Claude" });
+  await expect(trigger.locator(".kit-harness-icon--claude")).toBeVisible();
+  await trigger.click();
+  await expect(
+    picker
+      .getByRole("option", { name: "Claude", exact: true })
+      .locator(".kit-harness-icon--claude"),
+  ).toBeVisible();
+  await picker.getByRole("combobox").fill("cod");
+  await expect(picker.getByRole("option")).toHaveCount(1);
+  await expect(
+    picker.getByRole("option", { name: "Codex", exact: true }).locator(".kit-harness-icon--openai"),
+  ).toBeVisible();
+  await picker.getByRole("combobox").press("Enter");
+  await expect(
+    picker
+      .getByRole("button", { name: "Search agents: Codex" })
+      .locator(".kit-harness-icon--openai"),
+  ).toBeVisible();
+});

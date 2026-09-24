@@ -39,6 +39,8 @@ interface Props {
     /** Rendered inside the popover above the option list (e.g. a tab
      * switcher); receives no arguments. */
     header?: Snippet;
+    /** Decorative icon before each option and the selected trigger label. */
+    icon?: Snippet<[TypeaheadOption]>;
     /** Return `false` (or a promise of `false`), or throw, to keep the list
      * open — e.g. to veto a value or surface `error`. */
     onselect: (value: string) => void | boolean | Promise<void | boolean>;

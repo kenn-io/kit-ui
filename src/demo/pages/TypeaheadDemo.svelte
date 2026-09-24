@@ -1,6 +1,12 @@
 <script lang="ts">
-  import { Typeahead, type TypeaheadOption } from "../../lib/index.js";
+  import { HarnessIcon, Typeahead, type TypeaheadOption } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
+
+  let agent = $state("claude");
+  const agents = [
+    { name: "claude", label: "Claude" },
+    { name: "codex", label: "Codex" },
+  ];
 
   let repo = $state("");
   const repos = [
@@ -377,6 +383,31 @@
     {/snippet}
   </Typeahead>
   <span>value: <code data-demo="ref-value">{ref || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Optional icons"
+  description="Decorative icons accompany options and the selected value."
+>
+  <div data-testid="typeahead-icons">
+    <Typeahead
+      options={agents}
+      value={agent}
+      fallbackLabel="Select agent"
+      placeholder="Search agents"
+      onselect={(value) => {
+        agent = value;
+      }}
+    >
+      {#snippet icon(option)}
+        <HarnessIcon
+          harness={option.name === "claude" ? "claude" : "openai"}
+          size={14}
+          decorative
+        />
+      {/snippet}
+    </Typeahead>
+  </div>
 </DemoSection>
 
 <style>
