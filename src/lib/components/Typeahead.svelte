@@ -470,6 +470,10 @@
       aria-autocomplete="list"
       aria-activedescendant={!loading && rowCount > 0 ? `${listId}-row-${activeIndex}` : undefined}
       autocomplete="off"
+      data-1p-ignore="true"
+      data-bwignore="true"
+      data-lpignore="true"
+      data-form-type="other"
     />
     <div
       class="kit-typeahead__panel kit-popover-card"

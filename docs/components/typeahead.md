@@ -82,6 +82,15 @@ rows expose their position and sibling count through `aria-posinset` and
 `aria-setsize`. Filtering recalculates that metadata for the visible result
 tree while retaining the path to a deep match.
 
+## Password managers
+
+Password managers can mistake the search input for a login field and open a
+credential menu over the list. Browsers treat `autocomplete="off"` as a hint
+only, so the input also carries each manager's opt-out attribute:
+`data-1p-ignore` (1Password), `data-bwignore` (Bitwarden), `data-lpignore`
+(LastPass), and `data-form-type="other"` (Dashlane). Typeahead owns these
+attributes; `inputAttributes` cannot turn them off.
+
 ## Remote option sources
 
 Set `remote` when the caller fetches and replaces `options` from an external

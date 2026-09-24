@@ -156,7 +156,7 @@
   value={repo}
   fallbackLabel="All repositories"
   placeholder="Filter repositories…"
-  inputAttributes={{ "data-1p-ignore": "true" }}
+  inputAttributes={{ spellcheck: false }}
   onselect={(v) => {
     repo = v;
   }}
@@ -167,7 +167,7 @@
     value={repo}
     fallbackLabel="All repositories"
     placeholder="Filter repositories…"
-    inputAttributes={{ "data-1p-ignore": "true" }}
+    inputAttributes={{ spellcheck: false }}
     onselect={(v) => {
       repo = v;
     }}
