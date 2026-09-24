@@ -520,6 +520,7 @@
               onmousedown={() => void select("")}
               onmouseenter={() => (highlightIndex = 0)}
             >
+              {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
               <span class="kit-typeahead__option-label">{clearLabel}</span>
             </li>
           {/if}
@@ -583,6 +584,7 @@
               onmousedown={() => void select(customValue)}
               onmouseenter={() => (highlightIndex = customOffset)}
             >
+              {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
               <span class="kit-typeahead__option-label">
                 {customLabel.replace("{query}", customValue)}
               </span>
@@ -605,9 +607,9 @@
     >
       <span class="kit-typeahead__value">
         {#if triggerPrefix}<span class="kit-typeahead__prefix">{triggerPrefix}</span>{/if}
-        {#if icon && selectedOption}
+        {#if icon}
           <span class="kit-typeahead__icon" aria-hidden="true">
-            {@render icon(selectedOption)}
+            {#if selectedOption}{@render icon(selectedOption)}{/if}
           </span>
         {/if}
         <span class="kit-typeahead__value-text">{displayValue}</span>
@@ -671,6 +673,7 @@
   }
 
   .kit-typeahead__icon {
+    width: var(--typeahead-icon-width, 16px);
     display: inline-flex;
     align-items: center;
     justify-content: center;

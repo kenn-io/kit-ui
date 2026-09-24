@@ -138,7 +138,8 @@ selection can't dismiss a newer veto/error.
 `--typeahead-max-width` (300px),
 `--typeahead-panel-min-width` (0, the list is only as wide as the trigger),
 `--typeahead-control-height` (26px), `--typeahead-control-padding` (0 8px),
-`--typeahead-control-font-size` (var(--font-size-xs)).
+`--typeahead-control-font-size` (var(--font-size-xs)),
+`--typeahead-icon-width` (16px, reserved whenever `icon` is supplied, including empty slots).
 
 ## Positioning
 

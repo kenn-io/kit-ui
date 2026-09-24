@@ -619,7 +619,25 @@ test("optional icons follow options and the selected value through search", asyn
   const picker = page.getByTestId("typeahead-icons");
   const trigger = picker.getByRole("button", { name: "Search agents: Claude" });
   await expect(trigger.locator(".kit-harness-icon--claude")).toBeVisible();
+  const selectedLabelLeft = await trigger
+    .locator(".kit-typeahead__value-text")
+    .evaluate((el) => el.getBoundingClientRect().left);
   await trigger.click();
+  const labelPositions = await picker
+    .locator(".kit-typeahead__option-label")
+    .evaluateAll((labels) => labels.map((el) => el.getBoundingClientRect().left));
+  expect(labelPositions).toHaveLength(3);
+  expect(new Set(labelPositions).size).toBe(1);
+  const emptyOption = picker.getByRole("option", { name: "Custom", exact: true });
+  await expect(emptyOption.locator("svg")).toHaveCount(0);
+  await emptyOption.click();
+  await expect(picker.getByRole("button", { name: "Search agents: Custom" })).toBeVisible();
+  expect(
+    await picker
+      .locator(".kit-typeahead__value-text")
+      .evaluate((el) => el.getBoundingClientRect().left),
+  ).toBe(selectedLabelLeft);
+  await picker.getByRole("button", { name: "Search agents: Custom" }).click();
   await expect(
     picker
       .getByRole("option", { name: "Claude", exact: true })

@@ -6,6 +6,7 @@
   const agents = [
     { name: "claude", label: "Claude" },
     { name: "codex", label: "Codex" },
+    { name: "custom", label: "Custom" },
   ];
 
   let repo = $state("");
@@ -400,11 +401,13 @@
       }}
     >
       {#snippet icon(option)}
-        <HarnessIcon
-          harness={option.name === "claude" ? "claude" : "openai"}
-          size={14}
-          decorative
-        />
+        {#if option.name !== "custom"}
+          <HarnessIcon
+            harness={option.name === "claude" ? "claude" : "openai"}
+            size={14}
+            decorative
+          />
+        {/if}
       {/snippet}
     </Typeahead>
   </div>
