@@ -121,9 +121,21 @@ test("forwards consumer attributes to the search input", async ({ page }) => {
   await page.getByRole("button", { name: "Filter repositories…" }).click();
 
   await expect(page.getByRole("combobox", { name: "Filter repositories…" })).toHaveAttribute(
-    "data-1p-ignore",
-    "true",
+    "spellcheck",
+    "false",
   );
+});
+
+test("opts the search input out of password manager autofill", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Search remote options…" }).click();
+
+  const input = page.getByRole("combobox", { name: "Search remote options…" });
+  await expect(input).toHaveAttribute("autocomplete", "off");
+  await expect(input).toHaveAttribute("data-1p-ignore", "true");
+  await expect(input).toHaveAttribute("data-bwignore", "true");
+  await expect(input).toHaveAttribute("data-lpignore", "true");
+  await expect(input).toHaveAttribute("data-form-type", "other");
 });
 
 test("remote mode reports queries without filtering caller-supplied options", async ({ page }) => {
