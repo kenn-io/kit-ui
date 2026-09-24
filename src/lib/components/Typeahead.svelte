@@ -46,6 +46,8 @@
     /** Rendered inside the popover above the option list (e.g. a tab
      * switcher); receives no arguments. */
     header?: Snippet;
+    /** Decorative icon before each option and the selected trigger label. */
+    icon?: Snippet<[TypeaheadOption]>;
     /** Return `false` (or a promise of `false`), or throw, to keep the list
      * open — e.g. to veto a value or surface `error`. */
     onselect: (value: string) => void | boolean | Promise<void | boolean>;
@@ -72,6 +74,7 @@
     onquery,
     error = "",
     header,
+    icon,
     onselect,
   }: Props = $props();
 
@@ -517,6 +520,7 @@
               onmousedown={() => void select("")}
               onmouseenter={() => (highlightIndex = 0)}
             >
+              {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
               <span class="kit-typeahead__option-label">{clearLabel}</span>
             </li>
           {/if}
@@ -551,6 +555,11 @@
                   aria-hidden="true"
                 />
               {/if}
+              {#if icon}
+                <span class="kit-typeahead__icon" aria-hidden="true">
+                  {@render icon(row.option)}
+                </span>
+              {/if}
               <span class="kit-typeahead__option-label">
                 {@render segments(row.option.label)}
               </span>
@@ -575,6 +584,7 @@
               onmousedown={() => void select(customValue)}
               onmouseenter={() => (highlightIndex = customOffset)}
             >
+              {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
               <span class="kit-typeahead__option-label">
                 {customLabel.replace("{query}", customValue)}
               </span>
@@ -597,6 +607,11 @@
     >
       <span class="kit-typeahead__value">
         {#if triggerPrefix}<span class="kit-typeahead__prefix">{triggerPrefix}</span>{/if}
+        {#if icon}
+          <span class="kit-typeahead__icon" aria-hidden="true">
+            {#if selectedOption}{@render icon(selectedOption)}{/if}
+          </span>
+        {/if}
         <span class="kit-typeahead__value-text">{displayValue}</span>
       </span>
       <ChevronDownIcon
@@ -655,6 +670,14 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+  }
+
+  .kit-typeahead__icon {
+    width: var(--typeahead-icon-width, 16px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
   }
 
   .kit-typeahead__value-text {
