@@ -10,6 +10,8 @@
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
+    /** Decorative leading icon. Its column stays reserved when absent or empty. */
+    icon?: Snippet;
     children: Snippet;
   }
 
@@ -20,6 +22,7 @@
     tone = "neutral",
     textValue,
     class: className = "",
+    icon,
     children,
   }: Props = $props();
 
@@ -56,10 +59,22 @@
   }}
   onpointermove={() => element?.focus({ preventScroll: true })}
 >
+  <span class="kit-menu__icon" aria-hidden="true">
+    {@render icon?.()}
+  </span>
   {@render children()}
 </button>
 
 <style>
+  .kit-menu__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--menu-icon-width, 16px);
+    height: var(--menu-icon-width, 16px);
+    flex: 0 0 var(--menu-icon-width, 16px);
+  }
+
   .kit-menu__item {
     box-sizing: border-box;
     display: flex;

@@ -58,3 +58,26 @@ test("radio menu exposes and updates a single checked item", async ({ page }) =>
   await expect(page.getByRole("menu", { name: "Configured daemons" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Switch daemon: remote" })).toBeFocused();
 });
+
+test("action labels align with populated, empty, and omitted icons", async ({ page }) => {
+  await gotoPage(page, "menu");
+  await page.getByRole("button", { name: "Task actions" }).click();
+  const items = page.getByRole("menu", { name: "Task actions" }).getByRole("menuitem");
+  const geometry = await items.evaluateAll((elements) =>
+    elements.map((element) => {
+      const text = [...element.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+      );
+      if (!text) throw new Error("Missing menu label");
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      return {
+        labelLeft: range.getBoundingClientRect().left,
+        iconWidth: element.querySelector(".kit-menu__icon")?.getBoundingClientRect().width,
+      };
+    }),
+  );
+  expect(geometry.map((item) => item.iconWidth)).toEqual([16, 16, 16]);
+  expect(geometry[1].labelLeft).toBe(geometry[0].labelLeft);
+  expect(geometry[2].labelLeft).toBe(geometry[0].labelLeft);
+});
