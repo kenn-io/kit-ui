@@ -62,12 +62,28 @@ buttons. Those need normal Tab navigation and belong in a popover or dialog.
 
 ## Interface
 
-| Part             | Main props                                                                              |
-| ---------------- | --------------------------------------------------------------------------------------- |
-| `Menu`           | `bind:open`, `align="start" \| "end"`, `onopenchange`, `class`, `children`              |
-| `MenuTrigger`    | `ariaLabel`, `title`, `disabled`, `class`, `children`, `child`                          |
-| `MenuContent`    | `ariaLabel`, `class`, `children`                                                        |
-| `MenuItem`       | `onselect`, `disabled`, `closeOnSelect=true`, `tone="neutral" \| "danger"`, `textValue` |
-| `MenuRadioGroup` | `value`, `onchange`, `ariaLabel`, `children`                                            |
-| `MenuRadioItem`  | `value`, `disabled`, `closeOnSelect=false`, `textValue`, `class`, `children`            |
-| `MenuSeparator`  | none                                                                                    |
+| Part             | Main props                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `Menu`           | `bind:open`, `align="start" \| "end"`, `onopenchange`, `class`, `children`                      |
+| `MenuTrigger`    | `ariaLabel`, `title`, `disabled`, `class`, `children`, `child`                                  |
+| `MenuContent`    | `ariaLabel`, `class`, `children`                                                                |
+| `MenuItem`       | `onselect`, `disabled`, `closeOnSelect=true`, `tone="neutral" \| "danger"`, `textValue`, `icon` |
+| `MenuRadioGroup` | `value`, `onchange`, `ariaLabel`, `children`                                                    |
+| `MenuRadioItem`  | `value`, `disabled`, `closeOnSelect=false`, `textValue`, `class`, `children`                    |
+| `MenuSeparator`  | none                                                                                            |
+
+## Icon alignment
+
+`MenuItem` reserves a leading icon column even when its optional `icon` snippet
+is omitted or renders nothing. Put decorative icons in that snippet and the
+label in `children`; mixed icon and iconless actions then share one label column.
+The slot is hidden from assistive technology. Set `--menu-icon-width` to change
+its default 16px size.
+
+```svelte
+<MenuItem onselect={moveIssue}>
+  {#snippet icon()}<ArrowRightIcon size={16} />{/snippet}
+  Move issue
+</MenuItem>
+<MenuItem onselect={archiveIssue}>Archive issue</MenuItem>
+```
