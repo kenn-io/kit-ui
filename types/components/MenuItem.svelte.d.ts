@@ -7,6 +7,8 @@ interface Props {
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
+    /** Decorative leading icon. Its column stays reserved when absent or empty. */
+    icon?: Snippet;
     children: Snippet;
 }
 declare const MenuItem: import("svelte").Component<Props, {}, "">;

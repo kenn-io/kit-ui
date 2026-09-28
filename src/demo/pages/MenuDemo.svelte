@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
   import MoreHorizontalIcon from "@lucide/svelte/icons/ellipsis";
   import {
     Menu,
@@ -45,9 +46,12 @@
         {/snippet}
       </MenuTrigger>
       <MenuContent ariaLabel="Task actions">
-        <MenuItem textValue="Move issue" onselect={() => (lastAction = "move")}>Move issue</MenuItem
-        >
+        <MenuItem textValue="Move issue" onselect={() => (lastAction = "move")}>
+          {#snippet icon()}<ArrowRightIcon size={16} />{/snippet}
+          Move issue
+        </MenuItem>
         <MenuItem disabled textValue="Archive issue" onselect={() => (lastAction = "archive")}>
+          {#snippet icon()}{/snippet}
           Archive issue
         </MenuItem>
         <MenuSeparator />
