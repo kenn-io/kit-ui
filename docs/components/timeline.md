@@ -52,6 +52,14 @@ deliberately doesn't render markdown itself.
 the two gaps do not stack. This does not change spacing inside the
 supplied content.
 
+`layout="inline"` keeps a short system event on one row: type, author,
+summary, and time. The summary takes the free width and ellipsizes, so
+pass one line of text, such as `develop → main` or a commit subject.
+
+Set `--kit-timeline-gap` on a `TimelineItem` (default `--space-6`, 16px) to
+change the space before the next item, for example to pack consecutive
+one-line system events more tightly than conversation cards.
+
 ## Scope
 
 App concerns stay in the app: reply threading, comment editing, diff

@@ -14,6 +14,7 @@
     { name: "dark-navy", color: "0b1e3f" },
     { name: "documentation", color: "0075ca" },
     { name: "wontfix", color: "fff" },
+    { name: "blocked", color: "000000" },
   ];
 </script>
 

@@ -19,7 +19,7 @@ export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.
 export { default as Calendar } from "./components/Calendar.svelte";
 export { default as Checkbox } from "./components/Checkbox.svelte";
 export { default as Card } from "./components/Card.svelte";
-export type { CardLevel, CardPadding, CardTone } from "./components/Card.svelte";
+export type { CardLayout, CardLevel, CardPadding, CardTone } from "./components/Card.svelte";
 export { default as Chip } from "./components/Chip.svelte";
 export type { ChipSize, ChipTone } from "./components/Chip.svelte";
 export { default as ChipStack } from "./components/ChipStack.svelte";

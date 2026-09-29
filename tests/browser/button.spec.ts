@@ -278,6 +278,7 @@ test("centers lowercase ink and keeps descenders inside clipped labels", async (
     "arctic",
     "ember",
     "graphite",
+    "quiet",
   ] as const;
   const measurements = [];
 

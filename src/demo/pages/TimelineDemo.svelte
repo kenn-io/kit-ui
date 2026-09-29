@@ -80,7 +80,14 @@
       </TimelineItem>
 
       <TimelineItem tone="danger">
-        <CommentCard typeLabel="force push" tone="danger" author="marius" time="70m ago">
+        <CommentCard
+          typeLabel="force push"
+          tone="danger"
+          author="marius"
+          time="70m ago"
+          layout="inline"
+          class="demo-inline-event"
+        >
           <code class="mono">rebased onto main (d6f8727)</code>
         </CommentCard>
       </TimelineItem>

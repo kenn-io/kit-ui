@@ -16,7 +16,21 @@ const MODES = [
   { name: "dark", dark: true, highContrast: false },
   { name: "light-hc", dark: false, highContrast: true },
   { name: "dark-hc", dark: true, highContrast: true },
+  { name: "quiet-light", dark: false, highContrast: false, theme: "quiet" },
+  { name: "quiet-dark", dark: true, highContrast: false, theme: "quiet" },
 ] as const;
+
+async function applyMode(
+  page: import("@playwright/test").Page,
+  mode: (typeof MODES)[number],
+): Promise<void> {
+  await setTheme(page, mode);
+  const theme = "theme" in mode ? mode.theme : null;
+  await page.evaluate((name) => {
+    if (name) document.documentElement.dataset.kitTheme = name;
+    else delete document.documentElement.dataset.kitTheme;
+  }, theme);
+}
 
 /** Stable identity for a tone combination: tone/surface modifier classes
  * without size modifiers or the svelte scoping hash. */
@@ -55,6 +69,14 @@ const KNOWN_FAILURES: Record<string, Record<string, number>> = {
     "kit-chip--tone-muted": 3.95,
   },
   "dark-hc": {},
+  "quiet-light": {
+    "kit-chip--tone-muted": 2.91,
+    "kit-chip--tone-canceled": 4.25,
+  },
+  "quiet-dark": {
+    "kit-chip--tone-muted": 3.51,
+    "kit-chip--tone-canceled": 4.4,
+  },
 };
 
 async function collectFailures(
@@ -92,13 +114,13 @@ for (const mode of MODES) {
     const seen = new Set<string>();
 
     await gotoPage(page, "chip");
-    await setTheme(page, mode);
+    await applyMode(page, mode);
     const chips = await collectFailures(page, ".kit-chip");
     for (const [k, v] of chips.failures) all.set(k, v);
     for (const k of chips.seen) seen.add(k);
 
     await gotoPage(page, "button");
-    await setTheme(page, mode);
+    await applyMode(page, mode);
     const buttons = await collectFailures(page, ".kit-button");
     for (const [k, v] of buttons.failures) all.set(k, v);
     for (const k of buttons.seen) seen.add(k);

@@ -71,10 +71,12 @@
     display: none;
   }
 
+  /* --kit-timeline-gap sets the space before the next item; dense
+   * one-line system events can tighten it. */
   .kit-timeline-item__content {
     flex: 1;
     min-width: 0;
-    padding: var(--space-2) 0 var(--space-6);
+    padding: var(--space-2) 0 var(--kit-timeline-gap, var(--space-6));
   }
 
   .kit-timeline-item:last-child .kit-timeline-item__content {

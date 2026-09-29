@@ -146,19 +146,21 @@ the rest are **fallback-only**: never declared by the default pair, read as
 `var(--token, <site default>)` so the default theme stays pixel-identical
 and each call site keeps its own tuned default until a theme opts in.
 
-| Token                                | Default                      | Used for                                                                                                                                           |
-| ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--border-width`                     | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
-| `--press-transform`                  | `translateY(1px)` (declared) | `:active` on controls carrying `kit-control-states`                                                                                                |
-| `--font-weight-medium/semibold/bold` | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
-| `--transition-ease`                  | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
-| `--transition-medium`                | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
-| `--letter-spacing-label`             | per site (fallback)          | uppercase label/eyebrow tracking                                                                                                                   |
-| `--line-height-prose`                | `1.6` (fallback)             | comment/markdown body leading                                                                                                                      |
-| `--icon-stroke`                      | `2` (fallback)               | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                |
-| `--radius-dot`                       | `50%` (fallback)             | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities |
-| `--radius-toggle`                    | `999px` (fallback)           | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                       |
-| `--overlay-filter`                   | `none` (fallback)            | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                    |
+| Token                                          | Default                      | Used for                                                                                                                                           |
+| ---------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--border-width`                               | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
+| `--press-transform`                            | `translateY(1px)` (declared) | `:active` on controls carrying `kit-control-states`                                                                                                |
+| `--font-weight-medium/semibold/bold`           | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
+| `--transition-ease`                            | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
+| `--transition-medium`                          | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
+| `--letter-spacing-label`                       | per site (fallback)          | uppercase label/eyebrow tracking                                                                                                                   |
+| `--label-transform`                            | `uppercase` (fallback)       | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                             |
+| `--color-label-fill` / `--color-label-ink-mix` | `100%` (fallback)            | ColorLabel solid vs tinted pill (see [ColorLabel](components/color-label.md#theming))                                                              |
+| `--line-height-prose`                          | `1.6` (fallback)             | comment/markdown body leading                                                                                                                      |
+| `--icon-stroke`                                | `2` (fallback)               | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                |
+| `--radius-dot`                                 | `50%` (fallback)             | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities |
+| `--radius-toggle`                              | `999px` (fallback)           | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                       |
+| `--overlay-filter`                             | `none` (fallback)            | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                    |
 
 **Focus**: every interactive element shows
 `outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or
@@ -382,7 +384,8 @@ presence (`--border-*` and `--border-width`), hover feel
 (`--bg-surface-hover`), motion (`--transition-fast/medium` speed **and**
 `--transition-ease` character), press physics (`--press-transform`), focus
 treatment (`--focus-ring`), typographic voice (`--font-sans`, the
-`--font-weight-*` ladder, `--letter-spacing-label`, `--line-height-prose`),
+`--font-weight-*` ladder, `--letter-spacing-label`, `--label-transform`,
+`--line-height-prose`),
 icon line weight (`--icon-stroke`), and overlay frosting (`--overlay-filter`)
 together, and ships both a light and a dark variant so the dark-mode toggle
 keeps working under any theme.
@@ -401,7 +404,7 @@ setThemeName(null); // back to the default pair
 ```
 
 `KIT_THEMES` exports metadata (`name`, `label`, `description`) for building a
-picker. The eight built-in identities:
+picker. The nine built-in identities:
 
 | Name           | Identity                                                                                                                                                                              |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -413,6 +416,7 @@ picker. The eight built-in identities:
 | `arctic`       | Glacier light: airy, near-borderless, tonal depth, generous radii, long decelerating glide, heavy overlay frost, geometric type (Avenir / Century Gothic)                             |
 | `ember`        | Last light: warm peach neutrals, burnt-orange primary, sun-tinted shadows, humanist type (Seravek / Trebuchet), pointer-tracking warm glow on buttons                                 |
 | `graphite`     | Machined steel: 0.5px hairline borders, tight 2–4px radii, linear 0.06s response, no press travel, safety orange; deliberately keeps the base Inter                                   |
+| `quiet`        | Calm workspace: platform system type, neutral surfaces, one blue accent, sentence-case labels (`--label-transform: none`), AA muted text on both surfaces, no canvas decor            |
 
 ### Canvas decor
 

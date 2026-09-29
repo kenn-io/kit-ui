@@ -284,7 +284,7 @@
     font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: var(--letter-spacing-label, 0.04em);
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
     color: var(--text-muted);
   }
 

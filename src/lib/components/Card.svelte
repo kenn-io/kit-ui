@@ -3,6 +3,7 @@
 
   export type CardLevel = "inset" | "default" | "raised";
   export type CardPadding = "none" | "sm" | "md";
+  export type CardLayout = "stack" | "inline";
   export type CardTone = ChipTone;
 </script>
 
@@ -14,6 +15,10 @@
      * (list tiles, timeline cards), `raised` (page-level panel). */
     level?: CardLevel;
     padding?: CardPadding;
+    /** `stack` puts the header above the body. `inline` lays eyebrow,
+     * title, body, meta, and actions on one row — a one-line system event
+     * whose body is a short summary that ellipsizes. */
+    layout?: CardLayout;
     /** Uppercase mini-label above/beside the title (e.g. an event type). */
     eyebrow?: string | undefined;
     /** Accent for the eyebrow, using the Chip tone vocabulary. */
@@ -43,6 +48,7 @@
   let {
     level = "default",
     padding = "md",
+    layout = "stack",
     eyebrow = undefined,
     eyebrowTone = undefined,
     title = undefined,
@@ -65,6 +71,7 @@
     "kit-card",
     `kit-card--${level}`,
     `kit-card--pad-${padding}`,
+    layout === "inline" && "kit-card--inline",
     (href !== undefined || onclick !== undefined) && "kit-card--clickable",
     selected && "kit-card--selected",
     className,
@@ -211,7 +218,7 @@
   .kit-card__eyebrow {
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold, 700);
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
     letter-spacing: var(--letter-spacing-label, 0.04em);
     color: var(--text-muted);
     flex-shrink: 0;
@@ -280,5 +287,65 @@
     min-width: 0;
     border-top: 1px solid var(--border-muted);
     padding-top: var(--space-4);
+  }
+
+  /* One-row layout: the header dissolves so its parts and the body share
+   * the card's flex row. The body summary takes the free width and
+   * ellipsizes; the meta stays pinned right. */
+  .kit-card--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .kit-card--inline > .kit-card__header {
+    display: contents;
+  }
+
+  /* Every text part may shrink and ellipsize, each capped so no single
+   * long label, author, or localized time can take the whole row or
+   * overflow a narrow card; the summary keeps what is left. */
+  .kit-card--inline .kit-card__eyebrow,
+  .kit-card--inline .kit-card__title,
+  .kit-card--inline .kit-card__meta {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kit-card--inline .kit-card__eyebrow {
+    order: 1;
+    max-width: 30%;
+  }
+
+  .kit-card--inline .kit-card__title {
+    order: 2;
+    max-width: 40%;
+  }
+
+  /* The summary keeps at least 30% of the row: the label caps can sum
+   * to the full width, and the labels shrink below their caps first. */
+  .kit-card--inline > .kit-card__body {
+    order: 3;
+    flex: 1 1 0;
+    min-width: 30%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kit-card--inline .kit-card__meta {
+    order: 4;
+    max-width: 30%;
+  }
+
+  .kit-card--inline .kit-card__actions {
+    order: 5;
+  }
+
+  .kit-card--inline > .kit-card__footer {
+    display: none;
   }
 </style>
