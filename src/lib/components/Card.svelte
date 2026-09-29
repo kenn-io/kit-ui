@@ -325,10 +325,12 @@
     max-width: 40%;
   }
 
+  /* The summary keeps at least 30% of the row: the label caps can sum
+   * to the full width, and the labels shrink below their caps first. */
   .kit-card--inline > .kit-card__body {
     order: 3;
     flex: 1 1 0;
-    min-width: 0;
+    min-width: 30%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

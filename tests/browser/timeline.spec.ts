@@ -110,3 +110,20 @@ test("inline CommentCard keeps a long type label and time inside a narrow card",
     expect(box.x + box.width, part).toBeLessThanOrEqual(cardBox.x + cardBox.width);
   }
 });
+
+test("inline CommentCard keeps its summary visible when every label is long", async ({ page }) => {
+  await gotoPage(page, "timeline");
+
+  const card = page.locator(".demo-inline-event");
+  await card.evaluate((el) => {
+    (el as HTMLElement).style.width = "220px";
+    el.querySelector(".kit-card__eyebrow")!.textContent = "review requested from a team";
+    el.querySelector(".kit-card__title")!.textContent = "a-very-long-automation-account-name";
+    el.querySelector(".kit-card__meta")!.textContent = "vor ungefähr siebzehn Stunden";
+  });
+
+  expect(await card.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  const inner = await card.evaluate((el) => el.clientWidth);
+  const summary = (await card.locator(".kit-comment-card__body").boundingBox())!;
+  expect(summary.width).toBeGreaterThanOrEqual(inner * 0.25);
+});
