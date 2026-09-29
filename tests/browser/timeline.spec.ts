@@ -69,3 +69,22 @@ test("TimelineItem spacing follows --kit-timeline-gap", async ({ page }) => {
     .evaluate((el) => (el as HTMLElement).style.setProperty("--kit-timeline-gap", "4px"));
   expect(standard - (await gapAfterFirst())).toBeCloseTo(12, 0);
 });
+
+test("inline CommentCard keeps a long author inside a narrow card", async ({ page }) => {
+  await gotoPage(page, "timeline");
+
+  const card = page.locator(".demo-inline-event");
+  await card.evaluate((el) => {
+    (el as HTMLElement).style.width = "280px";
+    el.querySelector(".kit-card__title")!.textContent =
+      "a-very-long-automation-account-name-for-release-tooling";
+  });
+
+  const fits = await card.evaluate((el) => el.scrollWidth <= el.clientWidth);
+  expect(fits).toBe(true);
+  const cardBox = (await card.boundingBox())!;
+  const timeBox = (await card.locator(".kit-card__meta").boundingBox())!;
+  expect(timeBox.x + timeBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+  const summaryBox = (await card.locator(".kit-comment-card__body").boundingBox())!;
+  expect(summaryBox.width).toBeGreaterThan(0);
+});

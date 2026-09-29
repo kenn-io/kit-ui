@@ -306,14 +306,17 @@
     order: 1;
   }
 
+  /* A long title ellipsizes (the base title rule clips it) and never
+   * takes more than 40% of the row, so the summary keeps room. */
   .kit-card--inline .kit-card__title {
     order: 2;
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    max-width: 40%;
   }
 
   .kit-card--inline > .kit-card__body {
     order: 3;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
