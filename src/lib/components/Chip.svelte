@@ -108,7 +108,7 @@
     font-weight: var(--font-weight-semibold, 600);
     line-height: 1;
     letter-spacing: var(--letter-spacing-label, 0.03em);
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
     vertical-align: middle;
     white-space: nowrap;
   }

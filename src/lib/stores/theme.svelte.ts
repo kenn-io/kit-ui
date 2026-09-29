@@ -65,6 +65,11 @@ export const KIT_THEMES: readonly KitThemeInfo[] = [
     label: "Graphite",
     description: "Machined steel: strong borders, tight radii, safety orange",
   },
+  {
+    name: "quiet",
+    label: "Quiet",
+    description: "Calm workspace: system type, neutral surfaces, sentence-case labels",
+  },
 ];
 
 const DEFAULT_STORAGE_KEY = "kit-ui-theme";

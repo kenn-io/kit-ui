@@ -76,7 +76,7 @@
     font-weight: var(--font-weight-bold, 700);
     line-height: 1.25;
     letter-spacing: var(--letter-spacing-label, 0.04em);
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
   }
 
   .kit-metric-card__label--tone-info {

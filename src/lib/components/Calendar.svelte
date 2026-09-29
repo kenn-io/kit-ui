@@ -336,7 +336,7 @@
     font-weight: var(--font-weight-semibold, 600);
     color: var(--text-muted);
     text-align: center;
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
     letter-spacing: var(--letter-spacing-label, 0.02em);
     overflow: hidden;
     text-overflow: clip;

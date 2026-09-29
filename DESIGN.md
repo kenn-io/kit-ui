@@ -96,8 +96,8 @@ is a CSS custom property from `theme.css`; consuming apps retheme by
 overriding tokens, never by forking components.
 
 The Workbench is the **base identity**, shipped as the untouchable default
-light/dark pair. Eight alternate identities — Control Room, Terminal, Zine,
-Pebble, Gallery, Arctic, Ember, Graphite — ship as opt-in theme packs in
+light/dark pair. Nine alternate identities — Control Room, Terminal, Zine,
+Pebble, Gallery, Arctic, Ember, Graphite, Quiet — ship as opt-in theme packs in
 `themes.css`, each retuning the full token surface (shape, elevation,
 borders, motion, type, palette) while components stay byte-identical.
 

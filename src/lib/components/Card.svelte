@@ -211,7 +211,7 @@
   .kit-card__eyebrow {
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold, 700);
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
     letter-spacing: var(--letter-spacing-label, 0.04em);
     color: var(--text-muted);
     flex-shrink: 0;

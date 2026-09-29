@@ -82,7 +82,7 @@
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: var(--letter-spacing-label, 0.04em);
-    text-transform: uppercase;
+    text-transform: var(--label-transform, uppercase);
   }
 
   .kit-structured-list__header-status {
