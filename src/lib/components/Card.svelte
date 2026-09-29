@@ -302,15 +302,26 @@
     display: contents;
   }
 
-  .kit-card--inline .kit-card__eyebrow {
-    order: 1;
+  /* Every text part may shrink and ellipsize, each capped so no single
+   * long label, author, or localized time can take the whole row or
+   * overflow a narrow card; the summary keeps what is left. */
+  .kit-card--inline .kit-card__eyebrow,
+  .kit-card--inline .kit-card__title,
+  .kit-card--inline .kit-card__meta {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  /* A long title ellipsizes (the base title rule clips it) and never
-   * takes more than 40% of the row, so the summary keeps room. */
+  .kit-card--inline .kit-card__eyebrow {
+    order: 1;
+    max-width: 30%;
+  }
+
   .kit-card--inline .kit-card__title {
     order: 2;
-    flex: 0 1 auto;
     max-width: 40%;
   }
 
@@ -325,6 +336,7 @@
 
   .kit-card--inline .kit-card__meta {
     order: 4;
+    max-width: 30%;
   }
 
   .kit-card--inline .kit-card__actions {

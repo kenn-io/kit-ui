@@ -88,3 +88,25 @@ test("inline CommentCard keeps a long author inside a narrow card", async ({ pag
   const summaryBox = (await card.locator(".kit-comment-card__body").boundingBox())!;
   expect(summaryBox.width).toBeGreaterThan(0);
 });
+
+test("inline CommentCard keeps a long type label and time inside a narrow card", async ({
+  page,
+}) => {
+  await gotoPage(page, "timeline");
+
+  const card = page.locator(".demo-inline-event");
+  await card.evaluate((el) => {
+    (el as HTMLElement).style.width = "220px";
+    el.querySelector(".kit-card__eyebrow")!.textContent = "review requested from a team";
+    el.querySelector(".kit-card__meta")!.textContent = "vor ungefähr siebzehn Stunden";
+  });
+
+  const fits = await card.evaluate((el) => el.scrollWidth <= el.clientWidth);
+  expect(fits).toBe(true);
+  const cardBox = (await card.boundingBox())!;
+  for (const part of [".kit-card__eyebrow", ".kit-card__title", ".kit-card__meta"]) {
+    const box = (await card.locator(part).boundingBox())!;
+    expect(box.x, part).toBeGreaterThanOrEqual(cardBox.x);
+    expect(box.x + box.width, part).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+  }
+});
