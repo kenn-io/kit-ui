@@ -146,20 +146,21 @@ the rest are **fallback-only**: never declared by the default pair, read as
 `var(--token, <site default>)` so the default theme stays pixel-identical
 and each call site keeps its own tuned default until a theme opts in.
 
-| Token                                | Default                      | Used for                                                                                                                                           |
-| ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--border-width`                     | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
-| `--press-transform`                  | `translateY(1px)` (declared) | `:active` on controls carrying `kit-control-states`                                                                                                |
-| `--font-weight-medium/semibold/bold` | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
-| `--transition-ease`                  | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
-| `--transition-medium`                | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
-| `--letter-spacing-label`             | per site (fallback)          | uppercase label/eyebrow tracking                                                                                                                   |
-| `--label-transform`                  | `uppercase` (fallback)       | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                             |
-| `--line-height-prose`                | `1.6` (fallback)             | comment/markdown body leading                                                                                                                      |
-| `--icon-stroke`                      | `2` (fallback)               | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                |
-| `--radius-dot`                       | `50%` (fallback)             | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities |
-| `--radius-toggle`                    | `999px` (fallback)           | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                       |
-| `--overlay-filter`                   | `none` (fallback)            | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                    |
+| Token                                          | Default                      | Used for                                                                                                                                           |
+| ---------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--border-width`                               | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
+| `--press-transform`                            | `translateY(1px)` (declared) | `:active` on controls carrying `kit-control-states`                                                                                                |
+| `--font-weight-medium/semibold/bold`           | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
+| `--transition-ease`                            | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
+| `--transition-medium`                          | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
+| `--letter-spacing-label`                       | per site (fallback)          | uppercase label/eyebrow tracking                                                                                                                   |
+| `--label-transform`                            | `uppercase` (fallback)       | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                             |
+| `--color-label-fill` / `--color-label-ink-mix` | `100%` (fallback)            | ColorLabel solid vs tinted pill (see [ColorLabel](components/color-label.md#theming))                                                              |
+| `--line-height-prose`                          | `1.6` (fallback)             | comment/markdown body leading                                                                                                                      |
+| `--icon-stroke`                                | `2` (fallback)               | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                |
+| `--radius-dot`                                 | `50%` (fallback)             | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities |
+| `--radius-toggle`                              | `999px` (fallback)           | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                       |
+| `--overlay-filter`                             | `none` (fallback)            | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                    |
 
 **Focus**: every interactive element shows
 `outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or

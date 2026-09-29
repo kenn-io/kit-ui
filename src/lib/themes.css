@@ -658,6 +658,9 @@
   --letter-spacing-label: normal;
   --label-transform: none;
   --line-height-prose: 1.55;
+  /* Tinted label pills: a light wash of the label color, hue-tinted ink. */
+  --color-label-fill: 16%;
+  --color-label-ink-mix: 0%;
 
   --bg-primary: #f7f8fa;
   --bg-surface: #ffffff;

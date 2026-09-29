@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { contrastOf, gotoPage, setTheme } from "./helpers.js";
 
 // The quiet theme drops uppercase label styling through the
@@ -9,6 +9,20 @@ async function useTheme(page: Page, name: string | null): Promise<void> {
     if (themeName) document.documentElement.dataset.kitTheme = themeName;
     else delete document.documentElement.dataset.kitTheme;
   }, name);
+}
+
+/** The computed background as rounded 0–255 sRGB channels, whether the
+ * browser serializes it as rgb() or as color(srgb …) from color-mix(). */
+async function backgroundChannels(locator: Locator): Promise<number[]> {
+  const color = await locator.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const srgb = color.match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+  if (srgb) return srgb.slice(1, 4).map((channel) => Math.round(Number(channel) * 255));
+  const rgb = color.match(/rgba?\(([^)]+)\)/);
+  if (!rgb) throw new Error(`unsupported color: ${color}`);
+  return rgb[1]!
+    .split(",")
+    .slice(0, 3)
+    .map((channel) => Math.round(Number(channel)));
 }
 
 async function labelStyle(page: Page, selector: string) {
@@ -73,5 +87,32 @@ for (const dark of [false, true]) {
       }, surface);
       expect(await contrastOf(page.locator(probe)), surface).toBeGreaterThanOrEqual(4.5);
     }
+  });
+}
+
+test("default theme keeps GitHub-style solid label fills", async ({ page }) => {
+  await gotoPage(page, "color-label");
+  await useTheme(page, null);
+  const bug = page.locator(".kit-color-label", { hasText: /^bug$/ }).first();
+  expect(await backgroundChannels(bug)).toEqual([215, 58, 74]);
+});
+
+for (const dark of [false, true]) {
+  test(`quiet tinted labels keep AA text across label colors (${dark ? "dark" : "light"})`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "color-label");
+    await useTheme(page, "quiet");
+    await setTheme(page, { dark });
+    const labels = page.locator(".kit-color-label");
+    const count = await labels.count();
+    expect(count).toBeGreaterThan(8);
+    for (let i = 0; i < count; i++) {
+      const label = labels.nth(i);
+      const name = (await label.textContent()) ?? "";
+      expect(await contrastOf(label), name).toBeGreaterThanOrEqual(4.5);
+    }
+    const bug = page.locator(".kit-color-label", { hasText: /^bug$/ }).first();
+    expect(await backgroundChannels(bug)).not.toEqual([215, 58, 74]);
   });
 }

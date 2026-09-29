@@ -82,14 +82,32 @@
 
 <span
   class={["kit-color-label", `kit-color-label--${size}`, className]}
-  style:background-color={background}
-  style:color={foreground}
+  style:--kit-color-label-hue={background}
+  style:--kit-color-label-ink={foreground}
   {title}>{name}</span
 >
 
 <style>
+  /* Two theme tokens choose between the GitHub-style solid pill and a
+   * tinted one. --color-label-fill is how much of the label color fills
+   * the pill (100% = solid). --color-label-ink-mix is how much of the
+   * contrast-picked ink the text keeps (100%); the remainder is the label
+   * hue mixed toward --text-primary, which stays legible on a light tint
+   * of any label color. The inset edge carries the hue on tinted pills and
+   * disappears into a solid fill. */
   .kit-color-label {
     box-sizing: border-box;
+    background-color: color-mix(
+      in srgb,
+      var(--kit-color-label-hue) var(--color-label-fill, 100%),
+      var(--bg-surface)
+    );
+    color: color-mix(
+      in srgb,
+      var(--kit-color-label-ink) var(--color-label-ink-mix, 100%),
+      color-mix(in srgb, var(--kit-color-label-hue) 35%, var(--text-primary))
+    );
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kit-color-label-hue) 40%, transparent);
     display: inline-flex;
     align-items: center;
     min-width: 0;
