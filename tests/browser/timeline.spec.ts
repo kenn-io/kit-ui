@@ -49,3 +49,23 @@ test("inline CommentCard keeps a system event on one row", async ({ page }) => {
   expect(author.x).toBeLessThan(body.x);
   expect(body.x + body.width).toBeLessThanOrEqual(time.x);
 });
+
+test("TimelineItem spacing follows --kit-timeline-gap", async ({ page }) => {
+  await gotoPage(page, "timeline");
+
+  const items = page.locator(".kit-timeline-item");
+  const gapAfterFirst = async () => {
+    const first = await items
+      .nth(0)
+      .locator(".kit-timeline-item__content > *")
+      .first()
+      .boundingBox();
+    const second = await items.nth(1).boundingBox();
+    return second!.y - (first!.y + first!.height);
+  };
+  const standard = await gapAfterFirst();
+  await items
+    .nth(0)
+    .evaluate((el) => (el as HTMLElement).style.setProperty("--kit-timeline-gap", "4px"));
+  expect(standard - (await gapAfterFirst())).toBeCloseTo(12, 0);
+});
