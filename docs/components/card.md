@@ -30,7 +30,9 @@ The header renders when any of `eyebrow` (uppercase mini-label, tinted via
 `eyebrowTone` — the Chip tone vocabulary), `title`, `meta` (right-aligned
 muted text), or the `actions` snippet (trailing icon buttons) is present.
 The `footer` snippet is divided from the body by a muted rule.
-`padding` is `"none" | "sm" | "md"` (default `md`).
+`padding` is `"none" | "sm" | "md"` (default `md`). `layout` is `"stack"` (header above
+body, the default) or `"inline"`, which lays eyebrow, title, body, meta, and
+actions on one row and ellipsizes the body; the footer is not shown inline.
 
 ```svelte
 <Card level="raised" eyebrow="review" eyebrowTone="merged" title="ada" meta="2h ago">

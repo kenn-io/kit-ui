@@ -1,5 +1,5 @@
 import type { Snippet } from "svelte";
-import { type CardTone } from "./Card.svelte";
+import { type CardLayout, type CardTone } from "./Card.svelte";
 interface Props {
     /** Uppercase event label ("comment", "review", "merged"…). */
     typeLabel?: string | undefined;
@@ -10,6 +10,9 @@ interface Props {
     time?: string | undefined;
     /** Header-to-body spacing. Use `none` when rich content owns its outer spacing. */
     bodyGap?: "none" | "sm";
+    /** `inline` keeps a short system event (type, author, summary, time)
+     * on one row; see Card's `layout`. */
+    layout?: CardLayout;
     class?: string;
     /** Trailing header content — edit / copy-link icon buttons. */
     actions?: Snippet;

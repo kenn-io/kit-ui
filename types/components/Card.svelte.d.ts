@@ -1,6 +1,7 @@
 import type { ChipTone } from "./Chip.svelte";
 export type CardLevel = "inset" | "default" | "raised";
 export type CardPadding = "none" | "sm" | "md";
+export type CardLayout = "stack" | "inline";
 export type CardTone = ChipTone;
 import type { Snippet } from "svelte";
 interface Props {
@@ -8,6 +9,10 @@ interface Props {
      * (list tiles, timeline cards), `raised` (page-level panel). */
     level?: CardLevel;
     padding?: CardPadding;
+    /** `stack` puts the header above the body. `inline` lays eyebrow,
+     * title, body, meta, and actions on one row — a one-line system event
+     * whose body is a short summary that ellipsizes. */
+    layout?: CardLayout;
     /** Uppercase mini-label above/beside the title (e.g. an event type). */
     eyebrow?: string | undefined;
     /** Accent for the eyebrow, using the Chip tone vocabulary. */

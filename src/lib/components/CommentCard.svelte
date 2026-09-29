@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import Card, { type CardTone } from "./Card.svelte";
+  import Card, { type CardLayout, type CardTone } from "./Card.svelte";
 
   interface Props {
     /** Uppercase event label ("comment", "review", "merged"…). */
@@ -12,6 +12,9 @@
     time?: string | undefined;
     /** Header-to-body spacing. Use `none` when rich content owns its outer spacing. */
     bodyGap?: "none" | "sm";
+    /** `inline` keeps a short system event (type, author, summary, time)
+     * on one row; see Card's `layout`. */
+    layout?: CardLayout;
     class?: string;
     /** Trailing header content — edit / copy-link icon buttons. */
     actions?: Snippet;
@@ -26,6 +29,7 @@
     author = undefined,
     time = undefined,
     bodyGap = "sm",
+    layout = "stack",
     class: className = "",
     actions,
     children,
@@ -42,6 +46,7 @@
   <Card
     level="default"
     padding="sm"
+    {layout}
     eyebrow={typeLabel}
     eyebrowTone={tone}
     title={author}
@@ -59,6 +64,7 @@
   <Card
     level="default"
     padding="sm"
+    {layout}
     eyebrow={typeLabel}
     eyebrowTone={tone}
     title={author}
@@ -80,5 +86,11 @@
     line-height: var(--line-height-prose, 1.6);
     color: var(--text-primary);
     word-break: break-word;
+  }
+
+  :global(.kit-card--inline) .kit-comment-card__body {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>
