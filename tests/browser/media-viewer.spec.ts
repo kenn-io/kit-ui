@@ -172,3 +172,17 @@ test("markdown image expansion handles links and suspends app shortcuts", async 
   await expect(viewer(page)).toHaveCount(0);
   expect(await calls()).toEqual(["open", "restore"]);
 });
+
+test("unmounting an ImagePreview closes the viewer it opened", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { mountImagePreview } = await import("/tests/browser/fixtures/mount-image-preview.ts");
+    Object.assign(window, { __unmountPreview: mountImagePreview("Mounted preview") });
+  });
+  await page.getByRole("button", { name: "Open image in expanded view: Mounted preview" }).click();
+  await expect(viewer(page)).toBeVisible();
+
+  await page.evaluate(() =>
+    (window as unknown as { __unmountPreview: () => void }).__unmountPreview(),
+  );
+  await expect(viewer(page)).toHaveCount(0);
+});

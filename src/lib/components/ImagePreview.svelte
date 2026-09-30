@@ -38,11 +38,28 @@
 
   const triggerLabel = $derived(alt.trim() ? `${expandLabel}: ${alt}` : expandLabel);
 
+  // Close function of a viewer this preview opened; the viewer lives on
+  // document.body, so it must not outlive the preview.
+  let closeOwnViewer: (() => void) | null = null;
+
+  async function openViewer(trigger: HTMLElement): Promise<void> {
+    const close: () => void = await openMediaViewerGallery(trigger, {
+      closeLabel,
+      onClose: () => {
+        if (closeOwnViewer === close) closeOwnViewer = null;
+      },
+    });
+    closeOwnViewer = close;
+  }
+
   // The trigger is this preview's entry in the page gallery; the item is
   // read at open time, so it always reflects the current src/alt.
   function galleryEntry(trigger: HTMLElement) {
     registerMediaViewerItem(trigger, () => ({ kind: "image", src, alt }));
-    return () => unregisterMediaViewerItem(trigger);
+    return () => {
+      unregisterMediaViewerItem(trigger);
+      closeOwnViewer?.();
+    };
   }
 </script>
 
@@ -55,7 +72,7 @@
       class="kit-image-preview__trigger kit-control-states"
       aria-label={triggerLabel}
       title={triggerLabel}
-      onclick={(event) => void openMediaViewerGallery(event.currentTarget, { closeLabel })}
+      onclick={(event) => void openViewer(event.currentTarget)}
       {@attach galleryEntry}
     >
       <img
