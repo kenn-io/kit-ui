@@ -41,7 +41,10 @@ appear, loads mermaid on demand (first diagram only), renders them, and
 wraps each result in a viewer:
 
 - **drag to pan, wheel to zoom** (0.4×–8×, cursor-anchored), with a reset
-  control;
+  control. On touch, a two-finger pinch zooms and a double tap zooms in
+  on the tapped point (a second double tap resets). At scale 1 a vertical
+  swipe scrolls the page, so a diagram never traps the reader's scroll;
+  once zoomed, every gesture pans the diagram;
 - **copy** — the original fence source, via kit-ui's `copyToClipboard`;
 - **expand** — opens [MediaViewer](media-viewer.md) on the diagram, with
   the page's other displayed diagrams and images to page through. The

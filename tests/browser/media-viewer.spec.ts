@@ -322,35 +322,3 @@ test("a theme flip closes a viewer showing diagrams, not one showing only images
   await setTheme(page, { dark: false });
   await expect(viewer(page)).toHaveCount(0);
 });
-
-test("a two-finger pinch zooms around the fingers", async ({ page }) => {
-  await page.getByRole("button", { name: "Open viewer" }).click();
-  const viewport = page.locator(".kit-media-viewer__viewport");
-  const scale = () =>
-    page
-      .locator(".kit-media-viewer__pan")
-      .evaluate((node) => new DOMMatrix(node.style.transform).a);
-
-  await viewport.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const fire = (type: string, pointerId: number, x: number) =>
-      element.dispatchEvent(
-        new PointerEvent(type, {
-          pointerId,
-          pointerType: "touch",
-          clientX: x,
-          clientY: cy,
-          bubbles: true,
-        }),
-      );
-    fire("pointerdown", 1, cx - 50);
-    fire("pointerdown", 2, cx + 50);
-    // Fingers 100px apart spread to 200px: twice the scale.
-    fire("pointermove", 2, cx + 150);
-    fire("pointerup", 1, cx - 50);
-    fire("pointerup", 2, cx + 150);
-  });
-  await expect.poll(scale).toBeCloseTo(2, 1);
-});

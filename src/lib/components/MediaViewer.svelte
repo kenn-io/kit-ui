@@ -94,7 +94,11 @@
 
   function panZoomViewport(viewport: HTMLElement) {
     const pan = viewport.firstElementChild as HTMLElement;
-    const handle = attachPanZoom(viewport, pan);
+    const handle = attachPanZoom(viewport, pan, {
+      onSwipe: (direction) => {
+        if (paged) step(direction);
+      },
+    });
     panZoom = handle;
     return () => {
       handle.destroy();
@@ -193,9 +197,10 @@
    * diagrams, full-page screenshots) is the reason to expand. dvh keeps
    * mobile browser bars from covering the bottom edge. */
   .kit-media-viewer__panel {
+    --kit-media-viewer-step: 36px;
     position: relative;
-    width: 96vw;
-    height: 96dvh;
+    width: 90vw;
+    height: 90dvh;
     overflow: hidden;
     background: var(--kit-media-viewer-bg, var(--bg-surface));
     border: var(--border-width) solid var(--border-default);
@@ -285,9 +290,9 @@
   /* Centered with top, not transform: .kit-control-states owns the
    * button's transform for its pressed state. */
   .kit-media-viewer__panel :global(.kit-media-viewer__step) {
-    top: calc(50% - 18px);
-    width: 36px;
-    height: 36px;
+    top: calc(50% - var(--kit-media-viewer-step) / 2);
+    width: var(--kit-media-viewer-step);
+    height: var(--kit-media-viewer-step);
   }
 
   .kit-media-viewer__panel :global(.kit-media-viewer__step--previous) {
@@ -321,6 +326,19 @@
     }
   }
 
+  /* Finger-sized controls on touch devices. */
+  @media (hover: none), (pointer: coarse) {
+    .kit-media-viewer__panel {
+      --kit-media-viewer-step: 44px;
+    }
+
+    .kit-media-viewer__panel :global(.kit-media-viewer__close),
+    .kit-media-viewer__panel :global(.kit-media-viewer__reset) {
+      width: 44px;
+      height: 44px;
+    }
+  }
+
   @media (max-width: 640px) {
     .kit-media-viewer__pan {
       width: calc(100% - 32px);
@@ -334,7 +352,7 @@
 
     .kit-media-viewer__panel :global(.kit-media-viewer__step--next) {
       right: auto;
-      left: calc(var(--space-5) + 44px);
+      left: calc(var(--space-5) + var(--kit-media-viewer-step) + var(--space-4));
     }
   }
 </style>

@@ -86,6 +86,12 @@ pre.mermaid.kit-mermaid-viewer {
   justify-content: center;
   overflow: hidden;
   cursor: grab;
+  /* At scale 1 a vertical swipe scrolls the page past the diagram; once
+   * zoomed, every gesture pans and zooms the diagram. */
+  touch-action: pan-y;
+}
+
+.kit-mermaid-viewer__viewport[data-zoomed] {
   touch-action: none;
 }
 
@@ -192,6 +198,22 @@ pre.mermaid.kit-mermaid-viewer .edgeLabel div,
 .kit-mermaid-content .edgeLabel p,
 .kit-mermaid-content .edgeLabel div {
   color: var(--mermaid-label-text) !important;
+}
+
+/* Finger-sized controls on touch devices. */
+@media (hover: none), (pointer: coarse) {
+  .kit-mermaid-viewer__button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .kit-mermaid-viewer__controls--top {
+    grid-template-columns: repeat(2, 44px);
+  }
+
+  .kit-mermaid-viewer__controls--nav {
+    grid-template-columns: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

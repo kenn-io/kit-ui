@@ -68,7 +68,7 @@ graph LR
 
 <DemoSection
   title="Direct use"
-  description="MediaViewer takes a list of items and pages between them with the arrow buttons or the Left/Right keys, wrapping at the ends. Drag to pan, wheel to zoom, reset to go back. Images never upscale; the panel is 96% of the viewport."
+  description="MediaViewer takes a list of items and pages between them with the arrow buttons or the Left/Right keys, wrapping at the ends. Drag to pan, wheel to zoom, reset to go back. Images never upscale; the panel is 90% of the viewport."
   code={`<MediaViewer items={[{ kind: "image", src, alt }, …]} bind:index onclose={close} />`}
 >
   <Button onclick={() => (directOpen = true)}>Open viewer</Button>

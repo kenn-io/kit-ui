@@ -77,8 +77,11 @@
   outline-offset: 2px;
 }
 
+/* Always shown, and finger-sized, where there is no hover. */
 @media (hover: none), (pointer: coarse) {
   .kit-markdown-image__expand {
+    width: 44px;
+    height: 44px;
     opacity: 1;
     pointer-events: auto;
   }

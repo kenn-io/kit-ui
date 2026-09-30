@@ -155,7 +155,7 @@ test("expanded view uses the whole screen for a tall diagram", async ({ page }) 
       );
       return Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top));
     });
-  expect(drawnHeight).toBeGreaterThan(1500 * 0.85);
+  expect(drawnHeight).toBeGreaterThan(1500 * 0.8);
 });
 
 test("init directives cannot override the locked theme config", async ({ page }) => {

@@ -1,11 +1,17 @@
 # MediaViewer
 
 The expanded view for images, Mermaid diagrams, and other static
-content. It opens as a full-viewport modal: the panel is 96% of the
+content. It opens as a full-viewport modal: the panel is 90% of the
 viewport width and height, with no pixel cap. The content can be dragged
 to pan, zoomed from 0.4× to 8× with the wheel or a trackpad pinch
 (anchored at the cursor) or a two-finger touch pinch (anchored between
 the fingers), and reset.
+
+On touch, a double tap zooms in 2.5× on the tapped point and a second
+double tap resets. At scale 1, a horizontal one-finger swipe pages to
+the next or previous item; once zoomed, a swipe pans instead. On touch
+devices (`(hover: none), (pointer: coarse)`) the viewer's buttons, the
+inline Mermaid controls, and the markdown image expand button are 44px.
 
 With more than one item, the viewer pages between them. The previous and
 next buttons and the Left/Right arrow keys step through the list,
