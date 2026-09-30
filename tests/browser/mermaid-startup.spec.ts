@@ -45,7 +45,7 @@ for (const [dependency, url] of [
     await viewer.getByRole("button", { name: "Open diagram in expanded view" }).click();
     const lightbox = page.getByRole("dialog");
     await expect(lightbox.locator("svg.flowchart .node")).toHaveCount(2);
-    await lightbox.getByRole("button", { name: "Close expanded diagram" }).click();
+    await lightbox.getByRole("button", { name: "Close expanded view" }).click();
     await expect(lightbox).toHaveCount(0);
   });
 }

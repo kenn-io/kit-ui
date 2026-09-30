@@ -397,6 +397,22 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-image-preview"])).toHaveLength(0);
   });
 
+  test("lightbox: class attribute, className assignment, and CSS selector", () => {
+    const src = svelte(
+      `.markdown-image-lightbox { position: fixed; }`,
+      `<div class="image-lightbox"></div>`,
+      `overlay.className = "markdown-image-lightbox";`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-lightbox"]);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]!.message).toContain("MediaViewer");
+  });
+
+  test("lightbox: does not match kit-ui's viewer or unrelated names", () => {
+    const src = `<div class="kit-media-viewer"></div>\n<script>const lightboxOpen = true;</script>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);
+  });
+
   test("icon button: class and CSS selector, both spellings", () => {
     const src = svelte(
       `.icon-btn { width: 28px; } .icon-button:hover { color: red; }`,

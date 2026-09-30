@@ -4,7 +4,8 @@ interface Props {
     alt: string;
     /** Caps the rendered image height (any CSS length). */
     maxHeight?: string;
-    /** Click-to-expand into a full-viewport lightbox (default true). */
+    /** Click-to-expand into the full-viewport MediaViewer (default true),
+     * which also pages through the page's other expandable media. */
     expandable?: boolean;
     /** Shown in place of the image when it fails to load. */
     errorLabel?: string;

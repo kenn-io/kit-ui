@@ -150,6 +150,15 @@ export function checkHandRolledImagePreview(source: any): {
     line: number;
     message: string;
 }[];
+/** Hand-rolled lightboxes (expanded image/diagram overlays) duplicate
+ * MediaViewer, which adds pan/zoom and paging through the page's other
+ * media. Matches lightbox class names in markup, `className` assignments,
+ * and CSS selectors. */
+export function checkHandRolledLightbox(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Custom sortable table headers duplicate TableHeaderCell. */
 export function checkHandRolledTableSort(source: any): {
     rule: string;
@@ -362,6 +371,7 @@ export const ALL_RULES: {
     "hand-rolled-empty-state": typeof checkHandRolledEmptyState;
     "hand-rolled-icon-button": typeof checkHandRolledIconButton;
     "hand-rolled-image-preview": typeof checkHandRolledImagePreview;
+    "hand-rolled-lightbox": typeof checkHandRolledLightbox;
     "hand-rolled-top-bar": typeof checkHandRolledTopBar;
     "hand-rolled-search-input": typeof checkHandRolledSearchInput;
     "hand-rolled-date-input": typeof checkHandRolledDateInput;

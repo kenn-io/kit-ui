@@ -80,13 +80,11 @@ test.describe("ImagePreview nested in Modal", () => {
     await expect(modal).toBeVisible();
     await modal.getByRole("button", { name: "Expand nested image" }).click();
 
-    const lightbox = page.locator(".kit-image-preview__lightbox-panel");
+    const lightbox = page.locator(".kit-media-viewer__panel");
     await expect(lightbox).toBeVisible();
     await expect
       .poll(() =>
-        page.evaluate(
-          () => document.activeElement?.closest(".kit-image-preview__lightbox-panel") !== null,
-        ),
+        page.evaluate(() => document.activeElement?.closest(".kit-media-viewer__panel") !== null),
       )
       .toBe(true);
 
@@ -95,7 +93,7 @@ test.describe("ImagePreview nested in Modal", () => {
     await page.keyboard.press("Tab");
     expect(
       await page.evaluate(
-        () => document.activeElement?.closest(".kit-image-preview__lightbox-panel") !== null,
+        () => document.activeElement?.closest(".kit-media-viewer__panel") !== null,
       ),
     ).toBe(true);
 

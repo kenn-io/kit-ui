@@ -31,10 +31,6 @@
   --mermaid-note-bg: #fff8c5;
   --mermaid-note-text: #24292f;
   --mermaid-note-border: #d4a72c;
-
-  /* Lightbox scrim: fixed GitHub-dark glass regardless of app theme.
-   * Shared name with Forge's image lightbox by design. */
-  --viewer-scrim: rgba(1, 4, 9, 0.72);
 }
 
 :root.dark {
@@ -93,7 +89,7 @@ pre.mermaid.kit-mermaid-viewer {
   touch-action: none;
 }
 
-.kit-mermaid-viewer__viewport--dragging {
+.kit-mermaid-viewer__viewport[data-panning] {
   cursor: grabbing;
 }
 
@@ -177,86 +173,25 @@ pre.mermaid.kit-mermaid-viewer {
 
 /* Edge labels: mermaid renders these as foreignObject/text nodes whose
  * default fill fights the themed background — pin them to the label
- * tokens in both the inline viewer and the lightbox. */
+ * tokens in both the inline viewer and the expanded MediaViewer (which
+ * tags diagram content with .kit-mermaid-content). */
 pre.mermaid.kit-mermaid-viewer .edgeLabel,
-.kit-mermaid-lightbox .edgeLabel {
+.kit-mermaid-content .edgeLabel {
   color: var(--mermaid-label-text);
 }
 
 pre.mermaid.kit-mermaid-viewer .edgeLabel text,
-.kit-mermaid-lightbox .edgeLabel text {
+.kit-mermaid-content .edgeLabel text {
   fill: var(--mermaid-label-text) !important;
 }
 
 pre.mermaid.kit-mermaid-viewer .edgeLabel span,
 pre.mermaid.kit-mermaid-viewer .edgeLabel p,
 pre.mermaid.kit-mermaid-viewer .edgeLabel div,
-.kit-mermaid-lightbox .edgeLabel span,
-.kit-mermaid-lightbox .edgeLabel p,
-.kit-mermaid-lightbox .edgeLabel div {
+.kit-mermaid-content .edgeLabel span,
+.kit-mermaid-content .edgeLabel p,
+.kit-mermaid-content .edgeLabel div {
   color: var(--mermaid-label-text) !important;
-}
-
-/* Full-screen pan/zoom lightbox with its own chrome, not a dialog
- * surface. The panel is sized purely in viewport units: large diagrams
- * (long sequence diagrams especially) are the reason to expand, so no
- * pixel caps. */
-.kit-mermaid-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--viewer-scrim);
-}
-
-/* Panel chrome matches the kit dialog surfaces (Modal, DetailDrawer):
- * 1px default border + standard shadow, not Forge's heavier glass. */
-.kit-mermaid-lightbox__panel {
-  position: relative;
-  width: 96vw;
-  height: 96dvh;
-  overflow: hidden;
-  background: var(--mermaid-bg);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.kit-mermaid-lightbox .kit-mermaid-viewer__viewport {
-  background: transparent;
-}
-
-.kit-mermaid-lightbox .kit-mermaid-viewer__pan {
-  width: calc(100% - 64px);
-  height: calc(100% - 64px);
-  max-width: none;
-  max-height: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.kit-mermaid-lightbox .kit-mermaid-viewer__pan svg {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.kit-mermaid-lightbox .kit-mermaid-viewer__controls--nav {
-  right: 24px;
-  bottom: 24px;
-  top: auto;
-  transform: none;
-}
-
-.kit-mermaid-lightbox__close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 3;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -268,15 +203,5 @@ pre.mermaid.kit-mermaid-viewer .edgeLabel div,
 @media (max-width: 640px) {
   pre.mermaid.kit-mermaid-viewer {
     height: 240px;
-  }
-
-  .kit-mermaid-lightbox .kit-mermaid-viewer__pan {
-    width: calc(100% - 32px);
-    height: calc(100% - 72px);
-  }
-
-  .kit-mermaid-lightbox .kit-mermaid-viewer__controls--nav {
-    right: 12px;
-    bottom: 12px;
   }
 }

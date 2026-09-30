@@ -548,6 +548,25 @@ export function checkHandRolledImagePreview(source) {
   return findings;
 }
 
+/** Hand-rolled lightboxes (expanded image/diagram overlays) duplicate
+ * MediaViewer, which adds pan/zoom and paging through the page's other
+ * media. Matches lightbox class names in markup, `className` assignments,
+ * and CSS selectors. */
+export function checkHandRolledLightbox(source) {
+  const findings = [];
+  const re = /class(?:Name)?\s*=\s*["'`][^"'`]*lightbox|\.[\w-]*lightbox\b/gi;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-lightbox",
+      line: lineOfIndex(source, match.index),
+      message:
+        "hand-rolled lightbox — use MediaViewer, ImagePreview, or initMarkdownImageViewer from @kenn-io/kit-ui (pan/zoom, paging)",
+    });
+  }
+  return findings;
+}
+
 /** Custom sortable table headers duplicate TableHeaderCell. */
 export function checkHandRolledTableSort(source) {
   const findings = [];
@@ -1125,6 +1144,7 @@ export const ALL_RULES = {
   "hand-rolled-empty-state": checkHandRolledEmptyState,
   "hand-rolled-icon-button": checkHandRolledIconButton,
   "hand-rolled-image-preview": checkHandRolledImagePreview,
+  "hand-rolled-lightbox": checkHandRolledLightbox,
   "hand-rolled-top-bar": checkHandRolledTopBar,
   "hand-rolled-search-input": checkHandRolledSearchInput,
   "hand-rolled-date-input": checkHandRolledDateInput,
