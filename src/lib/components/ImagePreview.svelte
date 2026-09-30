@@ -4,6 +4,7 @@
     openMediaViewerGallery,
     registerMediaViewerItem,
     unregisterMediaViewerItem,
+    type MediaViewerLabels,
   } from "../utils/media-gallery.js";
 
   interface Props {
@@ -19,6 +20,8 @@
     errorLabel?: string;
     expandLabel?: string;
     closeLabel?: string;
+    /** Other strings of the expanded view (see MediaViewer). */
+    viewerLabels?: MediaViewerLabels;
   }
 
   let {
@@ -29,6 +32,7 @@
     errorLabel = "Unable to load image",
     expandLabel = "Open image in expanded view",
     closeLabel = "Close expanded image",
+    viewerLabels = {},
   }: Props = $props();
 
   // Tracking the failed URL (rather than a boolean) means a src change
@@ -43,7 +47,10 @@
   let closeOwnViewer: (() => void) | null = null;
 
   async function openViewer(trigger: HTMLElement): Promise<void> {
+    // Unmounting meanwhile unregisters the trigger, and the gallery then
+    // opens nothing.
     const close: () => void = await openMediaViewerGallery(trigger, {
+      ...viewerLabels,
       closeLabel,
       onClose: () => {
         if (closeOwnViewer === close) closeOwnViewer = null;

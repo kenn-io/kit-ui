@@ -27,6 +27,7 @@
  * document can queue; they are scoped per observed root, so initialize
  * one controller per markdown document (see docs/components/mermaid.md).
  */
+import { type MediaViewerLabels } from "./media-gallery.js";
 export interface MarkdownMermaidAPI {
     version?: string;
     initialize: (config: MarkdownMermaidConfig) => void;
@@ -68,6 +69,8 @@ export interface MarkdownMermaidOptions {
      * pushing a "kit-media-viewer" scope on `appShortcuts`. Apps with their
      * own shortcut manager or modal stack hook in here. */
     onViewerOpen?: () => () => void;
+    /** Strings for the expanded view (see MediaViewer's label props). */
+    viewerLabels?: MediaViewerLabels;
 }
 /** `codeFence` interceptor for `createMarkdownRenderer`: routes
  * ```mermaid fences to `<pre class="mermaid">` blocks (escaped source,

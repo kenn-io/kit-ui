@@ -408,8 +408,17 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("MediaViewer");
   });
 
-  test("lightbox: does not match kit-ui's viewer or unrelated names", () => {
-    const src = `<div class="kit-media-viewer"></div>\n<script>const lightboxOpen = true;</script>`;
+  test("lightbox: quoted selector strings and BEM elements", () => {
+    const src = `overlay.closest(".markdown-image-lightbox");\n.lightbox__panel { inset: 0; }`;
+    expect(checkSource(src, "a.ts", ["hand-rolled-lightbox"])).toHaveLength(2);
+  });
+
+  test("lightbox: does not match kit-ui's viewer, property access, or other words", () => {
+    const src = [
+      `<div class="kit-media-viewer highlightbox"></div>`,
+      `const lightboxOpen = settings.lightbox;`,
+      `.highlightbox { color: red; }`,
+    ].join("\n");
     expect(checkSource(src, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);
   });
 

@@ -29,12 +29,13 @@ badge appears on hover/focus as the affordance.
 
 ## Props
 
-| Prop          | Type      | Default                         | Notes                                    |
-| ------------- | --------- | ------------------------------- | ---------------------------------------- |
-| `src`         | `string`  | —                               | Remote, relative, or `data:`/`blob:` URL |
-| `alt`         | `string`  | —                               | Alt text; also labels the expanded view  |
-| `maxHeight`   | `string`  | `"70vh"`                        | Any CSS length capping image height      |
-| `expandable`  | `boolean` | `true`                          | Click-to-expand into MediaViewer         |
-| `errorLabel`  | `string`  | `"Unable to load image"`        | Shown when the image fails to load       |
-| `expandLabel` | `string`  | `"Open image in expanded view"` | Action phrase prepended to `alt`         |
-| `closeLabel`  | `string`  | `"Close expanded image"`        | Accessible name of the viewer's close    |
+| Prop           | Type                | Default                         | Notes                                                        |
+| -------------- | ------------------- | ------------------------------- | ------------------------------------------------------------ |
+| `src`          | `string`            | —                               | Remote, relative, or `data:`/`blob:` URL                     |
+| `alt`          | `string`            | —                               | Alt text; also labels the expanded view                      |
+| `maxHeight`    | `string`            | `"70vh"`                        | Any CSS length capping image height                          |
+| `expandable`   | `boolean`           | `true`                          | Click-to-expand into MediaViewer                             |
+| `errorLabel`   | `string`            | `"Unable to load image"`        | Shown when the image fails to load                           |
+| `expandLabel`  | `string`            | `"Open image in expanded view"` | Action phrase prepended to `alt`                             |
+| `closeLabel`   | `string`            | `"Close expanded image"`        | Accessible name of the viewer's close                        |
+| `viewerLabels` | `MediaViewerLabels` | `{}`                            | Other expanded-view strings ([MediaViewer](media-viewer.md)) |

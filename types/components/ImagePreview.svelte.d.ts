@@ -1,3 +1,4 @@
+import { type MediaViewerLabels } from "../utils/media-gallery.js";
 interface Props {
     /** Image URL — remote, relative, or a data:/blob: URL. */
     src: string;
@@ -11,6 +12,8 @@ interface Props {
     errorLabel?: string;
     expandLabel?: string;
     closeLabel?: string;
+    /** Other strings of the expanded view (see MediaViewer). */
+    viewerLabels?: MediaViewerLabels;
 }
 declare const ImagePreview: import("svelte").Component<Props, {}, "">;
 type ImagePreview = ReturnType<typeof ImagePreview>;

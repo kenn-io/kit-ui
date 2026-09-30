@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gotoPage } from "./helpers.js";
+import { gotoPage, setTheme } from "./helpers.js";
 
 // MediaViewer (docs/components/media-viewer.md): the shared expanded view
 // for images, Mermaid diagrams, and other elements, and the page gallery
@@ -208,4 +208,149 @@ test("an onViewerOpen hook that updates app state leaves the viewer working", as
   await page.keyboard.press("Escape");
   await expect(viewer(page)).toHaveCount(0);
   expect(await depth()).toBe(0);
+});
+
+const swatchItems = `[
+  { kind: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E", alt: "First" },
+  { kind: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E", alt: "  " },
+  { kind: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E", alt: "Third" },
+]`;
+
+test("an out-of-range index wraps, and an empty alt falls back to a name", async ({ page }) => {
+  await page.evaluate(async (itemsSource) => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    mountMediaViewer(new Function(`return ${itemsSource}`)(), 10);
+  }, swatchItems);
+  // 10 wraps to the second item, whose alt is blank.
+  await expect(viewer(page)).toHaveAccessibleName("Expanded view (2 of 3)");
+  await expect(counter(page)).toHaveText("2 / 3");
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer(page)).toHaveAccessibleName("Third (3 of 3)");
+});
+
+test("the position suffix is localizable", async ({ page }) => {
+  await page.evaluate(async (itemsSource) => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    mountMediaViewer(
+      new Function(`return ${itemsSource}`)(),
+      0,
+      (p: number, t: number) => `${p} von ${t}`,
+    );
+  }, swatchItems);
+  await expect(viewer(page)).toHaveAccessibleName("First (1 von 3)");
+});
+
+test("replacing onViewerOpen restores the old hook and runs the new one", async ({ page }) => {
+  await page.evaluate(async (itemsSource) => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    Object.assign(window, { __host: mountMediaViewer(new Function(`return ${itemsSource}`)(), 0) });
+  }, swatchItems);
+  await expect(viewer(page)).toBeVisible();
+  const calls = () =>
+    page.evaluate(() => [...(window as unknown as { __host: { calls: string[] } }).__host.calls]);
+  expect(await calls()).toEqual(["open A"]);
+
+  await page.evaluate(() =>
+    (window as unknown as { __host: { replaceHook: () => void } }).__host.replaceHook(),
+  );
+  await expect.poll(calls).toEqual(["open A", "restore A", "open B"]);
+});
+
+test("a preview unmounted while its viewer loads opens nothing", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { mountImagePreview } = await import("/tests/browser/fixtures/mount-image-preview.ts");
+    const unmountPreview = mountImagePreview("Short-lived preview");
+    document
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="Open image in expanded view: Short-lived preview"]',
+      )!
+      .click();
+    // Same task: the viewer's dynamic import has not resolved yet.
+    unmountPreview();
+  });
+  await page.waitForTimeout(500);
+  await expect(page.locator(".kit-media-viewer")).toHaveCount(0);
+});
+
+test("a markdown image controller disconnected while its viewer loads opens nothing", async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const { initMarkdownImageViewer } = await import("/src/lib/utils/markdown-images.ts");
+    const host = document.createElement("div");
+    host.innerHTML = `<img alt="Pending" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E">`;
+    document.body.append(host);
+    const controller = initMarkdownImageViewer(host, { selector: "img" });
+    host.querySelector<HTMLButtonElement>("button")!.click();
+    controller.disconnect();
+  });
+  await page.waitForTimeout(500);
+  await expect(page.locator(".kit-media-viewer")).toHaveCount(0);
+});
+
+test("a theme flip closes a viewer showing diagrams, not one showing only images", async ({
+  page,
+}) => {
+  await page.locator("pre.mermaid.kit-mermaid-viewer").waitFor({ timeout: 15_000 });
+  // The gallery takes every displayed item, so hide the diagrams to open
+  // a viewer that shows only images.
+  await page.getByRole("radio", { name: "Other tab" }).click();
+  await page.evaluate(() => {
+    for (const diagram of document.querySelectorAll<HTMLElement>("pre.mermaid"))
+      diagram.hidden = true;
+  });
+  await page.getByRole("img", { name: "Hidden tab image" }).hover();
+  await page.getByRole("button", { name: "Open image in expanded view: Hidden tab image" }).click();
+  await expect(viewer(page)).toBeVisible();
+  await setTheme(page, { dark: true });
+  await page.waitForTimeout(300);
+  await expect(viewer(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => {
+    for (const diagram of document.querySelectorAll<HTMLElement>("pre.mermaid"))
+      diagram.hidden = false;
+  });
+
+  await page
+    .locator("pre.mermaid.kit-mermaid-viewer")
+    .getByRole("button", { name: "Open diagram in expanded view" })
+    .click();
+  await expect(viewer(page)).toBeVisible();
+  await setTheme(page, { dark: false });
+  await expect(viewer(page)).toHaveCount(0);
+});
+
+test("a two-finger pinch zooms around the fingers", async ({ page }) => {
+  await page.getByRole("button", { name: "Open viewer" }).click();
+  const viewport = page.locator(".kit-media-viewer__viewport");
+  const scale = () =>
+    page
+      .locator(".kit-media-viewer__pan")
+      .evaluate((node) => new DOMMatrix(node.style.transform).a);
+
+  await viewport.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const fire = (type: string, pointerId: number, x: number) =>
+      element.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId,
+          pointerType: "touch",
+          clientX: x,
+          clientY: cy,
+          bubbles: true,
+        }),
+      );
+    fire("pointerdown", 1, cx - 50);
+    fire("pointerdown", 2, cx + 50);
+    // Fingers 100px apart spread to 200px: twice the scale.
+    fire("pointermove", 2, cx + 150);
+    fire("pointerup", 1, cx - 50);
+    fire("pointerup", 2, cx + 150);
+  });
+  await expect.poll(scale).toBeCloseTo(2, 1);
 });

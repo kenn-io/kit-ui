@@ -152,8 +152,10 @@ export function checkHandRolledImagePreview(source: any): {
 }[];
 /** Hand-rolled lightboxes (expanded image/diagram overlays) duplicate
  * MediaViewer, which adds pan/zoom and paging through the page's other
- * media. Matches lightbox class names in markup, `className` assignments,
- * and CSS selectors. */
+ * media. Matches a `lightbox` class token (whole, or a hyphenated segment
+ * like `image-lightbox`) in class attributes, `className` assignments, and
+ * selectors — a CSS rule or a quoted selector string — but not property
+ * access such as `settings.lightbox`. */
 export function checkHandRolledLightbox(source: any): {
     rule: string;
     line: number;

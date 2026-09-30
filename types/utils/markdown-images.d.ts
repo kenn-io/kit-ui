@@ -8,6 +8,7 @@
  * The wrapper and button are imperative DOM, so their styles are global:
  * import `@kenn-io/kit-ui/markdown-images.css` alongside theme.css.
  */
+import { type MediaViewerLabels } from "./media-gallery.js";
 export interface MarkdownImageViewerOptions {
     /** Images to enhance under the root. Defaults to images inside kit-ui's
      * `Markdown` component. */
@@ -16,6 +17,8 @@ export interface MarkdownImageViewerOptions {
      * (see MediaViewer's `onViewerOpen`). */
     onViewerOpen?: () => () => void;
     expandLabel?: string;
+    /** Strings for the expanded view (see MediaViewer's label props). */
+    viewerLabels?: MediaViewerLabels;
 }
 export interface MarkdownImageViewerController {
     /** Enhance matching images now instead of on the next DOM mutation. */

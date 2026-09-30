@@ -36,6 +36,7 @@ import {
   openMediaViewerGallery,
   registerMediaViewerItem,
   unregisterMediaViewerItem,
+  type MediaViewerLabels,
 } from "./media-gallery.js";
 import { attachPanZoom } from "./pan-zoom.js";
 
@@ -83,6 +84,8 @@ export interface MarkdownMermaidOptions {
    * pushing a "kit-media-viewer" scope on `appShortcuts`. Apps with their
    * own shortcut manager or modal stack hook in here. */
   onViewerOpen?: () => () => void;
+  /** Strings for the expanded view (see MediaViewer's label props). */
+  viewerLabels?: MediaViewerLabels;
 }
 
 interface InternalMarkdownMermaidOptions extends MarkdownMermaidOptions {
@@ -506,9 +509,12 @@ function cssThemeToken(styles: CSSStyleDeclaration, name: string): string {
 }
 
 function resetRenderedMermaidViewers(root: ParentNode): void {
-  closeMediaViewerGallery();
+  const viewers = Array.from(root.querySelectorAll<HTMLElement>(MERMAID_VIEWER_SELECTOR));
+  // An open viewer showing these diagrams holds copies in the old palette;
+  // one showing only other media stays open.
+  closeMediaViewerGallery(viewers);
 
-  for (const node of Array.from(root.querySelectorAll<HTMLElement>(MERMAID_VIEWER_SELECTOR))) {
+  for (const node of viewers) {
     const source = diagramSources.get(node);
     if (source === undefined) continue;
 
@@ -545,6 +551,7 @@ async function openMermaidViewer(
   options: InternalMarkdownMermaidOptions,
 ): Promise<void> {
   const close: () => void = await openMediaViewerGallery(node, {
+    ...options.viewerLabels,
     onViewerOpen: options.onViewerOpen,
     onClose: () => options.onViewerClosed?.(close),
   });
@@ -612,7 +619,9 @@ export function initMarkdownMermaidRendering(
   const renderOptions: InternalMarkdownMermaidOptions = {
     ...options,
     onViewerOpened(close) {
-      closeOwnedViewer = close;
+      // Disconnected while the viewer loaded: it must not outlive us.
+      if (disconnected) close();
+      else closeOwnedViewer = close;
     },
     onViewerClosed(close) {
       if (closeOwnedViewer === close) {

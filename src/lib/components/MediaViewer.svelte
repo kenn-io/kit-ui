@@ -13,9 +13,10 @@
 
   interface Props {
     /** What to show; with more than one item the viewer pages between
-     * them (buttons, ArrowLeft/ArrowRight), wrapping at the ends. */
+     * them (buttons, ArrowLeft/ArrowRight), wrapping at the ends. An
+     * empty list renders nothing. */
     items: MediaViewerItem[];
-    /** Index of the item on display. */
+    /** Index of the item on display; out-of-range values wrap. */
     index?: number;
     onclose: () => void;
     /** Suspend app-level keyboard handling while open; returns the
@@ -25,6 +26,10 @@
     resetLabel?: string;
     previousLabel?: string;
     nextLabel?: string;
+    /** Accessible name when the item has none (an image with empty alt). */
+    fallbackLabel?: string;
+    /** Position suffix of the accessible name when paging (1-based). */
+    formatPosition?: (position: number, total: number) => string;
   }
 
   let {
@@ -36,28 +41,38 @@
     resetLabel = "Reset view",
     previousLabel = "Previous item",
     nextLabel = "Next item",
+    fallbackLabel = "Expanded view",
+    formatPosition = (position, total) => `${position} of ${total}`,
   }: Props = $props();
 
-  const current = $derived(items[index] ?? items[0]);
+  // index wrapped into range, so the item, counter, and label agree.
+  const position = $derived(
+    items.length > 0 ? ((index % items.length) + items.length) % items.length : 0,
+  );
+  const current = $derived(items[position]);
   const paged = $derived(items.length > 1);
-  const itemLabel = $derived(current?.kind === "image" ? current.alt : (current?.label ?? ""));
+  const itemLabel = $derived(
+    (current?.kind === "image" ? current.alt : (current?.label ?? "")).trim() || fallbackLabel,
+  );
   const dialogLabel = $derived(
-    paged ? `${itemLabel || "Expanded view"} (${index + 1} of ${items.length})` : itemLabel,
+    paged ? `${itemLabel} (${formatPosition(position + 1, items.length)})` : itemLabel,
   );
 
   // Set by the viewport attachment; not reactive, only called from the
   // reset button.
   let panZoom: PanZoom | null = null;
 
-  // Untracked: an app's hook typically reads and writes its own state (a
-  // modal stack). Tracked inside the attachment's effect, that write would
-  // re-run the effect in a loop.
+  // The hook itself runs untracked: an app's hook typically reads and
+  // writes its own state (a modal stack), which tracked inside the
+  // attachment's effect would re-run the effect in a loop. The prop read
+  // stays tracked, so a replacement hook swaps in.
   function suspendShortcuts() {
-    return untrack(() => onViewerOpen());
+    const hook = onViewerOpen;
+    return untrack(hook);
   }
 
   function step(delta: number): void {
-    index = (index + delta + items.length) % items.length;
+    index = (position + delta + items.length) % items.length;
   }
 
   function onkeydown(event: KeyboardEvent): void {
@@ -95,71 +110,73 @@
   }
 </script>
 
-<div
-  class="kit-media-viewer"
-  role="presentation"
-  onpointerdown={backdropCloses(onclose)}
-  {@attach suspendShortcuts}
->
+{#if current}
   <div
-    class="kit-media-viewer__panel"
-    role="dialog"
-    aria-modal="true"
-    aria-label={dialogLabel}
-    tabindex="-1"
-    style:--kit-media-viewer-bg={current?.kind === "element" ? current.background : undefined}
-    {onkeydown}
-    {@attach trapFocus}
+    class="kit-media-viewer"
+    role="presentation"
+    onpointerdown={backdropCloses(onclose)}
+    {@attach suspendShortcuts}
   >
-    {#key current}
-      <div class="kit-media-viewer__viewport" {@attach panZoomViewport}>
-        <div
-          class={[
-            "kit-media-viewer__pan",
-            current?.kind === "element" && "kit-media-viewer__pan--element",
-            current?.kind === "element" && current.class,
-          ]}
-        >
-          {#if current?.kind === "image"}
-            <img class="kit-media-viewer__img" src={current.src} alt={current.alt} />
-          {:else if current?.kind === "element"}
-            <div class="kit-media-viewer__element" {@attach cloneInto(current.element)}></div>
-          {/if}
-        </div>
-      </div>
-    {/key}
-
-    <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={onclose}>
-      <XIcon size="16" strokeWidth="2" aria-hidden="true" />
-    </IconButton>
-
-    {#if paged}
-      <IconButton
-        class="kit-media-viewer__step kit-media-viewer__step--previous"
-        ariaLabel={previousLabel}
-        onclick={() => step(-1)}
-      >
-        <ChevronLeftIcon size="18" strokeWidth="2" aria-hidden="true" />
-      </IconButton>
-      <IconButton
-        class="kit-media-viewer__step kit-media-viewer__step--next"
-        ariaLabel={nextLabel}
-        onclick={() => step(1)}
-      >
-        <ChevronRightIcon size="18" strokeWidth="2" aria-hidden="true" />
-      </IconButton>
-      <p class="kit-media-viewer__counter" aria-hidden="true">{index + 1} / {items.length}</p>
-    {/if}
-
-    <IconButton
-      class="kit-media-viewer__reset"
-      ariaLabel={resetLabel}
-      onclick={() => panZoom?.reset()}
+    <div
+      class="kit-media-viewer__panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label={dialogLabel}
+      tabindex="-1"
+      style:--kit-media-viewer-bg={current?.kind === "element" ? current.background : undefined}
+      {onkeydown}
+      {@attach trapFocus}
     >
-      <RotateCcwIcon size="16" strokeWidth="2" aria-hidden="true" />
-    </IconButton>
+      {#key position}
+        <div class="kit-media-viewer__viewport" {@attach panZoomViewport}>
+          <div
+            class={[
+              "kit-media-viewer__pan",
+              current?.kind === "element" && "kit-media-viewer__pan--element",
+              current?.kind === "element" && current.class,
+            ]}
+          >
+            {#if current?.kind === "image"}
+              <img class="kit-media-viewer__img" src={current.src} alt={current.alt} />
+            {:else if current?.kind === "element"}
+              <div class="kit-media-viewer__element" {@attach cloneInto(current.element)}></div>
+            {/if}
+          </div>
+        </div>
+      {/key}
+
+      <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={onclose}>
+        <XIcon size="16" strokeWidth="2" aria-hidden="true" />
+      </IconButton>
+
+      {#if paged}
+        <IconButton
+          class="kit-media-viewer__step kit-media-viewer__step--previous"
+          ariaLabel={previousLabel}
+          onclick={() => step(-1)}
+        >
+          <ChevronLeftIcon size="18" strokeWidth="2" aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          class="kit-media-viewer__step kit-media-viewer__step--next"
+          ariaLabel={nextLabel}
+          onclick={() => step(1)}
+        >
+          <ChevronRightIcon size="18" strokeWidth="2" aria-hidden="true" />
+        </IconButton>
+        <p class="kit-media-viewer__counter" aria-hidden="true">{position + 1} / {items.length}</p>
+      {/if}
+
+      <IconButton
+        class="kit-media-viewer__reset"
+        ariaLabel={resetLabel}
+        onclick={() => panZoom?.reset()}
+      >
+        <RotateCcwIcon size="16" strokeWidth="2" aria-hidden="true" />
+      </IconButton>
+    </div>
   </div>
-</div>
+{/if}
 
 <style>
   .kit-media-viewer {

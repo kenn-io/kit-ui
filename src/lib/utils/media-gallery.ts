@@ -22,7 +22,10 @@ export type MediaViewerItem =
     }
   | {
       kind: "element";
-      /** Cloned into the viewer on display; the original stays in place. */
+      /** Deep-cloned into the viewer on display; the original stays in
+       * place. Suited to static markup such as an SVG diagram: a clone
+       * keeps no event listeners, canvas pixels, shadow roots, or live
+       * form/media state, and it repeats the original's ids. */
       element: Element;
       /** Accessible name for the expanded view. */
       label: string;
@@ -33,11 +36,17 @@ export type MediaViewerItem =
       background?: string;
     };
 
+/** User-facing strings of the viewer, all with English defaults. */
 export interface MediaViewerLabels {
   closeLabel?: string;
   resetLabel?: string;
   previousLabel?: string;
   nextLabel?: string;
+  /** Accessible name when the item has none (an image with empty alt). */
+  fallbackLabel?: string;
+  /** Position suffix of the accessible name when paging, e.g.
+   * `(position, total) => \`${position} of ${total}\``. 1-based. */
+  formatPosition?: (position: number, total: number) => string;
 }
 
 export interface OpenMediaViewerOptions extends MediaViewerLabels {
@@ -53,7 +62,7 @@ export interface OpenMediaViewerOptions extends MediaViewerLabels {
 const ITEM_ATTRIBUTE = "data-kit-media-item";
 const MODAL_LAYER_SELECTOR = '[aria-modal="true"]';
 const registeredItems = new WeakMap<Element, () => MediaViewerItem>();
-let closeActiveViewer: (() => void) | null = null;
+let activeViewer: { close: () => void; elements: Element[] } | null = null;
 let openGeneration = 0;
 
 /** Mark `element` as an expandable gallery entry. `item` is called at
@@ -84,49 +93,59 @@ function isDisplayed(element: Element): boolean {
   if (typeof element.checkVisibility === "function") {
     return element.checkVisibility({ visibilityProperty: true });
   }
-  return element.getClientRects().length > 0;
+  // No client rects means a display:none subtree; visibility inherits, so
+  // the element's own computed value covers hidden ancestors.
+  return element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden";
 }
 
 /** Open MediaViewer on `origin`, paging through the page's other
- * eligible items. Replaces any viewer that is already open. Resolves to
- * a function that closes this viewer (a no-op once it has closed). */
+ * eligible items. Replaces any viewer that is already open. The viewer
+ * component loads on first use; if `origin` is removed or unregistered
+ * meanwhile (its owner unmounted), nothing opens. Resolves to a function
+ * that closes this viewer (a no-op once it has closed or never opened). */
 export async function openMediaViewerGallery(
   origin: Element,
   options: OpenMediaViewerOptions = {},
 ): Promise<() => void> {
   const generation = ++openGeneration;
-  const elements = collectMediaViewerGallery(origin);
-  const items = elements.map((element) => registeredItems.get(element)!());
-  const index = elements.indexOf(origin);
-
   const [{ mount, unmount }, { default: MediaViewer }] = await Promise.all([
     import("svelte"),
     import("../components/MediaViewer.svelte"),
   ]);
-  // A later open (or a close) raced this one's dynamic import.
+  // A later open (or a close) raced this one's dynamic import, or the
+  // origin's owner went away while it loaded.
   if (generation !== openGeneration) return () => {};
-  closeActiveViewer?.();
+  if (!origin.isConnected || !registeredItems.has(origin)) return () => {};
+  activeViewer?.close();
 
+  // Collected after the load so the set and each item reflect the page now.
+  const elements = collectMediaViewerGallery(origin);
+  const items = elements.map((element) => registeredItems.get(element)!());
   const { onClose, ...viewerProps } = options;
   let closed = false;
   const close = () => {
     if (closed) return;
     closed = true;
-    if (closeActiveViewer === close) closeActiveViewer = null;
+    if (activeViewer?.close === close) activeViewer = null;
     void unmount(instance);
     onClose?.();
   };
   const instance = mount(MediaViewer, {
     target: document.body,
-    props: { ...viewerProps, items, index: Math.max(index, 0), onclose: close },
+    props: { ...viewerProps, items, index: elements.indexOf(origin), onclose: close },
   });
-  closeActiveViewer = close;
+  activeViewer = { close, elements };
   return close;
 }
 
-/** Close the open gallery viewer, if any (e.g. before content it shows
- * is re-rendered). */
-export function closeMediaViewerGallery(): void {
+/** Close the open gallery viewer and cancel a pending open. With
+ * `showing`, only when the open viewer's items include one of those
+ * elements (e.g. diagrams about to be re-rendered). */
+export function closeMediaViewerGallery(showing?: Iterable<Element>): void {
+  if (showing) {
+    const shown = activeViewer?.elements;
+    if (!shown || !Array.from(showing).some((element) => shown.includes(element))) return;
+  }
   openGeneration += 1;
-  closeActiveViewer?.();
+  activeViewer?.close();
 }
