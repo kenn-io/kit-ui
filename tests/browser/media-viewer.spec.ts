@@ -128,3 +128,47 @@ test("a small diagram grows to fill the expanded view", async ({ page }) => {
   expect(widths.svg).toBeGreaterThan(widths.natural);
   expect(widths.svg).toBeCloseTo(widths.pan, 0);
 });
+
+test("markdown image expansion handles links and suspends app shortcuts", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { initMarkdownImageViewer } = await import("/src/lib/utils/markdown-images.ts");
+    const pixel =
+      "data:image/svg+xml," +
+      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"/>');
+    const host = document.createElement("div");
+    host.id = "markdown-images-host";
+    host.innerHTML = `
+      <a id="image-link" href="#linked"><img alt="Linked" src="${pixel}"></a>
+      <a id="text-link" href="#text"><img alt="In text link" src="${pixel}"> read more</a>`;
+    document.body.append(host);
+    const calls: string[] = [];
+    Object.assign(window, { __viewerCalls: calls });
+    initMarkdownImageViewer(host, {
+      selector: "img",
+      onViewerOpen: () => {
+        calls.push("open");
+        return () => calls.push("restore");
+      },
+    });
+  });
+  const host = page.locator("#markdown-images-host");
+  const calls = () =>
+    page.evaluate(() => (window as unknown as { __viewerCalls: string[] }).__viewerCalls);
+
+  // A link wrapping only the image keeps working; the button sits beside it.
+  const linkedButton = host.getByRole("button", { name: "Open image in expanded view: Linked" });
+  await expect(linkedButton).toHaveCount(1);
+  expect(await linkedButton.evaluate((button) => button.closest("a"))).toBeNull();
+  await expect(host.locator("#image-link")).toHaveAttribute("href", "#linked");
+  // An image inside a link with other content is left alone.
+  await expect(host.getByRole("button", { name: /In text link/ })).toHaveCount(0);
+
+  await host.locator("#image-link").hover({ position: { x: 20, y: 100 } });
+  await linkedButton.click();
+  // The demo page's own media join the gallery too.
+  await expect(viewer(page)).toHaveAccessibleName(/^Linked \(\d+ of \d+\)$/);
+  expect(await calls()).toEqual(["open"]);
+  await page.keyboard.press("Escape");
+  await expect(viewer(page)).toHaveCount(0);
+  expect(await calls()).toEqual(["open", "restore"]);
+});
