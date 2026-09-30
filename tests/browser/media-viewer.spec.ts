@@ -106,7 +106,9 @@ test("an item inside a modal pages only within that modal", async ({ page }) => 
   await page.getByRole("button", { name: "Open image modal" }).click();
   await page.getByRole("button", { name: "Expand nested image" }).click();
 
-  await expect(viewer(page)).toBeVisible();
+  // The Modal is a dialog too; the viewer's name has no "(n of m)" suffix
+  // because it holds only the nested image.
+  await expect(page.getByRole("dialog", { name: "Nested demo shapes", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Next item" })).toHaveCount(0);
   await expect(counter(page)).toHaveCount(0);
 });
@@ -185,4 +187,25 @@ test("unmounting an ImagePreview closes the viewer it opened", async ({ page }) 
     (window as unknown as { __unmountPreview: () => void }).__unmountPreview(),
   );
   await expect(viewer(page)).toHaveCount(0);
+});
+
+test("an onViewerOpen hook that updates app state leaves the viewer working", async ({ page }) => {
+  await page.locator("pre.mermaid.kit-mermaid-viewer").waitFor({ timeout: 15_000 });
+  await page.evaluate(async () => {
+    const { pushFrame, depth } = await import("/tests/browser/fixtures/modal-stack.svelte.ts");
+    const { openMediaViewerGallery } = await import("/src/lib/utils/media-gallery.ts");
+    Object.assign(window, { __depth: depth });
+    const origin = document.querySelector(".kit-markdown-image")!;
+    await openMediaViewerGallery(origin, { onViewerOpen: pushFrame });
+  });
+  const depth = () =>
+    page.evaluate(() => (window as unknown as { __depth: () => number }).__depth());
+
+  await expect(viewer(page)).toHaveAccessibleName("Screenshot A (1 of 4)");
+  expect(await depth()).toBe(1);
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (2 of 4)");
+  await page.keyboard.press("Escape");
+  await expect(viewer(page)).toHaveCount(0);
+  expect(await depth()).toBe(0);
 });

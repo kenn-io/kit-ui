@@ -3,6 +3,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import XIcon from "@lucide/svelte/icons/x";
+  import { untrack } from "svelte";
   import type { MediaViewerItem } from "../utils/media-gallery.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
@@ -48,6 +49,13 @@
   // reset button.
   let panZoom: PanZoom | null = null;
 
+  // Untracked: an app's hook typically reads and writes its own state (a
+  // modal stack). Tracked inside the attachment's effect, that write would
+  // re-run the effect in a loop.
+  function suspendShortcuts() {
+    return untrack(() => onViewerOpen());
+  }
+
   function step(delta: number): void {
     index = (index + delta + items.length) % items.length;
   }
@@ -91,7 +99,7 @@
   class="kit-media-viewer"
   role="presentation"
   onpointerdown={backdropCloses(onclose)}
-  {@attach () => onViewerOpen()}
+  {@attach suspendShortcuts}
 >
   <div
     class="kit-media-viewer__panel"
