@@ -130,6 +130,34 @@ test("backdrop click closes the lightbox", async ({ page }) => {
   await expect(lightbox).toHaveCount(0);
 });
 
+test("expanded view uses the whole screen for a tall diagram", async ({ page }) => {
+  await page.setViewportSize({ width: 2900, height: 1500 });
+  await page.evaluate(async () => {
+    const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const host = document.createElement("div");
+    host.id = "tall-diagram-host";
+    const messages = Array.from({ length: 30 }, (_, i) => `A->>B: step ${i}`).join("\n");
+    host.innerHTML = `<pre class="mermaid">sequenceDiagram\n${messages}</pre>`;
+    document.body.append(host);
+    initMarkdownMermaidRendering(host);
+  });
+
+  const host = page.locator("#tall-diagram-host");
+  await expect(host.locator("pre.mermaid.kit-mermaid-viewer")).toBeVisible({ timeout: 15_000 });
+  await host.getByRole("button", { name: "Open diagram in expanded view" }).click();
+
+  // Height of the drawn diagram, not the svg box (which letterboxes it).
+  const drawnHeight = await page
+    .locator(".kit-mermaid-lightbox .kit-mermaid-viewer__pan > svg")
+    .evaluate((svg) => {
+      const rects = Array.from(svg.children, (child) => child.getBoundingClientRect()).filter(
+        (rect) => rect.height > 0,
+      );
+      return Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top));
+    });
+  expect(drawnHeight).toBeGreaterThan(1500 * 0.85);
+});
+
 test("init directives cannot override the locked theme config", async ({ page }) => {
   const result = await page.evaluate(async () => {
     const mod = await import("/src/lib/utils/markdown-mermaid.ts");

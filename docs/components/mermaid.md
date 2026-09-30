@@ -38,7 +38,7 @@ observes the root with a `MutationObserver` and, whenever new blocks
 appear, loads mermaid on demand (first diagram only), renders them, and
 wraps each result in a viewer:
 
-- **drag to pan, wheel to zoom** (0.4×–3×, cursor-anchored), with a reset
+- **drag to pan, wheel to zoom** (0.4×–8×, cursor-anchored), with a reset
   control;
 - **copy** — the original fence source, via kit-ui's `copyToClipboard`;
 - **expand** — a full-screen lightbox (`role="dialog"` with full modal
