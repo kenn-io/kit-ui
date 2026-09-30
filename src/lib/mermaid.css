@@ -215,8 +215,8 @@ pre.mermaid.kit-mermaid-viewer .edgeLabel div,
  * 1px default border + standard shadow, not Forge's heavier glass. */
 .kit-mermaid-lightbox__panel {
   position: relative;
-  width: 96vw;
-  height: 96dvh;
+  width: 90vw;
+  height: 90dvh;
   overflow: hidden;
   background: var(--mermaid-bg);
   border: 1px solid var(--border-default);
