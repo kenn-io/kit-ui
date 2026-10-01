@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
 // trapFocus behaviors only a real browser exercises: initial focus,
@@ -159,5 +159,96 @@ test.describe("trapFocus tab order", () => {
     );
     await page.keyboard.press("Tab");
     expect(await focused()).toBe("Medium");
+  });
+});
+
+test.describe("trapFocus tab order edge cases", () => {
+  async function mount(page: Page, html: string, withoutCheckVisibility = false) {
+    await gotoPage(page, "modal");
+    await page.evaluate(
+      async ({ html, withoutCheckVisibility }) => {
+        if (withoutCheckVisibility) {
+          // Older engines: the computed-style fallback decides visibility.
+          delete (HTMLElement.prototype as { checkVisibility?: unknown }).checkVisibility;
+          delete (Element.prototype as { checkVisibility?: unknown }).checkVisibility;
+        }
+        const { trapFocus } = await import("/src/lib/utils/focus-trap.ts");
+        const surface = document.createElement("div");
+        surface.id = "trap-edge";
+        surface.tabIndex = -1;
+        surface.innerHTML = html;
+        document.body.append(surface);
+        trapFocus(surface);
+      },
+      { html, withoutCheckVisibility },
+    );
+  }
+  const focused = (page: Page) =>
+    page.evaluate(
+      () =>
+        document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent,
+    );
+
+  test("an unchecked radio group is entered at its first radio, or its last going back", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      `<button>Before</button>
+       <input type="radio" name="g" aria-label="One"><input type="radio" name="g" aria-label="Two">
+       <input type="radio" name="g" aria-label="Three"><button>After</button>`,
+    );
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    expect(await focused(page)).toBe("One");
+    await page.keyboard.press("Tab");
+    expect(await focused(page)).toBe("After");
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused(page)).toBe("Three");
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused(page)).toBe("Before");
+  });
+
+  test("from a roving item, Tab takes the nearest stop in document order", async ({ page }) => {
+    await mount(
+      page,
+      `<button>Zero A</button><button tabindex="-1" id="roving">Roving</button>
+       <button>Zero B</button><button tabindex="2">Positive</button>`,
+    );
+    await page.evaluate(() => document.querySelector<HTMLElement>("#trap-edge #roving")!.focus());
+    await page.keyboard.press("Tab");
+    expect(await focused(page)).toBe("Zero B");
+    await page.evaluate(() => document.querySelector<HTMLElement>("#trap-edge #roving")!.focus());
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused(page)).toBe("Zero A");
+  });
+
+  test("skips nested editing hosts and iframes", async ({ page }) => {
+    await mount(
+      page,
+      `<button>First</button>
+       <div contenteditable="true" aria-label="Host"><span contenteditable="true" aria-label="Nested">x</span></div>
+       <iframe title="Frame" srcdoc="<button>Inside</button>"></iframe><button>Last</button>`,
+    );
+    for (const name of ["First", "Host", "Last", "First"]) {
+      await page.keyboard.press("Tab");
+      expect(await focused(page)).toBe(name);
+    }
+  });
+
+  test("without checkVisibility, a radio in a closed details does not hide its group", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      `<button>Before</button>
+       <details><summary>More</summary><input type="radio" name="h" aria-label="Hidden" checked></details>
+       <input type="radio" name="h" aria-label="Visible"><button>After</button>`,
+      true,
+    );
+    for (const name of ["Before", "More", "Visible", "After"]) {
+      await page.keyboard.press("Tab");
+      expect(await focused(page)).toBe(name);
+    }
   });
 });

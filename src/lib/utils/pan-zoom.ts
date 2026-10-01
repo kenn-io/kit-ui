@@ -73,7 +73,7 @@ export function attachPanZoom(
 
   const updateTransform = () => {
     pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${formatScale(scale)})`;
-    if (scale === 1) delete viewport.dataset.zoomed;
+    if (atRest(scale)) delete viewport.dataset.zoomed;
     else viewport.dataset.zoomed = "true";
   };
 
@@ -175,6 +175,11 @@ export function attachPanZoom(
     }
     if (pointers.size > 0) return;
     delete viewport.dataset.panning;
+    // A pinch out and back ends a hair off 1: settle it at exactly 1.
+    if (atRest(scale) && scale !== 1) {
+      scale = 1;
+      updateTransform();
+    }
     const ended = gesture;
     gesture = null;
     if (!ended) return;
@@ -190,7 +195,7 @@ export function attachPanZoom(
     const dy = event.clientY - start.y;
     if (
       options.onSwipe &&
-      start.scale === 1 &&
+      atRest(start.scale) &&
       Math.abs(dx) >= SWIPE_MIN &&
       Math.abs(dx) > Math.abs(dy) * SWIPE_AXIS_RATIO
     ) {
@@ -218,7 +223,7 @@ export function attachPanZoom(
 
   /** Zoomed: back to the whole view. At scale 1: zoom in on the point. */
   const toggleZoom = (x: number, y: number) => {
-    if (scale !== 1) {
+    if (!atRest(scale)) {
       reset();
     } else {
       const origin = fromCenter(x, y);
@@ -282,13 +287,17 @@ function normalizeWheelDelta(event: WheelEvent, viewport: HTMLElement): number {
   return event.deltaY;
 }
 
-// Scale keeps full precision: a pinch arrives as many tiny ratios, and
-// rounding each step would discard them. Only the CSS value is rounded.
-// Within 0.1% of 1 it is exactly 1, so a pinch out and back leaves no
-// float residue that would read as zoomed (no paging, no page scroll).
+// Scale keeps full precision: a pinch or slow wheel arrives as many tiny
+// ratios, and rounding or snapping each step would discard them. Only the
+// CSS value is rounded.
 function clampScale(value: number): number {
-  if (Math.abs(value - 1) < 0.001) return 1;
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+}
+
+/** Unzoomed for paging, page scroll, and double tap: within 0.1% of 1,
+ * so float residue from a pinch out and back does not count as zoom. */
+function atRest(value: number): boolean {
+  return Math.abs(value - 1) < 0.001;
 }
 
 function formatScale(value: number): string {

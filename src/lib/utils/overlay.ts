@@ -28,8 +28,12 @@ export function backdropCloses(close: () => void): (backdrop: HTMLElement) => ()
     const onPointerUp = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
       pointerId = null;
-      // Without layout (jsdom) there is no hit test; trust the target.
-      const hit = document.elementFromPoint?.(event.clientX, event.clientY) ?? event.target;
+      // Without layout (jsdom) there is no hit test; trust the target. A
+      // release off-screen hits nothing (null) and does not count.
+      const hit =
+        typeof document.elementFromPoint === "function"
+          ? document.elementFromPoint(event.clientX, event.clientY)
+          : event.target;
       released = hit === backdrop;
     };
     const onPointerCancel = (event: PointerEvent) => {

@@ -553,17 +553,21 @@ export function checkHandRolledImagePreview(source) {
  * media. Matches a `lightbox` class token (whole, or a hyphenated segment
  * like `image-lightbox`) in class attributes and `className` assignments,
  * and as a class selector (`.lightbox`, `div.image-lightbox`) in
- * stylesheets — CSS files and `<style>` blocks — and inside string
- * literals (`querySelector(".lightbox")`). Script code outside strings is
- * never matched, so property access such as `settings.lightbox` is not a
- * finding. */
+ * stylesheets — CSS files and `<style>` blocks, outside comments and
+ * quoted values — and inside string literals (`querySelector(".lightbox")`).
+ * Script code outside strings is never matched, so property access such
+ * as `settings.lightbox` is not a finding. */
 const LIGHTBOX_CLASS_ATTRIBUTE =
   /class(?:Name)?\s*=\s*["'`](?:[^"'`]*[\s-])?lightbox(?![a-z0-9])/gi;
 const LIGHTBOX_SELECTOR = /\.(?:[\w-]*-)?lightbox(?![a-z0-9])/gi;
-const STYLESHEET_FILE = /\.(?:css|scss|sass|less|pcss|postcss)$/i;
+// The file types kit-ui-check's directory walk yields.
+const STYLESHEET_FILE = /\.css$/i;
 const STYLE_BLOCK = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
-// A complete string literal on one line, escapes included.
-const STRING_LITERAL = /(["'`])((?:\\.|(?!\1)[^\\\n])*)\1/g;
+// A complete string literal, escapes included: quotes on one line,
+// template literals across lines.
+const STRING_LITERAL = /(["'])((?:\\.|(?!\1)[^\\\n])*)\1|`((?:\\.|[^\\`])*)`/g;
+// Stylesheet text that holds no selectors: comments and quoted values.
+const CSS_NON_SELECTOR = /\/\*[\s\S]*?\*\/|(["'])(?:\\.|(?!\1)[^\\\n])*\1/g;
 
 export function checkHandRolledLightbox(source, filename = "") {
   const starts = new Set();
@@ -571,13 +575,23 @@ export function checkHandRolledLightbox(source, filename = "") {
   const scan = (text, offset) => {
     for (const match of text.matchAll(LIGHTBOX_SELECTOR)) starts.add(offset + match.index);
   };
+  // Blank out comments and quoted values, keeping offsets (and lines).
+  const scanStylesheet = (text, offset) =>
+    scan(
+      text.replace(CSS_NON_SELECTOR, (match) => match.replace(/[^\n]/g, " ")),
+      offset,
+    );
   if (STYLESHEET_FILE.test(filename)) {
-    scan(source, 0);
+    scanStylesheet(source, 0);
   } else {
     for (const match of source.matchAll(STYLE_BLOCK)) {
-      scan(match[1], match.index + match[0].indexOf(">") + 1);
+      scanStylesheet(match[1], match.index + match[0].indexOf(">") + 1);
     }
-    for (const match of source.matchAll(STRING_LITERAL)) scan(match[2], match.index + 1);
+    // Strings in script and markup; style blocks were scanned above.
+    const outsideStyles = source.replace(STYLE_BLOCK, (match) => match.replace(/[^\n]/g, " "));
+    for (const match of outsideStyles.matchAll(STRING_LITERAL)) {
+      scan(match[2] ?? match[3], match.index + 1);
+    }
   }
   return [...starts]
     .sort((a, b) => a - b)

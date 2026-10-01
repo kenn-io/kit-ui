@@ -23,7 +23,8 @@ const TABBABLE_SELECTOR = [
   "details > summary:first-of-type",
   "audio[controls]",
   "video[controls]",
-  "iframe",
+  // No iframe: focus inside one fires keydown in the frame's document,
+  // out of the trap's reach, so Tab could leave the surface from there.
   '[contenteditable]:not([contenteditable="false"])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
@@ -92,34 +93,54 @@ function isShown(el: HTMLElement): boolean {
   if (getComputedStyle(el).visibility === "hidden") return false;
   for (let node: Element | null = el; node; node = node.parentElement) {
     if (getComputedStyle(node).display === "none") return false;
+    // A closed <details> shows only its summary.
+    if (node !== el && node instanceof HTMLDetailsElement && !node.open) {
+      if (!node.querySelector(":scope > summary")?.contains(el)) return false;
+    }
   }
   return true;
 }
 
-/** The surface's tab stops in the order the browser's Tab visits them. */
-function tabbables(surface: HTMLElement): HTMLElement[] {
-  const candidates = Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
-    (el) =>
-      // tabindex="-1" (roving items) is focusable but no tab stop. Some
-      // engines report -1 for contenteditable with no tabindex, which
-      // Tab still visits.
-      (el.tabIndex >= 0 || (el.isContentEditable && !el.hasAttribute("tabindex"))) &&
-      !el.closest("[inert]") &&
-      // Also catches controls inside a disabled fieldset.
-      !el.matches(":disabled") &&
-      (el === document.activeElement || isShown(el)),
+/** Focusable by Tab, ignoring native radio grouping. */
+function isCandidate(el: HTMLElement): boolean {
+  const explicit = el.hasAttribute("tabindex");
+  // Tab visits an editing host, but not one nested inside another unless
+  // it has its own tabindex. Some engines report -1 for an editing host
+  // with no tabindex.
+  const nestedEditable = !explicit && el.parentElement?.isContentEditable === true;
+  return (
+    // tabindex="-1" (roving items) is focusable but no tab stop.
+    (el.tabIndex >= 0 || (!explicit && el.isContentEditable)) &&
+    !(el.hasAttribute("contenteditable") && nestedEditable) &&
+    !el.closest("[inert]") &&
+    // Also catches controls inside a disabled fieldset.
+    !el.matches(":disabled") &&
+    (el === document.activeElement || isShown(el))
   );
-  // A native radio group is one stop: its checked radio, else its first.
+}
+
+function radioGroup(el: Element | null, candidates: HTMLElement[]): HTMLInputElement[] | null {
+  if (!(el instanceof HTMLInputElement) || el.type !== "radio" || !el.name) return null;
+  return candidates.filter(
+    (other): other is HTMLInputElement =>
+      other instanceof HTMLInputElement &&
+      other.type === "radio" &&
+      other.name === el.name &&
+      other.form === el.form,
+  );
+}
+
+function candidatesIn(surface: HTMLElement): HTMLElement[] {
+  return Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(isCandidate);
+}
+
+/** The surface's tab stops in the order the browser's Tab visits them. */
+function tabbables(candidates: HTMLElement[]): HTMLElement[] {
+  // A native radio group is one stop: its checked radio, else its first
+  // (entered backward, its last; see entryPoint).
   const stops = candidates.filter((el) => {
-    if (!(el instanceof HTMLInputElement) || el.type !== "radio" || !el.name) return true;
-    const group = candidates.filter(
-      (other): other is HTMLInputElement =>
-        other instanceof HTMLInputElement &&
-        other.type === "radio" &&
-        other.name === el.name &&
-        other.form === el.form,
-    );
-    return el === (group.find((radio) => radio.checked) ?? group[0]);
+    const group = radioGroup(el, candidates);
+    return !group || el === (group.find((radio) => radio.checked) ?? group[0]);
   });
   // Positive tabindex values come first, ascending; then document order.
   const rank = (el: HTMLElement) => (el.tabIndex > 0 ? el.tabIndex : Number.POSITIVE_INFINITY);
@@ -130,26 +151,44 @@ function tabbables(surface: HTMLElement): HTMLElement[] {
 }
 
 /** The stop Tab (or Shift+Tab) moves to from `active`, wrapping. */
-function nextStop(items: HTMLElement[], active: Element | null, backward: boolean): HTMLElement {
-  const index = active ? items.indexOf(active as HTMLElement) : -1;
+function nextStop(
+  items: HTMLElement[],
+  candidates: HTMLElement[],
+  active: Element | null,
+  backward: boolean,
+): HTMLElement {
+  // Any radio of a group stands for the group's stop.
+  const group = radioGroup(active, candidates);
+  const current = group
+    ? (items.find((item) => group.includes(item as HTMLInputElement)) ?? null)
+    : active;
+  const index = current ? items.indexOf(current as HTMLElement) : -1;
   if (index !== -1) {
     return items[(index + (backward ? -1 : 1) + items.length) % items.length]!;
   }
   // Focus is on the surface or a control that is no tab stop (a roving
-  // item reached with arrow keys): go to the next stop after it in the
-  // document, or the last one before it.
+  // item reached with arrow keys): the nearest stop after it in document
+  // order, or before it going backward.
   if (active) {
     const following = (item: HTMLElement) =>
       (active.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    const inDocumentOrder = items
+      .slice()
+      .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
     const found = backward
-      ? items
-          .slice()
-          .reverse()
-          .find((item) => !following(item) && item !== active)
-      : items.find((item) => following(item));
+      ? inDocumentOrder.reverse().find((item) => !following(item) && item !== active)
+      : inDocumentOrder.find((item) => following(item));
     if (found) return found;
   }
   return backward ? items[items.length - 1]! : items[0]!;
+}
+
+/** Where focus lands for a stop: an unchecked radio group entered
+ * backward lands on its last radio, as the browser does. */
+function entryPoint(stop: HTMLElement, candidates: HTMLElement[], backward: boolean): HTMLElement {
+  const group = radioGroup(stop, candidates);
+  if (!group || !backward || group.some((radio) => radio.checked)) return stop;
+  return group[group.length - 1]!;
 }
 
 export function trapFocus(surface: HTMLElement): () => void {
@@ -170,18 +209,20 @@ export function trapFocus(surface: HTMLElement): () => void {
   function handleKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.key !== "Tab") return;
     event.preventDefault();
-    const items = tabbables(surface);
+    const candidates = candidatesIn(surface);
+    const items = tabbables(candidates);
     if (items.length === 0) {
       surface.focus();
       return;
     }
     // A stop can refuse focus (an iframe still loading, a control disabled
     // a moment ago); move on to the next one rather than stall.
-    let target = nextStop(items, document.activeElement, event.shiftKey);
+    let target = nextStop(items, candidates, document.activeElement, event.shiftKey);
     for (let tries = 0; tries < items.length; tries += 1) {
-      target.focus();
-      if (document.activeElement === target) return;
-      target = nextStop(items, target, event.shiftKey);
+      const entry = entryPoint(target, candidates, event.shiftKey);
+      entry.focus();
+      if (document.activeElement === entry) return;
+      target = nextStop(items, candidates, target, event.shiftKey);
     }
     surface.focus();
   }

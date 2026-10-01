@@ -77,6 +77,31 @@ test("double-click zooms in on the point, and again resets", async ({ page }) =>
   await expect.poll(transform).toEqual([1, 0, 0]);
 });
 
+test("slow wheel steps accumulate into zoom", async ({ page }) => {
+  await page.getByRole("button", { name: "Open viewer" }).click();
+  const viewport = page.locator(".kit-media-viewer__viewport");
+  // Each step alone is under 0.1% of zoom.
+  await viewport.evaluate((element) => {
+    const r = element.getBoundingClientRect();
+    for (let i = 0; i < 40; i += 1) {
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: -0.5,
+          clientX: r.left + r.width / 2,
+          clientY: r.top + r.height / 2,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  });
+  const scale = await page
+    .locator(".kit-media-viewer__pan")
+    .evaluate((node) => new DOMMatrix((node as HTMLElement).style.transform).a);
+  expect(scale).toBeGreaterThan(1.02);
+  await expect(viewport).toHaveAttribute("data-zoomed", "true");
+});
+
 test("images keep their natural size instead of upscaling", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
   const size = await viewer(page)

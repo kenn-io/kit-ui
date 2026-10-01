@@ -431,13 +431,27 @@ describe("hand-rolled components", () => {
   });
 
   test("lightbox: compound selectors in CSS rules and quoted strings", () => {
-    const src = [
+    const css = [
       `div.lightbox { position: fixed; }`,
       `.overlay.lightbox, #preview.lightbox__panel { inset: 0; }`,
-      `document.querySelector("dialog.image-lightbox");`,
     ].join("\n");
-    const findings = checkSource(src, "a.css", ["hand-rolled-lightbox"]);
-    expect(findings.map((finding) => finding.line)).toEqual([1, 2, 2, 3]);
+    const findings = checkSource(css, "a.css", ["hand-rolled-lightbox"]);
+    expect(findings.map((finding) => finding.line)).toEqual([1, 2, 2]);
+    const script = `document.querySelector("dialog.image-lightbox");`;
+    expect(checkSource(script, "a.ts", ["hand-rolled-lightbox"])).toHaveLength(1);
+  });
+
+  test("lightbox: multiline template literals; not CSS comments or quoted values", () => {
+    const script = "const overlay = document.querySelector(`\n  .lightbox\n`);";
+    expect(checkSource(script, "a.ts", ["hand-rolled-lightbox"]).map((f) => f.line)).toEqual([2]);
+    const css = [
+      `/* replaces the old .lightbox overlay */`,
+      `.badge::after { content: ".lightbox"; }`,
+      `.image-lightbox { inset: 0; }`,
+    ].join("\n");
+    expect(checkSource(css, "a.css", ["hand-rolled-lightbox"]).map((f) => f.line)).toEqual([3]);
+    const style = svelte(`/* .lightbox */ .x::after { content: ".lightbox"; }`);
+    expect(checkSource(style, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);
   });
 
   test("lightbox: reports an unindented selector on its own line", () => {

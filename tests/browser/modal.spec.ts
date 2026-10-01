@@ -76,6 +76,19 @@ test("the backdrop closes only on a press that starts and ends on it", async ({ 
   await drag(inside, backdrop);
   await expect(dialog).toBeVisible();
 
+  // A release off-screen (pointer capture keeps the backdrop as target)
+  // hits nothing, so the click that follows does not close.
+  await page.locator(".kit-modal-overlay").evaluate((overlay) => {
+    const fire = (type: string, x: number, y: number) =>
+      overlay.dispatchEvent(
+        new PointerEvent(type, { pointerId: 9, clientX: x, clientY: y, bubbles: true }),
+      );
+    fire("pointerdown", 10, 10);
+    fire("pointerup", -50, -50);
+    overlay.dispatchEvent(new MouseEvent("click", { clientX: -50, clientY: -50, bubbles: true }));
+  });
+  await expect(dialog).toBeVisible();
+
   // A press that starts and ends on the backdrop closes it.
   await page.mouse.click(backdrop.x, backdrop.y);
   await expect(dialog).toBeHidden();
