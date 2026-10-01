@@ -98,12 +98,15 @@ return their cleanup function.
 </script>
 
 <svelte:window onkeydown={escapeCloses(close)} />
-<div class="my-overlay" role="presentation" onpointerdown={backdropCloses(close)}>
+<div class="my-overlay" role="presentation" {@attach backdropCloses(close)}>
 ```
 
 The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
-`backdropCloses` closes when the press starts on the backdrop itself
-(press semantics — a drag ending on the backdrop doesn't dismiss).
+`backdropCloses` is an attachment that closes on a press that starts
+and ends on the backdrop itself, so a drag between the panel and the
+backdrop, in either direction, doesn't dismiss. It closes on the click rather than the press: on touch, a tap's
+click arrives after the finger lifts, and closing earlier would let that
+click activate the page control under the backdrop.
 `escapeCloses` closes one layer at a time: inner surfaces that already
 handled Escape (a popover's `dismissable`, a clearing search field) call
 `preventDefault`, and it respects that. Pair with `trapFocus` below for a
@@ -123,6 +126,11 @@ The modal-surface behavior `Modal` and `DetailDrawer` use, exported for
 custom overlays: moves focus in (first `[autofocus]` descendant, else the
 surface — hence `tabindex="-1"`), traps Tab/Shift+Tab, locks body scroll
 (re-entrant), and restores focus on teardown.
+
+Tab moves in the browser's own order, iframe content included. Two
+invisible guard elements (`[data-kit-focus-guard]`) sit just before and
+after the surface while it is mounted; Tab past either end lands on one
+and wraps focus to the other end, as Headless UI and Floating UI do.
 
 ## Formatters
 

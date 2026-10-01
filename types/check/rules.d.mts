@@ -150,6 +150,11 @@ export function checkHandRolledImagePreview(source: any): {
     line: number;
     message: string;
 }[];
+export function checkHandRolledLightbox(source: any, filename?: string): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Custom sortable table headers duplicate TableHeaderCell. */
 export function checkHandRolledTableSort(source: any): {
     rule: string;
@@ -362,6 +367,7 @@ export const ALL_RULES: {
     "hand-rolled-empty-state": typeof checkHandRolledEmptyState;
     "hand-rolled-icon-button": typeof checkHandRolledIconButton;
     "hand-rolled-image-preview": typeof checkHandRolledImagePreview;
+    "hand-rolled-lightbox": typeof checkHandRolledLightbox;
     "hand-rolled-top-bar": typeof checkHandRolledTopBar;
     "hand-rolled-search-input": typeof checkHandRolledSearchInput;
     "hand-rolled-date-input": typeof checkHandRolledDateInput;

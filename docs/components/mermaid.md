@@ -5,7 +5,9 @@ Forge's frontend. Two pieces that layer on the
 [markdown pipeline](code-block.md): a `codeFence` interceptor that turns
 ` ```mermaid ` fences into `<pre class="mermaid">` blocks, and an
 imperative post-processor that renders those blocks into themed pan/zoom
-viewers with copy and expanded-lightbox controls.
+viewers with copy and expand controls. Expand opens the shared
+[MediaViewer](media-viewer.md), which pages through the page's other
+diagrams and images.
 
 **Deliberately not in the library barrel.** mermaid is a multi-megabyte
 optional peer dependency loaded via dynamic `import("mermaid")`; a barrel
@@ -38,12 +40,16 @@ observes the root with a `MutationObserver` and, whenever new blocks
 appear, loads mermaid on demand (first diagram only), renders them, and
 wraps each result in a viewer:
 
-- **drag to pan, wheel to zoom** (0.4×–3×, cursor-anchored), with a reset
-  control;
+- **drag to pan, wheel to zoom** (0.4×–8×, cursor-anchored), with a reset
+  control. On touch, a two-finger pinch zooms and a double tap zooms in
+  on the tapped point (a second double tap resets). At scale 1 a vertical
+  swipe scrolls the page, so a diagram never traps the reader's scroll;
+  once zoomed, every gesture pans the diagram;
 - **copy** — the original fence source, via kit-ui's `copyToClipboard`;
-- **expand** — a full-screen lightbox (`role="dialog"` with full modal
-  semantics via kit's `trapFocus`: Tab containment, body scroll lock;
-  Escape or backdrop click closes and focus returns to the opener).
+- **expand** — opens [MediaViewer](media-viewer.md) on the diagram, with
+  the page's other displayed diagrams and images to page through. The
+  viewer is a modal dialog (Tab containment, body scroll lock); Escape or
+  a backdrop click closes it and focus returns to the opener.
 
 A second observer watches the `dark` class on `<html>`: a theme flip
 resets every rendered viewer and re-renders with the other palette —
@@ -66,10 +72,11 @@ mermaidCodeFence(code: string, lang: string): string | undefined
 
 `MarkdownMermaidOptions`:
 
-| Option           | Default                                         | Notes                                                                                                              |
-| ---------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `load`           | dynamic `import("mermaid")`                     | Injectable loader (tests, custom bundling); custom loaders must expose `version: "12.0.0"` for the runtime guard   |
-| `onLightboxOpen` | push `"kit-mermaid-lightbox"` on `appShortcuts` | Suspend app keyboard handling while the lightbox is open; returns the restore function. Hook a modal stack in here |
+| Option         | Default                                     | Notes                                                                                                                   |
+| -------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `load`         | dynamic `import("mermaid")`                 | Injectable loader (tests, custom bundling); custom loaders must expose `version: "12.0.0"` for the runtime guard        |
+| `onViewerOpen` | push `"kit-media-viewer"` on `appShortcuts` | Suspend app keyboard handling while the expanded view is open; returns the restore function. Hook a modal stack in here |
+| `viewerLabels` | English defaults                            | `MediaViewerLabels` for the expanded view (see [MediaViewer](media-viewer.md))                                          |
 
 ## Security model
 
@@ -112,17 +119,17 @@ them after the import to retheme. They're read through
 replacement) is required. The control buttons carry IconButton's md
 ghost chrome (inlined in `mermaid.css` because the DOM is imperative —
 keep in sync with `IconButton.svelte`) and render the same lucide icons
-the components use (`copy`/`check`, `x`), loaded with the mermaid chunk
-and falling back to text glyphs if that load fails. Only the lightbox
-scrim keeps a fixed theme-invariant color (`--viewer-scrim`, shared
-with Forge's image lightbox).
+the components use (`copy`/`check`, `rotate-ccw`), loaded with the
+mermaid chunk and falling back to text glyphs if that load fails. In the
+expanded view, diagram content carries the `kit-mermaid-content` class
+so the edge-label rules in `mermaid.css` apply there too.
 
 ## Migrating the apps
 
 Forge's `frontend/src/lib/utils/markdownMermaid.ts` is this module
 (selectors generalized from `.markdown-body`/`.doc-markdown` to any
 `pre.mermaid`; viewer classes renamed `mermaid-viewer__*` →
-`kit-mermaid-viewer__*`, lightbox → `kit-mermaid-lightbox*` — any CSS
+`kit-mermaid-viewer__*`, lightbox → MediaViewer (`kit-media-viewer*`) — any CSS
 overrides targeting the old class names must move to the new ones or be
 dropped). Migrate in reviewable steps, in this order:
 
@@ -131,7 +138,7 @@ dropped). Migrate in reviewable steps, in this order:
 2. Replace the hand-rolled mermaid fence branches in both markdown
    pipelines with `mermaidCodeFence`.
 3. Swap `initMarkdownMermaidRendering` to the kit import, passing
-   `onLightboxOpen: () => pushModalFrame("mermaid-lightbox", [])`.
+   `onViewerOpen: () => pushModalFrame("media-viewer", [])`.
 4. Delete `markdownMermaid.ts` + its viewer CSS and update e2e selectors
    to the `kit-mermaid-*` classes. This step also brings the budget caps
    back under test coverage (their unit tests currently live only in

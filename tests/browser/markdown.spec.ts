@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoPage, setTheme } from "./helpers.js";
+import { clipboardReader, gotoPage, setTheme } from "./helpers.js";
 
 // Markdown pipeline security + rendering acceptance
 // (docs/components/code-block.md). The sanitizer runs against real
@@ -86,12 +86,11 @@ test.describe("CodeBlock", () => {
   });
 
   test("copy button announces the copied state", async ({ page, context }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    const readClipboard = await clipboardReader(page, context);
     const block = page.locator(".kit-code-block").first();
     const copy = block.getByRole("button", { name: "Copy code" });
     await copy.click();
     await expect(block.getByRole("button", { name: "Copied" })).toBeVisible();
-    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clipboard).toContain("interface Session");
+    expect(await readClipboard()).toContain("interface Session");
   });
 });

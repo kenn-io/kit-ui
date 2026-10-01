@@ -52,6 +52,7 @@ export type { IconButtonSize, IconButtonTone } from "./components/IconButton.sve
 export { default as ImagePreview } from "./components/ImagePreview.svelte";
 export { default as KbdBadge } from "./components/KbdBadge.svelte";
 export { default as Markdown } from "./components/Markdown.svelte";
+export { default as MediaViewer } from "./components/MediaViewer.svelte";
 export { default as Menu } from "./components/Menu.svelte";
 export { default as MenuContent } from "./components/MenuContent.svelte";
 export { default as MenuItem } from "./components/MenuItem.svelte";
@@ -215,5 +216,21 @@ export {
   type MarkdownRenderer,
   type MarkdownRendererOptions,
 } from "./utils/markdown.js";
+export {
+  initMarkdownImageViewer,
+  type MarkdownImageViewerController,
+  type MarkdownImageViewerOptions,
+} from "./utils/markdown-images.js";
+export {
+  closeMediaViewerGallery,
+  collectMediaViewerGallery,
+  openMediaViewerGallery,
+  registerMediaViewerItem,
+  unregisterMediaViewerItem,
+  type MediaViewerItem,
+  type MediaViewerLabels,
+  type OpenMediaViewerOptions,
+} from "./utils/media-gallery.js";
+export { attachPanZoom, type PanZoom, type PanZoomOptions } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";

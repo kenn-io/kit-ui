@@ -1,9 +1,11 @@
 <script lang="ts">
   import Maximize2Icon from "@lucide/svelte/icons/maximize-2";
-  import XIcon from "@lucide/svelte/icons/x";
-  import { trapFocus } from "../utils/focus-trap.js";
-  import { backdropCloses, escapeCloses } from "../utils/overlay.js";
-  import IconButton from "./IconButton.svelte";
+  import {
+    openMediaViewerGallery,
+    registerMediaViewerItem,
+    unregisterMediaViewerItem,
+    type MediaViewerLabels,
+  } from "../utils/media-gallery.js";
 
   interface Props {
     /** Image URL — remote, relative, or a data:/blob: URL. */
@@ -11,12 +13,15 @@
     alt: string;
     /** Caps the rendered image height (any CSS length). */
     maxHeight?: string;
-    /** Click-to-expand into a full-viewport lightbox (default true). */
+    /** Click-to-expand into the full-viewport MediaViewer (default true),
+     * which also pages through the page's other expandable media. */
     expandable?: boolean;
     /** Shown in place of the image when it fails to load. */
     errorLabel?: string;
     expandLabel?: string;
     closeLabel?: string;
+    /** Other strings of the expanded view (see MediaViewer). */
+    viewerLabels?: MediaViewerLabels;
   }
 
   let {
@@ -27,6 +32,7 @@
     errorLabel = "Unable to load image",
     expandLabel = "Open image in expanded view",
     closeLabel = "Close expanded image",
+    viewerLabels = {},
   }: Props = $props();
 
   // Tracking the failed URL (rather than a boolean) means a src change
@@ -34,8 +40,34 @@
   let failedSrc = $state<string | null>(null);
   const failed = $derived(failedSrc === src);
 
-  let expanded = $state(false);
   const triggerLabel = $derived(alt.trim() ? `${expandLabel}: ${alt}` : expandLabel);
+
+  // Close function of a viewer this preview opened; the viewer lives on
+  // document.body, so it must not outlive the preview.
+  let closeOwnViewer: (() => void) | null = null;
+
+  async function openViewer(trigger: HTMLElement): Promise<void> {
+    // Unmounting meanwhile unregisters the trigger, and the gallery then
+    // opens nothing.
+    const close: () => void = await openMediaViewerGallery(trigger, {
+      ...viewerLabels,
+      closeLabel,
+      onClose: () => {
+        if (closeOwnViewer === close) closeOwnViewer = null;
+      },
+    });
+    closeOwnViewer = close;
+  }
+
+  // The trigger is this preview's entry in the page gallery; the item is
+  // read at open time, so it always reflects the current src/alt.
+  function galleryEntry(trigger: HTMLElement) {
+    registerMediaViewerItem(trigger, () => ({ kind: "image", src, alt }));
+    return () => {
+      unregisterMediaViewerItem(trigger);
+      closeOwnViewer?.();
+    };
+  }
 </script>
 
 <div class="kit-image-preview">
@@ -47,7 +79,8 @@
       class="kit-image-preview__trigger kit-control-states"
       aria-label={triggerLabel}
       title={triggerLabel}
-      onclick={() => (expanded = true)}
+      onclick={(event) => void openViewer(event.currentTarget)}
+      {@attach galleryEntry}
     >
       <img
         class="kit-image-preview__img"
@@ -70,34 +103,6 @@
     />
   {/if}
 </div>
-
-{#if expanded}
-  <div
-    class="kit-image-preview__lightbox"
-    role="presentation"
-    onpointerdown={backdropCloses(() => (expanded = false))}
-  >
-    <div
-      class="kit-image-preview__lightbox-panel"
-      role="dialog"
-      aria-modal="true"
-      aria-label={alt}
-      tabindex="-1"
-      onkeydown={escapeCloses(() => (expanded = false))}
-      {@attach trapFocus}
-    >
-      <img class="kit-image-preview__lightbox-img" {src} {alt} />
-      <IconButton
-        size="md"
-        class="kit-image-preview__lightbox-close"
-        ariaLabel={closeLabel}
-        onclick={() => (expanded = false)}
-      >
-        <XIcon size="16" strokeWidth="2" aria-hidden="true" />
-      </IconButton>
-    </div>
-  </div>
-{/if}
 
 <style>
   .kit-image-preview {
@@ -172,54 +177,5 @@
     margin: 0;
     color: var(--text-muted);
     font-size: var(--font-size-sm);
-  }
-
-  .kit-image-preview__lightbox {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-8);
-    background: var(--overlay-bg, rgba(0, 0, 0, 0.3));
-    -webkit-backdrop-filter: var(--overlay-filter, none);
-    backdrop-filter: var(--overlay-filter, none);
-  }
-
-  .kit-image-preview__lightbox-panel {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .kit-image-preview__lightbox-img {
-    display: block;
-    max-width: calc(100vw - 64px);
-    max-height: calc(100vh - 64px);
-    object-fit: contain;
-    border: var(--border-width) solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
-  }
-
-  /* Hovers over the image's top-right corner; half-transparent so it
-   * doesn't fight the image, solid on hover/focus. */
-  .kit-image-preview__lightbox-panel :global(.kit-image-preview__lightbox-close) {
-    position: absolute;
-    top: var(--space-4);
-    right: var(--space-4);
-    color: var(--text-secondary);
-    background: var(--bg-surface);
-    border: var(--border-width) solid var(--border-muted);
-    box-shadow: var(--shadow-sm);
-    opacity: 0.5;
-  }
-
-  .kit-image-preview__lightbox-panel :global(.kit-image-preview__lightbox-close):hover,
-  .kit-image-preview__lightbox-panel :global(.kit-image-preview__lightbox-close):focus-visible {
-    background: var(--bg-surface-hover);
-    opacity: 1;
   }
 </style>

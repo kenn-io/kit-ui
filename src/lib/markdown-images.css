@@ -1,0 +1,94 @@
+/*
+ * kit-ui markdown image expand controls — opt-in stylesheet for
+ * utils/markdown-images. Import alongside theme.css in apps that call
+ * initMarkdownImageViewer:
+ *
+ *   import "@kenn-io/kit-ui/theme.css";
+ *   import "@kenn-io/kit-ui/markdown-images.css";
+ *
+ * The wrapper and button are created imperatively (post-processing
+ * rendered markdown), so these styles are global by necessity. The
+ * expanded view itself is the MediaViewer component and styles itself.
+ */
+
+.kit-markdown-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+  line-height: 0;
+}
+
+.kit-markdown-image > a {
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.kit-markdown-image img {
+  display: block;
+  min-width: 1px;
+  min-height: 1px;
+}
+
+/* IconButton's md chrome on a surface chip, inlined because the button is
+ * imperative DOM; keep in sync with IconButton.svelte. Hidden until the
+ * image is hovered or holds focus. */
+.kit-markdown-image__expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-muted);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    background var(--transition-fast) var(--transition-ease, ease),
+    opacity var(--transition-fast) var(--transition-ease, ease);
+}
+
+.kit-markdown-image:hover .kit-markdown-image__expand,
+.kit-markdown-image:focus-within .kit-markdown-image__expand {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kit-markdown-image__expand:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.kit-markdown-image__expand:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Always shown, and finger-sized, where there is no hover. */
+@media (hover: none), (pointer: coarse) {
+  .kit-markdown-image__expand {
+    width: 44px;
+    height: 44px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-markdown-image__expand {
+    transition: none;
+  }
+}

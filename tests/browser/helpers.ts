@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 /** Open a gallery page by its hash id and wait for it to render. */
 export async function gotoPage(page: Page, id: string): Promise<void> {
@@ -82,4 +82,25 @@ export async function contrastOf(locator: Locator): Promise<number> {
     const [hi, lo] = fg > bg ? [fg, bg] : [bg, fg];
     return (hi + 0.05) / (lo + 0.05);
   });
+}
+
+/** Read what the page copies. Chromium grants real clipboard access;
+ * Firefox and WebKit offer no clipboard permission to automation, so
+ * there the page's writeText is recorded instead. Call before copying. */
+export async function clipboardReader(
+  page: Page,
+  context: BrowserContext,
+): Promise<() => Promise<string>> {
+  if (context.browser()?.browserType().name() === "chromium") {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    return () => page.evaluate(() => navigator.clipboard.readText());
+  }
+  await page.evaluate(() => {
+    const record = window as unknown as { __copied: string };
+    record.__copied = "";
+    navigator.clipboard.writeText = async (text: string) => {
+      record.__copied = text;
+    };
+  });
+  return () => page.evaluate(() => (window as unknown as { __copied: string }).__copied);
 }

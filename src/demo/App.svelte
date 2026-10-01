@@ -37,6 +37,7 @@
   import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
   import MarkdownDemo from "./pages/MarkdownDemo.svelte";
+  import MediaViewerDemo from "./pages/MediaViewerDemo.svelte";
   import MenuDemo from "./pages/MenuDemo.svelte";
   import MentionTextareaDemo from "./pages/MentionTextareaDemo.svelte";
   import MermaidDemo from "./pages/MermaidDemo.svelte";
@@ -118,6 +119,7 @@
     { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
+    { id: "media-viewer", label: "MediaViewer", component: MediaViewerDemo },
     { id: "menu", label: "Menu", component: MenuDemo },
     { id: "mention-textarea", label: "MentionTextarea", component: MentionTextareaDemo },
     { id: "mermaid", label: "Mermaid", component: MermaidDemo },
