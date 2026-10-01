@@ -8,9 +8,6 @@ interface Props {
     search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
     /** Character that opens the menu at a word boundary (default "#"). */
     trigger?: string;
-    /** Where the trigger counts: at any word boundary ("word"), or only as
-     * the first character of the text ("start"), as slash commands do. */
-    triggerAt?: "word" | "start";
     /** Keep the menu closed while nothing matches instead of showing the
      * searching and empty rows. Suits synchronous searches over a fixed
      * list, where an empty menu only gets in the way of typing. */

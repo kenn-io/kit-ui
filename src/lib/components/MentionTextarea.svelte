@@ -12,9 +12,6 @@
     search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
     /** Character that opens the menu at a word boundary (default "#"). */
     trigger?: string;
-    /** Where the trigger counts: at any word boundary ("word"), or only as
-     * the first character of the text ("start"), as slash commands do. */
-    triggerAt?: "word" | "start";
     /** Keep the menu closed while nothing matches instead of showing the
      * searching and empty rows. Suits synchronous searches over a fixed
      * list, where an empty menu only gets in the way of typing. */
@@ -50,7 +47,6 @@
     value = $bindable(""),
     search,
     trigger = "#",
-    triggerAt = "word",
     hideEmpty = false,
     embedded = false,
     placeholder = "",
@@ -138,14 +134,13 @@
   });
 
   /** Index of the trigger character governing the caret, or -1: the trigger
-   * must start the text or (with triggerAt "word") follow whitespace, with no
-   * whitespace between it and the caret. */
+   * must start the text or follow whitespace, with no whitespace between it
+   * and the caret. */
   function findTriggerIndex(text: string, caret: number): number {
     for (let i = caret - 1; i >= 0; i--) {
       const char = text[i];
       if (char === trigger) {
         if (i === 0) return i;
-        if (triggerAt === "start") return -1;
         const prev = text[i - 1];
         if (prev === " " || prev === "\n" || prev === "\t") return i;
         return -1;

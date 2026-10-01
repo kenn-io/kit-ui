@@ -105,14 +105,13 @@
 
 <DemoSection
   title="Slash commands in a composer"
-  description="triggerAt=start opens the menu only when / begins the text, hideEmpty keeps it closed while nothing matches, and embedded drops the field's own frame so the composer card draws it. textareaEl exposes the field for focus management."
+  description="Commands can be named anywhere in the message. hideEmpty keeps the menu closed while nothing matches, so a path such as /tmp does not interrupt typing, and embedded drops the field's own frame so the composer card draws it. textareaEl exposes the field for focus management."
   code={`<div class="composer">
   <MentionTextarea
     bind:value
     bind:textareaEl
     search={searchCommands}
     trigger="/"
-    triggerAt="start"
     hideEmpty
     embedded
     rows={2}
@@ -129,7 +128,6 @@
         bind:textareaEl={commandField}
         search={searchCommands}
         trigger="/"
-        triggerAt="start"
         hideEmpty
         embedded
         rows={2}
@@ -140,7 +138,7 @@
         onpaste={(event) => (pastes += event.clipboardData?.files.length ?? 0)}
       />
     </div>
-    <span id="composer-help">Commands work only as the first word.</span>
+    <span id="composer-help">Type / to use a command anywhere in the message.</span>
     <span>value: <code data-demo="command-value">{commandValue || "(empty)"}</code></span>
     <span
       >edits: <code data-demo="command-edits">{edits}</code> · pasted files:

@@ -34,7 +34,6 @@ generalized to any trigger/search/row-rendering.
 | `value`           | `string` (bindable)                                              | `""`           |                                                                                           |
 | `search`          | `(query: string) => MentionOption[] \| Promise<MentionOption[]>` | required       | Called with the text between trigger and caret (may be `""`); stale responses are dropped |
 | `trigger`         | `string`                                                         | `"#"`          | Opens the menu at the start of the text or after whitespace                               |
-| `triggerAt`       | `"word" \| "start"`                                              | `"word"`       | `"start"` opens the menu only when the trigger is the first character (slash commands)    |
 | `hideEmpty`       | `boolean`                                                        | `false`        | Keep the menu closed while nothing matches instead of showing the status rows             |
 | `embedded`        | `boolean`                                                        | `false`        | Borderless, transparent, auto-growing field for use inside a composer card (see below)    |
 | `placeholder`     | `string`                                                         | `""`           |                                                                                           |
@@ -72,10 +71,6 @@ fire but `issue#12` (mid-word) does not. Multi-character triggers and
 punctuation-adjacent boundaries are out of scope; wrap the component if you
 need a different rule.
 
-With `triggerAt="start"`, the trigger counts only as the first character of
-the text: `/plan` opens the menu, `look at /tmp` does not. This is the slash
-command convention of chat composers.
-
 ## Async search and stale responses
 
 `search` may be sync or async. Each keystroke (and open/close) starts a new
@@ -89,7 +84,8 @@ render your own error state inside the results if you need to distinguish
 `hideEmpty` drops both status rows: the menu stays closed until the search
 returns at least one option, and keys such as Enter and Escape go to the
 textarea meanwhile. Use it for synchronous searches over a fixed list, such
-as slash commands, where an empty menu only interrupts typing. An async
+as slash commands, where an empty menu only interrupts typing: with `/` as
+the trigger, a path such as `/tmp` opens nothing unless a command matches. An async
 search with `hideEmpty` closes the menu while each lookup is pending.
 
 ## Keyboard protocol
@@ -124,7 +120,6 @@ to take pasted files.
     bind:textareaEl={field}
     search={(query) => commands.filter((command) => command.insert.startsWith(query))}
     trigger="/"
-    triggerAt="start"
     hideEmpty
     embedded
     onpaste={attachImages}

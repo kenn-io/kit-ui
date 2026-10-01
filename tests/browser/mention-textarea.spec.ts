@@ -124,21 +124,21 @@ test("custom trigger and row snippet", async ({ page }) => {
   await expect(page.locator('[data-demo="user-mention-value"]')).toHaveText("@marius ");
 });
 
-test("slash commands open only at the start of the text", async ({ page }) => {
+test("slash commands open anywhere in the message", async ({ page }) => {
   await gotoPage(page, "mention-textarea");
   const textarea = page.getByRole("textbox", { name: "Message" });
   const options = page.locator(".kit-mention__option");
 
-  await textarea.pressSequentially("look at /tmp");
+  // A path matches no command, so no menu interrupts typing.
+  await textarea.pressSequentially("look at /tmp then ");
   await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
 
-  await textarea.fill("");
   await textarea.pressSequentially("/p");
   await expect(options).toHaveCount(1);
   await expect(options).toContainText("/plan");
   await page.keyboard.press("Enter");
 
-  await expect(page.locator('[data-demo="command-value"]')).toHaveText("/plan ");
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText("look at /tmp then /plan ");
   // Inserting a command counts as an edit, like typing.
   await expect(page.locator('[data-demo="command-edits"]')).not.toHaveText("0");
   await expect(textarea).toHaveAttribute("aria-describedby", "composer-help");
