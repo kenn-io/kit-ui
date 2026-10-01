@@ -102,3 +102,49 @@ test.describe("ImagePreview nested in Modal", () => {
     await expect(modal).toBeVisible();
   });
 });
+
+test.describe("trapFocus tab order", () => {
+  test("Tab follows the browser's tab stops and wraps inside the surface", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await page.evaluate(async () => {
+      const { trapFocus } = await import("/src/lib/utils/focus-trap.ts");
+      const surface = document.createElement("div");
+      surface.tabIndex = -1;
+      surface.id = "trap-order";
+      surface.innerHTML = `
+        <button>First</button>
+        <div role="radiogroup">
+          <button tabindex="0" role="radio">Roving active</button>
+          <button tabindex="-1" role="radio">Roving other</button>
+        </div>
+        <input type="radio" name="size" aria-label="Small">
+        <input type="radio" name="size" aria-label="Medium" checked>
+        <input type="radio" name="size" aria-label="Large">
+        <button disabled>Disabled</button>
+        <div inert><button>Inert</button></div>
+        <a href="#x">Link</a>
+        <button>Last</button>`;
+      document.body.append(surface);
+      trapFocus(surface);
+    });
+    const focused = () =>
+      page.evaluate(
+        () =>
+          document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent,
+      );
+    const order = ["First", "Roving active", "Medium", "Link", "Last", "First"];
+    for (const name of order) {
+      await page.keyboard.press("Tab");
+      expect(await focused()).toBe(name);
+    }
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe("Last");
+    // From a control outside the tab order (an arrow-key roving item),
+    // Tab moves to the next stop after it.
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>('#trap-order [tabindex="-1"][role="radio"]')!.focus(),
+    );
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("Medium");
+  });
+});

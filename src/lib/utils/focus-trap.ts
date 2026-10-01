@@ -77,12 +77,58 @@ function lockBodyScroll(): () => void {
   };
 }
 
+/** The surface's tab stops in the order the browser's Tab visits them. */
 function tabbables(surface: HTMLElement): HTMLElement[] {
-  return Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
-    // offsetParent is null for display:none subtrees (e.g. collapsed
-    // sections) — skip those, they can't actually take focus.
-    (el) => el.offsetParent !== null || el === document.activeElement,
+  const candidates = Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
+    (el) =>
+      // tabindex="-1" (roving items) is focusable but no tab stop.
+      el.tabIndex >= 0 &&
+      !el.closest("[inert]") &&
+      // offsetParent is null for display:none subtrees (e.g. collapsed
+      // sections) — skip those, they can't actually take focus.
+      (el.offsetParent !== null || el === document.activeElement),
   );
+  // A native radio group is one stop: its checked radio, else its first.
+  const stops = candidates.filter((el) => {
+    if (!(el instanceof HTMLInputElement) || el.type !== "radio" || !el.name) return true;
+    const group = candidates.filter(
+      (other): other is HTMLInputElement =>
+        other instanceof HTMLInputElement &&
+        other.type === "radio" &&
+        other.name === el.name &&
+        other.form === el.form,
+    );
+    return el === (group.find((radio) => radio.checked) ?? group[0]);
+  });
+  // Positive tabindex values come first, ascending; then document order.
+  const rank = (el: HTMLElement) => (el.tabIndex > 0 ? el.tabIndex : Number.POSITIVE_INFINITY);
+  return stops
+    .map((el, index) => ({ el, index }))
+    .sort((a, b) => rank(a.el) - rank(b.el) || a.index - b.index)
+    .map(({ el }) => el);
+}
+
+/** The stop Tab (or Shift+Tab) moves to from `active`, wrapping. */
+function nextStop(items: HTMLElement[], active: Element | null, backward: boolean): HTMLElement {
+  const index = active ? items.indexOf(active as HTMLElement) : -1;
+  if (index !== -1) {
+    return items[(index + (backward ? -1 : 1) + items.length) % items.length]!;
+  }
+  // Focus is on the surface or a control that is no tab stop (a roving
+  // item reached with arrow keys): go to the next stop after it in the
+  // document, or the last one before it.
+  if (active) {
+    const following = (item: HTMLElement) =>
+      (active.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    const found = backward
+      ? items
+          .slice()
+          .reverse()
+          .find((item) => !following(item) && item !== active)
+      : items.find((item) => following(item));
+    if (found) return found;
+  }
+  return backward ? items[items.length - 1]! : items[0]!;
 }
 
 export function trapFocus(surface: HTMLElement): () => void {
@@ -108,18 +154,7 @@ export function trapFocus(surface: HTMLElement): () => void {
       surface.focus();
       return;
     }
-    // Document order, wrapping at the ends. From the surface itself (or
-    // anything not in the list), Tab goes to the first control and
-    // Shift+Tab to the last.
-    const index = items.indexOf(document.activeElement as HTMLElement);
-    const step = event.shiftKey ? -1 : 1;
-    const next =
-      index === -1
-        ? event.shiftKey
-          ? items.length - 1
-          : 0
-        : (index + step + items.length) % items.length;
-    items[next]!.focus();
+    nextStop(items, document.activeElement, event.shiftKey).focus();
   }
 
   surface.addEventListener("keydown", handleKeydown);
