@@ -127,6 +127,11 @@ custom overlays: moves focus in (first `[autofocus]` descendant, else the
 surface — hence `tabindex="-1"`), traps Tab/Shift+Tab, locks body scroll
 (re-entrant), and restores focus on teardown.
 
+Tab moves in the browser's own order, iframe content included. Two
+invisible guard elements (`[data-kit-focus-guard]`) sit just before and
+after the surface while it is mounted; Tab past either end lands on one
+and wraps focus to the other end, as Headless UI and Floating UI do.
+
 ## Formatters
 
 ```ts

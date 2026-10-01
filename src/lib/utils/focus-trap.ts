@@ -5,9 +5,9 @@
  * is mounted it:
  * - moves focus into it (the first [autofocus] descendant if present,
  *   otherwise the surface itself — give the surface tabindex="-1"),
- * - keeps Tab / Shift+Tab cycling inside it, through every tabbable
- *   control: Safari's Tab skips buttons and links by default, so the trap
- *   moves focus itself instead of leaving it to the browser,
+ * - keeps Tab / Shift+Tab cycling inside it. The browser moves focus,
+ *   in its own tab order (iframe content included); invisible guards just
+ *   before and after the surface wrap focus to the other end,
  * - locks body scroll (re-entrant, so stacked surfaces don't unlock early),
  * - restores focus to the previously focused element on teardown. Safari
  *   and Firefox on macOS do not focus a button on click, so when nothing
@@ -23,8 +23,7 @@ const TABBABLE_SELECTOR = [
   "details > summary:first-of-type",
   "audio[controls]",
   "video[controls]",
-  // No iframe: focus inside one fires keydown in the frame's document,
-  // out of the trap's reach, so Tab could leave the surface from there.
+  "iframe",
   '[contenteditable]:not([contenteditable="false"])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
@@ -101,94 +100,53 @@ function isShown(el: HTMLElement): boolean {
   return true;
 }
 
-/** Focusable by Tab, ignoring native radio grouping. */
-function isCandidate(el: HTMLElement): boolean {
-  const explicit = el.hasAttribute("tabindex");
-  // Tab visits an editing host, but not one nested inside another unless
-  // it has its own tabindex. Some engines report -1 for an editing host
-  // with no tabindex.
-  const nestedEditable = !explicit && el.parentElement?.isContentEditable === true;
+/** A tab stop the browser could land on: not inert, disabled, hidden, or
+ * removed from the tab order with tabindex="-1". */
+function isTabStop(el: HTMLElement): boolean {
   return (
-    // tabindex="-1" (roving items) is focusable but no tab stop.
-    (el.tabIndex >= 0 || (!explicit && el.isContentEditable)) &&
-    !(el.hasAttribute("contenteditable") && nestedEditable) &&
+    (el.tabIndex >= 0 || (!el.hasAttribute("tabindex") && el.isContentEditable)) &&
     !el.closest("[inert]") &&
     // Also catches controls inside a disabled fieldset.
     !el.matches(":disabled") &&
-    (el === document.activeElement || isShown(el))
+    isShown(el)
   );
 }
 
-function radioGroup(el: Element | null, candidates: HTMLElement[]): HTMLInputElement[] | null {
-  if (!(el instanceof HTMLInputElement) || el.type !== "radio" || !el.name) return null;
-  return candidates.filter(
-    (other): other is HTMLInputElement =>
-      other instanceof HTMLInputElement &&
-      other.type === "radio" &&
-      other.name === el.name &&
-      other.form === el.form,
-  );
-}
-
-function candidatesIn(surface: HTMLElement): HTMLElement[] {
-  return Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(isCandidate);
-}
-
-/** The surface's tab stops in the order the browser's Tab visits them. */
-function tabbables(candidates: HTMLElement[]): HTMLElement[] {
-  // A native radio group is one stop: its checked radio, else its first
-  // (entered backward, its last; see entryPoint).
-  const stops = candidates.filter((el) => {
-    const group = radioGroup(el, candidates);
-    return !group || el === (group.find((radio) => radio.checked) ?? group[0]);
-  });
-  // Positive tabindex values come first, ascending; then document order.
+/** Where a wrap lands: the first (or last) tab stop in the browser's
+ * order, positive tabindex values first. A radio group is entered at
+ * its checked radio. */
+function edgeStop(surface: HTMLElement, last: boolean): HTMLElement | null {
   const rank = (el: HTMLElement) => (el.tabIndex > 0 ? el.tabIndex : Number.POSITIVE_INFINITY);
-  return stops
+  const stops = Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR))
+    .filter(isTabStop)
     .map((el, index) => ({ el, index }))
     .sort((a, b) => rank(a.el) - rank(b.el) || a.index - b.index)
     .map(({ el }) => el);
+  const stop = last ? stops[stops.length - 1] : stops[0];
+  if (stop instanceof HTMLInputElement && stop.type === "radio" && stop.name && !stop.checked) {
+    const checked = stops.find(
+      (other) =>
+        other instanceof HTMLInputElement &&
+        other.type === "radio" &&
+        other.name === stop.name &&
+        other.form === stop.form &&
+        other.checked,
+    );
+    if (checked) return checked;
+  }
+  return stop ?? null;
 }
 
-/** The stop Tab (or Shift+Tab) moves to from `active`, wrapping. */
-function nextStop(
-  items: HTMLElement[],
-  candidates: HTMLElement[],
-  active: Element | null,
-  backward: boolean,
-): HTMLElement {
-  // Any radio of a group stands for the group's stop.
-  const group = radioGroup(active, candidates);
-  const current = group
-    ? (items.find((item) => group.includes(item as HTMLInputElement)) ?? null)
-    : active;
-  const index = current ? items.indexOf(current as HTMLElement) : -1;
-  if (index !== -1) {
-    return items[(index + (backward ? -1 : 1) + items.length) % items.length]!;
-  }
-  // Focus is on the surface or a control that is no tab stop (a roving
-  // item reached with arrow keys): the nearest stop after it in document
-  // order, or before it going backward.
-  if (active) {
-    const following = (item: HTMLElement) =>
-      (active.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-    const inDocumentOrder = items
-      .slice()
-      .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-    const found = backward
-      ? inDocumentOrder.reverse().find((item) => !following(item) && item !== active)
-      : inDocumentOrder.find((item) => following(item));
-    if (found) return found;
-  }
-  return backward ? items[items.length - 1]! : items[0]!;
-}
-
-/** Where focus lands for a stop: an unchecked radio group entered
- * backward lands on its last radio, as the browser does. */
-function entryPoint(stop: HTMLElement, candidates: HTMLElement[], backward: boolean): HTMLElement {
-  const group = radioGroup(stop, candidates);
-  if (!group || !backward || group.some((radio) => radio.checked)) return stop;
-  return group[group.length - 1]!;
+/** An invisible, focusable element at one edge of the surface. */
+function focusGuard(onFocus: () => void): HTMLSpanElement {
+  const guard = document.createElement("span");
+  guard.tabIndex = 0;
+  guard.setAttribute("aria-hidden", "true");
+  guard.dataset.kitFocusGuard = "";
+  guard.style.cssText =
+    "position: fixed; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none;";
+  guard.addEventListener("focus", onFocus);
+  return guard;
 }
 
 export function trapFocus(surface: HTMLElement): () => void {
@@ -206,32 +164,23 @@ export function trapFocus(surface: HTMLElement): () => void {
     surface.focus();
   }
 
-  function handleKeydown(event: KeyboardEvent): void {
-    if (event.defaultPrevented || event.key !== "Tab") return;
-    event.preventDefault();
-    const candidates = candidatesIn(surface);
-    const items = tabbables(candidates);
-    if (items.length === 0) {
-      surface.focus();
-      return;
-    }
-    // A stop can refuse focus (an iframe still loading, a control disabled
-    // a moment ago); move on to the next one rather than stall.
-    let target = nextStop(items, candidates, document.activeElement, event.shiftKey);
-    for (let tries = 0; tries < items.length; tries += 1) {
-      const entry = entryPoint(target, candidates, event.shiftKey);
-      entry.focus();
-      if (document.activeElement === entry) return;
-      target = nextStop(items, candidates, target, event.shiftKey);
-    }
-    surface.focus();
-  }
-
-  surface.addEventListener("keydown", handleKeydown);
+  // The browser moves focus on Tab, so the order is always its own and
+  // focus can enter an iframe and come back out. Tab past either end
+  // lands on a guard, which wraps focus to the other end.
+  const wrapTo = (last: boolean) => {
+    const stop = edgeStop(surface, last);
+    stop?.focus();
+    if (!stop || !surface.contains(document.activeElement)) surface.focus();
+  };
+  const startGuard = focusGuard(() => wrapTo(true));
+  const endGuard = focusGuard(() => wrapTo(false));
+  surface.before(startGuard);
+  surface.after(endGuard);
   const unlockScroll = lockBodyScroll();
 
   return () => {
-    surface.removeEventListener("keydown", handleKeydown);
+    startGuard.remove();
+    endGuard.remove();
     unlockScroll();
     previous?.focus();
   };

@@ -244,17 +244,17 @@ test("media viewer traps Tab and locks body scroll while open", async ({ page })
     .toBe("hidden");
 
   // The demo page has two diagrams, so the viewer pages: close, previous,
-  // next, reset — Tab cycles inside the dialog.
+  // next, reset. The browser orders Tab between them (Safari skips
+  // buttons by default); the trap keeps it inside and wraps at the ends.
   const close = lightbox.getByRole("button", { name: "Close expanded view" });
   const reset = lightbox.getByRole("button", { name: "Reset view" });
-  await page.keyboard.press("Tab");
-  await expect(close).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(lightbox.getByRole("button", { name: "Previous item" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(lightbox.getByRole("button", { name: "Next item" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(reset).toBeFocused();
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(() => document.activeElement?.closest(".kit-media-viewer") !== null),
+    ).toBe(true);
+  }
+  await reset.focus();
   await page.keyboard.press("Tab");
   await expect(close).toBeFocused();
   await page.keyboard.press("Shift+Tab");

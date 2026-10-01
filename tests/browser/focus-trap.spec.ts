@@ -103,66 +103,9 @@ test.describe("ImagePreview nested in Modal", () => {
   });
 });
 
-test.describe("trapFocus tab order", () => {
-  test("Tab follows the browser's tab stops and wraps inside the surface", async ({ page }) => {
-    await gotoPage(page, "modal");
-    await page.evaluate(async () => {
-      const { trapFocus } = await import("/src/lib/utils/focus-trap.ts");
-      const surface = document.createElement("div");
-      surface.tabIndex = -1;
-      surface.id = "trap-order";
-      surface.innerHTML = `
-        <button>First</button>
-        <div role="radiogroup">
-          <button tabindex="0" role="radio">Roving active</button>
-          <button tabindex="-1" role="radio">Roving other</button>
-        </div>
-        <input type="radio" name="size" aria-label="Small">
-        <input type="radio" name="size" aria-label="Medium" checked>
-        <input type="radio" name="size" aria-label="Large">
-        <button disabled>Disabled</button>
-        <fieldset disabled><button>In disabled fieldset</button></fieldset>
-        <div inert><button>Inert</button></div>
-        <button style="visibility: hidden">Hidden</button>
-        <a href="#x">Link</a>
-        <details><summary>Summary</summary><button>Collapsed</button></details>
-        <div contenteditable="true" aria-label="Editable"></div>
-        <button>Last</button>`;
-      document.body.append(surface);
-      trapFocus(surface);
-    });
-    const focused = () =>
-      page.evaluate(
-        () =>
-          document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent,
-      );
-    const order = [
-      "First",
-      "Roving active",
-      "Medium",
-      "Link",
-      "Summary",
-      "Editable",
-      "Last",
-      "First",
-    ];
-    for (const name of order) {
-      await page.keyboard.press("Tab");
-      expect(await focused()).toBe(name);
-    }
-    await page.keyboard.press("Shift+Tab");
-    expect(await focused()).toBe("Last");
-    // From a control outside the tab order (an arrow-key roving item),
-    // Tab moves to the next stop after it.
-    await page.evaluate(() =>
-      document.querySelector<HTMLElement>('#trap-order [tabindex="-1"][role="radio"]')!.focus(),
-    );
-    await page.keyboard.press("Tab");
-    expect(await focused()).toBe("Medium");
-  });
-});
-
-test.describe("trapFocus tab order edge cases", () => {
+test.describe("trapFocus wrapping", () => {
+  // Text inputs, not buttons: Safari's Tab skips buttons by default, and
+  // the browser decides the order between the edges.
   async function mount(page: Page, html: string, withoutCheckVisibility = false) {
     await gotoPage(page, "modal");
     await page.evaluate(
@@ -174,81 +117,115 @@ test.describe("trapFocus tab order edge cases", () => {
         }
         const { trapFocus } = await import("/src/lib/utils/focus-trap.ts");
         const surface = document.createElement("div");
-        surface.id = "trap-edge";
+        surface.id = "trap";
         surface.tabIndex = -1;
         surface.innerHTML = html;
-        document.body.append(surface);
+        const outside = document.createElement("input");
+        outside.setAttribute("aria-label", "Outside");
+        document.body.append(surface, outside);
         trapFocus(surface);
       },
       { html, withoutCheckVisibility },
     );
   }
+  // The focused element's label; inside an iframe, the frame's own focus.
   const focused = (page: Page) =>
+    page.evaluate(() => {
+      let active = document.activeElement;
+      if (active instanceof HTMLIFrameElement) {
+        active = active.contentDocument?.activeElement ?? null;
+        if (active?.tagName === "BODY") return "frame";
+      }
+      return active?.getAttribute("aria-label") ?? active?.tagName ?? null;
+    });
+  const focus = (page: Page, label: string) =>
     page.evaluate(
-      () =>
-        document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent,
+      (label) => document.querySelector<HTMLElement>(`#trap [aria-label="${label}"]`)!.focus(),
+      label,
     );
 
-  test("an unchecked radio group is entered at its first radio, or its last going back", async ({
-    page,
-  }) => {
+  test("Tab wraps at both edges, past controls that cannot take focus", async ({ page }) => {
     await mount(
       page,
-      `<button>Before</button>
-       <input type="radio" name="g" aria-label="One"><input type="radio" name="g" aria-label="Two">
-       <input type="radio" name="g" aria-label="Three"><button>After</button>`,
+      `<input aria-label="First"><input aria-label="Last">
+       <input aria-label="Disabled" disabled>
+       <fieldset disabled><input aria-label="In disabled fieldset"></fieldset>
+       <div inert><input aria-label="Inert"></div>
+       <input aria-label="Invisible" style="visibility: hidden">
+       <input aria-label="Removed" tabindex="-1">`,
     );
+    await focus(page, "Last");
     await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
-    expect(await focused(page)).toBe("One");
-    await page.keyboard.press("Tab");
-    expect(await focused(page)).toBe("After");
+    await expect.poll(() => focused(page)).toBe("First");
     await page.keyboard.press("Shift+Tab");
-    expect(await focused(page)).toBe("Three");
-    await page.keyboard.press("Shift+Tab");
-    expect(await focused(page)).toBe("Before");
+    await expect.poll(() => focused(page)).toBe("Last");
   });
 
-  test("from a roving item, Tab takes the nearest stop in document order", async ({ page }) => {
+  test("Tab moves through an iframe's content and wraps after it", async ({ page }) => {
     await mount(
       page,
-      `<button>Zero A</button><button tabindex="-1" id="roving">Roving</button>
-       <button>Zero B</button><button tabindex="2">Positive</button>`,
+      `<input aria-label="First">
+       <iframe title="Frame" srcdoc="<input aria-label='Inside'>"></iframe>`,
     );
-    await page.evaluate(() => document.querySelector<HTMLElement>("#trap-edge #roving")!.focus());
-    await page.keyboard.press("Tab");
-    expect(await focused(page)).toBe("Zero B");
-    await page.evaluate(() => document.querySelector<HTMLElement>("#trap-edge #roving")!.focus());
-    await page.keyboard.press("Shift+Tab");
-    expect(await focused(page)).toBe("Zero A");
-  });
-
-  test("skips nested editing hosts and iframes", async ({ page }) => {
-    await mount(
-      page,
-      `<button>First</button>
-       <div contenteditable="true" aria-label="Host"><span contenteditable="true" aria-label="Nested">x</span></div>
-       <iframe title="Frame" srcdoc="<button>Inside</button>"></iframe><button>Last</button>`,
+    await page.waitForFunction(
+      () => document.querySelector("iframe")?.contentDocument?.querySelector("input") != null,
     );
-    for (const name of ["First", "Host", "Last", "First"]) {
+    await focus(page, "First");
+    const seen: (string | null)[] = [];
+    for (let i = 0; i < 4; i++) {
       await page.keyboard.press("Tab");
-      expect(await focused(page)).toBe(name);
+      await page.waitForTimeout(50);
+      seen.push(await focused(page));
     }
+    expect(seen).toContain("Inside");
+    expect(seen).not.toContain("Outside");
+    await expect.poll(() => focused(page)).not.toBe("Outside");
+    // Shift+Tab from the first control wraps back into the frame.
+    await focus(page, "First");
+    await page.keyboard.press("Shift+Tab");
+    await expect.poll(() => focused(page)).toMatch(/^(Inside|frame|IFRAME)$/);
   });
 
-  test("without checkVisibility, a radio in a closed details does not hide its group", async ({
-    page,
-  }) => {
+  test("a wrap enters a radio group at its checked radio", async ({ page }) => {
     await mount(
       page,
-      `<button>Before</button>
-       <details><summary>More</summary><input type="radio" name="h" aria-label="Hidden" checked></details>
-       <input type="radio" name="h" aria-label="Visible"><button>After</button>`,
+      `<input aria-label="First">
+       <input type="radio" name="size" aria-label="Small">
+       <input type="radio" name="size" aria-label="Large" checked>
+       <input type="radio" name="size" aria-label="Huge">`,
+    );
+    await focus(page, "First");
+    await page.keyboard.press("Shift+Tab");
+    await expect.poll(() => focused(page)).toBe("Large");
+  });
+
+  test("with no tab stops, Tab keeps focus on the surface", async ({ page }) => {
+    await mount(page, `<p>Nothing to focus</p>`);
+    await page.evaluate(() => document.querySelector<HTMLElement>("#trap")!.focus());
+    await page.keyboard.press("Tab");
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("trap");
+    await page.keyboard.press("Shift+Tab");
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("trap");
+  });
+
+  test("without checkVisibility, a wrap skips controls in a closed details", async ({ page }) => {
+    await mount(
+      page,
+      `<input aria-label="First">
+       <details><summary aria-label="More">More</summary><input aria-label="Collapsed"></details>`,
       true,
     );
-    for (const name of ["Before", "More", "Visible", "After"]) {
-      await page.keyboard.press("Tab");
-      expect(await focused(page)).toBe(name);
-    }
+    await focus(page, "First");
+    await page.keyboard.press("Shift+Tab");
+    await expect.poll(() => focused(page)).toBe("More");
+  });
+
+  test("the guards leave with the surface", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await page.getByRole("button", { name: "Open modal" }).click();
+    await expect(page.locator("[data-kit-focus-guard]")).toHaveCount(2);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page.locator("[data-kit-focus-guard]")).toHaveCount(0);
   });
 });
