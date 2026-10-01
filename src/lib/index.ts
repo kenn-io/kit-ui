@@ -62,7 +62,7 @@ export { default as MenuSeparator } from "./components/MenuSeparator.svelte";
 export { default as MenuTrigger } from "./components/MenuTrigger.svelte";
 export type { MenuAlign } from "./components/menu.js";
 export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
-export type { MentionOption } from "./components/mention.js";
+export type { MentionOption, MentionTrigger } from "./components/mention.js";
 export { default as MetricCard } from "./components/MetricCard.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";

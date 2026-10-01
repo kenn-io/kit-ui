@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { Button, MentionTextarea, type MentionOption } from "../../lib/index.js";
+  import {
+    Button,
+    MentionTextarea,
+    type MentionOption,
+    type MentionTrigger,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const issues: MentionOption[] = [
@@ -47,6 +52,45 @@
     const q = query.toLowerCase();
     return commands.filter((command) => command.insert.startsWith(q));
   }
+
+  const files = [
+    "README.md",
+    "package.json",
+    "src/lib/index.ts",
+    "src/lib/components/Button.svelte",
+    "src/lib/components/MentionTextarea.svelte",
+    "src/lib/components/mention.ts",
+    "docs/components/mention-textarea.md",
+    "tests/browser/mention-textarea.spec.ts",
+  ];
+  // A stand-in for an app's file search: fzf-style subsequence matching that
+  // ranks tight matches and matches in the file name first. Real apps rank
+  // their own project files, usually off the main thread.
+  function fuzzyScore(path: string, query: string): number {
+    const text = path.toLowerCase();
+    const nameStart = text.lastIndexOf("/") + 1;
+    let score = 0;
+    let at = -1;
+    for (const char of query.toLowerCase()) {
+      const next = text.indexOf(char, at + 1);
+      if (next === -1) return -1;
+      score += next === at + 1 ? 3 : 1;
+      if (next >= nameStart) score += 2;
+      at = next;
+    }
+    return score - path.length / 100;
+  }
+  function searchFiles(query: string): MentionOption[] {
+    return files
+      .map((path) => ({ path, score: fuzzyScore(path, query) }))
+      .filter((entry) => entry.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ path }) => ({ id: path, insert: path, label: "" }));
+  }
+  const composerTriggers: MentionTrigger[] = [
+    { char: "/", search: searchCommands, hideEmpty: true, menuLabel: "Commands" },
+    { char: "@", search: searchFiles, emptyLabel: "No matching files", menuLabel: "Files" },
+  ];
 </script>
 
 <DemoSection
@@ -104,15 +148,16 @@
 </DemoSection>
 
 <DemoSection
-  title="Slash commands in a composer"
-  description="Commands can be named anywhere in the message. hideEmpty keeps the menu closed while nothing matches, so a path such as /tmp does not interrupt typing, and embedded drops the field's own frame so the composer card draws it. textareaEl exposes the field for focus management."
+  title="Commands and files in a composer"
+  description="triggers gives each character its own search: / lists commands anywhere in the message, and @ fuzzy-matches files. The / trigger uses hideEmpty, so a path such as /tmp opens nothing unless a command matches, and the / inside @src/lib stays part of the file query. embedded drops the field's own frame so the composer card draws it, and textareaEl exposes the field for focus management."
   code={`<div class="composer">
   <MentionTextarea
     bind:value
     bind:textareaEl
-    search={searchCommands}
-    trigger="/"
-    hideEmpty
+    triggers={[
+      { char: "/", search: searchCommands, hideEmpty: true, menuLabel: "Commands" },
+      { char: "@", search: searchFiles, menuLabel: "Files" },
+    ]}
     embedded
     rows={2}
     oninput={() => edits++}
@@ -126,19 +171,17 @@
       <MentionTextarea
         bind:value={commandValue}
         bind:textareaEl={commandField}
-        search={searchCommands}
-        trigger="/"
-        hideEmpty
+        triggers={composerTriggers}
         embedded
         rows={2}
-        placeholder="Ask the agent, or type / for commands"
+        placeholder="Ask the agent; / for commands, @ for files"
         ariaLabel="Message"
         ariaDescribedby="composer-help"
         oninput={() => edits++}
         onpaste={(event) => (pastes += event.clipboardData?.files.length ?? 0)}
       />
     </div>
-    <span id="composer-help">Type / to use a command anywhere in the message.</span>
+    <span id="composer-help">Type / for a command or @ for a file, anywhere in the message.</span>
     <span>value: <code data-demo="command-value">{commandValue || "(empty)"}</code></span>
     <span
       >edits: <code data-demo="command-edits">{edits}</code> · pasted files:

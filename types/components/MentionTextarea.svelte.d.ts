@@ -1,13 +1,18 @@
 import { type Snippet } from "svelte";
-import type { MentionOption } from "./mention.js";
+import type { MentionOption, MentionTrigger } from "./mention.js";
 interface Props {
     value: string;
-    /** App-provided lookup: called with the text between the trigger
-     * character and the caret (may be empty on a bare trigger). Results
-     * beyond `maxResults` are dropped. */
-    search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
-    /** Character that opens the menu at a word boundary (default "#"). */
+    /** App-provided lookup for `trigger`: called with the text between the
+     * trigger character and the caret (may be empty on a bare trigger).
+     * Results beyond `maxResults` are dropped. Required unless `triggers`
+     * is set. */
+    search?: (query: string) => MentionOption[] | Promise<MentionOption[]>;
+    /** Character that opens the menu when it starts a word (default "#"). */
     trigger?: string;
+    /** Several triggers, each with its own search, e.g. "/" for commands
+     * and "@" for files. Replaces `trigger`, `search`, `hideEmpty`, and the
+     * status labels when set. */
+    triggers?: MentionTrigger[];
     /** Keep the menu closed while nothing matches instead of showing the
      * searching and empty rows. Suits synchronous searches over a fixed
      * list, where an empty menu only gets in the way of typing. */
@@ -25,9 +30,10 @@ interface Props {
     maxResults?: number;
     searchingLabel?: string;
     emptyLabel?: string;
-    /** Custom row rendering; receives the option and whether it is the
-     * keyboard-active row. Defaults to trigger+insert, label, dim meta. */
-    option?: Snippet<[MentionOption, boolean]>;
+    /** Custom row rendering; receives the option, whether it is the
+     * keyboard-active row, and the trigger character that opened the menu.
+     * Defaults to trigger+insert, label, dim meta. */
+    option?: Snippet<[MentionOption, boolean, string]>;
     /** Receives keys the mention menu did not consume. */
     onkeydown?: (event: KeyboardEvent) => void;
     /** Called with the new text after each edit. */

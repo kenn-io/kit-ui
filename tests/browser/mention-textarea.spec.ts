@@ -144,6 +144,31 @@ test("slash commands open anywhere in the message", async ({ page }) => {
   await expect(textarea).toHaveAttribute("aria-describedby", "composer-help");
 });
 
+test("one field offers commands and fuzzy file references", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+  const files = page.getByRole("listbox", { name: "Files" });
+
+  // Letters in order anywhere in the path match; the file name ranks first.
+  await textarea.pressSequentially("check @txtarea.sv");
+  await expect(files.locator(".kit-mention__option").first()).toContainText(
+    "@src/lib/components/MentionTextarea.svelte",
+  );
+  // The "/" inside a file query does not switch to the command menu.
+  await textarea.fill("");
+  await textarea.pressSequentially("@src/lib/components/bu");
+  await expect(files).toBeVisible();
+  await expect(page.getByRole("listbox", { name: "Commands" })).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await textarea.pressSequentially("then /re");
+  await expect(page.getByRole("listbox", { name: "Commands" })).toContainText("/review");
+  await page.keyboard.press("Tab");
+
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText(
+    "@src/lib/components/Button.svelte then /review ",
+  );
+});
+
 test("hideEmpty keeps the menu closed and leaves keys to the field", async ({ page }) => {
   await gotoPage(page, "mention-textarea");
   const textarea = page.getByRole("textbox", { name: "Message" });

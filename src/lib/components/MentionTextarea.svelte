@@ -2,16 +2,21 @@
   import { tick, type Snippet } from "svelte";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { MentionOption } from "./mention.js";
+  import type { MentionOption, MentionTrigger } from "./mention.js";
 
   interface Props {
     value: string;
-    /** App-provided lookup: called with the text between the trigger
-     * character and the caret (may be empty on a bare trigger). Results
-     * beyond `maxResults` are dropped. */
-    search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
-    /** Character that opens the menu at a word boundary (default "#"). */
+    /** App-provided lookup for `trigger`: called with the text between the
+     * trigger character and the caret (may be empty on a bare trigger).
+     * Results beyond `maxResults` are dropped. Required unless `triggers`
+     * is set. */
+    search?: (query: string) => MentionOption[] | Promise<MentionOption[]>;
+    /** Character that opens the menu when it starts a word (default "#"). */
     trigger?: string;
+    /** Several triggers, each with its own search, e.g. "/" for commands
+     * and "@" for files. Replaces `trigger`, `search`, `hideEmpty`, and the
+     * status labels when set. */
+    triggers?: MentionTrigger[];
     /** Keep the menu closed while nothing matches instead of showing the
      * searching and empty rows. Suits synchronous searches over a fixed
      * list, where an empty menu only gets in the way of typing. */
@@ -29,9 +34,10 @@
     maxResults?: number;
     searchingLabel?: string;
     emptyLabel?: string;
-    /** Custom row rendering; receives the option and whether it is the
-     * keyboard-active row. Defaults to trigger+insert, label, dim meta. */
-    option?: Snippet<[MentionOption, boolean]>;
+    /** Custom row rendering; receives the option, whether it is the
+     * keyboard-active row, and the trigger character that opened the menu.
+     * Defaults to trigger+insert, label, dim meta. */
+    option?: Snippet<[MentionOption, boolean, string]>;
     /** Receives keys the mention menu did not consume. */
     onkeydown?: (event: KeyboardEvent) => void;
     /** Called with the new text after each edit. */
@@ -45,8 +51,9 @@
 
   let {
     value = $bindable(""),
-    search,
+    search = undefined,
     trigger = "#",
+    triggers = undefined,
     hideEmpty = false,
     embedded = false,
     placeholder = "",
@@ -75,9 +82,16 @@
   let searching = $state(false);
   let queryStart = -1;
   let searchVersion = 0;
+  // The single-trigger props are shorthand for a one-entry list.
+  const triggerList = $derived<MentionTrigger[]>(
+    triggers ?? (search ? [{ char: trigger, search, hideEmpty, searchingLabel, emptyLabel }] : []),
+  );
+  // Index into triggerList of the trigger that opened the menu.
+  let activeIndex = $state(0);
+  const active = $derived(triggerList[activeIndex]);
   // With hideEmpty, an open query that matches nothing shows no menu and
   // leaves its keys to the textarea.
-  const visible = $derived(open && (!hideEmpty || results.length > 0));
+  const visible = $derived(open && (!active?.hideEmpty || results.length > 0));
 
   const uid = $props.id();
   const listId = `${uid}-mention-list`;
@@ -92,6 +106,7 @@
       return;
     }
     const q = query;
+    const lookup = active?.search;
     const version = ++searchVersion;
     // Drop the previous query's results up front: while the new search is
     // pending there must be nothing stale to navigate to or insert.
@@ -99,7 +114,8 @@
     searching = true;
     void (async () => {
       try {
-        const found = await search(q);
+        if (!lookup) throw new Error("MentionTextarea needs search or triggers");
+        const found = await lookup(q);
         if (version !== searchVersion) return;
         results = found.slice(0, maxResults);
         highlight = 0;
@@ -133,21 +149,16 @@
     return autoReposition(() => [menuEl, wrapEl], positionMenu);
   });
 
-  /** Index of the trigger character governing the caret, or -1: the trigger
-   * must start the text or follow whitespace, with no whitespace between it
-   * and the caret. */
-  function findTriggerIndex(text: string, caret: number): number {
-    for (let i = caret - 1; i >= 0; i--) {
-      const char = text[i];
-      if (char === trigger) {
-        if (i === 0) return i;
-        const prev = text[i - 1];
-        if (prev === " " || prev === "\n" || prev === "\t") return i;
-        return -1;
-      }
-      if (char === " " || char === "\n" || char === "\t") return -1;
-    }
-    return -1;
+  /** The trigger governing the caret: the word holding the caret (text
+   * since the last whitespace) must start with a trigger character. Reading
+   * the word's first character means a later trigger character inside it,
+   * like the "/" in "@src/lib", stays part of the query. */
+  function findTrigger(text: string, caret: number): { start: number; index: number } | null {
+    let start = caret;
+    while (start > 0 && !" \n\t".includes(text[start - 1]!)) start--;
+    if (start === caret) return null;
+    const index = triggerList.findIndex((entry) => entry.char === text[start]);
+    return index === -1 ? null : { start, index };
   }
 
   function refreshMention(): void {
@@ -157,15 +168,16 @@
     }
     const caret = textarea.selectionStart;
     const text = textarea.value;
-    const triggerIndex = findTriggerIndex(text, caret);
-    if (triggerIndex === -1) {
+    const found = findTrigger(text, caret);
+    if (!found) {
       open = false;
       query = "";
       queryStart = -1;
       return;
     }
-    queryStart = triggerIndex;
-    query = text.slice(triggerIndex + 1, caret);
+    queryStart = found.start;
+    activeIndex = found.index;
+    query = text.slice(found.start + 1, caret);
     open = true;
   }
 
@@ -201,7 +213,7 @@
     const caret = textarea.selectionStart;
     const before = text.slice(0, queryStart);
     const after = text.slice(caret);
-    const replacement = `${trigger}${item.insert} `;
+    const replacement = `${active?.char ?? trigger}${item.insert} `;
     value = before + replacement + after;
     oninput?.(value);
     open = false;
@@ -274,14 +286,14 @@
       style={menuStyle}
       id={listId}
       role="listbox"
-      aria-label="Insert reference"
+      aria-label={active?.menuLabel ?? "Insert reference"}
       tabindex="-1"
       onmousedown={preventBlur}
     >
       {#if searching && results.length === 0}
-        <div class="kit-mention__status">{searchingLabel}</div>
+        <div class="kit-mention__status">{active?.searchingLabel ?? searchingLabel}</div>
       {:else if results.length === 0}
-        <div class="kit-mention__status">{emptyLabel}</div>
+        <div class="kit-mention__status">{active?.emptyLabel ?? emptyLabel}</div>
       {:else}
         {#each results as item, index (item.id)}
           <button
@@ -298,9 +310,9 @@
             onmouseenter={() => (highlight = index)}
           >
             {#if option}
-              {@render option(item, index === highlight)}
+              {@render option(item, index === highlight, active?.char ?? trigger)}
             {:else}
-              <span class="kit-mention__insert">{trigger}{item.insert}</span>
+              <span class="kit-mention__insert">{active?.char ?? trigger}{item.insert}</span>
               <span class="kit-mention__label">{item.label}</span>
               {#if item.meta}
                 <span class="kit-mention__meta">{item.meta}</span>
