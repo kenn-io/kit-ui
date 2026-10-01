@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MentionTextarea, type MentionOption } from "../../lib/index.js";
+  import { Button, MentionTextarea, type MentionOption } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const issues: MentionOption[] = [
@@ -32,6 +32,20 @@
     return users.filter((user) =>
       [user.insert, user.label].some((part) => part.toLowerCase().includes(q)),
     );
+  }
+
+  let commandValue = $state("");
+  let commandField = $state<HTMLTextAreaElement>();
+  let edits = $state(0);
+  let pastes = $state(0);
+  const commands: MentionOption[] = [
+    { id: "review", insert: "review", label: "Review the current changes" },
+    { id: "plan", insert: "plan", label: "Plan a change" },
+    { id: "compact", insert: "compact", label: "Summarize the conversation" },
+  ];
+  function searchCommands(query: string): MentionOption[] {
+    const q = query.toLowerCase();
+    return commands.filter((command) => command.insert.startsWith(q));
   }
 </script>
 
@@ -89,7 +103,67 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Slash commands in a composer"
+  description="triggerAt=start opens the menu only when / begins the text, hideEmpty keeps it closed while nothing matches, and embedded drops the field's own frame so the composer card draws it. textareaEl exposes the field for focus management."
+  code={`<div class="composer">
+  <MentionTextarea
+    bind:value
+    bind:textareaEl
+    search={searchCommands}
+    trigger="/"
+    triggerAt="start"
+    hideEmpty
+    embedded
+    rows={2}
+    oninput={() => edits++}
+    onpaste={(event) => pastes += event.clipboardData?.files.length ?? 0}
+    ariaLabel="Message"
+  />
+</div>`}
+>
+  <div class="mention-demo">
+    <div class="composer">
+      <MentionTextarea
+        bind:value={commandValue}
+        bind:textareaEl={commandField}
+        search={searchCommands}
+        trigger="/"
+        triggerAt="start"
+        hideEmpty
+        embedded
+        rows={2}
+        placeholder="Ask the agent, or type / for commands"
+        ariaLabel="Message"
+        ariaDescribedby="composer-help"
+        oninput={() => edits++}
+        onpaste={(event) => (pastes += event.clipboardData?.files.length ?? 0)}
+      />
+    </div>
+    <span id="composer-help">Commands work only as the first word.</span>
+    <span>value: <code data-demo="command-value">{commandValue || "(empty)"}</code></span>
+    <span
+      >edits: <code data-demo="command-edits">{edits}</code> · pasted files:
+      <code data-demo="command-pastes">{pastes}</code></span
+    >
+    <div><Button size="sm" onclick={() => commandField?.focus()}>Focus the composer</Button></div>
+  </div>
+</DemoSection>
+
 <style>
+  .composer {
+    --kit-mention-padding: var(--space-4) var(--space-5);
+    --kit-mention-min-height: 56px;
+    --kit-mention-max-height: 12rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+  }
+
+  .composer:focus-within {
+    border-color: var(--accent-blue);
+  }
+
   .mention-demo {
     display: flex;
     flex-direction: column;

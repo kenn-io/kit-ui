@@ -123,3 +123,68 @@ test("custom trigger and row snippet", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.locator('[data-demo="user-mention-value"]')).toHaveText("@marius ");
 });
+
+test("slash commands open only at the start of the text", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+  const options = page.locator(".kit-mention__option");
+
+  await textarea.pressSequentially("look at /tmp");
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+
+  await textarea.fill("");
+  await textarea.pressSequentially("/p");
+  await expect(options).toHaveCount(1);
+  await expect(options).toContainText("/plan");
+  await page.keyboard.press("Enter");
+
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText("/plan ");
+  // Inserting a command counts as an edit, like typing.
+  await expect(page.locator('[data-demo="command-edits"]')).not.toHaveText("0");
+  await expect(textarea).toHaveAttribute("aria-describedby", "composer-help");
+});
+
+test("hideEmpty keeps the menu closed and leaves keys to the field", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+
+  await textarea.pressSequentially("/zz");
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+  await expect(textarea).not.toHaveAttribute("aria-controls");
+  // Enter is not consumed by a hidden menu: it reaches the textarea.
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText("/zz\n");
+});
+
+test("embedded field drops its frame, grows with content, and exposes the textarea", async ({
+  page,
+}) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+
+  const style = await textarea.evaluate((el) => {
+    const computed = getComputedStyle(el);
+    return {
+      border: computed.borderTopWidth,
+      resize: computed.resize,
+      padding: computed.paddingTop,
+    };
+  });
+  expect(style).toEqual({ border: "0px", resize: "none", padding: "8px" });
+  const before = await textarea.evaluate((el) => el.getBoundingClientRect().height);
+  await textarea.fill("one\ntwo\nthree\nfour\nfive");
+  const after = await textarea.evaluate((el) => el.getBoundingClientRect().height);
+  expect(after).toBeGreaterThan(before);
+
+  await page.getByRole("button", { name: "Focus the composer" }).click();
+  await expect(textarea).toBeFocused();
+
+  await textarea.evaluate((el) => {
+    const data = new DataTransfer();
+    data.items.add(new File(["x"], "shot.png", { type: "image/png" }));
+    el.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  });
+  await expect(page.locator('[data-demo="command-pastes"]')).toHaveText("1");
+});

@@ -12,10 +12,23 @@
     search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
     /** Character that opens the menu at a word boundary (default "#"). */
     trigger?: string;
+    /** Where the trigger counts: at any word boundary ("word"), or only as
+     * the first character of the text ("start"), as slash commands do. */
+    triggerAt?: "word" | "start";
+    /** Keep the menu closed while nothing matches instead of showing the
+     * searching and empty rows. Suits synchronous searches over a fixed
+     * list, where an empty menu only gets in the way of typing. */
+    hideEmpty?: boolean;
+    /** Borderless, transparent field that grows with its content and has no
+     * resize handle, for a textarea inside a composer card that draws its
+     * own frame. Size it with --kit-mention-padding, --kit-mention-min-height,
+     * and --kit-mention-max-height. */
+    embedded?: boolean;
     placeholder?: string;
     rows?: number;
     disabled?: boolean;
     ariaLabel?: string;
+    ariaDescribedby?: string;
     maxResults?: number;
     searchingLabel?: string;
     emptyLabel?: string;
@@ -24,24 +37,38 @@
     option?: Snippet<[MentionOption, boolean]>;
     /** Receives keys the mention menu did not consume. */
     onkeydown?: (event: KeyboardEvent) => void;
+    /** Called with the new text after each edit. */
+    oninput?: (value: string) => void;
+    /** Receives paste events, e.g. to take pasted files. */
+    onpaste?: (event: ClipboardEvent) => void;
+    /** The underlying textarea (bindable) — for focus and caret management. */
+    textareaEl?: HTMLTextAreaElement | undefined;
+    class?: string;
   }
 
   let {
     value = $bindable(""),
     search,
     trigger = "#",
+    triggerAt = "word",
+    hideEmpty = false,
+    embedded = false,
     placeholder = "",
     rows = 3,
     disabled = false,
     ariaLabel = undefined,
+    ariaDescribedby = undefined,
     maxResults = 8,
     searchingLabel = "Searching…",
     emptyLabel = "No matches",
     option,
     onkeydown = undefined,
+    oninput = undefined,
+    onpaste = undefined,
+    textareaEl: textarea = $bindable(undefined),
+    class: className = "",
   }: Props = $props();
 
-  let textarea = $state<HTMLTextAreaElement>();
   let wrapEl = $state<HTMLDivElement>();
   let menuEl = $state<HTMLDivElement>();
   let menuStyle = $state("");
@@ -52,6 +79,9 @@
   let searching = $state(false);
   let queryStart = -1;
   let searchVersion = 0;
+  // With hideEmpty, an open query that matches nothing shows no menu and
+  // leaves its keys to the textarea.
+  const visible = $derived(open && (!hideEmpty || results.length > 0));
 
   const uid = $props.id();
   const listId = `${uid}-mention-list`;
@@ -102,19 +132,20 @@
   }
 
   $effect(() => {
-    if (!open) return;
+    if (!visible) return;
     positionMenu();
     return autoReposition(() => [menuEl, wrapEl], positionMenu);
   });
 
   /** Index of the trigger character governing the caret, or -1: the trigger
-   * must start the text or follow whitespace, with no whitespace between it
-   * and the caret. */
+   * must start the text or (with triggerAt "word") follow whitespace, with no
+   * whitespace between it and the caret. */
   function findTriggerIndex(text: string, caret: number): number {
     for (let i = caret - 1; i >= 0; i--) {
       const char = text[i];
       if (char === trigger) {
         if (i === 0) return i;
+        if (triggerAt === "start") return -1;
         const prev = text[i - 1];
         if (prev === " " || prev === "\n" || prev === "\t") return i;
         return -1;
@@ -177,6 +208,7 @@
     const after = text.slice(caret);
     const replacement = `${trigger}${item.insert} `;
     value = before + replacement + after;
+    oninput?.(value);
     open = false;
     query = "";
     await tick();
@@ -205,7 +237,7 @@
         return;
       }
     }
-    if (open && event.key === "Escape") {
+    if (visible && event.key === "Escape") {
       event.preventDefault();
       open = false;
       return;
@@ -218,7 +250,7 @@
   }
 </script>
 
-<div class="kit-mention" bind:this={wrapEl}>
+<div class={["kit-mention", embedded && "kit-mention--embedded", className]} bind:this={wrapEl}>
   <textarea
     bind:this={textarea}
     bind:value
@@ -227,13 +259,20 @@
     {rows}
     {placeholder}
     aria-label={ariaLabel}
-    aria-activedescendant={open && results.length > 0 ? `${listId}-opt-${highlight}` : undefined}
-    oninput={refreshMention}
+    aria-describedby={ariaDescribedby}
+    aria-autocomplete="list"
+    aria-controls={visible ? listId : undefined}
+    aria-activedescendant={visible && results.length > 0 ? `${listId}-opt-${highlight}` : undefined}
+    oninput={() => {
+      refreshMention();
+      oninput?.(value);
+    }}
     onkeydown={handleKeydown}
     onkeyup={handleKeyup}
     onclick={refreshMention}
-    onblur={handleBlur}></textarea>
-  {#if open}
+    onblur={handleBlur}
+    {onpaste}></textarea>
+  {#if visible}
     <div
       bind:this={menuEl}
       class="kit-mention__menu kit-popover-card"
@@ -311,6 +350,30 @@
 
   .kit-mention__textarea:disabled {
     opacity: var(--opacity-disabled);
+  }
+
+  /* Embedded: the surrounding composer owns the frame and focus styling. */
+  .kit-mention--embedded .kit-mention__textarea {
+    display: block;
+    min-height: var(--kit-mention-min-height, auto);
+    max-height: var(--kit-mention-max-height, none);
+    padding: var(--kit-mention-padding, var(--space-2) var(--space-3));
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font: inherit;
+    line-height: 1.5;
+    resize: none;
+    field-sizing: content;
+  }
+
+  .kit-mention--embedded .kit-mention__textarea::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .kit-mention--embedded .kit-mention__textarea:disabled {
+    opacity: 1;
+    cursor: not-allowed;
   }
 
   .kit-mention__menu {
