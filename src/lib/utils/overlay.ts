@@ -28,13 +28,7 @@ export function backdropCloses(close: () => void): (backdrop: HTMLElement) => ()
     const onPointerUp = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
       pointerId = null;
-      // Without layout (jsdom) there is no hit test; trust the target. A
-      // release off-screen hits nothing (null) and does not count.
-      const hit =
-        typeof document.elementFromPoint === "function"
-          ? document.elementFromPoint(event.clientX, event.clientY)
-          : event.target;
-      released = hit === backdrop;
+      released = releaseTarget(event) === backdrop;
     };
     const onPointerCancel = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
@@ -58,6 +52,19 @@ export function backdropCloses(close: () => void): (backdrop: HTMLElement) => ()
       backdrop.removeEventListener("click", onClick);
     };
   };
+}
+
+/** The element under a pointer release. A release off-screen hits
+ * nothing (null). Without layout (jsdom) there is no real hit test: the
+ * API is missing, or a test stub returns null for every point. A browser
+ * returns null only outside the viewport, so a null inside it means no
+ * layout, and the event target is the best answer. */
+function releaseTarget(event: PointerEvent): EventTarget | null {
+  if (typeof document.elementFromPoint !== "function") return event.target;
+  const { clientX: x, clientY: y } = event;
+  const hit = document.elementFromPoint(x, y);
+  const inViewport = x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight;
+  return hit === null && inViewport ? event.target : hit;
 }
 
 /**

@@ -95,3 +95,25 @@ test("the backdrop closes only on a press that starts and ends on it", async ({ 
   panel = await open();
   expect(panel.width).toBeGreaterThan(0);
 });
+
+test("without layout, a backdrop press still closes the modal", async ({ page }) => {
+  await gotoPage(page, "modal");
+  const dialog = page.getByRole("dialog");
+  await page.getByRole("button", { name: "Open modal" }).click();
+  await expect(dialog).toBeVisible();
+  // jsdom test setups often stub elementFromPoint to return null for
+  // every point. Inside the viewport, that means "no hit test".
+  await page.evaluate(() => {
+    document.elementFromPoint = () => null;
+  });
+  await page.locator(".kit-modal-overlay").evaluate((overlay) => {
+    const fire = (type: string) =>
+      overlay.dispatchEvent(
+        new PointerEvent(type, { pointerId: 9, clientX: 0, clientY: 0, bubbles: true }),
+      );
+    fire("pointerdown");
+    fire("pointerup");
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await expect(dialog).toBeHidden();
+});
