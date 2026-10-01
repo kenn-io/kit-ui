@@ -8,8 +8,9 @@
  * - `initMarkdownMermaidRendering` — an imperative post-processor that
  *   watches a root for those blocks, renders them with mermaid (loaded on
  *   demand), and wraps each result in a pan/zoom viewer with copy and
- *   expanded-lightbox controls. Diagrams re-render when the theme class
- *   on <html> flips.
+ *   expand controls. Expand opens the shared MediaViewer, which pages
+ *   through the page's other diagrams and images. Diagrams re-render when
+ *   the theme class on <html> flips.
  *
  * Deliberately NOT exported from the library barrel: the dynamic
  * `import("mermaid")` would otherwise land in every consumer's module
@@ -26,6 +27,7 @@
  * document can queue; they are scoped per observed root, so initialize
  * one controller per markdown document (see docs/components/mermaid.md).
  */
+import { type MediaViewerLabels } from "./media-gallery.js";
 export interface MarkdownMermaidAPI {
     version?: string;
     initialize: (config: MarkdownMermaidConfig) => void;
@@ -62,11 +64,13 @@ export interface MarkdownMermaidOptions {
     /** Injectable mermaid loader (tests, custom bundling). Defaults to a
      * dynamic import of the `mermaid` optional peer dependency. */
     load?: MarkdownMermaidLoader;
-    /** Suspend app-level keyboard handling while the expanded-view
-     * lightbox is open; returns the restore function called on close.
-     * Defaults to pushing a "kit-mermaid-lightbox" scope on `appShortcuts`.
-     * Apps with their own shortcut manager or modal stack hook in here. */
-    onLightboxOpen?: () => () => void;
+    /** Suspend app-level keyboard handling while the expanded view is
+     * open; returns the restore function called on close. Defaults to
+     * pushing a "kit-media-viewer" scope on `appShortcuts`. Apps with their
+     * own shortcut manager or modal stack hook in here. */
+    onViewerOpen?: () => () => void;
+    /** Strings for the expanded view (see MediaViewer's label props). */
+    viewerLabels?: MediaViewerLabels;
 }
 /** `codeFence` interceptor for `createMarkdownRenderer`: routes
  * ```mermaid fences to `<pre class="mermaid">` blocks (escaped source,

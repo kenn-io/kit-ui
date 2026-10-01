@@ -8,8 +8,9 @@
  * - `initMarkdownMermaidRendering` — an imperative post-processor that
  *   watches a root for those blocks, renders them with mermaid (loaded on
  *   demand), and wraps each result in a pan/zoom viewer with copy and
- *   expanded-lightbox controls. Diagrams re-render when the theme class
- *   on <html> flips.
+ *   expand controls. Expand opens the shared MediaViewer, which pages
+ *   through the page's other diagrams and images. Diagrams re-render when
+ *   the theme class on <html> flips.
  *
  * Deliberately NOT exported from the library barrel: the dynamic
  * `import("mermaid")` would otherwise land in every consumer's module
@@ -28,9 +29,16 @@
  */
 
 import { copyToClipboard } from "./clipboard.js";
-import { trapFocus } from "./focus-trap.js";
+import { loadControlIcons, setControlIcon, type ControlIcon } from "./control-icons.js";
 import { escapeHtml } from "./markdown.js";
-import { appShortcuts } from "./shortcuts.js";
+import {
+  closeMediaViewerGallery,
+  openMediaViewerGallery,
+  registerMediaViewerItem,
+  unregisterMediaViewerItem,
+  type MediaViewerLabels,
+} from "./media-gallery.js";
+import { attachPanZoom } from "./pan-zoom.js";
 
 export interface MarkdownMermaidAPI {
   version?: string;
@@ -71,16 +79,18 @@ export interface MarkdownMermaidOptions {
   /** Injectable mermaid loader (tests, custom bundling). Defaults to a
    * dynamic import of the `mermaid` optional peer dependency. */
   load?: MarkdownMermaidLoader;
-  /** Suspend app-level keyboard handling while the expanded-view
-   * lightbox is open; returns the restore function called on close.
-   * Defaults to pushing a "kit-mermaid-lightbox" scope on `appShortcuts`.
-   * Apps with their own shortcut manager or modal stack hook in here. */
-  onLightboxOpen?: () => () => void;
+  /** Suspend app-level keyboard handling while the expanded view is
+   * open; returns the restore function called on close. Defaults to
+   * pushing a "kit-media-viewer" scope on `appShortcuts`. Apps with their
+   * own shortcut manager or modal stack hook in here. */
+  onViewerOpen?: () => () => void;
+  /** Strings for the expanded view (see MediaViewer's label props). */
+  viewerLabels?: MediaViewerLabels;
 }
 
 interface InternalMarkdownMermaidOptions extends MarkdownMermaidOptions {
-  onLightboxMounted?: (close: () => void) => void;
-  onLightboxClosed?: (close: () => void) => void;
+  onViewerOpened?: (close: () => void) => void;
+  onViewerClosed?: (close: () => void) => void;
   /** Whether this pass may retry nodes held after an infrastructure
    * failure (default true). The controller sets false for observer-
    * triggered passes: the failure's own source-restore mutation wakes
@@ -94,11 +104,6 @@ interface InternalMarkdownMermaidOptions extends MarkdownMermaidOptions {
 const MERMAID_SELECTOR = "pre.mermaid";
 const MERMAID_VIEWER_SELECTOR = "pre.mermaid.kit-mermaid-viewer";
 const MERMAID_VIEWER_ATTACHED = "true";
-const MIN_SCALE = 0.4;
-const MAX_SCALE = 8;
-const WHEEL_ZOOM_SENSITIVITY = 0.0015;
-const WHEEL_DELTA_LINE = 1;
-const WHEEL_DELTA_PAGE = 2;
 const MAX_MERMAID_DIAGRAMS_PER_DOCUMENT = 25;
 const MAX_MERMAID_SOURCE_BYTES_PER_DOCUMENT = 200_000;
 const MERMAID_MAX_TEXT_SIZE = 50_000;
@@ -165,7 +170,6 @@ const initializedMermaidTheme = new WeakMap<MarkdownMermaidAPI, MermaidThemeName
 const diagramSources = new WeakMap<HTMLElement, string>();
 const failedDiagramSources = new WeakMap<HTMLElement, string>();
 const infrastructureFailureHolds = new WeakMap<HTMLElement, string>();
-let closeActiveMermaidLightbox: (() => void) | null = null;
 
 /** `codeFence` interceptor for `createMarkdownRenderer`: routes
  * ```mermaid fences to `<pre class="mermaid">` blocks (escaped source,
@@ -176,77 +180,9 @@ export function mermaidCodeFence(code: string, lang: string): string | undefined
   return `<pre class="mermaid">${escapeHtml(code)}</pre>`;
 }
 
-function defaultLightboxOpen(): () => void {
-  return appShortcuts.pushScope("kit-mermaid-lightbox");
-}
-
-// Viewer control icons — the same lucide set the component library uses
-// (CopyButton's copy/check pair, Modal's x). The viewer DOM is imperative,
-// so instead of managing per-button Svelte lifecycles each icon component
-// is mounted once into a detached host, its svg markup captured, and the
-// instance unmounted; buttons clone the cached markup. Imported
-// dynamically (with the text glyphs below as fallback) because .svelte
-// modules can't load in the unit-test runtime, and mermaid callers
-// already pay a dynamic-import roundtrip before any button exists.
-type MermaidButtonIcon = "expand" | "copy" | "reset" | "close" | "check";
-
-const MERMAID_BUTTON_GLYPHS: Record<MermaidButtonIcon, string> = {
-  expand: "⟷",
-  copy: "⧉",
-  reset: "⟳",
-  close: "×",
-  check: "✓",
-};
-
-let mermaidButtonIconSvgs: Record<MermaidButtonIcon, string> | null = null;
-let mermaidButtonIconPromise: Promise<void> | null = null;
-
 interface MermaidPackageModule {
   default?: { version?: unknown };
   version?: unknown;
-}
-
-function loadMermaidButtonIcons(): Promise<void> {
-  mermaidButtonIconPromise ??= (async () => {
-    const [svelte, expand, copy, reset, close, check] = await Promise.all([
-      import("svelte"),
-      import("@lucide/svelte/icons/maximize-2"),
-      import("@lucide/svelte/icons/copy"),
-      import("@lucide/svelte/icons/rotate-ccw"),
-      import("@lucide/svelte/icons/x"),
-      import("@lucide/svelte/icons/check"),
-    ]);
-    const renderIconSvg = (icon: { default: unknown }): string => {
-      const host = document.createElement("div");
-      const instance = svelte.mount(icon.default as Parameters<typeof svelte.mount>[0], {
-        target: host,
-        props: { size: 16, "aria-hidden": "true" },
-      });
-      const svg = host.innerHTML;
-      svelte.unmount(instance);
-      return svg;
-    };
-    mermaidButtonIconSvgs = {
-      expand: renderIconSvg(expand),
-      copy: renderIconSvg(copy),
-      reset: renderIconSvg(reset),
-      close: renderIconSvg(close),
-      check: renderIconSvg(check),
-    };
-  })().catch(() => {
-    // Icon chunk failed (offline) — buttons fall back to text glyphs and
-    // a later render retries the import.
-    mermaidButtonIconPromise = null;
-  });
-  return mermaidButtonIconPromise;
-}
-
-function setMermaidButtonIcon(button: HTMLButtonElement, icon: MermaidButtonIcon): void {
-  if (mermaidButtonIconSvgs) {
-    button.innerHTML = mermaidButtonIconSvgs[icon];
-  } else {
-    button.textContent = MERMAID_BUTTON_GLYPHS[icon];
-  }
 }
 
 async function loadMermaid(): Promise<MarkdownMermaidAPI> {
@@ -308,7 +244,7 @@ export async function renderMarkdownMermaidDiagrams(
 
   let mermaid: MarkdownMermaidAPI;
   try {
-    [mermaid] = await Promise.all([(options.load ?? loadMermaid)(), loadMermaidButtonIcons()]);
+    [mermaid] = await Promise.all([(options.load ?? loadMermaid)(), loadControlIcons()]);
     assertSupportedMermaidVersion(mermaid);
     initializeMermaidForCurrentTheme(mermaid);
   } catch (error: unknown) {
@@ -462,8 +398,15 @@ function attachMermaidViewer(
 
   svg.remove();
   const diagramView = createPannableDiagramView(svg);
+  registerMediaViewerItem(node, () => ({
+    kind: "element",
+    element: svg,
+    label: "Mermaid diagram",
+    class: "kit-mermaid-content",
+    background: "var(--mermaid-bg)",
+  }));
   const expandButton = createMermaidButton("Open diagram in expanded view", "expand", () =>
-    openMermaidLightbox(svg, options),
+    openMermaidViewer(node, options),
   );
   const copyButton = createMermaidButton("Copy Mermaid source", "copy", () =>
     copyMermaidSource(source, copyButton),
@@ -566,12 +509,16 @@ function cssThemeToken(styles: CSSStyleDeclaration, name: string): string {
 }
 
 function resetRenderedMermaidViewers(root: ParentNode): void {
-  closeActiveMermaidLightbox?.();
+  const viewers = Array.from(root.querySelectorAll<HTMLElement>(MERMAID_VIEWER_SELECTOR));
+  // An open viewer showing these diagrams holds copies in the old palette;
+  // one showing only other media stays open.
+  closeMediaViewerGallery(viewers);
 
-  for (const node of Array.from(root.querySelectorAll<HTMLElement>(MERMAID_VIEWER_SELECTOR))) {
+  for (const node of viewers) {
     const source = diagramSources.get(node);
     if (source === undefined) continue;
 
+    unregisterMediaViewerItem(node);
     node.textContent = source;
     node.classList.remove("kit-mermaid-viewer");
     delete node.dataset.mermaidViewer;
@@ -583,136 +530,37 @@ function createPannableDiagramView(svg: SVGSVGElement): {
   controls: HTMLDivElement;
   viewport: HTMLDivElement;
 } {
-  let scale = 1;
-  let offsetX = 0;
-  let offsetY = 0;
-
   const viewport = document.createElement("div");
   viewport.className = "kit-mermaid-viewer__viewport";
 
   const pan = document.createElement("div");
   pan.className = "kit-mermaid-viewer__pan";
-
-  const updateTransform = () => {
-    pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${formatScale(scale)})`;
-  };
-
-  const resetView = () => {
-    scale = 1;
-    offsetX = 0;
-    offsetY = 0;
-    updateTransform();
-  };
-
-  const zoomTo = (nextScale: number, originX: number, originY: number) => {
-    nextScale = clampScale(nextScale);
-    if (nextScale === scale) return;
-    const scaleRatio = nextScale / scale;
-    offsetX = originX - (originX - offsetX) * scaleRatio;
-    offsetY = originY - (originY - offsetY) * scaleRatio;
-    scale = nextScale;
-    updateTransform();
-  };
-
-  const controls = createMermaidResetControls(resetView);
-
-  attachDragPanning(viewport, {
-    onDrag(deltaX, deltaY) {
-      offsetX += deltaX;
-      offsetY += deltaY;
-      updateTransform();
-    },
-  });
-  attachWheelZoom(viewport, {
-    onZoom(event) {
-      const rect = viewport.getBoundingClientRect();
-      zoomTo(
-        scale * Math.exp(-normalizeWheelDelta(event, viewport) * WHEEL_ZOOM_SENSITIVITY),
-        event.clientX - rect.left - rect.width / 2,
-        event.clientY - rect.top - rect.height / 2,
-      );
-    },
-  });
-
   pan.append(svg);
   viewport.append(pan);
-  updateTransform();
+
+  const panZoom = attachPanZoom(viewport, pan);
+  const controls = document.createElement("div");
+  controls.className = "kit-mermaid-viewer__controls kit-mermaid-viewer__controls--nav";
+  controls.append(createMermaidButton("Reset diagram view", "reset", panZoom.reset));
 
   return { controls, viewport };
 }
 
-function createMermaidResetControls(resetView: () => void): HTMLDivElement {
-  const navControls = document.createElement("div");
-  navControls.className = "kit-mermaid-viewer__controls kit-mermaid-viewer__controls--nav";
-  navControls.append(createMermaidButton("Reset diagram view", "reset", resetView));
-  return navControls;
-}
-
-function openMermaidLightbox(svg: SVGSVGElement, options: InternalMarkdownMermaidOptions): void {
-  closeActiveMermaidLightbox?.();
-
-  const overlay = document.createElement("div");
-  overlay.className = "kit-mermaid-lightbox";
-  overlay.setAttribute("aria-label", "Expanded Mermaid diagram");
-  overlay.setAttribute("aria-modal", "true");
-  overlay.setAttribute("role", "dialog");
-  overlay.tabIndex = -1;
-
-  const panel = document.createElement("div");
-  panel.className = "kit-mermaid-lightbox__panel";
-  panel.tabIndex = -1;
-
-  const closeButton = createMermaidButton("Close expanded diagram", "close", closeLightbox);
-  closeButton.classList.add("kit-mermaid-lightbox__close");
-
-  const expandedSvg = svg.cloneNode(true) as SVGSVGElement;
-  const diagramView = createPannableDiagramView(expandedSvg);
-  panel.append(diagramView.viewport, closeButton, diagramView.controls);
-  overlay.append(panel);
-
-  const releaseShortcutScope = (options.onLightboxOpen ?? defaultLightboxOpen)();
-  const onKeyDown = (event: KeyboardEvent) => {
-    event.stopPropagation();
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeLightbox();
-    }
-  };
-
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) closeLightbox();
+async function openMermaidViewer(
+  node: HTMLElement,
+  options: InternalMarkdownMermaidOptions,
+): Promise<void> {
+  const close: () => void = await openMediaViewerGallery(node, {
+    ...options.viewerLabels,
+    onViewerOpen: options.onViewerOpen,
+    onClose: () => options.onViewerClosed?.(close),
   });
-  overlay.addEventListener("keydown", onKeyDown);
-
-  document.addEventListener("keydown", onKeyDown);
-  document.body.append(overlay);
-  closeActiveMermaidLightbox = closeLightbox;
-  options.onLightboxMounted?.(closeLightbox);
-  // Full modal semantics via the shared trap: Tab containment, body
-  // scroll lock, focus restore on close. [autofocus] steers the trap's
-  // initial focus to the close control.
-  closeButton.setAttribute("autofocus", "");
-  const releaseFocusTrap = trapFocus(panel);
-  let closed = false;
-
-  function closeLightbox(): void {
-    if (closed) return;
-    closed = true;
-    overlay.removeEventListener("keydown", onKeyDown);
-    document.removeEventListener("keydown", onKeyDown);
-    if (closeActiveMermaidLightbox === closeLightbox) {
-      closeActiveMermaidLightbox = null;
-    }
-    options.onLightboxClosed?.(closeLightbox);
-    releaseShortcutScope();
-    overlay.remove();
-    releaseFocusTrap();
-  }
+  options.onViewerOpened?.(close);
 }
 
 function createMermaidButton(
   label: string,
-  icon: MermaidButtonIcon,
+  icon: ControlIcon,
   onClick: () => void | Promise<void>,
 ): HTMLButtonElement {
   const button = document.createElement("button");
@@ -720,7 +568,7 @@ function createMermaidButton(
   button.className = "kit-mermaid-viewer__button";
   button.setAttribute("aria-label", label);
   button.title = label;
-  setMermaidButtonIcon(button, icon);
+  setControlIcon(button, icon);
   button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -739,77 +587,13 @@ async function copyMermaidSource(source: string, button: HTMLButtonElement): Pro
   button.dataset.copied = "true";
   button.setAttribute("aria-label", "Copied Mermaid source");
   button.title = "Copied Mermaid source";
-  setMermaidButtonIcon(button, "check");
+  setControlIcon(button, "check");
   window.setTimeout(() => {
     button.dataset.copied = "false";
     button.setAttribute("aria-label", "Copy Mermaid source");
     button.title = "Copy Mermaid source";
-    setMermaidButtonIcon(button, "copy");
+    setControlIcon(button, "copy");
   }, 1200);
-}
-
-function attachDragPanning(
-  viewport: HTMLElement,
-  drag: { onDrag: (deltaX: number, deltaY: number) => void },
-): void {
-  let activeDrag: { pointerId: number; x: number; y: number } | null = null;
-
-  viewport.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    activeDrag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    viewport.classList.add("kit-mermaid-viewer__viewport--dragging");
-    if ("setPointerCapture" in viewport) {
-      viewport.setPointerCapture(event.pointerId);
-    }
-  });
-
-  viewport.addEventListener("pointermove", (event) => {
-    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
-    drag.onDrag(event.clientX - activeDrag.x, event.clientY - activeDrag.y);
-    activeDrag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-  });
-
-  const endDrag = (event: PointerEvent) => {
-    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
-    activeDrag = null;
-    viewport.classList.remove("kit-mermaid-viewer__viewport--dragging");
-    if ("releasePointerCapture" in viewport) {
-      viewport.releasePointerCapture(event.pointerId);
-    }
-  };
-
-  viewport.addEventListener("pointerup", endDrag);
-  viewport.addEventListener("pointercancel", endDrag);
-}
-
-function attachWheelZoom(
-  viewport: HTMLElement,
-  zoom: { onZoom: (event: WheelEvent) => void },
-): void {
-  viewport.addEventListener(
-    "wheel",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      zoom.onZoom(event);
-    },
-    { passive: false },
-  );
-}
-
-function normalizeWheelDelta(event: WheelEvent, viewport: HTMLElement): number {
-  if (event.deltaMode === WHEEL_DELTA_LINE) return event.deltaY * 16;
-  if (event.deltaMode === WHEEL_DELTA_PAGE)
-    return event.deltaY * (viewport.clientHeight || window.innerHeight || 800);
-  return event.deltaY;
-}
-
-function clampScale(value: number): number {
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(value.toFixed(2))));
-}
-
-function formatScale(value: number): string {
-  return Number(value.toFixed(2)).toString();
 }
 
 export function initMarkdownMermaidRendering(
@@ -828,18 +612,20 @@ export function initMarkdownMermaidRendering(
   let renderAfterCurrent = false;
   let themeResetAfterCurrent = false;
   let renderedTheme = currentMermaidTheme();
-  let closeOwnedLightbox: (() => void) | null = null;
+  let closeOwnedViewer: (() => void) | null = null;
   // The initial pass and renderNow() are explicit — they may retry
   // infrastructure-held diagrams. Observer-triggered passes are not.
   let retryHeldFailures = true;
   const renderOptions: InternalMarkdownMermaidOptions = {
     ...options,
-    onLightboxMounted(close) {
-      closeOwnedLightbox = close;
+    onViewerOpened(close) {
+      // Disconnected while the viewer loaded: it must not outlive us.
+      if (disconnected) close();
+      else closeOwnedViewer = close;
     },
-    onLightboxClosed(close) {
-      if (closeOwnedLightbox === close) {
-        closeOwnedLightbox = null;
+    onViewerClosed(close) {
+      if (closeOwnedViewer === close) {
+        closeOwnedViewer = null;
       }
     },
   };
@@ -927,10 +713,10 @@ export function initMarkdownMermaidRendering(
     },
     disconnect() {
       disconnected = true;
-      const closeLightbox = closeOwnedLightbox;
-      closeOwnedLightbox = null;
+      const closeViewer = closeOwnedViewer;
+      closeOwnedViewer = null;
       try {
-        closeLightbox?.();
+        closeViewer?.();
       } finally {
         observer?.disconnect();
         themeObserver?.disconnect();

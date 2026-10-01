@@ -20,6 +20,7 @@
     "./themes.css": "./src/lib/themes.css",
     "./fonts.css": "./src/lib/fonts.css",
     "./mermaid.css": "./src/lib/mermaid.css",
+    "./markdown-images.css": "./src/lib/markdown-images.css",
     "./breakpoints": {
       "types": "./types/breakpoints.d.ts",
       "default": "./src/lib/breakpoints.ts"
@@ -52,9 +53,21 @@
       "types": "./types/utils/markdown.d.ts",
       "default": "./src/lib/utils/markdown.ts"
     },
+    "./utils/markdown-images": {
+      "types": "./types/utils/markdown-images.d.ts",
+      "default": "./src/lib/utils/markdown-images.ts"
+    },
     "./utils/markdown-mermaid": {
       "types": "./types/utils/markdown-mermaid.d.ts",
       "default": "./src/lib/utils/markdown-mermaid.ts"
+    },
+    "./utils/media-gallery": {
+      "types": "./types/utils/media-gallery.d.ts",
+      "default": "./src/lib/utils/media-gallery.ts"
+    },
+    "./utils/pan-zoom": {
+      "types": "./types/utils/pan-zoom.d.ts",
+      "default": "./src/lib/utils/pan-zoom.ts"
     },
     "./utils/overlay": {
       "types": "./types/utils/overlay.d.ts",

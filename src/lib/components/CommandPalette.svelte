@@ -170,11 +170,7 @@
 </script>
 
 {#if open}
-  <div
-    class="kit-command-palette-overlay"
-    role="presentation"
-    onpointerdown={backdropCloses(close)}
-  >
+  <div class="kit-command-palette-overlay" role="presentation" {@attach backdropCloses(close)}>
     <div
       class={["kit-command-palette", "kit-popover-card", className]}
       role="dialog"

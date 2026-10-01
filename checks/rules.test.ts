@@ -397,6 +397,70 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-image-preview"])).toHaveLength(0);
   });
 
+  test("lightbox: class attribute, className assignment, and CSS selector", () => {
+    const src = svelte(
+      `.markdown-image-lightbox { position: fixed; }`,
+      `<div class="image-lightbox"></div>`,
+      `overlay.className = "markdown-image-lightbox";`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-lightbox"]);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]!.message).toContain("MediaViewer");
+  });
+
+  test("lightbox: quoted selector strings and BEM elements", () => {
+    const src = `overlay.closest(".markdown-image-lightbox");\nconst panel = ".lightbox__panel";`;
+    expect(checkSource(src, "a.ts", ["hand-rolled-lightbox"])).toHaveLength(2);
+    expect(
+      checkSource(`.lightbox__panel { inset: 0; }`, "a.css", ["hand-rolled-lightbox"]),
+    ).toHaveLength(1);
+  });
+
+  test("lightbox: does not match kit-ui's viewer, property access, or other words", () => {
+    const src = [
+      `<div class="kit-media-viewer highlightbox"></div>`,
+      `const lightboxOpen = settings.lightbox;`,
+      `if (settings.lightbox) {`,
+      `settings.lightbox = { enabled: true };`,
+      `settings.lightbox = (value) => {`,
+      `const options = settings.lightbox ?? {};`,
+      `const label = "a" + settings.lightbox + "b";`,
+      `.highlightbox { color: red; }`,
+    ].join("\n");
+    expect(checkSource(src, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);
+  });
+
+  test("lightbox: compound selectors in CSS rules and quoted strings", () => {
+    const css = [
+      `div.lightbox { position: fixed; }`,
+      `.overlay.lightbox, #preview.lightbox__panel { inset: 0; }`,
+    ].join("\n");
+    const findings = checkSource(css, "a.css", ["hand-rolled-lightbox"]);
+    expect(findings.map((finding) => finding.line)).toEqual([1, 2, 2]);
+    const script = `document.querySelector("dialog.image-lightbox");`;
+    expect(checkSource(script, "a.ts", ["hand-rolled-lightbox"])).toHaveLength(1);
+  });
+
+  test("lightbox: multiline template literals; not CSS comments or quoted values", () => {
+    const script = "const overlay = document.querySelector(`\n  .lightbox\n`);";
+    expect(checkSource(script, "a.ts", ["hand-rolled-lightbox"]).map((f) => f.line)).toEqual([2]);
+    const css = [
+      `/* replaces the old .lightbox overlay */`,
+      `.badge::after { content: ".lightbox"; }`,
+      `.image-lightbox { inset: 0; }`,
+    ].join("\n");
+    expect(checkSource(css, "a.css", ["hand-rolled-lightbox"]).map((f) => f.line)).toEqual([3]);
+    const style = svelte(`/* .lightbox */ .x::after { content: ".lightbox"; }`);
+    expect(checkSource(style, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);
+  });
+
+  test("lightbox: reports an unindented selector on its own line", () => {
+    const src = `a { color: red; }\n.lightbox { inset: 0; }`;
+    expect(checkSource(src, "a.css", ["hand-rolled-lightbox"]).map((f) => f.line)).toEqual([2]);
+    const ignored = `a { color: red; }\n.lightbox { inset: 0; } /* kit-ui-check-ignore */`;
+    expect(checkSource(ignored, "a.css", ["hand-rolled-lightbox"])).toHaveLength(0);
+  });
+
   test("icon button: class and CSS selector, both spellings", () => {
     const src = svelte(
       `.icon-btn { width: 28px; } .icon-button:hover { color: red; }`,

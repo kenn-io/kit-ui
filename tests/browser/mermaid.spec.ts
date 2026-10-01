@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gotoPage, setTheme } from "./helpers.js";
+import { clipboardReader, gotoPage, setTheme } from "./helpers.js";
 
 // Mermaid post-processor acceptance against real mermaid in Chromium
 // (docs/components/mermaid.md): fence → themed pan/zoom viewer, copy /
@@ -80,30 +80,29 @@ test("wheel zoom keeps the live diagram vector-backed", async ({ page }) => {
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const readClipboard = await clipboardReader(page, context);
   const viewer = firstViewer(page);
   await viewer.getByRole("button", { name: "Copy Mermaid source" }).click();
   await expect(viewer.getByRole("button", { name: "Copied Mermaid source" })).toBeVisible();
-  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard).toContain(FLOWCHART_SOURCE);
+  expect(await readClipboard()).toContain(FLOWCHART_SOURCE);
 });
 
-test("expand opens a lightbox dialog; Escape closes and restores focus", async ({ page }) => {
+test("expand opens the media viewer; Escape closes and restores focus", async ({ page }) => {
   const expand = firstViewer(page).getByRole("button", { name: "Open diagram in expanded view" });
   await expand.click();
 
-  const lightbox = page.locator(".kit-mermaid-lightbox");
-  const panel = lightbox.locator(".kit-mermaid-lightbox__panel");
-  await expect(lightbox).toHaveAttribute("role", "dialog");
-  await expect(lightbox.locator(".kit-mermaid-viewer__pan svg")).toBeVisible();
-  await expect(lightbox.getByRole("button", { name: "Close expanded diagram" })).toBeFocused();
+  const lightbox = page.locator(".kit-media-viewer");
+  const panel = page.getByRole("dialog");
+  await expect(panel).toHaveAttribute("aria-modal", "true");
+  await expect(panel.locator(".kit-mermaid-content svg")).toBeVisible();
+  await expect(panel).toBeFocused();
   await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
 
   for (let i = 0; i < 4; i++) {
     await page.keyboard.press("Tab");
     expect(
       await page.evaluate(
-        () => document.activeElement?.closest(".kit-mermaid-lightbox__panel") !== null,
+        () => document.activeElement?.closest(".kit-media-viewer__panel") !== null,
       ),
     ).toBe(true);
   }
@@ -111,7 +110,7 @@ test("expand opens a lightbox dialog; Escape closes and restores focus", async (
     await page.keyboard.press("Shift+Tab");
     expect(
       await page.evaluate(
-        () => document.activeElement?.closest(".kit-mermaid-lightbox__panel") !== null,
+        () => document.activeElement?.closest(".kit-media-viewer__panel") !== null,
       ),
     ).toBe(true);
   }
@@ -123,9 +122,9 @@ test("expand opens a lightbox dialog; Escape closes and restores focus", async (
   await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
 });
 
-test("backdrop click closes the lightbox", async ({ page }) => {
+test("backdrop click closes the media viewer", async ({ page }) => {
   await firstViewer(page).getByRole("button", { name: "Open diagram in expanded view" }).click();
-  const lightbox = page.locator(".kit-mermaid-lightbox");
+  const lightbox = page.locator(".kit-media-viewer");
   await lightbox.click({ position: { x: 5, y: 5 } });
   await expect(lightbox).toHaveCount(0);
 });
@@ -148,7 +147,7 @@ test("expanded view uses the whole screen for a tall diagram", async ({ page }) 
 
   // Height of the drawn diagram, not the svg box (which letterboxes it).
   const drawnHeight = await page
-    .locator(".kit-mermaid-lightbox .kit-mermaid-viewer__pan > svg")
+    .locator(".kit-media-viewer .kit-mermaid-content svg")
     .evaluate((svg) => {
       const rects = Array.from(svg.children, (child) => child.getBoundingClientRect()).filter(
         (rect) => rect.height > 0,
@@ -236,21 +235,30 @@ test("a failed mermaid load clears pending state and retries on the next pass", 
   expect(result.viewer).toBe(true);
 });
 
-test("lightbox traps Tab and locks body scroll while open", async ({ page }) => {
+test("media viewer traps Tab and locks body scroll while open", async ({ page }) => {
   await firstViewer(page).getByRole("button", { name: "Open diagram in expanded view" }).click();
-  const lightbox = page.locator(".kit-mermaid-lightbox");
-  await expect(lightbox.getByRole("button", { name: "Close expanded diagram" })).toBeFocused();
+  const lightbox = page.locator(".kit-media-viewer");
+  await expect(page.getByRole("dialog")).toBeFocused();
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).overflow))
     .toBe("hidden");
 
-  // Two tabbables (close, reset) — Tab cycles inside the dialog.
+  // The demo page has two diagrams, so the viewer pages: close, previous,
+  // next, reset. The browser orders Tab between them (Safari skips
+  // buttons by default); the trap keeps it inside and wraps at the ends.
+  const close = lightbox.getByRole("button", { name: "Close expanded view" });
+  const reset = lightbox.getByRole("button", { name: "Reset view" });
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(() => document.activeElement?.closest(".kit-media-viewer") !== null),
+    ).toBe(true);
+  }
+  await reset.focus();
   await page.keyboard.press("Tab");
-  await expect(lightbox.getByRole("button", { name: "Reset diagram view" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(lightbox.getByRole("button", { name: "Close expanded diagram" })).toBeFocused();
+  await expect(close).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(lightbox.getByRole("button", { name: "Reset diagram view" })).toBeFocused();
+  await expect(reset).toBeFocused();
 
   await page.keyboard.press("Escape");
   await expect(lightbox).toHaveCount(0);
@@ -259,7 +267,7 @@ test("lightbox traps Tab and locks body scroll while open", async ({ page }) => 
     .not.toBe("hidden");
 });
 
-test("disconnect closes an open lightbox owned by that controller", async ({ page }) => {
+test("disconnect closes an open media viewer owned by that controller", async ({ page }) => {
   await page.evaluate(async () => {
     const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
     const host = document.createElement("div");
@@ -275,7 +283,7 @@ test("disconnect closes an open lightbox owned by that controller", async ({ pag
     timeout: 15_000,
   });
   await host.getByRole("button", { name: "Open diagram in expanded view" }).click();
-  const lightbox = page.locator(".kit-mermaid-lightbox");
+  const lightbox = page.locator(".kit-media-viewer");
   await expect(lightbox).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
 

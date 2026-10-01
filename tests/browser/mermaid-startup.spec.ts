@@ -6,7 +6,12 @@ for (const [dependency, url] of [
 ] as const) {
   test(`renders a complete viewer when ${dependency} arrive after window.load`, async ({
     page,
+    browserName,
   }) => {
+    // The routes below hold requests until the load event. WebKit's load
+    // event waits for those requests, so the harness deadlocks there; the
+    // race it reproduces is Chromium's ordering.
+    test.skip(browserName === "webkit", "load waits on the held requests in WebKit");
     const loaded = page.waitForEvent("load");
     await page.route("**/startup-load.svg", async (route) => {
       await page.waitForFunction(() => document.body.dataset.mermaidLoaded === "true");
@@ -45,7 +50,7 @@ for (const [dependency, url] of [
     await viewer.getByRole("button", { name: "Open diagram in expanded view" }).click();
     const lightbox = page.getByRole("dialog");
     await expect(lightbox.locator("svg.flowchart .node")).toHaveCount(2);
-    await lightbox.getByRole("button", { name: "Close expanded diagram" }).click();
+    await lightbox.getByRole("button", { name: "Close expanded view" }).click();
     await expect(lightbox).toHaveCount(0);
   });
 }
