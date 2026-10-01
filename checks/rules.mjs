@@ -551,31 +551,33 @@ export function checkHandRolledImagePreview(source) {
 /** Hand-rolled lightboxes (expanded image/diagram overlays) duplicate
  * MediaViewer, which adds pan/zoom and paging through the page's other
  * media. Matches a `lightbox` class token (whole, or a hyphenated segment
- * like `image-lightbox`) in class attributes, `className` assignments, and
- * selectors — a CSS rule or a quoted selector string — but not property
- * access such as `settings.lightbox`. Compound selectors (`div.lightbox`,
- * `#preview.lightbox`) look like property access, so they count only
- * before a rule's `{` on the same line or inside a quoted string. */
-const LIGHTBOX_TOKEN = String.raw`\.(?:[\w-]*-)?lightbox(?![a-z0-9])`;
-const LIGHTBOX_PATTERNS = [
-  /class(?:Name)?\s*=\s*["'`](?:[^"'`]*[\s-])?lightbox(?![a-z0-9])/gi,
-  // A selector's first compound: after a combinator, brace, or quote.
-  new RegExp(String.raw`(?<=^|[\s,{}>+~(:"'\`])` + LIGHTBOX_TOKEN, "gim"),
-  // A later compound in a CSS rule.
-  new RegExp(String.raw`(?<=[\w\]-])` + LIGHTBOX_TOKEN + String.raw`(?=[^;{}()\n]*\{)`, "gim"),
-  // A later compound in a quoted selector string.
-  new RegExp(
-    String.raw`(?<=["'\`][^"'\`\n]*[\w\]-])` + LIGHTBOX_TOKEN + String.raw`(?=[^"'\`\n]*["'\`])`,
-    "gim",
-  ),
-];
+ * like `image-lightbox`) in class attributes and `className` assignments,
+ * and as a class selector (`.lightbox`, `div.image-lightbox`) in
+ * stylesheets — CSS files and `<style>` blocks — and inside string
+ * literals (`querySelector(".lightbox")`). Script code outside strings is
+ * never matched, so property access such as `settings.lightbox` is not a
+ * finding. */
+const LIGHTBOX_CLASS_ATTRIBUTE =
+  /class(?:Name)?\s*=\s*["'`](?:[^"'`]*[\s-])?lightbox(?![a-z0-9])/gi;
+const LIGHTBOX_SELECTOR = /\.(?:[\w-]*-)?lightbox(?![a-z0-9])/gi;
+const STYLESHEET_FILE = /\.(?:css|scss|sass|less|pcss|postcss)$/i;
+const STYLE_BLOCK = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+// A complete string literal on one line, escapes included.
+const STRING_LITERAL = /(["'`])((?:\\.|(?!\1)[^\\\n])*)\1/g;
 
-export function checkHandRolledLightbox(source) {
-  // Match starts at the token itself (lookbehind, not a consumed
-  // delimiter), so the reported line is the selector's own line.
+export function checkHandRolledLightbox(source, filename = "") {
   const starts = new Set();
-  for (const re of LIGHTBOX_PATTERNS) {
-    for (const match of source.matchAll(re)) starts.add(match.index);
+  for (const match of source.matchAll(LIGHTBOX_CLASS_ATTRIBUTE)) starts.add(match.index);
+  const scan = (text, offset) => {
+    for (const match of text.matchAll(LIGHTBOX_SELECTOR)) starts.add(offset + match.index);
+  };
+  if (STYLESHEET_FILE.test(filename)) {
+    scan(source, 0);
+  } else {
+    for (const match of source.matchAll(STYLE_BLOCK)) {
+      scan(match[1], match.index + match[0].indexOf(">") + 1);
+    }
+    for (const match of source.matchAll(STRING_LITERAL)) scan(match[2], match.index + 1);
   }
   return [...starts]
     .sort((a, b) => a - b)

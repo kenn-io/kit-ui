@@ -51,3 +51,34 @@ test("a tall modal keeps its footer within the height a phone shows", async ({
     .evaluate((el) => el.scrollHeight > el.clientHeight);
   expect(scrolls, "the body scrolls rather than pushing the footer out").toBe(true);
 });
+
+test("the backdrop closes only on a press that starts and ends on it", async ({ page }) => {
+  await gotoPage(page, "modal");
+  const dialog = page.getByRole("dialog");
+  const open = async () => {
+    await page.getByRole("button", { name: "Open modal" }).click();
+    await expect(dialog).toBeVisible();
+    return (await page.locator(".kit-modal-panel").boundingBox())!;
+  };
+  const drag = async (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 4 });
+    await page.mouse.up();
+  };
+
+  // Backdrop to panel, and panel to backdrop: both keep the modal open.
+  let panel = await open();
+  const backdrop = { x: 10, y: 10 };
+  const inside = { x: panel.x + panel.width / 2, y: panel.y + 10 };
+  await drag(backdrop, inside);
+  await expect(dialog).toBeVisible();
+  await drag(inside, backdrop);
+  await expect(dialog).toBeVisible();
+
+  // A press that starts and ends on the backdrop closes it.
+  await page.mouse.click(backdrop.x, backdrop.y);
+  await expect(dialog).toBeHidden();
+  panel = await open();
+  expect(panel.width).toBeGreaterThan(0);
+});

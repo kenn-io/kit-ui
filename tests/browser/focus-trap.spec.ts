@@ -121,8 +121,12 @@ test.describe("trapFocus tab order", () => {
         <input type="radio" name="size" aria-label="Medium" checked>
         <input type="radio" name="size" aria-label="Large">
         <button disabled>Disabled</button>
+        <fieldset disabled><button>In disabled fieldset</button></fieldset>
         <div inert><button>Inert</button></div>
+        <button style="visibility: hidden">Hidden</button>
         <a href="#x">Link</a>
+        <details><summary>Summary</summary><button>Collapsed</button></details>
+        <div contenteditable="true" aria-label="Editable"></div>
         <button>Last</button>`;
       document.body.append(surface);
       trapFocus(surface);
@@ -132,7 +136,16 @@ test.describe("trapFocus tab order", () => {
         () =>
           document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent,
       );
-    const order = ["First", "Roving active", "Medium", "Link", "Last", "First"];
+    const order = [
+      "First",
+      "Roving active",
+      "Medium",
+      "Link",
+      "Summary",
+      "Editable",
+      "Last",
+      "First",
+    ];
     for (const name of order) {
       await page.keyboard.press("Tab");
       expect(await focused()).toBe(name);

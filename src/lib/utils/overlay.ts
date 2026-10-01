@@ -6,30 +6,49 @@
  */
 
 /**
- * Close on a click that both starts and ends on the backdrop element
- * itself (not a child). An attachment: `{@attach backdropCloses(close)}`.
+ * Close on a press that starts and ends on the backdrop element itself
+ * (not a child). An attachment: `{@attach backdropCloses(close)}`.
  *
  * A press that starts in the panel and ends on the backdrop (a text
- * selection drag) does not dismiss. Closing on the click, not on the
- * press, matters on touch: the browser sends a tap's click after the
+ * selection drag), or starts on the backdrop and ends in the panel, does
+ * not dismiss. The release is hit-tested, since touch pointer capture can
+ * report the backdrop as the target wherever the finger lifts. Closing
+ * waits for the press's click: on touch the browser sends it after the
  * finger lifts, and if the backdrop were already gone the click would
  * land on whatever page control is underneath and activate it.
  */
 export function backdropCloses(close: () => void): (backdrop: HTMLElement) => () => void {
   return (backdrop) => {
-    let pressed = false;
+    let pointerId: number | null = null;
+    let released = false;
     const onPointerDown = (event: PointerEvent) => {
-      pressed = event.target === backdrop;
+      pointerId = event.target === backdrop ? event.pointerId : null;
+      released = false;
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      pointerId = null;
+      released = document.elementFromPoint(event.clientX, event.clientY) === backdrop;
+    };
+    const onPointerCancel = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      pointerId = null;
+      released = false;
     };
     const onClick = (event: MouseEvent) => {
-      const wasPressed = pressed;
-      pressed = false;
-      if (wasPressed && event.target === backdrop) close();
+      const dismiss = released && event.target === backdrop;
+      released = false;
+      if (dismiss) close();
     };
     backdrop.addEventListener("pointerdown", onPointerDown);
+    // Window, so the release is seen wherever it lands.
+    window.addEventListener("pointerup", onPointerUp, true);
+    window.addEventListener("pointercancel", onPointerCancel, true);
     backdrop.addEventListener("click", onClick);
     return () => {
       backdrop.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp, true);
+      window.removeEventListener("pointercancel", onPointerCancel, true);
       backdrop.removeEventListener("click", onClick);
     };
   };

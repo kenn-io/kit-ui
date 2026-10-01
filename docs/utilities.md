@@ -102,9 +102,9 @@ return their cleanup function.
 ```
 
 The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
-`backdropCloses` is an attachment that closes on a click that starts
-and ends on the backdrop itself, so a drag ending on the backdrop doesn't
-dismiss. It closes on the click rather than the press: on touch, a tap's
+`backdropCloses` is an attachment that closes on a press that starts
+and ends on the backdrop itself, so a drag between the panel and the
+backdrop, in either direction, doesn't dismiss. It closes on the click rather than the press: on touch, a tap's
 click arrives after the finger lifts, and closing earlier would let that
 click activate the page control under the backdrop.
 `escapeCloses` closes one layer at a time: inner surfaces that already

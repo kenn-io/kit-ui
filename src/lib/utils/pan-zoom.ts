@@ -198,7 +198,7 @@ export function attachPanZoom(
       options.onSwipe(dx < 0 ? 1 : -1);
       return;
     }
-    if (start.moved || event.timeStamp - start.time >= TAP_MS) {
+    if (start.moved || Math.hypot(dx, dy) >= TAP_SLOP || event.timeStamp - start.time >= TAP_MS) {
       lastTap = null;
       return;
     }
@@ -284,7 +284,10 @@ function normalizeWheelDelta(event: WheelEvent, viewport: HTMLElement): number {
 
 // Scale keeps full precision: a pinch arrives as many tiny ratios, and
 // rounding each step would discard them. Only the CSS value is rounded.
+// Within 0.1% of 1 it is exactly 1, so a pinch out and back leaves no
+// float residue that would read as zoomed (no paging, no page scroll).
 function clampScale(value: number): number {
+  if (Math.abs(value - 1) < 0.001) return 1;
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 }
 

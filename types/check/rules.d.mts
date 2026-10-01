@@ -150,7 +150,7 @@ export function checkHandRolledImagePreview(source: any): {
     line: number;
     message: string;
 }[];
-export function checkHandRolledLightbox(source: any): {
+export function checkHandRolledLightbox(source: any, filename?: string): {
     rule: string;
     line: number;
     message: string;

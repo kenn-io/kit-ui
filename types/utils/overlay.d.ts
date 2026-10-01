@@ -1,10 +1,12 @@
 /**
- * Close on a click that both starts and ends on the backdrop element
- * itself (not a child). An attachment: `{@attach backdropCloses(close)}`.
+ * Close on a press that starts and ends on the backdrop element itself
+ * (not a child). An attachment: `{@attach backdropCloses(close)}`.
  *
  * A press that starts in the panel and ends on the backdrop (a text
- * selection drag) does not dismiss. Closing on the click, not on the
- * press, matters on touch: the browser sends a tap's click after the
+ * selection drag), or starts on the backdrop and ends in the panel, does
+ * not dismiss. The release is hit-tested, since touch pointer capture can
+ * report the backdrop as the target wherever the finger lifts. Closing
+ * waits for the press's click: on touch the browser sends it after the
  * finger lifts, and if the backdrop were already gone the click would
  * land on whatever page control is underneath and activate it.
  */

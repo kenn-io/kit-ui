@@ -20,6 +20,11 @@ const TABBABLE_SELECTOR = [
   "input:not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
+  "details > summary:first-of-type",
+  "audio[controls]",
+  "video[controls]",
+  "iframe",
+  '[contenteditable]:not([contenteditable="false"])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 
@@ -77,16 +82,27 @@ function lockBodyScroll(): () => void {
   };
 }
 
+/** Rendered and visible: not in a display:none subtree (a collapsed
+ * section) and not visibility:hidden. */
+function isShown(el: HTMLElement): boolean {
+  if (typeof el.checkVisibility === "function") {
+    return el.checkVisibility({ visibilityProperty: true });
+  }
+  return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+}
+
 /** The surface's tab stops in the order the browser's Tab visits them. */
 function tabbables(surface: HTMLElement): HTMLElement[] {
   const candidates = Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
     (el) =>
-      // tabindex="-1" (roving items) is focusable but no tab stop.
-      el.tabIndex >= 0 &&
+      // tabindex="-1" (roving items) is focusable but no tab stop. Some
+      // engines report -1 for contenteditable with no tabindex, which
+      // Tab still visits.
+      (el.tabIndex >= 0 || (el.isContentEditable && !el.hasAttribute("tabindex"))) &&
       !el.closest("[inert]") &&
-      // offsetParent is null for display:none subtrees (e.g. collapsed
-      // sections) — skip those, they can't actually take focus.
-      (el.offsetParent !== null || el === document.activeElement),
+      // Also catches controls inside a disabled fieldset.
+      !el.matches(":disabled") &&
+      (el === document.activeElement || isShown(el)),
   );
   // A native radio group is one stop: its checked radio, else its first.
   const stops = candidates.filter((el) => {
@@ -154,7 +170,15 @@ export function trapFocus(surface: HTMLElement): () => void {
       surface.focus();
       return;
     }
-    nextStop(items, document.activeElement, event.shiftKey).focus();
+    // A stop can refuse focus (an iframe still loading, a control disabled
+    // a moment ago); move on to the next one rather than stall.
+    let target = nextStop(items, document.activeElement, event.shiftKey);
+    for (let tries = 0; tries < items.length; tries += 1) {
+      target.focus();
+      if (document.activeElement === target) return;
+      target = nextStop(items, target, event.shiftKey);
+    }
+    surface.focus();
   }
 
   surface.addEventListener("keydown", handleKeydown);

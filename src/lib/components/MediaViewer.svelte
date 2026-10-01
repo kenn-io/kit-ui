@@ -1,20 +1,3 @@
-<script lang="ts" module>
-  // Stable ids for item objects, so the view resets when a different item
-  // shows at the same index (items replaced or reordered) but not when
-  // the same object repeats.
-  const itemIds = new WeakMap<object, number>();
-  let lastItemId = 0;
-
-  function itemId(item: object): number {
-    let id = itemIds.get(item);
-    if (id === undefined) {
-      id = ++lastItemId;
-      itemIds.set(item, id);
-    }
-    return id;
-  }
-</script>
-
 <script lang="ts">
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -77,8 +60,6 @@
   const dialogLabel = $derived(
     paged ? formatLabel(itemLabel, position + 1, items.length) : itemLabel,
   );
-  // Paging resets pan and zoom: a new viewport per position and item.
-  const viewKey = $derived(current ? `${position}:${itemId(current)}` : "");
 
   // Set by the viewport attachment; not reactive, only called from the
   // reset button.
@@ -153,22 +134,26 @@
       {onkeydown}
       {@attach trapFocus}
     >
-      {#key viewKey}
-        <div class="kit-media-viewer__viewport" {@attach panZoomViewport}>
-          <div
-            class={[
-              "kit-media-viewer__pan",
-              current?.kind === "element" && "kit-media-viewer__pan--element",
-              current?.kind === "element" && current.class,
-            ]}
-          >
-            {#if current?.kind === "image"}
-              <img class="kit-media-viewer__img" src={current.src} alt={current.alt} />
-            {:else if current?.kind === "element"}
-              <div class="kit-media-viewer__element" {@attach cloneInto(current.element)}></div>
-            {/if}
+      <!-- A new viewport (pan and zoom reset) when paging, and when a
+        different item takes the current index. -->
+      {#key position}
+        {#key current}
+          <div class="kit-media-viewer__viewport" {@attach panZoomViewport}>
+            <div
+              class={[
+                "kit-media-viewer__pan",
+                current?.kind === "element" && "kit-media-viewer__pan--element",
+                current?.kind === "element" && current.class,
+              ]}
+            >
+              {#if current?.kind === "image"}
+                <img class="kit-media-viewer__img" src={current.src} alt={current.alt} />
+              {:else if current?.kind === "element"}
+                <div class="kit-media-viewer__element" {@attach cloneInto(current.element)}></div>
+              {/if}
+            </div>
           </div>
-        </div>
+        {/key}
       {/key}
 
       <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={onclose}>

@@ -409,8 +409,11 @@ describe("hand-rolled components", () => {
   });
 
   test("lightbox: quoted selector strings and BEM elements", () => {
-    const src = `overlay.closest(".markdown-image-lightbox");\n.lightbox__panel { inset: 0; }`;
+    const src = `overlay.closest(".markdown-image-lightbox");\nconst panel = ".lightbox__panel";`;
     expect(checkSource(src, "a.ts", ["hand-rolled-lightbox"])).toHaveLength(2);
+    expect(
+      checkSource(`.lightbox__panel { inset: 0; }`, "a.css", ["hand-rolled-lightbox"]),
+    ).toHaveLength(1);
   });
 
   test("lightbox: does not match kit-ui's viewer, property access, or other words", () => {
@@ -418,6 +421,10 @@ describe("hand-rolled components", () => {
       `<div class="kit-media-viewer highlightbox"></div>`,
       `const lightboxOpen = settings.lightbox;`,
       `if (settings.lightbox) {`,
+      `settings.lightbox = { enabled: true };`,
+      `settings.lightbox = (value) => {`,
+      `const options = settings.lightbox ?? {};`,
+      `const label = "a" + settings.lightbox + "b";`,
       `.highlightbox { color: red; }`,
     ].join("\n");
     expect(checkSource(src, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);

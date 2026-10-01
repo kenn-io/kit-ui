@@ -177,6 +177,62 @@ test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
   await close();
 });
 
+test("a pinch out and back ends exactly unzoomed, so a swipe pages again", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const viewport = page.locator(".kit-media-viewer__viewport");
+  const mid = await center(viewport);
+  const pair = (spread: number): [Point, Point] => [
+    { x: mid.x - spread, y: mid.y },
+    { x: mid.x + spread, y: mid.y },
+  ];
+  // Out to 1.6x and back to the starting spread in uneven steps.
+  await touch(cdp, "touchStart", pair(50));
+  for (const spread of [57, 63, 71, 80, 73, 66, 61, 54, 50]) {
+    await touch(cdp, "touchMove", pair(spread));
+  }
+  await release(cdp, pair(50));
+  await expect
+    .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
+    .toBe(1);
+  await expect(viewport).not.toHaveAttribute("data-zoomed");
+  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
+  await expect(page.locator(".kit-media-viewer__counter")).toHaveText("2 / 3");
+  await close();
+});
+
+test("a release away from the press is no tap toward a double tap", async ({ page }) => {
+  await gotoPage(page, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).click();
+  // Pointer events as a browser sends them when it reports no move: the
+  // release is the first event to show the finger travelled 20px.
+  await page.locator(".kit-media-viewer__viewport").evaluate((viewport) => {
+    const r = viewport.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    const fire = (type: string, pointerId: number, clientY: number) =>
+      viewport.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId,
+          pointerType: "touch",
+          clientX: x,
+          clientY,
+          bubbles: true,
+        }),
+      );
+    fire("pointerdown", 1, y);
+    fire("pointerup", 1, y + 20);
+    fire("pointerdown", 2, y + 20);
+    fire("pointerup", 2, y + 20);
+  });
+  await page.waitForTimeout(150);
+  const scale = await page
+    .locator(".kit-media-viewer__pan")
+    .evaluate((node) => new DOMMatrix((node as HTMLElement).style.transform).a);
+  expect(scale).toBe(1);
+});
+
 test("only a still, quick touch counts toward a double tap", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
