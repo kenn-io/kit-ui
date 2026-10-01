@@ -13,6 +13,10 @@ function counter(page: Page) {
   return page.locator(".kit-media-viewer__counter");
 }
 
+function caption(page: Page) {
+  return page.locator(".kit-media-viewer__caption");
+}
+
 test.beforeEach(async ({ page }) => {
   await gotoPage(page, "media-viewer");
 });
@@ -123,9 +127,12 @@ test("a markdown image pages through every displayed item on the page", async ({
   // Screenshot A, the diagram, Screenshot B, the ImagePreview — not the
   // image in the inactive tab.
   await expect(viewer(page)).toHaveAccessibleName("Screenshot A (1 of 4)");
+  await expect(caption(page)).toHaveText("Screenshot A");
   await page.keyboard.press("ArrowRight");
   await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (2 of 4)");
   await expect(viewer(page).locator(".kit-mermaid-content svg")).toBeVisible();
+  // A diagram's label is generic, so it gets no caption.
+  await expect(caption(page)).toHaveCount(0);
   await page.keyboard.press("ArrowRight");
   await expect(viewer(page)).toHaveAccessibleName("Screenshot B (3 of 4)");
   await page.keyboard.press("ArrowRight");
@@ -268,6 +275,37 @@ test("an out-of-range index wraps, and an empty alt falls back to a name", async
   await expect(counter(page)).toHaveText("2 / 3");
   await page.keyboard.press("ArrowRight");
   await expect(viewer(page)).toHaveAccessibleName("Third (3 of 3)");
+});
+
+test("alt text shows as a caption, and a blank alt shows none", async ({ page }) => {
+  await page.evaluate(async (itemsSource) => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    mountMediaViewer(new Function(`return ${itemsSource}`)(), 0);
+  }, swatchItems);
+  await expect(caption(page)).toHaveText("First");
+  await expect(caption(page)).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(counter(page)).toHaveText("2 / 3");
+  await expect(caption(page)).toHaveCount(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(caption(page)).toHaveText("Third");
+});
+
+test("a tall image starts below its caption", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    const tall =
+      "data:image/svg+xml," +
+      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="4000"/>');
+    mountMediaViewer([{ kind: "image", src: tall, alt: "A long page screenshot" }], 0);
+  });
+  const image = viewer(page).getByRole("img");
+  await expect(image).toBeVisible();
+  const captionBox = (await caption(page).boundingBox())!;
+  const imageBox = (await image.boundingBox())!;
+  expect(imageBox.y).toBeGreaterThanOrEqual(captionBox.y + captionBox.height);
 });
 
 test("the position counter and accessible name are localizable", async ({ page }) => {

@@ -51,6 +51,13 @@ type MediaViewerItem =
     };
 ```
 
+An image's alt text is also its visible caption, centered at the top of
+the panel beside the close button. A long caption wraps to two lines and
+then truncates; hovering shows the full text. Images with blank alt text
+and element items get no caption, since element labels such as "Mermaid
+diagram" are usually generic. The caption is hidden from assistive tech
+because the dialog's name and the image's alt already carry the text.
+
 Images keep their natural size when it fits and shrink to fit otherwise;
 they never upscale. Element content that is an `svg` fills the available
 space, keeping its aspect ratio through its `viewBox`.
