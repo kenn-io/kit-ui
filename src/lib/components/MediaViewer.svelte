@@ -224,6 +224,8 @@
     --kit-media-viewer-step: 36px;
     position: relative;
     width: 90vw;
+    /* vh first: browsers without dvh drop that line and keep this one. */
+    height: 90vh;
     height: 90dvh;
     overflow: hidden;
     background: var(--kit-media-viewer-bg, var(--bg-surface));
