@@ -88,7 +88,12 @@ function isShown(el: HTMLElement): boolean {
   if (typeof el.checkVisibility === "function") {
     return el.checkVisibility({ visibilityProperty: true });
   }
-  return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  // Older engines and DOMs without layout (jsdom): computed styles only.
+  if (getComputedStyle(el).visibility === "hidden") return false;
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    if (getComputedStyle(node).display === "none") return false;
+  }
+  return true;
 }
 
 /** The surface's tab stops in the order the browser's Tab visits them. */
