@@ -18,11 +18,9 @@ type Point = { x: number; y: number };
 async function touchPage(
   browser: Browser,
   id: string,
+  viewport = { width: 1280, height: 800 },
 ): Promise<{ page: Page; cdp: CDPSession; close: () => Promise<void> }> {
-  const context = await browser.newContext({
-    hasTouch: true,
-    viewport: { width: 1280, height: 800 },
-  });
+  const context = await browser.newContext({ hasTouch: true, viewport });
   const page = await context.newPage();
   await gotoPage(page, id);
   const cdp = await context.newCDPSession(page);
@@ -48,6 +46,28 @@ async function drag(cdp: CDPSession, from: Point, to: Point, steps = 8) {
   await touch(cdp, "touchEnd", []);
 }
 
+/** Two fingers from `from` to `to` (each a pair of points). */
+async function twoFingers(cdp: CDPSession, from: [Point, Point], to: [Point, Point], steps = 5) {
+  await touch(cdp, "touchStart", from);
+  for (let step = 1; step <= steps; step += 1) {
+    const t = step / steps;
+    await touch(
+      cdp,
+      "touchMove",
+      from.map((point, i) => ({
+        x: point.x + (to[i]!.x - point.x) * t,
+        y: point.y + (to[i]!.y - point.y) * t,
+      })),
+    );
+  }
+  await touch(cdp, "touchEnd", []);
+}
+
+async function tap(cdp: CDPSession, at: Point) {
+  await touch(cdp, "touchStart", [at]);
+  await touch(cdp, "touchEnd", []);
+}
+
 async function doubleTap(cdp: CDPSession, at: Point) {
   for (let tap = 0; tap < 2; tap += 1) {
     await touch(cdp, "touchStart", [at]);
@@ -61,6 +81,10 @@ async function center(locator: Locator): Promise<Point> {
 }
 
 /** The pan element's transform as { scale, x, y }. */
+function viewer(page: Page) {
+  return page.getByRole("dialog");
+}
+
 function transformOf(pan: Locator) {
   return pan.evaluate((node) => {
     const matrix = new DOMMatrix((node as HTMLElement).style.transform);
@@ -116,21 +140,111 @@ test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const mid = await center(page.locator(".kit-media-viewer__viewport"));
 
-  // Fingers 100px apart spread to 200px: twice the scale.
-  await touch(cdp, "touchStart", [
-    { x: mid.x - 50, y: mid.y },
-    { x: mid.x + 50, y: mid.y },
-  ]);
-  for (const spread of [60, 70, 80, 90, 100]) {
-    await touch(cdp, "touchMove", [
-      { x: mid.x - spread, y: mid.y },
-      { x: mid.x + spread, y: mid.y },
-    ]);
-  }
-  await touch(cdp, "touchEnd", []);
+  // Fingers 100px apart spread to 200px in quarter-pixel steps, the size
+  // real fingers report: twice the scale, with no step lost to rounding.
+  await twoFingers(
+    cdp,
+    [
+      { x: mid.x - 50, y: mid.y },
+      { x: mid.x + 50, y: mid.y },
+    ],
+    [
+      { x: mid.x - 100, y: mid.y },
+      { x: mid.x + 100, y: mid.y },
+    ],
+    200,
+  );
   await expect
     .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
     .toBeCloseTo(2, 1);
+  await close();
+});
+
+test("only a still, quick touch counts toward a double tap", async ({ browser }) => {
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const pan = page.locator(".kit-media-viewer__pan");
+  const reset = page.getByRole("button", { name: "Reset view" });
+  const mid = await center(page.locator(".kit-media-viewer__viewport"));
+  const scale = async () => (await transformOf(pan)).scale;
+  const outAndBack = async () => {
+    await touch(cdp, "touchStart", [mid]);
+    await touch(cdp, "touchMove", [{ x: mid.x, y: mid.y + 40 }]);
+    await touch(cdp, "touchMove", [mid]);
+    await touch(cdp, "touchEnd", []);
+  };
+
+  // A tap, then a drag that ends where it started: no zoom.
+  await tap(cdp, mid);
+  await outAndBack();
+  await page.waitForTimeout(150);
+  expect(await scale()).toBe(1);
+
+  // The drag first, then a tap: no zoom.
+  await reset.tap();
+  await page.waitForTimeout(350);
+  await outAndBack();
+  await tap(cdp, mid);
+  await page.waitForTimeout(150);
+  expect(await scale()).toBe(1);
+
+  // A tap, a pinch, a tap: the pinch's zoom stays.
+  await page.waitForTimeout(350);
+  await tap(cdp, mid);
+  await twoFingers(
+    cdp,
+    [
+      { x: mid.x - 50, y: mid.y },
+      { x: mid.x + 50, y: mid.y },
+    ],
+    [
+      { x: mid.x - 100, y: mid.y },
+      { x: mid.x + 100, y: mid.y },
+    ],
+  );
+  await tap(cdp, mid);
+  await page.waitForTimeout(150);
+  expect(await scale()).toBeCloseTo(2, 1);
+  await close();
+});
+
+test("on a phone the controls stay apart and tappable, and the backdrop closes", async ({
+  browser,
+}) => {
+  const { page, close } = await touchPage(browser, "media-viewer", { width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const panel = (await viewer(page).boundingBox())!;
+  const names = ["Close expanded view", "Reset view", "Previous item", "Next item"];
+  const boxes = [];
+  for (const name of names) {
+    const box = (await page.getByRole("button", { name }).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(panel.x);
+    expect(box.y).toBeGreaterThanOrEqual(panel.y);
+    expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width);
+    expect(box.y + box.height).toBeLessThanOrEqual(panel.y + panel.height);
+    boxes.push(box);
+  }
+  const counterBox = (await page.locator(".kit-media-viewer__counter").boundingBox())!;
+  for (const [i, a] of [...boxes, counterBox].entries()) {
+    for (const b of [...boxes, counterBox].slice(i + 1)) {
+      const apart =
+        a.x + a.width <= b.x ||
+        b.x + b.width <= a.x ||
+        a.y + a.height <= b.y ||
+        b.y + b.height <= a.y;
+      expect(apart).toBe(true);
+    }
+  }
+
+  const counter = page.locator(".kit-media-viewer__counter");
+  await page.getByRole("button", { name: "Next item" }).tap();
+  await expect(counter).toHaveText("2 / 3");
+  await page.getByRole("button", { name: "Previous item" }).tap();
+  await expect(counter).toHaveText("1 / 3");
+
+  // The 5% margin around the panel is backdrop.
+  await page.touchscreen.tap(panel.x / 2, panel.y / 2);
+  await expect(viewer(page)).toBeHidden();
   await close();
 });
 
@@ -168,12 +282,33 @@ test("a vertical swipe over an inline diagram scrolls the page", async ({ browse
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x, y: mid.y + 60 }, { x: mid.x, y: mid.y - 60 }, 12);
   await expect.poll(top).toBeLessThan(before - 40);
-  expect((await transformOf(pan)).scale).toBe(1);
+  // Moves before the browser took the scroll leave no offset behind.
+  expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
   // Horizontal drags still pan the diagram.
   const moved = await center(viewport);
   await drag(cdp, { x: moved.x + 60, y: moved.y }, { x: moved.x - 60, y: moved.y });
   await expect.poll(async () => (await transformOf(pan)).x).toBeLessThan(-40);
+
+  // A pinch whose fingers drift vertically zooms; the page stays put.
+  await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
+  await expect.poll(async () => (await transformOf(pan)).scale).toBe(1);
+  const settled = await top();
+  await twoFingers(
+    cdp,
+    [
+      { x: moved.x - 30, y: moved.y + 30 },
+      { x: moved.x + 30, y: moved.y + 30 },
+    ],
+    [
+      { x: moved.x - 60, y: moved.y - 30 },
+      { x: moved.x + 60, y: moved.y - 30 },
+    ],
+    10,
+  );
+  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1.5);
+  expect(await top()).toBe(settled);
+  await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
 
   // Once zoomed, touch belongs to the diagram.
   await expect(viewport).toHaveCSS("touch-action", "pan-y");

@@ -231,6 +231,6 @@ export {
   type MediaViewerLabels,
   type OpenMediaViewerOptions,
 } from "./utils/media-gallery.js";
-export { attachPanZoom, type PanZoom } from "./utils/pan-zoom.js";
+export { attachPanZoom, type PanZoom, type PanZoomOptions } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";

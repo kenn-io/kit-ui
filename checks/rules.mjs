@@ -553,21 +553,38 @@ export function checkHandRolledImagePreview(source) {
  * media. Matches a `lightbox` class token (whole, or a hyphenated segment
  * like `image-lightbox`) in class attributes, `className` assignments, and
  * selectors — a CSS rule or a quoted selector string — but not property
- * access such as `settings.lightbox`. */
+ * access such as `settings.lightbox`. Compound selectors (`div.lightbox`,
+ * `#preview.lightbox`) look like property access, so they count only
+ * before a rule's `{` on the same line or inside a quoted string. */
+const LIGHTBOX_TOKEN = String.raw`\.(?:[\w-]*-)?lightbox(?![a-z0-9])`;
+const LIGHTBOX_PATTERNS = [
+  /class(?:Name)?\s*=\s*["'`](?:[^"'`]*[\s-])?lightbox(?![a-z0-9])/gi,
+  // A selector's first compound: after a combinator, brace, or quote.
+  new RegExp(String.raw`(?<=^|[\s,{}>+~(:"'\`])` + LIGHTBOX_TOKEN, "gim"),
+  // A later compound in a CSS rule.
+  new RegExp(String.raw`(?<=[\w\]-])` + LIGHTBOX_TOKEN + String.raw`(?=[^;{}()\n]*\{)`, "gim"),
+  // A later compound in a quoted selector string.
+  new RegExp(
+    String.raw`(?<=["'\`][^"'\`\n]*[\w\]-])` + LIGHTBOX_TOKEN + String.raw`(?=[^"'\`\n]*["'\`])`,
+    "gim",
+  ),
+];
+
 export function checkHandRolledLightbox(source) {
-  const findings = [];
-  const re =
-    /class(?:Name)?\s*=\s*["'`](?:[^"'`]*[\s-])?lightbox(?![a-z0-9])|(?:^|[\s,{}>+~(:"'`])\.(?:[\w-]*-)?lightbox(?![a-z0-9])/gim;
-  let match;
-  while ((match = re.exec(source)) !== null) {
-    findings.push({
+  // Match starts at the token itself (lookbehind, not a consumed
+  // delimiter), so the reported line is the selector's own line.
+  const starts = new Set();
+  for (const re of LIGHTBOX_PATTERNS) {
+    for (const match of source.matchAll(re)) starts.add(match.index);
+  }
+  return [...starts]
+    .sort((a, b) => a - b)
+    .map((index) => ({
       rule: "hand-rolled-lightbox",
-      line: lineOfIndex(source, match.index),
+      line: lineOfIndex(source, index),
       message:
         "hand-rolled lightbox — use MediaViewer, ImagePreview, or initMarkdownImageViewer from @kenn-io/kit-ui (pan/zoom, paging)",
-    });
-  }
-  return findings;
+    }));
 }
 
 /** Custom sortable table headers duplicate TableHeaderCell. */

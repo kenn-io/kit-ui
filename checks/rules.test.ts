@@ -417,9 +417,27 @@ describe("hand-rolled components", () => {
     const src = [
       `<div class="kit-media-viewer highlightbox"></div>`,
       `const lightboxOpen = settings.lightbox;`,
+      `if (settings.lightbox) {`,
       `.highlightbox { color: red; }`,
     ].join("\n");
     expect(checkSource(src, "A.svelte", ["hand-rolled-lightbox"])).toHaveLength(0);
+  });
+
+  test("lightbox: compound selectors in CSS rules and quoted strings", () => {
+    const src = [
+      `div.lightbox { position: fixed; }`,
+      `.overlay.lightbox, #preview.lightbox__panel { inset: 0; }`,
+      `document.querySelector("dialog.image-lightbox");`,
+    ].join("\n");
+    const findings = checkSource(src, "a.css", ["hand-rolled-lightbox"]);
+    expect(findings.map((finding) => finding.line)).toEqual([1, 2, 2, 3]);
+  });
+
+  test("lightbox: reports an unindented selector on its own line", () => {
+    const src = `a { color: red; }\n.lightbox { inset: 0; }`;
+    expect(checkSource(src, "a.css", ["hand-rolled-lightbox"]).map((f) => f.line)).toEqual([2]);
+    const ignored = `a { color: red; }\n.lightbox { inset: 0; } /* kit-ui-check-ignore */`;
+    expect(checkSource(ignored, "a.css", ["hand-rolled-lightbox"])).toHaveLength(0);
   });
 
   test("icon button: class and CSS selector, both spellings", () => {

@@ -229,17 +229,40 @@ test("an out-of-range index wraps, and an empty alt falls back to a name", async
   await expect(viewer(page)).toHaveAccessibleName("Third (3 of 3)");
 });
 
-test("the position suffix is localizable", async ({ page }) => {
+test("the position counter and accessible name are localizable", async ({ page }) => {
   await page.evaluate(async (itemsSource) => {
     const { mountMediaViewer } =
       await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
-    mountMediaViewer(
-      new Function(`return ${itemsSource}`)(),
-      0,
-      (p: number, t: number) => `${p} von ${t}`,
-    );
+    mountMediaViewer(new Function(`return ${itemsSource}`)(), 0, {
+      formatCounter: (p: number, t: number) => `${p}/${t} Bilder`,
+      formatLabel: (label: string, p: number, t: number) => `Bild ${p} von ${t}: ${label}`,
+    });
   }, swatchItems);
-  await expect(viewer(page)).toHaveAccessibleName("First (1 von 3)");
+  await expect(viewer(page)).toHaveAccessibleName("Bild 1 von 3: First");
+  await expect(counter(page)).toHaveText("1/3 Bilder");
+});
+
+test("a different item at the same index resets pan and zoom", async ({ page }) => {
+  await page.evaluate(async (itemsSource) => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    const items = new Function(`return ${itemsSource}`)();
+    const host = mountMediaViewer(items, 0);
+    (window as unknown as { __replace: () => void }).__replace = () =>
+      host.replaceItems([{ ...items[1], alt: "Replacement" }, ...items.slice(1)]);
+  }, swatchItems);
+  const viewport = page.locator(".kit-media-viewer__viewport");
+  const transform = () =>
+    page
+      .locator(".kit-media-viewer__pan")
+      .evaluate((node) => (node as HTMLElement).style.transform);
+  await viewport.hover();
+  await page.mouse.wheel(0, -400);
+  await expect.poll(transform).not.toBe("translate(0px, 0px) scale(1)");
+
+  await page.evaluate(() => (window as unknown as { __replace: () => void }).__replace());
+  await expect(viewer(page)).toHaveAccessibleName("Replacement (1 of 3)");
+  await expect.poll(transform).toBe("translate(0px, 0px) scale(1)");
 });
 
 test("replacing onViewerOpen restores the old hook and runs the new one", async ({ page }) => {
@@ -290,6 +313,32 @@ test("a markdown image controller disconnected while its viewer loads opens noth
   await page.waitForTimeout(500);
   await expect(page.locator(".kit-media-viewer")).toHaveCount(0);
 });
+
+for (const [name, interrupt] of [
+  ["is re-registered", "rerender"],
+  ["is named in a targeted close", "close"],
+] as const) {
+  test(`an origin that ${name} while its viewer loads opens nothing`, async ({ page }) => {
+    await page.evaluate(async (interrupt) => {
+      const gallery = await import("/src/lib/utils/media-gallery.ts");
+      const item = () => ({ kind: "image" as const, src: "data:,", alt: "Pending" });
+      const origin = document.createElement("div");
+      document.body.append(origin);
+      gallery.registerMediaViewerItem(origin, item);
+
+      // Same task: the viewer's dynamic import has not resolved yet.
+      void gallery.openMediaViewerGallery(origin);
+      if (interrupt === "rerender") {
+        gallery.unregisterMediaViewerItem(origin);
+        gallery.registerMediaViewerItem(origin, item);
+      } else {
+        gallery.closeMediaViewerGallery([origin]);
+      }
+    }, interrupt);
+    await page.waitForTimeout(500);
+    await expect(page.locator(".kit-media-viewer")).toHaveCount(0);
+  });
+}
 
 test("a theme flip closes a viewer showing diagrams, not one showing only images", async ({
   page,

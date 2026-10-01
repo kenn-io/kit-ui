@@ -16,8 +16,10 @@ interface Props {
     nextLabel?: string;
     /** Accessible name when the item has none (an image with empty alt). */
     fallbackLabel?: string;
-    /** Position suffix of the accessible name when paging (1-based). */
-    formatPosition?: (position: number, total: number) => string;
+    /** Visible position counter when paging (1-based). */
+    formatCounter?: (position: number, total: number) => string;
+    /** Accessible name when paging, from the item's name (1-based). */
+    formatLabel?: (label: string, position: number, total: number) => string;
 }
 declare const MediaViewer: import("svelte").Component<Props, {}, "index">;
 type MediaViewer = ReturnType<typeof MediaViewer>;

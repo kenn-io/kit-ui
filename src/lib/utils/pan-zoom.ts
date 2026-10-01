@@ -17,7 +17,8 @@ const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 const WHEEL_DELTA_LINE = 1;
 const WHEEL_DELTA_PAGE = 2;
 const DOUBLE_TAP_SCALE = 2.5;
-// A tap moves less than TAP_SLOP px and lasts under TAP_MS; a second tap
+// A tap never moves TAP_SLOP px from its start and lasts under TAP_MS;
+// a second tap
 // within DOUBLE_TAP_MS and DOUBLE_TAP_SLOP px of the first is a double tap.
 const TAP_SLOP = 10;
 const TAP_MS = 300;
@@ -52,8 +53,18 @@ export function attachPanZoom(
   // drags; two pinch (zoom around their midpoint) and pan together.
   const pointers = new Map<number, { x: number; y: number }>();
   // The touch or pen gesture in progress, from its first pointer down to
-  // its last pointer up; `multi` once a second finger joined.
-  let gesture: { x: number; y: number; time: number; scale: number; multi: boolean } | null = null;
+  // its last pointer up, with the view it started from; `multi` once a
+  // second finger joined, `moved` once it left the tap slop.
+  let gesture: {
+    x: number;
+    y: number;
+    time: number;
+    scale: number;
+    offsetX: number;
+    offsetY: number;
+    multi: boolean;
+    moved: boolean;
+  } | null = null;
   let lastTap: { x: number; y: number; time: number } | null = null;
 
   const updateTransform = () => {
@@ -95,10 +106,14 @@ export function attachPanZoom(
           y: event.clientY,
           time: event.timeStamp,
           scale,
+          offsetX,
+          offsetY,
           multi: false,
+          moved: false,
         };
       } else if (gesture) {
         gesture.multi = true;
+        lastTap = null;
       }
     }
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -114,6 +129,7 @@ export function attachPanZoom(
     const previous = pointers.get(event.pointerId);
     if (!previous) return;
     const next = { x: event.clientX, y: event.clientY };
+    if (gesture && !gesture.moved && distance(next, gesture) >= TAP_SLOP) gesture.moved = true;
     if (pointers.size === 1) {
       offsetX += next.x - previous.x;
       offsetY += next.y - previous.y;
@@ -143,19 +159,29 @@ export function attachPanZoom(
     } catch {
       // Already released.
     }
+    if (event.type === "pointercancel" && gesture) {
+      // The browser took the gesture (e.g. to scroll the page past an
+      // inline diagram): undo what its first moves did, and it is no tap.
+      scale = gesture.scale;
+      offsetX = gesture.offsetX;
+      offsetY = gesture.offsetY;
+      updateTransform();
+      gesture = null;
+      lastTap = null;
+    }
     if (pointers.size > 0) return;
     delete viewport.dataset.panning;
     const ended = gesture;
     gesture = null;
-    // A cancelled pointer (the browser took over, e.g. to scroll the page)
-    // is no tap or swipe.
-    if (ended && !ended.multi && event.type === "pointerup") endTouchGesture(ended, event);
+    if (!ended) return;
+    if (ended.multi) {
+      lastTap = null;
+      return;
+    }
+    endTouchGesture(ended, event);
   };
 
-  const endTouchGesture = (
-    start: { x: number; y: number; time: number; scale: number },
-    event: PointerEvent,
-  ) => {
+  const endTouchGesture = (start: NonNullable<typeof gesture>, event: PointerEvent) => {
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     if (
@@ -168,7 +194,7 @@ export function attachPanZoom(
       options.onSwipe(dx < 0 ? 1 : -1);
       return;
     }
-    if (Math.hypot(dx, dy) >= TAP_SLOP || event.timeStamp - start.time >= TAP_MS) {
+    if (start.moved || event.timeStamp - start.time >= TAP_MS) {
       lastTap = null;
       return;
     }
@@ -236,10 +262,12 @@ function normalizeWheelDelta(event: WheelEvent, viewport: HTMLElement): number {
   return event.deltaY;
 }
 
+// Scale keeps full precision: a pinch arrives as many tiny ratios, and
+// rounding each step would discard them. Only the CSS value is rounded.
 function clampScale(value: number): number {
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(value.toFixed(2))));
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 }
 
 function formatScale(value: number): string {
-  return Number(value.toFixed(2)).toString();
+  return Number(value.toFixed(4)).toString();
 }

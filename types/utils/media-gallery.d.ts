@@ -25,9 +25,12 @@ export interface MediaViewerLabels {
     nextLabel?: string;
     /** Accessible name when the item has none (an image with empty alt). */
     fallbackLabel?: string;
-    /** Position suffix of the accessible name when paging, e.g.
-     * `(position, total) => \`${position} of ${total}\``. 1-based. */
-    formatPosition?: (position: number, total: number) => string;
+    /** Visible position counter when paging, e.g.
+     * `(position, total) => \`${position} / ${total}\``. 1-based. */
+    formatCounter?: (position: number, total: number) => string;
+    /** Accessible name when paging, from the item's name, e.g.
+     * `(label, position, total) => \`${label} (${position} of ${total})\``. */
+    formatLabel?: (label: string, position: number, total: number) => string;
 }
 export interface OpenMediaViewerOptions extends MediaViewerLabels {
     /** Suspend app-level keyboard handling while the viewer is open;
@@ -48,10 +51,11 @@ export declare function collectMediaViewerGallery(origin: Element): Element[];
 /** Open MediaViewer on `origin`, paging through the page's other
  * eligible items. Replaces any viewer that is already open. The viewer
  * component loads on first use; if `origin` is removed or unregistered
- * meanwhile (its owner unmounted), nothing opens. Resolves to a function
+ * meanwhile (its owner unmounted or re-rendered), nothing opens. Resolves to a function
  * that closes this viewer (a no-op once it has closed or never opened). */
 export declare function openMediaViewerGallery(origin: Element, options?: OpenMediaViewerOptions): Promise<() => void>;
 /** Close the open gallery viewer and cancel a pending open. With
- * `showing`, only when the open viewer's items include one of those
- * elements (e.g. diagrams about to be re-rendered). */
+ * `showing`, only those that involve one of the elements (e.g. diagrams
+ * about to be re-rendered): an open viewer whose items include one, or a
+ * pending open from one. */
 export declare function closeMediaViewerGallery(showing?: Iterable<Element>): void;

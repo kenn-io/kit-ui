@@ -15,8 +15,8 @@ inline Mermaid controls, and the markdown image expand button are 44px.
 
 With more than one item, the viewer pages between them. The previous and
 next buttons and the Left/Right arrow keys step through the list,
-wrapping at the ends, and a `2 / 5` counter shows the position. Paging
-resets pan and zoom. Escape, a backdrop click, or the close button closes
+wrapping at the ends, and a `2 / 5` counter shows the position. Paging,
+or a different item taking the current index, resets pan and zoom. Escape, a backdrop click, or the close button closes
 the viewer, and focus returns to the control that opened it.
 
 ```svelte
@@ -65,21 +65,24 @@ name always agree.
 
 ## Props
 
-| Prop             | Type                          | Default                         | Notes                                              |
-| ---------------- | ----------------------------- | ------------------------------- | -------------------------------------------------- |
-| `items`          | `MediaViewerItem[]`           | —                               | One item hides the paging controls                 |
-| `index`          | `number` (bindable)           | `0`                             | Item on display                                    |
-| `onclose`        | `() => void`                  | —                               | Remove the viewer here                             |
-| `onViewerOpen`   | `() => () => void`            | push `"kit-media-viewer"` scope | Suspend app shortcuts while open; returns restore  |
-| `closeLabel`     | `string`                      | `"Close expanded view"`         |                                                    |
-| `resetLabel`     | `string`                      | `"Reset view"`                  |                                                    |
-| `previousLabel`  | `string`                      | `"Previous item"`               |                                                    |
-| `nextLabel`      | `string`                      | `"Next item"`                   |                                                    |
-| `fallbackLabel`  | `string`                      | `"Expanded view"`               | Accessible name when the item has none (empty alt) |
-| `formatPosition` | `(position, total) => string` | `` `${position} of ${total}` `` | Position suffix of the accessible name when paging |
+| Prop            | Type                                 | Default                                    | Notes                                              |
+| --------------- | ------------------------------------ | ------------------------------------------ | -------------------------------------------------- |
+| `items`         | `MediaViewerItem[]`                  | —                                          | One item hides the paging controls                 |
+| `index`         | `number` (bindable)                  | `0`                                        | Item on display                                    |
+| `onclose`       | `() => void`                         | —                                          | Remove the viewer here                             |
+| `onViewerOpen`  | `() => () => void`                   | push `"kit-media-viewer"` scope            | Suspend app shortcuts while open; returns restore  |
+| `closeLabel`    | `string`                             | `"Close expanded view"`                    |                                                    |
+| `resetLabel`    | `string`                             | `"Reset view"`                             |                                                    |
+| `previousLabel` | `string`                             | `"Previous item"`                          |                                                    |
+| `nextLabel`     | `string`                             | `"Next item"`                              |                                                    |
+| `fallbackLabel` | `string`                             | `"Expanded view"`                          | Accessible name when the item has none (empty alt) |
+| `formatCounter` | `(position, total) => string`        | `` `${position} / ${total}` ``             | Visible counter when paging                        |
+| `formatLabel`   | `(label, position, total) => string` | `` `${label} (${position} of ${total})` `` | Accessible name when paging                        |
 
-The dialog's accessible name is the item's alt text or label, plus
-`(2 of 5)` from `formatPosition` when paging. The integrations below take
+The dialog's accessible name is the item's alt text or label. When
+paging, `formatLabel` builds it from that name and the position, and
+`formatCounter` builds the visible `2 / 5` counter. Positions are
+1-based. The integrations below take
 the same strings as `viewerLabels: MediaViewerLabels`
 (`initMarkdownImageViewer`, `initMarkdownMermaidRendering`, and
 `ImagePreview`), so an app can localize the whole viewer.

@@ -1,3 +1,20 @@
+<script lang="ts" module>
+  // Stable ids for item objects, so the view resets when a different item
+  // shows at the same index (items replaced or reordered) but not when
+  // the same object repeats.
+  const itemIds = new WeakMap<object, number>();
+  let lastItemId = 0;
+
+  function itemId(item: object): number {
+    let id = itemIds.get(item);
+    if (id === undefined) {
+      id = ++lastItemId;
+      itemIds.set(item, id);
+    }
+    return id;
+  }
+</script>
+
 <script lang="ts">
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -28,8 +45,10 @@
     nextLabel?: string;
     /** Accessible name when the item has none (an image with empty alt). */
     fallbackLabel?: string;
-    /** Position suffix of the accessible name when paging (1-based). */
-    formatPosition?: (position: number, total: number) => string;
+    /** Visible position counter when paging (1-based). */
+    formatCounter?: (position: number, total: number) => string;
+    /** Accessible name when paging, from the item's name (1-based). */
+    formatLabel?: (label: string, position: number, total: number) => string;
   }
 
   let {
@@ -42,7 +61,8 @@
     previousLabel = "Previous item",
     nextLabel = "Next item",
     fallbackLabel = "Expanded view",
-    formatPosition = (position, total) => `${position} of ${total}`,
+    formatCounter = (position, total) => `${position} / ${total}`,
+    formatLabel = (label, position, total) => `${label} (${position} of ${total})`,
   }: Props = $props();
 
   // index wrapped into range, so the item, counter, and label agree.
@@ -55,8 +75,10 @@
     (current?.kind === "image" ? current.alt : (current?.label ?? "")).trim() || fallbackLabel,
   );
   const dialogLabel = $derived(
-    paged ? `${itemLabel} (${formatPosition(position + 1, items.length)})` : itemLabel,
+    paged ? formatLabel(itemLabel, position + 1, items.length) : itemLabel,
   );
+  // Paging resets pan and zoom: a new viewport per position and item.
+  const viewKey = $derived(current ? `${position}:${itemId(current)}` : "");
 
   // Set by the viewport attachment; not reactive, only called from the
   // reset button.
@@ -131,7 +153,7 @@
       {onkeydown}
       {@attach trapFocus}
     >
-      {#key position}
+      {#key viewKey}
         <div class="kit-media-viewer__viewport" {@attach panZoomViewport}>
           <div
             class={[
@@ -168,7 +190,9 @@
         >
           <ChevronRightIcon size="18" strokeWidth="2" aria-hidden="true" />
         </IconButton>
-        <p class="kit-media-viewer__counter" aria-hidden="true">{position + 1} / {items.length}</p>
+        <p class="kit-media-viewer__counter" aria-hidden="true">
+          {formatCounter(position + 1, items.length)}
+        </p>
       {/if}
 
       <IconButton

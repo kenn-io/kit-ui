@@ -2,12 +2,12 @@
 // it is open (media-viewer.spec.ts). Served by the Vite dev server.
 import { mount } from "svelte";
 import MediaViewer from "../../../src/lib/components/MediaViewer.svelte";
-import type { MediaViewerItem } from "../../../src/lib/utils/media-gallery.ts";
+import type { MediaViewerItem, MediaViewerLabels } from "../../../src/lib/utils/media-gallery.ts";
 
 export function mountMediaViewer(
   items: MediaViewerItem[],
   index: number,
-  formatPosition?: (position: number, total: number) => string,
+  labels: MediaViewerLabels = {},
 ) {
   const calls: string[] = [];
   const hook = (name: string) => () => {
@@ -19,13 +19,16 @@ export function mountMediaViewer(
     index,
     onclose: () => {},
     onViewerOpen: hook("A"),
-    ...(formatPosition ? { formatPosition } : {}),
+    ...labels,
   });
   mount(MediaViewer, { target: document.body, props });
   return {
     calls,
     replaceHook: () => {
       props.onViewerOpen = hook("B");
+    },
+    replaceItems: (next: MediaViewerItem[]) => {
+      props.items = next;
     },
   };
 }

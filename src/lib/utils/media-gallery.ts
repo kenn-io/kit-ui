@@ -44,9 +44,12 @@ export interface MediaViewerLabels {
   nextLabel?: string;
   /** Accessible name when the item has none (an image with empty alt). */
   fallbackLabel?: string;
-  /** Position suffix of the accessible name when paging, e.g.
-   * `(position, total) => \`${position} of ${total}\``. 1-based. */
-  formatPosition?: (position: number, total: number) => string;
+  /** Visible position counter when paging, e.g.
+   * `(position, total) => \`${position} / ${total}\``. 1-based. */
+  formatCounter?: (position: number, total: number) => string;
+  /** Accessible name when paging, from the item's name, e.g.
+   * `(label, position, total) => \`${label} (${position} of ${total})\``. */
+  formatLabel?: (label: string, position: number, total: number) => string;
 }
 
 export interface OpenMediaViewerOptions extends MediaViewerLabels {
@@ -64,6 +67,14 @@ const MODAL_LAYER_SELECTOR = '[aria-modal="true"]';
 const registeredItems = new WeakMap<Element, () => MediaViewerItem>();
 let activeViewer: { close: () => void; elements: Element[] } | null = null;
 let openGeneration = 0;
+// The origin of the open still loading the viewer, if any.
+let pendingOrigin: Element | null = null;
+
+/** Cancel a pending open (its load resolves to nothing). */
+function cancelPendingOpen(): void {
+  openGeneration += 1;
+  pendingOrigin = null;
+}
 
 /** Mark `element` as an expandable gallery entry. `item` is called at
  * open time, so it can describe the element's current content. */
@@ -73,6 +84,9 @@ export function registerMediaViewerItem(element: Element, item: () => MediaViewe
 }
 
 export function unregisterMediaViewerItem(element: Element): void {
+  // Even if it registers again before the load resolves (a re-render),
+  // the open it requested is void.
+  if (element === pendingOrigin) cancelPendingOpen();
   registeredItems.delete(element);
   element.removeAttribute(ITEM_ATTRIBUTE);
 }
@@ -101,13 +115,14 @@ function isDisplayed(element: Element): boolean {
 /** Open MediaViewer on `origin`, paging through the page's other
  * eligible items. Replaces any viewer that is already open. The viewer
  * component loads on first use; if `origin` is removed or unregistered
- * meanwhile (its owner unmounted), nothing opens. Resolves to a function
+ * meanwhile (its owner unmounted or re-rendered), nothing opens. Resolves to a function
  * that closes this viewer (a no-op once it has closed or never opened). */
 export async function openMediaViewerGallery(
   origin: Element,
   options: OpenMediaViewerOptions = {},
 ): Promise<() => void> {
   const generation = ++openGeneration;
+  pendingOrigin = origin;
   const [{ mount, unmount }, { default: MediaViewer }] = await Promise.all([
     import("svelte"),
     import("../components/MediaViewer.svelte"),
@@ -115,6 +130,7 @@ export async function openMediaViewerGallery(
   // A later open (or a close) raced this one's dynamic import, or the
   // origin's owner went away while it loaded.
   if (generation !== openGeneration) return () => {};
+  pendingOrigin = null;
   if (!origin.isConnected || !registeredItems.has(origin)) return () => {};
   activeViewer?.close();
 
@@ -139,13 +155,17 @@ export async function openMediaViewerGallery(
 }
 
 /** Close the open gallery viewer and cancel a pending open. With
- * `showing`, only when the open viewer's items include one of those
- * elements (e.g. diagrams about to be re-rendered). */
+ * `showing`, only those that involve one of the elements (e.g. diagrams
+ * about to be re-rendered): an open viewer whose items include one, or a
+ * pending open from one. */
 export function closeMediaViewerGallery(showing?: Iterable<Element>): void {
-  if (showing) {
-    const shown = activeViewer?.elements;
-    if (!shown || !Array.from(showing).some((element) => shown.includes(element))) return;
+  if (!showing) {
+    cancelPendingOpen();
+    activeViewer?.close();
+    return;
   }
-  openGeneration += 1;
-  activeViewer?.close();
+  const elements = Array.from(showing);
+  if (pendingOrigin && elements.includes(pendingOrigin)) cancelPendingOpen();
+  const shown = activeViewer?.elements;
+  if (shown && elements.some((element) => shown.includes(element))) activeViewer?.close();
 }

@@ -110,6 +110,6 @@ export { appShortcuts, createShortcutManager, formatShortcutKeys, initShortcuts,
 export { codeFenceLanguage, createMarkdownRenderer, escapeHtml, highlightCode, renderMarkdown, renderMarkdownSync, type MarkdownRenderer, type MarkdownRendererOptions, } from "./utils/markdown.js";
 export { initMarkdownImageViewer, type MarkdownImageViewerController, type MarkdownImageViewerOptions, } from "./utils/markdown-images.js";
 export { closeMediaViewerGallery, collectMediaViewerGallery, openMediaViewerGallery, registerMediaViewerItem, unregisterMediaViewerItem, type MediaViewerItem, type MediaViewerLabels, type OpenMediaViewerOptions, } from "./utils/media-gallery.js";
-export { attachPanZoom, type PanZoom } from "./utils/pan-zoom.js";
+export { attachPanZoom, type PanZoom, type PanZoomOptions } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";
