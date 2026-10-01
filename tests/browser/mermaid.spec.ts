@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gotoPage, setTheme } from "./helpers.js";
+import { clipboardReader, gotoPage, setTheme } from "./helpers.js";
 
 // Mermaid post-processor acceptance against real mermaid in Chromium
 // (docs/components/mermaid.md): fence → themed pan/zoom viewer, copy /
@@ -80,12 +80,11 @@ test("wheel zoom keeps the live diagram vector-backed", async ({ page }) => {
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const readClipboard = await clipboardReader(page, context);
   const viewer = firstViewer(page);
   await viewer.getByRole("button", { name: "Copy Mermaid source" }).click();
   await expect(viewer.getByRole("button", { name: "Copied Mermaid source" })).toBeVisible();
-  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard).toContain(FLOWCHART_SOURCE);
+  expect(await readClipboard()).toContain(FLOWCHART_SOURCE);
 });
 
 test("expand opens the media viewer; Escape closes and restores focus", async ({ page }) => {

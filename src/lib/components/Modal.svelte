@@ -57,7 +57,7 @@
 <div
   class="kit-modal-overlay"
   role="presentation"
-  onpointerdown={closeOnOverlayClick ? backdropCloses(close) : undefined}
+  {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div
     class="kit-modal-panel"

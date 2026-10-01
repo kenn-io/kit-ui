@@ -9,7 +9,11 @@ import { gotoPage } from "./helpers.js";
 // Emulation.setSmallViewportHeightDifferenceOverride sets that gap, which is
 // what makes this reproducible without a phone: a headless browser has no URL
 // bar, so without it 100vh and 100svh are the same and nothing shows.
-test("a tall modal keeps its footer within the height a phone shows", async ({ page }) => {
+test("a tall modal keeps its footer within the height a phone shows", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "the URL-bar override is a CDP call");
   await page.setViewportSize({ width: 390, height: 664 });
   await gotoPage(page, "modal");
 

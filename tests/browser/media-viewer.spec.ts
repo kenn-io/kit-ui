@@ -61,6 +61,22 @@ test("paging resets pan and zoom", async ({ page }) => {
   await expect.poll(scale).toBe(1);
 });
 
+test("double-click zooms in on the point, and again resets", async ({ page }) => {
+  // The dblclick path: iOS Safari sends a double tap's second tap only as
+  // clicks and a dblclick, and a mouse double-click lands here too.
+  await page.getByRole("button", { name: "Open viewer" }).click();
+  const box = (await page.locator(".kit-media-viewer__viewport").boundingBox())!;
+  const transform = () =>
+    page.locator(".kit-media-viewer__pan").evaluate((node) => {
+      const matrix = new DOMMatrix((node as HTMLElement).style.transform);
+      return [matrix.a, Math.round(matrix.e), Math.round(matrix.f)];
+    });
+  await page.mouse.dblclick(box.x + box.width / 2 + 40, box.y + box.height / 2 + 20);
+  await expect.poll(transform).toEqual([2.5, -60, -30]);
+  await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+  await expect.poll(transform).toEqual([1, 0, 0]);
+});
+
 test("images keep their natural size instead of upscaling", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
   const size = await viewer(page)
@@ -252,17 +268,19 @@ test("a different item at the same index resets pan and zoom", async ({ page }) 
       host.replaceItems([{ ...items[1], alt: "Replacement" }, ...items.slice(1)]);
   }, swatchItems);
   const viewport = page.locator(".kit-media-viewer__viewport");
+  // [scale, x, y]; engines differ in how they write an identity transform.
   const transform = () =>
-    page
-      .locator(".kit-media-viewer__pan")
-      .evaluate((node) => (node as HTMLElement).style.transform);
+    page.locator(".kit-media-viewer__pan").evaluate((node) => {
+      const matrix = new DOMMatrix((node as HTMLElement).style.transform);
+      return [matrix.a, matrix.e, matrix.f];
+    });
   await viewport.hover();
   await page.mouse.wheel(0, -400);
-  await expect.poll(transform).not.toBe("translate(0px, 0px) scale(1)");
+  await expect.poll(transform).not.toEqual([1, 0, 0]);
 
   await page.evaluate(() => (window as unknown as { __replace: () => void }).__replace());
   await expect(viewer(page)).toHaveAccessibleName("Replacement (1 of 3)");
-  await expect.poll(transform).toBe("translate(0px, 0px) scale(1)");
+  await expect.poll(transform).toEqual([1, 0, 0]);
 });
 
 test("replacing onViewerOpen restores the old hook and runs the new one", async ({ page }) => {

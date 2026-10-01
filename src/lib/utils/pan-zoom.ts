@@ -1,6 +1,7 @@
 /*
  * Drag-to-pan, cursor-anchored wheel zoom (which also covers trackpad
- * pinch), two-finger touch pinch, and double-tap zoom for a viewport
+ * pinch), two-finger touch pinch, and double-tap (or double-click) zoom
+ * for a viewport
  * element and the transformed element inside it. Shared by the inline
  * Mermaid viewer (imperative DOM) and MediaViewer (as a Svelte attachment
  * body).
@@ -66,6 +67,9 @@ export function attachPanZoom(
     moved: boolean;
   } | null = null;
   let lastTap: { x: number; y: number; time: number } | null = null;
+  // When the pointer path last handled a double tap, so the dblclick the
+  // browser may send for the same taps is not handled again.
+  let doubleTapTime = -Infinity;
 
   const updateTransform = () => {
     pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${formatScale(scale)})`;
@@ -205,16 +209,30 @@ export function attachPanZoom(
       distance(tap, lastTap) < DOUBLE_TAP_SLOP
     ) {
       lastTap = null;
-      // Zoomed: back to the whole view. At scale 1: zoom in on the tap.
-      if (scale !== 1) {
-        reset();
-      } else {
-        const origin = fromCenter(tap.x, tap.y);
-        zoomTo(DOUBLE_TAP_SCALE, origin.x, origin.y);
-      }
+      doubleTapTime = event.timeStamp;
+      toggleZoom(tap.x, tap.y);
       return;
     }
     lastTap = tap;
+  };
+
+  /** Zoomed: back to the whole view. At scale 1: zoom in on the point. */
+  const toggleZoom = (x: number, y: number) => {
+    if (scale !== 1) {
+      reset();
+    } else {
+      const origin = fromCenter(x, y);
+      zoomTo(DOUBLE_TAP_SCALE, origin.x, origin.y);
+    }
+  };
+
+  // iOS Safari sends pointer events for only the first tap of a double
+  // tap; the second arrives as clicks and a dblclick. A mouse double-click
+  // lands here too.
+  const onDoubleClick = (event: MouseEvent) => {
+    lastTap = null;
+    if (event.timeStamp - doubleTapTime < DOUBLE_TAP_MS * 2) return;
+    toggleZoom(event.clientX, event.clientY);
   };
 
   const onWheel = (event: WheelEvent) => {
@@ -228,6 +246,7 @@ export function attachPanZoom(
     );
   };
 
+  viewport.addEventListener("dblclick", onDoubleClick);
   viewport.addEventListener("pointerdown", onPointerDown);
   viewport.addEventListener("pointermove", onPointerMove);
   viewport.addEventListener("pointerup", endPointer);
@@ -238,6 +257,7 @@ export function attachPanZoom(
   return {
     reset,
     destroy() {
+      viewport.removeEventListener("dblclick", onDoubleClick);
       viewport.removeEventListener("pointerdown", onPointerDown);
       viewport.removeEventListener("pointermove", onPointerMove);
       viewport.removeEventListener("pointerup", endPointer);

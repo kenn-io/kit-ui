@@ -9,9 +9,10 @@ import {
 import { gotoPage } from "./helpers.js";
 
 // Touch behavior of MediaViewer and the inline Mermaid viewer
-// (docs/components/media-viewer.md). Real touch input through the Chrome
-// DevTools Protocol, in a touch-enabled context so the coarse-pointer
-// media queries match.
+// (docs/components/media-viewer.md), in a touch-enabled context so the
+// coarse-pointer media queries match. Gestures use real touch input
+// through the Chrome DevTools Protocol, so they run in Chromium only;
+// layout and tap tests run in every engine.
 
 type Point = { x: number; y: number };
 
@@ -23,7 +24,10 @@ async function touchPage(
   const context = await browser.newContext({ hasTouch: true, viewport });
   const page = await context.newPage();
   await gotoPage(page, id);
-  const cdp = await context.newCDPSession(page);
+  const cdp =
+    browser.browserType().name() === "chromium"
+      ? await context.newCDPSession(page)
+      : (null as unknown as CDPSession);
   return { page, cdp, close: () => context.close() };
 }
 
@@ -32,6 +36,16 @@ function touch(cdp: CDPSession, type: string, points: Point[]) {
     type,
     touchPoints: points.map((point, id) => ({ ...point, id })),
   });
+}
+
+/** Lift the fingers after holding them still at `points`. CDP moves arrive
+ * with no time between them, so lifting mid-move reads as a fast fling.
+ * Chromium then swallows the next tap as the one that stops the fling,
+ * and a tapped button gets no click. */
+async function release(cdp: CDPSession, points: Point[]) {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await touch(cdp, "touchMove", points);
+  await touch(cdp, "touchEnd", []);
 }
 
 /** One finger from `from` to `to` in `steps` moves. */
@@ -43,7 +57,7 @@ async function drag(cdp: CDPSession, from: Point, to: Point, steps = 8) {
       { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t },
     ]);
   }
-  await touch(cdp, "touchEnd", []);
+  await release(cdp, [to]);
 }
 
 /** Two fingers from `from` to `to` (each a pair of points). */
@@ -60,7 +74,7 @@ async function twoFingers(cdp: CDPSession, from: [Point, Point], to: [Point, Poi
       })),
     );
   }
-  await touch(cdp, "touchEnd", []);
+  await release(cdp, to);
 }
 
 async function tap(cdp: CDPSession, at: Point) {
@@ -93,6 +107,7 @@ function transformOf(pan: Locator) {
 }
 
 test("a swipe pages the viewer; once zoomed, a swipe pans instead", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const counter = page.locator(".kit-media-viewer__counter");
@@ -120,6 +135,7 @@ test("a swipe pages the viewer; once zoomed, a swipe pans instead", async ({ bro
 });
 
 test("double-tap zooms in at the tap, and again resets", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const pan = page.locator(".kit-media-viewer__pan");
@@ -136,6 +152,7 @@ test("double-tap zooms in at the tap, and again resets", async ({ browser }) => 
 });
 
 test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const mid = await center(page.locator(".kit-media-viewer__viewport"));
@@ -161,6 +178,7 @@ test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
 });
 
 test("only a still, quick touch counts toward a double tap", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const pan = page.locator(".kit-media-viewer__pan");
@@ -242,9 +260,19 @@ test("on a phone the controls stay apart and tappable, and the backdrop closes",
   await page.getByRole("button", { name: "Previous item" }).tap();
   await expect(counter).toHaveText("1 / 3");
 
-  // The 5% margin around the panel is backdrop.
+  // The 5% margin around the panel is backdrop. A link fills the page
+  // beneath the overlay: the tap must close the viewer and not also
+  // follow the link (its click must not fall through once closed).
+  await page.evaluate(() => {
+    const link = document.createElement("a");
+    link.href = "#followed";
+    link.style.cssText = "position: fixed; inset: 0; z-index: 1;";
+    document.body.append(link);
+  });
   await page.touchscreen.tap(panel.x / 2, panel.y / 2);
   await expect(viewer(page)).toBeHidden();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => location.hash)).toBe("#media-viewer");
   await close();
 });
 
@@ -271,6 +299,7 @@ test("touch devices get 44px controls", async ({ browser }) => {
 });
 
 test("a vertical swipe over an inline diagram scrolls the page", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "mermaid");
   const diagram = page.locator("pre.mermaid.kit-mermaid-viewer").first();
   await diagram.waitFor({ timeout: 15_000 });
@@ -292,7 +321,7 @@ test("a vertical swipe over an inline diagram scrolls the page", async ({ browse
 
   // A pinch whose fingers drift vertically zooms; the page stays put.
   await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
-  await expect.poll(async () => (await transformOf(pan)).scale).toBe(1);
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
   const settled = await top();
   await twoFingers(
     cdp,
@@ -309,6 +338,7 @@ test("a vertical swipe over an inline diagram scrolls the page", async ({ browse
   await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1.5);
   expect(await top()).toBe(settled);
   await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
   // Once zoomed, touch belongs to the diagram.
   await expect(viewport).toHaveCSS("touch-action", "pan-y");

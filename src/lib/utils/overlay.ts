@@ -6,13 +6,32 @@
  */
 
 /**
- * Close when the press starts on the backdrop element itself (not on a
- * child). Wire as the backdrop's `onpointerdown` — press semantics, so a
- * drag that merely ends on the backdrop doesn't dismiss.
+ * Close on a click that both starts and ends on the backdrop element
+ * itself (not a child). An attachment: `{@attach backdropCloses(close)}`.
+ *
+ * A press that starts in the panel and ends on the backdrop (a text
+ * selection drag) does not dismiss. Closing on the click, not on the
+ * press, matters on touch: the browser sends a tap's click after the
+ * finger lifts, and if the backdrop were already gone the click would
+ * land on whatever page control is underneath and activate it.
  */
-export function backdropCloses(close: () => void): (event: Event) => void {
-  return (event) => {
-    if (event.target === event.currentTarget) close();
+export function backdropCloses(close: () => void): (backdrop: HTMLElement) => () => void {
+  return (backdrop) => {
+    let pressed = false;
+    const onPointerDown = (event: PointerEvent) => {
+      pressed = event.target === backdrop;
+    };
+    const onClick = (event: MouseEvent) => {
+      const wasPressed = pressed;
+      pressed = false;
+      if (wasPressed && event.target === backdrop) close();
+    };
+    backdrop.addEventListener("pointerdown", onPointerDown);
+    backdrop.addEventListener("click", onClick);
+    return () => {
+      backdrop.removeEventListener("pointerdown", onPointerDown);
+      backdrop.removeEventListener("click", onClick);
+    };
   };
 }
 

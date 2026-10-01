@@ -140,7 +140,7 @@
   <div
     class="kit-media-viewer"
     role="presentation"
-    onpointerdown={backdropCloses(onclose)}
+    {@attach backdropCloses(onclose)}
     {@attach suspendShortcuts}
   >
     <div

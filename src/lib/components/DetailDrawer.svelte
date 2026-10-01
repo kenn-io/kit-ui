@@ -54,7 +54,7 @@
 <div
   class="kit-detail-drawer-overlay"
   role="presentation"
-  onpointerdown={closeOnOverlayClick ? backdropCloses(close) : undefined}
+  {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div
     class="kit-detail-drawer"

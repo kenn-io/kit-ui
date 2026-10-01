@@ -98,12 +98,15 @@ return their cleanup function.
 </script>
 
 <svelte:window onkeydown={escapeCloses(close)} />
-<div class="my-overlay" role="presentation" onpointerdown={backdropCloses(close)}>
+<div class="my-overlay" role="presentation" {@attach backdropCloses(close)}>
 ```
 
 The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
-`backdropCloses` closes when the press starts on the backdrop itself
-(press semantics — a drag ending on the backdrop doesn't dismiss).
+`backdropCloses` is an attachment that closes on a click that starts
+and ends on the backdrop itself, so a drag ending on the backdrop doesn't
+dismiss. It closes on the click rather than the press: on touch, a tap's
+click arrives after the finger lifts, and closing earlier would let that
+click activate the page control under the backdrop.
 `escapeCloses` closes one layer at a time: inner surfaces that already
 handled Escape (a popover's `dismissable`, a clearing search field) call
 `preventDefault`, and it respects that. Pair with `trapFocus` below for a
