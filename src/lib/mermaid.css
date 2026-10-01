@@ -216,6 +216,8 @@ pre.mermaid.kit-mermaid-viewer .edgeLabel div,
 .kit-mermaid-lightbox__panel {
   position: relative;
   width: 90vw;
+  /* vh first: browsers without dvh drop that line and keep this one. */
+  height: 90vh;
   height: 90dvh;
   overflow: hidden;
   background: var(--mermaid-bg);
