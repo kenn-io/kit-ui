@@ -13,6 +13,10 @@ function counter(page: Page) {
   return page.locator(".kit-media-viewer__counter");
 }
 
+function caption(page: Page) {
+  return page.locator(".kit-media-viewer__caption");
+}
+
 test.beforeEach(async ({ page }) => {
   await gotoPage(page, "media-viewer");
 });
@@ -123,9 +127,12 @@ test("a markdown image pages through every displayed item on the page", async ({
   // Screenshot A, the diagram, Screenshot B, the ImagePreview — not the
   // image in the inactive tab.
   await expect(viewer(page)).toHaveAccessibleName("Screenshot A (1 of 4)");
+  await expect(caption(page)).toHaveText("Screenshot A");
   await page.keyboard.press("ArrowRight");
   await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (2 of 4)");
   await expect(viewer(page).locator(".kit-mermaid-content svg")).toBeVisible();
+  // A diagram's label is generic, so it gets no caption.
+  await expect(caption(page)).toHaveCount(0);
   await page.keyboard.press("ArrowRight");
   await expect(viewer(page)).toHaveAccessibleName("Screenshot B (3 of 4)");
   await page.keyboard.press("ArrowRight");
@@ -268,6 +275,75 @@ test("an out-of-range index wraps, and an empty alt falls back to a name", async
   await expect(counter(page)).toHaveText("2 / 3");
   await page.keyboard.press("ArrowRight");
   await expect(viewer(page)).toHaveAccessibleName("Third (3 of 3)");
+});
+
+test("alt text shows as a caption, and a blank alt shows none", async ({ page }) => {
+  await page.evaluate(async (itemsSource) => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    mountMediaViewer(new Function(`return ${itemsSource}`)(), 0);
+  }, swatchItems);
+  await expect(caption(page)).toHaveText("First");
+  await expect(caption(page)).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(counter(page)).toHaveText("2 / 3");
+  await expect(caption(page)).toHaveCount(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(caption(page)).toHaveText("Third");
+});
+
+for (const [lines, alt] of [
+  ["one-line", "A long page screenshot"],
+  ["wrapped", "A long page screenshot of the settings screen ".repeat(12).trim()],
+] as const) {
+  test(`a tall image starts just below a ${lines} caption`, async ({ page }) => {
+    await page.evaluate(async (alt) => {
+      const { mountMediaViewer } =
+        await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+      const tall =
+        "data:image/svg+xml," +
+        encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="4000"/>');
+      mountMediaViewer([{ kind: "image", src: tall, alt }], 0);
+    }, alt);
+    const image = viewer(page).getByRole("img");
+    await expect(image).toBeVisible();
+    const captionBox = (await caption(page).boundingBox())!;
+    const imageBox = (await image.boundingBox())!;
+    const lineHeight = await caption(page).evaluate((el) =>
+      parseFloat(getComputedStyle(el).lineHeight),
+    );
+    expect(Math.floor(captionBox.height / lineHeight)).toBe(lines === "wrapped" ? 2 : 1);
+    // Clear of the caption, with only the --space-5 gap reserved below it.
+    const captionBottom = captionBox.y + captionBox.height;
+    expect(imageBox.y).toBeGreaterThanOrEqual(captionBottom);
+    expect(imageBox.y).toBeLessThanOrEqual(captionBottom + 12 + 1);
+  });
+}
+
+test("a long caption stays clear of the close button in a larger control context", async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    document.body.style.setProperty("--kit-control-height", "48px");
+    const alt = "A long page screenshot of the settings screen ".repeat(12).trim();
+    mountMediaViewer(
+      [
+        {
+          kind: "image",
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E",
+          alt,
+        },
+      ],
+      0,
+    );
+  });
+  const close = viewer(page).getByRole("button", { name: "Close expanded view" });
+  await expect(caption(page)).toBeVisible();
+  const captionBox = (await caption(page).boundingBox())!;
+  const closeBox = (await close.boundingBox())!;
+  expect(captionBox.x + captionBox.width).toBeLessThanOrEqual(closeBox.x);
 });
 
 test("the position counter and accessible name are localizable", async ({ page }) => {

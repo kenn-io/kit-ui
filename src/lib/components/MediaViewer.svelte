@@ -57,6 +57,12 @@
   const itemLabel = $derived(
     (current?.kind === "image" ? current.alt : (current?.label ?? "")).trim() || fallbackLabel,
   );
+  // Visible title: the image's own alt text. Element labels are often
+  // generic ("Mermaid diagram"), so they stay accessible names only.
+  const caption = $derived(current?.kind === "image" ? current.alt.trim() : "");
+  // Rendered caption height (one line or two), so the content clears
+  // exactly what the caption covers.
+  let captionHeight = $state(0);
   const dialogLabel = $derived(
     paged ? formatLabel(itemLabel, position + 1, items.length) : itemLabel,
   );
@@ -130,6 +136,8 @@
       aria-modal="true"
       aria-label={dialogLabel}
       tabindex="-1"
+      class:kit-media-viewer__panel--captioned={caption}
+      style:--kit-media-viewer-caption-height={caption ? `${captionHeight}px` : undefined}
       style:--kit-media-viewer-bg={current?.kind === "element" ? current.background : undefined}
       {onkeydown}
       {@attach trapFocus}
@@ -155,6 +163,19 @@
           </div>
         {/key}
       {/key}
+
+      <!-- Hidden from assistive tech: the dialog's name and the image's alt
+        already carry this text. -->
+      {#if caption}
+        <p
+          class="kit-media-viewer__caption"
+          aria-hidden="true"
+          title={caption}
+          bind:offsetHeight={captionHeight}
+        >
+          {caption}
+        </p>
+      {/if}
 
       <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={onclose}>
         <XIcon size="16" strokeWidth="2" aria-hidden="true" />
@@ -207,6 +228,17 @@
    * mobile browser bars from covering the bottom edge. */
   .kit-media-viewer__panel {
     --kit-media-viewer-step: 36px;
+    /* Close and reset button size; the caption clears the close button. */
+    --kit-media-viewer-control: 28px;
+    /* Space above and below the content, kept clear of the controls. */
+    --kit-media-viewer-inset-base: 64px;
+    /* Top band the caption covers; the content is centered, so the
+     * inset reserves it on both sides. */
+    --kit-media-viewer-caption-band: 0px;
+    --kit-media-viewer-inset-y: max(
+      var(--kit-media-viewer-inset-base),
+      2 * var(--kit-media-viewer-caption-band)
+    );
     position: relative;
     width: 90vw;
     /* vh first: browsers without dvh drop that line and keep this one. */
@@ -217,6 +249,13 @@
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
+  }
+
+  /* The caption sits in the top band, so content starts below it. */
+  .kit-media-viewer__panel--captioned {
+    --kit-media-viewer-caption-band: calc(
+      var(--space-5) + var(--kit-media-viewer-caption-height, 0px) + var(--space-5)
+    );
   }
 
   .kit-media-viewer__panel:focus {
@@ -241,7 +280,7 @@
   /* Inset keeps content clear of the corner and edge controls. */
   .kit-media-viewer__pan {
     width: calc(100% - 128px);
-    height: calc(100% - 64px);
+    height: calc(100% - var(--kit-media-viewer-inset-y));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -288,6 +327,14 @@
     box-shadow: var(--shadow-sm);
   }
 
+  /* Sized here rather than from an inherited --kit-control-height, so
+   * the caption's inset always matches the close button. */
+  .kit-media-viewer__panel :global(.kit-media-viewer__close),
+  .kit-media-viewer__panel :global(.kit-media-viewer__reset) {
+    width: var(--kit-media-viewer-control);
+    height: var(--kit-media-viewer-control);
+  }
+
   .kit-media-viewer__panel :global(.kit-media-viewer__close) {
     top: var(--space-5);
     right: var(--space-5);
@@ -312,6 +359,38 @@
 
   .kit-media-viewer__panel :global(.kit-media-viewer__step--next) {
     right: var(--space-5);
+  }
+
+  /* Centered between the panel edges, clear of the close button on
+   * both sides; long alt text wraps to two lines, then truncates (the
+   * title attribute has the rest). */
+  .kit-media-viewer__caption {
+    --kit-media-viewer-caption-inset: calc(
+      var(--space-5) + var(--kit-media-viewer-control) + var(--space-4)
+    );
+    position: absolute;
+    top: var(--space-5);
+    left: var(--kit-media-viewer-caption-inset);
+    right: var(--kit-media-viewer-caption-inset);
+    z-index: 1;
+    display: -webkit-box;
+    width: fit-content;
+    margin: 0 auto;
+    padding: var(--space-2) var(--space-4);
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: var(--border-width) solid var(--border-muted);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .kit-media-viewer__counter {
@@ -341,19 +420,17 @@
   @media (hover: none), (pointer: coarse) {
     .kit-media-viewer__panel {
       --kit-media-viewer-step: 44px;
-    }
-
-    .kit-media-viewer__panel :global(.kit-media-viewer__close),
-    .kit-media-viewer__panel :global(.kit-media-viewer__reset) {
-      width: 44px;
-      height: 44px;
+      --kit-media-viewer-control: 44px;
     }
   }
 
   @media (max-width: 640px) {
+    .kit-media-viewer__panel {
+      --kit-media-viewer-inset-base: 112px;
+    }
+
     .kit-media-viewer__pan {
       width: calc(100% - 32px);
-      height: calc(100% - 112px);
     }
 
     .kit-media-viewer__panel :global(.kit-media-viewer__step) {
