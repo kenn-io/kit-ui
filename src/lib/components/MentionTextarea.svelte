@@ -37,6 +37,10 @@
      * own frame. Size it with --kit-mention-padding, --kit-mention-min-height,
      * and --kit-mention-max-height. */
     embedded?: boolean;
+    /** Where the menu opens: below the field when it fits ("auto"), or
+     * always above or below. A composer at the bottom of a panel opens it
+     * above so the menu never covers its toolbar. */
+    placement?: "auto" | "top" | "bottom";
     placeholder?: string;
     rows?: number;
     disabled?: boolean;
@@ -67,6 +71,7 @@
     triggers = undefined,
     hideEmpty = false,
     embedded = false,
+    placement = "auto",
     placeholder = "",
     rows = 3,
     disabled = false,
@@ -151,6 +156,7 @@
       popoverWidth: rect.width,
       popoverHeight: menuEl.offsetHeight,
       triggerGap: 4,
+      placement: placement === "top" ? "above" : placement === "bottom" ? "below" : "auto",
     })}; width: ${Math.round(rect.width)}px`;
   }
 

@@ -159,6 +159,7 @@
       { char: "@", search: searchFiles, menuLabel: "Files" },
     ]}
     embedded
+    placement="top"
     rows={2}
     oninput={() => edits++}
     onpaste={(event) => pastes += event.clipboardData?.files.length ?? 0}
@@ -173,6 +174,7 @@
         bind:textareaEl={commandField}
         triggers={composerTriggers}
         embedded
+        placement="top"
         rows={2}
         placeholder="Ask the agent; / for commands, @ for files"
         ariaLabel="Message"

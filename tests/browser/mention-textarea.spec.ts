@@ -162,6 +162,10 @@ test("one field offers commands and fuzzy file references", async ({ page }) => 
   await page.keyboard.press("Enter");
   await textarea.pressSequentially("then /re");
   await expect(page.getByRole("listbox", { name: "Commands" })).toContainText("/review");
+  // placement="top" keeps the menu above the field, clear of a composer toolbar.
+  const menuBox = await page.getByRole("listbox", { name: "Commands" }).boundingBox();
+  const fieldBox = await textarea.boundingBox();
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(fieldBox!.y);
   await page.keyboard.press("Tab");
 
   await expect(page.locator('[data-demo="command-value"]')).toHaveText(

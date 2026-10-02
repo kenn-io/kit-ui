@@ -37,6 +37,7 @@ generalized to any trigger/search/row-rendering.
 | `triggers`        | `MentionTrigger[]`                                               | —              | Several triggers, each with its own search; use instead of `search` and `trigger`, and replaces `hideEmpty` and the status labels                             |
 | `hideEmpty`       | `boolean`                                                        | `false`        | Keep the menu closed while nothing matches instead of showing the status rows                                                                                 |
 | `embedded`        | `boolean`                                                        | `false`        | Borderless, transparent, auto-growing field for use inside a composer card (see below)                                                                        |
+| `placement`       | `"auto" \| "top" \| "bottom"`                                    | `"auto"`       | Menu side; `"auto"` opens below when it fits. Composers at the bottom of a panel use `"top"`                                                                  |
 | `placeholder`     | `string`                                                         | `""`           |                                                                                                                                                               |
 | `rows`            | `number`                                                         | `3`            |                                                                                                                                                               |
 | `disabled`        | `boolean`                                                        | `false`        |                                                                                                                                                               |
@@ -124,7 +125,9 @@ query.
 `embedded` removes the field's border, background, focus border, and resize
 handle and lets it grow with its content (`field-sizing: content`), so a
 composer card around it can draw the frame, focus ring, attachments, and
-toolbar. Size the field with CSS custom properties on an ancestor:
+toolbar. Set `placement="top"` so the menu opens above the field instead of
+covering the composer's toolbar. Size the field with CSS custom properties
+on an ancestor:
 
 | Property                   | Default                         |
 | -------------------------- | ------------------------------- |
@@ -145,6 +148,7 @@ to take pasted files.
       { char: "@", search: searchFiles, menuLabel: "Files" },
     ]}
     embedded
+    placement="top"
     onpaste={attachImages}
     ariaLabel="Message"
   />

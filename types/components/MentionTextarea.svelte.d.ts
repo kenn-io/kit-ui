@@ -11,6 +11,10 @@ interface BaseProps {
      * own frame. Size it with --kit-mention-padding, --kit-mention-min-height,
      * and --kit-mention-max-height. */
     embedded?: boolean;
+    /** Where the menu opens: below the field when it fits ("auto"), or
+     * always above or below. A composer at the bottom of a panel opens it
+     * above so the menu never covers its toolbar. */
+    placement?: "auto" | "top" | "bottom";
     placeholder?: string;
     rows?: number;
     disabled?: boolean;
