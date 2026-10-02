@@ -1093,6 +1093,29 @@ describe("split-handle-override", () => {
     expect(checkSource(src, "app.css", rule)).toHaveLength(0);
   });
 
+  test("follows attribute operator semantics and case sensitivity", () => {
+    const flagged = `[class$="--horizontal svelte-abc123"] { width: 8px; }
+[class~="KIT-SPLIT-RESIZE-HANDLE" i] { width: 8px; }
+[class="kit-split-resize-handle kit-control-states kit-split-resize-handle--vertical svelte-x1"] { width: 8px; }
+`;
+    expect(checkSource(flagged, "app.css", rule)).toHaveLength(3);
+    const ignored = `[class="kit-split-resize-handle"] { width: 8px; }
+[class$="--horizontal"] { width: 8px; }
+[class~="KIT-SPLIT-RESIZE-HANDLE"] { width: 8px; }
+`;
+    expect(checkSource(ignored, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("keeps comment markers inside quoted strings literal", () => {
+    const src = `.a { content: "/*"; }
+.kit-split-resize-handle { width: 8px; }
+.b { content: "*/"; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+    const markup = svelte(``, `<p>don't</p>\n<!-- style="--split-handle-size: 1px" -->`);
+    expect(checkSource(markup, "A.svelte", rule)).toHaveLength(0);
+  });
+
   test("flags custom properties set on the handle", () => {
     const src = `.kit-split-resize-handle { --border-muted: red; --press-transform: none; }\n`;
     expect(checkSource(src, "app.css", rule)).toHaveLength(2);
@@ -1132,6 +1155,7 @@ describe("split-handle-override", () => {
     const started = performance.now();
     checkSource("/*" + "a/*".repeat(50_000), "app.css", rule);
     checkSource("<!--".repeat(50_000), "A.svelte", rule);
+    checkSource(`"${"'".repeat(100_000)}`, "A.svelte", rule);
     expect(performance.now() - started).toBeLessThan(500);
   });
 

@@ -1194,37 +1194,47 @@ const SPLIT_HANDLE_PLACEMENT = new Set([
   "-webkit-app-region",
 ]);
 const SPLIT_HANDLE_CLASS = /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])/;
-// The class attribute the handle renders with, minus Svelte's scoping hash.
+// The class attribute the handle renders with. Svelte appends its scoping
+// class (`svelte-<hash>`) after these, so the real value ends in that class.
 const SPLIT_HANDLE_CLASS_VALUES = ["horizontal", "vertical"].map(
   (orientation) =>
     `kit-split-resize-handle kit-control-states kit-split-resize-handle--${orientation}`,
 );
+const SVELTE_SCOPE_SUFFIX = / svelte-[\w-]+$/;
 const CLASS_ATTRIBUTE_SELECTOR =
-  /\[\s*class\s*([~*^$|]?)=\s*(?:"([^"]*)"|'([^']*)'|([^\s\]]+))\s*(?:[is]\s*)?\]/gi;
+  /\[\s*class\s*([~*^$|]?)=\s*(?:"([^"]*)"|'([^']*)'|([^\s\]]+))\s*(?:([is])\s*)?\]/gi;
 const SPLIT_HANDLE_TOKEN_ASSIGNMENT =
   /--split-handle-size["'`]?\s*:|setProperty\s*\(\s*["'`]--split-handle-size|style:--split-handle-size/g;
 
-/** Whether `[class<operator>="value"]` can match the handle's class attribute. */
-function classAttributeMatchesHandle(operator, value) {
-  const wanted = value.toLowerCase();
-  return SPLIT_HANDLE_CLASS_VALUES.some((actual) => {
+/** Whether `[class<operator>="value" <flag>]` matches the handle's rendered
+ * class attribute, following CSS attribute-selector semantics. Class values
+ * compare case-sensitively unless the selector carries the `i` flag. */
+function classAttributeMatchesHandle(operator, rawValue, flag) {
+  const fold = flag?.toLowerCase() === "i";
+  const value = fold ? rawValue.toLowerCase() : rawValue;
+  return SPLIT_HANDLE_CLASS_VALUES.some((handleValue) => {
     // kit-control-states is on every kit control, so it never singles out the handle.
-    const classes = actual.split(" ").filter((name) => name !== "kit-control-states");
+    const classes = handleValue.split(" ").filter((name) => name !== "kit-control-states");
     switch (operator) {
       case "~":
-        return classes.includes(wanted);
+        return classes.includes(value);
       case "*":
-        return wanted.length > 0 && actual.includes(wanted);
+        return value.length > 0 && handleValue.includes(value);
       case "^":
-        return wanted.length > 0 && actual.startsWith(wanted);
-      case "$":
-        // Svelte's scoping hash really ends the attribute; a handle-class
-        // suffix is the closest app CSS can aim at the handle.
-        return wanted.length > 0 && actual.endsWith(wanted);
+        return value.length > 0 && handleValue.startsWith(value);
       case "|":
-        return actual === wanted || actual.startsWith(`${wanted}-`);
-      default:
-        return wanted.split(/\s+/).some((name) => classes.includes(name));
+        return handleValue === value || handleValue.startsWith(`${value}-`);
+      case "$": {
+        // Only a value that runs through the scoping class can be a suffix.
+        const scoped = value.match(SVELTE_SCOPE_SUFFIX);
+        const before = scoped ? value.slice(0, scoped.index) : "";
+        return before.length > 0 && handleValue.endsWith(before);
+      }
+      default: {
+        // `=` compares the whole attribute, scoping class included.
+        const scoped = value.match(SVELTE_SCOPE_SUFFIX);
+        return scoped !== null && value.slice(0, scoped.index) === handleValue;
+      }
     }
   });
 }
@@ -1232,12 +1242,13 @@ function classAttributeMatchesHandle(operator, value) {
 function compoundTargetsHandle(compound) {
   if (SPLIT_HANDLE_CLASS.test(compound)) return true;
   for (const match of compound.matchAll(CLASS_ATTRIBUTE_SELECTOR)) {
-    if (classAttributeMatchesHandle(match[1], match[2] ?? match[3] ?? match[4] ?? "")) return true;
+    const value = match[2] ?? match[3] ?? match[4] ?? "";
+    if (classAttributeMatchesHandle(match[1], value, match[5])) return true;
   }
   return false;
 }
 
-/** Blank CSS, HTML, and line comments in one linear pass, keeping offsets.
+/** Blank CSS, HTML, and line comments in one pass, keeping offsets.
  * A `//` after `:`, a quote, or a word character is a URL, not a comment. */
 function blankComments(source) {
   const out = source.split("");
@@ -1245,7 +1256,21 @@ function blankComments(source) {
     for (let k = from; k < to; k += 1) if (out[k] !== "\n") out[k] = " ";
   };
   let i = 0;
+  let lineEnd = -1;
   while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'") {
+      // A one-line quoted string (CSS or script) keeps comment markers
+      // literal. Without a closing quote on the line it is prose, such as
+      // an apostrophe in markup, not a string.
+      if (lineEnd < i) {
+        lineEnd = source.indexOf("\n", i);
+        if (lineEnd === -1) lineEnd = source.length;
+      }
+      const close = source.indexOf(ch, i + 1);
+      i = close !== -1 && close < lineEnd ? close + 1 : i + 1;
+      continue;
+    }
     let close = -1;
     if (source.startsWith("/*", i)) close = source.indexOf("*/", i + 2) + 2;
     else if (source.startsWith("<!--", i)) close = source.indexOf("-->", i + 4) + 3;
