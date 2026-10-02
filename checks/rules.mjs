@@ -1193,17 +1193,75 @@ const SPLIT_HANDLE_PLACEMENT = new Set([
   "grid-column-end",
   "-webkit-app-region",
 ]);
-// The handle's class, or a class attribute selector aimed at it.
-const SPLIT_HANDLE_SELECTOR =
-  /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])|\[\s*class\s*[~*^$|]?=\s*["']?[^\]"']*(?:kit-split|split-resize)/i;
+const SPLIT_HANDLE_CLASS = /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])/;
+// The class attribute the handle renders with, minus Svelte's scoping hash.
+const SPLIT_HANDLE_CLASS_VALUES = ["horizontal", "vertical"].map(
+  (orientation) =>
+    `kit-split-resize-handle kit-control-states kit-split-resize-handle--${orientation}`,
+);
+const CLASS_ATTRIBUTE_SELECTOR =
+  /\[\s*class\s*([~*^$|]?)=\s*(?:"([^"]*)"|'([^']*)'|([^\s\]]+))\s*(?:[is]\s*)?\]/gi;
 const SPLIT_HANDLE_TOKEN_ASSIGNMENT =
-  /--split-handle-size["'`]?\s*:|setProperty\(\s*["'`]--split-handle-size|style:--split-handle-size/g;
-// CSS, HTML, and line comments, blanked so offsets and line numbers survive.
-// A `//` after `:` or a quote is a URL, not a comment.
-const SOURCE_COMMENTS = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<![:"'`\w])\/\/[^\n]*/g;
+  /--split-handle-size["'`]?\s*:|setProperty\s*\(\s*["'`]--split-handle-size|style:--split-handle-size/g;
 
+/** Whether `[class<operator>="value"]` can match the handle's class attribute. */
+function classAttributeMatchesHandle(operator, value) {
+  const wanted = value.toLowerCase();
+  return SPLIT_HANDLE_CLASS_VALUES.some((actual) => {
+    // kit-control-states is on every kit control, so it never singles out the handle.
+    const classes = actual.split(" ").filter((name) => name !== "kit-control-states");
+    switch (operator) {
+      case "~":
+        return classes.includes(wanted);
+      case "*":
+        return wanted.length > 0 && actual.includes(wanted);
+      case "^":
+        return wanted.length > 0 && actual.startsWith(wanted);
+      case "$":
+        // Svelte's scoping hash really ends the attribute; a handle-class
+        // suffix is the closest app CSS can aim at the handle.
+        return wanted.length > 0 && actual.endsWith(wanted);
+      case "|":
+        return actual === wanted || actual.startsWith(`${wanted}-`);
+      default:
+        return wanted.split(/\s+/).some((name) => classes.includes(name));
+    }
+  });
+}
+
+function compoundTargetsHandle(compound) {
+  if (SPLIT_HANDLE_CLASS.test(compound)) return true;
+  for (const match of compound.matchAll(CLASS_ATTRIBUTE_SELECTOR)) {
+    if (classAttributeMatchesHandle(match[1], match[2] ?? match[3] ?? match[4] ?? "")) return true;
+  }
+  return false;
+}
+
+/** Blank CSS, HTML, and line comments in one linear pass, keeping offsets.
+ * A `//` after `:`, a quote, or a word character is a URL, not a comment. */
 function blankComments(source) {
-  return source.replace(SOURCE_COMMENTS, (comment) => comment.replace(/[^\n]/g, " "));
+  const out = source.split("");
+  const blank = (from, to) => {
+    for (let k = from; k < to; k += 1) if (out[k] !== "\n") out[k] = " ";
+  };
+  let i = 0;
+  while (i < source.length) {
+    let close = -1;
+    if (source.startsWith("/*", i)) close = source.indexOf("*/", i + 2) + 2;
+    else if (source.startsWith("<!--", i)) close = source.indexOf("-->", i + 4) + 3;
+    else if (source.startsWith("//", i) && !/[:"'`\w]/.test(source[i - 1] ?? "")) {
+      close = source.indexOf("\n", i);
+      if (close === -1) close = source.length;
+    } else {
+      i += 1;
+      continue;
+    }
+    // indexOf returned -1 for an unterminated comment: blank to the end.
+    if (close < i + 2) close = source.length;
+    blank(i, close);
+    i = close;
+  }
+  return out.join("");
 }
 
 /** Split a selector at separator characters outside () and []. */
@@ -1253,8 +1311,72 @@ function splitHandleSubject(selector) {
   const unwrapped = replaceFunctional(selector, "global", true);
   const subject = topLevelParts(unwrapped, /[\s>+~]/).at(-1) ?? "";
   const own = replaceFunctional(subject, "not|has", false);
-  if (!SPLIT_HANDLE_SELECTOR.test(own)) return null;
+  if (!compoundTargetsHandle(own)) return null;
   return { pseudoElement: /::|:(?:before|after)\b/.test(own) };
+}
+
+/** Resolve a nested selector against its parent rule's selector. */
+function resolveNestedSelector(selector, parent) {
+  if (parent === null) return selector;
+  return topLevelParts(selector, /,/)
+    .map((part) =>
+      part.includes("&") ? part.replaceAll("&", `:is(${parent})`) : `:is(${parent}) ${part}`,
+    )
+    .join(", ");
+}
+
+/** Every style rule, including parents of nested rules, with its selector
+ * resolved through CSS nesting and its own declarations (nested blocks
+ * blanked out, offsets kept). Input must already have comments blanked. */
+function cssRulesWithNesting(css) {
+  const rules = [];
+  const stack = [{ selector: null, bodyStart: 0, children: [], isRoot: true }];
+  let segmentStart = 0;
+  let parens = 0;
+  for (let i = 0; i < css.length; i += 1) {
+    const ch = css[i];
+    if (ch === "\\") {
+      i += 1;
+    } else if (ch === '"' || ch === "'") {
+      const close = css.indexOf(ch, i + 1);
+      i = close === -1 ? css.length : close;
+    } else if (ch === "(") {
+      parens += 1;
+    } else if (ch === ")") {
+      parens = Math.max(0, parens - 1);
+    } else if (ch === ";" && parens === 0) {
+      segmentStart = i + 1;
+    } else if (ch === "{") {
+      const parent = stack[stack.length - 1];
+      const prelude = css.slice(segmentStart, i).trim();
+      const selector = prelude.startsWith("@")
+        ? parent.selector
+        : resolveNestedSelector(prelude, parent.selector);
+      stack.push({ selector, bodyStart: i + 1, children: [], start: segmentStart });
+      segmentStart = i + 1;
+    } else if (ch === "}") {
+      const frame = stack.pop();
+      if (!frame || frame.isRoot) {
+        stack.push(frame ?? stack[0]);
+      } else {
+        stack[stack.length - 1].children.push([frame.start, i + 1]);
+        // A nested @media body applies to the enclosing rule's selector.
+        if (frame.selector !== null) {
+          const chars = css.slice(frame.bodyStart, i).split("");
+          for (const [from, to] of frame.children) {
+            for (let k = from - frame.bodyStart; k < to - frame.bodyStart; k += 1) chars[k] = " ";
+          }
+          rules.push({
+            selector: frame.selector,
+            body: chars.join(""),
+            bodyStart: frame.bodyStart,
+          });
+        }
+      }
+      segmentStart = i + 1;
+    }
+  }
+  return rules;
 }
 
 export function checkSplitHandleOverride(source, filename) {
@@ -1262,23 +1384,23 @@ export function checkSplitHandleOverride(source, filename) {
   const fix =
     "SplitResizeHandle thickness and look come from --split-handle-size in kit-ui's brand.json; only place the handle (display, position, inset, z-index, order, grid/self alignment)";
   for (const { css, offset } of styleBlocks(source, filename)) {
-    for (const rule of leafCssRules(css)) {
-      const subjects = topLevelParts(rule.selector.replace(/\/\*[\s\S]*?\*\//g, ""), /,/)
-        .map(splitHandleSubject)
-        .filter(Boolean);
+    for (const rule of cssRulesWithNesting(blankComments(css))) {
+      const subjects = topLevelParts(rule.selector, /,/).map(splitHandleSubject).filter(Boolean);
       if (subjects.length === 0) continue;
+      const declarationRe = /(?:^|;)\s*(--[\w-]+|-?[a-zA-Z][\w-]*)\s*:/g;
       if (subjects.some((subject) => subject.pseudoElement)) {
-        findings.push({
-          rule: "split-handle-override",
-          line: lineOfIndex(source, offset + rule.bodyStart - 1),
-          message: `pseudo-element on .kit-split-resize-handle — ${fix}`,
-        });
+        if (declarationRe.test(rule.body)) {
+          findings.push({
+            rule: "split-handle-override",
+            line: lineOfIndex(source, offset + rule.bodyStart - 1),
+            message: `pseudo-element on .kit-split-resize-handle — ${fix}`,
+          });
+        }
         continue;
       }
-      const body = rule.body.replace(/\/\*[\s\S]*?\*\//g, (comment) => " ".repeat(comment.length));
-      const declarationRe = /(?:^|;)\s*(-?[a-zA-Z][\w-]*)\s*:/g;
+      declarationRe.lastIndex = 0;
       let declaration;
-      while ((declaration = declarationRe.exec(body)) !== null) {
+      while ((declaration = declarationRe.exec(rule.body)) !== null) {
         const property = declaration[1].toLowerCase();
         if (SPLIT_HANDLE_PLACEMENT.has(property)) continue;
         findings.push({

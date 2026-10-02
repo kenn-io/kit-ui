@@ -1085,6 +1085,56 @@ describe("split-handle-override", () => {
     expect(checkSource(src, "app.css", rule)).toHaveLength(2);
   });
 
+  test("allows class attribute selectors that cannot match the handle", () => {
+    const src = `[class="kit-split-resize-handle-wrapper"] { width: 8px; }
+[class*="split-resizer-shell"] { width: 8px; }
+[class~="kit-control-states"] { width: 8px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("flags custom properties set on the handle", () => {
+    const src = `.kit-split-resize-handle { --border-muted: red; --press-transform: none; }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(2);
+  });
+
+  test("flags declarations in nested rules and in their parents", () => {
+    const src = `.layout {
+  .kit-split-resize-handle {
+    width: 8px;
+    &:hover { background: red !important; }
+    @media (max-width: 640px) { height: 2px; }
+  }
+}
+`;
+    const findings = checkSource(src, "app.css", rule);
+    expect(findings.map((f) => f.line)).toEqual([3, 4, 5]);
+  });
+
+  test("allows nested rules that only place the handle or style its neighbours", () => {
+    const src = `.layout {
+  .kit-split-resize-handle { z-index: 12; & + .pane { border-left: 0; } }
+}
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("flags setProperty calls with a space before the parenthesis", () => {
+    const src = svelte(
+      ``,
+      ``,
+      `document.documentElement.style.setProperty ("--split-handle-size", "8px");`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(1);
+  });
+
+  test("scans unterminated and repeated comment openers in linear time", () => {
+    const started = performance.now();
+    checkSource("/*" + "a/*".repeat(50_000), "app.css", rule);
+    checkSource("<!--".repeat(50_000), "A.svelte", rule);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
   test("allows styling elements beside a handle named inside :is()", () => {
     const src = `:is(.kit-split-resize-handle, .pane) > .title { color: var(--text-primary); }
 :global(.kit-split-resize-handle + .pane) { border-left: 0; }
