@@ -60,7 +60,7 @@ Shiki emits `--shiki-light`/`--shiki-dark` custom properties per token
 <Markdown source={text} />
 ```
 
-GFM (tables, task lists, strikethrough, `breaks: true`), fences
+GFM (tables, task lists, strikethrough, `breaks: true` by default), fences
 highlighted within budgets, everything sanitized. The previous document
 stays visible during a re-render, and a stale async render never
 overwrites a newer one. Pass `renderer` (below) for app syntax. Prose
@@ -97,6 +97,12 @@ const renderer = createMarkdownRenderer({
 Mermaid diagram rendering (fence interceptor + pan/zoom viewer) ships as
 an opt-in module on top of this hook — see
 [mermaid.md](mermaid.md).
+
+For documents with source lines wrapped within paragraphs, use
+`createMarkdownRenderer({ breaks: false })`. Source newlines become soft
+breaks; two trailing spaces or a backslash still create a hard break.
+Code blocks keep their line breaks. The default remains `breaks: true`
+for chat-style text.
 
 `codeFence` contract: the returned string is **markup**, so the
 interceptor must escape the user-authored fence text itself

@@ -48,6 +48,9 @@ export declare function codeHighlightPlan(marked: Marked, tokens: Tokens.Generic
  */
 export declare function highlightCode(code: string, lang: string): Promise<string | null>;
 export interface MarkdownRendererOptions {
+    /** Turn source newlines into hard breaks (default true). Set false
+     * for standard Markdown soft breaks in prose. */
+    breaks?: boolean;
     /** Custom marked tokenizer/renderer extensions — the injection point
      * for app-specific syntax (issue references, wrapper tags). */
     extensions?: TokenizerAndRendererExtension[];
