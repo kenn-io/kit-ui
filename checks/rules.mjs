@@ -1159,6 +1159,111 @@ export function checkChipLabelOverride(source, filename) {
   return findings;
 }
 
+/** SplitResizeHandle has one thickness everywhere: --split-handle-size from
+ * kit-ui's brand.json. Consumers may place a handle but never restyle it, so
+ * any rule whose subject is the handle may only use placement properties;
+ * pseudo-elements on it and assignments to the token are always findings.
+ * This rule ignores kit-ui-check-ignore and cannot be disabled. */
+const SPLIT_HANDLE_PLACEMENT = new Set([
+  "display",
+  "visibility",
+  "position",
+  "inset",
+  "inset-block",
+  "inset-block-start",
+  "inset-block-end",
+  "inset-inline",
+  "inset-inline-start",
+  "inset-inline-end",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "z-index",
+  "order",
+  "align-self",
+  "justify-self",
+  "place-self",
+  "grid-area",
+  "grid-row",
+  "grid-row-start",
+  "grid-row-end",
+  "grid-column",
+  "grid-column-start",
+  "grid-column-end",
+  "-webkit-app-region",
+]);
+const SPLIT_HANDLE_CLASS = /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])/;
+const SPLIT_HANDLE_TOKEN_ASSIGNMENT =
+  /--split-handle-size["'`]?\s*:|setProperty\(\s*["'`]--split-handle-size|style:--split-handle-size/g;
+
+/** The last compound of a selector names the element a rule styles.
+ * :not()/:has() arguments describe other elements, so they are dropped;
+ * :global()/:where()/:is() wrappers are unwrapped. */
+function splitHandleSubject(selector) {
+  const subject =
+    selector
+      .replace(/:(?:not|has)\([^()]*\)/g, "")
+      .replace(/:(?:global|where|is)\(([^()]*)\)/g, "$1")
+      .trim()
+      .split(/[\s>+~]+/)
+      .at(-1) ?? "";
+  if (!SPLIT_HANDLE_CLASS.test(subject)) return null;
+  return { pseudoElement: /::|:(?:before|after)\b/.test(subject) };
+}
+
+export function checkSplitHandleOverride(source, filename) {
+  const findings = [];
+  const fix =
+    "SplitResizeHandle thickness and look come from --split-handle-size in kit-ui's brand.json; only place the handle (display, position, inset, z-index, order, grid/self alignment)";
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    for (const rule of leafCssRules(css)) {
+      const subjects = rule.selector
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .split(",")
+        .map(splitHandleSubject)
+        .filter(Boolean);
+      if (subjects.length === 0) continue;
+      if (subjects.some((subject) => subject.pseudoElement)) {
+        findings.push({
+          rule: "split-handle-override",
+          line: lineOfIndex(source, offset + rule.bodyStart - 1),
+          message: `pseudo-element on .kit-split-resize-handle — ${fix}`,
+        });
+        continue;
+      }
+      const body = rule.body.replace(/\/\*[\s\S]*?\*\//g, (comment) => " ".repeat(comment.length));
+      const declarationRe = /(?:^|;)\s*(-?[a-zA-Z][\w-]*)\s*:/g;
+      let declaration;
+      while ((declaration = declarationRe.exec(body)) !== null) {
+        const property = declaration[1].toLowerCase();
+        if (SPLIT_HANDLE_PLACEMENT.has(property)) continue;
+        findings.push({
+          rule: "split-handle-override",
+          line: lineOfIndex(
+            source,
+            offset + rule.bodyStart + declaration.index + declaration[0].indexOf(declaration[1]),
+          ),
+          message: `\`${property}\` on .kit-split-resize-handle — ${fix}`,
+        });
+      }
+    }
+  }
+  let match;
+  while ((match = SPLIT_HANDLE_TOKEN_ASSIGNMENT.exec(source)) !== null) {
+    findings.push({
+      rule: "split-handle-override",
+      line: lineOfIndex(source, match.index),
+      message:
+        "--split-handle-size is set once, in kit-ui's brand.json — do not override it in an app",
+    });
+  }
+  return findings;
+}
+
+/** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
+export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override"]);
+
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
   "raw-color": checkRawColors,
@@ -1205,6 +1310,7 @@ export const ALL_RULES = {
   "nonstandard-spacing": checkNonstandardSpacing,
   "legacy-svelte": checkLegacySvelte,
   "chip-label-override": checkChipLabelOverride,
+  "split-handle-override": checkSplitHandleOverride,
 };
 
 /** Run all (or the selected) rules on one file's source. */
@@ -1216,5 +1322,7 @@ export function checkSource(source, filename, ruleNames = Object.keys(ALL_RULES)
     if (!rule) throw new Error(`unknown rule: ${name}`);
     findings.push(...rule(source, filename));
   }
-  return findings.filter((f) => !isIgnored(lines, f.line)).sort((a, b) => a.line - b.line);
+  return findings
+    .filter((f) => UNSUPPRESSIBLE_RULES.has(f.rule) || !isIgnored(lines, f.line))
+    .sort((a, b) => a.line - b.line);
 }

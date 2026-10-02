@@ -19,7 +19,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { ALL_RULES, checkSource } from "../checks/rules.mjs";
+import { ALL_RULES, checkSource, UNSUPPRESSIBLE_RULES } from "../checks/rules.mjs";
 
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -46,6 +46,13 @@ function parseArgs(argv) {
       opts.rules = (argv[++i] ?? "").split(",").filter(Boolean);
     } else if (arg === "--disable") {
       const disabled = new Set((argv[++i] ?? "").split(","));
+      const locked = [...disabled].filter((r) => UNSUPPRESSIBLE_RULES.has(r));
+      if (locked.length > 0) {
+        console.error(
+          `cannot disable ${locked.join(", ")}: it guards a single design-system value`,
+        );
+        process.exit(2);
+      }
       opts.rules = opts.rules.filter((r) => !disabled.has(r));
     } else if (arg === "--help" || arg === "-h") {
       console.log("usage: kit-ui-check [paths…] [--rules a,b] [--disable a,b] [--warn] [--json]");

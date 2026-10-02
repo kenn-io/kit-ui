@@ -6,7 +6,6 @@
     ariaLabel: string;
     /** Direction in which the two panes are arranged. */
     orientation?: SplitResizeOrientation;
-    class?: string;
     disabled?: boolean;
     /** Pixels moved per arrow-key press. */
     keyboardStep?: number;
@@ -21,7 +20,6 @@
   let {
     ariaLabel,
     orientation = "horizontal",
-    class: className = "",
     disabled = false,
     keyboardStep = 24,
     ariaValueMin,
@@ -148,14 +146,7 @@
 <!-- A separator is an adjustable widget; the button supplies native focus and disabled semantics. -->
 <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
 <button
-  class={[
-    "kit-split-resize-handle",
-    "kit-control-states",
-    `kit-split-resize-handle--${orientation}`,
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ")}
+  class="kit-split-resize-handle kit-control-states kit-split-resize-handle--{orientation}"
   type="button"
   role="separator"
   aria-label={ariaLabel}
@@ -169,26 +160,51 @@
 ></button>
 
 <style>
+  /* Every split in every app has the same thickness: --split-handle-size from
+     brand.json. There is deliberately no class prop, and the thickness is
+     !important, so a consumer cannot restyle one handle; kit-ui-check's
+     split-handle-override rule rejects the attempt. Consumers only place the
+     handle (display, position, z-index). */
   .kit-split-resize-handle {
     --press-transform: none;
 
+    position: relative;
+    z-index: 1;
     background: var(--border-muted);
     appearance: none;
     border: 0;
+    margin: 0;
     padding: 0;
-    flex-shrink: 0;
+    flex: none;
+  }
+
+  /* A thin line is hard to grab. Extend the pointer target 2px past both
+     edges with a transparent pseudo-element; it hit-tests as the button but
+     paints nothing, so the visible line keeps the token's thickness. */
+  .kit-split-resize-handle::after {
+    content: "";
+    position: absolute;
+    inset: 0 -2px;
   }
 
   .kit-split-resize-handle--horizontal {
-    width: 4px;
+    width: var(--split-handle-size) !important;
+    min-width: var(--split-handle-size) !important;
+    max-width: var(--split-handle-size) !important;
     cursor: col-resize;
     touch-action: pan-y;
   }
 
   .kit-split-resize-handle--vertical {
-    height: 4px;
+    height: var(--split-handle-size) !important;
+    min-height: var(--split-handle-size) !important;
+    max-height: var(--split-handle-size) !important;
     cursor: row-resize;
     touch-action: pan-x;
+  }
+
+  .kit-split-resize-handle--vertical::after {
+    inset: -2px 0;
   }
 
   .kit-split-resize-handle:hover,

@@ -127,6 +127,7 @@
   "layout": {
     "headerHeight": "44px",
     "statusBarHeight": "24px",
+    "splitHandleSize": "4px",
     "zPopover": 1000,
     "zOverlay": 1000,
     "zTooltip": 1100

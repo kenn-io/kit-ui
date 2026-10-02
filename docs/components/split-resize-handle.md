@@ -5,6 +5,30 @@ deltas along the active axis and the panes apply and clamp them. The default
 `horizontal` orientation is for side-by-side panes; use `vertical` for stacked
 panes.
 
+## One thickness everywhere
+
+Every handle in every app is `--split-handle-size` thick (4px), in both
+orientations. The value lives in `src/lib/brand.json` (`layout.splitHandleSize`)
+and nowhere else. Apps cannot change it:
+
+- The component has no `class` prop, and its thickness is `!important`.
+- `kit-ui-check` reports any app CSS that sizes, colors, borders, pads, or adds
+  pseudo-elements to `.kit-split-resize-handle`, and any app assignment to
+  `--split-handle-size` (`split-handle-override`). The rule ignores
+  `kit-ui-check-ignore` and cannot be passed to `--disable`.
+- Panes next to a handle must not draw a border on that edge; the handle is
+  the divider.
+
+Apps may still place a handle: `display`, `visibility`, `position`, `inset`
+and its longhands, `z-index`, `order`, grid placement, self-alignment, and
+`-webkit-app-region` are allowed. Hide a handle responsively from a wrapper
+selector such as `.layout :global(.kit-split-resize-handle) { display: none; }`.
+Read the token, for example to reserve room for an absolutely positioned
+handle, with `var(--split-handle-size)`.
+
+The handle's pointer target extends 2px past each edge of the visible line, so
+it is easy to grab without looking thicker.
+
 ```svelte
 <script lang="ts">
   import { SplitResizeHandle, type SplitResizeEvent } from "@kenn-io/kit-ui";
@@ -50,7 +74,6 @@ panes.
 | `onResizeStart` | `(event) => void`                   | —              | Snapshot the starting dimension here         |
 | `onResize`      | `(event: SplitResizeEvent) => void` | —              | Fires on every pointer move or keyboard step |
 | `onResizeEnd`   | `(event: SplitResizeEvent) => void` | —              | Commit and persist the final dimension       |
-| `class`         | `string`                            | `""`           |                                              |
 
 `SplitResizeEvent` carries `orientation`, `delta`, `start`, `current`, and the
 raw pointer or keyboard `event`. Horizontal handles use Left/Right; vertical

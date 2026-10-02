@@ -1013,3 +1013,80 @@ describe("suppression and plumbing", () => {
     expect(() => checkSource("", "A.svelte", ["nope"])).toThrow("unknown rule");
   });
 });
+
+describe("split-handle-override", () => {
+  const rule = ["split-handle-override"];
+
+  test("flags resizing a handle through a wrapper selector", () => {
+    const src = svelte(
+      `.chat-resizer :global(.kit-split-resize-handle) {
+        display: block;
+        height: 100%;
+        width: var(--chat-divider-width);
+      }`,
+    );
+    const findings = checkSource(src, "A.svelte", rule);
+    expect(findings.map((f) => f.message.split(" ")[0])).toEqual(["`height`", "`width`"]);
+  });
+
+  test("flags restyling the handle's colour, including hover states", () => {
+    const src = `.hub .kit-split-resize-handle { background: transparent; }
+.hub .kit-split-resize-handle:hover { background: var(--accent-blue); }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(2);
+  });
+
+  test("flags pseudo-elements on the handle and its orientation modifiers", () => {
+    const src = `:where(.kit-split-resize-handle)::after { content: ""; inset: 0 -2px; }
+:where(.kit-split-resize-handle--vertical)::after { top: -2px; }
+`;
+    const findings = checkSource(src, "app.css", rule);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("pseudo-element");
+  });
+
+  test("allows placing and hiding a handle", () => {
+    const src = svelte(
+      `.chat-resizer :global(.kit-split-resize-handle) {
+        position: absolute;
+        inset: 0 auto 0 0;
+        z-index: 12;
+        -webkit-app-region: no-drag;
+      }
+      @media (max-width: 760px) {
+        .layout :global(.kit-split-resize-handle) { display: none; }
+      }`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("allows styling neighbours and unrelated kit-split classes", () => {
+    const src = `.layout:has(.kit-split-resize-handle) .pane { border: 0; }
+.kit-split-resize-handle + .pane { padding-left: 4px; }
+.pane:not(.kit-split-resize-handle) { width: 10px; }
+.kit-split-resize-handle-wrapper { width: 10px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("flags app-level assignments of the size token", () => {
+    const src = svelte(
+      `:root { --split-handle-size: 8px; }`,
+      `<div style="--split-handle-size: 2px" style:--split-handle-size="3px"></div>`,
+      `el.style.setProperty("--split-handle-size", "6px");`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(4);
+  });
+
+  test("allows reading the size token", () => {
+    const src = `.chat-slot { padding-inline-start: var(--split-handle-size); }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("ignores the kit-ui-check-ignore marker", () => {
+    const src = `/* kit-ui-check-ignore: our splitters are special */
+.layout .kit-split-resize-handle { width: 8px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+  });
+});
