@@ -185,6 +185,29 @@ test("hideEmpty keeps the menu closed and leaves keys to the field", async ({ pa
   await expect(page.locator('[data-demo="command-value"]')).toHaveText("/zz\n");
 });
 
+test("Escape during a hidden pending search closes the query and reaches the field", async ({
+  page,
+}) => {
+  await gotoPage(page, "mention-textarea");
+  await page.evaluate(async () => {
+    const { mountPendingMention } =
+      await import("/tests/browser/fixtures/mount-mention-textarea.ts");
+    Object.assign(window, { __pending: mountPendingMention("Pending") });
+  });
+  const textarea = page.getByRole("textbox", { name: "Pending" });
+
+  await textarea.pressSequentially("/rev");
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  // Matches that arrive after Escape must not reopen the dismissed menu.
+  await page.evaluate(() =>
+    (window as any).__pending.resolve([{ id: "review", insert: "review", label: "Review" }]),
+  );
+  await page.waitForTimeout(100);
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__pending.keys)).toContain("Escape");
+});
+
 test("embedded field drops its frame, grows with content, and exposes the textarea", async ({
   page,
 }) => {

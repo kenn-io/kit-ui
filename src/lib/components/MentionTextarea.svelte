@@ -261,10 +261,16 @@
         return;
       }
     }
-    if (visible && event.key === "Escape") {
-      event.preventDefault();
+    if (open && event.key === "Escape") {
+      // Escape always ends the query, which also drops a pending lookup that
+      // could otherwise reopen the menu. A hidden menu leaves the key to the
+      // field as well.
+      const shown = visible;
       open = false;
-      return;
+      if (shown) {
+        event.preventDefault();
+        return;
+      }
     }
     onkeydown?.(event);
   }

@@ -109,7 +109,9 @@ returns at least one option, and keys such as Enter and Escape go to the
 textarea meanwhile. Use it for synchronous searches over a fixed list, such
 as slash commands, where an empty menu only interrupts typing: with `/` as
 the trigger, a path such as `/tmp` opens nothing unless a command matches. An async
-search with `hideEmpty` closes the menu while each lookup is pending.
+search with `hideEmpty` closes the menu while each lookup is pending;
+Escape during that wait still ends the query, so a late response cannot
+reopen it.
 
 ## Keyboard protocol
 
