@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { MentionTextarea, type MentionOption } from "../../lib/index.js";
+  import {
+    Button,
+    MentionTextarea,
+    type MentionOption,
+    type MentionTrigger,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const issues: MentionOption[] = [
@@ -33,6 +38,59 @@
       [user.insert, user.label].some((part) => part.toLowerCase().includes(q)),
     );
   }
+
+  let commandValue = $state("");
+  let commandField = $state<HTMLTextAreaElement>();
+  let edits = $state(0);
+  let pastes = $state(0);
+  const commands: MentionOption[] = [
+    { id: "review", insert: "review", label: "Review the current changes" },
+    { id: "plan", insert: "plan", label: "Plan a change" },
+    { id: "compact", insert: "compact", label: "Summarize the conversation" },
+  ];
+  function searchCommands(query: string): MentionOption[] {
+    const q = query.toLowerCase();
+    return commands.filter((command) => command.insert.startsWith(q));
+  }
+
+  const files = [
+    "README.md",
+    "package.json",
+    "src/lib/index.ts",
+    "src/lib/components/Button.svelte",
+    "src/lib/components/MentionTextarea.svelte",
+    "src/lib/components/mention.ts",
+    "docs/components/mention-textarea.md",
+    "tests/browser/mention-textarea.spec.ts",
+  ];
+  // A stand-in for an app's file search: fzf-style subsequence matching that
+  // ranks tight matches and matches in the file name first. Real apps rank
+  // their own project files, usually off the main thread.
+  function fuzzyScore(path: string, query: string): number {
+    const text = path.toLowerCase();
+    const nameStart = text.lastIndexOf("/") + 1;
+    let score = 0;
+    let at = -1;
+    for (const char of query.toLowerCase()) {
+      const next = text.indexOf(char, at + 1);
+      if (next === -1) return -1;
+      score += next === at + 1 ? 3 : 1;
+      if (next >= nameStart) score += 2;
+      at = next;
+    }
+    return score - path.length / 100;
+  }
+  function searchFiles(query: string): MentionOption[] {
+    return files
+      .map((path) => ({ path, score: fuzzyScore(path, query) }))
+      .filter((entry) => entry.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ path }) => ({ id: path, insert: path, label: "" }));
+  }
+  const composerTriggers: MentionTrigger[] = [
+    { char: "/", search: searchCommands, hideEmpty: true, menuLabel: "Commands" },
+    { char: "@", search: searchFiles, emptyLabel: "No matching files", menuLabel: "Files" },
+  ];
 </script>
 
 <DemoSection
@@ -89,7 +147,66 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Commands and files in a composer"
+  description="triggers gives each character its own search: / lists commands anywhere in the message, and @ fuzzy-matches files. The / trigger uses hideEmpty, so a path such as /tmp opens nothing unless a command matches, and the / inside @src/lib stays part of the file query. embedded drops the field's own frame so the composer card draws it, and textareaEl exposes the field for focus management."
+  code={`<div class="composer">
+  <MentionTextarea
+    bind:value
+    bind:textareaEl
+    triggers={[
+      { char: "/", search: searchCommands, hideEmpty: true, menuLabel: "Commands" },
+      { char: "@", search: searchFiles, menuLabel: "Files" },
+    ]}
+    embedded
+    placement="top"
+    rows={2}
+    oninput={() => edits++}
+    onpaste={(event) => pastes += event.clipboardData?.files.length ?? 0}
+    ariaLabel="Message"
+  />
+</div>`}
+>
+  <div class="mention-demo">
+    <div class="composer">
+      <MentionTextarea
+        bind:value={commandValue}
+        bind:textareaEl={commandField}
+        triggers={composerTriggers}
+        embedded
+        placement="top"
+        rows={2}
+        placeholder="Ask the agent; / for commands, @ for files"
+        ariaLabel="Message"
+        ariaDescribedby="composer-help"
+        oninput={() => edits++}
+        onpaste={(event) => (pastes += event.clipboardData?.files.length ?? 0)}
+      />
+    </div>
+    <span id="composer-help">Type / for a command or @ for a file, anywhere in the message.</span>
+    <span>value: <code data-demo="command-value">{commandValue || "(empty)"}</code></span>
+    <span
+      >edits: <code data-demo="command-edits">{edits}</code> · pasted files:
+      <code data-demo="command-pastes">{pastes}</code></span
+    >
+    <div><Button size="sm" onclick={() => commandField?.focus()}>Focus the composer</Button></div>
+  </div>
+</DemoSection>
+
 <style>
+  .composer {
+    --kit-mention-padding: var(--space-4) var(--space-5);
+    --kit-mention-min-height: 56px;
+    --kit-mention-max-height: 12rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+  }
+
+  .composer:focus-within {
+    border-color: var(--accent-blue);
+  }
+
   .mention-demo {
     display: flex;
     flex-direction: column;

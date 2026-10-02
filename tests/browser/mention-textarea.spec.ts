@@ -123,3 +123,120 @@ test("custom trigger and row snippet", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.locator('[data-demo="user-mention-value"]')).toHaveText("@marius ");
 });
+
+test("slash commands open anywhere in the message", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+  const options = page.locator(".kit-mention__option");
+
+  // A path matches no command, so no menu interrupts typing.
+  await textarea.pressSequentially("look at /tmp then ");
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+
+  await textarea.pressSequentially("/p");
+  await expect(options).toHaveCount(1);
+  await expect(options).toContainText("/plan");
+  await page.keyboard.press("Enter");
+
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText("look at /tmp then /plan ");
+  // Inserting a command counts as an edit, like typing.
+  await expect(page.locator('[data-demo="command-edits"]')).not.toHaveText("0");
+  await expect(textarea).toHaveAttribute("aria-describedby", "composer-help");
+});
+
+test("one field offers commands and fuzzy file references", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+  const files = page.getByRole("listbox", { name: "Files" });
+
+  // Letters in order anywhere in the path match; the file name ranks first.
+  await textarea.pressSequentially("check @txtarea.sv");
+  await expect(files.locator(".kit-mention__option").first()).toContainText(
+    "@src/lib/components/MentionTextarea.svelte",
+  );
+  // The "/" inside a file query does not switch to the command menu.
+  await textarea.fill("");
+  await textarea.pressSequentially("@src/lib/components/bu");
+  await expect(files).toBeVisible();
+  await expect(page.getByRole("listbox", { name: "Commands" })).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await textarea.pressSequentially("then /re");
+  await expect(page.getByRole("listbox", { name: "Commands" })).toContainText("/review");
+  // placement="top" keeps the menu above the field, clear of a composer toolbar.
+  const menuBox = await page.getByRole("listbox", { name: "Commands" }).boundingBox();
+  const fieldBox = await textarea.boundingBox();
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(fieldBox!.y);
+  await page.keyboard.press("Tab");
+
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText(
+    "@src/lib/components/Button.svelte then /review ",
+  );
+});
+
+test("hideEmpty keeps the menu closed and leaves keys to the field", async ({ page }) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+
+  await textarea.pressSequentially("/zz");
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+  await expect(textarea).not.toHaveAttribute("aria-controls");
+  // Enter is not consumed by a hidden menu: it reaches the textarea.
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-demo="command-value"]')).toHaveText("/zz\n");
+});
+
+test("Escape during a hidden pending search closes the query and reaches the field", async ({
+  page,
+}) => {
+  await gotoPage(page, "mention-textarea");
+  await page.evaluate(async () => {
+    const { mountPendingMention } =
+      await import("/tests/browser/fixtures/mount-mention-textarea.ts");
+    Object.assign(window, { __pending: mountPendingMention("Pending") });
+  });
+  const textarea = page.getByRole("textbox", { name: "Pending" });
+
+  await textarea.pressSequentially("/rev");
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  // Matches that arrive after Escape must not reopen the dismissed menu.
+  await page.evaluate(() =>
+    (window as any).__pending.resolve([{ id: "review", insert: "review", label: "Review" }]),
+  );
+  await page.waitForTimeout(100);
+  await expect(page.locator(".kit-mention__menu")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__pending.keys)).toContain("Escape");
+});
+
+test("embedded field drops its frame, grows with content, and exposes the textarea", async ({
+  page,
+}) => {
+  await gotoPage(page, "mention-textarea");
+  const textarea = page.getByRole("textbox", { name: "Message" });
+
+  const style = await textarea.evaluate((el) => {
+    const computed = getComputedStyle(el);
+    return {
+      border: computed.borderTopWidth,
+      resize: computed.resize,
+      padding: computed.paddingTop,
+    };
+  });
+  expect(style).toEqual({ border: "0px", resize: "none", padding: "8px" });
+  const before = await textarea.evaluate((el) => el.getBoundingClientRect().height);
+  await textarea.fill("one\ntwo\nthree\nfour\nfive");
+  const after = await textarea.evaluate((el) => el.getBoundingClientRect().height);
+  expect(after).toBeGreaterThan(before);
+
+  await page.getByRole("button", { name: "Focus the composer" }).click();
+  await expect(textarea).toBeFocused();
+
+  await textarea.evaluate((el) => {
+    const data = new DataTransfer();
+    data.items.add(new File(["x"], "shot.png", { type: "image/png" }));
+    el.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  });
+  await expect(page.locator('[data-demo="command-pastes"]')).toHaveText("1");
+});

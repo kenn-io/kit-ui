@@ -2,46 +2,92 @@
   import { tick, type Snippet } from "svelte";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { MentionOption } from "./mention.js";
+  import type { MentionOption, MentionTrigger } from "./mention.js";
 
-  interface Props {
+  // Exactly one lookup form: a single `search` (with `trigger`), or `triggers`.
+  type Props = BaseProps &
+    (
+      | {
+          /** App-provided lookup for `trigger`: called with the text between
+           * the trigger character and the caret (may be empty on a bare
+           * trigger). Results beyond `maxResults` are dropped. */
+          search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
+          /** Character that opens the menu when it starts a word (default "#"). */
+          trigger?: string;
+          triggers?: never;
+        }
+      | {
+          /** Several triggers, each with its own search, e.g. "/" for
+           * commands and "@" for files. Replaces `hideEmpty` and the status
+           * labels. */
+          triggers: MentionTrigger[];
+          search?: never;
+          trigger?: never;
+        }
+    );
+
+  interface BaseProps {
     value: string;
-    /** App-provided lookup: called with the text between the trigger
-     * character and the caret (may be empty on a bare trigger). Results
-     * beyond `maxResults` are dropped. */
-    search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
-    /** Character that opens the menu at a word boundary (default "#"). */
-    trigger?: string;
+    /** Keep the menu closed while nothing matches instead of showing the
+     * searching and empty rows. Suits synchronous searches over a fixed
+     * list, where an empty menu only gets in the way of typing. */
+    hideEmpty?: boolean;
+    /** Borderless, transparent field that grows with its content and has no
+     * resize handle, for a textarea inside a composer card that draws its
+     * own frame. Size it with --kit-mention-padding, --kit-mention-min-height,
+     * and --kit-mention-max-height. */
+    embedded?: boolean;
+    /** Where the menu opens: below the field when it fits ("auto"), or
+     * always above or below. A composer at the bottom of a panel opens it
+     * above so the menu never covers its toolbar. */
+    placement?: "auto" | "top" | "bottom";
     placeholder?: string;
     rows?: number;
     disabled?: boolean;
     ariaLabel?: string;
+    ariaDescribedby?: string;
     maxResults?: number;
     searchingLabel?: string;
     emptyLabel?: string;
-    /** Custom row rendering; receives the option and whether it is the
-     * keyboard-active row. Defaults to trigger+insert, label, dim meta. */
-    option?: Snippet<[MentionOption, boolean]>;
+    /** Custom row rendering; receives the option, whether it is the
+     * keyboard-active row, and the trigger character that opened the menu.
+     * Defaults to trigger+insert, label, dim meta. */
+    option?: Snippet<[MentionOption, boolean, string]>;
     /** Receives keys the mention menu did not consume. */
     onkeydown?: (event: KeyboardEvent) => void;
+    /** Called with the new text after each edit. */
+    oninput?: (value: string) => void;
+    /** Receives paste events, e.g. to take pasted files. */
+    onpaste?: (event: ClipboardEvent) => void;
+    /** The underlying textarea (bindable) — for focus and caret management. */
+    textareaEl?: HTMLTextAreaElement | undefined;
+    class?: string;
   }
 
   let {
     value = $bindable(""),
-    search,
+    search = undefined,
     trigger = "#",
+    triggers = undefined,
+    hideEmpty = false,
+    embedded = false,
+    placement = "auto",
     placeholder = "",
     rows = 3,
     disabled = false,
     ariaLabel = undefined,
+    ariaDescribedby = undefined,
     maxResults = 8,
     searchingLabel = "Searching…",
     emptyLabel = "No matches",
     option,
     onkeydown = undefined,
+    oninput = undefined,
+    onpaste = undefined,
+    textareaEl: textarea = $bindable(undefined),
+    class: className = "",
   }: Props = $props();
 
-  let textarea = $state<HTMLTextAreaElement>();
   let wrapEl = $state<HTMLDivElement>();
   let menuEl = $state<HTMLDivElement>();
   let menuStyle = $state("");
@@ -52,6 +98,16 @@
   let searching = $state(false);
   let queryStart = -1;
   let searchVersion = 0;
+  // The single-trigger props are shorthand for a one-entry list.
+  const triggerList = $derived<MentionTrigger[]>(
+    triggers ?? (search ? [{ char: trigger, search, hideEmpty, searchingLabel, emptyLabel }] : []),
+  );
+  // Index into triggerList of the trigger that opened the menu.
+  let activeIndex = $state(0);
+  const active = $derived(triggerList[activeIndex]);
+  // With hideEmpty, an open query that matches nothing shows no menu and
+  // leaves its keys to the textarea.
+  const visible = $derived(open && (!active?.hideEmpty || results.length > 0));
 
   const uid = $props.id();
   const listId = `${uid}-mention-list`;
@@ -66,6 +122,7 @@
       return;
     }
     const q = query;
+    const lookup = active?.search;
     const version = ++searchVersion;
     // Drop the previous query's results up front: while the new search is
     // pending there must be nothing stale to navigate to or insert.
@@ -73,7 +130,8 @@
     searching = true;
     void (async () => {
       try {
-        const found = await search(q);
+        if (!lookup) throw new Error("MentionTextarea needs search or triggers");
+        const found = await lookup(q);
         if (version !== searchVersion) return;
         results = found.slice(0, maxResults);
         highlight = 0;
@@ -98,30 +156,26 @@
       popoverWidth: rect.width,
       popoverHeight: menuEl.offsetHeight,
       triggerGap: 4,
+      placement: placement === "top" ? "above" : placement === "bottom" ? "below" : "auto",
     })}; width: ${Math.round(rect.width)}px`;
   }
 
   $effect(() => {
-    if (!open) return;
+    if (!visible) return;
     positionMenu();
     return autoReposition(() => [menuEl, wrapEl], positionMenu);
   });
 
-  /** Index of the trigger character governing the caret, or -1: the trigger
-   * must start the text or follow whitespace, with no whitespace between it
-   * and the caret. */
-  function findTriggerIndex(text: string, caret: number): number {
-    for (let i = caret - 1; i >= 0; i--) {
-      const char = text[i];
-      if (char === trigger) {
-        if (i === 0) return i;
-        const prev = text[i - 1];
-        if (prev === " " || prev === "\n" || prev === "\t") return i;
-        return -1;
-      }
-      if (char === " " || char === "\n" || char === "\t") return -1;
-    }
-    return -1;
+  /** The trigger governing the caret: the word holding the caret (text
+   * since the last whitespace) must start with a trigger character. Reading
+   * the word's first character means a later trigger character inside it,
+   * like the "/" in "@src/lib", stays part of the query. */
+  function findTrigger(text: string, caret: number): { start: number; index: number } | null {
+    let start = caret;
+    while (start > 0 && !" \n\t".includes(text[start - 1]!)) start--;
+    if (start === caret) return null;
+    const index = triggerList.findIndex((entry) => entry.char === text[start]);
+    return index === -1 ? null : { start, index };
   }
 
   function refreshMention(): void {
@@ -131,15 +185,16 @@
     }
     const caret = textarea.selectionStart;
     const text = textarea.value;
-    const triggerIndex = findTriggerIndex(text, caret);
-    if (triggerIndex === -1) {
+    const found = findTrigger(text, caret);
+    if (!found) {
       open = false;
       query = "";
       queryStart = -1;
       return;
     }
-    queryStart = triggerIndex;
-    query = text.slice(triggerIndex + 1, caret);
+    queryStart = found.start;
+    activeIndex = found.index;
+    query = text.slice(found.start + 1, caret);
     open = true;
   }
 
@@ -175,8 +230,9 @@
     const caret = textarea.selectionStart;
     const before = text.slice(0, queryStart);
     const after = text.slice(caret);
-    const replacement = `${trigger}${item.insert} `;
+    const replacement = `${active?.char ?? trigger}${item.insert} `;
     value = before + replacement + after;
+    oninput?.(value);
     open = false;
     query = "";
     await tick();
@@ -206,9 +262,15 @@
       }
     }
     if (open && event.key === "Escape") {
-      event.preventDefault();
+      // Escape always ends the query, which also drops a pending lookup that
+      // could otherwise reopen the menu. A hidden menu leaves the key to the
+      // field as well.
+      const shown = visible;
       open = false;
-      return;
+      if (shown) {
+        event.preventDefault();
+        return;
+      }
     }
     onkeydown?.(event);
   }
@@ -218,7 +280,7 @@
   }
 </script>
 
-<div class="kit-mention" bind:this={wrapEl}>
+<div class={["kit-mention", embedded && "kit-mention--embedded", className]} bind:this={wrapEl}>
   <textarea
     bind:this={textarea}
     bind:value
@@ -227,27 +289,34 @@
     {rows}
     {placeholder}
     aria-label={ariaLabel}
-    aria-activedescendant={open && results.length > 0 ? `${listId}-opt-${highlight}` : undefined}
-    oninput={refreshMention}
+    aria-describedby={ariaDescribedby}
+    aria-autocomplete="list"
+    aria-controls={visible ? listId : undefined}
+    aria-activedescendant={visible && results.length > 0 ? `${listId}-opt-${highlight}` : undefined}
+    oninput={() => {
+      refreshMention();
+      oninput?.(value);
+    }}
     onkeydown={handleKeydown}
     onkeyup={handleKeyup}
     onclick={refreshMention}
-    onblur={handleBlur}></textarea>
-  {#if open}
+    onblur={handleBlur}
+    {onpaste}></textarea>
+  {#if visible}
     <div
       bind:this={menuEl}
       class="kit-mention__menu kit-popover-card"
       style={menuStyle}
       id={listId}
       role="listbox"
-      aria-label="Insert reference"
+      aria-label={active?.menuLabel ?? "Insert reference"}
       tabindex="-1"
       onmousedown={preventBlur}
     >
       {#if searching && results.length === 0}
-        <div class="kit-mention__status">{searchingLabel}</div>
+        <div class="kit-mention__status">{active?.searchingLabel ?? searchingLabel}</div>
       {:else if results.length === 0}
-        <div class="kit-mention__status">{emptyLabel}</div>
+        <div class="kit-mention__status">{active?.emptyLabel ?? emptyLabel}</div>
       {:else}
         {#each results as item, index (item.id)}
           <button
@@ -264,9 +333,9 @@
             onmouseenter={() => (highlight = index)}
           >
             {#if option}
-              {@render option(item, index === highlight)}
+              {@render option(item, index === highlight, active?.char ?? trigger)}
             {:else}
-              <span class="kit-mention__insert">{trigger}{item.insert}</span>
+              <span class="kit-mention__insert">{active?.char ?? trigger}{item.insert}</span>
               <span class="kit-mention__label">{item.label}</span>
               {#if item.meta}
                 <span class="kit-mention__meta">{item.meta}</span>
@@ -311,6 +380,30 @@
 
   .kit-mention__textarea:disabled {
     opacity: var(--opacity-disabled);
+  }
+
+  /* Embedded: the surrounding composer owns the frame and focus styling. */
+  .kit-mention--embedded .kit-mention__textarea {
+    display: block;
+    min-height: var(--kit-mention-min-height, auto);
+    max-height: var(--kit-mention-max-height, none);
+    padding: var(--kit-mention-padding, var(--space-2) var(--space-3));
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font: inherit;
+    line-height: 1.5;
+    resize: none;
+    field-sizing: content;
+  }
+
+  .kit-mention--embedded .kit-mention__textarea::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .kit-mention--embedded .kit-mention__textarea:disabled {
+    opacity: 1;
+    cursor: not-allowed;
   }
 
   .kit-mention__menu {
