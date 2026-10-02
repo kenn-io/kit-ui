@@ -327,6 +327,14 @@
     box-shadow: var(--shadow-sm);
   }
 
+  /* Sized here rather than from an inherited --kit-control-height, so
+   * the caption's inset always matches the close button. */
+  .kit-media-viewer__panel :global(.kit-media-viewer__close),
+  .kit-media-viewer__panel :global(.kit-media-viewer__reset) {
+    width: var(--kit-media-viewer-control);
+    height: var(--kit-media-viewer-control);
+  }
+
   .kit-media-viewer__panel :global(.kit-media-viewer__close) {
     top: var(--space-5);
     right: var(--space-5);
@@ -413,12 +421,6 @@
     .kit-media-viewer__panel {
       --kit-media-viewer-step: 44px;
       --kit-media-viewer-control: 44px;
-    }
-
-    .kit-media-viewer__panel :global(.kit-media-viewer__close),
-    .kit-media-viewer__panel :global(.kit-media-viewer__reset) {
-      width: var(--kit-media-viewer-control);
-      height: var(--kit-media-viewer-control);
     }
   }
 

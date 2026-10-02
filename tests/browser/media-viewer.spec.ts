@@ -320,6 +320,32 @@ for (const [lines, alt] of [
   });
 }
 
+test("a long caption stays clear of the close button in a larger control context", async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    document.body.style.setProperty("--kit-control-height", "48px");
+    const alt = "A long page screenshot of the settings screen ".repeat(12).trim();
+    mountMediaViewer(
+      [
+        {
+          kind: "image",
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E",
+          alt,
+        },
+      ],
+      0,
+    );
+  });
+  const close = viewer(page).getByRole("button", { name: "Close expanded view" });
+  await expect(caption(page)).toBeVisible();
+  const captionBox = (await caption(page).boundingBox())!;
+  const closeBox = (await close.boundingBox())!;
+  expect(captionBox.x + captionBox.width).toBeLessThanOrEqual(closeBox.x);
+});
+
 test("the position counter and accessible name are localizable", async ({ page }) => {
   await page.evaluate(async (itemsSource) => {
     const { mountMediaViewer } =
