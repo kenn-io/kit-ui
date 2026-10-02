@@ -72,8 +72,7 @@ markdown pipeline or debounce util lives in `.ts`, not markup.
 ## Suppressing a finding
 
 Put `kit-ui-check-ignore` in a comment on the offending line or the line
-above. `split-handle-override` is the exception: the marker does not suppress
-it, and `--disable split-handle-override` exits with an error. Give a reason — the marker is a promise that a human decided the
+above. Give a reason — the marker is a promise that a human decided the
 exception is legitimate:
 
 ```css
@@ -82,6 +81,18 @@ exception is legitimate:
   color: #ff5533;
 }
 ```
+
+`split-handle-override` is the exception: the marker does not suppress it, and
+`--disable split-handle-override` exits with an error.
+
+## Rules are best effort
+
+The rules match patterns in source text. They are not CSS or script parsers,
+so an unusual selector or comment can slip past them or be misread. They aim
+to catch the ordinary ways apps drift from kit-ui, and the components hold the
+hard guarantees, such as SplitResizeHandle's `!important` thickness. Fix a
+false positive that real code hits; do not grow a rule toward full parsing to
+close contrived edge cases.
 
 ## Programmatic use
 

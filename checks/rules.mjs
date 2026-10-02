@@ -1163,7 +1163,12 @@ export function checkChipLabelOverride(source, filename) {
  * kit-ui's brand.json. Consumers may place a handle but never restyle it, so
  * any rule whose subject is the handle may only use placement properties;
  * pseudo-elements on it and assignments to the token are always findings.
- * This rule ignores kit-ui-check-ignore and cannot be disabled. */
+ * This rule ignores kit-ui-check-ignore and cannot be disabled.
+ *
+ * Best effort by design: it pattern-matches source text and is not a CSS or
+ * script parser. It catches the ordinary ways an app restyles a handle; the
+ * component's !important thickness is the runtime guarantee. Do not grow it
+ * toward full parsing to close contrived selector or comment edge cases. */
 const SPLIT_HANDLE_PLACEMENT = new Set([
   "display",
   "visibility",
