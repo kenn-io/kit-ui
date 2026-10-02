@@ -30,7 +30,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                           |
 | Fonts       | `--font-sans`, `--font-mono`                                                                            |
 | Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                        |
-| Chrome      | `--header-height` (44px), `--status-bar-height` (24px)                                                  |
+| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)  |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, purple = merged/workflow, teal = workspace.

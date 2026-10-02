@@ -63,6 +63,7 @@
   --space-8: 32px;
   --header-height: 44px;
   --status-bar-height: 24px;
+  --split-handle-size: 4px;
   --z-popover: 1000;
   --z-overlay: 1000;
   --z-tooltip: 1100;

@@ -1013,3 +1013,177 @@ describe("suppression and plumbing", () => {
     expect(() => checkSource("", "A.svelte", ["nope"])).toThrow("unknown rule");
   });
 });
+
+describe("split-handle-override", () => {
+  const rule = ["split-handle-override"];
+
+  test("flags resizing a handle through a wrapper selector", () => {
+    const src = svelte(
+      `.chat-resizer :global(.kit-split-resize-handle) {
+        display: block;
+        height: 100%;
+        width: var(--chat-divider-width);
+      }`,
+    );
+    const findings = checkSource(src, "A.svelte", rule);
+    expect(findings.map((f) => f.message.split(" ")[0])).toEqual(["`height`", "`width`"]);
+  });
+
+  test("flags restyling the handle's colour, including hover states", () => {
+    const src = `.hub .kit-split-resize-handle { background: transparent; }
+.hub .kit-split-resize-handle:hover { background: var(--accent-blue); }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(2);
+  });
+
+  test("flags pseudo-elements on the handle and its orientation modifiers", () => {
+    const src = `:where(.kit-split-resize-handle)::after { content: ""; inset: 0 -2px; }
+:where(.kit-split-resize-handle--vertical)::after { top: -2px; }
+`;
+    const findings = checkSource(src, "app.css", rule);
+    expect(findings).toHaveLength(2);
+    expect(findings[0]!.message).toContain("pseudo-element");
+  });
+
+  test("allows placing and hiding a handle", () => {
+    const src = svelte(
+      `.chat-resizer :global(.kit-split-resize-handle) {
+        position: absolute;
+        inset: 0 auto 0 0;
+        z-index: 12;
+        -webkit-app-region: no-drag;
+      }
+      @media (max-width: 760px) {
+        .layout :global(.kit-split-resize-handle) { display: none; }
+      }`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("allows styling neighbours and unrelated kit-split classes", () => {
+    const src = `.layout:has(.kit-split-resize-handle) .pane { border: 0; }
+.kit-split-resize-handle + .pane { padding-left: 4px; }
+.pane:not(.kit-split-resize-handle) { width: 10px; }
+.kit-split-resize-handle-wrapper { width: 10px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("flags app-level assignments of the size token", () => {
+    const src = svelte(
+      `:root { --split-handle-size: 8px; }`,
+      `<div style="--split-handle-size: 2px" style:--split-handle-size="3px"></div>`,
+      `el.style.setProperty("--split-handle-size", "6px");`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(4);
+  });
+
+  test("flags class attribute selectors aimed at the handle", () => {
+    const src = `button[class~="kit-split-resize-handle"] { background: red !important; }
+.layout [class*=split-resize] { width: 8px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(2);
+  });
+
+  test("allows class attribute selectors that cannot match the handle", () => {
+    const src = `[class="kit-split-resize-handle-wrapper"] { width: 8px; }
+[class*="split-resizer-shell"] { width: 8px; }
+[class~="kit-control-states"] { width: 8px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("follows attribute operator semantics and case sensitivity", () => {
+    const flagged = `[class$="--horizontal svelte-abc123"] { width: 8px; }
+[class~="KIT-SPLIT-RESIZE-HANDLE" i] { width: 8px; }
+[class="kit-split-resize-handle kit-control-states kit-split-resize-handle--vertical svelte-x1"] { width: 8px; }
+`;
+    expect(checkSource(flagged, "app.css", rule)).toHaveLength(3);
+    const ignored = `[class="kit-split-resize-handle"] { width: 8px; }
+[class$="--horizontal"] { width: 8px; }
+[class~="KIT-SPLIT-RESIZE-HANDLE"] { width: 8px; }
+`;
+    expect(checkSource(ignored, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("keeps comment markers inside quoted strings literal", () => {
+    const src = `.a { content: "/*"; }
+.kit-split-resize-handle { width: 8px; }
+.b { content: "*/"; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+    const markup = svelte(``, `<p>don't</p>\n<!-- style="--split-handle-size: 1px" -->`);
+    expect(checkSource(markup, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("flags custom properties set on the handle", () => {
+    const src = `.kit-split-resize-handle { --border-muted: red; --press-transform: none; }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(2);
+  });
+
+  test("flags declarations in nested rules and in their parents", () => {
+    const src = `.layout {
+  .kit-split-resize-handle {
+    width: 8px;
+    &:hover { background: red !important; }
+    @media (max-width: 640px) { height: 2px; }
+  }
+}
+`;
+    const findings = checkSource(src, "app.css", rule);
+    expect(findings.map((f) => f.line)).toEqual([3, 4, 5]);
+  });
+
+  test("allows nested rules that only place the handle or style its neighbours", () => {
+    const src = `.layout {
+  .kit-split-resize-handle { z-index: 12; & + .pane { border-left: 0; } }
+}
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("flags setProperty calls with a space before the parenthesis", () => {
+    const src = svelte(
+      ``,
+      ``,
+      `document.documentElement.style.setProperty ("--split-handle-size", "8px");`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(1);
+  });
+
+  test("scans unterminated and repeated comment openers in linear time", () => {
+    const started = performance.now();
+    checkSource("/*" + "a/*".repeat(50_000), "app.css", rule);
+    checkSource("<!--".repeat(50_000), "A.svelte", rule);
+    checkSource(`"${"'".repeat(100_000)}`, "A.svelte", rule);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  test("allows styling elements beside a handle named inside :is()", () => {
+    const src = `:is(.kit-split-resize-handle, .pane) > .title { color: var(--text-primary); }
+:global(.kit-split-resize-handle + .pane) { border-left: 0; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("ignores the token name in comments", () => {
+    const src = svelte(
+      `/* --split-handle-size: 4px is reserved */ .x { color: var(--text-primary); }`,
+      `<!-- style="--split-handle-size: 2px" -->`,
+      `// el.style.setProperty("--split-handle-size", "6px");\nconst docs = "https://example.com/--split-handle-size";`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("allows reading the size token", () => {
+    const src = `.chat-slot { padding-inline-start: var(--split-handle-size); }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("ignores the kit-ui-check-ignore marker", () => {
+    const src = `/* kit-ui-check-ignore: our splitters are special */
+.layout .kit-split-resize-handle { width: 8px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+  });
+});

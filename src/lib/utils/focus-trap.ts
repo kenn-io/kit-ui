@@ -142,7 +142,7 @@ function focusGuard(onFocus: () => void): HTMLSpanElement {
   const guard = document.createElement("span");
   guard.tabIndex = 0;
   guard.setAttribute("aria-hidden", "true");
-  guard.dataset.kitFocusGuard = "";
+  guard.setAttribute("data-kit-focus-guard", "");
   guard.style.cssText =
     "position: fixed; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none;";
   guard.addEventListener("focus", onFocus);

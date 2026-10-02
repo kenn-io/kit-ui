@@ -3,7 +3,6 @@ interface Props {
     ariaLabel: string;
     /** Direction in which the two panes are arranged. */
     orientation?: SplitResizeOrientation;
-    class?: string;
     disabled?: boolean;
     /** Pixels moved per arrow-key press. */
     keyboardStep?: number;

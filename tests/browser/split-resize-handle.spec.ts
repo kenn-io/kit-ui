@@ -131,3 +131,33 @@ test("ends the active resize when pointer capture is lost", async ({ page }) => 
   await page.mouse.up();
   await expect(vertical).toHaveAttribute("aria-valuenow", "136");
 });
+
+test("draws every handle at the shared thickness, whatever an app stylesheet says", async ({
+  page,
+}) => {
+  await gotoPage(page, "split-resize");
+  await page.addStyleTag({
+    content: `main .kit-split-resize-handle.kit-split-resize-handle { width: 10px; height: 10px; min-width: 10px; min-height: 10px; }`,
+  });
+
+  const horizontal = page.getByRole("separator", { name: "Resize left pane" });
+  const vertical = page.getByRole("separator", { name: "Resize top pane" });
+  await expect(horizontal).toHaveCSS("width", "4px");
+  await expect(vertical).toHaveCSS("height", "4px");
+});
+
+test("accepts a grab just outside the visible line", async ({ page }) => {
+  await gotoPage(page, "split-resize");
+
+  const horizontal = page.getByRole("separator", { name: "Resize left pane" });
+  const box = await horizontal.boundingBox();
+  if (!box) throw new Error("Horizontal split handle is not visible");
+  const x = box.x + box.width + 1;
+  const y = box.y + box.height / 2;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 24, y);
+  await page.mouse.up();
+  await expect(horizontal).toHaveAttribute("aria-valuenow", "224");
+});

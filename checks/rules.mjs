@@ -1159,6 +1159,307 @@ export function checkChipLabelOverride(source, filename) {
   return findings;
 }
 
+/** SplitResizeHandle has one thickness everywhere: --split-handle-size from
+ * kit-ui's brand.json. Consumers may place a handle but never restyle it, so
+ * any rule whose subject is the handle may only use placement properties;
+ * pseudo-elements on it and assignments to the token are always findings.
+ * This rule ignores kit-ui-check-ignore and cannot be disabled.
+ *
+ * Best effort by design: it pattern-matches source text and is not a CSS or
+ * script parser. It catches the ordinary ways an app restyles a handle; the
+ * component's !important thickness is the runtime guarantee. Do not grow it
+ * toward full parsing to close contrived selector or comment edge cases. */
+const SPLIT_HANDLE_PLACEMENT = new Set([
+  "display",
+  "visibility",
+  "position",
+  "inset",
+  "inset-block",
+  "inset-block-start",
+  "inset-block-end",
+  "inset-inline",
+  "inset-inline-start",
+  "inset-inline-end",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "z-index",
+  "order",
+  "align-self",
+  "justify-self",
+  "place-self",
+  "grid-area",
+  "grid-row",
+  "grid-row-start",
+  "grid-row-end",
+  "grid-column",
+  "grid-column-start",
+  "grid-column-end",
+  "-webkit-app-region",
+]);
+const SPLIT_HANDLE_CLASS = /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])/;
+// The class attribute the handle renders with. Svelte appends its scoping
+// class (`svelte-<hash>`) after these, so the real value ends in that class.
+const SPLIT_HANDLE_CLASS_VALUES = ["horizontal", "vertical"].map(
+  (orientation) =>
+    `kit-split-resize-handle kit-control-states kit-split-resize-handle--${orientation}`,
+);
+const SVELTE_SCOPE_SUFFIX = / svelte-[\w-]+$/;
+const CLASS_ATTRIBUTE_SELECTOR =
+  /\[\s*class\s*([~*^$|]?)=\s*(?:"([^"]*)"|'([^']*)'|([^\s\]]+))\s*(?:([is])\s*)?\]/gi;
+const SPLIT_HANDLE_TOKEN_ASSIGNMENT =
+  /--split-handle-size["'`]?\s*:|setProperty\s*\(\s*["'`]--split-handle-size|style:--split-handle-size/g;
+
+/** Whether `[class<operator>="value" <flag>]` matches the handle's rendered
+ * class attribute, following CSS attribute-selector semantics. Class values
+ * compare case-sensitively unless the selector carries the `i` flag. */
+function classAttributeMatchesHandle(operator, rawValue, flag) {
+  const fold = flag?.toLowerCase() === "i";
+  const value = fold ? rawValue.toLowerCase() : rawValue;
+  return SPLIT_HANDLE_CLASS_VALUES.some((handleValue) => {
+    // kit-control-states is on every kit control, so it never singles out the handle.
+    const classes = handleValue.split(" ").filter((name) => name !== "kit-control-states");
+    switch (operator) {
+      case "~":
+        return classes.includes(value);
+      case "*":
+        return value.length > 0 && handleValue.includes(value);
+      case "^":
+        return value.length > 0 && handleValue.startsWith(value);
+      case "|":
+        return handleValue === value || handleValue.startsWith(`${value}-`);
+      case "$": {
+        // Only a value that runs through the scoping class can be a suffix.
+        const scoped = value.match(SVELTE_SCOPE_SUFFIX);
+        const before = scoped ? value.slice(0, scoped.index) : "";
+        return before.length > 0 && handleValue.endsWith(before);
+      }
+      default: {
+        // `=` compares the whole attribute, scoping class included.
+        const scoped = value.match(SVELTE_SCOPE_SUFFIX);
+        return scoped !== null && value.slice(0, scoped.index) === handleValue;
+      }
+    }
+  });
+}
+
+function compoundTargetsHandle(compound) {
+  if (SPLIT_HANDLE_CLASS.test(compound)) return true;
+  for (const match of compound.matchAll(CLASS_ATTRIBUTE_SELECTOR)) {
+    const value = match[2] ?? match[3] ?? match[4] ?? "";
+    if (classAttributeMatchesHandle(match[1], value, match[5])) return true;
+  }
+  return false;
+}
+
+/** Blank CSS, HTML, and line comments in one pass, keeping offsets.
+ * A `//` after `:`, a quote, or a word character is a URL, not a comment. */
+function blankComments(source) {
+  const out = source.split("");
+  const blank = (from, to) => {
+    for (let k = from; k < to; k += 1) if (out[k] !== "\n") out[k] = " ";
+  };
+  let i = 0;
+  let lineEnd = -1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'") {
+      // A one-line quoted string (CSS or script) keeps comment markers
+      // literal. Without a closing quote on the line it is prose, such as
+      // an apostrophe in markup, not a string.
+      if (lineEnd < i) {
+        lineEnd = source.indexOf("\n", i);
+        if (lineEnd === -1) lineEnd = source.length;
+      }
+      const close = source.indexOf(ch, i + 1);
+      i = close !== -1 && close < lineEnd ? close + 1 : i + 1;
+      continue;
+    }
+    let close = -1;
+    if (source.startsWith("/*", i)) close = source.indexOf("*/", i + 2) + 2;
+    else if (source.startsWith("<!--", i)) close = source.indexOf("-->", i + 4) + 3;
+    else if (source.startsWith("//", i) && !/[:"'`\w]/.test(source[i - 1] ?? "")) {
+      close = source.indexOf("\n", i);
+      if (close === -1) close = source.length;
+    } else {
+      i += 1;
+      continue;
+    }
+    // indexOf returned -1 for an unterminated comment: blank to the end.
+    if (close < i + 2) close = source.length;
+    blank(i, close);
+    i = close;
+  }
+  return out.join("");
+}
+
+/** Split a selector at separator characters outside () and []. */
+function topLevelParts(selector, separator) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < selector.length; i += 1) {
+    const ch = selector[i];
+    if (ch === "(" || ch === "[") depth += 1;
+    else if (ch === ")" || ch === "]") depth -= 1;
+    else if (depth === 0 && separator.test(ch)) {
+      parts.push(selector.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(selector.slice(start));
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** Replace each named functional pseudo-class with its argument (unwrap) or
+ * with nothing, matching nested parentheses. */
+function replaceFunctional(selector, names, unwrap) {
+  const re = new RegExp(`:(?:${names})\\(`, "g");
+  let out = selector;
+  let match;
+  while ((match = re.exec(out)) !== null) {
+    const argumentStart = match.index + match[0].length;
+    let depth = 1;
+    let i = argumentStart;
+    while (i < out.length && depth > 0) {
+      if (out[i] === "(") depth += 1;
+      else if (out[i] === ")") depth -= 1;
+      i += 1;
+    }
+    const argument = unwrap ? out.slice(argumentStart, i - 1) : "";
+    out = out.slice(0, match.index) + argument + out.slice(i);
+    re.lastIndex = match.index;
+  }
+  return out;
+}
+
+/** The last compound of a selector names the element a rule styles. Svelte's
+ * :global() is transparent; :not()/:has() arguments describe other elements,
+ * so they cannot make the handle the subject. */
+function splitHandleSubject(selector) {
+  const unwrapped = replaceFunctional(selector, "global", true);
+  const subject = topLevelParts(unwrapped, /[\s>+~]/).at(-1) ?? "";
+  const own = replaceFunctional(subject, "not|has", false);
+  if (!compoundTargetsHandle(own)) return null;
+  return { pseudoElement: /::|:(?:before|after)\b/.test(own) };
+}
+
+/** Resolve a nested selector against its parent rule's selector. */
+function resolveNestedSelector(selector, parent) {
+  if (parent === null) return selector;
+  return topLevelParts(selector, /,/)
+    .map((part) =>
+      part.includes("&") ? part.replaceAll("&", `:is(${parent})`) : `:is(${parent}) ${part}`,
+    )
+    .join(", ");
+}
+
+/** Every style rule, including parents of nested rules, with its selector
+ * resolved through CSS nesting and its own declarations (nested blocks
+ * blanked out, offsets kept). Input must already have comments blanked. */
+function cssRulesWithNesting(css) {
+  const rules = [];
+  const stack = [{ selector: null, bodyStart: 0, children: [], isRoot: true }];
+  let segmentStart = 0;
+  let parens = 0;
+  for (let i = 0; i < css.length; i += 1) {
+    const ch = css[i];
+    if (ch === "\\") {
+      i += 1;
+    } else if (ch === '"' || ch === "'") {
+      const close = css.indexOf(ch, i + 1);
+      i = close === -1 ? css.length : close;
+    } else if (ch === "(") {
+      parens += 1;
+    } else if (ch === ")") {
+      parens = Math.max(0, parens - 1);
+    } else if (ch === ";" && parens === 0) {
+      segmentStart = i + 1;
+    } else if (ch === "{") {
+      const parent = stack[stack.length - 1];
+      const prelude = css.slice(segmentStart, i).trim();
+      const selector = prelude.startsWith("@")
+        ? parent.selector
+        : resolveNestedSelector(prelude, parent.selector);
+      stack.push({ selector, bodyStart: i + 1, children: [], start: segmentStart });
+      segmentStart = i + 1;
+    } else if (ch === "}") {
+      const frame = stack.pop();
+      if (!frame || frame.isRoot) {
+        stack.push(frame ?? stack[0]);
+      } else {
+        stack[stack.length - 1].children.push([frame.start, i + 1]);
+        // A nested @media body applies to the enclosing rule's selector.
+        if (frame.selector !== null) {
+          const chars = css.slice(frame.bodyStart, i).split("");
+          for (const [from, to] of frame.children) {
+            for (let k = from - frame.bodyStart; k < to - frame.bodyStart; k += 1) chars[k] = " ";
+          }
+          rules.push({
+            selector: frame.selector,
+            body: chars.join(""),
+            bodyStart: frame.bodyStart,
+          });
+        }
+      }
+      segmentStart = i + 1;
+    }
+  }
+  return rules;
+}
+
+export function checkSplitHandleOverride(source, filename) {
+  const findings = [];
+  const fix =
+    "SplitResizeHandle thickness and look come from --split-handle-size in kit-ui's brand.json; only place the handle (display, position, inset, z-index, order, grid/self alignment)";
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    for (const rule of cssRulesWithNesting(blankComments(css))) {
+      const subjects = topLevelParts(rule.selector, /,/).map(splitHandleSubject).filter(Boolean);
+      if (subjects.length === 0) continue;
+      const declarationRe = /(?:^|;)\s*(--[\w-]+|-?[a-zA-Z][\w-]*)\s*:/g;
+      if (subjects.some((subject) => subject.pseudoElement)) {
+        if (declarationRe.test(rule.body)) {
+          findings.push({
+            rule: "split-handle-override",
+            line: lineOfIndex(source, offset + rule.bodyStart - 1),
+            message: `pseudo-element on .kit-split-resize-handle — ${fix}`,
+          });
+        }
+        continue;
+      }
+      declarationRe.lastIndex = 0;
+      let declaration;
+      while ((declaration = declarationRe.exec(rule.body)) !== null) {
+        const property = declaration[1].toLowerCase();
+        if (SPLIT_HANDLE_PLACEMENT.has(property)) continue;
+        findings.push({
+          rule: "split-handle-override",
+          line: lineOfIndex(
+            source,
+            offset + rule.bodyStart + declaration.index + declaration[0].indexOf(declaration[1]),
+          ),
+          message: `\`${property}\` on .kit-split-resize-handle — ${fix}`,
+        });
+      }
+    }
+  }
+  const code = blankComments(source);
+  let match;
+  while ((match = SPLIT_HANDLE_TOKEN_ASSIGNMENT.exec(code)) !== null) {
+    findings.push({
+      rule: "split-handle-override",
+      line: lineOfIndex(source, match.index),
+      message:
+        "--split-handle-size is set once, in kit-ui's brand.json — do not override it in an app",
+    });
+  }
+  return findings;
+}
+
+/** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
+export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override"]);
+
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
   "raw-color": checkRawColors,
@@ -1205,6 +1506,7 @@ export const ALL_RULES = {
   "nonstandard-spacing": checkNonstandardSpacing,
   "legacy-svelte": checkLegacySvelte,
   "chip-label-override": checkChipLabelOverride,
+  "split-handle-override": checkSplitHandleOverride,
 };
 
 /** Run all (or the selected) rules on one file's source. */
@@ -1216,5 +1518,7 @@ export function checkSource(source, filename, ruleNames = Object.keys(ALL_RULES)
     if (!rule) throw new Error(`unknown rule: ${name}`);
     findings.push(...rule(source, filename));
   }
-  return findings.filter((f) => !isIgnored(lines, f.line)).sort((a, b) => a.line - b.line);
+  return findings
+    .filter((f) => UNSUPPRESSIBLE_RULES.has(f.rule) || !isIgnored(lines, f.line))
+    .sort((a, b) => a.line - b.line);
 }

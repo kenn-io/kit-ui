@@ -99,6 +99,7 @@
   {#if !isCollapsed && !hideSidebar}
     <aside
       class="kit-sidebar-layout__sidebar"
+      class:kit-sidebar-layout__sidebar--split={!sidebarOnly && hasMain}
       data-collapsed="false"
       style={`width: ${sidebarOnly || !hasMain ? "100%" : `${currentWidth}px`}`}
     >
@@ -165,6 +166,11 @@
     flex-direction: column;
   }
 
+  /* The resize handle is the divider; a border beside it would thicken it. */
+  .kit-sidebar-layout__sidebar--split {
+    border-right: 0;
+  }
+
   .kit-sidebar-layout__sidebar--collapsed {
     width: 28px;
     align-items: center;
@@ -209,6 +215,7 @@
     z-index: 20;
     width: min(100%, 390px) !important;
     max-width: 100%;
+    border-right: 1px solid var(--border-default);
     box-shadow: var(--shadow-lg);
   }
 
@@ -233,6 +240,7 @@
       z-index: 20;
       width: min(100%, 390px) !important;
       max-width: 100%;
+      border-right: 1px solid var(--border-default);
       box-shadow: var(--shadow-lg);
     }
 

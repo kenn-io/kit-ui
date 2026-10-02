@@ -332,6 +332,11 @@ export function checkChipLabelOverride(source: any, filename: any): {
     line: number;
     message: string;
 }[];
+export function checkSplitHandleOverride(source: any, filename: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Run all (or the selected) rules on one file's source. */
 export function checkSource(source: any, filename: any, ruleNames?: string[]): any[];
 /**
@@ -346,6 +351,8 @@ export function checkSource(source: any, filename: any, ruleNames?: string[]): a
  */
 export const STANDARD_BREAKPOINTS: number[];
 export const SPACING_LADDER: number[];
+/** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
+export const UNSUPPRESSIBLE_RULES: Set<string>;
 export const ALL_RULES: {
     "nonstandard-breakpoint": typeof checkBreakpoints;
     "raw-color": typeof checkRawColors;
@@ -392,4 +399,5 @@ export const ALL_RULES: {
     "nonstandard-spacing": typeof checkNonstandardSpacing;
     "legacy-svelte": typeof checkLegacySvelte;
     "chip-label-override": typeof checkChipLabelOverride;
+    "split-handle-override": typeof checkSplitHandleOverride;
 };
