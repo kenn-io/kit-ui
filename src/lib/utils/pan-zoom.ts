@@ -73,8 +73,8 @@ export function attachPanZoom(
 
   const updateTransform = () => {
     pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${formatScale(scale)})`;
-    if (atRest(scale)) delete viewport.dataset.zoomed;
-    else viewport.dataset.zoomed = "true";
+    if (atRest(scale)) delete viewport.dataset["zoomed"];
+    else viewport.dataset["zoomed"] = "true";
   };
 
   const reset = () => {
@@ -121,7 +121,7 @@ export function attachPanZoom(
       }
     }
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    viewport.dataset.panning = "true";
+    viewport.dataset["panning"] = "true";
     try {
       viewport.setPointerCapture?.(event.pointerId);
     } catch {
@@ -174,7 +174,7 @@ export function attachPanZoom(
       lastTap = null;
     }
     if (pointers.size > 0) return;
-    delete viewport.dataset.panning;
+    delete viewport.dataset["panning"];
     // A pinch out and back ends a hair off 1: settle it at exactly 1.
     if (atRest(scale) && scale !== 1) {
       scale = 1;

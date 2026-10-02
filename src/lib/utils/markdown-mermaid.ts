@@ -238,7 +238,7 @@ export async function renderMarkdownMermaidDiagrams(
   if (nodes.length === 0) return 0;
 
   for (const node of nodes) {
-    node.dataset.mermaidRendered = "pending";
+    node.dataset["mermaidRendered"] = "pending";
     diagramSources.set(node, node.textContent ?? "");
   }
 
@@ -263,7 +263,7 @@ export async function renderMarkdownMermaidDiagrams(
   for (const node of nodes) {
     if (attachMermaidViewer(node, diagramSources.get(node) ?? "", options)) {
       failedDiagramSources.delete(node);
-      node.dataset.mermaidRendered = "true";
+      node.dataset["mermaidRendered"] = "true";
       renderedCount += 1;
     } else {
       restoreMermaidSource(node);
@@ -285,8 +285,8 @@ function collectRenderableMermaidNodes(
     const heldSource = infrastructureFailureHolds.get(node);
     const hasRenderState =
       heldSource !== undefined ||
-      node.dataset.mermaidRendered !== undefined ||
-      node.dataset.processed === "true";
+      node.dataset["mermaidRendered"] !== undefined ||
+      node.dataset["processed"] === "true";
 
     // Fresh candidates past the diagram cap are skipped before their
     // source is even read — hostile documents shouldn't buy per-block
@@ -309,7 +309,7 @@ function collectRenderableMermaidNodes(
       }
     }
 
-    if (node.dataset.mermaidRendered === "failed") {
+    if (node.dataset["mermaidRendered"] === "failed") {
       const failedSource = failedDiagramSources.get(node);
       if (failedSource === undefined || failedSource === source) {
         diagramCount += 1;
@@ -320,7 +320,7 @@ function collectRenderableMermaidNodes(
       clearMermaidRenderState(node);
     }
 
-    if (node.dataset.mermaidRendered || node.dataset.processed === "true") {
+    if (node.dataset["mermaidRendered"] || node.dataset["processed"] === "true") {
       diagramCount += 1;
       sourceBytes += mermaidSourceByteLength(source);
       continue;
@@ -345,7 +345,7 @@ function collectRenderableMermaidNodes(
 }
 
 function mermaidNodeSource(node: HTMLElement): string {
-  if (node.dataset.mermaidRendered === "failed") {
+  if (node.dataset["mermaidRendered"] === "failed") {
     return node.textContent ?? "";
   }
   return diagramSources.get(node) ?? node.textContent ?? "";
@@ -382,8 +382,8 @@ export function mermaidSourceByteLength(source: string, cap = Infinity): number 
 
 function skipMermaidRender(node: HTMLElement): void {
   node.classList.remove("mermaid");
-  node.dataset.mermaidRendered = "skipped";
-  delete node.dataset.processed;
+  node.dataset["mermaidRendered"] = "skipped";
+  delete node.dataset["processed"];
 }
 
 function attachMermaidViewer(
@@ -391,7 +391,7 @@ function attachMermaidViewer(
   source: string,
   options: InternalMarkdownMermaidOptions,
 ): boolean {
-  if (node.dataset.mermaidViewer === MERMAID_VIEWER_ATTACHED) return true;
+  if (node.dataset["mermaidViewer"] === MERMAID_VIEWER_ATTACHED) return true;
 
   const svg = node.querySelector("svg");
   if (!svg) return false;
@@ -417,14 +417,14 @@ function attachMermaidViewer(
 
   node.textContent = "";
   node.classList.add("kit-mermaid-viewer");
-  node.dataset.mermaidViewer = MERMAID_VIEWER_ATTACHED;
+  node.dataset["mermaidViewer"] = MERMAID_VIEWER_ATTACHED;
   node.append(diagramView.viewport, topControls, diagramView.controls);
   return true;
 }
 
 function clearMermaidRenderState(node: HTMLElement): void {
-  delete node.dataset.mermaidRendered;
-  delete node.dataset.processed;
+  delete node.dataset["mermaidRendered"];
+  delete node.dataset["processed"];
 }
 
 function restoreMermaidSourcesAndClearRenderState(nodes: HTMLElement[]): void {
@@ -442,8 +442,8 @@ function restoreMermaidSourcesAndClearRenderState(nodes: HTMLElement[]): void {
 function markMermaidRenderFailed(node: HTMLElement): void {
   const source = diagramSources.get(node) ?? node.textContent ?? "";
   failedDiagramSources.set(node, source);
-  node.dataset.mermaidRendered = "failed";
-  delete node.dataset.processed;
+  node.dataset["mermaidRendered"] = "failed";
+  delete node.dataset["processed"];
 }
 
 function restoreMermaidSource(node: HTMLElement): void {
@@ -457,7 +457,7 @@ function initializeMermaidForCurrentTheme(mermaid: MarkdownMermaidAPI): void {
   const theme = currentMermaidTheme();
   if (initializedMermaidTheme.get(mermaid) === theme) return;
   const themeVariables = mermaidThemeVariables(theme);
-  const fontFamily = String(themeVariables.fontFamily);
+  const fontFamily = String(themeVariables["fontFamily"]);
 
   mermaid.initialize({
     startOnLoad: false,
@@ -521,7 +521,7 @@ function resetRenderedMermaidViewers(root: ParentNode): void {
     unregisterMediaViewerItem(node);
     node.textContent = source;
     node.classList.remove("kit-mermaid-viewer");
-    delete node.dataset.mermaidViewer;
+    delete node.dataset["mermaidViewer"];
     clearMermaidRenderState(node);
   }
 }
@@ -584,12 +584,12 @@ async function copyMermaidSource(source: string, button: HTMLButtonElement): Pro
     console.error("Failed to copy Mermaid source");
     return;
   }
-  button.dataset.copied = "true";
+  button.dataset["copied"] = "true";
   button.setAttribute("aria-label", "Copied Mermaid source");
   button.title = "Copied Mermaid source";
   setControlIcon(button, "check");
   window.setTimeout(() => {
-    button.dataset.copied = "false";
+    button.dataset["copied"] = "false";
     button.setAttribute("aria-label", "Copy Mermaid source");
     button.title = "Copy Mermaid source";
     setControlIcon(button, "copy");
