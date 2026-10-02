@@ -1078,6 +1078,29 @@ describe("split-handle-override", () => {
     expect(checkSource(src, "A.svelte", rule)).toHaveLength(4);
   });
 
+  test("flags class attribute selectors aimed at the handle", () => {
+    const src = `button[class~="kit-split-resize-handle"] { background: red !important; }
+.layout [class*=split-resize] { width: 8px; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(2);
+  });
+
+  test("allows styling elements beside a handle named inside :is()", () => {
+    const src = `:is(.kit-split-resize-handle, .pane) > .title { color: var(--text-primary); }
+:global(.kit-split-resize-handle + .pane) { border-left: 0; }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("ignores the token name in comments", () => {
+    const src = svelte(
+      `/* --split-handle-size: 4px is reserved */ .x { color: var(--text-primary); }`,
+      `<!-- style="--split-handle-size: 2px" -->`,
+      `// el.style.setProperty("--split-handle-size", "6px");\nconst docs = "https://example.com/--split-handle-size";`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
   test("allows reading the size token", () => {
     const src = `.chat-slot { padding-inline-start: var(--split-handle-size); }\n`;
     expect(checkSource(src, "app.css", rule)).toHaveLength(0);

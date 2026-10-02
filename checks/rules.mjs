@@ -1193,23 +1193,68 @@ const SPLIT_HANDLE_PLACEMENT = new Set([
   "grid-column-end",
   "-webkit-app-region",
 ]);
-const SPLIT_HANDLE_CLASS = /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])/;
+// The handle's class, or a class attribute selector aimed at it.
+const SPLIT_HANDLE_SELECTOR =
+  /\.kit-split-resize-handle(?:--(?:horizontal|vertical))?(?![\w-])|\[\s*class\s*[~*^$|]?=\s*["']?[^\]"']*(?:kit-split|split-resize)/i;
 const SPLIT_HANDLE_TOKEN_ASSIGNMENT =
   /--split-handle-size["'`]?\s*:|setProperty\(\s*["'`]--split-handle-size|style:--split-handle-size/g;
+// CSS, HTML, and line comments, blanked so offsets and line numbers survive.
+// A `//` after `:` or a quote is a URL, not a comment.
+const SOURCE_COMMENTS = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<![:"'`\w])\/\/[^\n]*/g;
 
-/** The last compound of a selector names the element a rule styles.
- * :not()/:has() arguments describe other elements, so they are dropped;
- * :global()/:where()/:is() wrappers are unwrapped. */
+function blankComments(source) {
+  return source.replace(SOURCE_COMMENTS, (comment) => comment.replace(/[^\n]/g, " "));
+}
+
+/** Split a selector at separator characters outside () and []. */
+function topLevelParts(selector, separator) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < selector.length; i += 1) {
+    const ch = selector[i];
+    if (ch === "(" || ch === "[") depth += 1;
+    else if (ch === ")" || ch === "]") depth -= 1;
+    else if (depth === 0 && separator.test(ch)) {
+      parts.push(selector.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(selector.slice(start));
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** Replace each named functional pseudo-class with its argument (unwrap) or
+ * with nothing, matching nested parentheses. */
+function replaceFunctional(selector, names, unwrap) {
+  const re = new RegExp(`:(?:${names})\\(`, "g");
+  let out = selector;
+  let match;
+  while ((match = re.exec(out)) !== null) {
+    const argumentStart = match.index + match[0].length;
+    let depth = 1;
+    let i = argumentStart;
+    while (i < out.length && depth > 0) {
+      if (out[i] === "(") depth += 1;
+      else if (out[i] === ")") depth -= 1;
+      i += 1;
+    }
+    const argument = unwrap ? out.slice(argumentStart, i - 1) : "";
+    out = out.slice(0, match.index) + argument + out.slice(i);
+    re.lastIndex = match.index;
+  }
+  return out;
+}
+
+/** The last compound of a selector names the element a rule styles. Svelte's
+ * :global() is transparent; :not()/:has() arguments describe other elements,
+ * so they cannot make the handle the subject. */
 function splitHandleSubject(selector) {
-  const subject =
-    selector
-      .replace(/:(?:not|has)\([^()]*\)/g, "")
-      .replace(/:(?:global|where|is)\(([^()]*)\)/g, "$1")
-      .trim()
-      .split(/[\s>+~]+/)
-      .at(-1) ?? "";
-  if (!SPLIT_HANDLE_CLASS.test(subject)) return null;
-  return { pseudoElement: /::|:(?:before|after)\b/.test(subject) };
+  const unwrapped = replaceFunctional(selector, "global", true);
+  const subject = topLevelParts(unwrapped, /[\s>+~]/).at(-1) ?? "";
+  const own = replaceFunctional(subject, "not|has", false);
+  if (!SPLIT_HANDLE_SELECTOR.test(own)) return null;
+  return { pseudoElement: /::|:(?:before|after)\b/.test(own) };
 }
 
 export function checkSplitHandleOverride(source, filename) {
@@ -1218,9 +1263,7 @@ export function checkSplitHandleOverride(source, filename) {
     "SplitResizeHandle thickness and look come from --split-handle-size in kit-ui's brand.json; only place the handle (display, position, inset, z-index, order, grid/self alignment)";
   for (const { css, offset } of styleBlocks(source, filename)) {
     for (const rule of leafCssRules(css)) {
-      const subjects = rule.selector
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .split(",")
+      const subjects = topLevelParts(rule.selector.replace(/\/\*[\s\S]*?\*\//g, ""), /,/)
         .map(splitHandleSubject)
         .filter(Boolean);
       if (subjects.length === 0) continue;
@@ -1249,8 +1292,9 @@ export function checkSplitHandleOverride(source, filename) {
       }
     }
   }
+  const code = blankComments(source);
   let match;
-  while ((match = SPLIT_HANDLE_TOKEN_ASSIGNMENT.exec(source)) !== null) {
+  while ((match = SPLIT_HANDLE_TOKEN_ASSIGNMENT.exec(code)) !== null) {
     findings.push({
       rule: "split-handle-override",
       line: lineOfIndex(source, match.index),
