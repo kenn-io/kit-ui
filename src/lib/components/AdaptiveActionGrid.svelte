@@ -227,9 +227,9 @@
     if (layout === "fill") {
       // Rows are packed and stretched by CSS; only the compact decision needs
       // the no-wrap measurement.
-      itemsEl.dataset.measuring = "";
+      itemsEl.dataset["measuring"] = "";
       const requiredRowWidth = itemsEl.scrollWidth;
-      delete itemsEl.dataset.measuring;
+      delete itemsEl.dataset["measuring"];
       const rowFits = requiredRowWidth <= itemsEl.clientWidth + 1;
       setMode(!rowFits && hostEl.clientWidth < safeCollapseBelow ? "compact" : "grid");
       return;
@@ -239,9 +239,9 @@
     // This keeps content changes authoritative in grid and compact modes while
     // avoiding a cloned control subtree. The measuring CSS removes stretched
     // grid widths before scrollWidth is read.
-    itemsEl.dataset.measuring = "";
+    itemsEl.dataset["measuring"] = "";
     const requiredRowWidth = itemsEl.scrollWidth;
-    delete itemsEl.dataset.measuring;
+    delete itemsEl.dataset["measuring"];
 
     const rowFits = requiredRowWidth <= itemsEl.clientWidth + 1;
 
