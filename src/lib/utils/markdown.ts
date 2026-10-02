@@ -235,6 +235,9 @@ export async function highlightCode(code: string, lang: string): Promise<string 
 }
 
 export interface MarkdownRendererOptions {
+  /** Turn source newlines into hard breaks (default true). Set false
+   * for standard Markdown soft breaks in prose. */
+  breaks?: boolean;
   /** Custom marked tokenizer/renderer extensions — the injection point
    * for app-specific syntax (issue references, wrapper tags). */
   extensions?: TokenizerAndRendererExtension[];
@@ -344,7 +347,7 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
  * per distinct option set) and reuse it — each instance owns a Marked
  * instance and an LRU-ish render cache. */
 export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): MarkdownRenderer {
-  const marked = new Marked({ gfm: true, breaks: true });
+  const marked = new Marked({ gfm: true, breaks: options.breaks ?? true });
   if (options.extensions?.length) {
     marked.use({ extensions: options.extensions });
   }

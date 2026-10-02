@@ -13,6 +13,43 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
   }, source);
 }
 
+for (const method of ["render", "renderSync"] as const) {
+  test(`${method} preserves source line breaks by default`, async ({ page }) => {
+    await gotoPage(page, "markdown");
+    const html = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      return createMarkdownRenderer()[method]("First line\nsecond line.");
+    }, method);
+    expect(html).toBe("<p>First line<br>second line.</p>\n");
+  });
+
+  test(`${method} allows soft breaks while keeping explicit breaks and code lines`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "markdown");
+    const result = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      const renderer = createMarkdownRenderer({ breaks: false });
+      const html = await renderer[method](
+        "First line\nsecond line.\n\nTwo spaces  \nnext line.\n\nBackslash\\\nnext line.\n\n```text\none\ntwo\n```",
+      );
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      return {
+        paragraphs: [...doc.querySelectorAll("p")].map((p) => p.innerHTML),
+        code: doc.querySelector("pre code")?.textContent,
+      };
+    }, method);
+    expect(result).toEqual({
+      paragraphs: [
+        "First line\nsecond line.",
+        "Two spaces<br>next line.",
+        "Backslash<br>next line.",
+      ],
+      code: "one\ntwo",
+    });
+  });
+}
+
 test.describe("sanitization", () => {
   test.beforeEach(async ({ page }) => gotoPage(page, "markdown"));
 
