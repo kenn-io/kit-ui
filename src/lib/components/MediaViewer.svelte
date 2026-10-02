@@ -60,6 +60,9 @@
   // Visible title: the image's own alt text. Element labels are often
   // generic ("Mermaid diagram"), so they stay accessible names only.
   const caption = $derived(current?.kind === "image" ? current.alt.trim() : "");
+  // Rendered caption height (one line or two), so the content clears
+  // exactly what the caption covers.
+  let captionHeight = $state(0);
   const dialogLabel = $derived(
     paged ? formatLabel(itemLabel, position + 1, items.length) : itemLabel,
   );
@@ -134,6 +137,7 @@
       aria-label={dialogLabel}
       tabindex="-1"
       class:kit-media-viewer__panel--captioned={caption}
+      style:--kit-media-viewer-caption-height={caption ? `${captionHeight}px` : undefined}
       style:--kit-media-viewer-bg={current?.kind === "element" ? current.background : undefined}
       {onkeydown}
       {@attach trapFocus}
@@ -163,7 +167,14 @@
       <!-- Hidden from assistive tech: the dialog's name and the image's alt
         already carry this text. -->
       {#if caption}
-        <p class="kit-media-viewer__caption" aria-hidden="true" title={caption}>{caption}</p>
+        <p
+          class="kit-media-viewer__caption"
+          aria-hidden="true"
+          title={caption}
+          bind:offsetHeight={captionHeight}
+        >
+          {caption}
+        </p>
       {/if}
 
       <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={onclose}>
@@ -220,7 +231,14 @@
     /* Close and reset button size; the caption clears the close button. */
     --kit-media-viewer-control: 28px;
     /* Space above and below the content, kept clear of the controls. */
-    --kit-media-viewer-inset-y: 64px;
+    --kit-media-viewer-inset-base: 64px;
+    /* Top band the caption covers; the content is centered, so the
+     * inset reserves it on both sides. */
+    --kit-media-viewer-caption-band: 0px;
+    --kit-media-viewer-inset-y: max(
+      var(--kit-media-viewer-inset-base),
+      2 * var(--kit-media-viewer-caption-band)
+    );
     position: relative;
     width: 90vw;
     /* vh first: browsers without dvh drop that line and keep this one. */
@@ -235,7 +253,9 @@
 
   /* The caption sits in the top band, so content starts below it. */
   .kit-media-viewer__panel--captioned {
-    --kit-media-viewer-inset-y: 104px;
+    --kit-media-viewer-caption-band: calc(
+      var(--space-5) + var(--kit-media-viewer-caption-height, 0px) + var(--space-5)
+    );
   }
 
   .kit-media-viewer__panel:focus {
@@ -404,11 +424,7 @@
 
   @media (max-width: 640px) {
     .kit-media-viewer__panel {
-      --kit-media-viewer-inset-y: 112px;
-    }
-
-    .kit-media-viewer__panel--captioned {
-      --kit-media-viewer-inset-y: 144px;
+      --kit-media-viewer-inset-base: 112px;
     }
 
     .kit-media-viewer__pan {

@@ -292,21 +292,33 @@ test("alt text shows as a caption, and a blank alt shows none", async ({ page })
   await expect(caption(page)).toHaveText("Third");
 });
 
-test("a tall image starts below its caption", async ({ page }) => {
-  await page.evaluate(async () => {
-    const { mountMediaViewer } =
-      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
-    const tall =
-      "data:image/svg+xml," +
-      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="4000"/>');
-    mountMediaViewer([{ kind: "image", src: tall, alt: "A long page screenshot" }], 0);
+for (const [lines, alt] of [
+  ["one-line", "A long page screenshot"],
+  ["wrapped", "A long page screenshot of the settings screen ".repeat(12).trim()],
+] as const) {
+  test(`a tall image starts just below a ${lines} caption`, async ({ page }) => {
+    await page.evaluate(async (alt) => {
+      const { mountMediaViewer } =
+        await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+      const tall =
+        "data:image/svg+xml," +
+        encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="4000"/>');
+      mountMediaViewer([{ kind: "image", src: tall, alt }], 0);
+    }, alt);
+    const image = viewer(page).getByRole("img");
+    await expect(image).toBeVisible();
+    const captionBox = (await caption(page).boundingBox())!;
+    const imageBox = (await image.boundingBox())!;
+    const lineHeight = await caption(page).evaluate((el) =>
+      parseFloat(getComputedStyle(el).lineHeight),
+    );
+    expect(Math.floor(captionBox.height / lineHeight)).toBe(lines === "wrapped" ? 2 : 1);
+    // Clear of the caption, with only the --space-5 gap reserved below it.
+    const captionBottom = captionBox.y + captionBox.height;
+    expect(imageBox.y).toBeGreaterThanOrEqual(captionBottom);
+    expect(imageBox.y).toBeLessThanOrEqual(captionBottom + 12 + 1);
   });
-  const image = viewer(page).getByRole("img");
-  await expect(image).toBeVisible();
-  const captionBox = (await caption(page).boundingBox())!;
-  const imageBox = (await image.boundingBox())!;
-  expect(imageBox.y).toBeGreaterThanOrEqual(captionBox.y + captionBox.height);
-});
+}
 
 test("the position counter and accessible name are localizable", async ({ page }) => {
   await page.evaluate(async (itemsSource) => {
