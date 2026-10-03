@@ -56,6 +56,8 @@ export function startAppOpenedReporting({ route, surface, post }: AppOpenedOptio
           retry = setTimeout(send, RETRY_MS);
           return;
         }
+        // An answer landing after midnight must not roll back a later day another tab recorded.
+        if (storedDay() > sending) return;
         try {
           localStorage.setItem(key, sending);
         } catch {
