@@ -169,6 +169,27 @@ onInput("ab"); // search("ab") fires once, 250ms later
 onInput.cancel(); // drop a pending call (e.g. on teardown)
 ```
 
+## App opened
+
+```ts
+import { startAppOpenedReporting } from "@kenn-io/kit-ui";
+
+const stop = startAppOpenedReporting({
+  route: "/api/v1/telemetry/events",
+  surface: "web",
+  post: (route, event) => fetch(route, { method: "POST", headers, body: JSON.stringify(event) }),
+});
+```
+
+Posts `app_opened` on load and again when the window regains focus on a later
+UTC day, so one browser counts once a day. `post` carries the product's own
+auth headers or generated client and resolves with the response status. A
+rejection or a 502, 503 or 504 means the daemon hasn't answered yet, so the
+post repeats every second until it does; any other status ends the day's
+attempt. The day lives in localStorage, so reloads and other tabs send nothing
+more that day. When storage is blocked, memory holds the day for the page, so
+each page load sends at most once a day.
+
 ## Color hashing
 
 ```ts
