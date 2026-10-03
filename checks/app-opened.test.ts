@@ -136,6 +136,16 @@ describe("startAppOpenedReporting", () => {
     expect([...stored.values()]).toEqual(["2026-10-04"]);
   });
 
+  test("a retry stops once another tab records the day", async () => {
+    statuses = ["offline"];
+    start();
+    await settle();
+    stored.set("kit-ui.app-opened.web", "2026-10-03");
+    jest.advanceTimersByTime(5000);
+    await settle();
+    expect(sent).toHaveLength(1);
+  });
+
   test("any answer counts, so an error status is not retried", async () => {
     statuses = [401];
     start();

@@ -20,8 +20,9 @@ const NOT_READY = new Set([502, 503, 504]);
 /**
  * Posts `app_opened` now and on the first window focus of each later UTC day;
  * returns a cleanup. Retries until the backend answers, then ignores the
- * outcome. localStorage carries the day across reloads and tabs; when storage
- * is blocked, memory still holds it for this page.
+ * outcome. localStorage carries the day across reloads and tabs, though tabs
+ * that open together may each send one; when storage is blocked, memory still
+ * holds it for this page.
  */
 export function startAppOpenedReporting({ route, surface, post }: AppOpenedOptions): () => void {
   const key = `kit-ui.app-opened.${surface}`;
@@ -42,6 +43,8 @@ export function startAppOpenedReporting({ route, surface, post }: AppOpenedOptio
   // A retry that crosses UTC midnight counts for the day it lands on.
   const send = (): void => {
     const sending = (day = today());
+    // Another tab may have recorded the day while this one waited to retry.
+    if (storedDay() === sending) return;
     post(route, { event: "app_opened", properties: { surface } })
       .then(
         (response) => !NOT_READY.has(response.status),

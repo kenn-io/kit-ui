@@ -18,7 +18,8 @@ export interface AppOpenedOptions {
 /**
  * Posts `app_opened` now and on the first window focus of each later UTC day;
  * returns a cleanup. Retries until the backend answers, then ignores the
- * outcome. localStorage carries the day across reloads and tabs; when storage
- * is blocked, memory still holds it for this page.
+ * outcome. localStorage carries the day across reloads and tabs, though tabs
+ * that open together may each send one; when storage is blocked, memory still
+ * holds it for this page.
  */
 export declare function startAppOpenedReporting({ route, surface, post }: AppOpenedOptions): () => void;

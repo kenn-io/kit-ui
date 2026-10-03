@@ -182,12 +182,13 @@ const stop = startAppOpenedReporting({
 ```
 
 Posts `app_opened` on load and again when the window regains focus on a later
-UTC day, so one browser counts once a day. `post` carries the product's own
+UTC day. `post` carries the product's own
 auth headers or generated client and resolves with the response status. A
 rejection or a 502, 503 or 504 means the daemon hasn't answered yet, so the
 post repeats every second until it does; any other status ends the day's
-attempt. The day lives in localStorage, so reloads and other tabs send nothing
-more that day. When storage is blocked, memory holds the day for the page, so
+attempt. The day lives in localStorage, so reloads and tabs opened later send
+nothing more that day. Tabs that open together may each send one, which
+doesn't move a count of installs active that day. When storage is blocked, memory holds the day for the page, so
 each page load sends at most once a day.
 
 ## Color hashing
