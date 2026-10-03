@@ -1,3 +1,9 @@
+---
+title: SelectDropdown
+description: Accessible single-select combobox with listbox semantics and keyboard navigation.
+last_edited: 2026-08-24
+---
+
 # SelectDropdown
 
 Accessible single-select combobox (ARIA `combobox` + `listbox`) with full

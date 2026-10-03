@@ -1,3 +1,9 @@
+---
+title: Checkbox
+description: Accessible checkbox with bindable state, indeterminate display, and shared focus styling.
+last_edited: 2026-08-24
+---
+
 # Checkbox
 
 Forge's `TreeCheckbox` recipe, consolidated: a 16px drawn box layered

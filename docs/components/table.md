@@ -1,3 +1,9 @@
+---
+title: Table + TableHeaderCell
+description: Data-table shell and sortable header-cell primitives with sticky headers, striping, and application-owned sorting.
+last_edited: 2026-08-24
+---
+
 # Table + TableHeaderCell
 
 Data-table primitives consolidating Forge's `JobTable` and agentsview's

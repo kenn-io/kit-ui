@@ -1,3 +1,9 @@
+---
+title: Orientation-Aware Split Handle and Bottom Dock Design
+description: Design contracts for orientation-aware split handles and a controlled, resizable inline bottom dock.
+last_edited: 2026-08-24
+---
+
 # Orientation-Aware Split Handle and Bottom Dock Design
 
 ## Goal

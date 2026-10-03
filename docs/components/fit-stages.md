@@ -1,3 +1,9 @@
+---
+title: FitStages
+description: Measurement-driven wrapper that selects the richest control rendering that fits its container.
+last_edited: 2026-07-02
+---
+
 # FitStages
 
 Generic multi-breakpoint wrapper: give it renderings of the same control at

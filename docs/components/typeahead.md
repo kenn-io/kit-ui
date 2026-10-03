@@ -1,3 +1,9 @@
+---
+title: Typeahead
+description: Filterable select with grouped options, keyboard navigation, custom values, and remote data sources.
+last_edited: 2026-09-24
+---
+
 # Typeahead
 
 Filterable select: the closed state is a trigger button; clicking it swaps in a

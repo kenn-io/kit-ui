@@ -1,3 +1,9 @@
+---
+title: CopyButton
+description: Copy-to-clipboard icon button with self-managed or controlled confirmation state.
+last_edited: 2026-07-02
+---
+
 # CopyButton
 
 Icon button that copies text and flashes a check mark. Extracted from

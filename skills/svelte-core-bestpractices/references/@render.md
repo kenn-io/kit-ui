@@ -1,3 +1,9 @@
+---
+title: Svelte render tags
+description: Render snippets with expressions, optional render tags, and fallback content.
+last_edited: 2026-07-02
+---
+
 To render a [snippet](snippet), use a `{@render ...}` tag.
 
 ```svelte

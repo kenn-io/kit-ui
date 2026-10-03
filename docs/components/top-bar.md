@@ -1,3 +1,9 @@
+---
+title: TopBar
+description: Application header with side regions, search, and measurement-driven navigation collapse.
+last_edited: 2026-08-24
+---
+
 # TopBar
 
 App header bar: reserved left/right regions, an optional centered search

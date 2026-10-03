@@ -1,3 +1,9 @@
+---
+title: DetailDrawer
+description: Modal side panel for detail content with overlay dismissal and keyboard accessibility.
+last_edited: 2026-08-24
+---
+
 # DetailDrawer
 
 Right-side slide-in detail panel over a dimmed overlay — the "click a row,

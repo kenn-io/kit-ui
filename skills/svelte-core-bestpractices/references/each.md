@@ -1,3 +1,9 @@
+---
+title: Svelte keyed each blocks
+description: Render keyed collections with stable item identity, index access, and destructuring.
+last_edited: 2026-07-02
+---
+
 ## Keyed each blocks
 
 ```svelte

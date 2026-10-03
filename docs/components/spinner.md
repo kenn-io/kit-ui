@@ -1,3 +1,9 @@
+---
+title: Spinner
+description: Accessible loading spinner with status semantics and configurable presentation.
+last_edited: 2026-07-02
+---
+
 # Spinner
 
 Simple loading spinner (`role="status"`). Extracted from agentsview's modal

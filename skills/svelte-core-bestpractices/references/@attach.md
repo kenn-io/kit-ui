@@ -1,3 +1,9 @@
+---
+title: Svelte attachments
+description: Attach reactive DOM behavior with attachment factories, cleanup, component forwarding, and conditional attachments.
+last_edited: 2026-07-02
+---
+
 Attachments are functions that run in an [effect]($effect) when an element is mounted to the DOM or when [state]($state) read inside the function updates.
 
 Optionally, they can return a function that is called before the attachment re-runs, or after the element is later removed from the DOM.

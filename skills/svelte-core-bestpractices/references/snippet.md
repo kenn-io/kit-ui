@@ -1,3 +1,9 @@
+---
+title: Svelte snippets
+description: Define reusable markup snippets, pass and type them, and manage scope, exports, and programmatic creation.
+last_edited: 2026-07-02
+---
+
 ```svelte
 <!--- copy: false  --->
 {#snippet name()}...{/snippet}

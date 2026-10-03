@@ -1,3 +1,9 @@
+---
+title: Provider brand
+description: Provider identity marks and action buttons with application-owned authentication behavior.
+last_edited: 2026-07-31
+---
+
 # Provider brand
 
 `ProviderBrandMark` renders provider identity without authentication behavior.

@@ -1,3 +1,9 @@
+---
+title: Calendar
+description: Single-month date grid with month navigation, highlighted ranges, and date limits.
+last_edited: 2026-07-01
+---
+
 # Calendar
 
 A single-month date grid: Monday-first weeks, month paging, an optional

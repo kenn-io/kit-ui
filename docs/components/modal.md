@@ -1,3 +1,9 @@
+---
+title: Modal
+description: Accessible dialog primitive with an overlay, header, scrollable body, and optional footer.
+last_edited: 2026-09-13
+---
+
 # Modal
 
 Dialog primitive: overlay + panel + header + scrollable body + optional footer.

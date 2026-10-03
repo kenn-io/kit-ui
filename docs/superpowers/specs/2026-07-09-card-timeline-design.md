@@ -1,3 +1,9 @@
+---
+title: Card + Timeline compounds — design
+description: Approved design for Card, Timeline, TimelineItem, and CommentCard compounds consolidated from Forge.
+last_edited: 2026-08-24
+---
+
 # Card + Timeline compounds — design
 
 Approved 2026-07-09. Consolidates Forge's hand-rolled card recipes and

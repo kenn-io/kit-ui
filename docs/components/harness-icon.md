@@ -1,3 +1,9 @@
+---
+title: HarnessIcon
+description: Bundled monochrome glyphs for coding-agent harnesses, with sizing and provenance details.
+last_edited: 2026-09-16
+---
+
 # HarnessIcon
 
 `HarnessIcon` renders the glyph of a coding-agent harness (Claude, Codex via

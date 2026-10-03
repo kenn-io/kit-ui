@@ -1,3 +1,9 @@
+---
+title: Mermaid diagrams (`utils/markdown-mermaid`)
+description: Opt-in Mermaid rendering for Markdown documents with themed pan, zoom, and media-viewer controls.
+last_edited: 2026-10-01
+---
+
 # Mermaid diagrams (`utils/markdown-mermaid`)
 
 Opt-in mermaid rendering for markdown documents, consolidated from

@@ -1,3 +1,9 @@
+---
+title: KbdBadge
+description: Keyboard-shortcut badge that hides automatically on touch devices.
+last_edited: 2026-08-24
+---
+
 # KbdBadge
 
 Keyboard-shortcut badge. Hidden automatically on touch devices

@@ -1,3 +1,9 @@
+---
+title: SettingsLayout
+description: Categorized settings shell and section primitives with responsive navigation and optional footer actions.
+last_edited: 2026-08-24
+---
+
 # SettingsLayout
 
 Categorized settings shell: a sidebar of categories on the left and a

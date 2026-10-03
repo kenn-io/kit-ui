@@ -1,3 +1,9 @@
+---
+title: Svelte hydratable
+description: Reuse server-side asynchronous results during client hydration with serialization and CSP guidance.
+last_edited: 2026-07-02
+---
+
 In Svelte, when you want to render asynchronous content data on the server, you can simply `await` it. This is great! However, it comes with a pitfall: when hydrating that content on the client, Svelte has to redo the asynchronous work, which blocks hydration for however long it takes:
 
 ```svelte

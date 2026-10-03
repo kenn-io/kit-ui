@@ -1,6 +1,8 @@
 ---
-name: kit-ui
+title: "Design System: kit-ui"
 description: Shared Svelte 5 component library for kenn-io frontends — a calm, dense tool surface
+last_edited: 2026-09-29
+name: kit-ui
 colors:
   primary: "#2563eb"
   workbench-fog: "#f5f6f8"

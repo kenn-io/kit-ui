@@ -1,3 +1,9 @@
+---
+title: TextInput / SearchInput
+description: Bordered TextInput and SearchInput primitives with shared sizes, validation states, and search controls.
+last_edited: 2026-07-31
+---
+
 # TextInput / SearchInput
 
 The bordered text-field primitives. `TextInput` is the base: a wrapper that

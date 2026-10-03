@@ -1,3 +1,9 @@
+---
+title: Svelte reactive subscribers
+description: Integrate external event-based systems with Svelte reactivity using createSubscriber.
+last_edited: 2026-07-02
+---
+
 ## createSubscriber
 
 <blockquote class="since note">

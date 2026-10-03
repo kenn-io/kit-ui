@@ -1,3 +1,9 @@
+---
+title: Responsive action grid research
+description: Research on responsive mixed-control groups, accessibility guidance, and the proposed AdaptiveActionGrid behavior.
+last_edited: 2026-08-25
+---
+
 # Responsive action grid research
 
 Research date: 2026-08-21

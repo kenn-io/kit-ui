@@ -1,3 +1,9 @@
+---
+title: Chip
+description: Status and label badges with semantic tones, optional interaction, and decorative trailing content.
+last_edited: 2026-08-24
+---
+
 # Chip
 
 Small status/label badge. Renders a `<span>`, or a `<button>` when

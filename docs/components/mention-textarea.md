@@ -1,3 +1,9 @@
+---
+title: MentionTextarea
+description: Textarea autocomplete with configurable triggers, async search, custom rows, and keyboard navigation.
+last_edited: 2026-10-02
+---
+
 # MentionTextarea
 
 Textarea with inline mention autocomplete: typing the trigger character at a

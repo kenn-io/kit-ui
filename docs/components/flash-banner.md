@@ -1,3 +1,9 @@
+---
+title: FlashBanner
+description: Transient toast banner component and the shared notification store API.
+last_edited: 2026-08-24
+---
+
 # FlashBanner
 
 Transient toast banner driven by a module-level store. Extracted from

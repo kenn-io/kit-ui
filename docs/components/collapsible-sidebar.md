@@ -1,3 +1,9 @@
+---
+title: CollapsibleSidebar + SidebarToggle
+description: Resizable sidebar and main-content layout with collapse and expand controls.
+last_edited: 2026-08-24
+---
+
 # CollapsibleSidebar + SidebarToggle
 
 Sidebar-plus-main layout from Forge: resizable via a `SplitResizeHandle`

@@ -1,3 +1,9 @@
+---
+title: RefreshControl
+description: Refresh button and updated-age label with optional automatic refresh and localization.
+last_edited: 2026-09-21
+---
+
 # RefreshControl
 
 Refresh button plus an "Updated Xm ago" label with built-in auto-refresh.

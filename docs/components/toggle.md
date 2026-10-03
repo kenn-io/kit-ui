@@ -1,3 +1,9 @@
+---
+title: Toggle
+description: Accessible on/off switch with bindable checkbox state and shared focus styling.
+last_edited: 2026-08-24
+---
+
 # Toggle
 
 The on/off switch from Forge's diff toolbar, consolidated: a 36×20

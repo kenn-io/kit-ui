@@ -1,3 +1,9 @@
+---
+title: ColorLabel
+description: Pill labels with arbitrary hex backgrounds and text selected by WCAG contrast ratio.
+last_edited: 2026-09-29
+---
+
 # ColorLabel
 
 Pill label with an arbitrary hex background (GitHub-label style) that picks

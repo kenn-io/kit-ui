@@ -1,3 +1,9 @@
+---
+title: Button
+description: Action button API with semantic tone, visual surface, and size variants.
+last_edited: 2026-08-24
+---
+
 # Button
 
 Action button with semantic **tone** × visual-weight **surface** × **size**

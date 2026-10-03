@@ -1,3 +1,9 @@
+---
+title: Auth Surfaces
+description: Compose account and authentication screens with PageFrame, FormField, and Notice.
+last_edited: 2026-07-31
+---
+
 # Auth Surfaces
 
 `PageFrame`, `FormField`, and `Notice` share the visual structure used by

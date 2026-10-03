@@ -1,3 +1,9 @@
+---
+title: CodeBlock + Markdown pipeline
+description: CodeBlock, Markdown, and the marked, Shiki, and DOMPurify document-rendering pipeline.
+last_edited: 2026-10-02
+---
+
 # CodeBlock + Markdown pipeline
 
 Three pieces that compose: a **markdown pipeline**

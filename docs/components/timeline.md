@@ -1,3 +1,9 @@
+---
+title: Timeline, TimelineItem, CommentCard
+description: Timeline, TimelineItem, and CommentCard presentation primitives for conversation and activity views.
+last_edited: 2026-09-29
+---
+
 # Timeline, TimelineItem, CommentCard
 
 The presentational compound behind PR/issue conversation views

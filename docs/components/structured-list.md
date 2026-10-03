@@ -1,3 +1,9 @@
+---
+title: StructuredList
+description: Dense comparable records in a card surface with stable row anatomy and expandable details.
+last_edited: 2026-08-21
+---
+
 # StructuredList
 
 `StructuredList` presents dense, comparable records in a card surface. Use it when rows share a stable primary, secondary, description, and status anatomy but may need expandable supporting detail.

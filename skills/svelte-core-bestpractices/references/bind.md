@@ -1,3 +1,9 @@
+---
+title: Svelte function bindings
+description: Use getter and setter functions for validated bindings and readonly dimension bindings.
+last_edited: 2026-07-01
+---
+
 ## Function bindings
 
 You can also use `bind:property={get, set}`, where `get` and `set` are functions, allowing you to perform validation and transformation:

@@ -1,3 +1,9 @@
+---
+title: Shared Form Control Height
+description: Design decision to align large inputs and actions on a shared 36px minimum form-control height.
+last_edited: 2026-07-31
+---
+
 # Shared Form Control Height
 
 ## Problem

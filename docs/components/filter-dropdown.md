@@ -1,3 +1,9 @@
+---
+title: FilterDropdown
+description: Sectioned filter and sort popover with search, counts, bulk actions, and reset controls.
+last_edited: 2026-08-24
+---
+
 # FilterDropdown
 
 Sectioned filter/sort/menu popover with an active badge, optional search,

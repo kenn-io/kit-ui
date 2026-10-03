@@ -1,3 +1,9 @@
+---
+title: MediaViewer
+description: Full-viewport viewer for images and diagrams with panning, zooming, and gallery navigation.
+last_edited: 2026-10-01
+---
+
 # MediaViewer
 
 The expanded view for images, Mermaid diagrams, and other static

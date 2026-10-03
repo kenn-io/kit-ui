@@ -1,3 +1,9 @@
+---
+title: Brand Contract
+description: Maintain the brand contract, generated CSS, shared assets, and typography tokens.
+last_edited: 2026-07-29
+---
+
 # Brand Contract
 
 `src/lib/brand.json` is the editable source for brand colors, type, spacing,

@@ -1,3 +1,9 @@
+---
+title: DateRangePicker
+description: Date-range popover with relative, calendar, and custom range selection plus date helpers.
+last_edited: 2026-07-11
+---
+
 # DateRangePicker
 
 Date-range trigger + popover with three tabs: **Relative** (rolling "last N

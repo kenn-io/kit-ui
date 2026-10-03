@@ -1,3 +1,9 @@
+---
+title: Menu
+description: Compositional action and single-choice menus with shared state, positioning, dismissal, and keyboard focus.
+last_edited: 2026-09-27
+---
+
 # Menu
 
 Compositional action and single-choice menus. `Menu` keeps open state and the

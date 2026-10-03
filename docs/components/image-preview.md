@@ -1,3 +1,9 @@
+---
+title: ImagePreview
+description: Image preview panel with a checkerboard background, failure state, and MediaViewer expansion.
+last_edited: 2026-10-01
+---
+
 # ImagePreview
 
 Image file preview panel: a contain-fit image centered on a checkerboard

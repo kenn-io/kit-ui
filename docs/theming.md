@@ -1,3 +1,9 @@
+---
+title: Theming
+description: Configure theme tokens, typography, spacing, semantic tones, and the theme store.
+last_edited: 2026-10-02
+---
+
 # Theming
 
 kit-ui components read only CSS custom properties — there is no Tailwind and no

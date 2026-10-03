@@ -1,3 +1,9 @@
+---
+title: SplitResizeHandle
+description: Keyboard-accessible pane divider reporting horizontal or vertical resize deltas.
+last_edited: 2026-10-02
+---
+
 # SplitResizeHandle
 
 Keyboard-accessible pane divider from Forge. It owns no layout; it reports

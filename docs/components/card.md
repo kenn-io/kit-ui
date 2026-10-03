@@ -1,3 +1,9 @@
+---
+title: Card
+description: Bordered surface container with inset, default, and raised hierarchy levels.
+last_edited: 2026-09-29
+---
+
 # Card
 
 Bordered surface container with three hierarchy levels. Consolidates the

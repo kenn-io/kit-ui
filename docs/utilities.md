@@ -1,3 +1,9 @@
+---
+title: Utilities
+description: Reference shared helpers for clipboard access, formatting, overlays, popovers, focus, and refresh scheduling.
+last_edited: 2026-10-01
+---
+
 # Utilities
 
 All exported from the package root (or the granular `/utils/*` subpaths).

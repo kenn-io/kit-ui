@@ -1,3 +1,9 @@
+---
+title: Tooltip
+description: Hover and focus tooltips with rich content, viewport-aware positioning, delays, and accessible descriptions.
+last_edited: 2026-08-24
+---
+
 # Tooltip
 
 Hover/focus tooltip with rich-content support, generalized from Forge's

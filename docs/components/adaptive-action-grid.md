@@ -1,3 +1,9 @@
+---
+title: AdaptiveActionGrid
+description: Responsive mixed-control container with row, equal-grid, and disclosure layouts.
+last_edited: 2026-08-30
+---
+
 # AdaptiveActionGrid
 
 Responsive container for mixed actions and controls. It keeps a natural-width

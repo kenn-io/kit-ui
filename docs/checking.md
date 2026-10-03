@@ -1,3 +1,9 @@
+---
+title: kit-ui-check
+description: Detect hand-rolled component equivalents and design-token violations with the kit-ui-check CLI.
+last_edited: 2026-10-02
+---
+
 # kit-ui-check
 
 CLI that scans a project consuming `@kenn-io/kit-ui` for hand-rolled

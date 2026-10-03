@@ -1,3 +1,9 @@
+---
+title: ChipStack
+description: Collapsing chip and badge rows with a reversible overflow expander.
+last_edited: 2026-08-24
+---
+
 # ChipStack
 
 Collapsing row for chips, badges, or small buttons: items past `maxVisible`

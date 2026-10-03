@@ -1,3 +1,9 @@
+---
+title: SegmentedControl
+description: Inline radio-group value selector with roving keyboard focus, tones, and snippet content.
+last_edited: 2026-08-24
+---
+
 # SegmentedControl
 
 Inline value selector (the "All / PRs / Issues" pattern Forge repeated as

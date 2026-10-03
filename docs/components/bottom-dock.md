@@ -1,3 +1,9 @@
+---
+title: BottomDock
+description: Controlled, resizable inline bottom panel for details, logs, terminals, and review content.
+last_edited: 2026-07-21
+---
+
 # BottomDock
 
 Controlled inline bottom panel for detail, log, terminal, and review surfaces.

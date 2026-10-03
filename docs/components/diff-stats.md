@@ -1,3 +1,9 @@
+---
+title: DiffStats
+description: Compact added and removed line counts with tabular numerals and abbreviated large values.
+last_edited: 2026-08-24
+---
+
 # DiffStats
 
 The `+N −M` added/removed line counts, tabular-nums in the mono font, with

@@ -1,3 +1,9 @@
+---
+title: ScrollBox
+description: Labelled, keyboard-focusable vertical scroller that preserves native scrollbar behavior.
+last_edited: 2026-07-15
+---
+
 # ScrollBox
 
 Vertical scroller that preserves the browser and operating system's native

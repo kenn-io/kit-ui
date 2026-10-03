@@ -1,3 +1,9 @@
+---
+title: Adaptive action grid design
+description: Design for a responsive control container that moves between a natural-width row, equal grid tracks, and inline disclosure.
+last_edited: 2026-08-25
+---
+
 # Adaptive action grid design
 
 ## Goal

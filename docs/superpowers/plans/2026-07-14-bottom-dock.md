@@ -1,3 +1,9 @@
+---
+title: Orientation-Aware Split Handle and Bottom Dock Implementation Plan
+description: Historical implementation plan for orientation-aware split resizing and the inline BottomDock component.
+last_edited: 2026-08-24
+---
+
 # Orientation-Aware Split Handle and Bottom Dock Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

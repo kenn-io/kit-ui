@@ -1,3 +1,9 @@
+---
+title: Browser tests
+description: Run Playwright browser tests and understand the demo gallery behaviors they cover.
+last_edited: 2026-10-02
+---
+
 # Browser tests
 
 Playwright suite driving the demo gallery in real Chromium — the

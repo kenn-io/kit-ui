@@ -1,3 +1,9 @@
+---
+title: Menu component research
+description: Research on compositional action menus, accessibility semantics, framework approaches, and the proposed kit-ui API.
+last_edited: 2026-08-26
+---
+
 # Menu component research
 
 Date: 2026-08-26

@@ -1,3 +1,9 @@
+---
+title: MetricCard
+description: Dashboard metric surface with a label, prominent value, supporting detail, and source metadata.
+last_edited: 2026-08-21
+---
+
 # MetricCard
 
 Dashboard metric surface with a deliberate vertical hierarchy. Use it when a

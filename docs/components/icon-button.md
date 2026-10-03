@@ -1,3 +1,9 @@
+---
+title: IconButton
+description: Accessible square ghost button for a single toolbar or header icon.
+last_edited: 2026-07-17
+---
+
 # IconButton
 
 Square ghost button for a lone icon — the toolbar/header workhorse both apps

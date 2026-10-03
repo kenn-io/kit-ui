@@ -1,3 +1,9 @@
+---
+title: EmptyState
+description: Centered placeholder content for empty panes, filter misses, and unselected records.
+last_edited: 2026-07-02
+---
+
 # EmptyState
 
 Centered muted placeholder for panes with nothing to show — empty inboxes,

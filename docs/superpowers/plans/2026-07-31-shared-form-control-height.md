@@ -1,3 +1,9 @@
+---
+title: Shared Form Control Height Implementation Plan
+description: Implementation plan for aligning large form inputs and actions on a shared 36px minimum height.
+last_edited: 2026-07-31
+---
+
 # Shared Form Control Height Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

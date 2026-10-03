@@ -1,3 +1,9 @@
+---
+title: CommandPalette + keyboard shortcuts
+description: Keyboard shortcut registration and an overlay command palette driven by application commands.
+last_edited: 2026-07-02
+---
+
 # CommandPalette + keyboard shortcuts
 
 Two pieces that compose: a **shortcut system** (combo parsing, platform

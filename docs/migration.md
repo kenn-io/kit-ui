@@ -1,3 +1,9 @@
+---
+title: Migrating Forge and agentsview to kit-ui
+description: Migrate Forge and agentsview components, theme setup, and shared utilities to kit-ui.
+last_edited: 2026-08-24
+---
+
 # Migrating Forge and agentsview to kit-ui
 
 A step-by-step guide for an agent (or human) converting an app to consume

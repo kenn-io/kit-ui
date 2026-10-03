@@ -1,3 +1,9 @@
+---
+title: StatusDot
+description: Small presence and status indicator driven by application-provided status values.
+last_edited: 2026-09-02
+---
+
 # StatusDot
 
 Tiny presence/status indicator for session lists and tables. Extracted from

@@ -1,3 +1,9 @@
+---
+title: VirtualList
+description: Windowed lists with fixed or measured row heights, overscan, and keyboard focus guidance.
+last_edited: 2026-07-02
+---
+
 # VirtualList
 
 Windowed list for long datasets (sessions, log lines, table rows): only the

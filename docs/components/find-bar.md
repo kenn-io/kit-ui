@@ -1,3 +1,9 @@
+---
+title: FindBar
+description: In-content search bar with match counts, navigation controls, and placement variants.
+last_edited: 2026-07-02
+---
+
 # FindBar
 
 In-content find bar (the Cmd-F strip): search input, "N of M" counter,

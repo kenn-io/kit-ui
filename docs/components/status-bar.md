@@ -1,3 +1,9 @@
+---
+title: StatusBar
+description: Fixed-height application footer with snippet-driven status content and optional popovers.
+last_edited: 2026-08-24
+---
+
 # StatusBar
 
 Fixed-height bottom app bar: `var(--status-bar-height)` (24px) tall, surface

@@ -1,3 +1,9 @@
+---
+title: ThemeToggle
+description: Ready-made theme-store control with variants for switching application color modes.
+last_edited: 2026-07-02
+---
+
 # ThemeToggle
 
 Ready-made control over the [theme store](../theming.md#theme-store): call
