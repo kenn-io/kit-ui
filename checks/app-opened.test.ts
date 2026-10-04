@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { startAppOpenedReporting, type AppOpenedEvent } from "../src/lib/utils/app-opened.js";
 
 const ROUTE = "/api/v1/telemetry/events";
+const STORAGE_KEY = "kit-ui.app-opened.example.web";
 const DAY_ONE = new Date("2026-10-03T12:00:00Z");
 const DAY_TWO = new Date("2026-10-04T00:30:00Z");
 
@@ -23,8 +24,8 @@ const post = (route: string, event: AppOpenedEvent) => {
     ? Promise.reject(new TypeError("Failed to fetch"))
     : Promise.resolve({ status: next });
 };
-const start = () => {
-  const stop = startAppOpenedReporting({ route: ROUTE, surface: "web", post });
+const start = (storageKey = STORAGE_KEY) => {
+  const stop = startAppOpenedReporting({ route: ROUTE, surface: "web", storageKey, post });
   stops.push(stop);
   return stop;
 };
@@ -100,6 +101,21 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(1);
   });
 
+  test("products sharing an origin record their days independently", async () => {
+    start("kit-ui.app-opened.first.web");
+    await settle();
+    start("kit-ui.app-opened.second.web");
+    await settle();
+    start("kit-ui.app-opened.first.web");
+    start("kit-ui.app-opened.second.web");
+    await settle();
+    expect(sent).toHaveLength(2);
+    expect([...stored.entries()]).toEqual([
+      ["kit-ui.app-opened.first.web", "2026-10-03"],
+      ["kit-ui.app-opened.second.web", "2026-10-03"],
+    ]);
+  });
+
   test("blocked storage sends at most one per page load", async () => {
     blockStorage();
     start();
@@ -119,11 +135,75 @@ describe("startAppOpenedReporting", () => {
     expect(stored.size).toBe(0);
     jest.advanceTimersByTime(1000);
     await settle();
-    jest.advanceTimersByTime(1000);
+    jest.advanceTimersByTime(2000);
     await settle();
     expect(sent).toHaveLength(3);
     expect([...stored.values()]).toEqual(["2026-10-03"]);
     jest.advanceTimersByTime(5000);
+    await settle();
+    expect(sent).toHaveLength(3);
+  });
+
+  test("retries back off to 30 seconds until the backend answers", async () => {
+    statuses = ["offline", 502, 503, 504, "offline", 503, 503];
+    start();
+    await settle();
+    for (const [i, delay] of [1000, 2000, 4000, 8000, 16000, 30000, 30000].entries()) {
+      jest.advanceTimersByTime(delay - 1);
+      await settle();
+      expect(sent).toHaveLength(i + 1);
+      jest.advanceTimersByTime(1);
+      await settle();
+      expect(sent).toHaveLength(i + 2);
+    }
+    expect([...stored.values()]).toEqual(["2026-10-03"]);
+    jest.advanceTimersByTime(60000);
+    await settle();
+    expect(sent).toHaveLength(8);
+  });
+
+  test("a new day's focus cancels yesterday's timer and resets backoff", async () => {
+    statuses = [503, 503, "held"];
+    const stop = start();
+    await settle();
+    jest.advanceTimersByTime(1000);
+    await settle();
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    await settle();
+    jest.advanceTimersByTime(2000);
+    await settle();
+    expect(sent).toHaveLength(3);
+    release(503);
+    await settle();
+    jest.advanceTimersByTime(1000);
+    await settle();
+    expect(sent).toHaveLength(4);
+    expect([...stored.values()]).toEqual(["2026-10-04"]);
+    stop();
+    jest.advanceTimersByTime(60000);
+    await settle();
+    expect(sent).toHaveLength(4);
+  });
+
+  test("yesterday's in-flight failure cannot start another retry chain", async () => {
+    statuses = ["held", "held", 503];
+    const stop = start();
+    const releaseYesterday = release;
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    releaseYesterday(503);
+    await settle();
+    jest.advanceTimersByTime(1000);
+    await settle();
+    expect(sent).toHaveLength(2);
+    release(503);
+    await settle();
+    jest.advanceTimersByTime(1000);
+    await settle();
+    expect(sent).toHaveLength(3);
+    stop();
+    jest.advanceTimersByTime(60000);
     await settle();
     expect(sent).toHaveLength(3);
   });
@@ -145,7 +225,7 @@ describe("startAppOpenedReporting", () => {
     statuses = ["offline"];
     start();
     await settle();
-    stored.set("kit-ui.app-opened.web", "2026-10-03");
+    stored.set(STORAGE_KEY, "2026-10-03");
     jest.advanceTimersByTime(5000);
     await settle();
     expect(sent).toHaveLength(1);
@@ -156,17 +236,30 @@ describe("startAppOpenedReporting", () => {
     statuses = ["held"];
     start();
     await settle();
-    stored.set("kit-ui.app-opened.web", "2026-10-04");
+    stored.set(STORAGE_KEY, "2026-10-04");
     release(202);
     await settle();
     expect([...stored.values()]).toEqual(["2026-10-04"]);
   });
 
-  test("any answer counts, so an error status is not retried", async () => {
-    statuses = [401];
+  test.each([202, 400, 401, 500])("an HTTP %i ends the day's attempt", async (status) => {
+    statuses = [status];
     start();
     await settle();
-    jest.advanceTimersByTime(5000);
+    jest.advanceTimersByTime(60000);
+    await settle();
+    start();
+    await settle();
+    expect(sent).toHaveLength(1);
+  });
+
+  test("cleanup during an in-flight post prevents retries", async () => {
+    statuses = ["held"];
+    const stop = start();
+    stop();
+    release(503);
+    await settle();
+    jest.advanceTimersByTime(60000);
     await settle();
     expect(sent).toHaveLength(1);
   });

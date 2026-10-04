@@ -10,16 +10,18 @@ export interface AppOpenedOptions {
     route: string;
     /** Where the open happened, e.g. "web". */
     surface: string;
-    /** Sends the event with the product's own auth or client. Rejects when nothing answered. */
+    /** Stable localStorage key, unique to the product or installation and surface. */
+    storageKey: string;
+    /** Resolves with the HTTP status, including errors. Rejects only when no response arrived. */
     post: (route: string, event: AppOpenedEvent) => Promise<{
         status: number;
     }>;
 }
 /**
  * Posts `app_opened` now and on the first window focus of each later UTC day;
- * returns a cleanup. Retries until the backend answers, then ignores the
- * outcome. localStorage carries the day across reloads and tabs, though tabs
- * that open together may each send one; when storage is blocked, memory still
- * holds it for this page.
+ * returns a cleanup. Retries back off from 1 to 30 seconds until the backend
+ * answers, then ignores the outcome. localStorage carries the day across reloads
+ * and tabs, though tabs that open together may each send one; when storage is
+ * blocked, memory still holds it for this page.
  */
-export declare function startAppOpenedReporting({ route, surface, post }: AppOpenedOptions): () => void;
+export declare function startAppOpenedReporting({ route, surface, storageKey, post, }: AppOpenedOptions): () => void;

@@ -9,30 +9,38 @@ export interface AppOpenedOptions {
   route: string;
   /** Where the open happened, e.g. "web". */
   surface: string;
-  /** Sends the event with the product's own auth or client. Rejects when nothing answered. */
+  /** Stable localStorage key, unique to the product or installation and surface. */
+  storageKey: string;
+  /** Resolves with the HTTP status, including errors. Rejects only when no response arrived. */
   post: (route: string, event: AppOpenedEvent) => Promise<{ status: number }>;
 }
 
 const RETRY_MS = 1000;
+const MAX_RETRY_MS = 30000;
 // A daemon that is still starting, or a proxy in front of one, answers these.
 const NOT_READY = new Set([502, 503, 504]);
 
 /**
  * Posts `app_opened` now and on the first window focus of each later UTC day;
- * returns a cleanup. Retries until the backend answers, then ignores the
- * outcome. localStorage carries the day across reloads and tabs, though tabs
- * that open together may each send one; when storage is blocked, memory still
- * holds it for this page.
+ * returns a cleanup. Retries back off from 1 to 30 seconds until the backend
+ * answers, then ignores the outcome. localStorage carries the day across reloads
+ * and tabs, though tabs that open together may each send one; when storage is
+ * blocked, memory still holds it for this page.
  */
-export function startAppOpenedReporting({ route, surface, post }: AppOpenedOptions): () => void {
-  const key = `kit-ui.app-opened.${surface}`;
+export function startAppOpenedReporting({
+  route,
+  surface,
+  storageKey,
+  post,
+}: AppOpenedOptions): () => void {
   let day = "";
   let stopped = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
+  let retryMs = RETRY_MS;
 
   const storedDay = (): string => {
     try {
-      return localStorage.getItem(key) ?? "";
+      return localStorage.getItem(storageKey) ?? "";
     } catch {
       return "";
     }
@@ -53,13 +61,14 @@ export function startAppOpenedReporting({ route, surface, post }: AppOpenedOptio
       .then((answered) => {
         if (stopped || sending !== day) return;
         if (!answered) {
-          retry = setTimeout(send, RETRY_MS);
+          retry = setTimeout(send, retryMs);
+          retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
           return;
         }
         // An answer landing after midnight must not roll back a later day another tab recorded.
         if (storedDay() > sending) return;
         try {
-          localStorage.setItem(key, sending);
+          localStorage.setItem(storageKey, sending);
         } catch {
           // Blocked storage: memory still holds the day for this page.
         }
@@ -68,8 +77,9 @@ export function startAppOpenedReporting({ route, surface, post }: AppOpenedOptio
 
   const report = (): void => {
     const now = today();
-    if (now === day || now === storedDay()) return;
+    if (now === day) return;
     clearTimeout(retry);
+    retryMs = RETRY_MS;
     send();
   };
 
