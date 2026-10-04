@@ -179,6 +179,11 @@ export {
 } from "./stores/theme.svelte.js";
 
 // Utilities
+export {
+  startAppOpenedReporting,
+  type AppOpenedEvent,
+  type AppOpenedOptions,
+} from "./utils/app-opened.js";
 export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";

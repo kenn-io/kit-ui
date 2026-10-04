@@ -98,6 +98,7 @@ export { offsetOfIndex, virtualSlice, type VirtualSlice, type VirtualSliceInput,
 export { BREAKPOINTS, MEDIA, type BreakpointName } from "./breakpoints.js";
 export { dismissFlash, getFlash, getFlashes, getFlashMessage, showFlash, type FlashOptions, type FlashState, type FlashTone, } from "./stores/flash.svelte.js";
 export { cleanupTheme, getHighContrast, getThemeMode, getThemeName, initTheme, isDark, KIT_THEMES, setHighContrast, setThemeMode, setThemeName, type KitThemeInfo, type ThemeMode, type ThemeOptions, } from "./stores/theme.svelte.js";
+export { startAppOpenedReporting, type AppOpenedEvent, type AppOpenedOptions, } from "./utils/app-opened.js";
 export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";

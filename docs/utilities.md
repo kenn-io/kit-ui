@@ -169,6 +169,41 @@ onInput("ab"); // search("ab") fires once, 250ms later
 onInput.cancel(); // drop a pending call (e.g. on teardown)
 ```
 
+## App opened
+
+```ts
+import { startAppOpenedReporting } from "@kenn-io/kit-ui";
+
+const stop = startAppOpenedReporting({
+  route: "/api/v1/telemetry/events",
+  surface: "web",
+  storageKey: "example.app-opened.web",
+  post: (route, event) => fetch(route, { method: "POST", headers, body: JSON.stringify(event) }),
+});
+```
+
+Posts `app_opened` on load and again when the window regains focus on a later
+UTC day. Choose a stable `storageKey` unique to the product or installation
+and surface. Products mounted at different paths on the same origin need
+different keys. The day lives in localStorage under that exact key, so
+reloads and tabs opened later send nothing more that day.
+
+`post` carries the product's own auth headers and must resolve with the
+actual HTTP status, including error statuses. Reject only when no response
+arrived. For a generated client that throws on HTTP errors, use its
+response-returning transport (for example, Forge's `orvalRequest`) or adapt
+its HTTP errors into `{ status }` results. Passing a throwing client without
+this adaptation makes permanent HTTP errors retry indefinitely.
+
+A rejection or a 502, 503 or 504 triggers retries after 1, 2, 4, 8 and 16
+seconds, then every 30 seconds until the backend answers. Any other status
+ends the day's attempt. A focus that starts a new day's attempt resets the
+delay to one second.
+
+Tabs that open together may each send one, which doesn't move a count of
+installs active that day. When storage is blocked, memory holds the day for
+the page, so each page load sends at most once a day.
+
 ## Color hashing
 
 ```ts

@@ -20,7 +20,27 @@ Do not infer fork eligibility or network/cache isolation from this setting.
 
 Breaking API changes are 100% acceptable.
 
+## Git workflow
+
+- Finish implementation tasks by running the relevant checks, committing the
+  task's changes, and pushing the current branch before reporting completion.
+  Do not wait for a separate request to commit or push. If the user asks to
+  keep work local or uncommitted, follow that instruction. If verification,
+  committing, or pushing is blocked, report the blocker and remaining work.
+- Reviews, diagnoses, and discussions are read-only unless the user asks for
+  changes.
+- Stage only changes that belong to the task. Preserve unrelated user work.
+- Do not change branches, amend commits, or force-push unless the user
+  explicitly asks.
+- Do not merge a pull request without explicit user authorization.
+- Do not poll or watch CI or pull request checks after pushing unless the
+  user explicitly asks. A one-time status lookup is allowed when diagnosing
+  a user-identified CI failure.
+
 ## Commands
+
+Run verification with the Bun version declared in `package.json`'s
+`packageManager` field, matching CI. The system's default Bun may differ.
 
 ```bash
 bun install
