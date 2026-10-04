@@ -163,12 +163,13 @@ describe("startAppOpenedReporting", () => {
   });
 
   test("a new day's focus cancels yesterday's timer and resets backoff", async () => {
+    jest.useFakeTimers({ now: new Date("2026-10-03T23:59:58.500Z") });
     statuses = [503, 503, "held"];
     const stop = start();
     await settle();
     jest.advanceTimersByTime(1000);
     await settle();
-    jest.setSystemTime(DAY_TWO);
+    jest.advanceTimersByTime(1000);
     focus();
     await settle();
     jest.advanceTimersByTime(2000);
@@ -187,10 +188,11 @@ describe("startAppOpenedReporting", () => {
   });
 
   test("yesterday's in-flight failure cannot start another retry chain", async () => {
+    jest.useFakeTimers({ now: new Date("2026-10-03T23:59:59.500Z") });
     statuses = ["held", "held", 503];
     const stop = start();
     const releaseYesterday = release;
-    jest.setSystemTime(DAY_TWO);
+    jest.advanceTimersByTime(1000);
     focus();
     releaseYesterday(503);
     await settle();

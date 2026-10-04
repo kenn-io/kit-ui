@@ -39,6 +39,9 @@ Breaking API changes are 100% acceptable.
 
 ## Commands
 
+Run verification with the Bun version declared in `package.json`'s
+`packageManager` field, matching CI. The system's default Bun may differ.
+
 ```bash
 bun install
 bun run dev      # demo gallery (Vite dev server)
