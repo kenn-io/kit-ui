@@ -32,6 +32,8 @@ Breaking API changes are 100% acceptable.
 - Stage only changes that belong to the task. Preserve unrelated user work.
 - Do not change branches, amend commits, or force-push unless the user
   explicitly asks.
+- Pull requests must have a user-facing benefit or improve the developer
+  experience, and the body must say which one.
 - Do not merge a pull request without explicit user authorization.
 - Do not poll or watch CI or pull request checks after pushing unless the
   user explicitly asks. A one-time status lookup is allowed when diagnosing
