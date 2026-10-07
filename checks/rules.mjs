@@ -646,7 +646,7 @@ export function checkHandRolledDateInput(source) {
     findings.push({
       rule: "hand-rolled-date-input",
       line: lineOfIndex(source, match.index),
-      message: `type="${match[1]}" input — use DateRangePicker or Calendar from @kenn-io/kit-ui`,
+      message: `type="${match[1]}" input — use DatePicker (one date), DateRangePicker, or Calendar from @kenn-io/kit-ui`,
     });
   }
   return findings;
