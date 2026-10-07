@@ -527,7 +527,7 @@ describe("hand-rolled components", () => {
     const src = svelte(``, `<input type="date" /><input type="datetime-local" />`);
     const findings = checkSource(src, "A.svelte", ["hand-rolled-date-input"]);
     expect(findings).toHaveLength(2);
-    expect(findings[0]!.message).toContain("DateRangePicker");
+    expect(findings[0]!.message).toContain("DatePicker (one date)");
   });
 
   test("toast: classes including compounds like undo-toast", () => {

@@ -55,6 +55,7 @@ export type { ModalTone } from "./components/Modal.svelte";
 export { default as ProviderBrandMark } from "./components/ProviderBrandMark.svelte";
 export { default as ProviderButton } from "./components/ProviderButton.svelte";
 export type { ProviderBrand } from "./components/provider-brand.js";
+export { default as DatePicker } from "./components/DatePicker.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export { allFromDate, daysAgo, DEFAULT_RANGE_PRESETS, localDateStr, monthGridDates, monthLabels, periodBounds, presetRange, resolveRange, stepAnchor, todayStr, weekdayLabels, type CalendarNavLabels, type CalendarSelection, type CalendarUnit, type CustomSelection, type DateRange, type RangeMode, type RangePreset, type RangeSelection, type RelativeSelection, } from "./components/date-range.js";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
