@@ -38,7 +38,7 @@
     loadingLabel?: string;
     /** Disable local filtering when the caller supplies remotely filtered options. */
     remote?: boolean;
-    /** Called when the open input query changes, including reset on open and close. */
+    /** Called when the query changes, including the initial query on open and reset on close. */
     onquery?: (query: string) => void;
     /** Error row rendered above the options, which stay selectable so the
      * user can retry (clear it in `onselect`). */
@@ -260,15 +260,15 @@
     onquery?.(nextQuery);
   }
 
-  async function openDropdown() {
+  async function openDropdown(initialQuery = "") {
     if (disabled) return;
-    updateQuery("");
+    updateQuery(initialQuery);
     open = true;
     // The trigger button unmounts as the input mounts; focus briefly lands on
     // <body> and would fire focusout on the container. Suppress dismissal
     // until we've handed focus to the input.
     opening = true;
-    highlightIndex = clearOffset;
+    highlightIndex = !remote && customValue !== "" ? customOffset : clearOffset;
     await tick();
     positionPanel();
     inputEl?.focus();
@@ -600,7 +600,21 @@
       bind:this={triggerEl}
       class="kit-typeahead__trigger kit-control-states"
       type="button"
-      onclick={openDropdown}
+      onclick={() => void openDropdown()}
+      onkeydown={(event) => {
+        if (
+          event.key.length !== 1 ||
+          event.key === " " ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey ||
+          event.isComposing
+        )
+          return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openDropdown(event.key);
+      }}
       {title}
       {disabled}
       aria-label={triggerName}
