@@ -31,7 +31,7 @@ interface Props {
     loadingLabel?: string;
     /** Disable local filtering when the caller supplies remotely filtered options. */
     remote?: boolean;
-    /** Called when the open input query changes, including reset on open and close. */
+    /** Called when the query changes, including the initial query on open and reset on close. */
     onquery?: (query: string) => void;
     /** Error row rendered above the options, which stay selectable so the
      * user can retry (clear it in `onselect`). */

@@ -1,6 +1,7 @@
 # Typeahead
 
-Filterable select: the closed state is a trigger button; clicking it swaps in a
+Filterable select: the closed state is a trigger button. Typing while it has focus
+opens the search with the typed character. Clicking, Enter, or Space opens an empty
 search input with a match-highlighted option list. Arrow keys navigate, Enter
 selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
 extended with Forge's `TypeaheadTrigger` features (clear row, custom
@@ -50,7 +51,7 @@ values, veto, meta text) and grouped options.
 | `loading`         | `boolean`                                                       | `false`         | Replaces option rows with `loadingLabel` (async sources)                                                                     |
 | `loadingLabel`    | `string`                                                        | `"Loading…"`    |                                                                                                                              |
 | `remote`          | `boolean`                                                       | `false`         | Disables local option filtering for caller-supplied remote results                                                           |
-| `onquery`         | `(query: string) => void`                                       | —               | Reports input changes and `""` when the picker opens or closes                                                               |
+| `onquery`         | `(query: string) => void`                                       | —               | Reports input changes, the initial query on open, and `""` on close                                                          |
 | `error`           | `string`                                                        | —               | Error row above the options, which stay selectable (clear it in `onselect`)                                                  |
 | `icon`            | `Snippet<[TypeaheadOption]>`                                    | —               | Optional decorative icon before each option and the selected trigger label. Omitted for unmatched, clear, and custom values. |
 | `header`          | `Snippet`                                                       | —               | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher)                                            |

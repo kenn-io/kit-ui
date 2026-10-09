@@ -104,6 +104,70 @@ test("shrinks to a narrow container without widening the document", async ({ pag
   expect(narrowLayout.documentWidth).toBeLessThanOrEqual(narrowLayout.layoutRight);
 });
 
+test("typing on the focused trigger opens search and keeps every character", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Filter repositories…" });
+  await trigger.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(trigger).toBeFocused();
+  await page.keyboard.type("Agents");
+
+  const input = page.getByRole("combobox", { name: "Filter repositories…" });
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("Agents");
+  await expect(page.getByRole("option", { name: "kenn-io/agentsview" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "kenn-io/forge" })).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-demo="repo-value"]')).toHaveText("kenn-io/agentsview");
+  await expect(trigger).toBeFocused();
+});
+
+test("typing to open reports the initial query to remote consumers", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Search remote options…" });
+  await trigger.focus();
+  await page.keyboard.type("z");
+  await expect(page.getByRole("combobox", { name: "Search remote options…" })).toHaveValue("z");
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("z");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('[data-demo="remote-query"]')).toHaveText("(empty)");
+});
+
+test("typing one character can select a custom value alongside matching options", async ({
+  page,
+}) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "owner: Anyone" }).focus();
+  await page.keyboard.type("p");
+  await expect(page.getByRole("option", { name: 'Use "p"' })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-demo="owner-value"]')).toHaveText("p");
+});
+
+for (const key of ["Enter", "Space"]) {
+  test(`${key} opens the focused trigger with an empty search`, async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    await page.getByRole("button", { name: "Filter repositories…" }).focus();
+    await page.keyboard.press(key);
+    const input = page.getByRole("combobox", { name: "Filter repositories…" });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("");
+  });
+}
+
+test("shortcut chords leave the focused trigger closed", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Filter repositories…" });
+  await trigger.focus();
+  for (const key of ["Control+a", "Meta+a", "Alt+a"]) {
+    await page.keyboard.press(key);
+    await expect(trigger).toBeFocused();
+    await expect(page.getByRole("combobox", { name: "Filter repositories…" })).toHaveCount(0);
+  }
+});
+
 test("filters, highlights matches, and selects", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter repositories…" }).click();
