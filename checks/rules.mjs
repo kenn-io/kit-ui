@@ -696,9 +696,9 @@ function literal(value) {
 }
 
 /** The text a header's children show: markup tags, Svelte block tags
- * (`{#if}`, `{:else}`, `{/if}`), and `kit-sr-only` elements removed. Tags
- * end with tagEnd, so a `>` inside an attribute expression stays inside
- * its tag. */
+ * (`{#if}`, `{:else}`, `{/if}`), `{@const}` declarations, and `kit-sr-only`
+ * elements removed. Tags end with tagEnd, so a `>` inside an attribute
+ * expression stays inside its tag. */
 function visibleText(content) {
   let text = "";
   for (let i = 0; i < content.length; ) {
@@ -717,7 +717,7 @@ function visibleText(content) {
       i += 1;
     }
   }
-  return text.replace(/\{[#:/][^}]*\}/g, "").trim();
+  return text.replace(/\{(?:[#:/]|@const\s)[^}]*\}/g, "").trim();
 }
 
 /** Every table with a header must sort. A labeled TableHeaderCell needs

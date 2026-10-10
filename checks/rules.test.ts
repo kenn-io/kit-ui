@@ -342,6 +342,12 @@ describe("hand-rolled components", () => {
       />
     </TableHeaderCell>
     <TableHeaderCell>{#if editing}<span class="kit-sr-only">Actions</span>{/if}</TableHeaderCell>
+    <TableHeaderCell>
+      {#if selectable}
+        {@const all = chosen.length === rows.length}
+        <Checkbox checked={all} />
+      {/if}
+    </TableHeaderCell>
   {/snippet}
 </Table>`),
       ).toEqual([]);
