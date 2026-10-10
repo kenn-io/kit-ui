@@ -11,6 +11,10 @@
     /** Stripe even rows. */
     zebra?: boolean;
     ariaLabel?: string;
+    /** Opts this table out of sorting. Every other table must sort:
+     * kit-ui-check's `unsorted-table-header` rule requires sortable headers
+     * unless this is set. */
+    unsorted?: boolean;
     class?: string;
   }
 

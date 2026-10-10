@@ -250,6 +250,159 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("TableHeaderCell");
   });
 
+  describe("unsorted table header", () => {
+    const check = (markup: string) =>
+      checkSource(svelte(``, markup), "A.svelte", ["unsorted-table-header"]);
+
+    test("flags a labeled header that does not sort", () => {
+      const findings = check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell label="Repo" sort={sorter} column="repo" />
+    <TableHeaderCell label="Status" />
+  {/snippet}
+</Table>`);
+      // Line 1 is the helper's <script> block.
+      expect(findings.map((f) => f.line)).toEqual([5]);
+      expect(findings[0]!.message).toContain("TableSort");
+    });
+
+    test("accepts TableSort, sortable, and headers with no visible text", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell class="col-pick"><span class="kit-sr-only">Select</span></TableHeaderCell>
+    <TableHeaderCell label="Repo" sort={sorter} column="repo" />
+    <TableHeaderCell
+      label="Cost"
+      numeric
+      sortable
+      sortDirection={dir("cost")}
+      onsort={() => by("cost")}
+    />
+    <TableHeaderCell />
+  {/snippet}
+</Table>`),
+      ).toEqual([]);
+    });
+
+    test("sortable={false} and custom header text still need sorting", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell label="Repo" sortable={false} />
+    <TableHeaderCell>{columnName}</TableHeaderCell>
+  {/snippet}
+</Table>`),
+      ).toHaveLength(2);
+    });
+
+    test("only a Table that opts out with unsorted may skip sorting", () => {
+      expect(
+        check(`<Table ariaLabel="Totals" unsorted>
+  {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
+</Table>
+<Table ariaLabel="Jobs">
+  {#snippet header()}<TableHeaderCell label="Job" />{/snippet}
+</Table>
+<Table ariaLabel="Runs" unsorted={false}>
+  {#snippet header()}<TableHeaderCell label="Run" />{/snippet}
+</Table>`).map((f) => f.line),
+      ).toEqual([6, 9]);
+    });
+
+    test("flags a raw th with text, but not an empty one or a commented-out one", () => {
+      expect(
+        check(`<table>
+  <thead><tr><th></th><th scope="col">Name</th></tr></thead>
+</table>
+<!-- <TableHeaderCell label="Old" /> -->`).map((f) => f.message),
+      ).toEqual([expect.stringContaining("cannot sort")]);
+    });
+
+    test("an ignore marker cannot suppress it; unsorted is the only exception", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <!-- kit-ui-check-ignore -->
+    <TableHeaderCell label="Repo" />
+  {/snippet}
+</Table>`),
+      ).toHaveLength(1);
+    });
+
+    test("a header holding only a control or screen-reader text needs no sort", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell>
+      <Checkbox
+        checked={all}
+        indeterminate={chosen.length > 0 && chosen.length < rows.length}
+        onchange={(on) => (chosen = on ? rows : [])}
+      />
+    </TableHeaderCell>
+    <TableHeaderCell>{#if editing}<span class="kit-sr-only">Actions</span>{/if}</TableHeaderCell>
+    <TableHeaderCell>
+      {#if selectable}
+        {@const all = chosen.length === rows.length}
+        <Checkbox checked={all} />
+      {/if}
+    </TableHeaderCell>
+  {/snippet}
+</Table>`),
+      ).toEqual([]);
+    });
+
+    // sortable comes after the >, so a tag cut short there loses it and
+    // the header is reported.
+    test("a > inside an attribute expression does not end the tag", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell class={rows.length > 1 ? "many" : "few"} sortable>Cost</TableHeaderCell>
+  {/snippet}
+</Table>`),
+      ).toEqual([]);
+    });
+
+    test("reads shorthand and spaced attributes", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell {sort} column="repo" label="Repo" />
+    <TableHeaderCell {sortable} label="Cost" />
+    <TableHeaderCell sort = {sorter} column="age" label="Age" />
+    <TableHeaderCell sortable = {false} label="Owner" />
+  {/snippet}
+</Table>
+<Table unsorted = {true}>
+  {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
+</Table>`).map((f) => f.line),
+      ).toEqual([7]);
+    });
+
+    test("row headers and an empty label need no sort", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}<TableHeaderCell label="" />{/snippet}
+  <tr><th scope="row">Alice</th><td>1</td></tr>
+  <tr><th scope='rowgroup'>Team</th></tr>
+</Table>`),
+      ).toEqual([]);
+    });
+
+    test("only the exact kit-sr-only class hides header text", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell><span class='kit-sr-only'>Actions</span></TableHeaderCell>
+    <TableHeaderCell><span class="kit-sr-only-label">Owner</span></TableHeaderCell>
+  {/snippet}
+</Table>`).map((f) => f.line),
+      ).toEqual([5]);
+    });
+  });
+
   test("tooltip: role=tooltip markup", () => {
     const src = svelte(``, `<div class="hint" role="tooltip">Adds 3, removes 1</div>`);
     const findings = checkSource(src, "A.svelte", ["hand-rolled-tooltip"]);

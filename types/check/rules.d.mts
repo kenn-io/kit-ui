@@ -161,6 +161,17 @@ export function checkHandRolledTableSort(source: any): {
     line: number;
     message: string;
 }[];
+/** Every table with a header must sort. A labeled TableHeaderCell needs
+ * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
+ * text cannot sort at all. The one exception is a `<Table unsorted>`,
+ * which opts out explicitly. Headers with no
+ * visible text (a checkbox or actions column) and row headers
+ * (`scope="row"`) are exempt. */
+export function checkUnsortedTableHeader(source: any, filename: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Hand-rolled search inputs duplicate SearchInput. type="search" is the
  * reliable marker; the class names are established consumer patterns.
  * kit-search-input (the library's own class) is exempt. */
@@ -366,6 +377,7 @@ export const ALL_RULES: {
     "hand-rolled-splitter": typeof checkHandRolledSplitter;
     "hand-rolled-segmented": typeof checkHandRolledSegmented;
     "hand-rolled-table-sort": typeof checkHandRolledTableSort;
+    "unsorted-table-header": typeof checkUnsortedTableHeader;
     "hand-rolled-tooltip": typeof checkHandRolledTooltip;
     "hand-rolled-popover-card": typeof checkHandRolledPopoverCard;
     "hand-rolled-card": typeof checkHandRolledCard;

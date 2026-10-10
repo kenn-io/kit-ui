@@ -618,6 +618,163 @@ export function checkHandRolledTableSort(source) {
   return findings;
 }
 
+/** End of the tag that opens at `start` (index just past its `>`), skipping
+ * `>` inside quoted attribute values and `{…}` expressions. */
+function tagEnd(source, start) {
+  let depth = 0;
+  let quote = null;
+  for (let i = start; i < source.length; i += 1) {
+    const char = source[i];
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === "{") depth += 1;
+    else if (char === "}") depth = Math.max(0, depth - 1);
+    else if (depth === 0 && (char === '"' || char === "'")) quote = char;
+    else if (depth === 0 && char === ">") return i + 1;
+  }
+  return source.length;
+}
+
+/** A tag's attributes by name, read from the text between its name and its
+ * `>`: true for a bare `name` or a `{name}` shorthand, otherwise the raw
+ * value with its quotes or braces. Spreads are skipped. */
+function parseAttrs(attrs) {
+  const found = new Map();
+  let i = 0;
+  const skipSpace = () => {
+    while (i < attrs.length && /\s/.test(attrs[i])) i += 1;
+  };
+  const skipBraces = () => {
+    let depth = 0;
+    for (; i < attrs.length; i += 1) {
+      if (attrs[i] === "{") depth += 1;
+      else if (attrs[i] === "}" && --depth === 0) {
+        i += 1;
+        return;
+      }
+    }
+  };
+  for (skipSpace(); i < attrs.length; skipSpace()) {
+    const start = i;
+    if (attrs[i] === "{") {
+      skipBraces();
+      const shorthand = /^\{\s*([\w$]+)\s*\}$/.exec(attrs.slice(start, i));
+      if (shorthand) found.set(shorthand[1], true);
+      continue;
+    }
+    const name = /^[^\s=/>{"']+/.exec(attrs.slice(i))?.[0];
+    if (!name) {
+      i += 1;
+      continue;
+    }
+    i += name.length;
+    skipSpace();
+    if (attrs[i] !== "=") {
+      found.set(name, true);
+      continue;
+    }
+    i += 1;
+    skipSpace();
+    const valueStart = i;
+    if (attrs[i] === "{") skipBraces();
+    else if (attrs[i] === '"' || attrs[i] === "'") {
+      const close = attrs.indexOf(attrs[i], i + 1);
+      i = close < 0 ? attrs.length : close + 1;
+    } else while (i < attrs.length && !/[\s/>]/.test(attrs[i])) i += 1;
+    found.set(name, attrs.slice(valueStart, i));
+  }
+  return found;
+}
+
+/** The text of a static attribute value (`"x"`, `'x'`, `{"x"}`, or bare
+ * `x`), or null for an expression, a bare attribute, or no attribute. */
+function literal(value) {
+  if (typeof value !== "string") return null;
+  const quoted = /^(["'])([^]*)\1$/.exec(value) ?? /^\{\s*(["'`])([^"'`\\$]*)\1\s*\}$/.exec(value);
+  if (quoted) return quoted[2];
+  return /^[^"'{]/.test(value) ? value : null;
+}
+
+/** The text a header's children show: markup tags, Svelte block tags
+ * (`{#if}`, `{:else}`, `{/if}`), `{@const}` declarations, and `kit-sr-only`
+ * elements removed. Tags end with tagEnd, so a `>` inside an attribute
+ * expression stays inside its tag. */
+function visibleText(content) {
+  let text = "";
+  for (let i = 0; i < content.length; ) {
+    if (content[i] === "<" && /[A-Za-z/!]/.test(content[i + 1] ?? "")) {
+      const end = tagEnd(content, i + 1);
+      const tag = content.slice(i, end);
+      const name = /^<([A-Za-z][\w.-]*)/.exec(tag)?.[1];
+      i = end;
+      const classes = name && literal(parseAttrs(tag.slice(name.length + 1, -1)).get("class"));
+      if (name && !tag.endsWith("/>") && classes?.split(/\s+/).includes("kit-sr-only")) {
+        const close = content.indexOf(`</${name}>`, i);
+        i = close < 0 ? content.length : close + name.length + 3;
+      }
+    } else {
+      text += content[i];
+      i += 1;
+    }
+  }
+  return text.replace(/\{(?:[#:/]|@const\s)[^}]*\}/g, "").trim();
+}
+
+/** Every table with a header must sort. A labeled TableHeaderCell needs
+ * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
+ * text cannot sort at all. The one exception is a `<Table unsorted>`,
+ * which opts out explicitly. Headers with no
+ * visible text (a checkbox or actions column) and row headers
+ * (`scope="row"`) are exempt. */
+export function checkUnsortedTableHeader(source, filename) {
+  if (!filename.endsWith(".svelte")) return [];
+  // Blank out comments so commented-out markup is not checked.
+  const code = source.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "));
+  const findings = [];
+  const re = /<(TableHeaderCell|th)(?=[\s/>])/g;
+  let match;
+  while ((match = re.exec(code)) !== null) {
+    const name = match[1];
+    const end = tagEnd(code, match.index + match[0].length);
+    const attrs = code.slice(match.index + match[0].length, end - 1);
+    let content = "";
+    if (!attrs.trimEnd().endsWith("/")) {
+      const close = code.indexOf(`</${name}>`, end);
+      content = code.slice(end, close < 0 ? end : close);
+    }
+    const attributes = parseAttrs(attrs);
+    const sortable =
+      name === "TableHeaderCell" &&
+      (attributes.has("sort") ||
+        (attributes.has("sortable") &&
+          !/^\{\s*false\s*\}$/.test(String(attributes.get("sortable")))));
+    if (sortable) continue;
+    const scope = literal(attributes.get("scope"));
+    if (scope === "row" || scope === "rowgroup") continue;
+    const visible =
+      (attributes.has("label") && literal(attributes.get("label")) !== "") ||
+      visibleText(content) !== "";
+    if (!visible) continue;
+    const before = code.slice(0, match.index);
+    const tableAt = [...before.matchAll(/<Table(?=[\s>])/g)].at(-1)?.index ?? -1;
+    if (tableAt >= 0 && !before.slice(tableAt).includes("</Table>")) {
+      const tableStart = tableAt + "<Table".length;
+      const tableAttrs = code.slice(tableStart, tagEnd(code, tableStart) - 1);
+      const unsorted = parseAttrs(tableAttrs).get("unsorted");
+      if (unsorted !== undefined && !/^\{\s*false\s*\}$/.test(String(unsorted))) continue;
+    }
+    findings.push({
+      rule: "unsorted-table-header",
+      line: lineOfIndex(source, match.index),
+      message:
+        name === "th"
+          ? "table header that cannot sort — use Table + TableHeaderCell with TableSort from @kenn-io/kit-ui"
+          : 'table header without sorting — pass sort={tableSort} column="…" (TableSort) or sortable; or opt the table out with <Table unsorted>',
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled search inputs duplicate SearchInput. type="search" is the
  * reliable marker; the class names are established consumer patterns.
  * kit-search-input (the library's own class) is exempt. */
@@ -1458,7 +1615,8 @@ export function checkSplitHandleOverride(source, filename) {
 }
 
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
-export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override"]);
+// unsorted-table-header has its own, explicit exception: <Table unsorted>.
+export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override", "unsorted-table-header"]);
 
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
@@ -1473,6 +1631,7 @@ export const ALL_RULES = {
   "hand-rolled-splitter": checkHandRolledSplitter,
   "hand-rolled-segmented": checkHandRolledSegmented,
   "hand-rolled-table-sort": checkHandRolledTableSort,
+  "unsorted-table-header": checkUnsortedTableHeader,
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-popover-card": checkHandRolledPopoverCard,
   "hand-rolled-card": checkHandRolledCard,
