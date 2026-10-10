@@ -635,7 +635,29 @@ function tagEnd(source, start) {
   return source.length;
 }
 
-const SR_ONLY_ELEMENT = /<(\w+)[^>]*\bclass="[^"]*\bkit-sr-only\b[^"]*"[^>]*>[\s\S]*?<\/\1>/g;
+/** The text a header's children show: markup tags, Svelte block tags
+ * (`{#if}`, `{:else}`, `{/if}`), and `kit-sr-only` elements removed. Tags
+ * end with tagEnd, so a `>` inside an attribute expression stays inside
+ * its tag. */
+function visibleText(content) {
+  let text = "";
+  for (let i = 0; i < content.length; ) {
+    if (content[i] === "<" && /[A-Za-z/!]/.test(content[i + 1] ?? "")) {
+      const end = tagEnd(content, i + 1);
+      const tag = content.slice(i, end);
+      const name = /^<([A-Za-z][\w.-]*)/.exec(tag)?.[1];
+      i = end;
+      if (name && !tag.endsWith("/>") && /\bclass="[^"]*\bkit-sr-only\b/.test(tag)) {
+        const close = content.indexOf(`</${name}>`, i);
+        i = close < 0 ? content.length : close + name.length + 3;
+      }
+    } else {
+      text += content[i];
+      i += 1;
+    }
+  }
+  return text.replace(/\{[#:/][^}]*\}/g, "").trim();
+}
 
 /** Every table with a header must sort. A labeled TableHeaderCell needs
  * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
@@ -664,12 +686,7 @@ export function checkUnsortedTableHeader(source, filename) {
         /(?:^|\s)sortable(?=[\s/]|$)/.test(attrs) ||
         /(?:^|\s)sortable=\{(?!\s*false\s*\})/.test(attrs));
     if (sortable) continue;
-    const visible =
-      /(?:^|\s)label=/.test(attrs) ||
-      content
-        .replace(SR_ONLY_ELEMENT, "")
-        .replace(/<[^>]*>/g, "")
-        .trim() !== "";
+    const visible = /(?:^|\s)label=/.test(attrs) || visibleText(content) !== "";
     if (!visible) continue;
     const before = code.slice(0, match.index);
     const tableAt = [...before.matchAll(/<Table(?=[\s>])/g)].at(-1)?.index ?? -1;

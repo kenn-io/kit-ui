@@ -327,6 +327,23 @@ describe("hand-rolled components", () => {
       ).toHaveLength(1);
     });
 
+    test("a header holding only a control or screen-reader text needs no sort", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell>
+      <Checkbox
+        checked={all}
+        indeterminate={chosen.length > 0 && chosen.length < rows.length}
+        onchange={(on) => (chosen = on ? rows : [])}
+      />
+    </TableHeaderCell>
+    <TableHeaderCell>{#if editing}<span class="kit-sr-only">Actions</span>{/if}</TableHeaderCell>
+  {/snippet}
+</Table>`),
+      ).toEqual([]);
+    });
+
     test("a > inside an attribute expression does not end the tag", () => {
       expect(
         check(`<Table>
