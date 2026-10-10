@@ -1,77 +1,120 @@
-# Table + TableHeaderCell
+# Table + TableHeaderCell + TableSort
 
 Data-table primitives consolidating Forge's `JobTable` and agentsview's
 `SessionsTable` header patterns: `Table` is the shell (scroll wrapper, sticky
-header, zebra striping, row hover); `TableHeaderCell` is a header cell with
-optional sort button and `aria-sort`. Sorting logic stays in your code — the
-header cell only reports clicks and displays the direction you pass back.
+header, zebra striping, row hover); `TableHeaderCell` is a header cell with a
+sort button and `aria-sort`; `TableSort` holds client-side sort state.
+
+## Every table sorts
+
+People expect to click any column heading to sort by it. Every labeled header
+must sort, and kit-ui-check's `unsorted-table-header` rule enforces this; it
+cannot be suppressed or disabled.
+
+The one exception is a table with a fixed set of fewer than five rows, known
+when the code is written, such as one row per status. Declare it with
+`fixedRows={n}` (1–4) on `Table`. Headers with no visible text, such as a
+checkbox or actions column, need no sorting.
+
+## Client-side data: TableSort
+
+Declare each column's sort value once, pass the sorter to every header, and
+render `sorter.sort(rows)`:
 
 ```svelte
 <script lang="ts">
-  import { Table, TableHeaderCell, type SortDirection } from "@kenn-io/kit-ui";
+  import { Table, TableHeaderCell, TableSort } from "@kenn-io/kit-ui";
 
-  let sortKey = $state("id");
-  let sortDirection = $state<SortDirection>("asc");
+  let { jobs }: { jobs: Job[] } = $props();
 
-  function sortBy(key: string) {
-    if (sortKey === key) {
-      sortDirection = sortDirection === "asc" ? "desc" : "asc";
-    } else {
-      sortKey = key;
-      sortDirection = "asc";
-    }
-  }
+  const sorter = new TableSort<Job>(
+    {
+      id: (job) => job.id,
+      status: (job) => job.status,
+      // Biggest first on the first click.
+      cost: { value: (job) => job.cost, firstDirection: "desc" },
+    },
+    { key: "id" },
+  );
 </script>
 
 <Table ariaLabel="Review jobs">
   {#snippet header()}
-    <TableHeaderCell
-      label="ID"
-      sortable
-      sortDirection={sortKey === "id" ? sortDirection : null}
-      onsort={() => sortBy("id")}
-    />
-    <TableHeaderCell label="Status" />
-    <TableHeaderCell
-      label="Cost"
-      numeric
-      sortable
-      sortDirection={sortKey === "cost" ? sortDirection : null}
-      onsort={() => sortBy("cost")}
-    />
+    <TableHeaderCell label="ID" sort={sorter} column="id" />
+    <TableHeaderCell label="Status" sort={sorter} column="status" />
+    <TableHeaderCell label="Cost" numeric sort={sorter} column="cost" />
   {/snippet}
-  {#each sorted as row (row.id)}
+  {#each sorter.sort(jobs) as job (job.id)}
     <tr>
-      <td>#{row.id}</td>
-      <td>{row.status}</td>
-      <td>${row.cost}</td>
+      <td>#{job.id}</td>
+      <td>{job.status}</td>
+      <td>${job.cost}</td>
     </tr>
   {/each}
 </Table>
 ```
 
+- Text sorts by locale, ignoring case, with natural numbers (`v2` before
+  `v10`). Numbers, bigints, booleans, and dates sort by value.
+- `null`, `undefined`, `NaN`, and invalid dates sort last in both directions.
+- The sort is stable: ties keep the input order, so pass rows in the order you
+  want ties to keep.
+- A column's first click uses `firstDirection` (default `"asc"`); a second
+  click reverses it.
+
+The pure helpers `sortRows`, `nextSort`, and `compareSortValues` are exported
+for sorting outside a component.
+
+## Server-sorted data
+
+When the server orders the rows, such as a paginated list, sorting a page in
+the browser would be wrong. Keep the order on the server and drive the header
+yourself:
+
+```svelte
+<TableHeaderCell
+  label="Created"
+  sortable
+  sortDirection={query.sort === "created" ? query.direction : null}
+  onsort={() => setSort("created")}
+/>
+```
+
 ## Table props
 
-| Prop           | Type      | Default  | Notes                                                                           |
-| -------------- | --------- | -------- | ------------------------------------------------------------------------------- |
-| `header`       | `Snippet` | required | `<TableHeaderCell>` (or `<th>`) elements                                        |
-| `children`     | `Snippet` | required | `<tr>` body rows                                                                |
-| `stickyHeader` | `boolean` | `true`   | Header stays visible while the body scrolls (give the wrapper a bounded height) |
-| `zebra`        | `boolean` | `true`   | Stripe even rows                                                                |
-| `ariaLabel`    | `string`  | —        |                                                                                 |
-| `class`        | `string`  | `""`     | Applied to the scroll wrapper                                                   |
+| Prop           | Type               | Default  | Notes                                                                           |
+| -------------- | ------------------ | -------- | ------------------------------------------------------------------------------- |
+| `header`       | `Snippet`          | required | `<TableHeaderCell>` elements                                                    |
+| `children`     | `Snippet`          | required | `<tr>` body rows                                                                |
+| `stickyHeader` | `boolean`          | `true`   | Header stays visible while the body scrolls (give the wrapper a bounded height) |
+| `zebra`        | `boolean`          | `true`   | Stripe even rows                                                                |
+| `ariaLabel`    | `string`           | —        |                                                                                 |
+| `fixedRows`    | `1 \| 2 \| 3 \| 4` | —        | Declares a fixed set of at most this many rows; its headers need not sort       |
+| `class`        | `string`           | `""`     | Applied to the scroll wrapper                                                   |
 
 ## TableHeaderCell props
 
-| Prop            | Type                      | Default | Notes                                             |
-| --------------- | ------------------------- | ------- | ------------------------------------------------- |
-| `label`         | `string`                  | —       | Header text (or use `children`)                   |
-| `children`      | `Snippet`                 | —       | Custom header content                             |
-| `sortable`      | `boolean`                 | `false` | Render the sort button                            |
-| `sortDirection` | `"asc" \| "desc" \| null` | `null`  | This column's current direction; sets `aria-sort` |
-| `onsort`        | `() => void`              | —       | Click handler; toggle direction in your state     |
-| `numeric`       | `boolean`                 | `false` | Right-align (numbers, costs, durations)           |
-| `class`         | `string`                  | `""`    |                                                   |
+| Prop            | Type                      | Default | Notes                                                         |
+| --------------- | ------------------------- | ------- | ------------------------------------------------------------- |
+| `label`         | `string`                  | —       | Header text (or use `children`)                               |
+| `children`      | `Snippet`                 | —       | Custom header content                                         |
+| `sort`          | `TableSortControl`        | —       | A `TableSort`; replaces `sortable`, `sortDirection`, `onsort` |
+| `column`        | `string`                  | —       | This column's key in `sort`; required with `sort`             |
+| `sortable`      | `boolean`                 | `false` | Render the sort button for server-sorted data                 |
+| `sortDirection` | `"asc" \| "desc" \| null` | `null`  | This column's current direction; sets `aria-sort`             |
+| `onsort`        | `() => void`              | —       | Click handler; toggle direction in your state                 |
+| `numeric`       | `boolean`                 | `false` | Right-align (numbers, costs, durations)                       |
+| `class`         | `string`                  | `""`    |                                                               |
+
+## TableSort
+
+| Member                            | Notes                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `new TableSort(columns, initial)` | `columns`: key → value function or `{ value, firstDirection }`; `initial`: `{ key, direction? }` |
+| `key`, `direction`                | The active column and direction                                                                  |
+| `directionOf(column)`             | The column's direction, or `null` when it is not active                                          |
+| `toggle(column)`                  | What a header click does                                                                         |
+| `sort(rows)`                      | A sorted copy; reactive inside `$derived` or markup                                              |
 
 Body cells get default padding/typography via `Table`'s scoped styles; no cell
 component is required.

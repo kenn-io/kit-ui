@@ -250,6 +250,94 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("TableHeaderCell");
   });
 
+  describe("unsorted table header", () => {
+    const check = (markup: string) =>
+      checkSource(svelte(``, markup), "A.svelte", ["unsorted-table-header"]);
+
+    test("flags a labeled header that does not sort", () => {
+      const findings = check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell label="Repo" sort={sorter} column="repo" />
+    <TableHeaderCell label="Status" />
+  {/snippet}
+</Table>`);
+      // Line 1 is the helper's <script> block.
+      expect(findings.map((f) => f.line)).toEqual([5]);
+      expect(findings[0]!.message).toContain("TableSort");
+    });
+
+    test("accepts TableSort, sortable, and headers with no visible text", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell class="col-pick"><span class="kit-sr-only">Select</span></TableHeaderCell>
+    <TableHeaderCell label="Repo" sort={sorter} column="repo" />
+    <TableHeaderCell
+      label="Cost"
+      numeric
+      sortable
+      sortDirection={dir("cost")}
+      onsort={() => by("cost")}
+    />
+    <TableHeaderCell />
+  {/snippet}
+</Table>`),
+      ).toEqual([]);
+    });
+
+    test("sortable={false} and custom header text still need sorting", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell label="Repo" sortable={false} />
+    <TableHeaderCell>{columnName}</TableHeaderCell>
+  {/snippet}
+</Table>`),
+      ).toHaveLength(2);
+    });
+
+    test("only a Table declaring fixedRows may skip sorting", () => {
+      expect(
+        check(`<Table ariaLabel="Totals" fixedRows={3}>
+  {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
+</Table>
+<Table ariaLabel="Jobs">
+  {#snippet header()}<TableHeaderCell label="Job" />{/snippet}
+</Table>`).map((f) => f.line),
+      ).toEqual([6]);
+    });
+
+    test("flags a raw th with text, but not an empty one or a commented-out one", () => {
+      expect(
+        check(`<table>
+  <thead><tr><th></th><th scope="col">Name</th></tr></thead>
+</table>
+<!-- <TableHeaderCell label="Old" /> -->`).map((f) => f.message),
+      ).toEqual([expect.stringContaining("cannot sort")]);
+    });
+
+    test("an ignore marker cannot suppress it; fixedRows is the only exception", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <!-- kit-ui-check-ignore -->
+    <TableHeaderCell label="Repo" />
+  {/snippet}
+</Table>`),
+      ).toHaveLength(1);
+    });
+
+    test("a > inside an attribute expression does not end the tag", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell label="Cost" sortable={rows.length > 1} />
+  {/snippet}
+</Table>`),
+      ).toEqual([]);
+    });
+  });
+
   test("tooltip: role=tooltip markup", () => {
     const src = svelte(``, `<div class="hint" role="tooltip">Adds 3, removes 1</div>`);
     const findings = checkSource(src, "A.svelte", ["hand-rolled-tooltip"]);

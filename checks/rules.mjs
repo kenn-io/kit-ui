@@ -618,6 +618,77 @@ export function checkHandRolledTableSort(source) {
   return findings;
 }
 
+/** End of the tag that opens at `start` (index just past its `>`), skipping
+ * `>` inside quoted attribute values and `{…}` expressions. */
+function tagEnd(source, start) {
+  let depth = 0;
+  let quote = null;
+  for (let i = start; i < source.length; i += 1) {
+    const char = source[i];
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === "{") depth += 1;
+    else if (char === "}") depth = Math.max(0, depth - 1);
+    else if (depth === 0 && (char === '"' || char === "'")) quote = char;
+    else if (depth === 0 && char === ">") return i + 1;
+  }
+  return source.length;
+}
+
+const SR_ONLY_ELEMENT = /<(\w+)[^>]*\bclass="[^"]*\bkit-sr-only\b[^"]*"[^>]*>[\s\S]*?<\/\1>/g;
+
+/** Every table with a header must sort. A labeled TableHeaderCell needs
+ * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
+ * text cannot sort at all. The one exception is a `<Table fixedRows={n}>`,
+ * which declares a fixed set of fewer than five rows. Headers with no
+ * visible text (a checkbox or actions column) are exempt. */
+export function checkUnsortedTableHeader(source, filename) {
+  if (!filename.endsWith(".svelte")) return [];
+  // Blank out comments so commented-out markup is not checked.
+  const code = source.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "));
+  const findings = [];
+  const re = /<(TableHeaderCell|th)(?=[\s/>])/g;
+  let match;
+  while ((match = re.exec(code)) !== null) {
+    const name = match[1];
+    const end = tagEnd(code, match.index + match[0].length);
+    const attrs = code.slice(match.index + match[0].length, end - 1);
+    let content = "";
+    if (!attrs.trimEnd().endsWith("/")) {
+      const close = code.indexOf(`</${name}>`, end);
+      content = code.slice(end, close < 0 ? end : close);
+    }
+    const sortable =
+      name === "TableHeaderCell" &&
+      (/(?:^|\s)sort=\{/.test(attrs) ||
+        /(?:^|\s)sortable(?=[\s/]|$)/.test(attrs) ||
+        /(?:^|\s)sortable=\{(?!\s*false\s*\})/.test(attrs));
+    if (sortable) continue;
+    const visible =
+      /(?:^|\s)label=/.test(attrs) ||
+      content
+        .replace(SR_ONLY_ELEMENT, "")
+        .replace(/<[^>]*>/g, "")
+        .trim() !== "";
+    if (!visible) continue;
+    const before = code.slice(0, match.index);
+    const tableAt = [...before.matchAll(/<Table(?=[\s>])/g)].at(-1)?.index ?? -1;
+    if (tableAt >= 0 && !before.slice(tableAt).includes("</Table>")) {
+      const tableAttrs = code.slice(tableAt, tagEnd(code, tableAt + "<Table".length));
+      if (/(?:^|\s)fixedRows=/.test(tableAttrs)) continue;
+    }
+    findings.push({
+      rule: "unsorted-table-header",
+      line: lineOfIndex(source, match.index),
+      message:
+        name === "th"
+          ? "table header that cannot sort — use Table + TableHeaderCell with TableSort from @kenn-io/kit-ui"
+          : 'table header without sorting — pass sort={tableSort} column="…" (TableSort) or sortable; only a <Table fixedRows={n}> (fewer than five fixed rows) may skip sorting',
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled search inputs duplicate SearchInput. type="search" is the
  * reliable marker; the class names are established consumer patterns.
  * kit-search-input (the library's own class) is exempt. */
@@ -1458,7 +1529,8 @@ export function checkSplitHandleOverride(source, filename) {
 }
 
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
-export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override"]);
+// unsorted-table-header has its own, explicit exception: <Table fixedRows>.
+export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override", "unsorted-table-header"]);
 
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
@@ -1473,6 +1545,7 @@ export const ALL_RULES = {
   "hand-rolled-splitter": checkHandRolledSplitter,
   "hand-rolled-segmented": checkHandRolledSegmented,
   "hand-rolled-table-sort": checkHandRolledTableSort,
+  "unsorted-table-header": checkUnsortedTableHeader,
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-popover-card": checkHandRolledPopoverCard,
   "hand-rolled-card": checkHandRolledCard,

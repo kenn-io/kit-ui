@@ -1,6 +1,6 @@
 <script lang="ts">
   import { MediaQuery } from "svelte/reactivity";
-  import { BREAKPOINTS, MEDIA } from "../../lib/index.js";
+  import { BREAKPOINTS, MEDIA, Table, TableHeaderCell } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const compact = new MediaQuery(MEDIA.compact);
@@ -68,33 +68,35 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
 /* in CSS */
 @media (max-width: 640px) { … }`}
 >
-  <table class="bp-table">
-    <thead>
-      <tr><th>name</th><th>query</th><th>matches now</th></tr>
-    </thead>
-    <tbody>
-      <tr
-        ><td><code>compact</code></td><td><code>≤ {BREAKPOINTS.compact}px</code></td><td
-          >{compact.current ? "✓" : "—"}</td
-        ></tr
-      >
-      <tr
-        ><td><code>medium</code></td><td><code>≤ {BREAKPOINTS.medium}px</code></td><td
-          >{medium.current ? "✓" : "—"}</td
-        ></tr
-      >
-      <tr
-        ><td><code>wide</code></td><td><code>≤ {BREAKPOINTS.wide}px</code></td><td
-          >{wide.current ? "✓" : "—"}</td
-        ></tr
-      >
-      <tr
-        ><td><code>touch</code></td><td><code>{MEDIA.touch}</code></td><td
-          >{touch.current ? "✓" : "—"}</td
-        ></tr
-      >
-    </tbody>
-  </table>
+  <div class="bp-table">
+    <Table ariaLabel="Breakpoints" fixedRows={4} zebra={false}>
+      {#snippet header()}
+        <TableHeaderCell label="name" />
+        <TableHeaderCell label="query" />
+        <TableHeaderCell label="matches now" />
+      {/snippet}
+      <tr>
+        <td><code>compact</code></td>
+        <td><code>≤ {BREAKPOINTS.compact}px</code></td>
+        <td>{compact.current ? "✓" : "—"}</td>
+      </tr>
+      <tr>
+        <td><code>medium</code></td>
+        <td><code>≤ {BREAKPOINTS.medium}px</code></td>
+        <td>{medium.current ? "✓" : "—"}</td>
+      </tr>
+      <tr>
+        <td><code>wide</code></td>
+        <td><code>≤ {BREAKPOINTS.wide}px</code></td>
+        <td>{wide.current ? "✓" : "—"}</td>
+      </tr>
+      <tr>
+        <td><code>touch</code></td>
+        <td><code>{MEDIA.touch}</code></td>
+        <td>{touch.current ? "✓" : "—"}</td>
+      </tr>
+    </Table>
+  </div>
 </DemoSection>
 
 <DemoSection
@@ -115,21 +117,7 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
 
 <style>
   .bp-table {
-    border-collapse: collapse;
-    font-size: var(--font-size-sm);
-  }
-
-  .bp-table th,
-  .bp-table td {
-    text-align: left;
-    padding: 4px 16px 4px 0;
-    color: var(--text-secondary);
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  .bp-table th {
-    color: var(--text-muted);
-    font-weight: 600;
+    display: flex;
   }
 
   .type-scale {

@@ -124,7 +124,18 @@ export type { StructuredListLevel } from "./components/StructuredList.svelte";
 export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
-export type { SortDirection } from "./components/TableHeaderCell.svelte";
+export { TableSort } from "./components/table-sort.svelte.js";
+export {
+  compareSortValues,
+  nextSort,
+  sortRows,
+  type SortColumn,
+  type SortColumns,
+  type SortDirection,
+  type SortState,
+  type SortValue,
+  type TableSortControl,
+} from "./components/table-sort.js";
 export { default as TextInput } from "./components/TextInput.svelte";
 export type { TextInputSize } from "./components/TextInput.svelte";
 export { default as ThemeToggle } from "./components/ThemeToggle.svelte";

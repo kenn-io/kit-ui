@@ -1,16 +1,18 @@
 <script module lang="ts">
-  export type SortDirection = "asc" | "desc";
+  export type { SortDirection } from "./table-sort.js";
 </script>
 
 <script lang="ts">
   import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
   import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
   import type { Snippet } from "svelte";
+  import type { SortDirection, TableSortControl } from "./table-sort.js";
 
-  interface Props {
+  interface BaseProps {
     label?: string;
     children?: Snippet;
-    /** Render a sort button; `onsort` decides what sorting means. */
+    /** Render a sort button; `onsort` decides what sorting means. Prefer
+     * `sort` + `column` for client-side data. */
     sortable?: boolean;
     /** This column's current direction, or null/undefined when unsorted. */
     sortDirection?: SortDirection | null;
@@ -20,34 +22,58 @@
     class?: string;
   }
 
+  type Props = BaseProps &
+    (
+      | {
+          /** A TableSort (or other TableSortControl) that owns this column's
+           * sorting. Replaces `sortable`, `sortDirection`, and `onsort`. */
+          sort: TableSortControl;
+          /** This column's key in `sort`. */
+          column: string;
+        }
+      | { sort?: undefined; column?: undefined }
+    );
+
   let {
     label = undefined,
     children,
     sortable = false,
     sortDirection = null,
     onsort = undefined,
+    sort = undefined,
+    column = undefined,
     numeric = false,
     class: className = "",
   }: Props = $props();
 
+  const isSortable = $derived(sort !== undefined || sortable);
+  const direction = $derived(
+    sort !== undefined && column !== undefined ? sort.directionOf(column) : sortDirection,
+  );
+
+  function onclick() {
+    if (sort !== undefined && column !== undefined) sort.toggle(column);
+    else onsort?.();
+  }
+
   const ariaSort = $derived(
-    !sortable || !sortDirection
+    !isSortable || !direction
       ? undefined
-      : sortDirection === "asc"
+      : direction === "asc"
         ? ("ascending" as const)
         : ("descending" as const),
   );
 </script>
 
 <th class={["kit-th", { "kit-th--numeric": numeric }, className]} scope="col" aria-sort={ariaSort}>
-  {#if sortable}
-    <button class="kit-th__sort-btn kit-control-states" type="button" onclick={() => onsort?.()}>
+  {#if isSortable}
+    <button class="kit-th__sort-btn kit-control-states" type="button" {onclick}>
       {#if label}{label}{/if}
       {#if children}{@render children()}{/if}
-      <span class="kit-th__indicator" class:on={sortDirection}>
-        {#if sortDirection === "asc"}
+      <span class="kit-th__indicator" class:on={direction}>
+        {#if direction === "asc"}
           <ArrowUpIcon size="11" strokeWidth="2.2" aria-hidden="true" />
-        {:else if sortDirection === "desc"}
+        {:else if direction === "desc"}
           <ArrowDownIcon size="11" strokeWidth="2.2" aria-hidden="true" />
         {/if}
       </span>
@@ -75,9 +101,13 @@
     text-align: right;
   }
 
+  /* Baseline alignment keeps the label on the header row's text baseline.
+   * Centered items would hand the button's baseline to its first flex item,
+   * which in a numeric (row-reverse) header is the empty arrow slot, so
+   * numeric headers sat lower than their neighbors. */
   .kit-th__sort-btn {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 3px;
     padding: 0;
     border: 0;
@@ -103,6 +133,7 @@
 
   .kit-th__indicator {
     display: inline-flex;
+    align-self: center;
     width: 11px;
     color: var(--accent-blue);
     opacity: 0;
