@@ -107,6 +107,13 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
 - **Checker parity**: when adding a component that replaces a common
   hand-rolled pattern, add a detection rule to `checks/rules.mjs` (+ test) so
   external projects get steered to it.
+- **Checker rules are heuristics**: rules in `checks/rules.mjs` aim to be
+  right for the common case (about 80%), not to parse Svelte, CSS, or JS
+  exactly. Do not fix, or ask the user about, review findings that are edge
+  cases of the matching itself (braces inside strings, unusual nesting,
+  markup inside script strings, rare attribute forms). Record them as not an
+  issue without asking. Do act on a rule that misfires on common, idiomatic
+  code.
 - **Exports**: every new component/type/util must be added to
   `src/lib/index.ts`, given a demo page in `src/demo/pages/` (and registered in
   `src/demo/App.svelte`), and documented in `docs/components/`. Any source
