@@ -13,8 +13,11 @@ cannot be suppressed or disabled.
 
 The one exception is a table with a fixed set of fewer than five rows, known
 when the code is written, such as one row per status. Declare it with
-`fixedRows={n}` (1–4) on `Table`. Headers with no visible text, such as a
-checkbox or actions column, need no sorting.
+`fixedRows={n}` (1–4) on `Table`, and write its `header` snippet inside the
+`<Table>` tags: the checker reads `fixedRows` from the enclosing `Table`, so
+a header snippet declared elsewhere and passed as `header={…}` is still
+checked. Headers with no visible text, such as a checkbox or actions column,
+and row headers (`<th scope="row">`) need no sorting.
 
 ## Client-side data: TableSort
 
@@ -55,7 +58,9 @@ render `sorter.sort(rows)`:
 ```
 
 - Text sorts by locale, ignoring case, with natural numbers (`v2` before
-  `v10`). Numbers, bigints, booleans, and dates sort by value.
+  `v10`). Numbers, bigints, booleans, and dates sort by value. A column
+  mixing kinds sorts numbers, bigints, and dates first, then text, then
+  booleans.
 - `null`, `undefined`, `NaN`, and invalid dates sort last in both directions.
 - The sort is stable: ties keep the input order, so pass rows in the order you
   want ties to keep.

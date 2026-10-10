@@ -344,14 +344,53 @@ describe("hand-rolled components", () => {
       ).toEqual([]);
     });
 
+    // sortable comes after the >, so a tag cut short there loses it and
+    // the header is reported.
     test("a > inside an attribute expression does not end the tag", () => {
       expect(
         check(`<Table>
   {#snippet header()}
-    <TableHeaderCell label="Cost" sortable={rows.length > 1} />
+    <TableHeaderCell class={rows.length > 1 ? "many" : "few"} sortable>Cost</TableHeaderCell>
   {/snippet}
 </Table>`),
       ).toEqual([]);
+    });
+
+    test("reads shorthand and spaced attributes", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell {sort} column="repo" label="Repo" />
+    <TableHeaderCell {sortable} label="Cost" />
+    <TableHeaderCell sort = {sorter} column="age" label="Age" />
+    <TableHeaderCell sortable = {false} label="Owner" />
+  {/snippet}
+</Table>
+<Table fixedRows = {3}>
+  {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
+</Table>`).map((f) => f.line),
+      ).toEqual([7]);
+    });
+
+    test("row headers and an empty label need no sort", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}<TableHeaderCell label="" />{/snippet}
+  <tr><th scope="row">Alice</th><td>1</td></tr>
+  <tr><th scope='rowgroup'>Team</th></tr>
+</Table>`),
+      ).toEqual([]);
+    });
+
+    test("only the exact kit-sr-only class hides header text", () => {
+      expect(
+        check(`<Table>
+  {#snippet header()}
+    <TableHeaderCell><span class='kit-sr-only'>Actions</span></TableHeaderCell>
+    <TableHeaderCell><span class="kit-sr-only-label">Owner</span></TableHeaderCell>
+  {/snippet}
+</Table>`).map((f) => f.line),
+      ).toEqual([5]);
     });
   });
 

@@ -24,7 +24,9 @@ export interface TableSortControl {
  * after that returns to the input order (null) instead of starting over. */
 export declare function nextSort<Row, Key extends string>(current: SortState<Key> | null, key: Key, columns: SortColumns<Row, Key>, unsortable?: boolean): SortState<Key> | null;
 /** Ascending order of two present values: text by locale with natural
- * numbers ("v2" before "v10"), dates by time, everything else by `<`. */
+ * numbers ("v2" before "v10"), dates by time, numbers and bigints by value
+ * (also against each other), everything else by `<`. Values of different
+ * kinds order by kind, so a column mixing them still sorts consistently. */
 export declare function compareSortValues(a: Exclude<SortValue, null | undefined>, b: Exclude<SortValue, null | undefined>): number;
 /** The rows in `state` order, or the input order when `state` is null. The
  * sort is stable, so ties keep the input order, and rows without a value

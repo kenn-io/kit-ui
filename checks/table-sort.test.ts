@@ -42,6 +42,22 @@ describe("sortRows", () => {
     expect(sorted.slice(0, 2).map((job) => job.name)).toEqual(["deploy", "build v10"]);
   });
 
+  test("numbers and bigints sort by value against each other", () => {
+    const values = [-2, -10n, 3, 1n];
+    const sorted = sortRows(values, { key: "v", direction: "asc" }, { v: (value) => value });
+    expect(sorted).toEqual([-10n, -2, 1n, 3]);
+  });
+
+  // Without one order across kinds, the result would depend on the rows'
+  // starting order.
+  test("a column mixing kinds sorts numbers, then text, then booleans, from any start", () => {
+    const values = [true, "9", 10, "b", 2n, false];
+    const expected = [2n, 10, "9", "b", false, true];
+    const asc = { key: "v" as const, direction: "asc" as const };
+    expect(sortRows(values, asc, { v: (value) => value })).toEqual(expected);
+    expect(sortRows([...values].reverse(), asc, { v: (value) => value })).toEqual(expected);
+  });
+
   test("an unknown column is an error, not a silent no-op", () => {
     expect(() => sortRows(jobs, { key: "missing" as "name", direction: "asc" }, columns)).toThrow(
       'unknown column "missing"',

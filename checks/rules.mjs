@@ -635,6 +635,66 @@ function tagEnd(source, start) {
   return source.length;
 }
 
+/** A tag's attributes by name, read from the text between its name and its
+ * `>`: true for a bare `name` or a `{name}` shorthand, otherwise the raw
+ * value with its quotes or braces. Spreads are skipped. */
+function parseAttrs(attrs) {
+  const found = new Map();
+  let i = 0;
+  const skipSpace = () => {
+    while (i < attrs.length && /\s/.test(attrs[i])) i += 1;
+  };
+  const skipBraces = () => {
+    let depth = 0;
+    for (; i < attrs.length; i += 1) {
+      if (attrs[i] === "{") depth += 1;
+      else if (attrs[i] === "}" && --depth === 0) {
+        i += 1;
+        return;
+      }
+    }
+  };
+  for (skipSpace(); i < attrs.length; skipSpace()) {
+    const start = i;
+    if (attrs[i] === "{") {
+      skipBraces();
+      const shorthand = /^\{\s*([\w$]+)\s*\}$/.exec(attrs.slice(start, i));
+      if (shorthand) found.set(shorthand[1], true);
+      continue;
+    }
+    const name = /^[^\s=/>{"']+/.exec(attrs.slice(i))?.[0];
+    if (!name) {
+      i += 1;
+      continue;
+    }
+    i += name.length;
+    skipSpace();
+    if (attrs[i] !== "=") {
+      found.set(name, true);
+      continue;
+    }
+    i += 1;
+    skipSpace();
+    const valueStart = i;
+    if (attrs[i] === "{") skipBraces();
+    else if (attrs[i] === '"' || attrs[i] === "'") {
+      const close = attrs.indexOf(attrs[i], i + 1);
+      i = close < 0 ? attrs.length : close + 1;
+    } else while (i < attrs.length && !/[\s/>]/.test(attrs[i])) i += 1;
+    found.set(name, attrs.slice(valueStart, i));
+  }
+  return found;
+}
+
+/** The text of a static attribute value (`"x"`, `'x'`, `{"x"}`, or bare
+ * `x`), or null for an expression, a bare attribute, or no attribute. */
+function literal(value) {
+  if (typeof value !== "string") return null;
+  const quoted = /^(["'])([^]*)\1$/.exec(value) ?? /^\{\s*(["'`])([^"'`\\$]*)\1\s*\}$/.exec(value);
+  if (quoted) return quoted[2];
+  return /^[^"'{]/.test(value) ? value : null;
+}
+
 /** The text a header's children show: markup tags, Svelte block tags
  * (`{#if}`, `{:else}`, `{/if}`), and `kit-sr-only` elements removed. Tags
  * end with tagEnd, so a `>` inside an attribute expression stays inside
@@ -647,7 +707,8 @@ function visibleText(content) {
       const tag = content.slice(i, end);
       const name = /^<([A-Za-z][\w.-]*)/.exec(tag)?.[1];
       i = end;
-      if (name && !tag.endsWith("/>") && /\bclass="[^"]*\bkit-sr-only\b/.test(tag)) {
+      const classes = name && literal(parseAttrs(tag.slice(name.length + 1, -1)).get("class"));
+      if (name && !tag.endsWith("/>") && classes?.split(/\s+/).includes("kit-sr-only")) {
         const close = content.indexOf(`</${name}>`, i);
         i = close < 0 ? content.length : close + name.length + 3;
       }
@@ -663,7 +724,8 @@ function visibleText(content) {
  * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
  * text cannot sort at all. The one exception is a `<Table fixedRows={n}>`,
  * which declares a fixed set of fewer than five rows. Headers with no
- * visible text (a checkbox or actions column) are exempt. */
+ * visible text (a checkbox or actions column) and row headers
+ * (`scope="row"`) are exempt. */
 export function checkUnsortedTableHeader(source, filename) {
   if (!filename.endsWith(".svelte")) return [];
   // Blank out comments so commented-out markup is not checked.
@@ -680,19 +742,25 @@ export function checkUnsortedTableHeader(source, filename) {
       const close = code.indexOf(`</${name}>`, end);
       content = code.slice(end, close < 0 ? end : close);
     }
+    const attributes = parseAttrs(attrs);
     const sortable =
       name === "TableHeaderCell" &&
-      (/(?:^|\s)sort=\{/.test(attrs) ||
-        /(?:^|\s)sortable(?=[\s/]|$)/.test(attrs) ||
-        /(?:^|\s)sortable=\{(?!\s*false\s*\})/.test(attrs));
+      (attributes.has("sort") ||
+        (attributes.has("sortable") &&
+          !/^\{\s*false\s*\}$/.test(String(attributes.get("sortable")))));
     if (sortable) continue;
-    const visible = /(?:^|\s)label=/.test(attrs) || visibleText(content) !== "";
+    const scope = literal(attributes.get("scope"));
+    if (scope === "row" || scope === "rowgroup") continue;
+    const visible =
+      (attributes.has("label") && literal(attributes.get("label")) !== "") ||
+      visibleText(content) !== "";
     if (!visible) continue;
     const before = code.slice(0, match.index);
     const tableAt = [...before.matchAll(/<Table(?=[\s>])/g)].at(-1)?.index ?? -1;
     if (tableAt >= 0 && !before.slice(tableAt).includes("</Table>")) {
-      const tableAttrs = code.slice(tableAt, tagEnd(code, tableAt + "<Table".length));
-      if (/(?:^|\s)fixedRows=/.test(tableAttrs)) continue;
+      const tableStart = tableAt + "<Table".length;
+      const tableAttrs = code.slice(tableStart, tagEnd(code, tableStart) - 1);
+      if (parseAttrs(tableAttrs).has("fixedRows")) continue;
     }
     findings.push({
       rule: "unsorted-table-header",

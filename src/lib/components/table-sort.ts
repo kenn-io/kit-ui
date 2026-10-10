@@ -61,16 +61,26 @@ export function nextSort<Row, Key extends string>(
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
+/** Numbers, bigints, and dates first, then text, then booleans. */
+function typeRank(value: string | number | bigint | boolean): number {
+  if (typeof value === "string") return 1;
+  if (typeof value === "boolean") return 2;
+  return 0;
+}
+
 /** Ascending order of two present values: text by locale with natural
- * numbers ("v2" before "v10"), dates by time, everything else by `<`. */
+ * numbers ("v2" before "v10"), dates by time, numbers and bigints by value
+ * (also against each other), everything else by `<`. Values of different
+ * kinds order by kind, so a column mixing them still sorts consistently. */
 export function compareSortValues(
   a: Exclude<SortValue, null | undefined>,
   b: Exclude<SortValue, null | undefined>,
 ): number {
-  if (typeof a === "string" && typeof b === "string") return collator.compare(a, b);
   const x = a instanceof Date ? a.getTime() : a;
   const y = b instanceof Date ? b.getTime() : b;
-  if (typeof x !== typeof y) return collator.compare(String(x), String(y));
+  const rank = typeRank(x) - typeRank(y);
+  if (rank !== 0) return rank;
+  if (typeof x === "string" && typeof y === "string") return collator.compare(x, y);
   return x < y ? -1 : x > y ? 1 : 0;
 }
 
