@@ -83,9 +83,9 @@
 </DemoSection>
 
 <DemoSection
-  title="Fixed rows"
-  description="Every table sorts, except one with a fixed set of fewer than five rows known when the code is written. fixedRows (1–4) declares that, and kit-ui-check's unsorted-table-header rule accepts unsorted headers only there."
-  code={`<Table ariaLabel="Jobs by status" fixedRows={3}>
+  title="Opting out of sorting"
+  description="Every table sorts unless it opts out with unsorted, such as a short fixed list with one row per status. kit-ui-check's unsorted-table-header rule accepts unsorted headers only there."
+  code={`<Table ariaLabel="Jobs by status" unsorted>
   {#snippet header()}
     <TableHeaderCell label="Status" />
     <TableHeaderCell label="Jobs" numeric />
@@ -94,7 +94,7 @@
 </Table>`}
 >
   <div class="table-host">
-    <Table ariaLabel="Jobs by status" fixedRows={3}>
+    <Table ariaLabel="Jobs by status" unsorted>
       {#snippet header()}
         <TableHeaderCell label="Status" />
         <TableHeaderCell label="Jobs" numeric />

@@ -296,15 +296,18 @@ describe("hand-rolled components", () => {
       ).toHaveLength(2);
     });
 
-    test("only a Table declaring fixedRows may skip sorting", () => {
+    test("only a Table that opts out with unsorted may skip sorting", () => {
       expect(
-        check(`<Table ariaLabel="Totals" fixedRows={3}>
+        check(`<Table ariaLabel="Totals" unsorted>
   {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
 </Table>
 <Table ariaLabel="Jobs">
   {#snippet header()}<TableHeaderCell label="Job" />{/snippet}
+</Table>
+<Table ariaLabel="Runs" unsorted={false}>
+  {#snippet header()}<TableHeaderCell label="Run" />{/snippet}
 </Table>`).map((f) => f.line),
-      ).toEqual([6]);
+      ).toEqual([6, 9]);
     });
 
     test("flags a raw th with text, but not an empty one or a commented-out one", () => {
@@ -316,7 +319,7 @@ describe("hand-rolled components", () => {
       ).toEqual([expect.stringContaining("cannot sort")]);
     });
 
-    test("an ignore marker cannot suppress it; fixedRows is the only exception", () => {
+    test("an ignore marker cannot suppress it; unsorted is the only exception", () => {
       expect(
         check(`<Table>
   {#snippet header()}
@@ -366,7 +369,7 @@ describe("hand-rolled components", () => {
     <TableHeaderCell sortable = {false} label="Owner" />
   {/snippet}
 </Table>
-<Table fixedRows = {3}>
+<Table unsorted = {true}>
   {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
 </Table>`).map((f) => f.line),
       ).toEqual([7]);

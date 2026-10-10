@@ -722,8 +722,8 @@ function visibleText(content) {
 
 /** Every table with a header must sort. A labeled TableHeaderCell needs
  * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
- * text cannot sort at all. The one exception is a `<Table fixedRows={n}>`,
- * which declares a fixed set of fewer than five rows. Headers with no
+ * text cannot sort at all. The one exception is a `<Table unsorted>`,
+ * which opts out explicitly. Headers with no
  * visible text (a checkbox or actions column) and row headers
  * (`scope="row"`) are exempt. */
 export function checkUnsortedTableHeader(source, filename) {
@@ -760,7 +760,8 @@ export function checkUnsortedTableHeader(source, filename) {
     if (tableAt >= 0 && !before.slice(tableAt).includes("</Table>")) {
       const tableStart = tableAt + "<Table".length;
       const tableAttrs = code.slice(tableStart, tagEnd(code, tableStart) - 1);
-      if (parseAttrs(tableAttrs).has("fixedRows")) continue;
+      const unsorted = parseAttrs(tableAttrs).get("unsorted");
+      if (unsorted !== undefined && !/^\{\s*false\s*\}$/.test(String(unsorted))) continue;
     }
     findings.push({
       rule: "unsorted-table-header",
@@ -768,7 +769,7 @@ export function checkUnsortedTableHeader(source, filename) {
       message:
         name === "th"
           ? "table header that cannot sort — use Table + TableHeaderCell with TableSort from @kenn-io/kit-ui"
-          : 'table header without sorting — pass sort={tableSort} column="…" (TableSort) or sortable; only a <Table fixedRows={n}> (fewer than five fixed rows) may skip sorting',
+          : 'table header without sorting — pass sort={tableSort} column="…" (TableSort) or sortable; or opt the table out with <Table unsorted>',
     });
   }
   return findings;
@@ -1614,7 +1615,7 @@ export function checkSplitHandleOverride(source, filename) {
 }
 
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
-// unsorted-table-header has its own, explicit exception: <Table fixedRows>.
+// unsorted-table-header has its own, explicit exception: <Table unsorted>.
 export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override", "unsorted-table-header"]);
 
 export const ALL_RULES = {

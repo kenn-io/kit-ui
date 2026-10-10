@@ -11,11 +11,10 @@
     /** Stripe even rows. */
     zebra?: boolean;
     ariaLabel?: string;
-    /** Declares that this table always has at most this many rows, from a
-     * set fixed when the code is written (one row per status, say). Every
-     * other table must sort: kit-ui-check's `unsorted-table-header` rule
-     * requires sortable headers unless this is set. */
-    fixedRows?: 1 | 2 | 3 | 4;
+    /** Opts this table out of sorting. Every other table must sort:
+     * kit-ui-check's `unsorted-table-header` rule requires sortable headers
+     * unless this is set. */
+    unsorted?: boolean;
     class?: string;
   }
 
@@ -25,7 +24,6 @@
     stickyHeader = true,
     zebra = true,
     ariaLabel = undefined,
-    fixedRows = undefined,
     class: className = "",
   }: Props = $props();
 </script>
@@ -36,7 +34,6 @@
     class:kit-table--zebra={zebra}
     class:kit-table--sticky={stickyHeader}
     aria-label={ariaLabel}
-    data-fixed-rows={fixedRows}
   >
     <thead>
       <tr>

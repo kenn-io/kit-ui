@@ -69,7 +69,7 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
 @media (max-width: 640px) { … }`}
 >
   <div class="bp-table">
-    <Table ariaLabel="Breakpoints" fixedRows={4} zebra={false}>
+    <Table ariaLabel="Breakpoints" unsorted zebra={false}>
       {#snippet header()}
         <TableHeaderCell label="name" />
         <TableHeaderCell label="query" />

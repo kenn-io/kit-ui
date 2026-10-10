@@ -11,12 +11,11 @@ People expect to click any column heading to sort by it. Every labeled header
 must sort, and kit-ui-check's `unsorted-table-header` rule enforces this; it
 cannot be suppressed or disabled.
 
-The one exception is a table with a fixed set of fewer than five rows, known
-when the code is written, such as one row per status. Declare it with
-`fixedRows={n}` (1–4) on `Table`, and write its `header` snippet inside the
-`<Table>` tags: the checker reads `fixedRows` from the enclosing `Table`, so
-a header snippet declared elsewhere and passed as `header={…}` is still
-checked. Headers with no visible text, such as a checkbox or actions column,
+To leave a table unsorted, opt out explicitly with `unsorted` on `Table`,
+for example a short fixed list with one row per status. Write its `header`
+snippet inside the `<Table>` tags: the checker reads `unsorted` from the
+enclosing `Table`, so a header snippet declared elsewhere and passed as
+`header={…}` is still checked. Headers with no visible text, such as a checkbox or actions column,
 and row headers (`<th scope="row">`) need no sorting.
 
 ## Client-side data: TableSort
@@ -91,15 +90,15 @@ yourself:
 
 ## Table props
 
-| Prop           | Type               | Default  | Notes                                                                           |
-| -------------- | ------------------ | -------- | ------------------------------------------------------------------------------- |
-| `header`       | `Snippet`          | required | `<TableHeaderCell>` elements                                                    |
-| `children`     | `Snippet`          | required | `<tr>` body rows                                                                |
-| `stickyHeader` | `boolean`          | `true`   | Header stays visible while the body scrolls (give the wrapper a bounded height) |
-| `zebra`        | `boolean`          | `true`   | Stripe even rows                                                                |
-| `ariaLabel`    | `string`           | —        |                                                                                 |
-| `fixedRows`    | `1 \| 2 \| 3 \| 4` | —        | Declares a fixed set of at most this many rows; its headers need not sort       |
-| `class`        | `string`           | `""`     | Applied to the scroll wrapper                                                   |
+| Prop           | Type      | Default  | Notes                                                                           |
+| -------------- | --------- | -------- | ------------------------------------------------------------------------------- |
+| `header`       | `Snippet` | required | `<TableHeaderCell>` elements                                                    |
+| `children`     | `Snippet` | required | `<tr>` body rows                                                                |
+| `stickyHeader` | `boolean` | `true`   | Header stays visible while the body scrolls (give the wrapper a bounded height) |
+| `zebra`        | `boolean` | `true`   | Stripe even rows                                                                |
+| `ariaLabel`    | `string`  | —        |                                                                                 |
+| `unsorted`     | `boolean` | `false`  | Opts the table out of sorting; its headers need not sort                        |
+| `class`        | `string`  | `""`     | Applied to the scroll wrapper                                                   |
 
 ## TableHeaderCell props
 

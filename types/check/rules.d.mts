@@ -163,8 +163,8 @@ export function checkHandRolledTableSort(source: any): {
 }[];
 /** Every table with a header must sort. A labeled TableHeaderCell needs
  * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
- * text cannot sort at all. The one exception is a `<Table fixedRows={n}>`,
- * which declares a fixed set of fewer than five rows. Headers with no
+ * text cannot sort at all. The one exception is a `<Table unsorted>`,
+ * which opts out explicitly. Headers with no
  * visible text (a checkbox or actions column) and row headers
  * (`scope="row"`) are exempt. */
 export function checkUnsortedTableHeader(source: any, filename: any): {
