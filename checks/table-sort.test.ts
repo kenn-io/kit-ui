@@ -56,4 +56,23 @@ describe("nextSort", () => {
     expect(nextSort(byName, "cost", columns)).toEqual({ key: "cost", direction: "desc" });
     expect(nextSort(byName, "finished", columns)).toEqual({ key: "finished", direction: "asc" });
   });
+
+  // A table that starts in its input order (a server's or a curated one)
+  // must be able to get back to it.
+  test("from the input order, a column cycles first, reverse, then back to input order", () => {
+    const first = nextSort(null, "cost", columns, true);
+    const second = nextSort(first, "cost", columns, true);
+    expect([first, second, nextSort(second, "cost", columns, true)]).toEqual([
+      { key: "cost", direction: "desc" },
+      { key: "cost", direction: "asc" },
+      null,
+    ]);
+    expect(nextSort(second, "cost", columns)).toEqual({ key: "cost", direction: "desc" });
+  });
+});
+
+describe("sortRows with no sort", () => {
+  test("keeps the input order", () => {
+    expect(sortRows(jobs, null, columns)).toEqual(jobs);
+  });
 });

@@ -61,6 +61,10 @@ render `sorter.sort(rows)`:
   want ties to keep.
 - A column's first click uses `firstDirection` (default `"asc"`); a second
   click reverses it.
+- Leave out the initial sort to keep rows in the order they arrive in, such
+  as a server's or a curated order, until someone clicks a header. Each
+  column then cycles through its first direction, the reverse, and back to
+  that order.
 
 The pure helpers `sortRows`, `nextSort`, and `compareSortValues` are exported
 for sorting outside a component.
@@ -108,13 +112,13 @@ yourself:
 
 ## TableSort
 
-| Member                            | Notes                                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `new TableSort(columns, initial)` | `columns`: key → value function or `{ value, firstDirection }`; `initial`: `{ key, direction? }` |
-| `key`, `direction`                | The active column and direction                                                                  |
-| `directionOf(column)`             | The column's direction, or `null` when it is not active                                          |
-| `toggle(column)`                  | What a header click does                                                                         |
-| `sort(rows)`                      | A sorted copy; reactive inside `$derived` or markup                                              |
+| Member                             | Notes                                                                                                                                     |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `new TableSort(columns, initial?)` | `columns`: key → value function or `{ value, firstDirection }`; `initial`: `{ key, direction? }`, or leave it out to keep the input order |
+| `key`, `direction`                 | The active column and direction; `null` while rows keep the input order                                                                   |
+| `directionOf(column)`              | The column's direction, or `null` when it is not active                                                                                   |
+| `toggle(column)`                   | What a header click does                                                                                                                  |
+| `sort(rows)`                       | A sorted copy; reactive inside `$derived` or markup                                                                                       |
 
 Body cells get default padding/typography via `Table`'s scoped styles; no cell
 component is required.

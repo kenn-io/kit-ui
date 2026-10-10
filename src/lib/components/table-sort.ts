@@ -42,17 +42,21 @@ function column<Row, Key extends string>(
   return typeof entry === "function" ? { value: entry } : entry;
 }
 
-/** The state after clicking `key`: reverse the active column, or start a new
- * column in its first direction. */
+/** The state after clicking `key`. A new column starts in its first
+ * direction and a second click reverses it. With `unsortable`, the click
+ * after that returns to the input order (null) instead of starting over. */
 export function nextSort<Row, Key extends string>(
-  current: SortState<Key>,
+  current: SortState<Key> | null,
   key: Key,
   columns: SortColumns<Row, Key>,
-): SortState<Key> {
-  if (current.key === key) {
-    return { key, direction: current.direction === "asc" ? "desc" : "asc" };
+  unsortable = false,
+): SortState<Key> | null {
+  const first = column(columns, key).firstDirection ?? "asc";
+  if (current?.key !== key) return { key, direction: first };
+  if (current.direction === first) {
+    return { key, direction: first === "asc" ? "desc" : "asc" };
   }
-  return { key, direction: column(columns, key).firstDirection ?? "asc" };
+  return unsortable ? null : { key, direction: first };
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
@@ -70,14 +74,15 @@ export function compareSortValues(
   return x < y ? -1 : x > y ? 1 : 0;
 }
 
-/** The rows in `state` order. The sort is stable, so ties keep the input
- * order, and rows without a value (null, undefined, NaN, invalid dates)
- * always sort last. */
+/** The rows in `state` order, or the input order when `state` is null. The
+ * sort is stable, so ties keep the input order, and rows without a value
+ * (null, undefined, NaN, invalid dates) always sort last. */
 export function sortRows<Row, Key extends string>(
   rows: readonly Row[],
-  state: SortState<Key>,
+  state: SortState<Key> | null,
   columns: SortColumns<Row, Key>,
 ): Row[] {
+  if (state === null) return [...rows];
   const { value } = column(columns, state.key);
   const sign = state.direction === "asc" ? 1 : -1;
   const missing = (v: SortValue): v is null | undefined =>
