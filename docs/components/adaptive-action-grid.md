@@ -1,4 +1,3 @@
-
 # AdaptiveActionGrid
 
 Responsive container for mixed actions and controls. It keeps a natural-width
