@@ -1,3 +1,4 @@
+
 # AdaptiveActionGrid
 
 Responsive container for mixed actions and controls. It keeps a natural-width
@@ -175,6 +176,10 @@ geometry, inherited ancestor styles, or loaded fonts change. Content can
 therefore move an existing grid or compact layout back to a row without a
 container resize. Measurement changes CSS on the mounted subtree only; it never
 clones or remounts a control.
+
+Items always stay in DOM order. The grid never reorders them with CSS `order`,
+dense grid packing, or column-first flow, because any of those would let
+visual order and Tab order diverge for an open-ended set of nested controls.
 
 The compact panel is an inline disclosure, not a menu or popover. Its native
 button exposes `aria-expanded` and `aria-controls`; opening reveals the
