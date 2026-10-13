@@ -1,9 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoPage, resolvedStyle, setTheme, useTheme } from "./helpers.js";
 
-// The depth tokens are fallback-only. A theme that leaves them unset keeps
-// today's look; quiet sets them and its controls, fields and panels take
-// the raised, sunken and panel shadows.
+// Four depth tokens are fallback-only, and --edge-highlight is declared
+// transparent. A theme that leaves them unset keeps today's look; quiet sets
+// them and its controls, fields and panels take the raised, sunken and panel
+// shadows.
 
 const OTHER_THEMES = [
   null,
@@ -139,13 +140,17 @@ test("quiet re-sets its edge highlight and shadows for dark mode", async ({ page
     await setTheme(page, { dark });
     return {
       highlight: await resolvedStyle(page, "color", "var(--edge-highlight)"),
-      shadow: await resolvedStyle(page, "box-shadow", "var(--shadow-sm)"),
+      shadowSm: await resolvedStyle(page, "box-shadow", "var(--shadow-sm)"),
+      shadowMd: await resolvedStyle(page, "box-shadow", "var(--shadow-md)"),
+      shadowLg: await resolvedStyle(page, "box-shadow", "var(--shadow-lg)"),
     };
   };
-  const light = await resolved(false);
-  const dark = await resolved(true);
-  expect(dark.highlight, "--edge-highlight").not.toBe(light.highlight);
-  expect(dark.shadow, "--shadow-sm").not.toBe(light.shadow);
+  const inLight = await resolved(false);
+  const inDark = await resolved(true);
+  expect(inDark.highlight, "--edge-highlight").not.toBe(inLight.highlight);
+  expect(inDark.shadowSm, "--shadow-sm").not.toBe(inLight.shadowSm);
+  expect(inDark.shadowMd, "--shadow-md").not.toBe(inLight.shadowMd);
+  expect(inDark.shadowLg, "--shadow-lg").not.toBe(inLight.shadowLg);
 });
 
 test("table headers keep today's background until a theme lights them", async ({ page }) => {
