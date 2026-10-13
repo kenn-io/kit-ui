@@ -4,7 +4,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "src/lib/index.ts",
+    "src/lib/utils/focus-trap.ts"
   ],
   "main": "src/lib/index.ts",
   "types": "./types/index.d.ts",
