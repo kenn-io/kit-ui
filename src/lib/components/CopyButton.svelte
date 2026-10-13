@@ -114,6 +114,9 @@
 
   .kit-copy-btn:active {
     transform: scale(0.92);
+  }
+
+  .kit-copy-btn:where(:active) {
     box-shadow: var(--shadow-sunken, none);
   }
 </style>
