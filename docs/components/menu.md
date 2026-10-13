@@ -74,19 +74,15 @@ buttons. Those need normal Tab navigation and belong in a popover or dialog.
 
 ## Icon alignment
 
-`MenuItem` reserves a leading icon column only when passed an `icon` snippet.
-An item without an `icon` snippet starts its label at the item padding.
-Pass an empty `icon` snippet to align its label with items that have icons.
-The slot is hidden from assistive technology. Set `--menu-icon-width` to change
-its default 16px size.
+When any `MenuItem` in a menu passes an `icon` snippet, every item reserves the
+icon column so labels share one left edge. A menu where no item passes an icon
+shows no column. The slot is hidden from assistive technology. Set
+`--menu-icon-width` to change its default 16px size.
 
 ```svelte
 <MenuItem onselect={moveIssue}>
   {#snippet icon()}<ArrowRightIcon size={16} />{/snippet}
   Move issue
 </MenuItem>
-<MenuItem onselect={archiveIssue}>
-  {#snippet icon()}{/snippet}
-  Archive issue
-</MenuItem>
+<MenuItem onselect={archiveIssue}>Archive issue</MenuItem>
 ```

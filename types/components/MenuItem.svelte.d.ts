@@ -7,7 +7,7 @@ interface Props {
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
-    /** Decorative leading icon. Omit it for no reserved space; pass an empty snippet to align with icon items. */
+    /** Decorative leading icon. The icon column shows when any item in the menu passes one. */
     icon?: Snippet;
     children: Snippet;
 }
