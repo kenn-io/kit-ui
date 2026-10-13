@@ -282,7 +282,8 @@
     transition:
       border-color var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease),
-      background var(--transition-fast) var(--transition-ease, ease);
+      background var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-select-dropdown__trigger:hover:not(:disabled),

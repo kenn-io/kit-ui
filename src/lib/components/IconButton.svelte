@@ -96,7 +96,8 @@
     cursor: pointer;
     transition:
       background var(--transition-fast) var(--transition-ease, ease),
-      color var(--transition-fast) var(--transition-ease, ease);
+      color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-icon-button--sm {

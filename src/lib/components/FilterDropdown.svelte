@@ -306,7 +306,8 @@
     cursor: pointer;
     transition:
       border-color var(--transition-fast) var(--transition-ease, ease),
-      color var(--transition-fast) var(--transition-ease, ease);
+      color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
     position: relative;
     min-height: var(--kit-control-height, 24px);
   }
