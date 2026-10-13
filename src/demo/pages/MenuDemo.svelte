@@ -51,7 +51,6 @@
           Move issue
         </MenuItem>
         <MenuItem disabled textValue="Archive issue" onselect={() => (lastAction = "archive")}>
-          {#snippet icon()}{/snippet}
           Archive issue
         </MenuItem>
         <MenuSeparator />
@@ -61,6 +60,39 @@
       </MenuContent>
     </Menu>
     <span data-testid="menu-last-action">last action: {lastAction}</span>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Menu without icons"
+  description="When no item passes an icon, labels start at the item padding with no empty column."
+  code={`<Menu>
+  <MenuTrigger ariaLabel="Photo actions">…</MenuTrigger>
+  <MenuContent ariaLabel="Photo actions">
+    <MenuItem onselect={hide}>Hide</MenuItem>
+    <MenuItem onselect={report}>Report</MenuItem>
+  </MenuContent>
+</Menu>`}
+>
+  <div class="menu-demo-row">
+    <Menu>
+      <MenuTrigger ariaLabel="Photo actions">
+        {#snippet child({ attachment })}
+          <button
+            class="task-actions-trigger"
+            type="button"
+            title="Photo actions"
+            {@attach attachment}
+          >
+            <MoreHorizontalIcon size="14" strokeWidth="2" aria-hidden="true" />
+          </button>
+        {/snippet}
+      </MenuTrigger>
+      <MenuContent ariaLabel="Photo actions">
+        <MenuItem onselect={() => (lastAction = "hide")}>Hide</MenuItem>
+        <MenuItem onselect={() => (lastAction = "report")}>Report</MenuItem>
+      </MenuContent>
+    </Menu>
   </div>
 </DemoSection>
 

@@ -7,7 +7,7 @@ interface Props {
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
-    /** Decorative leading icon. Its column stays reserved when absent or empty. */
+    /** Decorative leading icon. The icon column shows when any item in the menu passes one. */
     icon?: Snippet;
     children: Snippet;
 }

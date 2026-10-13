@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
 test("action menu manages focus, disabled items, selection, and dismissal", async ({ page }) => {
@@ -59,11 +59,10 @@ test("radio menu exposes and updates a single checked item", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Switch daemon: remote" })).toBeFocused();
 });
 
-test("action labels align with populated, empty, and omitted icons", async ({ page }) => {
-  await gotoPage(page, "menu");
-  await page.getByRole("button", { name: "Task actions" }).click();
-  const items = page.getByRole("menu", { name: "Task actions" }).getByRole("menuitem");
-  const geometry = await items.evaluateAll((elements) =>
+async function labelGeometry(page: Page, menuName: string) {
+  await page.getByRole("button", { name: menuName }).click();
+  const items = page.getByRole("menu", { name: menuName }).getByRole("menuitem");
+  return items.evaluateAll((elements) =>
     elements.map((element) => {
       const text = [...element.childNodes].find(
         (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
@@ -73,11 +72,22 @@ test("action labels align with populated, empty, and omitted icons", async ({ pa
       range.selectNodeContents(text);
       return {
         labelLeft: range.getBoundingClientRect().left,
-        iconWidth: element.querySelector(".kit-menu__icon")?.getBoundingClientRect().width,
+        itemLeft: element.getBoundingClientRect().left,
+        paddingLeft: parseFloat(getComputedStyle(element).paddingLeft),
       };
     }),
   );
-  expect(geometry.map((item) => item.iconWidth)).toEqual([16, 16, 16]);
-  expect(geometry[1].labelLeft).toBe(geometry[0].labelLeft);
-  expect(geometry[2].labelLeft).toBe(geometry[0].labelLeft);
+}
+
+test("one icon indents every label in the menu", async ({ page }) => {
+  await gotoPage(page, "menu");
+  const geometry = await labelGeometry(page, "Task actions");
+  expect(geometry[0].labelLeft - geometry[0].itemLeft).toBeGreaterThan(geometry[0].paddingLeft);
+  for (const item of geometry) expect(item.labelLeft).toBe(geometry[0].labelLeft);
+});
+
+test("a menu without icons starts labels at the item padding", async ({ page }) => {
+  await gotoPage(page, "menu");
+  const geometry = await labelGeometry(page, "Photo actions");
+  for (const item of geometry) expect(item.labelLeft - item.itemLeft).toBe(item.paddingLeft);
 });

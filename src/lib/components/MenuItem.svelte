@@ -10,7 +10,7 @@
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
-    /** Decorative leading icon. Its column stays reserved when absent or empty. */
+    /** Decorative leading icon. The icon column shows when any item in the menu passes one. */
     icon?: Snippet;
     children: Snippet;
   }
@@ -59,7 +59,7 @@
   }}
   onpointermove={() => element?.focus({ preventScroll: true })}
 >
-  <span class="kit-menu__icon" aria-hidden="true">
+  <span class="kit-menu__icon" data-filled={icon ? "" : undefined} aria-hidden="true">
     {@render icon?.()}
   </span>
   {@render children()}
@@ -73,6 +73,10 @@
     width: var(--menu-icon-width, 16px);
     height: var(--menu-icon-width, 16px);
     flex: 0 0 var(--menu-icon-width, 16px);
+  }
+
+  :global(.kit-menu__content:not(:has(.kit-menu__icon[data-filled]))) .kit-menu__icon {
+    display: none;
   }
 
   .kit-menu__item {
