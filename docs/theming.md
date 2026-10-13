@@ -146,21 +146,26 @@ the rest are **fallback-only**: never declared by the default pair, read as
 `var(--token, <site default>)` so the default theme stays pixel-identical
 and each call site keeps its own tuned default until a theme opts in.
 
-| Token                                          | Default                      | Used for                                                                                                                                           |
-| ---------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--border-width`                               | `1px` (declared)             | full-box control/surface borders (single-edge dividers stay 1px)                                                                                   |
-| `--press-transform`                            | `translateY(1px)` (declared) | `:active` on controls carrying `kit-control-states`                                                                                                |
-| `--font-weight-medium/semibold/bold`           | `500/600/700` (declared)     | every library font-weight                                                                                                                          |
-| `--transition-ease`                            | `ease` (fallback)            | hover/press easing everywhere `--transition-fast` is used                                                                                          |
-| `--transition-medium`                          | per site (fallback)          | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                     |
-| `--letter-spacing-label`                       | per site (fallback)          | uppercase label/eyebrow tracking                                                                                                                   |
-| `--label-transform`                            | `uppercase` (fallback)       | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                             |
-| `--color-label-fill` / `--color-label-ink-mix` | `100%` (fallback)            | ColorLabel solid vs tinted pill (see [ColorLabel](components/color-label.md#theming))                                                              |
-| `--line-height-prose`                          | `1.6` (fallback)             | comment/markdown body leading                                                                                                                      |
-| `--icon-stroke`                                | `2` (fallback)               | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                |
-| `--radius-dot`                                 | `50%` (fallback)             | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities |
-| `--radius-toggle`                              | `999px` (fallback)           | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                       |
-| `--overlay-filter`                             | `none` (fallback)            | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                    |
+| Token                                          | Default                                                                            | Used for                                                                                                                                                                                   |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--border-width`                               | `1px` (declared)                                                                   | full-box control/surface borders (single-edge dividers stay 1px)                                                                                                                           |
+| `--press-transform`                            | `translateY(1px)` (declared)                                                       | `:active` on controls carrying `kit-control-states`                                                                                                                                        |
+| `--font-weight-medium/semibold/bold`           | `500/600/700` (declared)                                                           | every library font-weight                                                                                                                                                                  |
+| `--transition-ease`                            | `ease` (fallback)                                                                  | hover/press easing everywhere `--transition-fast` is used                                                                                                                                  |
+| `--transition-medium`                          | per site (fallback)                                                                | longer motion: DetailDrawer slide-in (`0.18s`)                                                                                                                                             |
+| `--letter-spacing-label`                       | per site (fallback)                                                                | uppercase label/eyebrow tracking                                                                                                                                                           |
+| `--label-transform`                            | `uppercase` (fallback)                                                             | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                                                                     |
+| `--color-label-fill` / `--color-label-ink-mix` | `100%` (fallback)                                                                  | ColorLabel solid vs tinted pill (see [ColorLabel](components/color-label.md#theming))                                                                                                      |
+| `--line-height-prose`                          | `1.6` (fallback)                                                                   | comment/markdown body leading                                                                                                                                                              |
+| `--icon-stroke`                                | `2` (fallback)                                                                     | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                                                        |
+| `--radius-dot`                                 | `50%` (fallback)                                                                   | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities                                         |
+| `--radius-toggle`                              | `999px` (fallback)                                                                 | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                                                               |
+| `--overlay-filter`                             | `none` (fallback)                                                                  | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                                                            |
+| `--edge-highlight`                             | `transparent` (declared)                                                           | top-edge highlight inside a theme's own `--shadow-raised` and `--shadow-panel`; no component reads it directly, so set it in both modes                                                    |
+| `--shadow-raised`                              | `none` (fallback; the active SegmentedControl segment falls back to `--shadow-sm`) | controls that stand up: Button and ProviderButton, IconButton, CopyButton, FilterDropdown and SelectDropdown triggers, the active SegmentedControl segment, a scrolled sticky Table header |
+| `--shadow-sunken`                              | `none` (fallback)                                                                  | fields and pressed or open controls: TextInput and SearchInput, MentionTextarea, the SegmentedControl track, pressed buttons, open Button, IconButton and dropdown triggers                |
+| `--shadow-panel`                               | per site (fallback)                                                                | panels: Card `raised` and MetricCard (`--shadow-sm`), the Table scroll wrapper (`none`)                                                                                                    |
+| `--bg-table-header`                            | `--bg-inset` (fallback)                                                            | TableHeaderCell background, such as a lit gradient                                                                                                                                         |
 
 **Focus**: every interactive element shows
 `outline: var(--focus-ring)` on `:focus-visible` (offset 1px outside, or
@@ -406,17 +411,17 @@ setThemeName(null); // back to the default pair
 `KIT_THEMES` exports metadata (`name`, `label`, `description`) for building a
 picker. The nine built-in identities:
 
-| Name           | Identity                                                                                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `control-room` | Mission console: dense cool steel, signal cyan, 0.08s feedback, machined radii, DIN lettering (Bahnschrift / Avenir Next)                                                             |
-| `terminal`     | Quiet teletype: mono type, zero radius, flat borders-only elevation, `steps(1)` no-tween state changes, no press travel, phosphor mint dark / ink-on-paper light                      |
-| `zine`         | Risograph poster: 2px ink borders, hard offset shadows, presses shove the card into its shadow (`translate(2px, 2px)`), poster weights (600/700/800), square corners, plain Helvetica |
-| `pebble`       | Soft clay: 10–20px radii, near-invisible borders, large diffuse shadows, halo focus, ease-out-expo squish press, frosted overlays, rounded face                                       |
-| `gallery`      | Exhibition catalogue: old-style serif UI (Iowan / Palatino), paper neutrals, hairline 1.5 icon strokes, book leading, ink navy                                                        |
-| `arctic`       | Glacier light: airy, near-borderless, tonal depth, generous radii, long decelerating glide, heavy overlay frost, geometric type (Avenir / Century Gothic)                             |
-| `ember`        | Last light: warm peach neutrals, burnt-orange primary, sun-tinted shadows, humanist type (Seravek / Trebuchet), pointer-tracking warm glow on buttons                                 |
-| `graphite`     | Machined steel: 0.5px hairline borders, tight 2–4px radii, linear 0.06s response, no press travel, safety orange; deliberately keeps the base Inter                                   |
-| `quiet`        | Calm workspace: platform system type, neutral surfaces, one blue accent, sentence-case labels (`--label-transform: none`), AA muted text on both surfaces, no canvas decor            |
+| Name           | Identity                                                                                                                                                                                                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `control-room` | Mission console: dense cool steel, signal cyan, 0.08s feedback, machined radii, DIN lettering (Bahnschrift / Avenir Next)                                                                                                                                                                     |
+| `terminal`     | Quiet teletype: mono type, zero radius, flat borders-only elevation, `steps(1)` no-tween state changes, no press travel, phosphor mint dark / ink-on-paper light                                                                                                                              |
+| `zine`         | Risograph poster: 2px ink borders, hard offset shadows, presses shove the card into its shadow (`translate(2px, 2px)`), poster weights (600/700/800), square corners, plain Helvetica                                                                                                         |
+| `pebble`       | Soft clay: 10–20px radii, near-invisible borders, large diffuse shadows, halo focus, ease-out-expo squish press, frosted overlays, rounded face                                                                                                                                               |
+| `gallery`      | Exhibition catalogue: old-style serif UI (Iowan / Palatino), paper neutrals, hairline 1.5 icon strokes, book leading, ink navy                                                                                                                                                                |
+| `arctic`       | Glacier light: airy, near-borderless, tonal depth, generous radii, long decelerating glide, heavy overlay frost, geometric type (Avenir / Century Gothic)                                                                                                                                     |
+| `ember`        | Last light: warm peach neutrals, burnt-orange primary, sun-tinted shadows, humanist type (Seravek / Trebuchet), pointer-tracking warm glow on buttons                                                                                                                                         |
+| `graphite`     | Machined steel: 0.5px hairline borders, tight 2–4px radii, linear 0.06s response, no press travel, safety orange; deliberately keeps the base Inter                                                                                                                                           |
+| `quiet`        | Calm workspace: platform system type, neutral surfaces layered inset < page < surface, one blue accent, sentence-case labels (`--label-transform: none`), depth tokens on (raised controls, sunken fields, ringed panels, lit table headers), AA muted text on every surface, no canvas decor |
 
 ### Canvas decor
 
@@ -510,6 +515,26 @@ Two cascade rules to respect (see the comment atop `themes.css`):
   winning: `themes.css` re-asserts the `high-contrast` values above any
   `data-kit-theme` — a custom theme file should copy those two blocks (or
   simply be imported before `themes.css`).
+
+Depth is optional. The five depth tokens (`--edge-highlight`, `--shadow-raised`,
+`--shadow-sunken`, `--shadow-panel`, `--bg-table-header`) have no effect until a
+theme sets them, so components keep today's look. A theme that sets them can
+declare the composites once in its light block, because each `var()` inside them
+resolves against the root's current palette:
+
+```css
+:root[data-kit-theme="acme"] {
+  --edge-highlight: #ffffff;
+  --shadow-raised: inset 0 1px var(--edge-highlight), var(--shadow-sm);
+  --shadow-sunken: inset var(--shadow-sm);
+  --shadow-panel: 0 0 0 1px var(--border-muted), var(--shadow-raised);
+  --bg-table-header: linear-gradient(var(--bg-surface), var(--bg-inset));
+}
+
+:root.dark[data-kit-theme="acme"] {
+  --edge-highlight: rgba(255, 255, 255, 0.06);
+}
+```
 
 Solid buttons render `--bg-surface` as their text color, so keep light-mode
 accents deep enough for near-white text (≥ 4.5:1) and dark-mode accents

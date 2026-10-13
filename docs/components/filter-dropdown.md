@@ -8,6 +8,9 @@ per-item counts, bulk actions, and a reset row. Consolidated from Forge's
 The panel uses viewport-aware fixed positioning (`floatingPopoverStyle`), so it
 flips above the trigger near the bottom edge and clamps to the viewport.
 
+The trigger exposes `aria-expanded`: `true` while the panel is open, `false`
+otherwise.
+
 ```svelte
 <script lang="ts">
   import { FilterDropdown } from "@kenn-io/kit-ui";

@@ -88,6 +88,13 @@ yourself:
 />
 ```
 
+## Theming
+
+The scroll wrapper reads `--shadow-panel` (no shadow by default) and header
+cells read `--bg-table-header` (falls back to `--bg-inset`). Once rows scroll
+beneath a sticky header, the header casts `--shadow-raised`. All three are
+depth tokens; see [Theming](../theming.md#identity-tokens).
+
 ## Table props
 
 | Prop           | Type      | Default  | Notes                                                                           |
