@@ -132,6 +132,7 @@
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--kit-control-radius, var(--radius-sm));
     background: var(--bg-inset);
+    box-shadow: var(--shadow-raised, none);
     color: var(--text-secondary);
     font: inherit;
     font-size: var(--kit-control-font-size, var(--font-size-sm));
@@ -140,6 +141,7 @@
       background var(--transition-fast) var(--transition-ease, ease),
       border-color var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease),
       transform var(--transition-fast) var(--transition-ease, ease),
       opacity var(--transition-fast) var(--transition-ease, ease);
   }
@@ -148,5 +150,9 @@
   .kit-menu__trigger[aria-expanded="true"] {
     border-color: var(--accent-blue);
     color: var(--text-primary);
+  }
+
+  .kit-menu__trigger:where([aria-expanded="true"], :active:not(:disabled)) {
+    box-shadow: var(--shadow-sunken, none);
   }
 </style>

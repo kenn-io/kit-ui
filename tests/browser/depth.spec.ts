@@ -42,6 +42,8 @@ const PROBES: Record<string, Probe[]> = {
   "select-dropdown": [
     { selector: body(".kit-select-dropdown__trigger"), today: "none", quiet: RAISED },
   ],
+  menu: [{ selector: body(".kit-menu__trigger"), today: "none", quiet: RAISED }],
+  typeahead: [{ selector: body(".kit-typeahead__trigger"), today: "none", quiet: RAISED }],
   "segmented-control": [
     {
       selector: body(".kit-segmented:not(.kit-segmented--borderless) .kit-segmented__btn.active"),
@@ -201,6 +203,21 @@ for (const theme of [null, "quiet"] as const) {
     await select.click();
     await expect(select).toHaveAttribute("aria-expanded", "true");
     await expectShadow(page, body(".kit-select-dropdown__trigger[aria-expanded='true']"), sunken);
+
+    await gotoPage(page, "menu");
+    await useTheme(page, theme);
+    const menu = page.locator(body(".kit-menu__trigger")).first();
+    await menu.click();
+    await expect(menu).toHaveAttribute("aria-expanded", "true");
+    await expectShadow(page, body(".kit-menu__trigger[aria-expanded='true']"), sunken);
+
+    // An open Typeahead swaps its trigger for a search input.
+    await gotoPage(page, "typeahead");
+    await useTheme(page, theme);
+    await page.locator(body(".kit-typeahead__trigger")).first().click();
+    const search = page.locator(body(".kit-typeahead__input")).first();
+    await expect(search).toHaveAttribute("aria-expanded", "true");
+    await expectShadow(page, body(".kit-typeahead__input"), sunken);
   });
 
   test(`${name}: a sticky header casts the raised shadow once rows scroll under it`, async ({
@@ -277,6 +294,8 @@ for (const { id, selector } of [
   { id: "copy-button", selector: body(".kit-copy-btn") },
   { id: "filter-dropdown", selector: body(".kit-filter-dropdown__btn") },
   { id: "select-dropdown", selector: body(".kit-select-dropdown__trigger") },
+  { id: "menu", selector: body(".kit-menu__trigger") },
+  { id: "typeahead", selector: body(".kit-typeahead__trigger") },
 ]) {
   test(`quiet: pressing the ${id} sinks it`, async ({ page }) => {
     await gotoPage(page, id);

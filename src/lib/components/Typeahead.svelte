@@ -655,12 +655,15 @@
     padding: var(--typeahead-control-padding, 0 8px);
     background: var(--bg-inset);
     border: var(--border-width) solid var(--border-muted);
+    box-shadow: var(--shadow-raised, none);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: var(--typeahead-control-font-size, var(--font-size-xs));
     color: var(--text-secondary);
     cursor: pointer;
-    transition: border-color var(--transition-fast) var(--transition-ease, ease);
+    transition:
+      border-color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
     text-align: left;
   }
 
@@ -671,6 +674,11 @@
   .kit-typeahead__trigger:focus {
     outline: none;
     border-color: var(--accent-blue);
+  }
+
+  /* A press only: while open, the input replaces the trigger and sinks as a field. */
+  .kit-typeahead__trigger:where(:active:not(:disabled)) {
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-typeahead__trigger:disabled {
@@ -716,6 +724,7 @@
     padding: var(--typeahead-control-padding, 0 8px);
     background: var(--bg-inset);
     border: var(--border-width) solid var(--accent-blue);
+    box-shadow: var(--shadow-sunken, none);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: var(--typeahead-control-font-size, var(--font-size-xs));
