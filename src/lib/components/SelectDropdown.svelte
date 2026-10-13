@@ -291,8 +291,7 @@
     color: var(--text-primary);
   }
 
-  .kit-select-dropdown__trigger[aria-expanded="true"],
-  .kit-select-dropdown__trigger:active:not(:disabled) {
+  .kit-select-dropdown__trigger:where([aria-expanded="true"], :active:not(:disabled)) {
     box-shadow: var(--shadow-sunken, none);
   }
 

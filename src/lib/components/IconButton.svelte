@@ -114,9 +114,11 @@
     color: var(--text-primary);
   }
 
-  .kit-icon-button[aria-pressed="true"],
-  .kit-icon-button[aria-expanded="true"],
-  .kit-icon-button:active:not(:disabled):not([aria-disabled="true"]) {
+  .kit-icon-button:where(
+    [aria-pressed="true"],
+    [aria-expanded="true"],
+    :active:not(:disabled):not([aria-disabled="true"])
+  ) {
     box-shadow: var(--shadow-sunken, none);
   }
 

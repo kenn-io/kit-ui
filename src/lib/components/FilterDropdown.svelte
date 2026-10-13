@@ -311,8 +311,7 @@
     min-height: var(--kit-control-height, 24px);
   }
 
-  .kit-filter-dropdown__btn[aria-expanded="true"],
-  .kit-filter-dropdown__btn:active:not(:disabled) {
+  .kit-filter-dropdown__btn:where([aria-expanded="true"], :active:not(:disabled)) {
     box-shadow: var(--shadow-sunken, none);
   }
 

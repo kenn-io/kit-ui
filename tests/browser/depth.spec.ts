@@ -287,3 +287,29 @@ for (const { id, selector } of [
     await page.mouse.up();
   });
 }
+
+// MediaViewer gives its IconButtons their own shadow. A pressed or open rule
+// must not outrank a parent's, or the press drops that shadow in themes
+// without depth tokens.
+for (const theme of [null, "zine"] as const) {
+  test(`${theme ?? "default"}: a pressed MediaViewer control keeps its shadow`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "media-viewer");
+    await useTheme(page, theme);
+    await page.getByRole("button", { name: "Open viewer" }).click();
+    const close = ".kit-media-viewer__close";
+    await expectShadow(page, close, "var(--shadow-sm)");
+
+    const control = page.locator(close);
+    await control.hover();
+    await page.mouse.down();
+    await expect.poll(() => control.evaluate((element) => element.matches(":active"))).toBe(true);
+    // Read the pressed shadow only after any shadow transition settles.
+    await control.evaluate((element) =>
+      Promise.all(element.getAnimations().map((animation) => animation.finished)),
+    );
+    await expectShadow(page, close, "var(--shadow-sm)");
+    await page.mouse.up();
+  });
+}

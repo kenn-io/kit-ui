@@ -144,8 +144,7 @@
     padding-inline: var(--space-5);
   }
 
-  .kit-button:active:not(:disabled),
-  .kit-button[aria-expanded="true"] {
+  .kit-button:where(:active:not(:disabled), [aria-expanded="true"]) {
     box-shadow: var(--shadow-sunken, none);
   }
 
