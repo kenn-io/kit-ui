@@ -7,7 +7,7 @@ interface Props {
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
-    /** Decorative leading icon. Its column stays reserved when absent or empty. */
+    /** Decorative leading icon. Reserves a leading column only when passed; an empty snippet keeps alignment with icon items. */
     icon?: Snippet;
     children: Snippet;
 }

@@ -10,7 +10,7 @@
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
-    /** Decorative leading icon. Its column stays reserved when absent or empty. */
+    /** Decorative leading icon. Reserves a leading column only when passed; an empty snippet keeps alignment with icon items. */
     icon?: Snippet;
     children: Snippet;
   }
@@ -59,9 +59,11 @@
   }}
   onpointermove={() => element?.focus({ preventScroll: true })}
 >
-  <span class="kit-menu__icon" aria-hidden="true">
-    {@render icon?.()}
-  </span>
+  {#if icon}
+    <span class="kit-menu__icon" aria-hidden="true">
+      {@render icon()}
+    </span>
+  {/if}
   {@render children()}
 </button>
 

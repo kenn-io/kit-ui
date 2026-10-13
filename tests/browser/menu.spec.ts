@@ -59,7 +59,9 @@ test("radio menu exposes and updates a single checked item", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Switch daemon: remote" })).toBeFocused();
 });
 
-test("action labels align with populated, empty, and omitted icons", async ({ page }) => {
+test("action labels align with populated and empty icons; omitted icons reserve no space", async ({
+  page,
+}) => {
   await gotoPage(page, "menu");
   await page.getByRole("button", { name: "Task actions" }).click();
   const items = page.getByRole("menu", { name: "Task actions" }).getByRole("menuitem");
@@ -73,11 +75,13 @@ test("action labels align with populated, empty, and omitted icons", async ({ pa
       range.selectNodeContents(text);
       return {
         labelLeft: range.getBoundingClientRect().left,
-        iconWidth: element.querySelector(".kit-menu__icon")?.getBoundingClientRect().width,
+        itemLeft: element.getBoundingClientRect().left,
+        paddingLeft: parseFloat(getComputedStyle(element).paddingLeft),
+        iconWidth: element.querySelector(".kit-menu__icon")?.getBoundingClientRect().width ?? 0,
       };
     }),
   );
-  expect(geometry.map((item) => item.iconWidth)).toEqual([16, 16, 16]);
+  expect(geometry.map((item) => item.iconWidth)).toEqual([16, 16, 0]);
   expect(geometry[1].labelLeft).toBe(geometry[0].labelLeft);
-  expect(geometry[2].labelLeft).toBe(geometry[0].labelLeft);
+  expect(geometry[2].labelLeft - geometry[2].itemLeft).toBe(geometry[2].paddingLeft);
 });
