@@ -82,6 +82,7 @@
     border: none;
     border-radius: var(--radius-sm, 4px);
     background: transparent;
+    box-shadow: var(--shadow-raised, none);
     color: var(--text-muted);
     cursor: pointer;
     transition:
@@ -112,5 +113,6 @@
 
   .kit-copy-btn:active {
     transform: scale(0.92);
+    box-shadow: var(--shadow-sunken, none);
   }
 </style>

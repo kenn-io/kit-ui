@@ -177,6 +177,7 @@
     bind:this={buttonRef}
     onclick={toggleOpen}
     aria-label={label}
+    aria-expanded={isOpen}
     {title}
     {disabled}
     type="button"
@@ -300,6 +301,7 @@
     color: var(--text-muted);
     background: var(--bg-inset);
     border: var(--border-width) solid var(--border-muted);
+    box-shadow: var(--shadow-raised, none);
     border-radius: var(--kit-control-radius, var(--radius-sm));
     cursor: pointer;
     transition:
@@ -307,6 +309,11 @@
       color var(--transition-fast) var(--transition-ease, ease);
     position: relative;
     min-height: var(--kit-control-height, 24px);
+  }
+
+  .kit-filter-dropdown__btn[aria-expanded="true"],
+  .kit-filter-dropdown__btn:active:not(:disabled) {
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-filter-dropdown__btn:hover:not(:disabled) {

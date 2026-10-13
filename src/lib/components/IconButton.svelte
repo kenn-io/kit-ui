@@ -90,6 +90,7 @@
     padding: 0;
     border: 0;
     background: transparent;
+    box-shadow: var(--shadow-raised, none);
     border-radius: var(--kit-control-radius, var(--radius-sm));
     color: var(--text-muted);
     cursor: pointer;
@@ -111,6 +112,12 @@
   .kit-icon-button:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
+  }
+
+  .kit-icon-button[aria-pressed="true"],
+  .kit-icon-button[aria-expanded="true"],
+  .kit-icon-button:active:not(:disabled):not([aria-disabled="true"]) {
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-icon-button[aria-pressed="true"] {

@@ -163,7 +163,7 @@
     --kit-card-bg: var(--bg-surface);
     --kit-card-border: var(--border-default);
     --kit-card-radius: var(--radius-lg);
-    --kit-card-shadow: var(--shadow-sm);
+    --kit-card-shadow: var(--shadow-panel, var(--shadow-sm));
   }
 
   .kit-card--pad-none {

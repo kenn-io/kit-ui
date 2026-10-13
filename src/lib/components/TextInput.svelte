@@ -147,6 +147,7 @@
     background: var(--bg-surface);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sunken, none);
     color: var(--text-primary);
     transition: border-color var(--transition-fast) var(--transition-ease, ease);
   }

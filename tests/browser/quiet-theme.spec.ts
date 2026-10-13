@@ -1,15 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { contrastOf, gotoPage, setTheme } from "./helpers.js";
+import { contrastOf, gotoPage, setTheme, useTheme } from "./helpers.js";
 
 // The quiet theme drops uppercase label styling through the
 // --label-transform token; the default Workbench pair must keep it.
-
-async function useTheme(page: Page, name: string | null): Promise<void> {
-  await page.evaluate((themeName) => {
-    if (themeName) document.documentElement.dataset.kitTheme = themeName;
-    else delete document.documentElement.dataset.kitTheme;
-  }, name);
-}
 
 /** The computed background as rounded 0–255 sRGB channels, whether the
  * browser serializes it as rgb() or as color(srgb …) from color-mix(). */

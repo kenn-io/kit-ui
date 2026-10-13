@@ -26,13 +26,19 @@
     ariaLabel = undefined,
     class: className = "",
   }: Props = $props();
+
+  let scrolled = $state(false);
 </script>
 
-<div class={["kit-table-wrapper", className]}>
+<div
+  class={["kit-table-wrapper", className]}
+  onscroll={(event) => (scrolled = event.currentTarget.scrollTop > 0)}
+>
   <table
     class="kit-table"
     class:kit-table--zebra={zebra}
     class:kit-table--sticky={stickyHeader}
+    class:kit-table--scrolled={scrolled}
     aria-label={ariaLabel}
   >
     <thead>
@@ -51,6 +57,7 @@
     overflow-y: auto;
     flex: 1;
     min-height: 0;
+    box-shadow: var(--shadow-panel, none);
   }
 
   .kit-table {
@@ -63,6 +70,11 @@
     position: sticky;
     top: 0;
     z-index: 1;
+  }
+
+  /* Rows scrolled beneath the stuck header pass under its shadow. */
+  .kit-table--sticky.kit-table--scrolled thead {
+    box-shadow: var(--shadow-raised, none);
   }
 
   .kit-table :global(tbody td) {

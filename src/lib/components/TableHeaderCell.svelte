@@ -91,7 +91,7 @@
     font-weight: var(--font-weight-semibold, 600);
     color: var(--text-muted);
     text-align: left;
-    background: var(--bg-inset);
+    background: var(--bg-table-header, var(--bg-inset));
     border-bottom: 1px solid var(--border-default);
     white-space: nowrap;
     user-select: none;

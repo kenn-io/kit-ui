@@ -25,6 +25,14 @@
   --provider-google-button-disabled-color: rgba(31, 31, 31, 0.38);
 }
 
+/* Depth tokens: --shadow-raised, --shadow-sunken, --shadow-panel and
+ * --bg-table-header stay unset by default, and components fall back to
+ * today's look. --edge-highlight is declared because themes use it inside
+ * those values, where an unset reference would void the whole shadow. */
+:root {
+  --edge-highlight: transparent;
+}
+
 :root.high-contrast :focus-visible {
   outline-width: 3px;
   outline-offset: 2px;
