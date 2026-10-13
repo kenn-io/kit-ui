@@ -10,7 +10,7 @@
     tone?: "neutral" | "danger";
     textValue?: string;
     class?: ClassValue;
-    /** Decorative leading icon. Reserves a leading column only when passed; an empty snippet keeps alignment with icon items. */
+    /** Decorative leading icon. Omit it for no reserved space; pass an empty snippet to align with icon items. */
     icon?: Snippet;
     children: Snippet;
   }
