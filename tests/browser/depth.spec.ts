@@ -90,6 +90,18 @@ async function expectShadow(page: Page, selector: string, css: string): Promise<
   await expect(page.locator(selector).first(), selector).toHaveCSS("box-shadow", expected);
 }
 
+// Right after a theme switch a control can still report the previous theme's
+// shadow while its transition starts, so finish the transition before reading.
+async function settledShadow(page: Page, selector: string): Promise<string> {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) => {
+      for (const animation of element.getAnimations()) animation.finish();
+      return getComputedStyle(element).boxShadow;
+    });
+}
+
 for (const [id, probes] of Object.entries(PROBES)) {
   test(`${id}: themes without depth tokens keep today's look`, async ({ page }) => {
     await gotoPage(page, id);
@@ -112,22 +124,44 @@ for (const [id, probes] of Object.entries(PROBES)) {
   });
 }
 
-test("the edge highlight stays transparent until a theme sets it", async ({ page }) => {
-  const transparent = "rgba(0, 0, 0, 0)";
+// A theme can build --shadow-raised around --edge-highlight without setting the
+// highlight. The declared default keeps that shadow valid; without it the whole
+// value is void and controls fall back to none. This rule stands in for such a
+// theme, and its red layer shows only while the shadow stays valid.
+test("a shadow that uses the edge highlight stays valid when a theme leaves it unset", async ({
+  page,
+}) => {
   await gotoPage(page, "button");
+  const red = "0 1px 2px rgb(255, 0, 0)";
+  await page.addStyleTag({
+    content: `:root { --shadow-raised: inset 0 1px var(--edge-highlight), ${red}; }`,
+  });
+  const layer = await resolvedStyle(page, "box-shadow", red);
   for (const theme of OTHER_THEMES) {
     await useTheme(page, theme);
     for (const dark of [false, true]) {
       await setTheme(page, { dark });
-      const highlight = await resolvedStyle(page, "color", "var(--edge-highlight)");
-      expect(highlight, `${theme ?? "default"} ${dark ? "dark" : "light"}`).toBe(transparent);
+      const label = `${theme ?? "default"} ${dark ? "dark" : "light"}`;
+      await expect
+        .poll(() => settledShadow(page, body(".kit-button")), { message: label })
+        .toContain(layer);
     }
   }
+});
+
+// The quiet tests above compare a control with the token's own value, so a
+// raised shadow that dropped the highlight would still pass them.
+test("quiet: the raised shadow carries the edge highlight", async ({ page }) => {
+  await gotoPage(page, "button");
   await useTheme(page, "quiet");
   for (const dark of [false, true]) {
     await setTheme(page, { dark });
-    const highlight = await resolvedStyle(page, "color", "var(--edge-highlight)");
-    expect(highlight, `quiet ${dark ? "dark" : "light"}`).not.toBe(transparent);
+    const mode = dark ? "dark" : "light";
+    const layer = await resolvedStyle(page, "box-shadow", "inset 0 1px var(--edge-highlight)");
+    expect(layer, `the highlight layer in ${mode}`).not.toBe("none");
+    await expect
+      .poll(() => settledShadow(page, body(".kit-button")), { message: `quiet ${mode}` })
+      .toContain(layer);
   }
 });
 
