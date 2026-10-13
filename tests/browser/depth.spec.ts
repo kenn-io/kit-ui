@@ -128,6 +128,24 @@ test("the edge highlight stays transparent until a theme sets it", async ({ page
   }
 });
 
+// The other quiet tests compare a component with the token's own value, so a
+// dark block that dropped a token would still pass with light's value.
+test("quiet re-sets its edge highlight and shadows for dark mode", async ({ page }) => {
+  await gotoPage(page, "button");
+  await useTheme(page, "quiet");
+  const resolved = async (dark: boolean) => {
+    await setTheme(page, { dark });
+    return {
+      highlight: await resolvedStyle(page, "color", "var(--edge-highlight)"),
+      shadow: await resolvedStyle(page, "box-shadow", "var(--shadow-sm)"),
+    };
+  };
+  const light = await resolved(false);
+  const dark = await resolved(true);
+  expect(dark.highlight, "--edge-highlight").not.toBe(light.highlight);
+  expect(dark.shadow, "--shadow-sm").not.toBe(light.shadow);
+});
+
 test("table headers keep today's background until a theme lights them", async ({ page }) => {
   await gotoPage(page, "table");
   const header = page.locator(body(".kit-th")).first();
@@ -207,6 +225,30 @@ for (const theme of [null, "quiet"] as const) {
     await expectShadow(page, head, "none");
   });
 }
+
+// No gallery table renders stickyHeader={false}, so this test drops the class
+// that prop controls. A header that is not stuck has no rows passing under it.
+test("quiet: a table without a sticky header casts no header shadow", async ({ page }) => {
+  await gotoPage(page, "table");
+  await useTheme(page, "quiet");
+  await page
+    .locator(body(".table-host"))
+    .first()
+    .evaluate((host) => {
+      (host as HTMLElement).style.maxHeight = "90px";
+    });
+  const wrapper = page.locator(body(".kit-table-wrapper")).first();
+  const head = body(".kit-table-wrapper thead");
+
+  await wrapper.evaluate((element) => element.scrollTo(0, 40));
+  await expectShadow(page, head, RAISED);
+
+  await page
+    .locator(body(".kit-table"))
+    .first()
+    .evaluate((table) => table.classList.remove("kit-table--sticky"));
+  await expectShadow(page, head, "none");
+});
 
 const SETTINGS_ICON_BUTTON = body(".kit-icon-button[aria-label='Settings']");
 
