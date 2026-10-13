@@ -74,7 +74,7 @@ const KNOWN_FAILURES: Record<string, Record<string, number>> = {
     "kit-chip--tone-canceled": 4.25,
   },
   "quiet-dark": {
-    "kit-chip--tone-muted": 3.51,
+    "kit-chip--tone-muted": 3.99,
     "kit-chip--tone-canceled": 4.4,
   },
 };
