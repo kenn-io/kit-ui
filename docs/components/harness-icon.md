@@ -41,7 +41,8 @@ AgentsView docs draw with it, in the order the docs present them.
 `isHarnessIconId(value)` narrows an arbitrary string to `HarnessIconId`, and
 `harnessIconInfo(id)` returns the entry. Ids are brand glyphs, not agent
 products: Codex draws `openai`, Cortex Code draws `snowflake`, Positron draws
-`posit`, and Muse Code draws `meta`. Map product names on the consumer side.
+`posit`, Muse Code draws `meta`, and StepCode draws `stepfun`. Map product names
+on the consumer side.
 
 | Id               | Brand            | Agents                                 |
 | ---------------- | ---------------- | -------------------------------------- |
@@ -100,6 +101,11 @@ products: Codex draws `openai`, Cortex Code draws `snowflake`, Positron draws
 | `opencodereview` | Open Code Review | Open Code Review                       |
 | `tau`            | Tau              | Tau                                    |
 | `meta`           | Meta             | Muse Code                              |
+| `augure`         | Augure           | Augure Code, Augure Desktop            |
+| `codebuddy`      | CodeBuddy        | CodeBuddy CN                           |
+| `junie`          | Junie            | Junie                                  |
+| `omo`            | OMO              | OMO                                    |
+| `stepfun`        | StepFun          | StepCode                               |
 
 ## Provenance
 

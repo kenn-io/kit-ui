@@ -54,6 +54,11 @@
   import opencodereview from "../assets/harness-icons/opencodereview.svg?raw";
   import tau from "../assets/harness-icons/tau.svg?raw";
   import meta from "../assets/harness-icons/meta.svg?raw";
+  import augure from "../assets/harness-icons/augure.svg?raw";
+  import codebuddy from "../assets/harness-icons/codebuddy.svg?raw";
+  import junie from "../assets/harness-icons/junie.svg?raw";
+  import omo from "../assets/harness-icons/omo.svg?raw";
+  import stepfun from "../assets/harness-icons/stepfun.svg?raw";
   import { harnessIconInfo, type HarnessIconId } from "./harness-icon.js";
 
   interface Props {
@@ -133,6 +138,11 @@
     opencodereview,
     tau,
     meta,
+    augure,
+    codebuddy,
+    junie,
+    omo,
+    stepfun,
   };
 
   const info = $derived(harnessIconInfo(harness));
