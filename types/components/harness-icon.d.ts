@@ -3,7 +3,7 @@
  * icon sprite on the AgentsView documentation landing page, which draws one
  * 24×24 monochrome glyph per harness.
  */
-export type HarnessIconId = "claude" | "openai" | "gemini" | "copilot" | "vscode" | "visualstudio" | "cursor" | "warp" | "qwen" | "deepseek" | "mistral" | "zed" | "posit" | "sourcegraph" | "opencode" | "antigravity" | "kilo" | "kimi" | "kiro" | "openhands" | "zencoder" | "snowflake" | "goose" | "grok" | "hermes" | "xiaomi" | "openclaw" | "pi" | "poolside" | "qoder" | "roocode" | "trae" | "aider" | "gptme" | "omnigent" | "zai" | "commandcode" | "codebuff" | "forge" | "iflow" | "omp" | "prime" | "piebald" | "tencent" | "reasonix" | "shelley" | "workbuddy" | "windsurf" | "devin" | "cline" | "crush" | "evener" | "opencodereview" | "tau";
+export type HarnessIconId = "claude" | "openai" | "gemini" | "copilot" | "vscode" | "visualstudio" | "cursor" | "warp" | "qwen" | "deepseek" | "mistral" | "zed" | "posit" | "sourcegraph" | "opencode" | "antigravity" | "kilo" | "kimi" | "kiro" | "openhands" | "zencoder" | "snowflake" | "goose" | "grok" | "hermes" | "xiaomi" | "openclaw" | "pi" | "poolside" | "qoder" | "roocode" | "trae" | "aider" | "gptme" | "omnigent" | "zai" | "commandcode" | "codebuff" | "forge" | "iflow" | "omp" | "prime" | "piebald" | "tencent" | "reasonix" | "shelley" | "workbuddy" | "windsurf" | "devin" | "cline" | "crush" | "evener" | "opencodereview" | "tau" | "meta";
 export interface HarnessIconInfo {
     id: HarnessIconId;
     /** Brand name; also the default accessible name of the icon. */
