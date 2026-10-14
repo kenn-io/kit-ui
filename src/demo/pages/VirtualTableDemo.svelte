@@ -3,6 +3,7 @@
     Button,
     Checkbox,
     Chip,
+    SearchInput,
     TableHeaderCell,
     TableSort,
     VirtualTable,
@@ -51,7 +52,20 @@
       ? reviews.map((r) => ({ ...r, project: `${r.project}-with-a-longer-name` }))
       : reviews,
   );
-  const sorted = $derived(sorter.sort(shown));
+  // Live filtering: every keystroke hands the table a new, shorter array.
+  let query = $state("");
+  const filtered = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return shown;
+    return shown.filter(
+      (r) =>
+        `#${r.id}`.includes(q) ||
+        r.project.includes(q) ||
+        r.branch.includes(q) ||
+        r.verdict.includes(q),
+    );
+  });
+  const sorted = $derived(sorter.sort(filtered));
 
   interface Note {
     id: number;
@@ -116,6 +130,17 @@
   {/snippet}
 </VirtualTable>`}
 >
+  <div class="filter">
+    <SearchInput
+      bind:value={query}
+      size="sm"
+      placeholder="Filter by ID, project, branch, or verdict…"
+      ariaLabel="Filter reviews"
+    />
+    <span class="filter-count" aria-live="polite">
+      {sorted.length.toLocaleString()} of {shown.length.toLocaleString()} rows
+    </span>
+  </div>
   <Checkbox bind:checked={showBranch} label="Show the Branch column" />
   <Checkbox bind:checked={longNames} label="Use longer project names" />
   <div class="host">
@@ -324,6 +349,20 @@ table.refresh();`}
     border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
+  }
+
+  .filter {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .filter-count {
+    flex: none;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
   }
 
   .saved-widths {
