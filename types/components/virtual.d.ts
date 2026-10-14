@@ -40,13 +40,12 @@ export interface VerticalBounds {
     top: number;
     bottom: number;
 }
-/** Scroll offset and viewport height of a list body, measured in the
- * body's own coordinates, for virtualizing a list that does not own its
- * scroll container (VirtualTable). `bodyTop` is the body's top edge in
- * viewport coordinates; `clips` are the bounds of every ancestor that
- * clips it, the nearest scroll container among them; `viewportHeight`
- * is the window's. The result feeds {@link virtualSlice}. */
-export declare function visibleWindow(bodyTop: number, clips: readonly VerticalBounds[], viewportHeight: number): {
+/** Scroll offset and viewport height of a list body, in the body's own
+ * coordinates, for virtualizing a list that does not own its scroll
+ * container (VirtualTable). `bodyTop` is the body's top edge and `view` the
+ * scroller's visible area (its client box, or the window for the document),
+ * both in viewport coordinates. The result feeds {@link virtualSlice}. */
+export declare function visibleWindow(bodyTop: number, view: VerticalBounds): {
     scrollTop: number;
     viewport: number;
 };

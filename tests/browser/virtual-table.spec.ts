@@ -211,22 +211,28 @@ test("a wide table in a flex row scrolls sideways instead of widening its box", 
   await gotoPage(page, "virtual-table");
   const table = inFlow(page);
   await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  // Columns re-pin to fit a narrower box and text wraps, so only a table
+  // that cannot shrink below the box (here a minimum width) overflows it.
   await table.evaluate((el) => {
+    el.style.minWidth = "800px";
     const flow = el.closest(".flow") as HTMLElement;
     flow.style.display = "flex";
     flow.style.width = "260px";
   });
+  // A clipping box also reports scrollWidth > clientWidth, but it cannot be
+  // scrolled, so only a real scroll shows the hidden columns are reachable.
   await expect
     .poll(() =>
       table.evaluate((el) => {
         const wrapper = el.parentElement!;
+        wrapper.scrollLeft = 100;
         return {
           fits: wrapper.getBoundingClientRect().width <= 262,
-          scrolls: wrapper.scrollWidth > wrapper.clientWidth,
+          scrolled: wrapper.scrollLeft > 0,
         };
       }),
     )
-    .toEqual({ fits: true, scrolls: true });
+    .toEqual({ fits: true, scrolled: true });
 });
 
 test("pinned widths do not add padding again when the app uses content-box sizing", async ({
@@ -490,4 +496,29 @@ test("rows cover the view while the wheel scrolls quickly", async ({ page }) => 
     worst = Math.max(worst, gap);
   }
   expect(worst).toBeLessThanOrEqual(1);
+});
+
+// A self-scrolling table mounted below a short window must render its whole
+// box once the page brings it into view, without scrolling the box itself.
+test("a bounded table scrolled into view by the page fills its box", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 220 });
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "10001");
+  await expect(table.locator("xpath=..")).not.toBeInViewport();
+  await table.locator("xpath=..").evaluate((wrapper) => {
+    const s = document.querySelector(".content__body")!;
+    s.scrollTop += wrapper.getBoundingClientRect().top - s.getBoundingClientRect().top;
+  });
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const wrapper = el.parentElement!;
+        const bottom =
+          wrapper.getBoundingClientRect().top + wrapper.clientTop + wrapper.clientHeight;
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        return rows[rows.length - 1]!.getBoundingClientRect().bottom >= bottom - 1;
+      }),
+    )
+    .toBe(true);
 });

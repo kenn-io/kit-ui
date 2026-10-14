@@ -105,17 +105,20 @@
   // even index keeps every row on the parity it has in a full table.
   const parityPad = $derived(slice.start % 2 === 0);
 
-  // The visible part of the body is where it overlaps the scroller (the
-  // window for the document scroller). The body's position is read on every
-  // update, so content above the table moving is picked up on the next
-  // scroll or resize; a layout change with neither calls `refresh()`.
+  // The visible part of the body is where it overlaps the scroller's client
+  // area, whether or not the scroller itself is on screen, so a table scrolled
+  // into view by something else is already rendered (the window stands in
+  // for the document scroller). The body's position is read on every update,
+  // so content above the table moving is picked up on the next scroll or
+  // resize; a layout change with neither calls `refresh()`.
   function updateWindow(): void {
     if (!body || !scroller) return;
-    const bounds =
-      scroller === document.scrollingElement
-        ? { top: 0, bottom: window.innerHeight }
-        : scroller.getBoundingClientRect();
-    const next = visibleWindow(body.getBoundingClientRect().top, [bounds], window.innerHeight);
+    let view = { top: 0, bottom: window.innerHeight };
+    if (scroller !== document.scrollingElement) {
+      const top = scroller.getBoundingClientRect().top + scroller.clientTop;
+      view = { top, bottom: top + scroller.clientHeight };
+    }
+    const next = visibleWindow(body.getBoundingClientRect().top, view);
     scrollTop = next.scrollTop;
     viewport = next.viewport;
   }
