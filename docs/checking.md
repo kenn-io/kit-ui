@@ -49,7 +49,7 @@ markdown pipeline or debounce util lives in `.ts`, not markup.
 | `hand-rolled-search-input`   | `type="search"` inputs, `search-input`/`search-box`/`search-field` classes (`kit-search-input` exempt)                                                                                      | `SearchInput`                                                                                                                           |
 | `hand-rolled-date-input`     | native `type="date"` / `type="datetime-local"` inputs (they render unthemed platform chrome)                                                                                                | `DateRangePicker`, `Calendar`                                                                                                           |
 | `hand-rolled-toast`          | `toast` / `snackbar` classes/selectors (compounds like `undo-toast` included)                                                                                                               | `FlashBanner` + the flash store                                                                                                         |
-| `hand-rolled-drawer`         | drawer structures plus exact `bottom-dock`/`bottom-panel`/`bottom-tray` tokens (compounds, generic dock names, and kit classes exempt)                                                      | `DetailDrawer`, `BottomDock`                                                                                                            |
+| `hand-rolled-drawer`         | drawer structures plus exact `bottom-dock`/`bottom-panel`/`bottom-tray` tokens (compounds, generic dock names, and kit classes exempt)                                                      | `DetailDrawer`, `BottomDock`, `AppSidebar`                                                                                              |
 | `hand-rolled-find-bar`       | `find-bar` classes/selectors (`kit-find-bar` exempt)                                                                                                                                        | `FindBar`                                                                                                                               |
 | `hand-rolled-status-dot`     | `status-dot` classes/selectors (`kit-status-dot` exempt)                                                                                                                                    | `StatusDot`                                                                                                                             |
 | `hand-rolled-checkbox`       | bare `<input type="checkbox">` markup, `input[type=checkbox]` selectors, or checkbox-scoped `accent-color` (range/progress accent-color is legitimate)                                      | `Checkbox` (or `Toggle` for on/off settings)                                                                                            |
@@ -115,48 +115,49 @@ CLAUDE.md checker-parity convention). Token rules (`raw-color`,
 `nonstandard-spacing`, `nonstandard-breakpoint`, typography rules) apply to
 everything and aren't repeated per row.
 
-| Component                                  | Enforcement                                                                                                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Modal, FlashBanner, DetailDrawer           | `hand-rolled-modal` (all are fixed inset-0 overlays); `hand-rolled-toast` and `hand-rolled-drawer` catch the class-name variants    |
-| BottomDock                                 | `hand-rolled-drawer` catches local drawer chrome; `hand-rolled-splitter` catches the top resize affordance                          |
-| Spinner                                    | `hand-rolled-spinner`                                                                                                               |
-| CopyButton / `copyToClipboard`             | `hand-rolled-clipboard`                                                                                                             |
-| SelectDropdown, Typeahead, FilterDropdown  | `hand-rolled-dropdown`                                                                                                              |
-| KbdBadge                                   | `hand-rolled-kbd`                                                                                                                   |
-| SplitResizeHandle, CollapsibleSidebar      | `hand-rolled-splitter`                                                                                                              |
-| SegmentedControl                           | `hand-rolled-segmented`                                                                                                             |
-| Table / TableHeaderCell                    | `hand-rolled-table-sort`, `unsorted-table-header`                                                                                   |
-| Tooltip                                    | `hand-rolled-tooltip`                                                                                                               |
-| StatusBar                                  | `hand-rolled-status-bar`                                                                                                            |
-| EmptyState                                 | `hand-rolled-empty-state`                                                                                                           |
-| CodeBlock                                  | `hand-rolled-code-block`                                                                                                            |
-| Markdown / markdown pipeline               | `hand-rolled-markdown` (the dependency is the tell — direct `marked`/`dompurify` imports)                                           |
-| IconButton                                 | `hand-rolled-icon-button`                                                                                                           |
-| TopBar                                     | `hand-rolled-top-bar`                                                                                                               |
-| Button                                     | no rule — generic button markup has no reliable signature; state-recipe rules catch disabled and pressed drift                      |
-| ChipStack                                  | no rule — generic badge markup has no reliable signature; found in review                                                           |
-| ProviderBrandMark, ProviderButton          | no rule — provider images and action buttons overlap ordinary image/button markup; class or label heuristics would false-positive   |
-| HarnessIcon                                | no rule — inline logos overlap ordinary `<img>`/`<svg>` markup; found in review                                                     |
-| Chip                                       | `chip-label-override` (CSS reaching into the internal label span); hand-rolled badge markup itself has no reliable signature        |
-| StatusDot                                  | `hand-rolled-status-dot`                                                                                                            |
-| Checkbox                                   | `hand-rolled-checkbox` (bare native checkboxes and `accent-color` styling)                                                          |
-| Toggle                                     | `hand-rolled-toggle` (`role="switch"` is the reliable marker)                                                                       |
-| ColorLabel, DiffStats                      | no rule — small display primitives with no detectable marker; found in review                                                       |
-| FindBar                                    | `hand-rolled-find-bar`                                                                                                              |
-| SidebarToggle                              | `hand-rolled-sidebar-toggle`                                                                                                        |
-| DateRangePicker, Calendar                  | `hand-rolled-date-input` (native date inputs); hand-rolled month grids still read as generic tables/buttons and are found in review |
-| RefreshControl, SettingsLayout/Section     | no rule — composite widgets; no stable class/aria signature that wouldn't false-positive. Revisit if either app regrows one         |
-| SearchInput                                | `hand-rolled-search-input` (`type="search"` is the reliable marker)                                                                 |
-| TextInput                                  | no rule — bare `<input>` markup is too generic to flag without drowning in false positives; found in review                         |
-| ThemeToggle / theme store                  | `manual-color-scheme` (`prefers-color-scheme` queries and hand-toggled `dark` classes)                                              |
-| VirtualList                                | `hand-rolled-virtualization` (library imports); unvirtualized long lists remain a perf review concern, not a lint                   |
-| `trapFocus`                                | `hand-rolled-focus-trap` (the tabbable-elements selector string)                                                                    |
-| MediaViewer, ImagePreview, markdown images | `hand-rolled-lightbox` (lightbox class names); `hand-rolled-image-preview` (image-preview panels)                                   |
-| `.kit-sr-only`, z tokens                   | `hand-rolled-sr-only`, `raw-z-index`                                                                                                |
-| CommandPalette, shortcut system            | no rule — ad-hoc `keydown` listeners are legitimate in components; app-level shortcut sprawl is found in review                     |
-| FitStages                                  | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags                                 |
-| `debounce`                                 | `local-debounce` (relative debounce imports / inline implementations)                                                               |
-| Formatters, `hashColor`                    | no rule — plain functions; duplication isn't detectable from markup                                                                 |
+| Component                                  | Enforcement                                                                                                                                    |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Modal, FlashBanner, DetailDrawer           | `hand-rolled-modal` (all are fixed inset-0 overlays); `hand-rolled-toast` and `hand-rolled-drawer` catch the class-name variants               |
+| BottomDock                                 | `hand-rolled-drawer` catches local drawer chrome; `hand-rolled-splitter` catches the top resize affordance                                     |
+| AppSidebar                                 | `hand-rolled-drawer` names it for local navigation drawers; a hand-rolled icon rail has no stable class names to detect, so it is not enforced |
+| Spinner                                    | `hand-rolled-spinner`                                                                                                                          |
+| CopyButton / `copyToClipboard`             | `hand-rolled-clipboard`                                                                                                                        |
+| SelectDropdown, Typeahead, FilterDropdown  | `hand-rolled-dropdown`                                                                                                                         |
+| KbdBadge                                   | `hand-rolled-kbd`                                                                                                                              |
+| SplitResizeHandle, CollapsibleSidebar      | `hand-rolled-splitter`                                                                                                                         |
+| SegmentedControl                           | `hand-rolled-segmented`                                                                                                                        |
+| Table / TableHeaderCell                    | `hand-rolled-table-sort`, `unsorted-table-header`                                                                                              |
+| Tooltip                                    | `hand-rolled-tooltip`                                                                                                                          |
+| StatusBar                                  | `hand-rolled-status-bar`                                                                                                                       |
+| EmptyState                                 | `hand-rolled-empty-state`                                                                                                                      |
+| CodeBlock                                  | `hand-rolled-code-block`                                                                                                                       |
+| Markdown / markdown pipeline               | `hand-rolled-markdown` (the dependency is the tell — direct `marked`/`dompurify` imports)                                                      |
+| IconButton                                 | `hand-rolled-icon-button`                                                                                                                      |
+| TopBar                                     | `hand-rolled-top-bar`                                                                                                                          |
+| Button                                     | no rule — generic button markup has no reliable signature; state-recipe rules catch disabled and pressed drift                                 |
+| ChipStack                                  | no rule — generic badge markup has no reliable signature; found in review                                                                      |
+| ProviderBrandMark, ProviderButton          | no rule — provider images and action buttons overlap ordinary image/button markup; class or label heuristics would false-positive              |
+| HarnessIcon                                | no rule — inline logos overlap ordinary `<img>`/`<svg>` markup; found in review                                                                |
+| Chip                                       | `chip-label-override` (CSS reaching into the internal label span); hand-rolled badge markup itself has no reliable signature                   |
+| StatusDot                                  | `hand-rolled-status-dot`                                                                                                                       |
+| Checkbox                                   | `hand-rolled-checkbox` (bare native checkboxes and `accent-color` styling)                                                                     |
+| Toggle                                     | `hand-rolled-toggle` (`role="switch"` is the reliable marker)                                                                                  |
+| ColorLabel, DiffStats                      | no rule — small display primitives with no detectable marker; found in review                                                                  |
+| FindBar                                    | `hand-rolled-find-bar`                                                                                                                         |
+| SidebarToggle                              | `hand-rolled-sidebar-toggle`                                                                                                                   |
+| DateRangePicker, Calendar                  | `hand-rolled-date-input` (native date inputs); hand-rolled month grids still read as generic tables/buttons and are found in review            |
+| RefreshControl, SettingsLayout/Section     | no rule — composite widgets; no stable class/aria signature that wouldn't false-positive. Revisit if either app regrows one                    |
+| SearchInput                                | `hand-rolled-search-input` (`type="search"` is the reliable marker)                                                                            |
+| TextInput                                  | no rule — bare `<input>` markup is too generic to flag without drowning in false positives; found in review                                    |
+| ThemeToggle / theme store                  | `manual-color-scheme` (`prefers-color-scheme` queries and hand-toggled `dark` classes)                                                         |
+| VirtualList                                | `hand-rolled-virtualization` (library imports); unvirtualized long lists remain a perf review concern, not a lint                              |
+| `trapFocus`                                | `hand-rolled-focus-trap` (the tabbable-elements selector string)                                                                               |
+| MediaViewer, ImagePreview, markdown images | `hand-rolled-lightbox` (lightbox class names); `hand-rolled-image-preview` (image-preview panels)                                              |
+| `.kit-sr-only`, z tokens                   | `hand-rolled-sr-only`, `raw-z-index`                                                                                                           |
+| CommandPalette, shortcut system            | no rule — ad-hoc `keydown` listeners are legitimate in components; app-level shortcut sprawl is found in review                                |
+| FitStages                                  | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags                                            |
+| `debounce`                                 | `local-debounce` (relative debounce imports / inline implementations)                                                                          |
+| Formatters, `hashColor`                    | no rule — plain functions; duplication isn't detectable from markup                                                                            |
 
 ## Adoption path
 

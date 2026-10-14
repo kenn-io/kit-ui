@@ -707,6 +707,7 @@ describe("hand-rolled components", () => {
     expect(findings).toHaveLength(3);
     expect(findings[0]!.message).toContain("DetailDrawer");
     expect(findings[0]!.message).toContain("BottomDock");
+    expect(findings[0]!.message).toContain("AppSidebar");
   });
 
   test("drawer: does not match kit-detail-drawer", () => {
@@ -733,6 +734,7 @@ describe("hand-rolled components", () => {
     const findings = checkSource(src, "A.svelte", ["hand-rolled-drawer"]);
     expect(findings).toHaveLength(5);
     expect(findings[0]!.message).toContain("BottomDock");
+    for (const finding of findings) expect(finding.message).toContain("AppSidebar");
   });
 
   test("drawer: generic dock names remain exempt", () => {

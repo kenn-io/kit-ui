@@ -826,8 +826,9 @@ export function checkHandRolledToast(source) {
 }
 
 /** Hand-rolled slide-in drawers and explicit inline bottom-panel patterns
- * duplicate DetailDrawer or BottomDock. Other drawer-* and generic dock names
- * are left alone; kit component classes are exempt. */
+ * duplicate DetailDrawer, BottomDock or, for app navigation, AppSidebar. Other
+ * drawer-* and generic dock names are left alone; kit component classes are
+ * exempt. */
 export function checkHandRolledDrawer(source) {
   const findings = [];
   const drawerPart =
@@ -842,7 +843,7 @@ export function checkHandRolledDrawer(source) {
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),
       message:
-        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets, BottomDock for inline bottom panels or AppSidebar for app navigation from @kenn-io/kit-ui",
     });
   }
 
@@ -854,7 +855,7 @@ export function checkHandRolledDrawer(source) {
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),
       message:
-        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets, BottomDock for inline bottom panels or AppSidebar for app navigation from @kenn-io/kit-ui",
     });
   }
 
@@ -864,7 +865,7 @@ export function checkHandRolledDrawer(source) {
       rule: "hand-rolled-drawer",
       line: lineOfIndex(source, match.index),
       message:
-        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets or BottomDock for inline bottom panels from @kenn-io/kit-ui",
+        "drawer/bottom-panel markup — use DetailDrawer for overlay side sheets, BottomDock for inline bottom panels or AppSidebar for app navigation from @kenn-io/kit-ui",
     });
   }
   return findings;

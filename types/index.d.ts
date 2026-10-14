@@ -5,6 +5,8 @@ export type { NoticeTone } from "./Notice.svelte";
 export { default as PageFrame } from "./PageFrame.svelte";
 export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.svelte";
 export type { AdaptiveActionGridFrame, AdaptiveActionGridItem, AdaptiveActionGridLayout, AdaptiveActionGridMode, AdaptiveActionGridRadius, AdaptiveActionGridSpace, } from "./components/AdaptiveActionGrid.svelte";
+export { default as AppSidebar } from "./components/AppSidebar.svelte";
+export type { SidebarGroup, SidebarLocation, SidebarSection, SidebarView, SidebarViewRun, } from "./components/AppSidebar.svelte";
 export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";

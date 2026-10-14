@@ -195,8 +195,9 @@ export function checkHandRolledToast(source: any): {
     message: string;
 }[];
 /** Hand-rolled slide-in drawers and explicit inline bottom-panel patterns
- * duplicate DetailDrawer or BottomDock. Other drawer-* and generic dock names
- * are left alone; kit component classes are exempt. */
+ * duplicate DetailDrawer, BottomDock or, for app navigation, AppSidebar. Other
+ * drawer-* and generic dock names are left alone; kit component classes are
+ * exempt. */
 export function checkHandRolledDrawer(source: any): {
     rule: string;
     line: number;
