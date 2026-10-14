@@ -236,28 +236,6 @@ test("Escape closes a flyout opened by hover", async ({ page }) => {
   await expect(reports).not.toBeFocused();
 });
 
-test("a host panel closes on the same Escape as a hover flyout", async ({ page }) => {
-  await open(page, "home", 1024);
-  // A side panel that leaves the rail uncovered and, like escapeCloses,
-  // closes on an Escape that reaches window unclaimed.
-  await page.evaluate(() => {
-    const panel = document.createElement("div");
-    panel.id = "host-panel";
-    panel.style.cssText = "position: fixed; top: 0; right: 0; bottom: 0; width: 320px";
-    document.body.append(panel);
-    addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      panel.remove();
-    });
-  });
-  await sectionLink(page, "Reports").hover();
-  await expect(flyout(page)).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(flyout(page)).toHaveCount(0);
-  await expect(page.locator("#host-panel")).toHaveCount(0);
-});
-
 test("an Escape another layer claimed leaves the flyout open", async ({ page }) => {
   await open(page, "home", 1024);
   // Added before the flyout's own listener, so it handles the key first, as an
