@@ -310,6 +310,17 @@ describe("hand-rolled components", () => {
       ).toEqual([6, 9]);
     });
 
+    test("VirtualTable sorts like Table and opts out the same way", () => {
+      expect(
+        check(`<VirtualTable ariaLabel="Totals" items={rows} unsorted>
+  {#snippet header()}<TableHeaderCell label="Kind" />{/snippet}
+</VirtualTable>
+<VirtualTable ariaLabel="Jobs" items={rows}>
+  {#snippet header()}<TableHeaderCell label="Job" />{/snippet}
+</VirtualTable>`).map((f) => f.line),
+      ).toEqual([6]);
+    });
+
     test("flags a raw th with text, but not an empty one or a commented-out one", () => {
       expect(
         check(`<table>

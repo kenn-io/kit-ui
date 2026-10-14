@@ -103,3 +103,32 @@ export function offsetOfIndex(
   for (let i = 0; i < clamped; i += 1) offset += heightOf(i);
   return offset;
 }
+
+/** A box's vertical extent in viewport coordinates. */
+export interface VerticalBounds {
+  top: number;
+  bottom: number;
+}
+
+/** Scroll offset and viewport height of a list body, measured in the
+ * body's own coordinates, for virtualizing a list that does not own its
+ * scroll container (VirtualTable). `bodyTop` is the body's top edge in
+ * viewport coordinates; `clips` are the bounds of every ancestor that
+ * clips it, the nearest scroll container among them; `viewportHeight`
+ * is the window's. The result feeds {@link virtualSlice}. */
+export function visibleWindow(
+  bodyTop: number,
+  clips: readonly VerticalBounds[],
+  viewportHeight: number,
+): { scrollTop: number; viewport: number } {
+  let top = 0;
+  let bottom = viewportHeight;
+  for (const clip of clips) {
+    top = Math.max(top, clip.top);
+    bottom = Math.min(bottom, clip.bottom);
+  }
+  return {
+    scrollTop: Math.max(0, top - bodyTop),
+    viewport: Math.max(0, bottom - Math.max(top, bodyTop)),
+  };
+}

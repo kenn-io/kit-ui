@@ -98,7 +98,8 @@ export type { TopBarTab, TopBarTabIndicator, TopBarTabIndicatorTone, } from "./c
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadInputAttributes, TypeaheadOption } from "./components/typeahead.js";
 export { default as VirtualList } from "./components/VirtualList.svelte";
-export { offsetOfIndex, virtualSlice, type VirtualSlice, type VirtualSliceInput, } from "./components/virtual.js";
+export { default as VirtualTable } from "./components/VirtualTable.svelte";
+export { offsetOfIndex, virtualSlice, visibleWindow, type VerticalBounds, type VirtualSlice, type VirtualSliceInput, } from "./components/virtual.js";
 export { BREAKPOINTS, MEDIA, type BreakpointName } from "./breakpoints.js";
 export { dismissFlash, getFlash, getFlashes, getFlashMessage, showFlash, type FlashOptions, type FlashState, type FlashTone, } from "./stores/flash.svelte.js";
 export { cleanupTheme, getHighContrast, getThemeMode, getThemeName, initTheme, isDark, KIT_THEMES, setHighContrast, setThemeMode, setThemeName, type KitThemeInfo, type ThemeMode, type ThemeOptions, } from "./stores/theme.svelte.js";

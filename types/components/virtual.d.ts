@@ -35,3 +35,18 @@ export declare function virtualSlice({ scrollTop, viewport, count, overscan, hei
 /** Offset of a row's top edge from the top of the list. `fixedHeight`
  * carries the same uniform-height contract as in {@link VirtualSliceInput}. */
 export declare function offsetOfIndex(index: number, count: number, heightOf: (index: number) => number, fixedHeight?: number): number;
+/** A box's vertical extent in viewport coordinates. */
+export interface VerticalBounds {
+    top: number;
+    bottom: number;
+}
+/** Scroll offset and viewport height of a list body, measured in the
+ * body's own coordinates, for virtualizing a list that does not own its
+ * scroll container (VirtualTable). `bodyTop` is the body's top edge in
+ * viewport coordinates; `clips` are the bounds of every ancestor that
+ * clips it, the nearest scroll container among them; `viewportHeight`
+ * is the window's. The result feeds {@link virtualSlice}. */
+export declare function visibleWindow(bodyTop: number, clips: readonly VerticalBounds[], viewportHeight: number): {
+    scrollTop: number;
+    viewport: number;
+};

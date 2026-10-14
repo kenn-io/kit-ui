@@ -722,8 +722,8 @@ function visibleText(content) {
 
 /** Every table with a header must sort. A labeled TableHeaderCell needs
  * `sort={…} column="…"` (TableSort) or `sortable`; a raw `<th>` with visible
- * text cannot sort at all. The one exception is a `<Table unsorted>`,
- * which opts out explicitly. Headers with no
+ * text cannot sort at all. The one exception is a `<Table unsorted>` (or
+ * `<VirtualTable unsorted>`), which opts out explicitly. Headers with no
  * visible text (a checkbox or actions column) and row headers
  * (`scope="row"`) are exempt. */
 export function checkUnsortedTableHeader(source, filename) {
@@ -756,9 +756,10 @@ export function checkUnsortedTableHeader(source, filename) {
       visibleText(content) !== "";
     if (!visible) continue;
     const before = code.slice(0, match.index);
-    const tableAt = [...before.matchAll(/<Table(?=[\s>])/g)].at(-1)?.index ?? -1;
-    if (tableAt >= 0 && !before.slice(tableAt).includes("</Table>")) {
-      const tableStart = tableAt + "<Table".length;
+    const opening = [...before.matchAll(/<(?:Virtual)?Table(?=[\s>])/g)].at(-1);
+    const tableAt = opening?.index ?? -1;
+    if (opening && !/<\/(?:Virtual)?Table>/.test(before.slice(tableAt))) {
+      const tableStart = tableAt + opening[0].length;
       const tableAttrs = code.slice(tableStart, tagEnd(code, tableStart) - 1);
       const unsorted = parseAttrs(tableAttrs).get("unsorted");
       if (unsorted !== undefined && !/^\{\s*false\s*\}$/.test(String(unsorted))) continue;
@@ -1117,7 +1118,7 @@ export function checkHandRolledVirtualization(source) {
     findings.push({
       rule: "hand-rolled-virtualization",
       line: lineOfIndex(source, match.index),
-      message: `${match[1]} import — use VirtualList from @kenn-io/kit-ui`,
+      message: `${match[1]} import — use VirtualList or VirtualTable from @kenn-io/kit-ui`,
     });
   }
   return findings;

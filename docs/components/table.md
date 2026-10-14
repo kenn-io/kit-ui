@@ -137,3 +137,9 @@ raised Card shows a second frame.
 
 Body cells get default padding/typography via `Table`'s scoped styles; no cell
 component is required.
+
+## Long tables
+
+`Table` renders every row. For a table that can grow past a few hundred
+rows, use [VirtualTable](virtual-table.md): the same header and row markup,
+with only the rows on screen in the DOM.

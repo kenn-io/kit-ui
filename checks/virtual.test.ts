@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { offsetOfIndex, virtualSlice } from "../src/lib/components/virtual.js";
+import { offsetOfIndex, virtualSlice, visibleWindow } from "../src/lib/components/virtual.js";
 
 const fixed = (h: number) => () => h;
 
@@ -138,5 +138,41 @@ describe("offsetOfIndex", () => {
     for (const index of [-5, 0, 7, 10, 50]) {
       expect(offsetOfIndex(index, 10, fixed(10), 10)).toBe(offsetOfIndex(index, 10, fixed(10)));
     }
+  });
+});
+
+describe("visibleWindow", () => {
+  test("a body scrolled past the top of its container starts mid-body", () => {
+    // Container spans 100..500 on screen; the body started 900px above it.
+    expect(visibleWindow(-800, [{ top: 100, bottom: 500 }], 1000)).toEqual({
+      scrollTop: 900,
+      viewport: 400,
+    });
+  });
+
+  test("the window and the nearest clip both bound the visible area", () => {
+    // The page clips at 0..1000, an inner box at 200..1400; only 200..800 is
+    // on screen below the 800px window.
+    expect(
+      visibleWindow(
+        150,
+        [
+          { top: 200, bottom: 1400 },
+          { top: 0, bottom: 1000 },
+        ],
+        800,
+      ),
+    ).toEqual({ scrollTop: 50, viewport: 600 });
+  });
+
+  test("a body below the visible area shows only from its own top", () => {
+    expect(visibleWindow(700, [{ top: 0, bottom: 1000 }], 1000)).toEqual({
+      scrollTop: 0,
+      viewport: 300,
+    });
+    expect(visibleWindow(1200, [{ top: 0, bottom: 1000 }], 1000)).toEqual({
+      scrollTop: 0,
+      viewport: 0,
+    });
   });
 });
