@@ -1,3 +1,4 @@
+mod runtime_stats;
 use gpui::{prelude::*, *};
 use kit_ui_gpui::{
     components,
@@ -32,6 +33,7 @@ struct Gallery {
     focus: FocusHandle,
     search: Entity<components::search_input::SearchInput>,
     query: String,
+    runtime_stats: Entity<runtime_stats::RuntimeStats>,
 }
 impl Gallery {
     fn select(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
@@ -234,7 +236,7 @@ impl Render for Gallery {
                     .bg(t.surface)
                     .text_color(t.muted)
                     .text_size(px(11.))
-                    .child("Native Rust · GPUI 0.2.2 · Experimental")
+                    .child(self.runtime_stats.clone())
                     .child("⌘ ↑ / ↓ Components    ⌘ D Theme    ⌘ R Reset    ⌘ Q Quit"),
             )
     }
@@ -654,6 +656,7 @@ fn main() {
                             focus,
                             search,
                             query: String::new(),
+                            runtime_stats: cx.new(runtime_stats::RuntimeStats::new),
                         }
                     })
                 },

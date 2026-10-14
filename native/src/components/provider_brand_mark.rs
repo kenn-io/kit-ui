@@ -48,7 +48,7 @@ impl ProviderBrandMark {
         let source = match self.provider {
             ProviderBrand::Google => Some(ImageSource::from(PathBuf::from(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/assets/provider-marks/google.svg"
+                "/assets/provider-marks/google.png"
             )))),
             ProviderBrand::Sso => self.icon,
         };

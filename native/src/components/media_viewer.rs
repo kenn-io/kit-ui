@@ -8,7 +8,7 @@ use gpui::{prelude::*, *};
 #[derive(Clone)]
 pub enum MediaViewerItem {
     Image {
-        src: SharedString,
+        src: ImageSource,
         alt: SharedString,
         natural_size: Size<Pixels>,
     },
@@ -21,7 +21,7 @@ pub enum MediaViewerItem {
 
 impl MediaViewerItem {
     pub fn image(
-        src: impl Into<SharedString>,
+        src: impl Into<ImageSource>,
         alt: impl Into<SharedString>,
         natural_size: Size<Pixels>,
     ) -> Self {
@@ -199,8 +199,19 @@ impl Render for MediaViewer {
             MediaViewerItem::Image { src, alt, .. } => (
                 alt,
                 img(src)
+                    .id(("media-viewer-image", self.index))
                     .w(displayed.width)
                     .h(displayed.height)
+                    .with_fallback(move || {
+                        div()
+                            .size_full()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_color(t.muted)
+                            .child("Unable to load image")
+                            .into_any_element()
+                    })
                     .into_any_element(),
             ),
             MediaViewerItem::Element { render, .. } => (SharedString::default(), render(scale, cx)),
@@ -421,10 +432,10 @@ pub fn demo(cx: &mut App) -> AnyView {
         MediaViewer::new(
             vec![
                 MediaViewerItem::image(
-                    concat!(
+                    std::path::PathBuf::from(concat!(
                         env!("CARGO_MANIFEST_DIR"),
                         "/assets/demo/activity-chart.png"
-                    ),
+                    )),
                     "Weekly activity",
                     size(px(640.), px(360.)),
                 ),

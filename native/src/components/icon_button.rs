@@ -111,7 +111,12 @@ impl RenderOnce for IconButton {
             .text_color(if self.pressed { accent } else { t.muted })
             .when(self.pressed, |s| s.bg(t.inset))
             .tooltip(move |_, cx| cx.new(|_| IconTooltip(tooltip.clone())).into())
-            .child(svg().path(self.icon).size(px(14.)));
+            .child(
+                svg()
+                    .path(self.icon)
+                    .size(px(14.))
+                    .text_color(if self.pressed { accent } else { t.muted }),
+            );
         if self.disabled {
             element = element.opacity(0.45).cursor(CursorStyle::Arrow);
         } else {

@@ -116,7 +116,8 @@ impl Render for EmptyStateDemo {
                             env!("CARGO_MANIFEST_DIR"),
                             "/assets/icons/panel-left.svg"
                         ))
-                        .size(px(32.)),
+                        .size(px(32.))
+                        .text_color(t.muted),
                 )
                 .child(
                     Button::new("empty-state-create", "Create workspace")

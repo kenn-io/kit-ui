@@ -5,7 +5,7 @@ use gpui::{prelude::*, *};
 /// A contain-fit thumbnail backed by the same image source as its expanded viewer.
 /// Sources may be native asset paths or URLs supported by GPUI's image loader.
 pub struct ImagePreview {
-    src: SharedString,
+    src: ImageSource,
     alt: SharedString,
     natural_size: Size<Pixels>,
     max_height: Pixels,
@@ -17,7 +17,7 @@ pub struct ImagePreview {
 
 impl ImagePreview {
     pub fn new(
-        src: impl Into<SharedString>,
+        src: impl Into<ImageSource>,
         alt: impl Into<SharedString>,
         natural_size: Size<Pixels>,
         cx: &mut Context<Self>,
@@ -64,7 +64,7 @@ impl ImagePreview {
     /// Updating the source resets the expanded view and retries the new image.
     pub fn set_source(
         &mut self,
-        src: impl Into<SharedString>,
+        src: impl Into<ImageSource>,
         alt: impl Into<SharedString>,
         natural_size: Size<Pixels>,
         window: &mut Window,
@@ -96,6 +96,7 @@ impl Render for ImagePreview {
         let width = self.natural_size.width
             * (f32::from(height) / f32::from(self.natural_size.height.max(px(1.))));
         let image = img(self.src.clone())
+            .id("image-preview-image")
             .w(width)
             .max_w_full()
             .h(height)
@@ -197,10 +198,10 @@ impl Render for ImagePreview {
 pub fn demo(cx: &mut App) -> AnyView {
     cx.new(|cx| {
         ImagePreview::new(
-            concat!(
+            std::path::PathBuf::from(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/assets/demo/activity-chart.png"
-            ),
+            )),
             "Weekly activity",
             size(px(640.), px(360.)),
             cx,

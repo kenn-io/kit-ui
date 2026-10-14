@@ -95,7 +95,8 @@ impl RenderOnce for SidebarToggle {
                         env!("CARGO_MANIFEST_DIR"),
                         "/assets/icons/panel-left.svg"
                     ))
-                    .size(px(14.)),
+                    .size(px(14.))
+                    .text_color(t.muted),
             )
             .child(
                 div()
