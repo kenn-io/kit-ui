@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { Checkbox, Chip, TableHeaderCell, TableSort, VirtualTable } from "../../lib/index.js";
+  import {
+    Button,
+    Checkbox,
+    Chip,
+    TableHeaderCell,
+    TableSort,
+    VirtualTable,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   interface Review {
@@ -38,6 +45,7 @@
   );
   const sorted = $derived(sorter.sort(reviews));
   let showBranch = $state(true);
+  let pageTable = $state<ReturnType<typeof VirtualTable<Review>>>();
   const pageSorter = new TableSort<Review>(
     { id: (r) => r.id, project: (r) => r.project, branch: (r) => r.branch },
     { key: "id" },
@@ -94,11 +102,21 @@
 
 <DemoSection
   title="Scrolling with the page"
-  description="Without a bounded height the table grows to its full length, and the page's scroll container decides which rows are on screen."
-  code={`<VirtualTable items={reviews} rowKey={(r) => r.id} ariaLabel="Reviews on the page">…</VirtualTable>`}
+  description={`With scroll="page" the table grows to its full length, the page's scroll container decides which rows are on screen, and the header sticks to the page. The table follows scrolling and resizing; after a layout change with neither, such as content above it collapsing, call refresh().`}
+  code={`<VirtualTable bind:this={table} scroll="page" items={reviews} ariaLabel="Reviews on the page">…</VirtualTable>
+
+<!-- after content above the table changes size without a scroll -->
+table.refresh();`}
 >
+  <Button label="Refresh the table" size="sm" onclick={() => pageTable?.refresh()} />
   <div class="flow">
-    <VirtualTable items={pageRows} rowKey={(r) => r.id} ariaLabel="Reviews on the page">
+    <VirtualTable
+      bind:this={pageTable}
+      scroll="page"
+      items={pageRows}
+      rowKey={(r) => r.id}
+      ariaLabel="Reviews on the page"
+    >
       {#snippet header()}
         <TableHeaderCell label="ID" numeric sort={pageSorter} column="id" />
         <TableHeaderCell label="Project" sort={pageSorter} column="project" />
@@ -122,7 +140,7 @@
 >
   <details class="flow">
     <summary>Show 2,000 reviews</summary>
-    <VirtualTable items={pageRows} rowKey={(r) => r.id} ariaLabel="Hidden reviews">
+    <VirtualTable scroll="page" items={pageRows} rowKey={(r) => r.id} ariaLabel="Hidden reviews">
       {#snippet header()}
         <TableHeaderCell label="ID" numeric sort={pageSorter} column="id" />
         <TableHeaderCell label="Project" sort={pageSorter} column="project" />
@@ -142,10 +160,11 @@
 <DemoSection
   title="Below the fold with no overscan"
   description="With overscan={0}, a table below the visible area renders no rows until it scrolls in. It never shows its empty row while it has items."
-  code={`<VirtualTable {items} overscan={0} …>{#snippet empty()}…{/snippet}</VirtualTable>`}
+  code={`<VirtualTable scroll="page" {items} overscan={0} …>{#snippet empty()}…{/snippet}</VirtualTable>`}
 >
   <div class="flow">
     <VirtualTable
+      scroll="page"
       items={reviews.slice(0, 300)}
       rowKey={(r) => r.id}
       overscan={0}

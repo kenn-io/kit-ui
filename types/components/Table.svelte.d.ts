@@ -4,6 +4,9 @@ interface Props {
     header: Snippet;
     /** Body rows — <tr> elements. */
     children: Snippet;
+    /** What scrolls the rows: the table's own wrapper (give it a bounded
+     * height), or the page or panel the table sits in. */
+    scroll?: "self" | "page";
     /** Keep the header visible while the body scrolls. */
     stickyHeader?: boolean;
     /** Stripe even rows. */

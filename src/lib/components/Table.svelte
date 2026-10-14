@@ -1,11 +1,15 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { scrollerOf } from "./virtual.js";
 
   interface Props {
     /** Header cells — <TableHeaderCell> (or <th>) elements. */
     header: Snippet;
     /** Body rows — <tr> elements. */
     children: Snippet;
+    /** What scrolls the rows: the table's own wrapper (give it a bounded
+     * height), or the page or panel the table sits in. */
+    scroll?: "self" | "page";
     /** Keep the header visible while the body scrolls. */
     stickyHeader?: boolean;
     /** Stripe even rows. */
@@ -21,6 +25,7 @@
   let {
     header,
     children,
+    scroll = "self",
     stickyHeader = true,
     zebra = true,
     ariaLabel = undefined,
@@ -28,35 +33,38 @@
   }: Props = $props();
 
   let scrolled = $state(false);
-  let contained = $state(false);
+  let wide = $state(false);
 
-  // A sticky header sticks to the nearest scroll container. A wrapper that
-  // can scroll would capture it even when the page does all the scrolling,
-  // so the wrapper scrolls only while the table overflows it: a bounded
-  // height, or a table wider than the screen. Otherwise it clips without
-  // scrolling and the header sticks to the page.
-  function fit(wrapper: HTMLDivElement) {
+  // Rows pass under the header once it leaves the table's top edge,
+  // whichever container scrolled it there.
+  function watchHeader(wrapper: HTMLDivElement) {
     const table = wrapper.firstElementChild as HTMLTableElement;
     const head = table.tHead;
-    const check = () => {
-      contained =
-        table.offsetHeight > wrapper.clientHeight + 1 ||
-        table.offsetWidth > wrapper.clientWidth + 1;
-    };
-    // Rows pass under the header once it leaves the table's top edge,
-    // whichever container scrolled it there.
+    const scroller = scroll === "self" ? wrapper : scrollerOf(wrapper);
+    const target: HTMLElement | Window = scroller === document.scrollingElement ? window : scroller;
     const stuck = () => {
       if (head)
         scrolled = head.getBoundingClientRect().top > table.getBoundingClientRect().top + 0.5;
     };
-    check();
     stuck();
-    window.addEventListener("scroll", stuck, { capture: true, passive: true });
-    // Environments without layout (jsdom) have no ResizeObserver; the wrapper
-    // keeps its initial state there.
-    if (typeof ResizeObserver === "undefined") {
-      return () => window.removeEventListener("scroll", stuck, { capture: true });
-    }
+    target.addEventListener("scroll", stuck, { passive: true });
+    return () => target.removeEventListener("scroll", stuck);
+  }
+
+  // A page-scrolled wrapper clips without scrolling, so it does not capture
+  // the sticky header. Only a table wider than the wrapper (a narrow screen)
+  // makes it scroll sideways, which gives up sticking to the page.
+  function fitWidth(wrapper: HTMLDivElement) {
+    // Environments without layout (jsdom) have no ResizeObserver.
+    if (scroll === "self" || typeof ResizeObserver === "undefined") return;
+    const table = wrapper.firstElementChild as HTMLTableElement;
+    // The clip edge is the padding box, and the table starts after the left
+    // padding, so it is clipped once it reaches past the right edge.
+    const check = () => {
+      const left = parseFloat(getComputedStyle(wrapper).paddingLeft) || 0;
+      wide = left + table.offsetWidth > wrapper.clientWidth + 1;
+    };
+    check();
     // Switching overflow resizes what is observed, so the check waits a
     // frame instead of looping inside the observer callback.
     let frame = 0;
@@ -65,7 +73,6 @@
         frame = requestAnimationFrame(() => {
           frame = 0;
           check();
-          stuck();
         });
     });
     observer.observe(wrapper);
@@ -73,15 +80,16 @@
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener("scroll", stuck, { capture: true });
     };
   }
 </script>
 
 <div
   class={["kit-table-wrapper", className]}
-  class:kit-table-wrapper--contained={contained}
-  {@attach fit}
+  class:kit-table-wrapper--page={scroll === "page"}
+  class:kit-table-wrapper--wide={scroll === "page" && wide}
+  {@attach watchHeader}
+  {@attach fitWidth}
 >
   <table
     class="kit-table"
@@ -102,18 +110,21 @@
 </div>
 
 <style>
-  /* min-width: 0 lets the wrapper shrink in a flex row: a clipping item
-   * otherwise grows to its content, so a wide table would never overflow
-   * it and switch it to scrolling. */
+  /* min-width: 0 lets the wrapper shrink in a flex row, so a wide table
+   * overflows it and scrolls instead of widening it. */
   .kit-table-wrapper {
-    overflow: clip;
+    overflow: auto;
     flex: 1;
     min-width: 0;
     min-height: 0;
     box-shadow: var(--shadow-panel, none);
   }
 
-  .kit-table-wrapper--contained {
+  .kit-table-wrapper--page {
+    overflow: clip;
+  }
+
+  .kit-table-wrapper--wide {
     overflow: auto;
   }
 
@@ -123,18 +134,16 @@
     table-layout: auto;
   }
 
-  /* A header that sticks to a padded page scroller would stop below the
-   * padding, with rows showing above it; the app offsets that padding. */
   .kit-table--sticky thead {
     position: sticky;
-    top: var(--kit-table-sticky-top, 0);
+    top: 0;
     z-index: 1;
   }
 
-  /* The page offset is for the page's padding; a wrapper that scrolls has
-   * none, so its header sticks to its top edge. */
-  .kit-table-wrapper--contained > .kit-table--sticky thead {
-    top: 0;
+  /* A header stuck to a padded page scroller would stop below the padding,
+   * with rows showing above it; the app offsets that padding. */
+  .kit-table-wrapper--page > .kit-table--sticky thead {
+    top: var(--kit-table-sticky-top, 0);
   }
 
   /* Rows scrolled beneath the stuck header pass under its shadow. */

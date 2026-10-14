@@ -129,9 +129,8 @@ test("a table the page scrolls keeps its header at the top of the page", async (
   await gotoPage(page, "virtual-table");
   const table = inFlow(page);
   await expect(table).toHaveAttribute("aria-rowcount", "2001");
-  // The table fits its wrapper, so the wrapper must not become the header's
-  // scroll container.
-  await expect(table.locator("xpath=..")).not.toHaveClass(/kit-table-wrapper--contained/);
+  // The page-scrolled wrapper must not become the header's scroll container.
+  await expect(table.locator("xpath=..")).toHaveCSS("overflow-y", "clip");
   const scroller = await table.evaluateHandle((el) => {
     let s: Element | null = el.parentElement;
     while (s && s.scrollHeight <= s.clientHeight) s = s.parentElement;
@@ -295,39 +294,10 @@ test("hiding a column re-pins the widths without a phantom column", async ({ pag
     .toEqual({ spacerColspan: 4, fills: true });
 });
 
-test("an ancestor that clips only sideways does not cut off rendered rows", async ({ page }) => {
-  await gotoPage(page, "virtual-table");
-  const table = inFlow(page);
-  await expect(table).toHaveAttribute("aria-rowcount", "2001");
-  await table.evaluate((el) => {
-    const flow = el.closest(".flow") as HTMLElement;
-    flow.style.overflowX = "clip";
-    flow.style.overflowY = "visible";
-    flow.style.height = "200px";
-  });
-  // Bring the table's top to the top of the scroller, so the rows past the
-  // 200px box are on screen.
-  await page.locator(".content__body").evaluate(
-    (s, el) => {
-      s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top;
-    },
-    await table.elementHandle(),
-  );
-  // A window resize re-reads the clipping ancestors.
-  await page.setViewportSize({ width: 1180, height: 800 });
-  await expect
-    .poll(() =>
-      table.evaluate((el) => {
-        const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
-        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
-        return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
-      }),
-    )
-    .toBe(true);
-});
-
-test("rows fill the view when content above the table collapses", async ({ page }) => {
+// Content above the table collapsing neither scrolls nor resizes the
+// scroller, so the app calls refresh(), as the demo's button does. Scroll
+// anchoring would hide the move, so it is off here.
+test("refresh() fills the view after content above the table collapses", async ({ page }) => {
   await gotoPage(page, "virtual-table");
   const table = inFlow(page);
   await expect(table).toHaveAttribute("aria-rowcount", "2001");
@@ -335,6 +305,7 @@ test("rows fill the view when content above the table collapses", async ({ page 
   // Put a tall block before the table and scroll until only the table's
   // first 100px show, then remove the block without scrolling.
   await table.evaluate((el) => {
+    (document.querySelector(".content__body") as HTMLElement).style.overflowAnchor = "none";
     const block = document.createElement("div");
     block.id = "collapsible";
     block.style.height = "600px";
@@ -349,6 +320,7 @@ test("rows fill the view when content above the table collapses", async ({ page 
   );
   await page.waitForTimeout(100);
   await page.locator("#collapsible").evaluate((block) => block.remove());
+  await page.getByRole("button", { name: "Refresh the table" }).click();
   await expect
     .poll(() =>
       table.evaluate((el) => {
@@ -381,42 +353,6 @@ test("a populated table below the fold never shows its empty row", async ({ page
   expect(id).toBeLessThan(150);
 });
 
-// A sibling directly inside the fixed-height scroller resizes none of the
-// table's ancestors. Scroll anchoring would hide the move, so it is off, as
-// it is in browsers without anchoring.
-test("rows fill the view when a sibling in a fixed-height scroller collapses", async ({ page }) => {
-  await gotoPage(page, "virtual-table");
-  const table = page.locator('table[aria-label="Reviews without overscan"]');
-  await expect(table).toHaveAttribute("aria-rowcount", "301");
-  const scroller = page.locator(".content__body");
-  await scroller.evaluate(
-    (s, el) => {
-      (s as HTMLElement).style.overflowAnchor = "none";
-      const block = document.createElement("div");
-      block.id = "collapsible";
-      block.style.height = "1000px";
-      s.prepend(block);
-      // Leave the table 300px below the visible area.
-      s.scrollTop += el!.getBoundingClientRect().top - (s.getBoundingClientRect().bottom + 300);
-    },
-    await table.elementHandle(),
-  );
-  await page.waitForTimeout(100);
-  await expect(dataRows(table)).toHaveCount(0);
-  await page.locator("#collapsible").evaluate((block) => block.remove());
-  await expect
-    .poll(() =>
-      table.evaluate((el) => {
-        const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
-        if (rows.length === 0) return false;
-        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
-        return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
-      }),
-    )
-    .toBe(true);
-});
-
 test("a resize while no rows render does not pin widths from the header", async ({ page }) => {
   await gotoPage(page, "virtual-table");
   const table = page.locator('table[aria-label="Reviews without overscan"]');
@@ -445,38 +381,6 @@ test("a resize while no rows render does not pin widths from the header", async 
     .first()
     .evaluate((th) => th.getBoundingClientRect().width);
   expect(id).toBeLessThan(150);
-});
-
-test("rows follow a collapse above the table larger than the screen", async ({ page }) => {
-  await gotoPage(page, "virtual-table");
-  const table = inFlow(page);
-  await expect(table).toHaveAttribute("aria-rowcount", "2001");
-  const scroller = page.locator(".content__body");
-  await scroller.evaluate(
-    (s, el) => {
-      (s as HTMLElement).style.overflowAnchor = "none";
-      const block = document.createElement("div");
-      block.id = "collapsible";
-      block.style.height = "3000px";
-      s.prepend(block);
-      // View the middle of the table.
-      s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top + 20000;
-    },
-    await table.elementHandle(),
-  );
-  await page.waitForTimeout(100);
-  await page.locator("#collapsible").evaluate((block) => block.remove());
-  await expect
-    .poll(() =>
-      table.evaluate((el) => {
-        const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
-        const first = rows[0]!.getBoundingClientRect().top;
-        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
-        return first <= s.top + 1 && last >= s.bottom - 1;
-      }),
-    )
-    .toBe(true);
 });
 
 test("a visible row growing deep in the table does not move the rows above it", async ({
@@ -510,56 +414,80 @@ test("a visible row growing deep in the table does not move the rows above it", 
   expect(Math.abs((await topIndex()) - before)).toBeLessThanOrEqual(1);
 });
 
-// A small move keeps the edge row partly visible throughout, so only the
-// spacer that comes into view can reveal it. `shown` is how much of the
-// table starts above the bottom of the view.
-for (const [shape, style] of [
-  [
-    "clipped sideways",
-    { table: "min-width: 2000px", flow: "width: 300px; overflow-x: clip", shown: 200 },
-  ],
-  ["taller than the view", { table: "", flow: "", cell: "height: 1200px", shown: 1150 }],
-] as const) {
-  test(`with no overscan, rows ${shape} follow content collapsing above`, async ({ page }) => {
-    await gotoPage(page, "virtual-table");
-    const table = page.locator('table[aria-label="Reviews without overscan"]');
-    await expect(table).toHaveAttribute("aria-rowcount", "301");
-    await table.evaluate((el, s) => {
-      el.setAttribute("style", `${el.getAttribute("style") ?? ""};${s.table}`);
-      const flow = el.closest(".flow") as HTMLElement;
-      flow.setAttribute("style", s.flow);
-      if ("cell" in s) {
-        const sheet = document.createElement("style");
-        sheet.textContent = `table[aria-label="Reviews without overscan"] td { ${s.cell} }`;
-        document.head.append(sheet);
-      }
-    }, style);
-    const scroller = page.locator(".content__body");
-    await scroller.evaluate(
-      (s, [el, shown]) => {
-        (s as HTMLElement).style.overflowAnchor = "none";
-        const block = document.createElement("div");
-        block.id = "collapsible";
-        block.style.height = "100px";
-        s.prepend(block);
+// One row grows while another shrinks by the same amount, so the body keeps
+// its size and only per-row observation measures the trade. With stale
+// heights the grown first row counts as short, and scrolling inside it
+// drops it from the window.
+test("two rows trading height are both measured again", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.locator('table[aria-label="Reviews without overscan"]');
+  await expect(table).toHaveAttribute("aria-rowcount", "301");
+  const scroller = page.locator(".content__body");
+  const toTable = async (by: number) =>
+    scroller.evaluate(
+      (s, [el, offset]) => {
         s.scrollTop +=
-          (el as Element).getBoundingClientRect().top - (s.getBoundingClientRect().bottom - shown);
+          (el as Element).getBoundingClientRect().top - s.getBoundingClientRect().top + offset;
       },
-      [await table.elementHandle(), style.shown] as const,
+      [await table.elementHandle(), by] as const,
     );
-    await expect(dataRows(table).first()).toBeAttached();
-    await page.waitForTimeout(200);
-    await page.locator("#collapsible").evaluate((block) => block.remove());
-    await expect
-      .poll(() =>
-        table.evaluate((el) => {
-          const s = document.querySelector(".content__body")!.getBoundingClientRect();
-          const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
-          if (rows.length === 0) return false;
-          const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
-          return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
-        }),
-      )
-      .toBe(true);
-  });
-}
+  await toTable(0);
+  const rows = dataRows(table);
+  await expect(rows.first()).toContainText("#0");
+  // Explicit heights, taller than either row's content, make the trade exact.
+  const setHeights = (first: string, second: string) =>
+    table.evaluate(
+      (el, [a, b]) => {
+        const [one, two] = el.querySelectorAll<HTMLElement>(
+          "tbody > tr:not(.kit-virtual-table__spacer)",
+        );
+        one!.style.height = a!;
+        two!.style.height = b!;
+      },
+      [first, second],
+    );
+  await setHeights("80px", "600px");
+  await page.waitForTimeout(200);
+  await setHeights("600px", "80px");
+  await page.waitForTimeout(200);
+  // The first row now spans the table's first 600px; a view 300px down is
+  // inside it. With stale heights the first row is dropped and scroll
+  // anchoring pulls the view away from where it was scrolled.
+  await toTable(300);
+  await expect(rows.first()).toHaveAttribute("aria-rowindex", "2");
+  await expect
+    .poll(() =>
+      rows.first().evaluate((tr) => {
+        const top = document.querySelector(".content__body")!.getBoundingClientRect().top;
+        return tr.getBoundingClientRect().top < top;
+      }),
+    )
+    .toBe(true);
+});
+
+test("rows cover the view while the wheel scrolls quickly", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const box = (await table.locator("xpath=..").boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  let worst = 0;
+  for (let i = 0; i < 30; i += 1) {
+    await page.mouse.wheel(0, i < 20 ? 300 : -300);
+    const gap = await table.evaluate(
+      (el) =>
+        new Promise<number>((resolve) =>
+          requestAnimationFrame(() => {
+            const wrapper = el.parentElement!.getBoundingClientRect();
+            const head = el.tHead!.getBoundingClientRect().bottom;
+            const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+            const first = rows[0]!.getBoundingClientRect().top;
+            const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+            resolve(Math.max(0, first - head, wrapper.bottom - last));
+          }),
+        ),
+    );
+    worst = Math.max(worst, gap);
+  }
+  expect(worst).toBeLessThanOrEqual(1);
+});

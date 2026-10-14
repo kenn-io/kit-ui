@@ -50,3 +50,7 @@ export declare function visibleWindow(bodyTop: number, clips: readonly VerticalB
     scrollTop: number;
     viewport: number;
 };
+/** The element that scrolls `el` vertically: its nearest ancestor with
+ * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
+ * when none is. Used for tables whose rows the page scrolls. */
+export declare function scrollerOf(el: Element): HTMLElement;

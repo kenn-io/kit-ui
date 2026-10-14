@@ -132,3 +132,14 @@ export function visibleWindow(
     viewport: Math.max(0, bottom - Math.max(top, bodyTop)),
   };
 }
+
+/** The element that scrolls `el` vertically: its nearest ancestor with
+ * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
+ * when none is. Used for tables whose rows the page scrolls. */
+export function scrollerOf(el: Element): HTMLElement {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const overflow = getComputedStyle(node).overflowY;
+    if (overflow === "auto" || overflow === "scroll" || overflow === "overlay") return node;
+  }
+  return (document.scrollingElement ?? document.documentElement) as HTMLElement;
+}

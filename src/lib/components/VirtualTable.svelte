@@ -2,7 +2,7 @@
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import Table from "./Table.svelte";
-  import { virtualSlice, visibleWindow, type VerticalBounds } from "./virtual.js";
+  import { scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
     /** Every row's data; only the rows on screen are rendered. */
@@ -15,8 +15,14 @@
     empty?: Snippet;
     /** Stable identity of a row, for keyed rendering. Defaults to the index. */
     rowKey?: (item: T, index: number) => unknown;
-    /** Height guess in px for rows not yet rendered; replaced by the
-     * average of the first rows that render, which then stays fixed. */
+    /** What scrolls the rows: the table's own wrapper (give it a bounded
+     * height), or the page or panel the table sits in. */
+    scroll?: "self" | "page";
+    /** With `scroll="page"`, the element that scrolls the table. Defaults to
+     * the nearest scrolling ancestor, or the document. */
+    scrollElement?: () => HTMLElement | null;
+    /** Height in px of rows not yet rendered. Set it near the real row
+     * height: it sizes the scrollbar and places unmeasured rows. */
     estimateRowHeight?: number;
     /** Rows rendered beyond each edge of the visible area. */
     overscan?: number;
@@ -36,6 +42,8 @@
     row,
     empty = undefined,
     rowKey = (_item: T, index: number) => index,
+    scroll = "self",
+    scrollElement = undefined,
     estimateRowHeight = 36,
     overscan = 8,
     stickyHeader = true,
@@ -51,25 +59,22 @@
   const SPACER_CELL = "padding: 0; border: 0;";
 
   let body: HTMLTableSectionElement | undefined;
+  let scroller: HTMLElement | undefined;
   let scrollTop = $state(0);
   let viewport = $state(0);
   let columns = $state(1);
 
   // Row heights by index, valid only for the `items` array they were taken
   // from (sorting or filtering reuses indexes for other rows). The Map is not
-  // reactive; `measureVersion` signals that it changed.
+  // reactive; `measureVersion` signals that it changed. Rows not yet
+  // measured use the fixed estimate, so measuring one row never moves the
+  // estimated rows around it.
   const measured = new Map<number, number>();
   let measureVersion = $state(0);
   let measuredFor: T[] | undefined;
-  // Height for rows not yet measured: the average of the first rows that
-  // render, then fixed, kept across item changes since rows of one table are
-  // usually alike. A running average would shift every unmeasured row above
-  // the view whenever a visible row changed height, jumping the content in
-  // browsers without scroll anchoring.
-  let lockedEstimate: number | undefined;
 
   const heightOf = (index: number): number => {
-    const h = measured.get(index) ?? lockedEstimate ?? estimateRowHeight;
+    const h = measured.get(index) ?? estimateRowHeight;
     return h > 0 ? h : 1;
   };
 
@@ -100,24 +105,17 @@
   // even index keeps every row on the parity it has in a full table.
   const parityPad = $derived(slice.start % 2 === 0);
 
-  // Every ancestor that clips the body vertically, nearest first. The nearest scroll
-  // container, whether the table's own wrapper or the page, is among them.
-  let clips: Element[] = [];
-  function collectClips(): void {
-    clips = [];
-    for (let el = body?.parentElement ?? null; el; el = el.parentElement) {
-      const style = getComputedStyle(el);
-      // Only a vertical clip limits which rows show. A horizontal-only clip
-      // leaves overflow-y visible; any other horizontal overflow forces
-      // overflow-y off visible too, so this one axis catches every case.
-      if (style.overflowY !== "visible") clips.push(el);
-    }
-  }
-
+  // The visible part of the body is where it overlaps the scroller (the
+  // window for the document scroller). The body's position is read on every
+  // update, so content above the table moving is picked up on the next
+  // scroll or resize; a layout change with neither calls `refresh()`.
   function updateWindow(): void {
-    if (!body) return;
-    const bounds: VerticalBounds[] = clips.map((el) => el.getBoundingClientRect());
-    const next = visibleWindow(body.getBoundingClientRect().top, bounds, window.innerHeight);
+    if (!body || !scroller) return;
+    const bounds =
+      scroller === document.scrollingElement
+        ? { top: 0, bottom: window.innerHeight }
+        : scroller.getBoundingClientRect();
+    const next = visibleWindow(body.getBoundingClientRect().top, [bounds], window.innerHeight);
     scrollTop = next.scrollTop;
     viewport = next.viewport;
   }
@@ -160,54 +158,10 @@
     frozenWidth = table.parentElement?.clientWidth ?? 0;
   }
 
-  // Read rendered row heights, from the gap between consecutive row tops so
-  // collapsed borders are counted once, and number the rows for assistive
-  // technology, which only sees the rendered ones.
-  function measureRows(): void {
-    if (!body) return;
-    const table = body.parentElement as HTMLTableElement;
-    table.setAttribute("aria-rowcount", String(items.length + 1));
-    // An empty table shows only the `empty` row, which neither measures a
-    // data row nor should decide the column widths.
-    if (items.length === 0) return;
-    const rows = Array.from(body.rows).filter((tr) => !tr.classList.contains(SPACER));
-    if (rows.length === 0) return;
-    const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
-    if (frozenWidth < 0 || headerCells !== columns) freezeColumns();
-    watchRows(rows);
-    const tops = rows.map((tr) => tr.getBoundingClientRect().top);
-    let changed = false;
-    let total = 0;
-    let count = 0;
-    rows.forEach((tr, i) => {
-      const index = slice.start + i;
-      tr.setAttribute("aria-rowindex", String(index + 2));
-      const next = tops[i + 1];
-      const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
-      if (h > 0) {
-        total += h;
-        count += 1;
-      }
-      if (h > 0 && measured.get(index) !== h) {
-        measured.set(index, h);
-        changed = true;
-      }
-    });
-    if (lockedEstimate === undefined && count > 0) {
-      lockedEstimate = total / count;
-      changed = true;
-    }
-    if (changed) measureVersion += 1;
-  }
-
-  // The rendered rows cover the visible area after every update. When the
-  // table moves without a scroll or a resize (content collapsing inside a
-  // fixed-height scroller), the rows on screen leave view, an edge row
-  // fully enters it, a spacer shows, or the body enters view, and the
-  // window follows.
-  // Watching every rendered row, not only the edges, catches a move large
-  // enough to carry the whole window past the screen.
-  let rowObserver: IntersectionObserver | undefined;
+  // Each rendered row is observed, so any row changing height, even when
+  // another changes by the opposite amount and the body keeps its size,
+  // measures the rows again.
+  let rowObserver: ResizeObserver | undefined;
   let watched = new Set<Element>();
   function watchRows(rows: Element[]): void {
     if (!rowObserver) return;
@@ -217,71 +171,83 @@
     watched = next;
   }
 
+  // Read rendered row heights, from the gap between consecutive row tops so
+  // collapsed borders are counted once, and number the rows for assistive
+  // technology, which only sees the rendered ones.
+  function measureRows(): void {
+    if (!body) return;
+    const table = body.parentElement as HTMLTableElement;
+    table.setAttribute("aria-rowcount", String(items.length + 1));
+    // An empty table shows only the `empty` row, which neither measures a
+    // data row nor should decide the column widths.
+    if (items.length === 0) return watchRows([]);
+    const rows = Array.from(body.rows).filter((tr) => !tr.classList.contains(SPACER));
+    watchRows(rows);
+    if (rows.length === 0) return;
+    const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
+    if (frozenWidth < 0 || headerCells !== columns) freezeColumns();
+    const tops = rows.map((tr) => tr.getBoundingClientRect().top);
+    let changed = false;
+    rows.forEach((tr, i) => {
+      const index = slice.start + i;
+      tr.setAttribute("aria-rowindex", String(index + 2));
+      const next = tops[i + 1];
+      const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
+      if (h > 0 && measured.get(index) !== h) {
+        measured.set(index, h);
+        changed = true;
+      }
+    });
+    if (changed) measureVersion += 1;
+  }
+
   $effect(() => {
     void slice;
     untrack(measureRows);
   });
 
+  /** Measure the rows and recompute which are visible. Call it after a
+   * layout change that neither scrolls nor resizes the scroller, such as
+   * content above the table collapsing. */
+  export function refresh(): void {
+    measureRows();
+    updateWindow();
+  }
+
   function track(spacer: HTMLTableRowElement) {
     body = spacer.parentElement as HTMLTableSectionElement;
-    const wrapper = body.parentElement?.parentElement;
+    const wrapper = body.parentElement!.parentElement as HTMLElement;
+    const element =
+      scroll === "self" ? wrapper : (scrollElement?.() ?? untrack(() => scrollerOf(wrapper)));
+    scroller = element;
+    const target: HTMLElement | Window = element === document.scrollingElement ? window : element;
     const resized = () => {
-      collectClips();
-      observeAncestors();
-      const width = wrapper?.clientWidth ?? 0;
+      const width = wrapper.clientWidth;
       if (frozenWidth >= 0 && width !== frozenWidth) freezeColumns();
-      measureRows();
-      updateWindow();
+      refresh();
     };
-    untrack(() => {
-      collectClips();
-      updateWindow();
-    });
-    // Capture sees scrolls of every ancestor, not only the window's. The
-    // window updates in the scroll event itself, before the next paint, so
-    // overscan only has to cover what the compositor scrolls ahead.
-    window.addEventListener("scroll", updateWindow, { capture: true, passive: true });
+    untrack(updateWindow);
+    // The window updates in the scroll event itself, before the next paint,
+    // so overscan only has to cover what the compositor scrolls ahead.
+    target.addEventListener("scroll", updateWindow, { passive: true });
     window.addEventListener("resize", resized);
-    // Re-laying out inside the observer's callback would resize what it
+    // Re-laying out inside an observer's callback would resize what it
     // observes in the same frame (a "ResizeObserver loop" error), so the work
     // waits for the next frame.
     let frame = 0;
-    const observer = new ResizeObserver(() => {
+    const schedule = () => {
       if (frame === 0)
         frame = requestAnimationFrame(() => {
           frame = 0;
           resized();
         });
-    });
-    if (wrapper) observer.observe(wrapper);
-    observer.observe(body);
-    // The table can move into view without resizing itself or the window:
-    // a scroller above it grows (a panel closing), or content before it
-    // collapses. Either resizes some ancestor, so every ancestor up to the
-    // root is observed.
-    const observeAncestors = () => {
-      for (let el = body?.parentElement?.parentElement ?? null; el; el = el.parentElement) {
-        observer.observe(el);
-      }
     };
-    observeAncestors();
-    // Environments without layout (jsdom) have no IntersectionObserver.
-    if (typeof IntersectionObserver !== "undefined") {
-      // The tiny threshold fires as soon as a pixel of a spacer, which is
-      // blank space standing in for unrendered rows, comes into view. Rows
-      // clipped sideways or taller than the view never reach a ratio of 1,
-      // so with no overscan only the spacers reveal their moves.
-      rowObserver = new IntersectionObserver(() => updateWindow(), {
-        threshold: [0, 0.000001, 1],
-      });
-      // With no rows rendered (a window scrolled out of view and no
-      // overscan), the body entering view covers it.
-      rowObserver.observe(body);
-      // The top spacer is this row; the bottom one is the body's last row.
-      rowObserver.observe(spacer);
-      const bottomSpacer = body.rows[body.rows.length - 1];
-      if (bottomSpacer?.classList.contains(SPACER)) rowObserver.observe(bottomSpacer);
-    }
+    // The scroller's size decides how many rows show; the wrapper's width
+    // decides the pinned columns, and it appearing lays out a hidden table.
+    const sizes = new ResizeObserver(schedule);
+    if (element !== document.scrollingElement) sizes.observe(element);
+    sizes.observe(wrapper);
+    rowObserver = new ResizeObserver(schedule);
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
@@ -293,14 +259,15 @@
     if (headerRow) columnsChanged.observe(headerRow, { childList: true });
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", updateWindow, { capture: true });
+      target.removeEventListener("scroll", updateWindow);
       window.removeEventListener("resize", resized);
-      observer.disconnect();
+      sizes.disconnect();
       columnsChanged.disconnect();
       rowObserver?.disconnect();
       rowObserver = undefined;
       watched = new Set();
       body = undefined;
+      scroller = undefined;
     };
   }
 </script>
@@ -308,7 +275,7 @@
 <!-- Spacers stand in for the rows that are not rendered. Inline styles keep
      row styling (padding, borders, stripes, hover) from Table or the app off
      them. -->
-<Table {header} {stickyHeader} {zebra} {ariaLabel} {unsorted} class={className}>
+<Table {header} {scroll} {stickyHeader} {zebra} {ariaLabel} {unsorted} class={className}>
   <tr class={SPACER} aria-hidden="true" style={SPACER_ROW} {@attach track}>
     <td colspan={columns} style={SPACER_CELL} style:height="{slice.topPad}px"></td>
   </tr>

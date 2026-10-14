@@ -88,25 +88,23 @@ yourself:
 />
 ```
 
-## Sticky header
+## Scrolling and the sticky header
 
-The header sticks to whichever container scrolls the table:
+Say what scrolls the rows with `scroll`; the table never guesses:
 
-- **The page.** A table left at its full height scrolls with the page, and
-  its header sticks to the top of the page's scroll container. The wrapper
-  clips without scrolling, so it does not capture the header.
-- **Its own wrapper.** When the table is taller than its wrapper (a flex
-  parent with a fixed height, or a `class` with `max-height`) or wider than
-  it (a narrow screen), the wrapper scrolls, and the header sticks to the
-  wrapper instead.
+- **`scroll="self"` (default).** The wrapper scrolls. Give it a bounded
+  height (a flex parent with a fixed height, or a `class` with
+  `max-height`). The header sticks to the wrapper's top edge.
+- **`scroll="page"`.** The table grows to its full height and the page or
+  panel around it scrolls. The wrapper clips without scrolling, so the
+  header sticks to the top of that scroll container. When the table is
+  wider than the wrapper (a narrow screen), the wrapper scrolls sideways
+  instead, and the header no longer sticks to the page.
 
-The wrapper switches between these one frame after its size changes.
-
-A header that sticks to the page sticks below the scroll container's top
-padding, so rows show in the padding above it. Cover the padding by setting
-`--kit-table-sticky-top` to its negative on the scroll container. A table
-that scrolls in its own wrapper ignores the offset and sticks at the
-wrapper's top edge:
+A header stuck to a page scroller stops below the scroller's top padding,
+so rows show in the padding above it. Cover the padding by setting
+`--kit-table-sticky-top` to its negative on the scroll container; only
+`scroll="page"` tables use it:
 
 ```css
 .page {
@@ -115,9 +113,9 @@ wrapper's top edge:
 }
 ```
 
-An ancestor between the table and the page that sets `overflow: hidden` or
-`auto` becomes the header's scroll container and stops it sticking to the
-page; use `overflow: clip` there.
+An ancestor between a page-scrolled table and the page that sets
+`overflow: hidden` or `auto` becomes the header's scroll container and stops
+it sticking to the page; use `overflow: clip` there.
 
 ## Theming
 
@@ -132,15 +130,16 @@ raised Card shows a second frame.
 
 ## Table props
 
-| Prop           | Type      | Default  | Notes                                                                                                              |
-| -------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
-| `header`       | `Snippet` | required | `<TableHeaderCell>` elements                                                                                       |
-| `children`     | `Snippet` | required | `<tr>` body rows                                                                                                   |
-| `stickyHeader` | `boolean` | `true`   | Header stays visible while the body scrolls, in the page or in a bounded wrapper ([Sticky header](#sticky-header)) |
-| `zebra`        | `boolean` | `true`   | Stripe even rows                                                                                                   |
-| `ariaLabel`    | `string`  | —        |                                                                                                                    |
-| `unsorted`     | `boolean` | `false`  | Opts the table out of sorting; its headers need not sort                                                           |
-| `class`        | `string`  | `""`     | Applied to the scroll wrapper                                                                                      |
+| Prop           | Type               | Default  | Notes                                                                 |
+| -------------- | ------------------ | -------- | --------------------------------------------------------------------- |
+| `header`       | `Snippet`          | required | `<TableHeaderCell>` elements                                          |
+| `children`     | `Snippet`          | required | `<tr>` body rows                                                      |
+| `scroll`       | `"self" \| "page"` | `"self"` | What scrolls the rows ([Scrolling](#scrolling-and-the-sticky-header)) |
+| `stickyHeader` | `boolean`          | `true`   | Header stays visible while the rows scroll                            |
+| `zebra`        | `boolean`          | `true`   | Stripe even rows                                                      |
+| `ariaLabel`    | `string`           | —        |                                                                       |
+| `unsorted`     | `boolean`          | `false`  | Opts the table out of sorting; its headers need not sort              |
+| `class`        | `string`           | `""`     | Applied to the scroll wrapper                                         |
 
 ## TableHeaderCell props
 

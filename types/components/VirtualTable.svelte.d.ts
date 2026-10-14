@@ -11,8 +11,14 @@ declare function $$render<T>(): {
         empty?: Snippet;
         /** Stable identity of a row, for keyed rendering. Defaults to the index. */
         rowKey?: (item: T, index: number) => unknown;
-        /** Height guess in px for rows not yet rendered; replaced by the
-         * average of the first rows that render, which then stays fixed. */
+        /** What scrolls the rows: the table's own wrapper (give it a bounded
+         * height), or the page or panel the table sits in. */
+        scroll?: "self" | "page";
+        /** With `scroll="page"`, the element that scrolls the table. Defaults to
+         * the nearest scrolling ancestor, or the document. */
+        scrollElement?: () => HTMLElement | null;
+        /** Height in px of rows not yet rendered. Set it near the real row
+         * height: it sizes the scrollbar and places unmeasured rows. */
         estimateRowHeight?: number;
         /** Rows rendered beyond each edge of the visible area. */
         overscan?: number;
@@ -25,7 +31,9 @@ declare function $$render<T>(): {
         unsorted?: boolean;
         class?: string;
     };
-    exports: {};
+    exports: {
+        refresh: () => void;
+    };
     bindings: "";
     slots: {};
     events: {};
@@ -35,7 +43,9 @@ declare class __sveltets_Render<T> {
     events(): ReturnType<typeof $$render<T>>['events'];
     slots(): ReturnType<typeof $$render<T>>['slots'];
     bindings(): "";
-    exports(): {};
+    exports(): {
+        refresh: () => void;
+    };
 }
 interface $$IsomorphicComponent {
     new <T>(options: import('svelte').ComponentConstructorOptions<ReturnType<__sveltets_Render<T>['props']>>): import('svelte').SvelteComponent<ReturnType<__sveltets_Render<T>['props']>, ReturnType<__sveltets_Render<T>['events']>, ReturnType<__sveltets_Render<T>['slots']>> & {
