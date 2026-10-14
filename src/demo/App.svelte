@@ -74,6 +74,7 @@
   import TopBarDemo from "./pages/TopBarDemo.svelte";
   import TypeaheadDemo from "./pages/TypeaheadDemo.svelte";
   import VirtualListDemo from "./pages/VirtualListDemo.svelte";
+  import VirtualTableDemo from "./pages/VirtualTableDemo.svelte";
 
   interface Page {
     id: string;
@@ -156,6 +157,7 @@
     { id: "top-bar", label: "TopBar", component: TopBarDemo },
     { id: "typeahead", label: "Typeahead", component: TypeaheadDemo },
     { id: "virtual-list", label: "VirtualList", component: VirtualListDemo },
+    { id: "virtual-table", label: "VirtualTable", component: VirtualTableDemo },
   ].sort((a, b) => a.label.localeCompare(b.label));
 
   const pages: Page[] = [...metaPages, ...componentPages];
@@ -376,6 +378,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 20px 32px 64px;
+    /* Table headers that stick to this scroller cover its top padding. */
+    --kit-table-sticky-top: -20px;
   }
 
   .content__heading {

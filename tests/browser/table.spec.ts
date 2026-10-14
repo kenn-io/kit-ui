@@ -33,7 +33,8 @@ test("numeric and text header labels share a baseline", async ({ page }) => {
   const top = async (name: string) => {
     const header = jobs(page).getByRole("columnheader", { name });
     return header.getByRole("button").evaluate((button) => {
-      const text = [...button.childNodes].find(
+      const label = button.querySelector(".kit-th__label")!;
+      const text = [...label.childNodes].find(
         (node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim() !== "",
       )!;
       const range = document.createRange();

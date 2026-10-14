@@ -88,6 +88,35 @@ yourself:
 />
 ```
 
+## Scrolling and the sticky header
+
+Say what scrolls the rows with `scroll`; the table never guesses:
+
+- **`scroll="self"` (default).** The wrapper scrolls. Give it a bounded
+  height (a flex parent with a fixed height, or a `class` with
+  `max-height`). The header sticks to the wrapper's top edge.
+- **`scroll="page"`.** The table grows to its full height and the page or
+  panel around it scrolls. The wrapper clips without scrolling, so the
+  header sticks to the top of that scroll container. When the table is
+  wider than the wrapper (a narrow screen), the wrapper scrolls sideways
+  instead, and the header no longer sticks to the page.
+
+A header stuck to a page scroller stops below the scroller's top padding,
+so rows show in the padding above it. Cover the padding by setting
+`--kit-table-sticky-top` to its negative on the scroll container; only
+`scroll="page"` tables use it:
+
+```css
+.page {
+  padding-top: 24px;
+  --kit-table-sticky-top: -24px;
+}
+```
+
+An ancestor between a page-scrolled table and the page that sets
+`overflow: hidden` or `auto` becomes the header's scroll container and stops
+it sticking to the page; use `overflow: clip` there.
+
 ## Theming
 
 The scroll wrapper reads `--shadow-panel` (no shadow by default) and header
@@ -101,29 +130,34 @@ raised Card shows a second frame.
 
 ## Table props
 
-| Prop           | Type      | Default  | Notes                                                                           |
-| -------------- | --------- | -------- | ------------------------------------------------------------------------------- |
-| `header`       | `Snippet` | required | `<TableHeaderCell>` elements                                                    |
-| `children`     | `Snippet` | required | `<tr>` body rows                                                                |
-| `stickyHeader` | `boolean` | `true`   | Header stays visible while the body scrolls (give the wrapper a bounded height) |
-| `zebra`        | `boolean` | `true`   | Stripe even rows                                                                |
-| `ariaLabel`    | `string`  | —        |                                                                                 |
-| `unsorted`     | `boolean` | `false`  | Opts the table out of sorting; its headers need not sort                        |
-| `class`        | `string`  | `""`     | Applied to the scroll wrapper                                                   |
+| Prop           | Type               | Default  | Notes                                                                 |
+| -------------- | ------------------ | -------- | --------------------------------------------------------------------- |
+| `header`       | `Snippet`          | required | `<TableHeaderCell>` elements                                          |
+| `children`     | `Snippet`          | required | `<tr>` body rows                                                      |
+| `scroll`       | `"self" \| "page"` | `"self"` | What scrolls the rows ([Scrolling](#scrolling-and-the-sticky-header)) |
+| `stickyHeader` | `boolean`          | `true`   | Header stays visible while the rows scroll                            |
+| `zebra`        | `boolean`          | `true`   | Stripe even rows                                                      |
+| `ariaLabel`    | `string`           | —        |                                                                       |
+| `unsorted`     | `boolean`          | `false`  | Opts the table out of sorting; its headers need not sort              |
+| `class`        | `string`           | `""`     | Applied to the scroll wrapper                                         |
 
 ## TableHeaderCell props
 
-| Prop            | Type                      | Default | Notes                                                         |
-| --------------- | ------------------------- | ------- | ------------------------------------------------------------- |
-| `label`         | `string`                  | —       | Header text (or use `children`)                               |
-| `children`      | `Snippet`                 | —       | Custom header content                                         |
-| `sort`          | `TableSortControl`        | —       | A `TableSort`; replaces `sortable`, `sortDirection`, `onsort` |
-| `column`        | `string`                  | —       | This column's key in `sort`; required with `sort`             |
-| `sortable`      | `boolean`                 | `false` | Render the sort button for server-sorted data                 |
-| `sortDirection` | `"asc" \| "desc" \| null` | `null`  | This column's current direction; sets `aria-sort`             |
-| `onsort`        | `() => void`              | —       | Click handler; toggle direction in your state                 |
-| `numeric`       | `boolean`                 | `false` | Right-align (numbers, costs, durations)                       |
-| `class`         | `string`                  | `""`    |                                                               |
+| Prop            | Type                      | Default | Notes                                                                                             |
+| --------------- | ------------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `label`         | `string`                  | —       | Header text (or use `children`)                                                                   |
+| `children`      | `Snippet`                 | —       | Custom header content                                                                             |
+| `sort`          | `TableSortControl`        | —       | A `TableSort`; replaces `sortable`, `sortDirection`, `onsort`                                     |
+| `column`        | `string`                  | —       | This column's key in `sort`; required with `sort`                                                 |
+| `sortable`      | `boolean`                 | `false` | Render the sort button for server-sorted data                                                     |
+| `sortDirection` | `"asc" \| "desc" \| null` | `null`  | This column's current direction; sets `aria-sort`                                                 |
+| `onsort`        | `() => void`              | —       | Click handler; toggle direction in your state                                                     |
+| `numeric`       | `boolean`                 | `false` | Right-align (numbers, costs, durations)                                                           |
+| `width`         | `number`                  | —       | VirtualTable: the column's starting width in px ([Column widths](virtual-table.md#column-widths)) |
+| `minWidth`      | `number`                  | `20`    | VirtualTable: the narrowest a resize or fit makes the column                                      |
+| `maxWidth`      | `number`                  | `1200`  | VirtualTable: the widest a resize or fit makes the column                                         |
+| `resizable`     | `boolean`                 | `true`  | VirtualTable: show the resize handle on the cell's right edge                                     |
+| `class`         | `string`                  | `""`    |                                                                                                   |
 
 ## TableSort
 
@@ -137,3 +171,9 @@ raised Card shows a second frame.
 
 Body cells get default padding/typography via `Table`'s scoped styles; no cell
 component is required.
+
+## Long tables
+
+`Table` renders every row. For a table that can grow past a few hundred
+rows, use [VirtualTable](virtual-table.md): the same header and row markup,
+with only the rows on screen in the DOM.

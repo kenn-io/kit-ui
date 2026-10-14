@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { offsetOfIndex, virtualSlice } from "../src/lib/components/virtual.js";
+import { offsetOfIndex, virtualSlice, visibleWindow } from "../src/lib/components/virtual.js";
 
 const fixed = (h: number) => () => h;
 
@@ -138,5 +138,35 @@ describe("offsetOfIndex", () => {
     for (const index of [-5, 0, 7, 10, 50]) {
       expect(offsetOfIndex(index, 10, fixed(10), 10)).toBe(offsetOfIndex(index, 10, fixed(10)));
     }
+  });
+});
+
+describe("visibleWindow", () => {
+  test("a body scrolled past the top of its container starts mid-body", () => {
+    // Container spans 100..500 on screen; the body started 900px above it.
+    expect(visibleWindow(-800, { top: 100, bottom: 500 })).toEqual({
+      scrollTop: 900,
+      viewport: 400,
+    });
+  });
+
+  test("a scroller below the window still shows its whole client area", () => {
+    // The scroller's client box spans 1200..1600, past the window's bottom;
+    // the body starts 50px above its top.
+    expect(visibleWindow(1150, { top: 1200, bottom: 1600 })).toEqual({
+      scrollTop: 50,
+      viewport: 400,
+    });
+  });
+
+  test("a body below the visible area shows only from its own top", () => {
+    expect(visibleWindow(700, { top: 0, bottom: 1000 })).toEqual({
+      scrollTop: 0,
+      viewport: 300,
+    });
+    expect(visibleWindow(1200, { top: 0, bottom: 1000 })).toEqual({
+      scrollTop: 0,
+      viewport: 0,
+    });
   });
 });

@@ -103,3 +103,35 @@ export function offsetOfIndex(
   for (let i = 0; i < clamped; i += 1) offset += heightOf(i);
   return offset;
 }
+
+/** A box's vertical extent in viewport coordinates. */
+export interface VerticalBounds {
+  top: number;
+  bottom: number;
+}
+
+/** Scroll offset and viewport height of a list body, in the body's own
+ * coordinates, for virtualizing a list that does not own its scroll
+ * container (VirtualTable). `bodyTop` is the body's top edge and `view` the
+ * scroller's visible area (its client box, or the window for the document),
+ * both in viewport coordinates. The result feeds {@link virtualSlice}. */
+export function visibleWindow(
+  bodyTop: number,
+  view: VerticalBounds,
+): { scrollTop: number; viewport: number } {
+  return {
+    scrollTop: Math.max(0, view.top - bodyTop),
+    viewport: Math.max(0, view.bottom - Math.max(view.top, bodyTop)),
+  };
+}
+
+/** The element that scrolls `el` vertically: its nearest ancestor with
+ * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
+ * when none is. Used for tables whose rows the page scrolls. */
+export function scrollerOf(el: Element): HTMLElement {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const overflow = getComputedStyle(node).overflowY;
+    if (overflow === "auto" || overflow === "scroll" || overflow === "overlay") return node;
+  }
+  return (document.scrollingElement ?? document.documentElement) as HTMLElement;
+}
