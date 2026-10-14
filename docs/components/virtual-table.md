@@ -70,8 +70,10 @@ offset.
 
 Visibility is measured against every ancestor that clips vertically and the
 window. It is measured again on any scroll, on a window resize, and when the
-table or any of its ancestors changes size, so the rows follow a scroller
-that grows or content above the table that collapses.
+table or any of its ancestors changes size. It also watches the table and
+its first and last rendered rows enter and leave view, so the rows follow
+the table when content above it collapses, even inside a fixed-height
+scroller.
 
 ## Rows
 
@@ -91,7 +93,9 @@ rendered rows lay the table out, then pins each header cell's width and
 switches to fixed layout. Pinned header cells use border-box sizing, so the
 measured width is the final width whatever the app's `box-sizing`. It lays
 the table out again when the table's width changes or a column is added or
-removed. Text wider than its pinned column
+removed. Only rendered data rows decide the widths: while none render (an
+empty list, or a window scrolled out of view), the columns stay unpinned
+until rows render again. Text wider than its pinned column
 wraps, breaking inside a long word when it has to; content that cannot wrap
 (buttons, chips) should be no wider than the column it had in the first
 rows.

@@ -139,6 +139,15 @@
       cell.style.width = "";
       cell.style.boxSizing = "";
     }
+    columns = Math.max(1, cells.length);
+    // Only data rows may decide the widths. Without any rendered (an empty
+    // list, or a window scrolled out of view), stay unpinned until rows
+    // render and measureRows pins them.
+    const rendered = Array.from(body!.rows).some((tr) => !tr.classList.contains(SPACER));
+    if (items.length === 0 || !rendered) {
+      frozenWidth = -1;
+      return;
+    }
     // The measured width includes padding and borders; border-box sizing
     // makes it the cell's final width whatever the app's box-sizing is.
     const widths = Array.from(cells, (cell) => cell.getBoundingClientRect().width);
@@ -149,7 +158,6 @@
     table.style.tableLayout = "fixed";
     table.classList.add(PINNED);
     frozenWidth = table.parentElement?.clientWidth ?? 0;
-    columns = Math.max(1, cells.length);
   }
 
   // Read rendered row heights, from the gap between consecutive row tops so
@@ -166,6 +174,7 @@
     if (rows.length === 0) return;
     const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
     if (frozenWidth < 0 || headerCells !== columns) freezeColumns();
+    watchEdges(rows[0]!, rows[rows.length - 1]!);
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
     rows.forEach((tr, i) => {
@@ -182,6 +191,19 @@
       }
     });
     if (changed) measureVersion += 1;
+  }
+
+  // The first and last rendered rows cover the visible area after every
+  // update. When the table moves without a scroll or a resize (a sibling
+  // collapsing inside a fixed-height scroller), one of them fully enters or
+  // leaves view, or the body enters view, and the window follows.
+  let edgeObserver: IntersectionObserver | undefined;
+  let edges: Element[] = [];
+  function watchEdges(first: Element, last: Element): void {
+    if (!edgeObserver || (edges[0] === first && edges[1] === last)) return;
+    for (const el of edges) edgeObserver.unobserve(el);
+    edges = [first, last];
+    for (const el of edges) edgeObserver.observe(el);
   }
 
   $effect(() => {
@@ -232,6 +254,13 @@
       }
     };
     observeAncestors();
+    // Environments without layout (jsdom) have no IntersectionObserver.
+    if (typeof IntersectionObserver !== "undefined") {
+      edgeObserver = new IntersectionObserver(() => updateWindow(), { threshold: [0, 1] });
+      // With no rows rendered (a window scrolled out of view and no
+      // overscan) there are no edge rows; the body entering view covers it.
+      edgeObserver.observe(body);
+    }
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
@@ -247,6 +276,9 @@
       window.removeEventListener("resize", resized);
       observer.disconnect();
       columnsChanged.disconnect();
+      edgeObserver?.disconnect();
+      edgeObserver = undefined;
+      edges = [];
       body = undefined;
     };
   }

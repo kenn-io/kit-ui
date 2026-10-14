@@ -372,11 +372,77 @@ test("a populated table below the fold never shows its empty row", async ({ page
   });
   await expect(dataRows(table).first()).toContainText("#0");
   await expect(table.getByText("No reviews")).toHaveCount(0);
-  // The columns were pinned from data rows: the long branch names widen
-  // their column well past the header's own width.
-  const branch = await table
+  // Data rows give the ID column only its numbers' width; headers alone
+  // would split the width between the two short labels.
+  const id = await table
     .locator("thead th")
-    .nth(1)
+    .first()
     .evaluate((th) => th.getBoundingClientRect().width);
-  expect(branch).toBeGreaterThan(300);
+  expect(id).toBeLessThan(150);
+});
+
+// A sibling directly inside the fixed-height scroller resizes none of the
+// table's ancestors. Scroll anchoring would hide the move, so it is off, as
+// it is in browsers without anchoring.
+test("rows fill the view when a sibling in a fixed-height scroller collapses", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.locator('table[aria-label="Reviews without overscan"]');
+  await expect(table).toHaveAttribute("aria-rowcount", "301");
+  const scroller = page.locator(".content__body");
+  await scroller.evaluate(
+    (s, el) => {
+      (s as HTMLElement).style.overflowAnchor = "none";
+      const block = document.createElement("div");
+      block.id = "collapsible";
+      block.style.height = "1000px";
+      s.prepend(block);
+      // Leave the table 300px below the visible area.
+      s.scrollTop += el!.getBoundingClientRect().top - (s.getBoundingClientRect().bottom + 300);
+    },
+    await table.elementHandle(),
+  );
+  await page.waitForTimeout(100);
+  await expect(dataRows(table)).toHaveCount(0);
+  await page.locator("#collapsible").evaluate((block) => block.remove());
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const s = document.querySelector(".content__body")!.getBoundingClientRect();
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        if (rows.length === 0) return false;
+        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+        return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
+      }),
+    )
+    .toBe(true);
+});
+
+test("a resize while no rows render does not pin widths from the header", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.locator('table[aria-label="Reviews without overscan"]');
+  await expect(table).toHaveAttribute("aria-rowcount", "301");
+  const scroller = page.locator(".content__body");
+  const toTable = async () =>
+    scroller.evaluate(
+      (s, el) => {
+        s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top;
+      },
+      await table.elementHandle(),
+    );
+  await toTable();
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Scroll far above the table so its rows unmount, then resize.
+  await scroller.evaluate((s) => (s.scrollTop = 0));
+  await expect(dataRows(table)).toHaveCount(0);
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await page.waitForTimeout(200);
+  await toTable();
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Data rows give the ID column only its numbers' width; headers alone
+  // would split the width between the two short labels.
+  const id = await table
+    .locator("thead th")
+    .first()
+    .evaluate((th) => th.getBoundingClientRect().width);
+  expect(id).toBeLessThan(150);
 });
