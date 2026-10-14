@@ -162,3 +162,29 @@ test("a table taller than its bounded wrapper scrolls inside it", async ({ page 
   await gotoPage(page, "virtual-table");
   await expect(bounded(page).locator("xpath=..")).toHaveClass(/kit-table-wrapper--contained/);
 });
+
+test("an unbroken value outside the first rows wraps inside its pinned column", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Row heights vary, so step toward row 6000 until it renders.
+  for (let step = 0; step < 8; step += 1) {
+    const first = Number(await dataRows(table).first().getAttribute("aria-rowindex")) - 2;
+    const last = Number(await dataRows(table).last().getAttribute("aria-rowindex")) - 2;
+    if (first <= 6000 && 6000 < last) break;
+    await table.evaluate((el, delta) => {
+      const wrapper = el.parentElement!;
+      wrapper.scrollTop += (delta * wrapper.scrollHeight) / 10000;
+    }, 6000 - first);
+    await page.waitForTimeout(50);
+  }
+  const cell = table.locator("td.branch", { hasText: "fix/anunbrokenname" });
+  await expect(cell).toBeVisible();
+  const box = await cell.evaluate((td) => ({
+    overflow: td.scrollWidth - td.clientWidth,
+    width: td.getBoundingClientRect().width,
+  }));
+  expect(box.overflow).toBeLessThanOrEqual(0);
+});

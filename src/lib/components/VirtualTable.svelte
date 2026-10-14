@@ -46,6 +46,7 @@
   }: Props = $props();
 
   const SPACER = "kit-virtual-table__spacer";
+  const PINNED = "kit-virtual-table--pinned";
   const SPACER_ROW = "border: 0; background: none;";
   const SPACER_CELL = "padding: 0; border: 0;";
 
@@ -130,10 +131,12 @@
     // pin yet; the resize when it appears measures it.
     if (!table || !cells || !table.parentElement?.clientWidth) return;
     table.style.tableLayout = "";
+    table.classList.remove(PINNED);
     for (const cell of cells) cell.style.width = "";
     const widths = Array.from(cells, (cell) => cell.getBoundingClientRect().width);
     widths.forEach((width, i) => (cells[i]!.style.width = `${width}px`));
     table.style.tableLayout = "fixed";
+    table.classList.add(PINNED);
     frozenWidth = table.parentElement?.clientWidth ?? 0;
     columns = Math.max(1, cells.length);
   }
@@ -236,3 +239,12 @@
     <td colspan={columns} style={SPACER_CELL} style:height="{bottomPad}px"></td>
   </tr>
 </Table>
+
+<style>
+  /* A pinned column no longer widens for a long value that scrolls in
+   * later, so its text breaks anywhere rather than spilling into the next
+   * cell. */
+  :global(.kit-virtual-table--pinned td) {
+    overflow-wrap: anywhere;
+  }
+</style>

@@ -86,9 +86,10 @@ Under automatic layout, column widths depend on the rows rendered, so they
 would shift as different rows scroll in. VirtualTable lets the first
 rendered rows lay the table out, then pins each header cell's width and
 switches to fixed layout. It lays the table out again when the table's
-width or its number of columns changes. Content wider than its pinned
-column wraps; content that cannot wrap (buttons, chips) should be no wider
-than the column it had in the first rows.
+width or its number of columns changes. Text wider than its pinned column
+wraps, breaking inside a long word when it has to; content that cannot wrap
+(buttons, chips) should be no wider than the column it had in the first
+rows.
 
 ## Limits
 

@@ -15,11 +15,14 @@
     id: i,
     verdict: i % 3 === 0 ? "fail" : "pass",
     project: projects[i % projects.length]!,
-    // Every seventh branch is long enough to wrap, so rows vary in height.
+    // Every seventh branch is long enough to wrap, so rows vary in height;
+    // row 6000's has no break opportunity at all.
     branch:
-      i % 7 === 0
-        ? `feature/a-much-longer-branch-name-that-wraps-onto-a-second-line-${i}`
-        : `fix/issue-${i % 400}`,
+      i === 6000
+        ? `fix/${"an-unbroken-name".replaceAll("-", "").repeat(12)}`
+        : i % 7 === 0
+          ? `feature/a-much-longer-branch-name-that-wraps-onto-a-second-line-${i}`
+          : `fix/issue-${i % 400}`,
     tokens: (i * 7919) % 50000,
   }));
 
@@ -148,9 +151,5 @@
   .num {
     text-align: right;
     font-variant-numeric: tabular-nums;
-  }
-
-  .branch {
-    overflow-wrap: anywhere;
   }
 </style>
