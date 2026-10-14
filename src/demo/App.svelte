@@ -14,6 +14,7 @@
     Toggle,
   } from "../lib/index.js";
   import AdaptiveActionGridDemo from "./pages/AdaptiveActionGridDemo.svelte";
+  import AppSidebarDemo from "./pages/AppSidebarDemo.svelte";
   import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
@@ -42,6 +43,7 @@
   import MentionTextareaDemo from "./pages/MentionTextareaDemo.svelte";
   import MermaidDemo from "./pages/MermaidDemo.svelte";
   import MobileDemo from "./pages/MobileDemo.svelte";
+  import AppSidebarFrame from "./AppSidebarFrame.svelte";
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
   import NoticeDemo from "./pages/NoticeDemo.svelte";
@@ -82,6 +84,8 @@
   // ?mobile-frame renders the sample screen for the Mobile-preview iframes
   // instead of the gallery shell.
   const isMobileFrame = new URLSearchParams(location.search).has("mobile-frame");
+  // ?app-sidebar-frame renders the sample app for the AppSidebar iframes.
+  const isAppSidebarFrame = new URLSearchParams(location.search).has("app-sidebar-frame");
 
   // Gallery meta-pages stay pinned at the top; component pages below are
   // sorted alphabetically by label regardless of declaration order.
@@ -97,6 +101,7 @@
       label: "AdaptiveActionGrid",
       component: AdaptiveActionGridDemo,
     },
+    { id: "app-sidebar", label: "AppSidebar", component: AppSidebarDemo },
     { id: "bottom-dock", label: "BottomDock", component: BottomDockDemo },
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
@@ -182,6 +187,8 @@
 
 {#if isMobileFrame}
   <MobileFrame />
+{:else if isAppSidebarFrame}
+  <AppSidebarFrame />
 {:else}
   {@render gallery()}
 {/if}

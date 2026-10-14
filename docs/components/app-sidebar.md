@@ -1,0 +1,138 @@
+# AppSidebar
+
+A responsive application sidebar. `CollapsibleSidebar` is a layout for any sidebar content, and its parent owns the collapse state and the persisted width. `AppSidebar` instead renders its own navigation from `groups` and collapses itself to a rail or a drawer as the window narrows. One component covers three width bands:
+
+| Window width       | Layout                                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 900px and narrower | A top bar with a menu button. The button opens the sidebar in a native modal `<dialog>` drawer.                                                                                 |
+| 901–1439px         | A 3.5rem icon rail. Hovering or focusing an icon opens a flyout with the section's title and views. A pin button expands the rail to the full sidebar and remembers the choice. |
+| 1440px and wider   | The full 15rem sidebar. The current section shows its views inline.                                                                                                             |
+
+```svelte
+<script lang="ts">
+  import FileTextIcon from "@lucide/svelte/icons/file-text";
+  import HouseIcon from "@lucide/svelte/icons/house";
+  import { AppSidebar, ThemeToggle, type SidebarGroup } from "@kenn-io/kit-ui";
+
+  const groups: SidebarGroup[] = [
+    {
+      label: null,
+      sections: [{ id: "home", label: "Home", href: "/", icon: HouseIcon, viewRuns: [] }],
+    },
+    {
+      label: "Workspace",
+      sections: [
+        {
+          id: "reports",
+          label: "Reports",
+          href: "/reports",
+          icon: FileTextIcon,
+          viewRuns: [
+            {
+              heading: null,
+              views: [
+                { id: "overview", label: "Overview", href: "/reports" },
+                { id: "history", label: "History", href: "/reports/history" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+</script>
+
+<div class="app">
+  <AppSidebar
+    {groups}
+    location={{ section: "reports", view: "overview" }}
+    page="/reports"
+    storageKey="acme-sidebar"
+  >
+    {#snippet brand({ rail })}<a href="/">{rail ? "A" : "Acme"}</a>{/snippet}
+    {#snippet narrowBar()}<span>Reports</span>{/snippet}
+    {#snippet footer({ rail })}<ThemeToggle size={rail ? "md" : "sm"} />{/snippet}
+  </AppSidebar>
+  <main>…</main>
+</div>
+
+<style>
+  .app {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .app > main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 900px) {
+    .app {
+      flex-direction: column;
+    }
+  }
+</style>
+```
+
+Sections and views are plain links. The component does not route: update `location` and `page` when your router navigates.
+
+## Props
+
+| Prop            | Type                                            | Default              | Notes                                                                                                                                                                                                                               |
+| --------------- | ----------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `groups`        | `SidebarGroup[]`                                | required             | Sections in order, grouped under optional labels                                                                                                                                                                                    |
+| `location`      | `SidebarLocation`                               | required             | The current section and view ids; either can be `null`                                                                                                                                                                              |
+| `page`          | `string`                                        | required             | The page address without its fragment, such as `pathname + search`. A change closes any open flyout                                                                                                                                 |
+| `storageKey`    | `string`                                        | required             | localStorage key that remembers the pinned (expanded) sidebar at rail widths                                                                                                                                                        |
+| `brand`         | `Snippet<[{ rail: boolean }]>`                  | required             | Brand area at the top of the panel; `rail` is true in the icon-only rail                                                                                                                                                            |
+| `narrowBar`     | `Snippet`                                       | required             | Everything after the menu button in the narrow top bar                                                                                                                                                                              |
+| `footer`        | `Snippet<[{ rail: boolean; drawer: boolean }]>` | —                    | Optional. Without it, no footer region renders at full width or in the drawer; at rail widths the region holds only the pin button. `drawer` is true inside the narrow drawer. The component adds its own pin button at rail widths |
+| `label`         | `string`                                        | `"Main navigation"`  | Accessible name of the navigation landmark                                                                                                                                                                                          |
+| `menuLabel`     | `string`                                        | `"Open navigation"`  | Accessible name of the narrow bar's menu button                                                                                                                                                                                     |
+| `drawerLabel`   | `string`                                        | `"Navigation"`       | Accessible name of the narrow drawer dialog                                                                                                                                                                                         |
+| `expandLabel`   | `string`                                        | `"Expand sidebar"`   | Accessible name of the pin button while the sidebar is collapsed                                                                                                                                                                    |
+| `collapseLabel` | `string`                                        | `"Collapse sidebar"` | Accessible name of the pin button while the sidebar is pinned open                                                                                                                                                                  |
+
+## Types
+
+- `SidebarGroup`: `{ label: string | null; sections: SidebarSection[] }`. A `null` label renders no group heading. The rail hides group headings.
+- `SidebarSection`: `{ id; label; href; icon: Component; viewRuns: SidebarViewRun[] }`. The icon renders at size 16, so any `@lucide/svelte` icon works. `viewRuns` is empty when the section has no views.
+- `SidebarViewRun`: `{ heading: string | null; views: SidebarView[] }`. A run of views under an optional heading.
+- `SidebarView`: `{ id; label; href }`.
+- `SidebarLocation`: `{ section: string | null; view: string | null }`.
+
+## Behavior
+
+- Landmark: the whole panel (brand, sections and footer) is one navigation landmark named by `label`. At 900px and narrower, the landmark sits inside the drawer dialog, so the page has no navigation landmark, brand or footer until the drawer opens. The top bar is a `<header>`, so it is the page's banner unless the host places it inside a sectioning element.
+- Current marks: a section link gets `aria-current="page"` when the section is current and none of its views is, and `aria-current="true"` when one of its views is current. The current view gets `aria-current="page"`. The full sidebar and the drawer list views inline for the current section only. In forced-colors mode, current rows take the system's selection colors.
+- Flyouts (rail only):
+  - Pointer hover or focus on a section opens its flyout beside the icon, with the section's title and views. The pointer leaving closes it, unless keyboard focus is on the section or inside its flyout. The close waits 250ms, so the pointer can cross other icons on its way to the flyout; an icon it still rests on when the wait ends opens its own flyout. Moving focus out of the section and its flyout closes it. A flyout with keyboard focus on its section or inside it also stays open while the pointer crosses other icons.
+  - Escape closes an open flyout, however it was opened. When focus is on the section or inside its flyout, the flyout claims the key and focus returns to the section icon. A flyout opened by hover closes without claiming the key, so another layer, such as a panel or popover, closes on the same press. An Escape that another layer already claimed leaves the flyout open.
+  - The flyout stays inside the window, and a flyout taller than the window scrolls. A page scroll keeps the flyout beside its icon.
+  - When the rail scrolls, an open flyout closes, unless keyboard focus is on the section or inside its flyout. Then it stays open and moves with its icon.
+  - A change to `page` closes the flyout. A change that only touches the fragment (`#details`) leaves `page` as it was, so the flyout stays.
+  - A section without views shows a title-only flyout that assistive technology does not see; the section link carries the name.
+  - When a flyout link navigates, the flyout closes. Focus then falls to the page unless the host's router moves it.
+- Pin (rail widths only): the pin button switches between the rail and the full sidebar. It stores `"expanded"` under `storageKey` when pinned open and `"collapsed"` when collapsed; any other stored value also reads as collapsed. With nothing stored, a touch screen (`MEDIA.touch`: no hover, or a coarse pointer; see [Breakpoints](../theming.md#breakpoints)) starts pinned open, so every view is reachable without hover, and other devices start as the rail. A stored choice wins. When storage is blocked, the choice lasts until the page reloads.
+- Drawer (900px and narrower): Escape, a click that starts and ends on the backdrop, or a click on a link inside closes it, and focus returns to the menu button. A drag that starts in the drawer and ends on the backdrop, or the reverse, such as a text selection, leaves it open. A click on a link with Ctrl, Meta, Shift or Alt held leaves it open. Focus stays inside while it is open. The menu button carries `aria-expanded` and `aria-haspopup="dialog"`. The `footer` snippet renders with `drawer: true` only while the drawer is open, which is how a host can tell that the drawer is open. To close it from host code, call `close()` on the drawer's `dialog` element, for example `event.currentTarget.closest("dialog")?.close()` in a handler inside `footer`.
+- Touch: on touch screens, section and view rows are at least 44px tall, and the menu button and the pin button are 44px square.
+
+## Layout
+
+The full sidebar and the rail are `position: sticky` and `100dvh` tall, so give their parent a flex row and let the main column take the remaining width (`min-width: 0`). At 900px and narrower the component renders a sticky top bar instead, so stack the bar above the main column (`flex-direction: column`), as in the example.
+
+## Stacking
+
+The sidebar and the narrow bar sit just below kit-ui's overlay layer (`--z-overlay`). `Modal`, `DetailDrawer`, `CommandPalette` and `FlashBanner` cover them, whatever their DOM order. See Stacking in the [theming guide](../theming.md#identity-tokens) for the z tokens.
+
+## Theming
+
+| Property                     | Default                     | Use                              |
+| ---------------------------- | --------------------------- | -------------------------------- |
+| `--kit-sidebar-accent`       | `var(--accent-blue)`        | The current view's indicator     |
+| `--kit-sidebar-current-icon` | `var(--kit-sidebar-accent)` | The current section's icon color |
+
+Set them on an ancestor of the sidebar, such as the app wrapper or `:root`.
+
+The full sidebar and the rail read `--shadow-raised`, so they stand raised under a theme with depth tokens (see [Theming](../theming.md#identity-tokens)). The narrow bar and the drawer stay flat.
