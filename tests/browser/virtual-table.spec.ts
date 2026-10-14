@@ -478,3 +478,88 @@ test("rows follow a collapse above the table larger than the screen", async ({ p
     )
     .toBe(true);
 });
+
+test("a visible row growing deep in the table does not move the rows above it", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Jump deep so thousands of rows above are unmeasured, with anchoring off.
+  await table.evaluate((el) => {
+    const wrapper = el.parentElement!;
+    wrapper.style.overflowAnchor = "none";
+    wrapper.scrollTop = wrapper.scrollHeight / 2;
+  });
+  await page.waitForTimeout(200);
+  const topIndex = () =>
+    table.evaluate((el) => {
+      const top = el.parentElement!.getBoundingClientRect().top + el.tHead!.offsetHeight;
+      const row = [...el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)")].find(
+        (r) => r.getBoundingClientRect().bottom > top,
+      )!;
+      return Number(row.getAttribute("aria-rowindex"));
+    });
+  const before = await topIndex();
+  // Grow a row lower in the view.
+  await table.evaluate((el) => {
+    const rows = el.querySelectorAll<HTMLElement>("tbody > tr:not(.kit-virtual-table__spacer)");
+    rows[Math.floor(rows.length / 2)]!.style.height = "400px";
+  });
+  await page.waitForTimeout(300);
+  expect(Math.abs((await topIndex()) - before)).toBeLessThanOrEqual(1);
+});
+
+// A small move keeps the edge row partly visible throughout, so only the
+// spacer that comes into view can reveal it. `shown` is how much of the
+// table starts above the bottom of the view.
+for (const [shape, style] of [
+  [
+    "clipped sideways",
+    { table: "min-width: 2000px", flow: "width: 300px; overflow-x: clip", shown: 200 },
+  ],
+  ["taller than the view", { table: "", flow: "", cell: "height: 1200px", shown: 1150 }],
+] as const) {
+  test(`with no overscan, rows ${shape} follow content collapsing above`, async ({ page }) => {
+    await gotoPage(page, "virtual-table");
+    const table = page.locator('table[aria-label="Reviews without overscan"]');
+    await expect(table).toHaveAttribute("aria-rowcount", "301");
+    await table.evaluate((el, s) => {
+      el.setAttribute("style", `${el.getAttribute("style") ?? ""};${s.table}`);
+      const flow = el.closest(".flow") as HTMLElement;
+      flow.setAttribute("style", s.flow);
+      if ("cell" in s) {
+        const sheet = document.createElement("style");
+        sheet.textContent = `table[aria-label="Reviews without overscan"] td { ${s.cell} }`;
+        document.head.append(sheet);
+      }
+    }, style);
+    const scroller = page.locator(".content__body");
+    await scroller.evaluate(
+      (s, [el, shown]) => {
+        (s as HTMLElement).style.overflowAnchor = "none";
+        const block = document.createElement("div");
+        block.id = "collapsible";
+        block.style.height = "100px";
+        s.prepend(block);
+        s.scrollTop +=
+          (el as Element).getBoundingClientRect().top - (s.getBoundingClientRect().bottom - shown);
+      },
+      [await table.elementHandle(), style.shown] as const,
+    );
+    await expect(dataRows(table).first()).toBeAttached();
+    await page.waitForTimeout(200);
+    await page.locator("#collapsible").evaluate((block) => block.remove());
+    await expect
+      .poll(() =>
+        table.evaluate((el) => {
+          const s = document.querySelector(".content__body")!.getBoundingClientRect();
+          const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+          if (rows.length === 0) return false;
+          const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+          return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
+        }),
+      )
+      .toBe(true);
+  });
+}

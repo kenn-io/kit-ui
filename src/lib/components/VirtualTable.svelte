@@ -16,7 +16,7 @@
     /** Stable identity of a row, for keyed rendering. Defaults to the index. */
     rowKey?: (item: T, index: number) => unknown;
     /** Height guess in px for rows not yet rendered; replaced by the
-     * average of measured rows once any have rendered. */
+     * average of the first rows that render, which then stays fixed. */
     estimateRowHeight?: number;
     /** Rows rendered beyond each edge of the visible area. */
     overscan?: number;
@@ -61,15 +61,15 @@
   const measured = new Map<number, number>();
   let measureVersion = $state(0);
   let measuredFor: T[] | undefined;
-  // Running average over every row measured so far, kept across item
-  // changes: rows of one table are usually alike, so it beats a fixed guess.
-  let measuredTotal = 0;
-  let measuredCount = 0;
+  // Height for rows not yet measured: the average of the first rows that
+  // render, then fixed, kept across item changes since rows of one table are
+  // usually alike. A running average would shift every unmeasured row above
+  // the view whenever a visible row changed height, jumping the content in
+  // browsers without scroll anchoring.
+  let lockedEstimate: number | undefined;
 
   const heightOf = (index: number): number => {
-    const h =
-      measured.get(index) ??
-      (measuredCount > 0 ? measuredTotal / measuredCount : estimateRowHeight);
+    const h = measured.get(index) ?? lockedEstimate ?? estimateRowHeight;
     return h > 0 ? h : 1;
   };
 
@@ -177,26 +177,34 @@
     watchRows(rows);
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
+    let total = 0;
+    let count = 0;
     rows.forEach((tr, i) => {
       const index = slice.start + i;
       tr.setAttribute("aria-rowindex", String(index + 2));
       const next = tops[i + 1];
       const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
-      const previous = measured.get(index);
-      if (h > 0 && previous !== h) {
+      if (h > 0) {
+        total += h;
+        count += 1;
+      }
+      if (h > 0 && measured.get(index) !== h) {
         measured.set(index, h);
-        measuredTotal += h - (previous ?? 0);
-        if (previous === undefined) measuredCount += 1;
         changed = true;
       }
     });
+    if (lockedEstimate === undefined && count > 0) {
+      lockedEstimate = total / count;
+      changed = true;
+    }
     if (changed) measureVersion += 1;
   }
 
   // The rendered rows cover the visible area after every update. When the
   // table moves without a scroll or a resize (content collapsing inside a
-  // fixed-height scroller), the rows on screen leave view, or an edge row
-  // fully enters it, or the body enters view, and the window follows.
+  // fixed-height scroller), the rows on screen leave view, an edge row
+  // fully enters it, a spacer shows, or the body enters view, and the
+  // window follows.
   // Watching every rendered row, not only the edges, catches a move large
   // enough to carry the whole window past the screen.
   let rowObserver: IntersectionObserver | undefined;
@@ -259,10 +267,20 @@
     observeAncestors();
     // Environments without layout (jsdom) have no IntersectionObserver.
     if (typeof IntersectionObserver !== "undefined") {
-      rowObserver = new IntersectionObserver(() => updateWindow(), { threshold: [0, 1] });
+      // The tiny threshold fires as soon as a pixel of a spacer, which is
+      // blank space standing in for unrendered rows, comes into view. Rows
+      // clipped sideways or taller than the view never reach a ratio of 1,
+      // so with no overscan only the spacers reveal their moves.
+      rowObserver = new IntersectionObserver(() => updateWindow(), {
+        threshold: [0, 0.000001, 1],
+      });
       // With no rows rendered (a window scrolled out of view and no
       // overscan), the body entering view covers it.
       rowObserver.observe(body);
+      // The top spacer is this row; the bottom one is the body's last row.
+      rowObserver.observe(spacer);
+      const bottomSpacer = body.rows[body.rows.length - 1];
+      if (bottomSpacer?.classList.contains(SPACER)) rowObserver.observe(bottomSpacer);
     }
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.

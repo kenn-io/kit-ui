@@ -12,7 +12,7 @@ declare function $$render<T>(): {
         /** Stable identity of a row, for keyed rendering. Defaults to the index. */
         rowKey?: (item: T, index: number) => unknown;
         /** Height guess in px for rows not yet rendered; replaced by the
-         * average of measured rows once any have rendered. */
+         * average of the first rows that render, which then stays fixed. */
         estimateRowHeight?: number;
         /** Rows rendered beyond each edge of the visible area. */
         overscan?: number;

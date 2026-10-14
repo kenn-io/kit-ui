@@ -38,20 +38,20 @@ whose rows are options, not cells.
 
 ## Props
 
-| Prop                | Type                                  | Default  | Notes                                                                                         |
-| ------------------- | ------------------------------------- | -------- | --------------------------------------------------------------------------------------------- |
-| `items`             | `T[]`                                 | required | Every row's data, in display order                                                            |
-| `header`            | `Snippet`                             | required | `<TableHeaderCell>` elements, as in `Table`                                                   |
-| `row`               | `Snippet<[T, number]>`                | required | `(item, index)`; renders exactly one `<tr>`                                                   |
-| `rowKey`            | `(item: T, index: number) => unknown` | index    | Stable row identity for keyed rendering                                                       |
-| `empty`             | `Snippet`                             | —        | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead     |
-| `estimateRowHeight` | `number`                              | `36`     | Height in px for rows before any has rendered; afterwards the average measured height is used |
-| `overscan`          | `number`                              | `8`      | Rows rendered beyond each edge of the visible area                                            |
-| `stickyHeader`      | `boolean`                             | `true`   | As on `Table`                                                                                 |
-| `zebra`             | `boolean`                             | `true`   | As on `Table`; stripes follow the row index, not the rendered position                        |
-| `ariaLabel`         | `string`                              | —        |                                                                                               |
-| `unsorted`          | `boolean`                             | `false`  | As on `Table`; kit-ui-check reads it on `VirtualTable` too                                    |
-| `class`             | `string`                              | `""`     | Applied to the scroll wrapper                                                                 |
+| Prop                | Type                                  | Default  | Notes                                                                                                                                                                |
+| ------------------- | ------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`             | `T[]`                                 | required | Every row's data, in display order                                                                                                                                   |
+| `header`            | `Snippet`                             | required | `<TableHeaderCell>` elements, as in `Table`                                                                                                                          |
+| `row`               | `Snippet<[T, number]>`                | required | `(item, index)`; renders exactly one `<tr>`                                                                                                                          |
+| `rowKey`            | `(item: T, index: number) => unknown` | index    | Stable row identity for keyed rendering                                                                                                                              |
+| `empty`             | `Snippet`                             | —        | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead                                                                            |
+| `estimateRowHeight` | `number`                              | `36`     | Height in px for rows before any has rendered; afterwards the average of the first rendered rows is used, fixed so later rows growing never move rows above the view |
+| `overscan`          | `number`                              | `8`      | Rows rendered beyond each edge of the visible area                                                                                                                   |
+| `stickyHeader`      | `boolean`                             | `true`   | As on `Table`                                                                                                                                                        |
+| `zebra`             | `boolean`                             | `true`   | As on `Table`; stripes follow the row index, not the rendered position                                                                                               |
+| `ariaLabel`         | `string`                              | —        |                                                                                                                                                                      |
+| `unsorted`          | `boolean`                             | `false`  | As on `Table`; kit-ui-check reads it on `VirtualTable` too                                                                                                           |
+| `class`             | `string`                              | `""`     | Applied to the scroll wrapper                                                                                                                                        |
 
 ## Scrolling
 
