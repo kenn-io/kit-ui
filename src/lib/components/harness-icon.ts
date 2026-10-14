@@ -57,7 +57,8 @@ export type HarnessIconId =
   | "crush"
   | "evener"
   | "opencodereview"
-  | "tau";
+  | "tau"
+  | "meta";
 
 export interface HarnessIconInfo {
   id: HarnessIconId;
@@ -123,6 +124,7 @@ export const HARNESS_ICONS: readonly HarnessIconInfo[] = [
   { id: "evener", label: "Evener", agents: ["Evener"] },
   { id: "opencodereview", label: "Open Code Review", agents: ["Open Code Review"] },
   { id: "tau", label: "Tau", agents: ["Tau"] },
+  { id: "meta", label: "Meta", agents: ["Muse Code"] },
 ];
 
 const BY_ID: ReadonlyMap<HarnessIconId, HarnessIconInfo> = new Map(

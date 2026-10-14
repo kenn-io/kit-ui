@@ -40,8 +40,8 @@ muted row dims its icons along with its text. Every glyph paints in
 AgentsView docs draw with it, in the order the docs present them.
 `isHarnessIconId(value)` narrows an arbitrary string to `HarnessIconId`, and
 `harnessIconInfo(id)` returns the entry. Ids are brand glyphs, not agent
-products: Codex draws `openai`, Cortex Code draws `snowflake`, and Positron
-draws `posit`. Map product names on the consumer side.
+products: Codex draws `openai`, Cortex Code draws `snowflake`, Positron draws
+`posit`, and Muse Code draws `meta`. Map product names on the consumer side.
 
 | Id               | Brand            | Agents                                 |
 | ---------------- | ---------------- | -------------------------------------- |
@@ -99,6 +99,7 @@ draws `posit`. Map product names on the consumer side.
 | `evener`         | Evener           | Evener                                 |
 | `opencodereview` | Open Code Review | Open Code Review                       |
 | `tau`            | Tau              | Tau                                    |
+| `meta`           | Meta             | Muse Code                              |
 
 ## Provenance
 

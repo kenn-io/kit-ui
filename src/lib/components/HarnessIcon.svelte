@@ -53,6 +53,7 @@
   import evener from "../assets/harness-icons/evener.svg?raw";
   import opencodereview from "../assets/harness-icons/opencodereview.svg?raw";
   import tau from "../assets/harness-icons/tau.svg?raw";
+  import meta from "../assets/harness-icons/meta.svg?raw";
   import { harnessIconInfo, type HarnessIconId } from "./harness-icon.js";
 
   interface Props {
@@ -131,6 +132,7 @@
     evener,
     opencodereview,
     tau,
+    meta,
   };
 
   const info = $derived(harnessIconInfo(harness));
