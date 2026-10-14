@@ -1,0 +1,22 @@
+[package]
+name = "kit-ui-gpui"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+gpui = "=0.2.2"
+unicode-segmentation = "1.12"
+chrono = "0.4"
+pulldown-cmark = "0.13"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "kit-ui-gpui"
+path = "src/main.rs"
+
+[dev-dependencies]
+gpui = { version = "=0.2.2", features = ["test-support"] }

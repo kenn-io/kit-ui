@@ -11,3 +11,6 @@ dist/
 
 # generated artifacts
 /output/
+
+# Native GPUI experiment
+/native/target/
