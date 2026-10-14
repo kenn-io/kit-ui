@@ -71,9 +71,8 @@ offset.
 Visibility is measured against every ancestor that clips vertically and the
 window. It is measured again on any scroll, on a window resize, and when the
 table or any of its ancestors changes size. It also watches the table and
-its first and last rendered rows enter and leave view, so the rows follow
-the table when content above it collapses, even inside a fixed-height
-scroller.
+every rendered row enter and leave view, so the rows follow the table when
+content above it collapses, even inside a fixed-height scroller.
 
 ## Rows
 

@@ -174,7 +174,7 @@
     if (rows.length === 0) return;
     const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
     if (frozenWidth < 0 || headerCells !== columns) freezeColumns();
-    watchEdges(rows[0]!, rows[rows.length - 1]!);
+    watchRows(rows);
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
     rows.forEach((tr, i) => {
@@ -193,17 +193,20 @@
     if (changed) measureVersion += 1;
   }
 
-  // The first and last rendered rows cover the visible area after every
-  // update. When the table moves without a scroll or a resize (a sibling
-  // collapsing inside a fixed-height scroller), one of them fully enters or
-  // leaves view, or the body enters view, and the window follows.
-  let edgeObserver: IntersectionObserver | undefined;
-  let edges: Element[] = [];
-  function watchEdges(first: Element, last: Element): void {
-    if (!edgeObserver || (edges[0] === first && edges[1] === last)) return;
-    for (const el of edges) edgeObserver.unobserve(el);
-    edges = [first, last];
-    for (const el of edges) edgeObserver.observe(el);
+  // The rendered rows cover the visible area after every update. When the
+  // table moves without a scroll or a resize (content collapsing inside a
+  // fixed-height scroller), the rows on screen leave view, or an edge row
+  // fully enters it, or the body enters view, and the window follows.
+  // Watching every rendered row, not only the edges, catches a move large
+  // enough to carry the whole window past the screen.
+  let rowObserver: IntersectionObserver | undefined;
+  let watched = new Set<Element>();
+  function watchRows(rows: Element[]): void {
+    if (!rowObserver) return;
+    const next = new Set(rows);
+    for (const el of watched) if (!next.has(el)) rowObserver.unobserve(el);
+    for (const el of next) if (!watched.has(el)) rowObserver.observe(el);
+    watched = next;
   }
 
   $effect(() => {
@@ -256,10 +259,10 @@
     observeAncestors();
     // Environments without layout (jsdom) have no IntersectionObserver.
     if (typeof IntersectionObserver !== "undefined") {
-      edgeObserver = new IntersectionObserver(() => updateWindow(), { threshold: [0, 1] });
+      rowObserver = new IntersectionObserver(() => updateWindow(), { threshold: [0, 1] });
       // With no rows rendered (a window scrolled out of view and no
-      // overscan) there are no edge rows; the body entering view covers it.
-      edgeObserver.observe(body);
+      // overscan), the body entering view covers it.
+      rowObserver.observe(body);
     }
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
@@ -276,9 +279,9 @@
       window.removeEventListener("resize", resized);
       observer.disconnect();
       columnsChanged.disconnect();
-      edgeObserver?.disconnect();
-      edgeObserver = undefined;
-      edges = [];
+      rowObserver?.disconnect();
+      rowObserver = undefined;
+      watched = new Set();
       body = undefined;
     };
   }

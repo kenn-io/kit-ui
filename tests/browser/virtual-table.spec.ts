@@ -446,3 +446,35 @@ test("a resize while no rows render does not pin widths from the header", async 
     .evaluate((th) => th.getBoundingClientRect().width);
   expect(id).toBeLessThan(150);
 });
+
+test("rows follow a collapse above the table larger than the screen", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  const scroller = page.locator(".content__body");
+  await scroller.evaluate(
+    (s, el) => {
+      (s as HTMLElement).style.overflowAnchor = "none";
+      const block = document.createElement("div");
+      block.id = "collapsible";
+      block.style.height = "3000px";
+      s.prepend(block);
+      // View the middle of the table.
+      s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top + 20000;
+    },
+    await table.elementHandle(),
+  );
+  await page.waitForTimeout(100);
+  await page.locator("#collapsible").evaluate((block) => block.remove());
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const s = document.querySelector(".content__body")!.getBoundingClientRect();
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        const first = rows[0]!.getBoundingClientRect().top;
+        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+        return first <= s.top + 1 && last >= s.bottom - 1;
+      }),
+    )
+    .toBe(true);
+});
