@@ -7,8 +7,8 @@ test("every registered harness renders a glyph", async ({ page }) => {
   await gotoPage(page, "harness-icon");
   const gallery = page.locator(GALLERY);
 
-  await expect(gallery.locator(".kit-harness-icon")).toHaveCount(55);
-  await expect(gallery.locator(".kit-harness-icon > svg")).toHaveCount(55);
+  await expect(gallery.locator(".kit-harness-icon")).toHaveCount(60);
+  await expect(gallery.locator(".kit-harness-icon > svg")).toHaveCount(60);
 
   await expect(gallery.getByRole("img", { name: "Claude" })).toBeVisible();
   await expect(gallery.getByRole("img", { name: "OpenAI" })).toBeVisible();
