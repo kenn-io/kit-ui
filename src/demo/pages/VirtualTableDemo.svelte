@@ -85,7 +85,7 @@
 
 <DemoSection
   title="10,000 rows in a table"
-  description="VirtualTable renders only the rows on screen plus overscan, inside a real table: sortable headers, zebra stripes, and links in cells all behave as in Table. With the default scroll='self' it scrolls inside its own bounded wrapper. Rows may vary in height; column widths are pinned after the first layout so they do not shift while scrolling."
+  description="VirtualTable renders only the rows on screen plus overscan, inside a real table: sortable headers, zebra stripes, and links in cells all behave as in Table. With the default scroll='self' it scrolls inside its own bounded wrapper. Column widths are pinned from rows sampled across the whole list, so they fit values far down the list and do not shift while scrolling."
   code={`<VirtualTable items={sorter.sort(reviews)} rowKey={(r) => r.id} ariaLabel="Reviews">
   {#snippet header()}
     <TableHeaderCell label="ID" sort={sorter} column="id" />

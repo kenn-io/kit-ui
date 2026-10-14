@@ -54,6 +54,10 @@
   }: Props = $props();
 
   const SPACER = "kit-virtual-table__spacer";
+  const END = "kit-virtual-table__end";
+  const SAMPLE = "kit-virtual-table__sample";
+  // Rows sampled across the whole list for column widths (see `samples`).
+  const SAMPLE_ROWS = 50;
   const PINNED = "kit-virtual-table--pinned";
   const SPACER_ROW = "border: 0; background: none;";
   const SPACER_CELL = "padding: 0; border: 0;";
@@ -105,6 +109,21 @@
   // even index keeps every row on the parity it has in a full table.
   const parityPad = $derived(slice.start % 2 === 0);
 
+  // Rows spread evenly across the list, first and last included, rendered
+  // after the bottom spacer with `visibility: collapse`: Chrome gives them no
+  // height and hides them from view, focus, and assistive technology, but
+  // they still count toward the column widths. The pinned widths then fit
+  // values from the whole list, not only the first rows on screen.
+  const samples = $derived.by(() => {
+    const n = items.length;
+    const count = Math.min(SAMPLE_ROWS, n);
+    const picked = new Set<number>();
+    for (let k = 0; k < count; k += 1) {
+      picked.add(count === 1 ? 0 : Math.round((k * (n - 1)) / (count - 1)));
+    }
+    return [...picked];
+  });
+
   // The visible part of the body is where it overlaps the scroller's client
   // area, whether or not the scroller itself is on screen, so a table scrolled
   // into view by something else is already rendered (the window stands in
@@ -141,9 +160,9 @@
       cell.style.boxSizing = "";
     }
     columns = Math.max(1, cells.length);
-    // Only data rows may decide the widths. Without any rendered (an empty
-    // list, or a window scrolled out of view), stay unpinned until rows
-    // render and measureRows pins them.
+    // Only data rows, on screen or sampled, may decide the widths. Without
+    // any (an empty list), stay unpinned until rows render and measureRows
+    // pins them.
     const rendered = Array.from(body!.rows).some((tr) => !tr.classList.contains(SPACER));
     if (items.length === 0 || !rendered) {
       frozenWidth = -1;
@@ -184,11 +203,23 @@
     // An empty table shows only the `empty` row, which neither measures a
     // data row nor should decide the column widths.
     if (items.length === 0) return watchRows([]);
-    const rows = Array.from(body.rows).filter((tr) => !tr.classList.contains(SPACER));
+    // The rendered window lies between the top and end spacers. The sampled
+    // rows after the end spacer are for column widths only, and are marked so
+    // queries for the table's rows skip them.
+    const rows: HTMLTableRowElement[] = [];
+    let sampled = false;
+    for (const tr of body.rows) {
+      if (sampled) {
+        tr.classList.add(SAMPLE);
+        tr.setAttribute("aria-hidden", "true");
+      } else if (tr.classList.contains(END)) sampled = true;
+      else if (!tr.classList.contains(SPACER)) rows.push(tr);
+    }
     watchRows(rows);
-    if (rows.length === 0) return;
+    // The samples alone can pin the columns, before any row is on screen.
     const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
     if (frozenWidth < 0 || headerCells !== columns) freezeColumns();
+    if (rows.length === 0) return;
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
     rows.forEach((tr, i) => {
@@ -293,9 +324,12 @@
   {#if items.length === 0}
     {@render empty?.()}
   {/if}
-  <tr class={SPACER} aria-hidden="true" style={SPACER_ROW}>
+  <tr class={[SPACER, END]} aria-hidden="true" style={SPACER_ROW}>
     <td colspan={columns} style={SPACER_CELL} style:height="{bottomPad}px"></td>
   </tr>
+  {#each samples as index (rowKey(items[index]!, index))}
+    {@render row(items[index]!, index)}
+  {/each}
 </Table>
 
 <style>
@@ -304,5 +338,9 @@
    * cell. */
   :global(.kit-virtual-table--pinned td) {
     overflow-wrap: anywhere;
+  }
+
+  :global(.kit-table tbody > tr.kit-virtual-table__end ~ tr) {
+    visibility: collapse;
   }
 </style>

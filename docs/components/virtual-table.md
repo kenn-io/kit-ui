@@ -98,17 +98,24 @@ browser's scroll anchoring, which current Chrome provides.
 ## Column widths
 
 Under automatic layout, column widths depend on the rows rendered, so they
-would shift as different rows scroll in. VirtualTable lets the first
-rendered rows lay the table out, then pins each header cell's width and
-switches to fixed layout. Pinned header cells use border-box sizing, so the
-measured width is the final width whatever the app's `box-sizing`. It lays
-the table out again when the table's width changes or a column is added or
-removed. Only rendered data rows decide the widths: while none render (an
-empty list, or a window scrolled out of view), the columns stay unpinned
-until rows render again. Text wider than its pinned column
-wraps, breaking inside a long word when it has to; content that cannot wrap
-(buttons, chips) should be no wider than the column it had in the first
-rows.
+would shift as different rows scroll in, and widths taken from the first
+screen would not fit longer values further down. VirtualTable also renders
+up to 50 rows sampled evenly across the whole list, first and last
+included, after the visible rows with `visibility: collapse`: Chrome gives
+them no height and hides them from view, focus, and assistive technology,
+but they still count toward the column widths. The table is laid out with
+the visible and sampled rows, then each header cell's width is pinned and
+the table switches to fixed layout.
+
+- Pinned header cells use border-box sizing, so the measured width is the
+  final width whatever the app's `box-sizing`.
+- The table is laid out again when its width changes or a column is added
+  or removed. An empty list stays unpinned until rows render.
+- Text wider than its pinned column wraps, breaking inside a long word when
+  it has to. Content that cannot wrap (buttons, chips) should fit the widest
+  sampled value.
+- Sampled rows carry the `kit-virtual-table__sample` class and
+  `aria-hidden="true"`; exclude them when querying the table's rows.
 
 ## Limits
 

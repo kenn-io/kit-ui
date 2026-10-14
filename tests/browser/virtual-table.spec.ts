@@ -7,7 +7,8 @@ import { gotoPage } from "./helpers.js";
 
 const bounded = (page: Page) => page.locator('table[aria-label="Reviews"]');
 const inFlow = (page: Page) => page.locator('table[aria-label="Reviews on the page"]');
-const dataRows = (table: Locator) => table.locator("tbody > tr:not(.kit-virtual-table__spacer)");
+const dataRows = (table: Locator) =>
+  table.locator("tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)");
 
 async function scrollWrapper(table: Locator, to: "middle" | "bottom"): Promise<void> {
   await table.evaluate((el, where) => {
@@ -269,7 +270,9 @@ test("rows fill space revealed when a scroller above the table grows", async ({ 
     .poll(() =>
       table.evaluate((el) => {
         const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        const rows = el.querySelectorAll(
+          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+        );
         const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
         return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
       }),
@@ -331,7 +334,9 @@ test("refresh() fills the view after content above the table collapses", async (
     .poll(() =>
       table.evaluate((el) => {
         const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        const rows = el.querySelectorAll(
+          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+        );
         const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
         return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
       }),
@@ -405,15 +410,19 @@ test("a visible row growing deep in the table does not move the rows above it", 
   const topIndex = () =>
     table.evaluate((el) => {
       const top = el.parentElement!.getBoundingClientRect().top + el.tHead!.offsetHeight;
-      const row = [...el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)")].find(
-        (r) => r.getBoundingClientRect().bottom > top,
-      )!;
+      const row = [
+        ...el.querySelectorAll(
+          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+        ),
+      ].find((r) => r.getBoundingClientRect().bottom > top)!;
       return Number(row.getAttribute("aria-rowindex"));
     });
   const before = await topIndex();
   // Grow a row lower in the view.
   await table.evaluate((el) => {
-    const rows = el.querySelectorAll<HTMLElement>("tbody > tr:not(.kit-virtual-table__spacer)");
+    const rows = el.querySelectorAll<HTMLElement>(
+      "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+    );
     rows[Math.floor(rows.length / 2)]!.style.height = "400px";
   });
   await page.waitForTimeout(300);
@@ -445,7 +454,7 @@ test("two rows trading height are both measured again", async ({ page }) => {
     table.evaluate(
       (el, [a, b]) => {
         const [one, two] = el.querySelectorAll<HTMLElement>(
-          "tbody > tr:not(.kit-virtual-table__spacer)",
+          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
         );
         one!.style.height = a!;
         two!.style.height = b!;
@@ -486,7 +495,9 @@ test("rows cover the view while the wheel scrolls quickly", async ({ page }) => 
           requestAnimationFrame(() => {
             const wrapper = el.parentElement!.getBoundingClientRect();
             const head = el.tHead!.getBoundingClientRect().bottom;
-            const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+            const rows = el.querySelectorAll(
+              "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+            );
             const first = rows[0]!.getBoundingClientRect().top;
             const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
             resolve(Math.max(0, first - head, wrapper.bottom - last));
@@ -498,14 +509,20 @@ test("rows cover the view while the wheel scrolls quickly", async ({ page }) => 
   expect(worst).toBeLessThanOrEqual(1);
 });
 
-// A self-scrolling table mounted below a short window must render its whole
-// box once the page brings it into view, without scrolling the box itself.
+// A self-scrolling table whose rows were last computed while it was off
+// screen must render its whole box once the page brings it back, without
+// scrolling the box itself.
 test("a bounded table scrolled into view by the page fills its box", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 220 });
   await gotoPage(page, "virtual-table");
   const table = bounded(page);
-  await expect(table).toHaveAttribute("aria-rowcount", "10001");
+  await expect(dataRows(table).first()).toContainText("#0");
+  const scroller = page.locator(".content__body");
+  // Scroll the page far past the table, then resize the window so the
+  // table recomputes its rows while off screen.
+  await scroller.evaluate((s) => (s.scrollTop = s.scrollHeight));
   await expect(table.locator("xpath=..")).not.toBeInViewport();
+  await page.setViewportSize({ width: 1180, height: 760 });
+  await page.waitForTimeout(200);
   await table.locator("xpath=..").evaluate((wrapper) => {
     const s = document.querySelector(".content__body")!;
     s.scrollTop += wrapper.getBoundingClientRect().top - s.getBoundingClientRect().top;
@@ -514,11 +531,44 @@ test("a bounded table scrolled into view by the page fills its box", async ({ pa
     .poll(() =>
       table.evaluate((el) => {
         const wrapper = el.parentElement!;
+        const top = el.tHead!.getBoundingClientRect().bottom;
         const bottom =
           wrapper.getBoundingClientRect().top + wrapper.clientTop + wrapper.clientHeight;
-        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
-        return rows[rows.length - 1]!.getBoundingClientRect().bottom >= bottom - 1;
+        const rows = el.querySelectorAll(
+          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+        );
+        const first = rows[0]!.getBoundingClientRect().top;
+        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+        return first <= top + 1 && last >= bottom - 1;
       }),
     )
     .toBe(true);
+});
+
+// Rows sampled across the list set the pinned widths, so a value far down
+// the list fits its column even though the columns were pinned at the top.
+test("pinned columns fit values from the whole list, not only the first rows", async ({ page }) => {
+  // A narrow window leaves the columns no spare width to hide the problem.
+  await page.setViewportSize({ width: 700, height: 800 });
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // The total height grows as taller rows near the end are measured, so
+  // keep scrolling to the bottom until the last row renders.
+  const last = dataRows(table).last();
+  await expect
+    .poll(async () => {
+      await scrollWrapper(table, "bottom");
+      return last.textContent();
+    })
+    .toContain("#9999");
+  const lines = await last
+    .locator("td")
+    .first()
+    .evaluate((td) => {
+      const range = document.createRange();
+      range.selectNodeContents(td);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+  expect(lines).toBe(1);
 });
