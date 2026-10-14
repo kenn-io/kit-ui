@@ -99,23 +99,23 @@ browser's scroll anchoring, which current Chrome provides.
 
 Under automatic layout, column widths depend on the rows rendered, so they
 would shift as different rows scroll in, and widths taken from the first
-screen would not fit longer values further down. VirtualTable also renders
-up to 50 rows sampled evenly across the whole list, first and last
-included, after the visible rows with `visibility: collapse`: Chrome gives
-them no height and hides them from view, focus, and assistive technology,
-but they still count toward the column widths. The table is laid out with
-the visible and sampled rows, then each header cell's width is pinned and
-the table switches to fixed layout.
+screen would not fit longer values further down. To pin the columns,
+VirtualTable briefly renders up to 50 rows sampled evenly across the whole
+list, first and last included, after the visible rows with
+`visibility: collapse`: Chrome gives them no height and hides them, but they
+still count toward the column widths. It pins each header cell's width,
+switches to fixed layout, and unmounts the samples in the same update,
+before paint, so their form fields never submit and queries for the
+table's rows never see them.
 
+- The columns are pinned again when the items array changes (new data, a
+  filter, a sort), when the table's width changes, and when a column is
+  added or removed. An empty list stays unpinned until rows render.
 - Pinned header cells use border-box sizing, so the measured width is the
   final width whatever the app's `box-sizing`.
-- The table is laid out again when its width changes or a column is added
-  or removed. An empty list stays unpinned until rows render.
 - Text wider than its pinned column wraps, breaking inside a long word when
   it has to. Content that cannot wrap (buttons, chips) should fit the widest
   sampled value.
-- Sampled rows carry the `kit-virtual-table__sample` class and
-  `aria-hidden="true"`; exclude them when querying the table's rows.
 
 ## Limits
 

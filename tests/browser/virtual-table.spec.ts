@@ -7,8 +7,7 @@ import { gotoPage } from "./helpers.js";
 
 const bounded = (page: Page) => page.locator('table[aria-label="Reviews"]');
 const inFlow = (page: Page) => page.locator('table[aria-label="Reviews on the page"]');
-const dataRows = (table: Locator) =>
-  table.locator("tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)");
+const dataRows = (table: Locator) => table.locator("tbody > tr:not(.kit-virtual-table__spacer)");
 
 async function scrollWrapper(table: Locator, to: "middle" | "bottom"): Promise<void> {
   await table.evaluate((el, where) => {
@@ -270,9 +269,7 @@ test("rows fill space revealed when a scroller above the table grows", async ({ 
     .poll(() =>
       table.evaluate((el) => {
         const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll(
-          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
-        );
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
         const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
         return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
       }),
@@ -334,9 +331,7 @@ test("refresh() fills the view after content above the table collapses", async (
     .poll(() =>
       table.evaluate((el) => {
         const s = document.querySelector(".content__body")!.getBoundingClientRect();
-        const rows = el.querySelectorAll(
-          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
-        );
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
         const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
         return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
       }),
@@ -410,19 +405,15 @@ test("a visible row growing deep in the table does not move the rows above it", 
   const topIndex = () =>
     table.evaluate((el) => {
       const top = el.parentElement!.getBoundingClientRect().top + el.tHead!.offsetHeight;
-      const row = [
-        ...el.querySelectorAll(
-          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
-        ),
-      ].find((r) => r.getBoundingClientRect().bottom > top)!;
+      const row = [...el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)")].find(
+        (r) => r.getBoundingClientRect().bottom > top,
+      )!;
       return Number(row.getAttribute("aria-rowindex"));
     });
   const before = await topIndex();
   // Grow a row lower in the view.
   await table.evaluate((el) => {
-    const rows = el.querySelectorAll<HTMLElement>(
-      "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
-    );
+    const rows = el.querySelectorAll<HTMLElement>("tbody > tr:not(.kit-virtual-table__spacer)");
     rows[Math.floor(rows.length / 2)]!.style.height = "400px";
   });
   await page.waitForTimeout(300);
@@ -454,7 +445,7 @@ test("two rows trading height are both measured again", async ({ page }) => {
     table.evaluate(
       (el, [a, b]) => {
         const [one, two] = el.querySelectorAll<HTMLElement>(
-          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
+          "tbody > tr:not(.kit-virtual-table__spacer)",
         );
         one!.style.height = a!;
         two!.style.height = b!;
@@ -495,9 +486,7 @@ test("rows cover the view while the wheel scrolls quickly", async ({ page }) => 
           requestAnimationFrame(() => {
             const wrapper = el.parentElement!.getBoundingClientRect();
             const head = el.tHead!.getBoundingClientRect().bottom;
-            const rows = el.querySelectorAll(
-              "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
-            );
+            const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
             const first = rows[0]!.getBoundingClientRect().top;
             const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
             resolve(Math.max(0, first - head, wrapper.bottom - last));
@@ -534,9 +523,7 @@ test("a bounded table scrolled into view by the page fills its box", async ({ pa
         const top = el.tHead!.getBoundingClientRect().bottom;
         const bottom =
           wrapper.getBoundingClientRect().top + wrapper.clientTop + wrapper.clientHeight;
-        const rows = el.querySelectorAll(
-          "tbody > tr:not(.kit-virtual-table__spacer, .kit-virtual-table__sample)",
-        );
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
         const first = rows[0]!.getBoundingClientRect().top;
         const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
         return first <= top + 1 && last >= bottom - 1;
@@ -571,4 +558,47 @@ test("pinned columns fit values from the whole list, not only the first rows", a
       return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
     });
   expect(lines).toBe(1);
+});
+
+// In a bounded flex column that scrolls, a page-scrolled table must keep its
+// full height; a shrunk, clipping wrapper would hide the rows below.
+test("a page-scrolled table keeps its full height in a bounded flex column", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  await table.evaluate((el) => {
+    const flow = el.closest(".flow") as HTMLElement;
+    flow.style.display = "flex";
+    flow.style.flexDirection = "column";
+    flow.style.height = "400px";
+    flow.style.overflowY = "auto";
+  });
+  await expect
+    .poll(() => table.evaluate((el) => el.parentElement!.clientHeight - el.offsetHeight))
+    .toBeGreaterThanOrEqual(-1);
+});
+
+// Sampled rows exist only while the columns are pinned, so none remain to
+// submit form fields or show up in queries for the table's rows.
+test("no sampled rows remain once the columns are pinned", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await expect(table.locator("tbody > tr.kit-virtual-table__end ~ tr")).toHaveCount(0);
+  await expect(table).toHaveClass(/kit-virtual-table--pinned/);
+});
+
+test("new items with wider values pin the columns again", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const project = () =>
+    table
+      .locator("thead th")
+      .nth(2)
+      .evaluate((th) => th.getBoundingClientRect().width);
+  const before = await project();
+  await page.getByRole("checkbox", { name: "Use longer project names" }).check();
+  await expect(dataRows(table).first()).toContainText("with-a-longer-name");
+  await expect.poll(project).toBeGreaterThan(before + 50);
 });

@@ -120,8 +120,11 @@
     box-shadow: var(--shadow-panel, none);
   }
 
+  /* A page-scrolled wrapper keeps the table's full height: in a bounded
+   * flex column it would otherwise shrink and clip the rows below. */
   .kit-table-wrapper--page {
     overflow: clip;
+    min-height: auto;
   }
 
   .kit-table-wrapper--wide {

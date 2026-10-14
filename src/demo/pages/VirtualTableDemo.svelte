@@ -44,7 +44,14 @@
     },
     { key: "id" },
   );
-  const sorted = $derived(sorter.sort(reviews));
+  // Swapping in longer names replaces the items, so the columns pin again.
+  let longNames = $state(false);
+  const shown = $derived(
+    longNames
+      ? reviews.map((r) => ({ ...r, project: `${r.project}-with-a-longer-name` }))
+      : reviews,
+  );
+  const sorted = $derived(sorter.sort(shown));
 
   interface Note {
     id: number;
@@ -100,6 +107,7 @@
 </VirtualTable>`}
 >
   <Checkbox bind:checked={showBranch} label="Show the Branch column" />
+  <Checkbox bind:checked={longNames} label="Use longer project names" />
   <div class="host">
     <VirtualTable items={sorted} rowKey={(r) => r.id} ariaLabel="Reviews">
       {#snippet header()}

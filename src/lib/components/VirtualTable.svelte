@@ -55,7 +55,6 @@
 
   const SPACER = "kit-virtual-table__spacer";
   const END = "kit-virtual-table__end";
-  const SAMPLE = "kit-virtual-table__sample";
   // Rows sampled across the whole list for column widths (see `samples`).
   const SAMPLE_ROWS = 50;
   const PINNED = "kit-virtual-table--pinned";
@@ -110,10 +109,12 @@
   const parityPad = $derived(slice.start % 2 === 0);
 
   // Rows spread evenly across the list, first and last included, rendered
-  // after the bottom spacer with `visibility: collapse`: Chrome gives them no
-  // height and hides them from view, focus, and assistive technology, but
-  // they still count toward the column widths. The pinned widths then fit
-  // values from the whole list, not only the first rows on screen.
+  // after the bottom spacer with `visibility: collapse` while the columns are
+  // pinned: Chrome gives them no height and hides them, but they still count
+  // toward the column widths, so the pinned widths fit values from the whole
+  // list, not only the first rows on screen. They are unmounted in the same
+  // update, before paint, so their form fields never submit or validate and
+  // queries for the table's rows never see them.
   const samples = $derived.by(() => {
     const n = items.length;
     const count = Math.min(SAMPLE_ROWS, n);
@@ -122,6 +123,25 @@
       picked.add(count === 1 ? 0 : Math.round((k * (n - 1)) / (count - 1)));
     }
     return [...picked];
+  });
+
+  let sampling = $state(false);
+  // Pin the columns again: mount the samples, and the effect below measures
+  // and unmounts them once they have rendered.
+  function requestPin(): void {
+    if (items.length > 0) sampling = true;
+  }
+
+  $effect(() => {
+    if (!sampling) return;
+    untrack(freezeColumns);
+    sampling = false;
+  });
+
+  // A new items array (other data, a filter, a sort) may hold wider values.
+  $effect(() => {
+    void items;
+    untrack(requestPin);
   });
 
   // The visible part of the body is where it overlaps the scroller's client
@@ -161,8 +181,7 @@
     }
     columns = Math.max(1, cells.length);
     // Only data rows, on screen or sampled, may decide the widths. Without
-    // any (an empty list), stay unpinned until rows render and measureRows
-    // pins them.
+    // any (an empty list), stay unpinned until rows render.
     const rendered = Array.from(body!.rows).some((tr) => !tr.classList.contains(SPACER));
     if (items.length === 0 || !rendered) {
       frozenWidth = -1;
@@ -203,22 +222,17 @@
     // An empty table shows only the `empty` row, which neither measures a
     // data row nor should decide the column widths.
     if (items.length === 0) return watchRows([]);
-    // The rendered window lies between the top and end spacers. The sampled
-    // rows after the end spacer are for column widths only, and are marked so
-    // queries for the table's rows skip them.
+    // The rendered window lies between the top and end spacers; sampled rows
+    // after the end spacer only exist while the columns are pinned.
     const rows: HTMLTableRowElement[] = [];
-    let sampled = false;
     for (const tr of body.rows) {
-      if (sampled) {
-        tr.classList.add(SAMPLE);
-        tr.setAttribute("aria-hidden", "true");
-      } else if (tr.classList.contains(END)) sampled = true;
-      else if (!tr.classList.contains(SPACER)) rows.push(tr);
+      if (tr.classList.contains(END)) break;
+      if (!tr.classList.contains(SPACER)) rows.push(tr);
     }
     watchRows(rows);
     // The samples alone can pin the columns, before any row is on screen.
     const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
-    if (frozenWidth < 0 || headerCells !== columns) freezeColumns();
+    if (frozenWidth < 0 || headerCells !== columns) requestPin();
     if (rows.length === 0) return;
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
@@ -257,7 +271,7 @@
     const target: HTMLElement | Window = element === document.scrollingElement ? window : element;
     const resized = () => {
       const width = wrapper.clientWidth;
-      if (frozenWidth >= 0 && width !== frozenWidth) freezeColumns();
+      if (frozenWidth >= 0 && width !== frozenWidth) requestPin();
       refresh();
     };
     untrack(updateWindow);
@@ -287,7 +301,7 @@
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
     const columnsChanged = new MutationObserver(() => {
       columns = Math.max(1, headerRow?.cells.length ?? 1);
-      if (frozenWidth >= 0) freezeColumns();
+      if (frozenWidth >= 0) requestPin();
       measureRows();
     });
     if (headerRow) columnsChanged.observe(headerRow, { childList: true });
@@ -327,9 +341,11 @@
   <tr class={[SPACER, END]} aria-hidden="true" style={SPACER_ROW}>
     <td colspan={columns} style={SPACER_CELL} style:height="{bottomPad}px"></td>
   </tr>
-  {#each samples as index (rowKey(items[index]!, index))}
-    {@render row(items[index]!, index)}
-  {/each}
+  {#if sampling}
+    {#each samples as index (rowKey(items[index]!, index))}
+      {@render row(items[index]!, index)}
+    {/each}
+  {/if}
 </Table>
 
 <style>
