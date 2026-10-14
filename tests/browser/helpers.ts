@@ -104,3 +104,28 @@ export async function clipboardReader(
   });
   return () => page.evaluate(() => (window as unknown as { __copied: string }).__copied);
 }
+
+/** Select a pluggable theme by name, or the default pair with `null`. */
+export async function useTheme(page: Page, name: string | null): Promise<void> {
+  await page.evaluate((themeName) => {
+    if (themeName) document.documentElement.dataset.kitTheme = themeName;
+    else delete document.documentElement.dataset.kitTheme;
+  }, name);
+}
+
+/** How the browser computes `property: value` on a plain element under the
+ * page's current theme, for comparing a component's computed style with a
+ * token. */
+export async function resolvedStyle(page: Page, property: string, value: string): Promise<string> {
+  return page.evaluate(
+    ([name, css]) => {
+      const probe = document.createElement("div");
+      probe.style.setProperty(name, css);
+      document.body.append(probe);
+      const computed = getComputedStyle(probe).getPropertyValue(name);
+      probe.remove();
+      return computed;
+    },
+    [property, value] as const,
+  );
+}

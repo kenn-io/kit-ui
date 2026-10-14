@@ -123,6 +123,7 @@
     background: var(--bg-inset);
     border-radius: var(--kit-segmented-radius);
     padding: 2px;
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-segmented--block {
@@ -171,7 +172,7 @@
   .kit-segmented__btn.active {
     background: var(--bg-surface);
     color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-raised, var(--shadow-sm));
   }
 
   .kit-segmented__btn:hover:not(.active):not(:disabled) {
@@ -200,6 +201,7 @@
     gap: 0;
     padding: 0;
     background: transparent;
+    box-shadow: none;
   }
 
   .kit-segmented--borderless .kit-segmented__btn {

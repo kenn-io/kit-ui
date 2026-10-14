@@ -118,6 +118,7 @@
     background: var(--bg-inset);
     color: var(--text-secondary);
     border: var(--border-width) solid var(--border-default);
+    box-shadow: var(--shadow-raised, none);
     transition:
       background-color var(--transition-fast) var(--transition-ease, ease),
       border-color var(--transition-fast) var(--transition-ease, ease),
@@ -141,6 +142,10 @@
   .kit-button--lg {
     min-height: 36px;
     padding-inline: var(--space-5);
+  }
+
+  .kit-button:where(:active:not(:disabled), [aria-expanded="true"]) {
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-button :global(svg) {

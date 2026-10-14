@@ -82,12 +82,14 @@
     border: none;
     border-radius: var(--radius-sm, 4px);
     background: transparent;
+    box-shadow: var(--shadow-raised, none);
     color: var(--text-muted);
     cursor: pointer;
     transition:
       opacity var(--transition-fast) var(--transition-ease, ease),
       background var(--transition-fast) var(--transition-ease, ease),
-      color var(--transition-fast) var(--transition-ease, ease);
+      color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
     flex-shrink: 0;
   }
 
@@ -112,5 +114,9 @@
 
   .kit-copy-btn:active {
     transform: scale(0.92);
+  }
+
+  .kit-copy-btn:where(:active) {
+    box-shadow: var(--shadow-sunken, none);
   }
 </style>

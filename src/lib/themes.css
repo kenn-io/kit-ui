@@ -645,9 +645,12 @@
  * Quiet — "the tool disappears into the task"
  * A calm workspace for apps people live in all day: the platform's own
  * system type, neutral surfaces, one blue accent, and sentence-case labels
- * (--label-transform: none) instead of uppercase tracking. Muted text
- * clears WCAG AA on both surfaces in both modes. No canvas decor: the
- * ground stays a flat neutral.
+ * (--label-transform: none) instead of uppercase tracking. Surfaces layer
+ * inset < page < surface in both modes. Quiet turns on the depth tokens:
+ * controls stand raised, fields sit sunken, panels get a hairline ring, and
+ * table headers are lit, all with short, crisp shadows. Muted text clears
+ * WCAG AA on every surface in both modes. No canvas decor: the ground
+ * stays a flat neutral.
  * ──────────────────────────────────────────────────────────────────────── */
 :root[data-kit-theme="quiet"] {
   --font-sans:
@@ -681,17 +684,28 @@
   --accent-teal: #0e7490;
   --status-waiting: #8a7342;
 
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
-  --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.16);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.12);
+  --shadow-md: 0 2px 4px rgba(16, 24, 40, 0.14);
+  --shadow-lg: 0 3px 8px rgba(16, 24, 40, 0.18);
   --overlay-bg: rgba(16, 24, 40, 0.32);
+
+  /* Depth. The composites resolve against the root's current palette, so
+   * the dark block re-sets only the highlight and the shadows. */
+  --edge-highlight: #ffffff;
+  --shadow-raised: inset 0 1px var(--edge-highlight), var(--shadow-sm);
+  --shadow-sunken: inset var(--shadow-sm);
+  --shadow-panel: 0 0 0 1px var(--border-muted), var(--shadow-raised);
+  --bg-table-header: linear-gradient(
+    var(--bg-surface),
+    color-mix(in srgb, var(--bg-primary) 60%, var(--bg-surface))
+  );
 }
 
 :root.dark[data-kit-theme="quiet"] {
   --bg-primary: #151618;
   --bg-surface: #1c1d20;
   --bg-surface-hover: #26282b;
-  --bg-inset: #222427;
+  --bg-inset: #0f1012;
   --border-default: #34373c;
   --border-muted: #2a2c30;
 
@@ -707,10 +721,11 @@
   --accent-teal: #3fc1d6;
   --status-waiting: #c4a76a;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 3px 8px rgba(0, 0, 0, 0.55);
   --overlay-bg: rgba(0, 0, 0, 0.55);
+  --edge-highlight: rgba(255, 255, 255, 0.06);
 }
 
 /* ────────────────────────────────────────────────────────────────────────

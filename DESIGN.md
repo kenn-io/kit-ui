@@ -165,6 +165,13 @@ Tinted cool-grey neutrals with a restrained six-accent semantic vocabulary; the 
 
 Borders first, shadows whisper. Resting structure is drawn entirely with 1px borders and tonal background steps (fog → paper → well). Shadows exist only to lift **transient** surfaces off the page: popovers, dropdowns, modals, tooltips. Nothing at rest casts a shadow heavier than `--shadow-sm`.
 
+Themes may opt into resting depth with the depth tokens (`--shadow-raised`,
+`--shadow-sunken`, `--shadow-panel`, `--bg-table-header`, `--edge-highlight`;
+see docs/theming.md). The shadow tokens build on `--shadow-sm`: a top highlight,
+a hairline ring, or the same shadow turned inward, never a heavier drop shadow,
+so the rule above still holds. The default pair leaves the tokens off, so its
+resting surfaces keep today's look.
+
 ### Shadow Vocabulary
 
 - **shadow-sm** (`0 1px 2px rgba(0,0,0,0.05)`): resting cards that genuinely need lift.

@@ -362,6 +362,7 @@
     background: var(--bg-surface);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sunken, none);
     font-family: inherit;
     font-size: var(--font-size-sm);
     line-height: 1.4;
@@ -391,6 +392,7 @@
     background: transparent;
     border: 0;
     border-radius: 0;
+    box-shadow: none;
     font: inherit;
     line-height: 1.5;
     resize: none;

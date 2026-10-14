@@ -90,12 +90,14 @@
     padding: 0;
     border: 0;
     background: transparent;
+    box-shadow: var(--shadow-raised, none);
     border-radius: var(--kit-control-radius, var(--radius-sm));
     color: var(--text-muted);
     cursor: pointer;
     transition:
       background var(--transition-fast) var(--transition-ease, ease),
-      color var(--transition-fast) var(--transition-ease, ease);
+      color var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-icon-button--sm {
@@ -111,6 +113,14 @@
   .kit-icon-button:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
+  }
+
+  .kit-icon-button:where(
+    [aria-pressed="true"],
+    [aria-expanded="true"],
+    :active:not(:disabled):not([aria-disabled="true"])
+  ) {
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-icon-button[aria-pressed="true"] {

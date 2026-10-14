@@ -15,11 +15,11 @@ rule steers external projects to it.
 
 ## Hierarchy levels
 
-| `level`   | Recipe                                              | Use for                                  |
-| --------- | --------------------------------------------------- | ---------------------------------------- |
-| `inset`   | bg-inset + border-muted + radius-sm                 | wells inside another surface             |
-| `default` | bg-surface + border-muted + radius-md               | list tiles, timeline cards (the default) |
-| `raised`  | bg-surface + border-default + radius-lg + shadow-sm | page-level panels                        |
+| `level`   | Recipe                                                                           | Use for                                  |
+| --------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
+| `inset`   | bg-inset + border-muted + radius-sm                                              | wells inside another surface             |
+| `default` | bg-surface + border-muted + radius-md                                            | list tiles, timeline cards (the default) |
+| `raised`  | bg-surface + border-default + radius-lg + shadow-panel (falls back to shadow-sm) | page-level panels                        |
 
 Levels compose — an `inset` well inside a `raised` panel reads as
 hierarchy. Don't nest same-level cards.
@@ -66,6 +66,9 @@ All three levels are pure token consumers (`--kit-card-bg/border/radius/
 shadow` internally), so every pluggable theme restyles them wholesale —
 zine's raised card gets ink borders and a hard offset shadow, pebble's
 gets 14px corners and diffuse lift.
+
+`raised` reads `--shadow-panel`, so a theme with depth tokens (see
+[Theming](../theming.md#identity-tokens)) rings and lifts page-level panels.
 
 ## Related
 

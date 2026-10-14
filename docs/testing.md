@@ -47,9 +47,10 @@ since only Chromium grants automation clipboard access.
 | `mermaid.spec.ts`              | Mermaid post-processor against real mermaid: fence → pan/zoom viewer, wheel zoom + reset, source copy, expand into MediaViewer (Escape/backdrop close, focus restore), invalid-diagram source fallback, theme-flip re-render                                                                                                                                                                                                                           |
 | `media-viewer.spec.ts`         | Paging by buttons and arrow keys (wrapping), zoom reset on page and when a different item takes the index, no image upscaling, page gallery across markdown images/diagrams/ImagePreview, hidden-tab and modal-layer eligibility, linked markdown images, the onViewerOpen hook (loops, replacement), opens that race an unmount, disconnect, re-render, or targeted close, index wrapping and fallback names, localized counter and name, theme flips |
 | `media-viewer-touch.spec.ts`   | Touch-enabled context. Chromium only (real touch over CDP): swipe paging (and panning once zoomed), double-tap zoom and reset, tap rules (movement, pinch in between), gradual two-finger pinch, inline Mermaid scroll-through at scale 1 with no leftover offset, drifting inline pinch. Every engine: 44px touch controls, phone layout, and a backdrop tap that closes without activating the page control underneath                               |
+| `depth.spec.ts`                | Depth tokens: every theme without them keeps today's control, field, panel and table-header look in light and dark; quiet raises controls, sinks fields and pressed or open controls, rings panels, lights table headers, and shadows a scrolled sticky header                                                                                                                                                                                         |
 
 Conventions: specs drive the gallery pages (`/#page-id`) through
-`helpers.ts` (`gotoPage`, `setSlider`, `setTheme`, `contrastOf`) —
+`helpers.ts` (`gotoPage`, `setSlider`, `setTheme`, `useTheme`, `contrastOf`, `resolvedStyle`) —
 when a component's demo changes its hooks (labels, classes), the spec is
 part of the change. New components with browser-only behavior should add
 a spec alongside their demo page.

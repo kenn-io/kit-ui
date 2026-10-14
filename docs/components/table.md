@@ -88,6 +88,17 @@ yourself:
 />
 ```
 
+## Theming
+
+The scroll wrapper reads `--shadow-panel` (no shadow by default) and header
+cells read `--bg-table-header` (falls back to `--bg-inset`). Once rows scroll
+beneath a sticky header, the header casts `--shadow-raised`. All three are
+depth tokens; see [Theming](../theming.md#identity-tokens).
+
+When a theme sets `--shadow-panel`, its ring paints outside the scroll
+wrapper, so a parent with `overflow: hidden` clips it, and a Table inside a
+raised Card shows a second frame.
+
 ## Table props
 
 | Prop           | Type      | Default  | Notes                                                                           |

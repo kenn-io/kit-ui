@@ -271,6 +271,7 @@
     padding: 0 8px;
     background: var(--bg-inset);
     border: var(--border-width) solid var(--border-muted);
+    box-shadow: var(--shadow-raised, none);
     border-radius: var(--kit-control-radius, var(--radius-sm));
     color: var(--text-secondary);
     cursor: pointer;
@@ -281,13 +282,18 @@
     transition:
       border-color var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease),
-      background var(--transition-fast) var(--transition-ease, ease);
+      background var(--transition-fast) var(--transition-ease, ease),
+      box-shadow var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-select-dropdown__trigger:hover:not(:disabled),
   .kit-select-dropdown__trigger[aria-expanded="true"] {
     border-color: var(--border-default);
     color: var(--text-primary);
+  }
+
+  .kit-select-dropdown__trigger:where([aria-expanded="true"], :active:not(:disabled)) {
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-select-dropdown__trigger:disabled {
