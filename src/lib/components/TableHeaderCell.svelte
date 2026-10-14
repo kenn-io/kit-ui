@@ -118,8 +118,10 @@
 >
   {#if isSortable}
     <button class="kit-th__sort-btn kit-control-states" type="button" {onclick}>
-      {#if label}{label}{/if}
-      {#if children}{@render children()}{/if}
+      <span class="kit-th__label">
+        {#if label}{label}{/if}
+        {#if children}{@render children()}{/if}
+      </span>
       <span class="kit-th__indicator" class:on={direction}>
         {#if direction === "asc"}
           <ArrowUpIcon size="11" strokeWidth="2.2" aria-hidden="true" />
@@ -129,8 +131,10 @@
       </span>
     </button>
   {:else}
-    {#if label}{label}{/if}
-    {#if children}{@render children()}{/if}
+    <span class="kit-th__label">
+      {#if label}{label}{/if}
+      {#if children}{@render children()}{/if}
+    </span>
   {/if}
   {#if sizing && resizable && shownWidth !== undefined}
     <!-- Double-click or Enter fits the column to its content; the handle
@@ -138,6 +142,7 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <span class="kit-th__resize" ondblclick={() => cell && sizing.fit(cell)} onkeydown={fitOnEnter}>
       <SplitResizeHandle
+        variant="column"
         ariaLabel={`Resize the ${label ?? "column"} column`}
         ariaValueMin={bounds.min}
         ariaValueMax={bounds.max}
@@ -167,16 +172,30 @@
     text-align: right;
   }
 
+  /* A sized column can be narrower than its label: the cell clips, and the
+   * label ends with an ellipsis instead of running into the next header. */
   .kit-th--sized {
     position: relative;
+    overflow: hidden;
   }
 
-  /* The handle sits on the cell's right edge, over the border between this
-   * column and the next. */
+  .kit-th--sized .kit-th__sort-btn {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .kit-th--sized .kit-th__label {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The handle sits on the cell's right edge, inside the clipped cell. */
   .kit-th__resize {
     position: absolute;
     inset-block: 0;
-    right: -2px;
+    right: 0;
     display: flex;
   }
 

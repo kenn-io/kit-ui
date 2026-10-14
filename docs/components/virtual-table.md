@@ -104,16 +104,17 @@ table: each column has a width, kept while the rows scroll and change, and
 people resize it or fit it to its content.
 
 - **Starting width.** A `TableHeaderCell` with `width` starts at that width.
-  The others are measured once: VirtualTable briefly renders up to 50 rows
-  sampled evenly across the list (first and last included) with
-  `visibility: collapse`, which Chrome lays out but does not show, lets the
-  browser size the columns, and unmounts the samples before paint.
-- **Resizing.** Each header cell's right edge has a resize handle
-  ([SplitResizeHandle](split-resize-handle.md)): drag it, or focus it and
-  press the arrow keys. `resizable={false}` removes it.
+  The others are measured once, in a hidden copy of the table holding the
+  rows on screen and up to 50 rows sampled evenly across the list (first and
+  last included). The copy sits in its own `<form>` and is removed before
+  paint, so its copied form fields never join the app's form or radio groups.
+- **Resizing.** Each header cell's right edge has a 1px resize handle
+  ([SplitResizeHandle](split-resize-handle.md) with `variant="column"`):
+  drag it, or focus it and press the arrow keys. `resizable={false}` removes
+  it. A column narrower than its label clips the label with an ellipsis.
 - **Fitting.** Double-click a handle, or press Enter on it, to fit the column
-  to its content. VirtualTable measures the widest value among the visible
-  and sampled rows; `fitColumn(column)` can return the content width instead,
+  to its content. VirtualTable measures the widest value in the copy's
+  rows; `fitColumn(column)` can return the content width instead,
   from what the app knows about its data. The header cell's padding is added.
 - **Limits.** `minWidth` (default 20) and `maxWidth` (default 1200) bound
   resizing and fitting, and a measured starting width.

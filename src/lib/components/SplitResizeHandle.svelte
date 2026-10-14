@@ -6,6 +6,9 @@
     ariaLabel: string;
     /** Direction in which the two panes are arranged. */
     orientation?: SplitResizeOrientation;
+    /** `column` draws a 1px line for resizing a table column; its pointer
+     * target stays as easy to grab as a pane divider's. */
+    variant?: "pane" | "column";
     disabled?: boolean;
     /** Pixels moved per arrow-key press. */
     keyboardStep?: number;
@@ -20,6 +23,7 @@
   let {
     ariaLabel,
     orientation = "horizontal",
+    variant = "pane",
     disabled = false,
     keyboardStep = 24,
     ariaValueMin,
@@ -147,6 +151,7 @@
 <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
 <button
   class="kit-split-resize-handle kit-control-states kit-split-resize-handle--{orientation}"
+  class:kit-split-resize-handle--column={variant === "column"}
   type="button"
   role="separator"
   aria-label={ariaLabel}
@@ -210,6 +215,18 @@
   .kit-split-resize-handle:hover,
   .kit-split-resize-handle:focus-visible {
     background: var(--accent-blue);
+  }
+
+  /* A table column's edge is a hairline next to the cell borders, not a
+   * pane divider. The pointer target still reaches 4px past each side. */
+  .kit-split-resize-handle--horizontal.kit-split-resize-handle--column {
+    width: 1px !important;
+    min-width: 1px !important;
+    max-width: 1px !important;
+  }
+
+  .kit-split-resize-handle--horizontal.kit-split-resize-handle--column::after {
+    inset: 0 -4px;
   }
 
   .kit-split-resize-handle:disabled {

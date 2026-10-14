@@ -75,13 +75,20 @@
     details: `Review #${i} ran ${(i % 6) + 2} agents over ${((i * 13) % 40) + 5} files.`,
   }));
   const noteSorter = new TableSort<Note>(
-    { id: (n) => n.id, project: (n) => n.project, lines: { value: (n) => n.lines.length } },
+    {
+      id: (n) => n.id,
+      project: (n) => n.project,
+      lines: { value: (n) => n.lines.length },
+      count: { value: (n) => n.lines.length },
+    },
     { key: "id" },
   );
   const sortedNotes = $derived(noteSorter.sort(notes));
   const expanded = new SvelteSet<number>();
   const toggle = (id: number) => (expanded.has(id) ? expanded.delete(id) : expanded.add(id));
   let savedWidths = $state<number[]>([]);
+  let favorite = $state(0);
+  let showLines = $state(false);
   // The app knows its IDs: at most "#1999", about 40px of digits.
   const fitNoteColumn = (column: number) => (column === 0 ? 40 : undefined);
   let showBranch = $state(true);
@@ -153,6 +160,7 @@
   {/snippet}
 </VirtualTable>`}
 >
+  <Checkbox bind:checked={showLines} label="Show the Lines column" />
   <div class="host">
     <VirtualTable
       items={sortedNotes}
@@ -166,6 +174,10 @@
         <TableHeaderCell label="ID" numeric sort={noteSorter} column="id" width={90} />
         <TableHeaderCell label="Project" sort={noteSorter} column="project" minWidth={80} />
         <TableHeaderCell label="Note" sort={noteSorter} column="lines" />
+        {#if showLines}
+          <TableHeaderCell label="Lines" numeric sort={noteSorter} column="count" />
+        {/if}
+        <TableHeaderCell><span class="kit-sr-only">Favorite</span></TableHeaderCell>
         <TableHeaderCell><span class="kit-sr-only">Details</span></TableHeaderCell>
       {/snippet}
       {#snippet row(note)}
@@ -179,6 +191,18 @@
             {#if expanded.has(note.id)}
               <div class="details">{note.details}</div>
             {/if}
+          </td>
+          {#if showLines}
+            <td class="num">{note.lines.length}</td>
+          {/if}
+          <td>
+            <input
+              type="radio"
+              name="favorite-note"
+              aria-label="Favorite review #{note.id}"
+              checked={favorite === note.id}
+              onchange={() => (favorite = note.id)}
+            />
           </td>
           <td>
             <Button

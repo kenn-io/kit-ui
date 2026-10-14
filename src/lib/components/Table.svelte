@@ -121,10 +121,12 @@
   }
 
   /* A page-scrolled wrapper keeps the table's full height: in a bounded
-   * flex column it would otherwise shrink and clip the rows below. */
+   * flex column it would otherwise shrink and hide the rows below. An
+   * explicit max-content holds even while a wide table makes it scroll
+   * sideways, where an automatic minimum would drop to zero. */
   .kit-table-wrapper--page {
     overflow: clip;
-    min-height: auto;
+    min-height: max-content;
   }
 
   .kit-table-wrapper--wide {

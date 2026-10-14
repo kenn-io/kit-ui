@@ -696,3 +696,81 @@ test("fitColumn supplies the content width for a fit", async ({ page }) => {
   // 40px of content plus the header cell's 10px padding on each side.
   await expect.poll(async () => (await columnWidths(table))[0]).toBe(60);
 });
+
+test("a wide page-scrolled table keeps its full height in a bounded flex column", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  // Wider than its box, so the wrapper scrolls sideways.
+  await table.evaluate((el) => {
+    el.style.minWidth = "3000px";
+    const flow = el.closest(".flow") as HTMLElement;
+    flow.style.display = "flex";
+    flow.style.flexDirection = "column";
+    flow.style.height = "400px";
+    flow.style.overflowY = "auto";
+  });
+  await expect(table.locator("xpath=..")).toHaveCSS("overflow-x", "auto");
+  await expect
+    .poll(() => table.evaluate((el) => el.parentElement!.clientHeight - el.offsetHeight))
+    .toBeGreaterThanOrEqual(-20);
+});
+
+test("measuring the columns leaves a row's checked radio checked", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = notesTable(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const radio = table.getByRole("radio", { name: "Favorite review #0" });
+  await expect(radio).toBeChecked();
+  await table.getByRole("separator", { name: "Resize the Note column" }).dblclick();
+  await expect(radio).toBeChecked();
+});
+
+test("a narrowed header keeps its label inside its cell", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await table.getByRole("separator", { name: "Resize the Project column" }).focus();
+  for (let i = 0; i < 3; i += 1) await page.keyboard.press("ArrowLeft");
+  const spill = await table
+    .locator("thead th")
+    .nth(2)
+    .evaluate((th) => {
+      const label = th.querySelector(".kit-th__label")!;
+      return label.getBoundingClientRect().right - th.getBoundingClientRect().right;
+    });
+  expect(spill).toBeLessThanOrEqual(0);
+  await expect
+    .poll(() =>
+      table
+        .locator("thead th")
+        .nth(2)
+        .locator(".kit-th__label")
+        .evaluate((label) => {
+          return label.scrollWidth > label.clientWidth;
+        }),
+    )
+    .toBe(true);
+});
+
+test("a column added while the table is hidden is sized when it appears", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = notesTable(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const host = table.locator("xpath=../..");
+  await host.evaluate((el) => ((el as HTMLElement).style.display = "none"));
+  await page.getByRole("checkbox", { name: "Show the Lines column" }).check();
+  await page.waitForTimeout(200);
+  await host.evaluate((el) => ((el as HTMLElement).style.display = ""));
+  // Measured, not left at the 100px fallback: a short numeric column.
+  await expect
+    .poll(() =>
+      table
+        .locator("thead th")
+        .nth(3)
+        .evaluate((th) => th.getBoundingClientRect().width),
+    )
+    .toBeLessThan(95);
+});

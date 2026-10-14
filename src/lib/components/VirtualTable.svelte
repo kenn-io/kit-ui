@@ -70,8 +70,7 @@
   }: Props = $props();
 
   const SPACER = "kit-virtual-table__spacer";
-  const END = "kit-virtual-table__end";
-  // Rows sampled across the whole list for column widths (see `samples`).
+  // Rows sampled across the whole list for column widths (see `measuredRows`).
   const SAMPLE_ROWS = 50;
   const PINNED = "kit-virtual-table--pinned";
   const SPACER_ROW = "border: 0; background: none;";
@@ -124,31 +123,35 @@
   // even index keeps every row on the parity it has in a full table.
   const parityPad = $derived(slice.start % 2 === 0);
 
-  // Rows spread evenly across the list, first and last included, rendered
-  // after the bottom spacer with `visibility: collapse` while the columns are
-  // pinned: Chrome gives them no height and hides them, but they still count
-  // toward the column widths, so the pinned widths fit values from the whole
-  // list, not only the first rows on screen. They are unmounted in the same
-  // update, before paint, so their form fields never submit or validate and
-  // queries for the table's rows never see them.
-  const samples = $derived.by(() => {
+  // Columns are measured in a separate, hidden copy of the table holding the
+  // rows on screen and rows sampled evenly across the list (first and last
+  // included), so the widths fit values from the whole list. The copy lives
+  // in its own <form>, mounted only while measuring and unmounted before
+  // paint, so the copied rows' form fields never join the app's form or its
+  // radio groups, and queries for the table's rows never see them.
+  const measuredRows = $derived.by(() => {
     const n = items.length;
     const count = Math.min(SAMPLE_ROWS, n);
     const picked = new Set<number>();
     for (let k = 0; k < count; k += 1) {
       picked.add(count === 1 ? 0 : Math.round((k * (n - 1)) / (count - 1)));
     }
-    return [...picked];
+    for (let i = slice.start; i < slice.end; i += 1) picked.add(i);
+    return [...picked].sort((a, b) => a - b);
   });
 
-  // Sampled rows are mounted only while columns are measured; the effect
-  // below measures once they have rendered and unmounts them before paint.
   let sampling = $state(false);
+  let measureForm = $state<HTMLFormElement>();
+  // The copy is as wide as the live table's wrapper.
+  let measureWidth = $state(0);
   // The column a fit measures, or undefined to size unsized columns.
   let fitting: number | undefined;
 
   function requestSizing(): void {
-    if (items.length > 0) sampling = true;
+    const wrapper = body?.parentElement?.parentElement;
+    if (items.length === 0 || !wrapper) return;
+    measureWidth = wrapper.offsetWidth;
+    sampling = true;
   }
 
   $effect(() => {
@@ -202,49 +205,34 @@
     return Math.min(max, Math.max(min, width));
   };
 
-  // Release the pinned layout so the browser lays the table out by content.
-  function unpin(table: HTMLElement, cells: HTMLTableCellElement[]): void {
-    table.style.tableLayout = "";
-    table.style.width = "";
-    table.classList.remove(PINNED);
-    for (const cell of cells) {
-      cell.style.width = "";
-      cell.style.boxSizing = "";
-    }
-  }
+  const copyTable = () => measureForm?.querySelector("table") ?? undefined;
+  const copyCells = (): HTMLTableCellElement[] =>
+    Array.from(copyTable()?.tHead?.rows[0]?.cells ?? []);
 
   // Give every column without a width one: the header's `width`, or its
-  // share of the table under automatic layout with the visible and sampled
-  // rows, the columns with widths keeping theirs.
+  // share of the copy's width under automatic layout, the columns with
+  // widths keeping theirs. Measured widths include padding and borders;
+  // pinned cells use border-box sizing, so they become the final widths.
   function sizeColumns(): void {
-    const table = body?.parentElement;
-    const cells = headerCells();
-    // A hidden table (a closed <details>, an inactive tab) has no layout to
-    // measure yet; the resize when it appears measures it.
-    if (!table || cells.length === 0 || !table.parentElement?.clientWidth) return;
-    columns = cells.length;
-    // Only data rows, on screen or sampled, may decide the widths. Without
-    // any (an empty list), wait until rows render.
-    const rendered = Array.from(body!.rows).some((tr) => !tr.classList.contains(SPACER));
-    if (items.length === 0 || !rendered) return;
+    const cells = copyCells();
+    // A hidden table (a closed <details>, an inactive tab) has no width to
+    // measure against yet; the resize when it appears sizes it. An empty
+    // list waits for rows.
+    if (cells.length === 0 || items.length === 0 || measureWidth === 0) return;
+    columns = headerCells().length;
     const explicit = (cell: HTMLTableCellElement) =>
       cell.dataset["kitWidth"] ? Number(cell.dataset["kitWidth"]) : undefined;
-    if (cells.some((cell) => !widths.has(keyOf(cell)))) {
-      unpin(table, cells);
-      for (const cell of cells) {
-        const known = widths.get(keyOf(cell)) ?? explicit(cell);
-        if (known === undefined) continue;
-        cell.style.boxSizing = "border-box";
-        cell.style.width = `${known}px`;
-      }
-      // Measured widths include padding and borders; pinned cells use
-      // border-box sizing, so they become the final widths.
-      const measured = cells.map((cell) => cell.getBoundingClientRect().width);
-      cells.forEach((cell, i) => {
-        if (!widths.has(keyOf(cell)))
-          widths.set(keyOf(cell), clampTo(cell, explicit(cell) ?? measured[i]!));
-      });
+    for (const cell of cells) {
+      const known = widths.get(keyOf(cell)) ?? explicit(cell);
+      if (known === undefined) continue;
+      cell.style.boxSizing = "border-box";
+      cell.style.width = `${known}px`;
     }
+    const measured = cells.map((cell) => cell.getBoundingClientRect().width);
+    cells.forEach((cell, i) => {
+      if (!widths.has(keyOf(cell)))
+        widths.set(keyOf(cell), clampTo(cell, explicit(cell) ?? measured[i]!));
+    });
     sized = true;
     applyWidths();
   }
@@ -274,18 +262,18 @@
   }
 
   function reportWidths(): void {
-    oncolumnwidthschange?.(headerCells().map((cell) => widths.get(keyOf(cell)) ?? 0));
+    oncolumnwidthschange?.(
+      headerCells().map((cell, i) => widths.get(keyOf(cell)) ?? shown[i] ?? 0),
+    );
   }
 
-  // Fit a column to its widest content among the visible and sampled rows:
-  // with the table laid out at its natural width, the column's header cell is
-  // as wide as its widest cell.
+  // Fit a column to its widest content among the copy's rows: laid out at
+  // its natural width, the column's header cell is as wide as its widest
+  // cell.
   function measureFit(column: number): void {
-    const table = body?.parentElement;
-    const cells = headerCells();
-    const cell = cells[column];
+    const table = copyTable();
+    const cell = copyCells()[column];
     if (!table || !cell) return;
-    unpin(table, cells);
     table.style.width = "max-content";
     widths.set(keyOf(cell), clampTo(cell, cell.getBoundingClientRect().width));
     applyWidths();
@@ -350,17 +338,12 @@
     // An empty table shows only the `empty` row, which neither measures a
     // data row nor should decide the column widths.
     if (items.length === 0) return watchRows([]);
-    // The rendered window lies between the top and end spacers; sampled rows
-    // after the end spacer only exist while the columns are pinned.
-    const rows: HTMLTableRowElement[] = [];
-    for (const tr of body.rows) {
-      if (tr.classList.contains(END)) break;
-      if (!tr.classList.contains(SPACER)) rows.push(tr);
-    }
+    const rows = Array.from(body.rows).filter((tr) => !tr.classList.contains(SPACER));
     watchRows(rows);
-    // The samples alone can pin the columns, before any row is on screen.
-    const headerCount = table.tHead?.rows[0]?.cells.length ?? 0;
-    if (!sized || headerCount !== columns) requestSizing();
+    // Size any column still without a width, until it has one: a column
+    // added while the list was empty or the table hidden is sized once rows
+    // render or the table appears.
+    if (headerCells().some((cell) => !widths.has(keyOf(cell)))) requestSizing();
     if (rows.length === 0) return;
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
@@ -428,7 +411,7 @@
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
     const columnsChanged = new MutationObserver(() => {
       columns = Math.max(1, headerRow?.cells.length ?? 1);
-      requestSizing();
+      if (headerCells().every((cell) => widths.has(keyOf(cell)))) applyWidths();
       measureRows();
     });
     if (headerRow) columnsChanged.observe(headerRow, { childList: true });
@@ -465,15 +448,25 @@
   {#if items.length === 0}
     {@render empty?.()}
   {/if}
-  <tr class={[SPACER, END]} aria-hidden="true" style={SPACER_ROW}>
+  <tr class={SPACER} aria-hidden="true" style={SPACER_ROW}>
     <td colspan={columns} style={SPACER_CELL} style:height="{bottomPad}px"></td>
   </tr>
-  {#if sampling}
-    {#each samples as index (rowKey(items[index]!, index))}
-      {@render row(items[index]!, index)}
-    {/each}
-  {/if}
 </Table>
+{#if sampling}
+  <form
+    bind:this={measureForm}
+    class="kit-virtual-table__measure"
+    aria-hidden="true"
+    inert
+    style:width="{measureWidth}px"
+  >
+    <Table {header} {zebra} {unsorted} stickyHeader={false} class={className}>
+      {#each measuredRows as index (rowKey(items[index]!, index))}
+        {@render row(items[index]!, index)}
+      {/each}
+    </Table>
+  </form>
+{/if}
 
 <style>
   /* A pinned column no longer widens for a long value that scrolls in
@@ -483,7 +476,16 @@
     overflow-wrap: anywhere;
   }
 
-  :global(.kit-table tbody > tr.kit-virtual-table__end ~ tr) {
-    visibility: collapse;
+  /* The measuring copy lays out at the live table's width but takes no
+   * space, never shows, and adds nothing to any scrollable area. */
+  .kit-virtual-table__measure {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
   }
 </style>
