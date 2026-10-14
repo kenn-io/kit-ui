@@ -163,7 +163,11 @@
     color: var(--text-muted);
     text-align: left;
     background: var(--bg-table-header, var(--bg-inset));
-    border-bottom: 1px solid var(--border-default);
+    /* The line under the header is an inset shadow, not a border: in a
+     * table with collapsed borders a sticky header's border stays with the
+     * table's border grid and scrolls away, leaving the stuck header without
+     * its line. */
+    box-shadow: inset 0 -1px 0 var(--border-default);
     white-space: nowrap;
     user-select: none;
   }
