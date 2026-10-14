@@ -326,3 +326,57 @@ test("an ancestor that clips only sideways does not cut off rendered rows", asyn
     )
     .toBe(true);
 });
+
+test("rows fill the view when content above the table collapses", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  const scroller = page.locator(".content__body");
+  // Put a tall block before the table and scroll until only the table's
+  // first 100px show, then remove the block without scrolling.
+  await table.evaluate((el) => {
+    const block = document.createElement("div");
+    block.id = "collapsible";
+    block.style.height = "600px";
+    el.closest(".flow")!.before(block);
+  });
+  await scroller.evaluate(
+    (s, el) => {
+      const bottom = s.getBoundingClientRect().bottom;
+      s.scrollTop += el!.getBoundingClientRect().top - (bottom - 100);
+    },
+    await table.elementHandle(),
+  );
+  await page.waitForTimeout(100);
+  await page.locator("#collapsible").evaluate((block) => block.remove());
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const s = document.querySelector(".content__body")!.getBoundingClientRect();
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+        return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
+      }),
+    )
+    .toBe(true);
+});
+
+test("a populated table below the fold never shows its empty row", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.locator('table[aria-label="Reviews without overscan"]');
+  await expect(table).toHaveAttribute("aria-rowcount", "301");
+  await expect(table.getByText("No reviews")).toHaveCount(0);
+  await table.evaluate((el) => {
+    const s = document.querySelector(".content__body")!;
+    s.scrollTop += el.getBoundingClientRect().top - s.getBoundingClientRect().top;
+  });
+  await expect(dataRows(table).first()).toContainText("#0");
+  await expect(table.getByText("No reviews")).toHaveCount(0);
+  // The columns were pinned from data rows: the long branch names widen
+  // their column well past the header's own width.
+  const branch = await table
+    .locator("thead th")
+    .nth(1)
+    .evaluate((th) => th.getBoundingClientRect().width);
+  expect(branch).toBeGreaterThan(300);
+});

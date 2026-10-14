@@ -44,6 +44,7 @@ whose rows are options, not cells.
 | `header`            | `Snippet`                             | required | `<TableHeaderCell>` elements, as in `Table`                                                   |
 | `row`               | `Snippet<[T, number]>`                | required | `(item, index)`; renders exactly one `<tr>`                                                   |
 | `rowKey`            | `(item: T, index: number) => unknown` | index    | Stable row identity for keyed rendering                                                       |
+| `empty`             | `Snippet`                             | —        | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead     |
 | `estimateRowHeight` | `number`                              | `36`     | Height in px for rows before any has rendered; afterwards the average measured height is used |
 | `overscan`          | `number`                              | `8`      | Rows rendered beyond each edge of the visible area                                            |
 | `stickyHeader`      | `boolean`                             | `true`   | As on `Table`                                                                                 |
@@ -69,7 +70,8 @@ offset.
 
 Visibility is measured against every ancestor that clips vertically and the
 window. It is measured again on any scroll, on a window resize, and when the
-table or one of those ancestors changes size.
+table or any of its ancestors changes size, so the rows follow a scroller
+that grows or content above the table that collapses.
 
 ## Rows
 

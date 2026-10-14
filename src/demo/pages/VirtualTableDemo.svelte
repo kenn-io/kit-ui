@@ -139,6 +139,37 @@
   </details>
 </DemoSection>
 
+<DemoSection
+  title="Below the fold with no overscan"
+  description="With overscan={0}, a table below the visible area renders no rows until it scrolls in. It never shows its empty row while it has items."
+  code={`<VirtualTable {items} overscan={0} …>{#snippet empty()}…{/snippet}</VirtualTable>`}
+>
+  <div class="flow">
+    <VirtualTable
+      items={reviews.slice(0, 300)}
+      rowKey={(r) => r.id}
+      overscan={0}
+      ariaLabel="Reviews without overscan"
+      unsorted
+    >
+      {#snippet header()}
+        <!-- A fixed order keeps this example about rendering, not sorting. -->
+        <TableHeaderCell label="ID" numeric />
+        <TableHeaderCell label="Branch" />
+      {/snippet}
+      {#snippet row(review)}
+        <tr>
+          <td class="num">#{review.id}</td>
+          <td>{review.branch}</td>
+        </tr>
+      {/snippet}
+      {#snippet empty()}
+        <tr><td colspan="2">No reviews</td></tr>
+      {/snippet}
+    </VirtualTable>
+  </div>
+</DemoSection>
+
 <style>
   .flow {
     width: 100%;

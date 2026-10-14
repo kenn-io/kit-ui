@@ -194,7 +194,7 @@
     const wrapper = body.parentElement?.parentElement;
     const resized = () => {
       collectClips();
-      observeClips();
+      observeAncestors();
       const width = wrapper?.clientWidth ?? 0;
       if (frozenWidth >= 0 && width !== frozenWidth) freezeColumns();
       measureRows();
@@ -222,10 +222,16 @@
     });
     if (wrapper) observer.observe(wrapper);
     observer.observe(body);
-    // A scroller above the table can grow (a panel closing) without the
-    // table or window resizing, revealing rows that are not rendered.
-    const observeClips = () => clips.forEach((el) => observer.observe(el));
-    observeClips();
+    // The table can move into view without resizing itself or the window:
+    // a scroller above it grows (a panel closing), or content before it
+    // collapses. Either resizes some ancestor, so every ancestor up to the
+    // root is observed.
+    const observeAncestors = () => {
+      for (let el = body?.parentElement?.parentElement ?? null; el; el = el.parentElement) {
+        observer.observe(el);
+      }
+    };
+    observeAncestors();
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
@@ -258,9 +264,12 @@
   {/if}
   {#each items.slice(slice.start, slice.end) as item, i (rowKey(item, slice.start + i))}
     {@render row(item, slice.start + i)}
-  {:else}
-    {@render empty?.()}
   {/each}
+  <!-- Only a table with no items is empty; a window scrolled out of view
+       renders no rows, not the empty row. -->
+  {#if items.length === 0}
+    {@render empty?.()}
+  {/if}
   <tr class={SPACER} aria-hidden="true" style={SPACER_ROW}>
     <td colspan={columns} style={SPACER_CELL} style:height="{bottomPad}px"></td>
   </tr>
