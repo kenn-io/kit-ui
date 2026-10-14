@@ -102,9 +102,13 @@
 </div>
 
 <style>
+  /* min-width: 0 lets the wrapper shrink in a flex row: a clipping item
+   * otherwise grows to its content, so a wide table would never overflow
+   * it and switch it to scrolling. */
   .kit-table-wrapper {
     overflow: clip;
     flex: 1;
+    min-width: 0;
     min-height: 0;
     box-shadow: var(--shadow-panel, none);
   }
@@ -125,6 +129,12 @@
     position: sticky;
     top: var(--kit-table-sticky-top, 0);
     z-index: 1;
+  }
+
+  /* The page offset is for the page's padding; a wrapper that scrolls has
+   * none, so its header sticks to its top edge. */
+  .kit-table-wrapper--contained > .kit-table--sticky thead {
+    top: 0;
   }
 
   /* Rows scrolled beneath the stuck header pass under its shadow. */

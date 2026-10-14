@@ -100,14 +100,17 @@
   // even index keeps every row on the parity it has in a full table.
   const parityPad = $derived(slice.start % 2 === 0);
 
-  // Every ancestor that clips the body, nearest first. The nearest scroll
+  // Every ancestor that clips the body vertically, nearest first. The nearest scroll
   // container, whether the table's own wrapper or the page, is among them.
   let clips: Element[] = [];
   function collectClips(): void {
     clips = [];
     for (let el = body?.parentElement ?? null; el; el = el.parentElement) {
       const style = getComputedStyle(el);
-      if (style.overflowY !== "visible" || style.overflowX !== "visible") clips.push(el);
+      // Only a vertical clip limits which rows show. A horizontal-only clip
+      // leaves overflow-y visible; any other horizontal overflow forces
+      // overflow-y off visible too, so this one axis catches every case.
+      if (style.overflowY !== "visible") clips.push(el);
     }
   }
 
@@ -132,9 +135,17 @@
     if (!table || !cells || !table.parentElement?.clientWidth) return;
     table.style.tableLayout = "";
     table.classList.remove(PINNED);
-    for (const cell of cells) cell.style.width = "";
+    for (const cell of cells) {
+      cell.style.width = "";
+      cell.style.boxSizing = "";
+    }
+    // The measured width includes padding and borders; border-box sizing
+    // makes it the cell's final width whatever the app's box-sizing is.
     const widths = Array.from(cells, (cell) => cell.getBoundingClientRect().width);
-    widths.forEach((width, i) => (cells[i]!.style.width = `${width}px`));
+    widths.forEach((width, i) => {
+      cells[i]!.style.boxSizing = "border-box";
+      cells[i]!.style.width = `${width}px`;
+    });
     table.style.tableLayout = "fixed";
     table.classList.add(PINNED);
     frozenWidth = table.parentElement?.clientWidth ?? 0;
@@ -183,6 +194,7 @@
     const wrapper = body.parentElement?.parentElement;
     const resized = () => {
       collectClips();
+      observeClips();
       const width = wrapper?.clientWidth ?? 0;
       if (frozenWidth >= 0 && width !== frozenWidth) freezeColumns();
       measureRows();
@@ -210,11 +222,25 @@
     });
     if (wrapper) observer.observe(wrapper);
     observer.observe(body);
+    // A scroller above the table can grow (a panel closing) without the
+    // table or window resizing, revealing rows that are not rendered.
+    const observeClips = () => clips.forEach((el) => observer.observe(el));
+    observeClips();
+    // Adding or removing a column changes neither the rows nor the sizes
+    // observed above, but the pinned widths and spacer colspans must follow.
+    const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
+    const columnsChanged = new MutationObserver(() => {
+      columns = Math.max(1, headerRow?.cells.length ?? 1);
+      if (frozenWidth >= 0) freezeColumns();
+      measureRows();
+    });
+    if (headerRow) columnsChanged.observe(headerRow, { childList: true });
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", updateWindow, { capture: true });
       window.removeEventListener("resize", resized);
       observer.disconnect();
+      columnsChanged.disconnect();
       body = undefined;
     };
   }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Chip, TableHeaderCell, TableSort, VirtualTable } from "../../lib/index.js";
+  import { Checkbox, Chip, TableHeaderCell, TableSort, VirtualTable } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   interface Review {
@@ -37,6 +37,7 @@
     { key: "id" },
   );
   const sorted = $derived(sorter.sort(reviews));
+  let showBranch = $state(true);
   const pageSorter = new TableSort<Review>(
     { id: (r) => r.id, project: (r) => r.project, branch: (r) => r.branch },
     { key: "id" },
@@ -60,13 +61,16 @@
   {/snippet}
 </VirtualTable>`}
 >
+  <Checkbox bind:checked={showBranch} label="Show the Branch column" />
   <div class="host">
     <VirtualTable items={sorted} rowKey={(r) => r.id} ariaLabel="Reviews">
       {#snippet header()}
         <TableHeaderCell label="ID" numeric sort={sorter} column="id" />
         <TableHeaderCell label="Verdict" sort={sorter} column="verdict" />
         <TableHeaderCell label="Project" sort={sorter} column="project" />
-        <TableHeaderCell label="Branch" sort={sorter} column="branch" />
+        {#if showBranch}
+          <TableHeaderCell label="Branch" sort={sorter} column="branch" />
+        {/if}
         <TableHeaderCell label="Tokens" numeric sort={sorter} column="tokens" />
       {/snippet}
       {#snippet row(review)}
@@ -78,7 +82,9 @@
             </Chip>
           </td>
           <td><a href="#virtual-table">{review.project}</a></td>
-          <td class="branch">{review.branch}</td>
+          {#if showBranch}
+            <td class="branch">{review.branch}</td>
+          {/if}
           <td class="num">{review.tokens.toLocaleString()}</td>
         </tr>
       {/snippet}

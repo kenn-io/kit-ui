@@ -104,7 +104,9 @@ The wrapper switches between these one frame after its size changes.
 
 A header that sticks to the page sticks below the scroll container's top
 padding, so rows show in the padding above it. Cover the padding by setting
-`--kit-table-sticky-top` to its negative on the scroll container:
+`--kit-table-sticky-top` to its negative on the scroll container. A table
+that scrolls in its own wrapper ignores the offset and sticks at the
+wrapper's top edge:
 
 ```css
 .page {

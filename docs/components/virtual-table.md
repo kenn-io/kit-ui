@@ -67,8 +67,9 @@ its own:
 See [Table: Sticky header](table.md#sticky-header) for the page padding
 offset.
 
-Visibility is measured against every clipping ancestor and the window, and
-re-measured on any scroll, resize, or change in the table's size.
+Visibility is measured against every ancestor that clips vertically and the
+window. It is measured again on any scroll, on a window resize, and when the
+table or one of those ancestors changes size.
 
 ## Rows
 
@@ -85,8 +86,10 @@ re-measured on any scroll, resize, or change in the table's size.
 Under automatic layout, column widths depend on the rows rendered, so they
 would shift as different rows scroll in. VirtualTable lets the first
 rendered rows lay the table out, then pins each header cell's width and
-switches to fixed layout. It lays the table out again when the table's
-width or its number of columns changes. Text wider than its pinned column
+switches to fixed layout. Pinned header cells use border-box sizing, so the
+measured width is the final width whatever the app's `box-sizing`. It lays
+the table out again when the table's width changes or a column is added or
+removed. Text wider than its pinned column
 wraps, breaking inside a long word when it has to; content that cannot wrap
 (buttons, chips) should be no wider than the column it had in the first
 rows.

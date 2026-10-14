@@ -158,11 +158,6 @@ test("a table the page scrolls keeps its header at the top of the page", async (
     .toEqual({ atTop: true, shadowed: true });
 });
 
-test("a table taller than its bounded wrapper scrolls inside it", async ({ page }) => {
-  await gotoPage(page, "virtual-table");
-  await expect(bounded(page).locator("xpath=..")).toHaveClass(/kit-table-wrapper--contained/);
-});
-
 test("an unbroken value outside the first rows wraps inside its pinned column", async ({
   page,
 }) => {
@@ -187,4 +182,147 @@ test("an unbroken value outside the first rows wraps inside its pinned column", 
     width: td.getBoundingClientRect().width,
   }));
   expect(box.overflow).toBeLessThanOrEqual(0);
+});
+
+// The page scroller in the gallery sets --kit-table-sticky-top: -20px for its
+// padding; a table scrolling in its own box must not use it.
+test("a table that scrolls in its own box sticks its header to the box's top", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await scrollWrapper(table, "middle");
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const wrapper = el.parentElement!;
+        return Math.round(
+          el.tHead!.getBoundingClientRect().top -
+            (wrapper.getBoundingClientRect().top + wrapper.clientTop),
+        );
+      }),
+    )
+    .toBe(0);
+});
+
+// The page-scrolled table clips without scrolling, so in a flex row only
+// min-width: 0 stops it growing to the table's width.
+test("a wide table in a flex row scrolls sideways instead of widening its box", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  await table.evaluate((el) => {
+    const flow = el.closest(".flow") as HTMLElement;
+    flow.style.display = "flex";
+    flow.style.width = "260px";
+  });
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const wrapper = el.parentElement!;
+        return {
+          fits: wrapper.getBoundingClientRect().width <= 262,
+          scrolls: wrapper.scrollWidth > wrapper.clientWidth,
+        };
+      }),
+    )
+    .toEqual({ fits: true, scrolls: true });
+});
+
+test("pinned widths do not add padding again when the app uses content-box sizing", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  await page.addStyleTag({ content: ".kit-table th, .kit-table td { box-sizing: content-box; }" });
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Re-pin under the content-box rule.
+  await page.setViewportSize({ width: 1180, height: 800 });
+  await expect
+    .poll(() => table.evaluate((el) => el.offsetWidth - el.parentElement!.clientWidth))
+    .toBeLessThanOrEqual(0);
+});
+
+test("rows fill space revealed when a scroller above the table grows", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  const scroller = page.locator(".content__body");
+  // Shrink the scroller, scroll into the table, then let it grow back with
+  // no change to the table or the window.
+  await scroller.evaluate((s) => ((s as HTMLElement).style.maxHeight = "200px"));
+  await scroller.evaluate(
+    (s, el) => {
+      s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top + 5000;
+    },
+    await table.elementHandle(),
+  );
+  await page.waitForTimeout(100);
+  await scroller.evaluate((s) => ((s as HTMLElement).style.maxHeight = ""));
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const s = document.querySelector(".content__body")!.getBoundingClientRect();
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+        return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
+      }),
+    )
+    .toBe(true);
+});
+
+test("hiding a column re-pins the widths without a phantom column", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await page.getByRole("checkbox", { name: "Show the Branch column" }).uncheck();
+  await expect(table.locator("thead th")).toHaveCount(4);
+  await expect
+    .poll(() =>
+      table.evaluate((el) => ({
+        spacerColspan: el.querySelector<HTMLTableCellElement>(".kit-virtual-table__spacer td")!
+          .colSpan,
+        fills:
+          Math.abs(
+            [...el.tHead!.rows[0]!.cells].reduce(
+              (sum, c) => sum + c.getBoundingClientRect().width,
+              0,
+            ) - el.getBoundingClientRect().width,
+          ) < 2,
+      })),
+    )
+    .toEqual({ spacerColspan: 4, fills: true });
+});
+
+test("an ancestor that clips only sideways does not cut off rendered rows", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  await table.evaluate((el) => {
+    const flow = el.closest(".flow") as HTMLElement;
+    flow.style.overflowX = "clip";
+    flow.style.overflowY = "visible";
+    flow.style.height = "200px";
+  });
+  // Bring the table's top to the top of the scroller, so the rows past the
+  // 200px box are on screen.
+  await page.locator(".content__body").evaluate(
+    (s, el) => {
+      s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top;
+    },
+    await table.elementHandle(),
+  );
+  // A window resize re-reads the clipping ancestors.
+  await page.setViewportSize({ width: 1180, height: 800 });
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const s = document.querySelector(".content__body")!.getBoundingClientRect();
+        const rows = el.querySelectorAll("tbody > tr:not(.kit-virtual-table__spacer)");
+        const last = rows[rows.length - 1]!.getBoundingClientRect().bottom;
+        return last >= Math.min(s.bottom, el.getBoundingClientRect().bottom) - 1;
+      }),
+    )
+    .toBe(true);
 });
