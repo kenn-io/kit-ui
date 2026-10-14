@@ -33,6 +33,7 @@ const TABBABLE_SELECTOR = [
 // it, since a keyboard-opened surface has a focused trigger (or none).
 let lastPressed: WeakRef<HTMLElement> | null = null;
 
+// Kept at startup by "sideEffects" in package.json, so a lazy dialog still sees its opening press.
 if (typeof document !== "undefined") {
   document.addEventListener(
     "pointerdown",

@@ -119,6 +119,12 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
   `src/demo/App.svelte`), and documented in `docs/components/`. Any source
   change under `src/lib/` or `checks/rules.mjs` needs `bun run generate:types`;
   a new `package.json` export needs a `types` condition listed first.
+- **Load-time work**: `package.json`'s `sideEffects` lists the CSS, the root
+  `src/lib/index.ts`, and each module that does work when it loads (such as
+  `src/lib/utils/focus-trap.ts`, which adds document listeners). Add any new
+  such module there, or bundlers drop it from apps. When you move a listed
+  file, update its entry; `checks/package-side-effects.test.ts` fails on an
+  entry that names no file.
 
 ## Provenance
 

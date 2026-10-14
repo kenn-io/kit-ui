@@ -3,6 +3,11 @@
   "version": "0.0.1",
   "license": "Apache-2.0",
   "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "src/lib/index.ts",
+    "src/lib/utils/focus-trap.ts"
+  ],
   "main": "src/lib/index.ts",
   "types": "./types/index.d.ts",
   "svelte": "src/lib/index.ts",
