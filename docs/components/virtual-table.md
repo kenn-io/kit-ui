@@ -58,10 +58,14 @@ The table follows whichever container scrolls it, so it needs no layout of
 its own:
 
 - **Page scrolling.** Left unbounded, the table is as tall as all its rows,
-  and the page's scroll container decides which rows are on screen.
+  and the page's scroll container decides which rows are on screen. The
+  header sticks to the top of the page.
 - **Its own wrapper.** Give the wrapper a bounded height (a flex parent with
   a fixed height, or a `class` with `max-height`) and the table scrolls
-  inside it, with the sticky header.
+  inside it, with the header stuck to the wrapper.
+
+See [Table: Sticky header](table.md#sticky-header) for the page padding
+offset.
 
 Visibility is measured against every clipping ancestor and the window, and
 re-measured on any scroll, resize, or change in the table's size.

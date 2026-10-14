@@ -88,6 +88,35 @@ yourself:
 />
 ```
 
+## Sticky header
+
+The header sticks to whichever container scrolls the table:
+
+- **The page.** A table left at its full height scrolls with the page, and
+  its header sticks to the top of the page's scroll container. The wrapper
+  clips without scrolling, so it does not capture the header.
+- **Its own wrapper.** When the table is taller than its wrapper (a flex
+  parent with a fixed height, or a `class` with `max-height`) or wider than
+  it (a narrow screen), the wrapper scrolls, and the header sticks to the
+  wrapper instead.
+
+The wrapper switches between these one frame after its size changes.
+
+A header that sticks to the page sticks below the scroll container's top
+padding, so rows show in the padding above it. Cover the padding by setting
+`--kit-table-sticky-top` to its negative on the scroll container:
+
+```css
+.page {
+  padding-top: 24px;
+  --kit-table-sticky-top: -24px;
+}
+```
+
+An ancestor between the table and the page that sets `overflow: hidden` or
+`auto` becomes the header's scroll container and stops it sticking to the
+page; use `overflow: clip` there.
+
 ## Theming
 
 The scroll wrapper reads `--shadow-panel` (no shadow by default) and header
@@ -101,15 +130,15 @@ raised Card shows a second frame.
 
 ## Table props
 
-| Prop           | Type      | Default  | Notes                                                                           |
-| -------------- | --------- | -------- | ------------------------------------------------------------------------------- |
-| `header`       | `Snippet` | required | `<TableHeaderCell>` elements                                                    |
-| `children`     | `Snippet` | required | `<tr>` body rows                                                                |
-| `stickyHeader` | `boolean` | `true`   | Header stays visible while the body scrolls (give the wrapper a bounded height) |
-| `zebra`        | `boolean` | `true`   | Stripe even rows                                                                |
-| `ariaLabel`    | `string`  | —        |                                                                                 |
-| `unsorted`     | `boolean` | `false`  | Opts the table out of sorting; its headers need not sort                        |
-| `class`        | `string`  | `""`     | Applied to the scroll wrapper                                                   |
+| Prop           | Type      | Default  | Notes                                                                                                              |
+| -------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `header`       | `Snippet` | required | `<TableHeaderCell>` elements                                                                                       |
+| `children`     | `Snippet` | required | `<tr>` body rows                                                                                                   |
+| `stickyHeader` | `boolean` | `true`   | Header stays visible while the body scrolls, in the page or in a bounded wrapper ([Sticky header](#sticky-header)) |
+| `zebra`        | `boolean` | `true`   | Stripe even rows                                                                                                   |
+| `ariaLabel`    | `string`  | —        |                                                                                                                    |
+| `unsorted`     | `boolean` | `false`  | Opts the table out of sorting; its headers need not sort                                                           |
+| `class`        | `string`  | `""`     | Applied to the scroll wrapper                                                                                      |
 
 ## TableHeaderCell props
 

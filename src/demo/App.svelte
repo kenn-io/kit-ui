@@ -378,6 +378,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 20px 32px 64px;
+    /* Table headers that stick to this scroller cover its top padding. */
+    --kit-table-sticky-top: -20px;
   }
 
   .content__heading {

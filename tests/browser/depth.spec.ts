@@ -272,6 +272,8 @@ for (const theme of [null, "quiet"] as const) {
       });
     const wrapper = page.locator(body(".kit-table-wrapper")).first();
     const head = body(".kit-table-wrapper thead");
+    // The wrapper scrolls once it sees the table overflow its new height.
+    await expect(wrapper).toHaveClass(/kit-table-wrapper--contained/);
 
     await wrapper.evaluate((element) => element.scrollTo(0, 40));
     expect(await wrapper.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
@@ -295,6 +297,7 @@ test("quiet: a table without a sticky header casts no header shadow", async ({ p
     });
   const wrapper = page.locator(body(".kit-table-wrapper")).first();
   const head = body(".kit-table-wrapper thead");
+  await expect(wrapper).toHaveClass(/kit-table-wrapper--contained/);
 
   await wrapper.evaluate((element) => element.scrollTo(0, 40));
   await expectShadow(page, head, RAISED);

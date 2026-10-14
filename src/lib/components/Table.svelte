@@ -28,11 +28,60 @@
   }: Props = $props();
 
   let scrolled = $state(false);
+  let contained = $state(false);
+
+  // A sticky header sticks to the nearest scroll container. A wrapper that
+  // can scroll would capture it even when the page does all the scrolling,
+  // so the wrapper scrolls only while the table overflows it: a bounded
+  // height, or a table wider than the screen. Otherwise it clips without
+  // scrolling and the header sticks to the page.
+  function fit(wrapper: HTMLDivElement) {
+    const table = wrapper.firstElementChild as HTMLTableElement;
+    const head = table.tHead;
+    const check = () => {
+      contained =
+        table.offsetHeight > wrapper.clientHeight + 1 ||
+        table.offsetWidth > wrapper.clientWidth + 1;
+    };
+    // Rows pass under the header once it leaves the table's top edge,
+    // whichever container scrolled it there.
+    const stuck = () => {
+      if (head)
+        scrolled = head.getBoundingClientRect().top > table.getBoundingClientRect().top + 0.5;
+    };
+    check();
+    stuck();
+    window.addEventListener("scroll", stuck, { capture: true, passive: true });
+    // Environments without layout (jsdom) have no ResizeObserver; the wrapper
+    // keeps its initial state there.
+    if (typeof ResizeObserver === "undefined") {
+      return () => window.removeEventListener("scroll", stuck, { capture: true });
+    }
+    // Switching overflow resizes what is observed, so the check waits a
+    // frame instead of looping inside the observer callback.
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      if (frame === 0)
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          check();
+          stuck();
+        });
+    });
+    observer.observe(wrapper);
+    observer.observe(table);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", stuck, { capture: true });
+    };
+  }
 </script>
 
 <div
   class={["kit-table-wrapper", className]}
-  onscroll={(event) => (scrolled = event.currentTarget.scrollTop > 0)}
+  class:kit-table-wrapper--contained={contained}
+  {@attach fit}
 >
   <table
     class="kit-table"
@@ -54,10 +103,14 @@
 
 <style>
   .kit-table-wrapper {
-    overflow-y: auto;
+    overflow: clip;
     flex: 1;
     min-height: 0;
     box-shadow: var(--shadow-panel, none);
+  }
+
+  .kit-table-wrapper--contained {
+    overflow: auto;
   }
 
   .kit-table {
@@ -66,9 +119,11 @@
     table-layout: auto;
   }
 
+  /* A header that sticks to a padded page scroller would stop below the
+   * padding, with rows showing above it; the app offsets that padding. */
   .kit-table--sticky thead {
     position: sticky;
-    top: 0;
+    top: var(--kit-table-sticky-top, 0);
     z-index: 1;
   }
 

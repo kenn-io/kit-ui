@@ -124,3 +124,41 @@ test("lays out a table that was hidden when it rendered", async ({ page }) => {
   expect(rendered).toBeGreaterThan(5);
   expect(rendered).toBeLessThan(80);
 });
+
+test("a table the page scrolls keeps its header at the top of the page", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await expect(table).toHaveAttribute("aria-rowcount", "2001");
+  // The table fits its wrapper, so the wrapper must not become the header's
+  // scroll container.
+  await expect(table.locator("xpath=..")).not.toHaveClass(/kit-table-wrapper--contained/);
+  const scroller = await table.evaluateHandle((el) => {
+    let s: Element | null = el.parentElement;
+    while (s && s.scrollHeight <= s.clientHeight) s = s.parentElement;
+    return s!;
+  });
+  await scroller.evaluate(
+    (s, el) => {
+      s.scrollTop += el!.getBoundingClientRect().top - s.getBoundingClientRect().top + 3000;
+    },
+    await table.elementHandle(),
+  );
+  await expect
+    .poll(() =>
+      table.evaluate((el) => {
+        const head = el.tHead!.getBoundingClientRect();
+        let s: Element | null = el.parentElement;
+        while (s && s.scrollHeight <= s.clientHeight) s = s.parentElement;
+        return {
+          atTop: Math.abs(head.top - s!.getBoundingClientRect().top) < 2,
+          shadowed: el.classList.contains("kit-table--scrolled"),
+        };
+      }),
+    )
+    .toEqual({ atTop: true, shadowed: true });
+});
+
+test("a table taller than its bounded wrapper scrolls inside it", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  await expect(bounded(page).locator("xpath=..")).toHaveClass(/kit-table-wrapper--contained/);
+});
