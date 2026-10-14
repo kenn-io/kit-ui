@@ -7,6 +7,7 @@
     TableSort,
     VirtualTable,
   } from "../../lib/index.js";
+  import { SvelteSet } from "svelte/reactivity";
   import DemoSection from "../DemoSection.svelte";
 
   interface Review {
@@ -44,6 +45,35 @@
     { key: "id" },
   );
   const sorted = $derived(sorter.sort(reviews));
+
+  interface Note {
+    id: number;
+    project: string;
+    lines: string[];
+    details: string;
+  }
+
+  const sentences = [
+    "Checked the retry path.",
+    "The flaky test passed twice in a row after the fix.",
+    "Waiting on the schema change before merging.",
+    "Rebased onto main and ran the browser suite again.",
+    "Logs show the cache miss only on a cold start.",
+  ];
+  // One to five lines per note, so rows differ in height at any width.
+  const notes: Note[] = Array.from({ length: 2000 }, (_, i) => ({
+    id: i,
+    project: projects[i % projects.length]!,
+    lines: Array.from({ length: ((i * 7) % 5) + 1 }, (_, j) => sentences[(i + j) % 5]!),
+    details: `Review #${i} ran ${(i % 6) + 2} agents over ${((i * 13) % 40) + 5} files.`,
+  }));
+  const noteSorter = new TableSort<Note>(
+    { id: (n) => n.id, project: (n) => n.project, lines: { value: (n) => n.lines.length } },
+    { key: "id" },
+  );
+  const sortedNotes = $derived(noteSorter.sort(notes));
+  const expanded = new SvelteSet<number>();
+  const toggle = (id: number) => (expanded.has(id) ? expanded.delete(id) : expanded.add(id));
   let showBranch = $state(true);
   let pageTable = $state<ReturnType<typeof VirtualTable<Review>>>();
   const pageSorter = new TableSort<Review>(
@@ -55,7 +85,7 @@
 
 <DemoSection
   title="10,000 rows in a table"
-  description="VirtualTable renders only the rows on screen plus overscan, inside a real table: sortable headers, zebra stripes, and links in cells all behave as in Table. It follows whichever container scrolls it — here its own bounded wrapper. Rows may vary in height; column widths are pinned after the first layout so they do not shift while scrolling."
+  description="VirtualTable renders only the rows on screen plus overscan, inside a real table: sortable headers, zebra stripes, and links in cells all behave as in Table. With the default scroll='self' it scrolls inside its own bounded wrapper. Rows may vary in height; column widths are pinned after the first layout so they do not shift while scrolling."
   code={`<VirtualTable items={sorter.sort(reviews)} rowKey={(r) => r.id} ariaLabel="Reviews">
   {#snippet header()}
     <TableHeaderCell label="ID" sort={sorter} column="id" />
@@ -94,6 +124,56 @@
             <td class="branch">{review.branch}</td>
           {/if}
           <td class="num">{review.tokens.toLocaleString()}</td>
+        </tr>
+      {/snippet}
+    </VirtualTable>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Rows of different heights"
+  description="Each note runs from one to five lines, and Details opens a row in place. Every rendered row is measured when it renders and again whenever it changes height, so the rows below it move down and the scrollbar stays accurate."
+  code={`<VirtualTable items={notes} rowKey={(n) => n.id} estimateRowHeight={60} ariaLabel="Review notes">
+  {#snippet row(note)}
+    <tr>
+      <td>{#each note.lines as line}<div>{line}</div>{/each}</td>
+      <td><Button label="Details" onclick={() => toggle(note.id)} /></td>
+    </tr>
+  {/snippet}
+</VirtualTable>`}
+>
+  <div class="host">
+    <VirtualTable
+      items={sortedNotes}
+      rowKey={(n) => n.id}
+      estimateRowHeight={60}
+      ariaLabel="Review notes"
+    >
+      {#snippet header()}
+        <TableHeaderCell label="ID" numeric sort={noteSorter} column="id" />
+        <TableHeaderCell label="Project" sort={noteSorter} column="project" />
+        <TableHeaderCell label="Note" sort={noteSorter} column="lines" />
+        <TableHeaderCell><span class="kit-sr-only">Details</span></TableHeaderCell>
+      {/snippet}
+      {#snippet row(note)}
+        <tr>
+          <td class="num">#{note.id}</td>
+          <td>{note.project}</td>
+          <td>
+            {#each note.lines as line, j (j)}
+              <div>{line}</div>
+            {/each}
+            {#if expanded.has(note.id)}
+              <div class="details">{note.details}</div>
+            {/if}
+          </td>
+          <td>
+            <Button
+              size="sm"
+              label={expanded.has(note.id) ? "Hide" : "Details"}
+              onclick={() => toggle(note.id)}
+            />
+          </td>
         </tr>
       {/snippet}
     </VirtualTable>
@@ -202,6 +282,12 @@ table.refresh();`}
     border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
+  }
+
+  .details {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
   }
 
   .num {
