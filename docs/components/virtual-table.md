@@ -38,22 +38,24 @@ whose rows are options, not cells.
 
 ## Props
 
-| Prop                | Type                                  | Default                    | Notes                                                                                                                     |
-| ------------------- | ------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `items`             | `T[]`                                 | required                   | Every row's data, in display order                                                                                        |
-| `header`            | `Snippet`                             | required                   | `<TableHeaderCell>` elements, as in `Table`                                                                               |
-| `row`               | `Snippet<[T, number]>`                | required                   | `(item, index)`; renders exactly one `<tr>`                                                                               |
-| `rowKey`            | `(item: T, index: number) => unknown` | index                      | Stable row identity for keyed rendering                                                                                   |
-| `empty`             | `Snippet`                             | —                          | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead                                 |
-| `scroll`            | `"self" \| "page"`                    | `"self"`                   | What scrolls the rows, as on `Table`                                                                                      |
-| `scrollElement`     | `() => HTMLElement \| null`           | nearest scrolling ancestor | With `scroll="page"`, the element that scrolls the table                                                                  |
-| `estimateRowHeight` | `number`                              | `36`                       | Height in px of rows not yet rendered. Set it near the real row height: it sizes the scrollbar and places unmeasured rows |
-| `overscan`          | `number`                              | `8`                        | Rows rendered beyond each edge of the visible area                                                                        |
-| `stickyHeader`      | `boolean`                             | `true`                     | As on `Table`                                                                                                             |
-| `zebra`             | `boolean`                             | `true`                     | As on `Table`; stripes follow the row index, not the rendered position                                                    |
-| `ariaLabel`         | `string`                              | —                          |                                                                                                                           |
-| `unsorted`          | `boolean`                             | `false`                    | As on `Table`; kit-ui-check reads it on `VirtualTable` too                                                                |
-| `class`             | `string`                              | `""`                       | Applied to the scroll wrapper                                                                                             |
+| Prop                   | Type                                      | Default                    | Notes                                                                                                                     |
+| ---------------------- | ----------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `items`                | `T[]`                                     | required                   | Every row's data, in display order                                                                                        |
+| `header`               | `Snippet`                                 | required                   | `<TableHeaderCell>` elements, as in `Table`                                                                               |
+| `row`                  | `Snippet<[T, number]>`                    | required                   | `(item, index)`; renders exactly one `<tr>`                                                                               |
+| `rowKey`               | `(item: T, index: number) => unknown`     | index                      | Stable row identity for keyed rendering                                                                                   |
+| `empty`                | `Snippet`                                 | —                          | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead                                 |
+| `scroll`               | `"self" \| "page"`                        | `"self"`                   | What scrolls the rows, as on `Table`                                                                                      |
+| `scrollElement`        | `() => HTMLElement \| null`               | nearest scrolling ancestor | With `scroll="page"`, the element that scrolls the table                                                                  |
+| `estimateRowHeight`    | `number`                                  | `36`                       | Height in px of rows not yet rendered. Set it near the real row height: it sizes the scrollbar and places unmeasured rows |
+| `overscan`             | `number`                                  | `8`                        | Rows rendered beyond each edge of the visible area                                                                        |
+| `stickyHeader`         | `boolean`                                 | `true`                     | As on `Table`                                                                                                             |
+| `zebra`                | `boolean`                                 | `true`                     | As on `Table`; stripes follow the row index, not the rendered position                                                    |
+| `ariaLabel`            | `string`                                  | —                          |                                                                                                                           |
+| `unsorted`             | `boolean`                                 | `false`                    | As on `Table`; kit-ui-check reads it on `VirtualTable` too                                                                |
+| `fitColumn`            | `(column: number) => number \| undefined` | —                          | Content width in px for fitting a column; undefined measures sampled rows                                                 |
+| `oncolumnwidthschange` | `(widths: number[]) => void`              | —                          | Every column's width, in order, after a resize or fit                                                                     |
+| `class`                | `string`                                  | `""`                       | Applied to the scroll wrapper                                                                                             |
 
 ## Scrolling
 
@@ -97,25 +99,35 @@ browser's scroll anchoring, which current Chrome provides.
 
 ## Column widths
 
-Under automatic layout, column widths depend on the rows rendered, so they
-would shift as different rows scroll in, and widths taken from the first
-screen would not fit longer values further down. To pin the columns,
-VirtualTable briefly renders up to 50 rows sampled evenly across the whole
-list, first and last included, after the visible rows with
-`visibility: collapse`: Chrome gives them no height and hides them, but they
-still count toward the column widths. It pins each header cell's width,
-switches to fixed layout, and unmounts the samples in the same update,
-before paint, so their form fields never submit and queries for the
-table's rows never see them.
+Columns work as in [gpui-kit](https://github.com/longbridge/gpui-kit)'s
+table: each column has a width, kept while the rows scroll and change, and
+people resize it or fit it to its content.
 
-- The columns are pinned again when the items array changes (new data, a
-  filter, a sort), when the table's width changes, and when a column is
-  added or removed. An empty list stays unpinned until rows render.
-- Pinned header cells use border-box sizing, so the measured width is the
-  final width whatever the app's `box-sizing`.
-- Text wider than its pinned column wraps, breaking inside a long word when
-  it has to. Content that cannot wrap (buttons, chips) should fit the widest
-  sampled value.
+- **Starting width.** A `TableHeaderCell` with `width` starts at that width.
+  The others are measured once: VirtualTable briefly renders up to 50 rows
+  sampled evenly across the list (first and last included) with
+  `visibility: collapse`, which Chrome lays out but does not show, lets the
+  browser size the columns, and unmounts the samples before paint.
+- **Resizing.** Each header cell's right edge has a resize handle
+  ([SplitResizeHandle](split-resize-handle.md)): drag it, or focus it and
+  press the arrow keys. `resizable={false}` removes it.
+- **Fitting.** Double-click a handle, or press Enter on it, to fit the column
+  to its content. VirtualTable measures the widest value among the visible
+  and sampled rows; `fitColumn(column)` can return the content width instead,
+  from what the app knows about its data. The header cell's padding is added.
+- **Limits.** `minWidth` (default 20) and `maxWidth` (default 1200) bound
+  resizing and fitting, and a measured starting width.
+- **Saving.** After a resize or fit, `oncolumnwidthschange(widths)` reports
+  every column's width in order; pass them back as `width` to restore them.
+- **Filling.** When the widths add up to less than the table's box, the last
+  column takes the rest. When they add up to more, the table scrolls
+  sideways.
+
+Widths are kept by the header's `column` (or its label), so hiding one
+column keeps the others' widths. Text wider than its column wraps, breaking
+inside a long word when it has to. Pinned header cells use border-box
+sizing, so a width is the cell's whole width whatever the app's
+`box-sizing`.
 
 ## Limits
 

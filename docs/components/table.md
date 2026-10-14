@@ -143,17 +143,21 @@ raised Card shows a second frame.
 
 ## TableHeaderCell props
 
-| Prop            | Type                      | Default | Notes                                                         |
-| --------------- | ------------------------- | ------- | ------------------------------------------------------------- |
-| `label`         | `string`                  | —       | Header text (or use `children`)                               |
-| `children`      | `Snippet`                 | —       | Custom header content                                         |
-| `sort`          | `TableSortControl`        | —       | A `TableSort`; replaces `sortable`, `sortDirection`, `onsort` |
-| `column`        | `string`                  | —       | This column's key in `sort`; required with `sort`             |
-| `sortable`      | `boolean`                 | `false` | Render the sort button for server-sorted data                 |
-| `sortDirection` | `"asc" \| "desc" \| null` | `null`  | This column's current direction; sets `aria-sort`             |
-| `onsort`        | `() => void`              | —       | Click handler; toggle direction in your state                 |
-| `numeric`       | `boolean`                 | `false` | Right-align (numbers, costs, durations)                       |
-| `class`         | `string`                  | `""`    |                                                               |
+| Prop            | Type                      | Default | Notes                                                                                             |
+| --------------- | ------------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `label`         | `string`                  | —       | Header text (or use `children`)                                                                   |
+| `children`      | `Snippet`                 | —       | Custom header content                                                                             |
+| `sort`          | `TableSortControl`        | —       | A `TableSort`; replaces `sortable`, `sortDirection`, `onsort`                                     |
+| `column`        | `string`                  | —       | This column's key in `sort`; required with `sort`                                                 |
+| `sortable`      | `boolean`                 | `false` | Render the sort button for server-sorted data                                                     |
+| `sortDirection` | `"asc" \| "desc" \| null` | `null`  | This column's current direction; sets `aria-sort`                                                 |
+| `onsort`        | `() => void`              | —       | Click handler; toggle direction in your state                                                     |
+| `numeric`       | `boolean`                 | `false` | Right-align (numbers, costs, durations)                                                           |
+| `width`         | `number`                  | —       | VirtualTable: the column's starting width in px ([Column widths](virtual-table.md#column-widths)) |
+| `minWidth`      | `number`                  | `20`    | VirtualTable: the narrowest a resize or fit makes the column                                      |
+| `maxWidth`      | `number`                  | `1200`  | VirtualTable: the widest a resize or fit makes the column                                         |
+| `resizable`     | `boolean`                 | `true`  | VirtualTable: show the resize handle on the cell's right edge                                     |
+| `class`         | `string`                  | `""`    |                                                                                                   |
 
 ## TableSort
 

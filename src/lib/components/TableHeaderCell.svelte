@@ -6,6 +6,14 @@
   import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
   import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
   import type { Snippet } from "svelte";
+  import { getContext } from "svelte";
+  import SplitResizeHandle from "./SplitResizeHandle.svelte";
+  import {
+    columnSizingContext,
+    DEFAULT_MAX_COLUMN_WIDTH,
+    DEFAULT_MIN_COLUMN_WIDTH,
+    type ColumnSizing,
+  } from "./table-columns.js";
   import type { SortDirection, TableSortControl } from "./table-sort.js";
 
   interface BaseProps {
@@ -19,6 +27,16 @@
     onsort?: () => void;
     /** Right-align (numbers, costs, durations). */
     numeric?: boolean;
+    /** VirtualTable: the column's width in px. Unset, it is measured from
+     * rows sampled across the list. */
+    width?: number;
+    /** VirtualTable: the narrowest a resize or fit makes the column. */
+    minWidth?: number;
+    /** VirtualTable: the widest a resize or fit makes the column. */
+    maxWidth?: number;
+    /** VirtualTable: show a handle to resize the column, or double-click it
+     * to fit the column to its content. */
+    resizable?: boolean;
     class?: string;
   }
 
@@ -43,8 +61,31 @@
     sort = undefined,
     column = undefined,
     numeric = false,
+    width = undefined,
+    minWidth = DEFAULT_MIN_COLUMN_WIDTH,
+    maxWidth = DEFAULT_MAX_COLUMN_WIDTH,
+    resizable = true,
     class: className = "",
   }: Props = $props();
+
+  // Present inside a VirtualTable, which owns the column widths.
+  const sizing = getContext<ColumnSizing | undefined>(columnSizingContext);
+  let cell = $state<HTMLTableCellElement>();
+  const shownWidth = $derived.by(() => {
+    void sizing?.version;
+    return cell && sizing ? sizing.width(cell) : undefined;
+  });
+  const bounds = $derived.by(() => {
+    void sizing?.version;
+    return cell && sizing ? sizing.limits(cell) : { min: minWidth, max: maxWidth };
+  });
+
+  function fitOnEnter(event: KeyboardEvent): void {
+    if (event.key === "Enter" && cell && sizing) {
+      event.preventDefault();
+      sizing.fit(cell);
+    }
+  }
 
   const isSortable = $derived(sort !== undefined || sortable);
   const direction = $derived(
@@ -65,7 +106,16 @@
   );
 </script>
 
-<th class={["kit-th", { "kit-th--numeric": numeric }, className]} scope="col" aria-sort={ariaSort}>
+<th
+  bind:this={cell}
+  class={["kit-th", { "kit-th--numeric": numeric, "kit-th--sized": sizing }, className]}
+  scope="col"
+  aria-sort={ariaSort}
+  data-kit-column={column ?? label}
+  data-kit-width={width}
+  data-kit-min-width={minWidth}
+  data-kit-max-width={maxWidth}
+>
   {#if isSortable}
     <button class="kit-th__sort-btn kit-control-states" type="button" {onclick}>
       {#if label}{label}{/if}
@@ -81,6 +131,22 @@
   {:else}
     {#if label}{label}{/if}
     {#if children}{@render children()}{/if}
+  {/if}
+  {#if sizing && resizable && shownWidth !== undefined}
+    <!-- Double-click or Enter fits the column to its content; the handle
+         itself drags and steps with the arrow keys. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <span class="kit-th__resize" ondblclick={() => cell && sizing.fit(cell)} onkeydown={fitOnEnter}>
+      <SplitResizeHandle
+        ariaLabel={`Resize the ${label ?? "column"} column`}
+        ariaValueMin={bounds.min}
+        ariaValueMax={bounds.max}
+        ariaValueNow={Math.round(shownWidth)}
+        onResizeStart={() => cell && sizing.resizeStart(cell)}
+        onResize={(event) => cell && sizing.resize(cell, event.delta)}
+        onResizeEnd={() => cell && sizing.resizeEnd(cell)}
+      />
+    </span>
   {/if}
 </th>
 
@@ -99,6 +165,19 @@
 
   .kit-th--numeric {
     text-align: right;
+  }
+
+  .kit-th--sized {
+    position: relative;
+  }
+
+  /* The handle sits on the cell's right edge, over the border between this
+   * column and the next. */
+  .kit-th__resize {
+    position: absolute;
+    inset-block: 0;
+    right: -2px;
+    display: flex;
   }
 
   /* Baseline alignment keeps the label on the header row's text baseline.

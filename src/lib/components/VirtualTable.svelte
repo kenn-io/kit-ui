@@ -1,7 +1,13 @@
 <script lang="ts" generics="T">
   import type { Snippet } from "svelte";
-  import { untrack } from "svelte";
+  import { setContext, untrack } from "svelte";
   import Table from "./Table.svelte";
+  import {
+    columnSizingContext,
+    DEFAULT_MAX_COLUMN_WIDTH,
+    DEFAULT_MIN_COLUMN_WIDTH,
+    type ColumnSizing,
+  } from "./table-columns.js";
   import { scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
@@ -33,6 +39,14 @@
     ariaLabel?: string;
     /** Opts this table out of sorting, as on Table. */
     unsorted?: boolean;
+    /** The width in px the content of column `column` needs, for fitting it
+     * when its resize handle is double-clicked; undefined measures the
+     * column's rows sampled across the list. The table adds the header
+     * cell's padding and clamps to the column's limits. */
+    fitColumn?: (column: number) => number | undefined;
+    /** Called with every column's width, in order, after a resize or fit,
+     * for an app to keep them. */
+    oncolumnwidthschange?: (widths: number[]) => void;
     class?: string;
   }
 
@@ -50,6 +64,8 @@
     zebra = true,
     ariaLabel = undefined,
     unsorted = false,
+    fitColumn = undefined,
+    oncolumnwidthschange = undefined,
     class: className = "",
   }: Props = $props();
 
@@ -125,23 +141,25 @@
     return [...picked];
   });
 
+  // Sampled rows are mounted only while columns are measured; the effect
+  // below measures once they have rendered and unmounts them before paint.
   let sampling = $state(false);
-  // Pin the columns again: mount the samples, and the effect below measures
-  // and unmounts them once they have rendered.
-  function requestPin(): void {
+  // The column a fit measures, or undefined to size unsized columns.
+  let fitting: number | undefined;
+
+  function requestSizing(): void {
     if (items.length > 0) sampling = true;
   }
 
   $effect(() => {
     if (!sampling) return;
-    untrack(freezeColumns);
+    untrack(() => {
+      const column = fitting;
+      fitting = undefined;
+      if (column === undefined) sizeColumns();
+      else measureFit(column);
+    });
     sampling = false;
-  });
-
-  // A new items array (other data, a filter, a sort) may hold wider values.
-  $effect(() => {
-    void items;
-    untrack(requestPin);
   });
 
   // The visible part of the body is where it overlaps the scroller's client
@@ -162,42 +180,152 @@
     viewport = next.viewport;
   }
 
-  // Column widths follow the rendered rows under automatic layout, so they
-  // would shift as different rows scroll in. Lay the table out once with the
-  // rows on screen, then pin those widths until the table's width changes or
-  // its columns do.
-  let frozenWidth = -1;
-  function freezeColumns(): void {
-    const table = body?.parentElement;
-    const cells = (table as HTMLTableElement | undefined)?.tHead?.rows[0]?.cells;
-    // A hidden table (a closed <details>, an inactive tab) has no layout to
-    // pin yet; the resize when it appears measures it.
-    if (!table || !cells || !table.parentElement?.clientWidth) return;
+  // Column widths, as in gpui-kit: each column has a width, set on its
+  // TableHeaderCell or measured once from the visible and sampled rows, kept
+  // until someone resizes or fits the column. Widths are stored by column key
+  // (the header's `column` or label), so hiding a column keeps the others'.
+  const widths = new Map<string, number>();
+  let shown: number[] = [];
+  let sized = false;
+  let sizingVersion = $state(0);
+
+  const headerCells = (): HTMLTableCellElement[] =>
+    Array.from((body?.parentElement as HTMLTableElement | undefined)?.tHead?.rows[0]?.cells ?? []);
+  const keyOf = (cell: HTMLTableCellElement): string =>
+    cell.dataset["kitColumn"] || String(cell.cellIndex);
+  const limitsOf = (cell: HTMLTableCellElement) => ({
+    min: Number(cell.dataset["kitMinWidth"]) || DEFAULT_MIN_COLUMN_WIDTH,
+    max: Number(cell.dataset["kitMaxWidth"]) || DEFAULT_MAX_COLUMN_WIDTH,
+  });
+  const clampTo = (cell: HTMLTableCellElement, width: number): number => {
+    const { min, max } = limitsOf(cell);
+    return Math.min(max, Math.max(min, width));
+  };
+
+  // Release the pinned layout so the browser lays the table out by content.
+  function unpin(table: HTMLElement, cells: HTMLTableCellElement[]): void {
     table.style.tableLayout = "";
+    table.style.width = "";
     table.classList.remove(PINNED);
     for (const cell of cells) {
       cell.style.width = "";
       cell.style.boxSizing = "";
     }
-    columns = Math.max(1, cells.length);
+  }
+
+  // Give every column without a width one: the header's `width`, or its
+  // share of the table under automatic layout with the visible and sampled
+  // rows, the columns with widths keeping theirs.
+  function sizeColumns(): void {
+    const table = body?.parentElement;
+    const cells = headerCells();
+    // A hidden table (a closed <details>, an inactive tab) has no layout to
+    // measure yet; the resize when it appears measures it.
+    if (!table || cells.length === 0 || !table.parentElement?.clientWidth) return;
+    columns = cells.length;
     // Only data rows, on screen or sampled, may decide the widths. Without
-    // any (an empty list), stay unpinned until rows render.
+    // any (an empty list), wait until rows render.
     const rendered = Array.from(body!.rows).some((tr) => !tr.classList.contains(SPACER));
-    if (items.length === 0 || !rendered) {
-      frozenWidth = -1;
-      return;
+    if (items.length === 0 || !rendered) return;
+    const explicit = (cell: HTMLTableCellElement) =>
+      cell.dataset["kitWidth"] ? Number(cell.dataset["kitWidth"]) : undefined;
+    if (cells.some((cell) => !widths.has(keyOf(cell)))) {
+      unpin(table, cells);
+      for (const cell of cells) {
+        const known = widths.get(keyOf(cell)) ?? explicit(cell);
+        if (known === undefined) continue;
+        cell.style.boxSizing = "border-box";
+        cell.style.width = `${known}px`;
+      }
+      // Measured widths include padding and borders; pinned cells use
+      // border-box sizing, so they become the final widths.
+      const measured = cells.map((cell) => cell.getBoundingClientRect().width);
+      cells.forEach((cell, i) => {
+        if (!widths.has(keyOf(cell)))
+          widths.set(keyOf(cell), clampTo(cell, explicit(cell) ?? measured[i]!));
+      });
     }
-    // The measured width includes padding and borders; border-box sizing
-    // makes it the cell's final width whatever the app's box-sizing is.
-    const widths = Array.from(cells, (cell) => cell.getBoundingClientRect().width);
-    widths.forEach((width, i) => {
-      cells[i]!.style.boxSizing = "border-box";
-      cells[i]!.style.width = `${width}px`;
+    sized = true;
+    applyWidths();
+  }
+
+  // Show the stored widths in fixed layout. When they add up to less than
+  // the wrapper, the last column takes the rest, so the table still fills
+  // it; when they add up to more, the table is wider and scrolls sideways.
+  function applyWidths(): void {
+    const table = body?.parentElement;
+    const wrapper = table?.parentElement;
+    const cells = headerCells();
+    if (!table || !wrapper || cells.length === 0) return;
+    const style = getComputedStyle(wrapper);
+    const available =
+      wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    shown = cells.map((cell) => widths.get(keyOf(cell)) ?? clampTo(cell, 100));
+    const total = shown.reduce((sum, width) => sum + width, 0);
+    if (total < available) shown[shown.length - 1]! += available - total;
+    cells.forEach((cell, i) => {
+      cell.style.boxSizing = "border-box";
+      cell.style.width = `${shown[i]}px`;
     });
     table.style.tableLayout = "fixed";
+    table.style.width = `${shown.reduce((sum, width) => sum + width, 0)}px`;
     table.classList.add(PINNED);
-    frozenWidth = table.parentElement?.clientWidth ?? 0;
+    sizingVersion += 1;
   }
+
+  function reportWidths(): void {
+    oncolumnwidthschange?.(headerCells().map((cell) => widths.get(keyOf(cell)) ?? 0));
+  }
+
+  // Fit a column to its widest content among the visible and sampled rows:
+  // with the table laid out at its natural width, the column's header cell is
+  // as wide as its widest cell.
+  function measureFit(column: number): void {
+    const table = body?.parentElement;
+    const cells = headerCells();
+    const cell = cells[column];
+    if (!table || !cell) return;
+    unpin(table, cells);
+    table.style.width = "max-content";
+    widths.set(keyOf(cell), clampTo(cell, cell.getBoundingClientRect().width));
+    applyWidths();
+    reportWidths();
+  }
+
+  let resizeBase = 0;
+  const sizingApi: ColumnSizing = {
+    get version() {
+      return sizingVersion;
+    },
+    width: (cell) => (sized ? shown[cell.cellIndex] : undefined),
+    limits: limitsOf,
+    resizeStart: (cell) => {
+      resizeBase = shown[cell.cellIndex] ?? 0;
+    },
+    resize: (cell, delta) => {
+      widths.set(keyOf(cell), clampTo(cell, resizeBase + delta));
+      applyWidths();
+    },
+    resizeEnd: () => reportWidths(),
+    fit: (cell) => {
+      const content = fitColumn?.(cell.cellIndex);
+      if (content !== undefined) {
+        const style = getComputedStyle(cell);
+        const frame =
+          parseFloat(style.paddingLeft) +
+          parseFloat(style.paddingRight) +
+          parseFloat(style.borderLeftWidth) +
+          parseFloat(style.borderRightWidth);
+        widths.set(keyOf(cell), clampTo(cell, content + frame));
+        applyWidths();
+        reportWidths();
+        return;
+      }
+      fitting = cell.cellIndex;
+      requestSizing();
+    },
+  };
+  setContext(columnSizingContext, sizingApi);
 
   // Each rendered row is observed, so any row changing height, even when
   // another changes by the opposite amount and the body keeps its size,
@@ -231,8 +359,8 @@
     }
     watchRows(rows);
     // The samples alone can pin the columns, before any row is on screen.
-    const headerCells = table.tHead?.rows[0]?.cells.length ?? 0;
-    if (frozenWidth < 0 || headerCells !== columns) requestPin();
+    const headerCount = table.tHead?.rows[0]?.cells.length ?? 0;
+    if (!sized || headerCount !== columns) requestSizing();
     if (rows.length === 0) return;
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
@@ -270,8 +398,7 @@
     scroller = element;
     const target: HTMLElement | Window = element === document.scrollingElement ? window : element;
     const resized = () => {
-      const width = wrapper.clientWidth;
-      if (frozenWidth >= 0 && width !== frozenWidth) requestPin();
+      if (sized) applyWidths();
       refresh();
     };
     untrack(updateWindow);
@@ -301,7 +428,7 @@
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
     const columnsChanged = new MutationObserver(() => {
       columns = Math.max(1, headerRow?.cells.length ?? 1);
-      if (frozenWidth >= 0) requestPin();
+      requestSizing();
       measureRows();
     });
     if (headerRow) columnsChanged.observe(headerRow, { childList: true });

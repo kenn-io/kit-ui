@@ -12,6 +12,16 @@ interface BaseProps {
     onsort?: () => void;
     /** Right-align (numbers, costs, durations). */
     numeric?: boolean;
+    /** VirtualTable: the column's width in px. Unset, it is measured from
+     * rows sampled across the list. */
+    width?: number;
+    /** VirtualTable: the narrowest a resize or fit makes the column. */
+    minWidth?: number;
+    /** VirtualTable: the widest a resize or fit makes the column. */
+    maxWidth?: number;
+    /** VirtualTable: show a handle to resize the column, or double-click it
+     * to fit the column to its content. */
+    resizable?: boolean;
     class?: string;
 }
 type Props = BaseProps & ({

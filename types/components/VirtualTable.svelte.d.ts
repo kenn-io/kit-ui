@@ -29,6 +29,14 @@ declare function $$render<T>(): {
         ariaLabel?: string;
         /** Opts this table out of sorting, as on Table. */
         unsorted?: boolean;
+        /** The width in px the content of column `column` needs, for fitting it
+         * when its resize handle is double-clicked; undefined measures the
+         * column's rows sampled across the list. The table adds the header
+         * cell's padding and clamps to the column's limits. */
+        fitColumn?: (column: number) => number | undefined;
+        /** Called with every column's width, in order, after a resize or fit,
+         * for an app to keep them. */
+        oncolumnwidthschange?: (widths: number[]) => void;
         class?: string;
     };
     exports: {

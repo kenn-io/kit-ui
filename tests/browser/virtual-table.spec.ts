@@ -238,15 +238,29 @@ test("a wide table in a flex row scrolls sideways instead of widening its box", 
 test("pinned widths do not add padding again when the app uses content-box sizing", async ({
   page,
 }) => {
+  // The app's content-box rule is in place before the columns are sized.
+  await page.addInitScript(() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const style = document.createElement("style");
+      style.textContent = ".kit-table th, .kit-table td { box-sizing: content-box; }";
+      document.head.append(style);
+    });
+  });
   await gotoPage(page, "virtual-table");
-  await page.addStyleTag({ content: ".kit-table th, .kit-table td { box-sizing: content-box; }" });
   const table = bounded(page);
   await expect(dataRows(table).first()).toContainText("#0");
-  // Re-pin under the content-box rule.
-  await page.setViewportSize({ width: 1180, height: 800 });
+  // Each header cell is drawn at its pinned width, padding included, so the
+  // table fills its box exactly.
   await expect
-    .poll(() => table.evaluate((el) => el.offsetWidth - el.parentElement!.clientWidth))
-    .toBeLessThanOrEqual(0);
+    .poll(() =>
+      table.evaluate((el) => ({
+        drawnAsPinned: [...el.tHead!.rows[0]!.cells].every(
+          (c) => Math.abs(c.getBoundingClientRect().width - parseFloat(c.style.width)) < 1,
+        ),
+        overflow: el.offsetWidth - el.parentElement!.clientWidth,
+      })),
+    )
+    .toEqual({ drawnAsPinned: true, overflow: 0 });
 });
 
 test("rows fill space revealed when a scroller above the table grows", async ({ page }) => {
@@ -588,17 +602,97 @@ test("no sampled rows remain once the columns are pinned", async ({ page }) => {
   await expect(table).toHaveClass(/kit-virtual-table--pinned/);
 });
 
-test("new items with wider values pin the columns again", async ({ page }) => {
+test("new items keep the columns' widths", async ({ page }) => {
   await gotoPage(page, "virtual-table");
   const table = bounded(page);
   await expect(dataRows(table).first()).toContainText("#0");
-  const project = () =>
+  const widths = () =>
     table
       .locator("thead th")
-      .nth(2)
-      .evaluate((th) => th.getBoundingClientRect().width);
-  const before = await project();
+      .evaluateAll((cells) => cells.map((c) => c.getBoundingClientRect().width));
+  const before = await widths();
   await page.getByRole("checkbox", { name: "Use longer project names" }).check();
   await expect(dataRows(table).first()).toContainText("with-a-longer-name");
-  await expect.poll(project).toBeGreaterThan(before + 50);
+  expect(await widths()).toEqual(before);
+});
+
+const notesTable = (page: Page) => page.locator('table[aria-label="Review notes"]');
+const columnWidths = (table: Locator) =>
+  table
+    .locator("thead th")
+    .evaluateAll((cells) => cells.map((c) => Math.round(c.getBoundingClientRect().width)));
+
+test("dragging a header edge resizes the column", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const before = await columnWidths(table);
+  const handle = table.getByRole("separator", { name: "Resize the Project column" });
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 100, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  const after = await columnWidths(table);
+  expect(after[2]! - before[2]!).toBeGreaterThanOrEqual(98);
+  // The table grows past its box rather than squeezing the other columns.
+  expect(after.slice(0, 2)).toEqual(before.slice(0, 2));
+  expect(after[3]).toBe(before[3]);
+});
+
+test("arrow keys on a header edge resize the column", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const before = await columnWidths(table);
+  await table.getByRole("separator", { name: "Resize the ID column" }).focus();
+  await page.keyboard.press("ArrowRight");
+  expect((await columnWidths(table))[0]).toBe(before[0]! + 24);
+});
+
+test("double-clicking a header edge fits the column to its widest value", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Squeeze the Branch column so its long values wrap, then fit it.
+  const handle = table.getByRole("separator", { name: "Resize the Branch column" });
+  await handle.focus();
+  for (let i = 0; i < 12; i += 1) await page.keyboard.press("ArrowLeft");
+  await handle.dblclick();
+  const lines = await table
+    .locator("td.branch", { hasText: "feature/a-much-longer" })
+    .first()
+    .evaluate((td) => {
+      const range = document.createRange();
+      range.selectNodeContents(td);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+  expect(lines).toBe(1);
+});
+
+test("a header's width and limits size its column", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = notesTable(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  expect((await columnWidths(table))[0]).toBe(90);
+  // Dragging far left stops at the Project column's 80px minimum.
+  const handle = table.getByRole("separator", { name: "Resize the Project column" });
+  await handle.scrollIntoViewIfNeeded();
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 400, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  expect((await columnWidths(table))[1]).toBe(80);
+  // The app is told the widths after a resize.
+  await expect(page.locator(".saved-widths")).toContainText(/Saved widths: 90, 80, /);
+});
+
+test("fitColumn supplies the content width for a fit", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = notesTable(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await table.getByRole("separator", { name: "Resize the ID column" }).dblclick();
+  // 40px of content plus the header cell's 10px padding on each side.
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(60);
 });

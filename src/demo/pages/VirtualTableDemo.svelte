@@ -81,6 +81,9 @@
   const sortedNotes = $derived(noteSorter.sort(notes));
   const expanded = new SvelteSet<number>();
   const toggle = (id: number) => (expanded.has(id) ? expanded.delete(id) : expanded.add(id));
+  let savedWidths = $state<number[]>([]);
+  // The app knows its IDs: at most "#1999", about 40px of digits.
+  const fitNoteColumn = (column: number) => (column === 0 ? 40 : undefined);
   let showBranch = $state(true);
   let pageTable = $state<ReturnType<typeof VirtualTable<Review>>>();
   const pageSorter = new TableSort<Review>(
@@ -92,7 +95,7 @@
 
 <DemoSection
   title="10,000 rows in a table"
-  description="VirtualTable renders only the rows on screen plus overscan, inside a real table: sortable headers, zebra stripes, and links in cells all behave as in Table. With the default scroll='self' it scrolls inside its own bounded wrapper. Column widths are pinned from rows sampled across the whole list, so they fit values far down the list and do not shift while scrolling."
+  description="VirtualTable renders only the rows on screen plus overscan, inside a real table: sortable headers, zebra stripes, and links in cells all behave as in Table. With the default scroll='self' it scrolls inside its own bounded wrapper. Columns start at widths measured from rows sampled across the whole list and keep them while scrolling. Drag a header's right edge to resize a column, or double-click it to fit the column to its content."
   code={`<VirtualTable items={sorter.sort(reviews)} rowKey={(r) => r.id} ariaLabel="Reviews">
   {#snippet header()}
     <TableHeaderCell label="ID" sort={sorter} column="id" />
@@ -140,7 +143,7 @@
 
 <DemoSection
   title="Rows of different heights"
-  description="Each note runs from one to five lines, and Details opens a row in place. Every rendered row is measured when it renders and again whenever it changes height, so the rows below it move down and the scrollbar stays accurate."
+  description="Each note runs from one to five lines, and Details opens a row in place. Every rendered row is measured when it renders and again whenever it changes height, so the rows below it move down and the scrollbar stays accurate. The ID column starts 90px wide and fits to a width the app supplies; resized widths are reported back to the app."
   code={`<VirtualTable items={notes} rowKey={(n) => n.id} estimateRowHeight={60} ariaLabel="Review notes">
   {#snippet row(note)}
     <tr>
@@ -156,10 +159,12 @@
       rowKey={(n) => n.id}
       estimateRowHeight={60}
       ariaLabel="Review notes"
+      fitColumn={fitNoteColumn}
+      oncolumnwidthschange={(widths) => (savedWidths = widths)}
     >
       {#snippet header()}
-        <TableHeaderCell label="ID" numeric sort={noteSorter} column="id" />
-        <TableHeaderCell label="Project" sort={noteSorter} column="project" />
+        <TableHeaderCell label="ID" numeric sort={noteSorter} column="id" width={90} />
+        <TableHeaderCell label="Project" sort={noteSorter} column="project" minWidth={80} />
         <TableHeaderCell label="Note" sort={noteSorter} column="lines" />
         <TableHeaderCell><span class="kit-sr-only">Details</span></TableHeaderCell>
       {/snippet}
@@ -186,6 +191,11 @@
       {/snippet}
     </VirtualTable>
   </div>
+  <p class="saved-widths" aria-live="polite">
+    Saved widths: {savedWidths.length
+      ? savedWidths.map((w) => Math.round(w)).join(", ")
+      : "none yet"}
+  </p>
 </DemoSection>
 
 <DemoSection
@@ -290,6 +300,12 @@ table.refresh();`}
     border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
+  }
+
+  .saved-widths {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
   }
 
   .details {
