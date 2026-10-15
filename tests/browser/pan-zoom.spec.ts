@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import type { PanZoom, PanZoomOptions, PanZoomView } from "../../src/lib/utils/pan-zoom.js";
 import { gotoPage } from "./helpers.js";
 
@@ -187,8 +187,11 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("the comparison demo links, separates, and fits its views", async ({ page }) => {
-  const { panes, images, boxes, link, transforms } = await openComparisonDemo(page);
+test("comparison demo links and fits views; Actual pixels preserves size, readout, and positions", async ({
+  page,
+  browser,
+}) => {
+  const { panes, images, boxes, link, transforms, fittedWidth } = await openComparisonDemo(page);
   const identity = [
     { scale: 1, offsetX: 0, offsetY: 0 },
     { scale: 1, offsetX: 0, offsetY: 0 },
@@ -231,13 +234,6 @@ test("the comparison demo links, separates, and fits its views", async ({ page }
   const panned = await transforms();
   expect(panned[0]).not.toBe(fitted[0]);
   expect(panned[1]).toBe(panned[0]);
-});
-
-test("Actual pixels keeps size, readout, and view positions across changes", async ({
-  page,
-  browser,
-}) => {
-  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
   await link.uncheck();
   for (const [width, dpr] of [
     [80, 4],
@@ -324,7 +320,6 @@ test("Actual pixels keeps size, readout, and view positions across changes", asy
         },
       ]);
   }
-  await preservesFractionalActualPixels(browser);
 });
 
 async function density(page: Page, value: number) {
@@ -335,7 +330,7 @@ async function density(page: Page, value: number) {
   await expect(page.locator("output")).toContainText(`DPR ${value}`);
 }
 
-async function preservesFractionalActualPixels(browser: Browser) {
+test("Actual pixels preserves fractional sizing", async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 1281, height: 800 },
     deviceScaleFactor: 2,
@@ -358,7 +353,7 @@ async function preservesFractionalActualPixels(browser: Browser) {
   } finally {
     await context.close();
   }
-}
+});
 
 async function setImageFitWidth(image: Locator, fittedWidth: number) {
   const { naturalWidth, naturalHeight } = (await measureImages(image))[0]!;
