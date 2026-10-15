@@ -79,13 +79,14 @@
   // One image pixel per physical screen pixel.
   function exactSize(index: number) {
     const image = imageNodes[index]!;
-    const fittedW = Math.min(
-      image.clientWidth,
-      (image.clientHeight * image.naturalWidth) / image.naturalHeight,
-    );
+    // These originals are unrotated, and their image boxes have no padding.
+    const displayW = image.naturalWidth;
+    const displayH = image.naturalHeight;
+    const fittedW = Math.min(image.clientWidth, (image.clientHeight * displayW) / displayH);
     exactIndex = index;
-    view = { scale: image.naturalWidth / (fittedW * dpr), offsetX: 0, offsetY: 0 };
+    view = { scale: displayW / (fittedW * dpr), offsetX: 0, offsetY: 0 };
     for (const controller of controllers) controller.setView(view);
+    view = controllers[0]!.getView();
   }
 
   function fit() {
@@ -98,8 +99,13 @@
   title="Linked panes"
   description="Drag either image to move both. Wheel or pinch to zoom, double-click to toggle. Actual pixels shows one image pixel per screen pixel."
   code={`const limits = { minScale: 0.1, maxScale: 32 };
-const fittedW = Math.min(image.clientWidth, image.clientHeight * image.naturalWidth / image.naturalHeight);
-const scale = image.naturalWidth / (fittedW * devicePixelRatio);
+const rotation = 0; // These originals are unrotated.
+const quarterTurn = rotation % 180 !== 0;
+const displayW = quarterTurn ? image.naturalHeight : image.naturalWidth;
+const displayH = quarterTurn ? image.naturalWidth : image.naturalHeight;
+// client dimensions equal content dimensions here: no image padding or border.
+const fittedW = Math.min(image.clientWidth, image.clientHeight * displayW / displayH);
+const scale = displayW / (fittedW * devicePixelRatio);
 const right = attachPanZoom(rightPane, rightImage, limits);
 const left = attachPanZoom(leftPane, leftImage, {
   ...limits,
@@ -152,6 +158,8 @@ right.setView(left.getView());`}
     display: block;
     width: 100%;
     height: 100%;
+    padding: 0;
+    border: 0;
     object-fit: contain;
     user-select: none;
     -webkit-user-drag: none;

@@ -18,8 +18,11 @@ const left = attachPanZoom(leftViewport, leftImage, {
   onChange: (view: PanZoomView) => right.setView(view),
 });
 
-const fittedW = Math.min(boxW, (boxH * naturalW) / naturalH);
-const scale = naturalW / (fittedW * devicePixelRatio);
+const quarterTurn = rotation % 180 !== 0;
+const displayW = quarterTurn ? naturalH : naturalW;
+const displayH = quarterTurn ? naturalW : naturalH;
+const fittedW = Math.min(boxW, (boxH * displayW) / displayH);
+const scale = displayW / (fittedW * devicePixelRatio);
 left.setView({ scale, offsetX: 0, offsetY: 0 });
 right.setView(left.getView());
 const view = left.getView();
@@ -40,13 +43,17 @@ most 1, otherwise it defaults to 0.4. `maxScale` accepts a finite value at least
 1, otherwise it defaults to 8. Each bound falls back independently and stays
 fixed at attachment time. Gestures and `setView()` clamp to these limits.
 Linked panes need identical limits because `setView()` clamps silently.
+Read `getView()` after setting a view to obtain the effective clamped values.
 Views containing non-finite values or a scale at or below zero are ignored.
 
 For actual pixels, the example computes one image pixel per physical screen
 pixel. With `object-fit: contain`, `boxW` and `boxH` are the untransformed CSS
-content dimensions; `fittedW` accounts for letterboxing. `offsetWidth` includes
-letterboxing and produces the wrong scale. Choose bounds that
-include the resulting scale and recompute it when DPR changes. Apps comparing
+content dimensions after any rotation; `displayW` and `displayH` swap the
+original dimensions for 90° and 270° turns. `fittedW` accounts for letterboxing.
+`clientWidth` and `clientHeight` include padding, so subtract it before using
+them as content dimensions; the demo images have no padding or border.
+`offsetWidth` includes letterboxing and produces the wrong scale. Choose
+bounds that include the resulting scale and recompute it when DPR changes. Apps comparing
 different image sizes map offsets and scale to their own image coordinates.
 
 Scales within 0.1% of 1 count as resting for touch paging and double-tap zoom.
