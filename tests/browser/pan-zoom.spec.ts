@@ -201,15 +201,16 @@ test("the comparison demo links, separates, and fits its views", async ({ page }
       })),
     )
     .toEqual(identity);
+  const fitted = await transforms();
 
   const box = (await panes.first().boundingBox())!;
   await mouseDrag(page, [box.x + 100, box.y + 100], [[box.x + 120, box.y + 130]]);
   const panned = await transforms();
-  expect(panned[0]).not.toBe(secondChanged[1]);
+  expect(panned[0]).not.toBe(fitted[0]);
   expect(panned[1]).toBe(panned[0]);
 });
 
-test("Actual pixels stays native through source and density changes", async ({
+test("Actual pixels stays native and preserves view centers", async ({
   page,
   browser,
   browserName,
@@ -444,7 +445,7 @@ test("wheel zoom anchors and accumulates gradual steps", async ({ page }) => {
   const wheeled = (await state(page)).view;
   expect(wheeled.offsetX).toBeCloseTo(60 * (1 - wheeled.scale), 10);
   expect(wheeled.offsetY).toBeCloseTo(40 * (1 - wheeled.scale), 10);
-  await page.evaluate(() => window.fixture.controller.reset());
+  await mount(page);
   // Each step alone is under 0.1% of zoom.
   await page.locator("#fixture").evaluate((element) => {
     const r = element.getBoundingClientRect();
