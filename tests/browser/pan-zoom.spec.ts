@@ -77,62 +77,60 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-for (const deviceScaleFactor of [3]) {
-  test.describe(`at device-pixel ratio ${deviceScaleFactor}`, () => {
-    test.use({ deviceScaleFactor });
+test.describe("at device-pixel ratio 3", () => {
+  test.use({ deviceScaleFactor: 3 });
 
-    test("linked panes show either original at exact physical size through a drag", async ({
-      page,
-    }) => {
-      const panes = page.locator(".pan-zoom-demo__pane");
-      const images = panes.locator("img");
-      await expect(images).toHaveCount(2);
-      // A shorter image box letterboxes both originals without changing the demo formula.
-      await images.evaluateAll((all) => {
-        for (const image of all) (image as HTMLElement).style.height = "120px";
-      });
-      const rendered = () =>
-        images.evaluateAll((all) =>
-          all.map((image) => ({
-            physical:
-              image.getBoundingClientRect().width *
-              Math.min(
-                1,
-                (image.clientHeight / image.clientWidth) *
-                  ((image as HTMLImageElement).naturalWidth /
-                    (image as HTMLImageElement).naturalHeight),
-              ) *
-              devicePixelRatio,
-            natural: (image as HTMLImageElement).naturalWidth,
-            transform: image.style.transform,
-          })),
-        );
-      for (const [index, label] of [
-        [0, "Large"],
-        [1, "Small"],
-      ] as const) {
-        await page.getByRole("button", { name: `${label} at actual pixels` }).click();
-        const box = (await panes.nth(index).boundingBox())!;
-        for (const drag of [false, true]) {
-          if (drag) await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-          const [first, second] = await rendered();
-          const exact = index === 0 ? first! : second!;
-          expect(exact.physical).toBeCloseTo(exact.natural, 3);
-          expect(second!.transform).toBe(first!.transform);
-          expect(first!.transform).toMatch(
-            drag ? /^translate\(30px, 40px\) scale\(/ : /^translate\(0px, 0px\) scale\(/,
-          );
-        }
-        await expect(panes.nth(0)).toHaveAttribute("data-zoomed", "true");
-      }
-      await page.getByRole("button", { name: "Fit", exact: true }).click();
-      expect((await rendered()).map(({ transform }) => transform)).toEqual([
-        "translate(0px, 0px) scale(1)",
-        "translate(0px, 0px) scale(1)",
-      ]);
+  test("linked panes show either original at exact physical size through a drag", async ({
+    page,
+  }) => {
+    const panes = page.locator(".pan-zoom-demo__pane");
+    const images = panes.locator("img");
+    await expect(images).toHaveCount(2);
+    // A shorter image box letterboxes both originals without changing the demo formula.
+    await images.evaluateAll((all) => {
+      for (const image of all) (image as HTMLElement).style.height = "120px";
     });
+    const rendered = () =>
+      images.evaluateAll((all) =>
+        all.map((image) => ({
+          physical:
+            image.getBoundingClientRect().width *
+            Math.min(
+              1,
+              (image.clientHeight / image.clientWidth) *
+                ((image as HTMLImageElement).naturalWidth /
+                  (image as HTMLImageElement).naturalHeight),
+            ) *
+            devicePixelRatio,
+          natural: (image as HTMLImageElement).naturalWidth,
+          transform: image.style.transform,
+        })),
+      );
+    for (const [index, label] of [
+      [0, "Large"],
+      [1, "Small"],
+    ] as const) {
+      await page.getByRole("button", { name: `${label} at actual pixels` }).click();
+      const box = (await panes.nth(index).boundingBox())!;
+      for (const drag of [false, true]) {
+        if (drag) await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
+        const [first, second] = await rendered();
+        const exact = index === 0 ? first! : second!;
+        expect(exact.physical).toBeCloseTo(exact.natural, 3);
+        expect(second!.transform).toBe(first!.transform);
+        expect(first!.transform).toMatch(
+          drag ? /^translate\(30px, 40px\) scale\(/ : /^translate\(0px, 0px\) scale\(/,
+        );
+      }
+      await expect(panes.nth(0)).toHaveAttribute("data-zoomed", "true");
+    }
+    await page.getByRole("button", { name: "Fit", exact: true }).click();
+    expect((await rendered()).map(({ transform }) => transform)).toEqual([
+      "translate(0px, 0px) scale(1)",
+      "translate(0px, 0px) scale(1)",
+    ]);
   });
-}
+});
 
 test("views are precise, detached, silent, and validated", async ({ page }) => {
   await mount(page);
