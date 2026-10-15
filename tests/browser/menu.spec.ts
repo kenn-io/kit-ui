@@ -197,3 +197,19 @@ test("context menu stays inside the viewport and closes when the page scrolls", 
   await page.mouse.wheel(0, -200);
   await expect(menu).toBeHidden();
 });
+
+test("only the focused item is filled when the pointer rests on another", async ({ page }) => {
+  await gotoPage(page, "menu");
+  await page.getByRole("button", { name: "Task actions" }).click();
+  const move = page.getByRole("menuitem", { name: "Move issue" });
+  const remove = page.getByRole("menuitem", { name: "Delete issue" });
+  await move.hover();
+  await expect(move).toBeFocused();
+  const fill = await move.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(fill).not.toBe("rgba(0, 0, 0, 0)");
+
+  await page.keyboard.press("End");
+  await expect(remove).toBeFocused();
+  await expect(remove).toHaveCSS("background-color", fill);
+  await expect(move).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});

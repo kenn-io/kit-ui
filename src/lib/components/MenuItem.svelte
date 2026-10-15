@@ -104,7 +104,10 @@
     cursor: pointer;
   }
 
-  .kit-menu__item:hover:not([aria-disabled="true"]),
+  /* Moving the pointer over an item focuses it, so focus alone drives the
+     fill. Filling on :hover too would leave two items lit when the pointer
+     rests on one and the arrow keys move to another. */
+  .kit-menu__item:focus:not([aria-disabled="true"]),
   .kit-menu__item:focus-visible {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
