@@ -218,8 +218,8 @@ test("unmounting an ImagePreview closes the viewer it opened", async ({ page }) 
 test("an onViewerOpen hook that updates app state leaves the viewer working", async ({ page }) => {
   await page.locator("pre.mermaid.kit-mermaid-viewer").waitFor({ timeout: 15_000 });
   await page.evaluate(async () => {
-    const { pushFrame, depth } = await import("/tests/browser/fixtures/modal-stack.svelte.ts");
-    const { openMediaViewerGallery } = await import("/src/lib/utils/media-gallery.ts");
+    const { pushFrame, depth, openMediaViewerGallery } =
+      await import("/tests/browser/fixtures/modal-stack.svelte.ts");
     Object.assign(window, { __depth: depth });
     const origin = document.querySelector(".kit-markdown-image")!;
     await openMediaViewerGallery(origin, { onViewerOpen: pushFrame });
