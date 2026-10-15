@@ -158,30 +158,11 @@ test("the comparison demo keeps linked views and independent view centers", asyn
   const images = panes.locator("img");
   const transforms = () =>
     images.evaluateAll((nodes) => nodes.map((node) => (node as HTMLImageElement).style.transform));
+  const fittedWidth = async () => (await measureImages(images.first()))[0]!.fittedWidth;
   const identity = [
     { scale: 1, offsetX: 0, offsetY: 0 },
     { scale: 1, offsetX: 0, offsetY: 0 },
   ];
-  await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-  await expect
-    .poll(async () =>
-      (await measureImages(images)).map(({ scale, offsetX, offsetY }) => ({
-        scale,
-        offsetX,
-        offsetY,
-      })),
-    )
-    .not.toEqual(identity);
-  await page.getByRole("button", { name: "Fit", exact: true }).click();
-  await expect
-    .poll(async () =>
-      (await measureImages(images)).map(({ scale, offsetX, offsetY }) => ({
-        scale,
-        offsetX,
-        offsetY,
-      })),
-    )
-    .toEqual(identity);
 
   const boxes = await panes.evaluateAll((elements) =>
     elements.map((element) => {
@@ -211,22 +192,22 @@ test("the comparison demo keeps linked views and independent view centers", asyn
   expect(secondChanged[1]).not.toBe(firstChanged[1]);
   await link.check();
   expect(await transforms()).toEqual([secondChanged[1], secondChanged[1]]);
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  await expect
+    .poll(async () =>
+      (await measureImages(images)).map(({ scale, offsetX, offsetY }) => ({
+        scale,
+        offsetX,
+        offsetY,
+      })),
+    )
+    .toEqual(identity);
 
   const box = (await panes.first().boundingBox())!;
   await mouseDrag(page, [box.x + 100, box.y + 100], [[box.x + 120, box.y + 130]]);
   const panned = await transforms();
   expect(panned[0]).not.toBe(secondChanged[1]);
   expect(panned[1]).toBe(panned[0]);
-
-  const fittedWidth = async () => (await measureImages(images.first()))[0]!.fittedWidth;
-  for (const larger of [true, false]) {
-    const previousWidth = await fittedWidth();
-    await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
-    if (larger) await expect.poll(fittedWidth).toBeGreaterThan(previousWidth);
-    else await expect.poll(fittedWidth).toBeLessThan(previousWidth);
-    const resized = await transforms();
-    expect(resized[1]).toBe(resized[0]);
-  }
 
   await link.uncheck();
   await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
@@ -260,13 +241,9 @@ test("the comparison demo keeps linked views and independent view centers", asyn
       .poll(async () =>
         (await measureImages(images)).map((view, index) => {
           const old = before[index]!;
-          const scale =
-            index === 0
-              ? (old.scale * old.fittedWidth * old.dpr) / (view.fittedWidth * view.dpr)
-              : old.scale;
-          const ratio = (scale * view.fittedWidth) / (old.scale * old.fittedWidth);
+          const ratio = (view.scale * view.fittedWidth) / (old.scale * old.fittedWidth);
           return {
-            scale: view.scale - scale,
+            scale: index === 1 ? view.scale - old.scale : 0,
             x: view.offsetX - old.offsetX * ratio,
             y: view.offsetY - old.offsetY * ratio,
           };

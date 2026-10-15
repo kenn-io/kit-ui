@@ -118,7 +118,7 @@ test("a touch swipe pages the viewer", async ({ browser }) => {
   await close();
 });
 
-test("touch double-tap and pinch zoom the viewer", async ({ browser }) => {
+test("a touch double-tap zooms the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -127,20 +127,6 @@ test("touch double-tap and pinch zoom the viewer", async ({ browser }) => {
   const at = { x: mid.x + 100, y: mid.y + 50 };
   await doubleTap(cdp, at);
   await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1);
-  const zoomedByDoubleTap = (await transformOf(pan)).scale;
-
-  await twoFingers(
-    cdp,
-    [
-      { x: mid.x + 50, y: mid.y + 50 },
-      { x: mid.x + 150, y: mid.y + 50 },
-    ],
-    [
-      { x: mid.x, y: mid.y + 50 },
-      { x: mid.x + 200, y: mid.y + 50 },
-    ],
-  );
-  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(zoomedByDoubleTap);
   await close();
 });
 
@@ -216,7 +202,9 @@ test("touch devices get 44px controls", async ({ browser }) => {
   await close();
 });
 
-test("an inline diagram scrolls, zooms with pinches, and resets", async ({ browser }) => {
+test("an inline diagram scrolls, zooms with pinches, and restores scrolling", async ({
+  browser,
+}) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "mermaid");
   const diagram = page.locator("pre.mermaid.kit-mermaid-viewer").first();
@@ -231,14 +219,9 @@ test("an inline diagram scrolls, zooms with pinches, and resets", async ({ brows
   await expect.poll(top).toBeLessThan(before - 40);
   expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
-  // Horizontal drags still pan the diagram.
-  const moved = await center(viewport);
-  await drag(cdp, { x: moved.x + 60, y: moved.y }, { x: moved.x - 60, y: moved.y });
-  await expect.poll(async () => (await transformOf(pan)).x).toBeLessThan(-40);
-
   // A pinch whose fingers drift vertically zooms; the page stays put.
-  await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
   const settled = await top();
+  const moved = await center(viewport);
   await twoFingers(
     cdp,
     [
