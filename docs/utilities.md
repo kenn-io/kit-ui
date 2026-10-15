@@ -20,7 +20,10 @@ const limits = {
   minScale: Math.min(0.4, scale, currentView.scale),
   maxScale: Math.max(8, scale, currentView.scale),
 };
-const right = attachPanZoom(rightViewport, rightImage, limits);
+const right = attachPanZoom(rightViewport, rightImage, {
+  ...limits,
+  onChange: (view: PanZoomView) => left.setView(view),
+});
 const left = attachPanZoom(leftViewport, leftImage, {
   ...limits,
   onChange: (view: PanZoomView) => right.setView(view),

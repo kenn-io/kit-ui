@@ -104,6 +104,7 @@ export function attachPanZoom(
   const getView = (): PanZoomView => ({ scale, offsetX, offsetY });
 
   const valid = (view: PanZoomView) =>
+    view != null &&
     Number.isFinite(view.scale) &&
     view.scale > 0 &&
     Number.isFinite(view.offsetX) &&

@@ -198,6 +198,10 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
       { scale: 2, offsetX: 0, offsetY: NaN },
     ])
       controller.setView(invalid);
+    // @ts-expect-error JavaScript callers can supply nullish runtime values.
+    controller.setView(null);
+    // @ts-expect-error JavaScript callers can supply nullish runtime values.
+    controller.setView(undefined);
   });
   expect(await state(page)).toEqual({
     view: { scale: 6.3456789, offsetX: 31.25, offsetY: -18.5 },

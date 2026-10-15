@@ -124,7 +124,10 @@ const displayH = quarterTurn ? image.naturalWidth : image.naturalHeight;
 const fittedW = Math.min(image.clientWidth, image.clientHeight * displayW / displayH);
 const scale = displayW / (fittedW * devicePixelRatio);
 const limits = { minScale: Math.min(0.4, scale, view.scale), maxScale: Math.max(8, scale, view.scale) };
-const right = attachPanZoom(rightPane, rightImage, limits);
+const right = attachPanZoom(rightPane, rightImage, {
+  ...limits,
+  onChange: (view) => left.setView(view),
+});
 const left = attachPanZoom(leftPane, leftImage, {
   ...limits,
   onChange: (view) => right.setView(view),
