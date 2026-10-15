@@ -235,8 +235,11 @@ test("the comparison demo links, separates, and fits its views", async ({ page }
   expect(panned[1]).toBe(panned[0]);
 });
 
-test("Actual pixels stays native through source and density changes", async ({ page, browser }) => {
-  const { images, boxes, link } = await openComparisonDemo(page);
+test("Actual pixels keeps size, readout, and view positions across changes", async ({
+  page,
+  browser,
+}) => {
+  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
   await link.uncheck();
   for (const [width, dpr] of [
     [80, 4],
@@ -276,14 +279,6 @@ test("Actual pixels stays native through source and density changes", async ({ p
     await expectNativePixels(images);
   }
 
-  await preservesFractionalActualPixels(browser);
-});
-
-test("Actual pixels readout follows pane changes and preserves view positions", async ({
-  page,
-}) => {
-  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
-  await link.uncheck();
   await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
   await expectZoomReadout(page, images.first());
   await mouseDrag(
@@ -330,6 +325,7 @@ test("Actual pixels readout follows pane changes and preserves view positions", 
         },
       ]);
   }
+  await preservesFractionalActualPixels(browser);
 });
 
 async function density(page: Page, value: number) {
