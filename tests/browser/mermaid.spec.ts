@@ -27,7 +27,7 @@ test("renders mermaid fences into pan/zoom viewers", async ({ page }) => {
   await expect(viewer.locator(".kit-mermaid-viewer__button svg.lucide")).toHaveCount(3);
 });
 
-test("repeated wheel zoom and drag pan are reset together", async ({ page }) => {
+test("wheel zoom stays vector-backed, and Reset clears zoom and pan", async ({ page }) => {
   const viewer = firstViewer(page);
   const viewport = viewer.locator(".kit-mermaid-viewer__viewport");
   const pan = viewer.locator(".kit-mermaid-viewer__pan");
