@@ -190,7 +190,9 @@ test("touch devices get 44px controls", async ({ browser }) => {
   await close();
 });
 
-test("inline Mermaid wires scroll handoff, pinch, reset, and touch-action", async ({ browser }) => {
+test("inline Mermaid wires scroll handoff, horizontal pan, pinch, and touch-action", async ({
+  browser,
+}) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "mermaid");
   const diagram = page.locator("pre.mermaid.kit-mermaid-viewer").first();

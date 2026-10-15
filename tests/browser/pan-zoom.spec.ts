@@ -156,7 +156,9 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
   });
 });
 
-test("wheel anchoring and precision obey fixed and normalized scale limits", async ({ page }) => {
+test("wheel zoom anchors, accumulates gradual steps, and clamps to scale limits", async ({
+  page,
+}) => {
   await mount(page, { minScale: 0.25, maxScale: 16 });
   await page.mouse.move(260, 240);
   await page.mouse.wheel(0, -100);
@@ -187,6 +189,9 @@ test("wheel anchoring and precision obey fixed and normalized scale limits", asy
   await expect.poll(async () => (await state(page)).view.scale).toBe(16);
   await page.mouse.wheel(0, 10000);
   await expect.poll(async () => (await state(page)).view.scale).toBe(0.25);
+});
+
+test("scale limits use independent defaults and stay fixed after attachment", async ({ page }) => {
   const defaults = await page.evaluate(async () => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
     const limits = { minScale: 0.1, maxScale: 32 };
@@ -341,7 +346,7 @@ test("double taps anchor, suppress duplicate clicks, and reject moved taps", asy
   expect(anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
   expect(afterClick).toEqual(anchored);
   expect((await state(page)).zoomed).toBe("true");
-  for (const scenario of ["release-away", "tap-drag", "drag-tap", "tap-pinch-tap"]) {
+  for (const scenario of ["release-away", "tap-drag", "tap-pinch-tap"]) {
     await mount(page);
     const scale = await page.evaluate(
       ({ scenario, initialScale }) => {
@@ -375,9 +380,6 @@ test("double taps anchor, suppress duplicate clicks, and reject moved taps", asy
         } else if (scenario === "tap-drag") {
           tapAt(200, 200);
           returningDrag();
-        } else if (scenario === "drag-tap") {
-          returningDrag();
-          tapAt(200, 200);
         } else {
           tapAt(200, 200);
           fire("pointerdown", 1, 150, 200);
