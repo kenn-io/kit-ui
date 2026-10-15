@@ -89,8 +89,9 @@ impl Render for Gallery {
             .flex_col()
             .bg(t.background)
             .text_color(t.text)
-            .font_family(".AppleSystemUIFont")
+            .font_family("Inter")
             .text_size(px(13.))
+            .line_height(relative(1.5))
             .child(
                 div()
                     .flex()
@@ -600,6 +601,17 @@ fn main() {
     Application::new()
         .with_assets(kit_ui_gpui::assets::Assets)
         .run(|cx: &mut App| {
+            // GPUI selects concrete faces; register each weight used by Kit UI.
+            cx.text_system()
+                .add_fonts(vec![
+                    std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/Inter-Regular.ttf")),
+                    std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/Inter-Medium.ttf")),
+                    std::borrow::Cow::Borrowed(include_bytes!(
+                        "../assets/fonts/Inter-SemiBold.ttf"
+                    )),
+                    std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/Inter-Bold.ttf")),
+                ])
+                .expect("load bundled Inter fonts");
             cx.set_global(Theme::light());
             components::text_input::init(cx);
             cx.bind_keys([

@@ -18,7 +18,11 @@ impl EventEmitter<SearchChanged> for SearchInput {}
 impl SearchInput {
     pub fn new(placeholder: impl Into<SharedString>, cx: &mut Context<Self>) -> Self {
         let placeholder = placeholder.into();
-        let input = cx.new(|cx| TextInput::new(placeholder, cx));
+        let input = cx.new(|cx| {
+            let mut input = TextInput::new(placeholder, cx);
+            input.block = true;
+            input
+        });
         cx.subscribe(&input, |_, _, event: &InputChanged, cx| {
             cx.emit(SearchChanged {
                 text: event.text.clone(),

@@ -60,9 +60,12 @@ impl RenderOnce for Checkbox {
             .size(px(16.))
             .flex_shrink_0()
             .rounded(px(4.))
-            .border_1()
+            .border(px(1.5))
             .border_color(if selected { t.accent } else { t.border })
             .bg(if selected { t.accent } else { t.surface });
+        if !self.disabled {
+            box_element = box_element.group_hover("checkbox", |style| style.border_color(t.accent));
+        }
         if self.checked {
             box_element = box_element.child(
                 svg()
@@ -74,20 +77,21 @@ impl RenderOnce for Checkbox {
                     .text_color(t.surface),
             );
         } else if self.indeterminate {
-            box_element = box_element.child(div().w(px(8.)).h(px(2.)).bg(t.surface));
+            box_element =
+                box_element.child(div().w(px(6.75)).h(px(1.5)).rounded_full().bg(t.surface));
         }
         let mut element = div()
             .id(self.id)
             .flex()
             .items_center()
-            .gap(px(12.))
-            .py(px(4.))
-            .text_size(px(13.))
-            .text_color(t.muted)
+            .group("checkbox")
+            .gap(px(8.))
+            .text_size(px(12.))
+            .text_color(t.secondary)
             .child(box_element)
             .child(self.label);
         if self.disabled {
-            return element.opacity(0.45);
+            return element.cursor_not_allowed().opacity(0.5);
         }
         element = element.cursor_pointer();
         let focus = self

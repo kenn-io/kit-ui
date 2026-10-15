@@ -117,6 +117,7 @@ pub fn demo(cx: &mut App) -> AnyView {
     cx.new(|cx| {
         let input = cx.new(|cx| {
             let mut input = TextInput::new("Enter text to copy…", cx);
+            input.block = true;
             input.set_value("Native Kit UI clipboard", cx);
             input
         });

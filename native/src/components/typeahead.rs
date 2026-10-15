@@ -51,7 +51,11 @@ impl Typeahead {
         placeholder: impl Into<SharedString>,
         cx: &mut Context<Self>,
     ) -> Self {
-        let input = cx.new(|cx| TextInput::new(placeholder, cx));
+        let input = cx.new(|cx| {
+            let mut input = TextInput::new(placeholder, cx);
+            input.block = true;
+            input
+        });
         let subscription = cx.subscribe(&input, |this, _, _: &InputChanged, cx| {
             this.highlighted = 0;
             this.scroll.scroll_to_item(0);

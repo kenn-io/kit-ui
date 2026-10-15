@@ -94,19 +94,91 @@ impl RenderOnce for Button {
             ButtonTone::Info => t.accent,
             ButtonTone::Workflow => t.workflow,
         };
-        let (background, ink, border) = match self.surface {
-            ButtonSurface::Outline => (t.surface, accent, t.border),
-            ButtonSurface::Soft => (
-                t.surface.blend(accent.opacity(0.12)),
-                accent,
-                t.border.blend(accent.opacity(0.3)),
-            ),
-            ButtonSurface::Solid => (accent, t.on_accent, accent),
+        let toned_ink = t.text.blend(accent.opacity(0.72));
+        let black: Hsla = rgb(0x000000).into();
+        let (background, ink, border, hover_background, hover_ink, hover_border) =
+            match (self.surface, self.tone) {
+                (ButtonSurface::Outline, ButtonTone::Neutral) => (
+                    t.inset,
+                    t.secondary,
+                    t.border,
+                    t.surface_hover,
+                    t.text,
+                    t.border,
+                ),
+                (ButtonSurface::Outline, ButtonTone::Danger) => (
+                    t.inset,
+                    t.secondary,
+                    t.border,
+                    t.surface.blend(accent.opacity(0.09)),
+                    toned_ink,
+                    t.border.blend(accent.opacity(0.30)),
+                ),
+                (ButtonSurface::Outline, _) => {
+                    let border = t.border.blend(accent.opacity(0.40));
+                    (
+                        t.surface,
+                        toned_ink,
+                        border,
+                        t.surface.blend(accent.opacity(0.08)),
+                        toned_ink,
+                        border,
+                    )
+                }
+                (ButtonSurface::Soft, ButtonTone::Neutral) => (
+                    t.inset.blend(t.muted.opacity(0.08)),
+                    t.secondary,
+                    t.border.opacity(0.80),
+                    t.surface_hover,
+                    t.text,
+                    t.border,
+                ),
+                (ButtonSurface::Soft, _) => {
+                    let (rest, hover) = match self.tone {
+                        ButtonTone::Success | ButtonTone::Workflow => (0.12, 0.20),
+                        _ => (0.10, 0.18),
+                    };
+                    (
+                        accent.opacity(rest),
+                        toned_ink,
+                        accent.opacity(0.30),
+                        accent.opacity(hover),
+                        toned_ink,
+                        accent.opacity(0.30),
+                    )
+                }
+                (ButtonSurface::Solid, ButtonTone::Neutral) => {
+                    let hover = t.background.blend(t.text.opacity(0.82));
+                    (t.text, t.background, t.text, hover, t.background, hover)
+                }
+                (ButtonSurface::Solid, ButtonTone::Success) => {
+                    let rest = black.blend(accent.opacity(0.82));
+                    let hover = black.blend(accent.opacity(0.72));
+                    (rest, t.surface, rest, hover, t.surface, hover)
+                }
+                (ButtonSurface::Solid, _) => {
+                    let hover = black.blend(accent.opacity(0.88));
+                    (accent, t.surface, accent, hover, t.surface, hover)
+                }
+            };
+        let (active_background, active_border) = match (self.surface, self.tone) {
+            (ButtonSurface::Solid, ButtonTone::Success) => {
+                let color = black.blend(accent.opacity(0.62));
+                (color, color)
+            }
+            (ButtonSurface::Solid, ButtonTone::Info) => {
+                let color = black.blend(accent.opacity(0.78));
+                (color, color)
+            }
+            (ButtonSurface::Soft, ButtonTone::Success) => {
+                (accent.opacity(0.26), accent.opacity(0.48))
+            }
+            _ => (hover_background, hover_border),
         };
-        let (height, padding, font) = match self.size {
-            ButtonSize::Small => (24., 12., 12.),
-            ButtonSize::Medium => (28., 14., 13.),
-            ButtonSize::Large => (36., 20., 13.),
+        let (height, padding_x, padding_y, radius, font) = match self.size {
+            ButtonSize::Small => (24., 12., 2., 6., 12.),
+            ButtonSize::Medium => (28., 14., 5., 4., 13.),
+            ButtonSize::Large => (36., 12., 5., 4., 13.),
         };
         let mut element = div()
             .id(self.id)
@@ -115,27 +187,40 @@ impl RenderOnce for Button {
             .justify_center()
             .gap(px(6.))
             .min_h(px(height))
-            .px(px(padding))
-            .py(px(4.))
-            .rounded(px(4.))
+            .px(px(padding_x))
+            .py(px(padding_y))
+            .rounded(px(radius))
             .border_1()
             .border_color(border)
             .bg(background)
             .text_color(ink)
             .text_size(px(font))
+            .line_height(relative(1.2))
+            .font_weight(FontWeight::MEDIUM)
+            .whitespace_nowrap()
+            .flex_shrink_0()
             .children(self.leading)
             .child(self.label)
             .children(self.trailing);
         if self.disabled {
-            element = element.opacity(0.45).cursor(CursorStyle::Arrow);
+            element = element.opacity(0.5).cursor(CursorStyle::Arrow);
         } else {
             element = element
                 .cursor_pointer()
                 .focusable()
                 .tab_stop(true)
                 .focus(|s| s.border_color(t.accent))
-                .hover(move |s| s.bg(background.blend(accent.opacity(0.15))))
-                .active(move |s| s.bg(background.blend(accent.opacity(0.25))));
+                .hover(move |s| {
+                    s.bg(hover_background)
+                        .text_color(hover_ink)
+                        .border_color(hover_border)
+                })
+                .active(move |s| {
+                    s.relative()
+                        .top(px(1.))
+                        .bg(active_background)
+                        .border_color(active_border)
+                });
             if let Some(callback) = self.on_click {
                 element = element.on_click(callback);
             }

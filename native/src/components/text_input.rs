@@ -43,6 +43,7 @@ pub struct TextInput {
     pub disabled: bool,
     pub readonly: bool,
     pub invalid: bool,
+    pub block: bool,
     pub height: f32,
     pub prefix: Option<SharedString>,
     pub suffix: Option<SharedString>,
@@ -66,6 +67,7 @@ impl TextInput {
             disabled: false,
             readonly: false,
             invalid: false,
+            block: false,
             height: 28.,
             prefix: None,
             suffix: None,
@@ -666,6 +668,14 @@ impl Render for TextInput {
         } else {
             t.border
         };
+        let large = self.height >= 36.;
+        let font_size = if self.height <= 24. {
+            11.
+        } else if large {
+            13.
+        } else {
+            12.
+        };
         div()
             .flex()
             .key_context("TextInput")
@@ -692,20 +702,25 @@ impl Render for TextInput {
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
-            .w_full()
+            .w(px(180.))
+            .max_w_full()
+            .when(self.block, |d| d.w_full())
             .items_center()
-            .gap(px(8.))
-            .px(px(8.))
+            .gap(px(4.))
+            .px(px(if large { 12. } else { 6. }))
+            .when(large, |d| d.py(px(5.)))
             .h(px(self.height))
             .border_1()
             .border_color(border)
-            .rounded(px(4.))
+            .rounded(px(6.))
             .bg(t.surface)
             .text_color(t.text)
             .opacity(if self.disabled { 0.5 } else { 1. })
-            .line_height(px(20.))
-            .text_size(px(13.))
-            .when_some(self.prefix.clone(), |d, text| d.child(label(text, cx)))
+            .line_height(relative(1.2))
+            .text_size(px(font_size))
+            .when_some(self.prefix.clone(), |d, text| {
+                d.child(div().flex_shrink_0().text_color(t.muted).child(text))
+            })
             .child(
                 div()
                     .flex_1()
@@ -713,7 +728,9 @@ impl Render for TextInput {
                     .overflow_hidden()
                     .child(TextElement { input: cx.entity() }),
             )
-            .when_some(self.suffix.clone(), |d, text| d.child(label(text, cx)))
+            .when_some(self.suffix.clone(), |d, text| {
+                d.child(div().flex_shrink_0().text_color(t.muted).child(text))
+            })
     }
 }
 

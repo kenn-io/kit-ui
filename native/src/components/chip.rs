@@ -10,8 +10,9 @@ pub enum ChipSize {
 }
 #[derive(Clone, Copy, Default)]
 pub enum ChipTone {
-    Muted,
     #[default]
+    Default,
+    Muted,
     Neutral,
     Success,
     Warning,
@@ -38,7 +39,7 @@ impl Chip {
         Self {
             text: text.into(),
             size: ChipSize::Md,
-            tone: ChipTone::Neutral,
+            tone: ChipTone::Default,
             dot: false,
             uppercase: true,
             interactive: false,
@@ -58,15 +59,16 @@ impl Chip {
             _ => t.muted,
         };
         let (background, ink) = match self.tone {
+            ChipTone::Default => (transparent_black(), t.text),
             ChipTone::Muted => (t.inset, t.inset.blend(t.muted.opacity(0.75))),
-            ChipTone::Neutral => (t.inset, t.muted),
+            ChipTone::Neutral => (t.inset, t.secondary),
             ChipTone::Canceled => (t.muted.opacity(0.15), t.muted),
             _ => (accent.opacity(0.15), t.text.blend(accent.opacity(0.65))),
         };
-        let (height, font, padding, dot_size) = match self.size {
-            ChipSize::Xs => (16., 10., 6., 5.),
-            ChipSize::Sm => (18., 11., 6., 6.),
-            ChipSize::Md => (22., 13., 8., 6.),
+        let (height, font, padding, vertical_padding, line_height, dot_size) = match self.size {
+            ChipSize::Xs => (16., 10., 6., 1., 1.15, 5.),
+            ChipSize::Sm => (18., 11., 6., 0., 1., 6.),
+            ChipSize::Md => (22., 12., 8., 0., 1., 6.),
         };
         let text = if self.uppercase {
             SharedString::from(self.text.to_uppercase())
@@ -81,11 +83,14 @@ impl Chip {
             .gap(px(4.))
             .min_h(px(height))
             .px(px(padding))
+            .py(px(vertical_padding))
             .rounded(px(999.))
-            .bg(background)
-            .text_color(ink)
             .text_size(px(font))
+            .line_height(relative(line_height))
             .font_weight(FontWeight::SEMIBOLD);
+        if !matches!(self.tone, ChipTone::Default) {
+            element = element.bg(background).text_color(ink);
+        }
         if self.dot {
             element = element.child(
                 div()
@@ -99,8 +104,10 @@ impl Chip {
         if let Some(trailing) = self.trailing {
             element = element.child(div().flex_shrink_0().child(trailing));
         }
-        if self.disabled {
-            element = element.opacity(0.45);
+        if self.disabled && self.interactive {
+            element = element
+                .opacity(0.5)
+                .cursor(CursorStyle::OperationNotAllowed);
         } else if self.interactive {
             element = element.cursor_pointer().hover(|s| s.opacity(0.8));
         }

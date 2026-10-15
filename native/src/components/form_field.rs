@@ -46,6 +46,7 @@ impl FormField {
     ) -> Self {
         let input = cx.new(|cx| {
             let mut input = TextInput::new(placeholder, cx);
+            input.block = true;
             input.set_value(field.value.clone(), cx);
             input.height = 36.;
             input.disabled = field.disabled;

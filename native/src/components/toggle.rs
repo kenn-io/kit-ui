@@ -50,44 +50,78 @@ impl Toggle {
 impl RenderOnce for Toggle {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let t = theme(cx);
-        let track = div()
+        let focus = self
+            .focus
+            .unwrap_or_else(|| cx.focus_handle().tab_stop(true));
+        let mut knob = div()
+            .id("toggle-knob")
+            .absolute()
+            .top(px(2.))
+            .left(px(if self.checked { 18. } else { 2. }))
+            .size(px(16.))
+            .rounded_full()
+            .bg(white())
+            .shadow(vec![BoxShadow {
+                color: black().opacity(if t.background.l < 0.5 { 0.25 } else { 0.05 }),
+                offset: point(px(0.), px(1.)),
+                blur_radius: px(2.),
+                spread_radius: px(0.),
+            }]);
+        let mut track = div()
             .relative()
             .w(px(36.))
             .h(px(20.))
             .flex_shrink_0()
-            .rounded(px(10.))
-            .bg(if self.checked { t.accent } else { t.border })
-            .child(
-                div()
-                    .absolute()
-                    .top(px(2.))
-                    .left(px(if self.checked { 18. } else { 2. }))
-                    .size(px(16.))
-                    .rounded(px(8.))
-                    .bg(t.on_accent),
-            );
+            .rounded_full()
+            .bg(if self.checked { t.accent } else { t.border });
+        if !self.disabled {
+            let checked = self.checked;
+            knob = knob.group_active("kit-toggle", move |style| {
+                style.w(px(19.)).left(px(if checked { 15. } else { 2. }))
+            });
+            track = track
+                .group_hover("kit-toggle", |style| {
+                    style.bg(if self.checked {
+                        black().blend(t.accent.opacity(0.88))
+                    } else {
+                        t.border.blend(t.secondary.opacity(0.25))
+                    })
+                })
+                .child(
+                    div()
+                        .absolute()
+                        .top(px(-3.))
+                        .left(px(-3.))
+                        .w(px(42.))
+                        .h(px(26.))
+                        .rounded_full()
+                        .border_2()
+                        .border_color(transparent_black())
+                        .track_focus(&focus)
+                        .focus(|style| style.border_color(t.accent)),
+                );
+        }
+        track = track.child(knob);
         let mut element = div()
             .id(self.id)
+            .group("kit-toggle")
             .flex()
             .items_center()
-            .gap(px(12.))
-            .py(px(4.))
-            .text_size(px(13.))
-            .text_color(t.muted)
+            .gap(px(8.))
+            .text_size(px(12.))
+            .text_color(t.secondary)
             .child(track)
             .child(self.label);
         if self.disabled {
-            return element.opacity(0.45);
+            return element
+                .opacity(0.5)
+                .cursor(CursorStyle::OperationNotAllowed);
         }
-        let focus = self
-            .focus
-            .unwrap_or_else(|| cx.focus_handle().tab_stop(true));
         element = element
             .cursor_pointer()
             .track_focus(&focus)
             .focusable()
-            .tab_stop(true)
-            .focus(|style| style.border_1().border_color(t.accent).rounded(px(4.)));
+            .tab_stop(true);
         if let Some(callback) = self.on_change {
             let next = !self.checked;
             element = element.on_click(move |_, window, cx| {

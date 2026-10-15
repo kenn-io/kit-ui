@@ -30,7 +30,11 @@ pub struct FindBar {
 impl EventEmitter<FindBarEvent> for FindBar {}
 impl FindBar {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let input = cx.new(|cx| TextInput::new("Find…", cx));
+        let input = cx.new(|cx| {
+            let mut input = TextInput::new("Find…", cx);
+            input.block = true;
+            input
+        });
         cx.subscribe(&input, |_, _, event: &InputChanged, cx| {
             cx.emit(FindBarEvent::QueryChanged(event.text.clone()));
             cx.notify();

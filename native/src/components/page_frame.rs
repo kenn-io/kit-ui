@@ -180,7 +180,11 @@ impl Render for PageFrameDemo {
 }
 pub fn demo(cx: &mut App) -> AnyView {
     cx.new(|cx| PageFrameDemo {
-        email: cx.new(|cx| TextInput::new("name@example.com", cx)),
+        email: cx.new(|cx| {
+            let mut input = TextInput::new("name@example.com", cx);
+            input.block = true;
+            input
+        }),
         submitted: false,
     })
     .into()
