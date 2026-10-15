@@ -35,6 +35,16 @@
     { status: "running", count: 1 },
     { status: "failed", count: 1 },
   ] as const;
+  const regions = [
+    {
+      name: "Europe",
+      hosts: [
+        { name: "Frankfurt", load: 42 },
+        { name: "Dublin", load: 17 },
+      ],
+    },
+    { name: "Americas", hosts: [{ name: "Ohio", load: 63 }] },
+  ];
 </script>
 
 <DemoSection
@@ -109,6 +119,52 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Bare table"
+  description="With bare, Table renders only the table element, carrying class and ariaLabel, so its content can hold row groups, a colgroup or spanning header rows. kit-ui's table styles do not apply: style the table from an element the page owns. unsorted works as on any Table."
+  code={`<Table unsorted bare ariaLabel="Hosts by region">
+  <thead>
+    <tr>
+      <th scope="col">Host</th>
+      <th scope="col" class="num">Load</th>
+    </tr>
+  </thead>
+  {#each regions as region (region.name)}
+    <tbody>
+      <tr><th scope="rowgroup" colspan="2">{region.name}</th></tr>
+      {#each region.hosts as host (host.name)}
+        <tr>
+          <th scope="row">{host.name}</th>
+          <td class="num">{host.load}%</td>
+        </tr>
+      {/each}
+    </tbody>
+  {/each}
+</Table>`}
+>
+  <div class="bare-host">
+    <Table unsorted bare ariaLabel="Hosts by region" class="regions">
+      <thead>
+        <tr>
+          <th scope="col">Host</th>
+          <th scope="col" class="num">Load</th>
+        </tr>
+      </thead>
+      {#each regions as region (region.name)}
+        <tbody>
+          <tr><th scope="rowgroup" colspan="2">{region.name}</th></tr>
+          {#each region.hosts as host (host.name)}
+            <tr>
+              <th scope="row">{host.name}</th>
+              <td class="num">{host.load}%</td>
+            </tr>
+          {/each}
+        </tbody>
+      {/each}
+    </Table>
+  </div>
+</DemoSection>
+
 <style>
   .table-host {
     width: 100%;
@@ -122,5 +178,33 @@
   .num {
     text-align: right;
     font-variant-numeric: tabular-nums;
+  }
+
+  .bare-host {
+    width: 100%;
+    overflow: auto;
+    border: var(--border-width) solid var(--border-muted);
+    border-radius: var(--radius-md);
+  }
+
+  .bare-host :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+
+  .bare-host th,
+  .bare-host td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: var(--border-width) solid var(--border-muted);
+  }
+
+  .bare-host th:not(.num) {
+    text-align: left;
+  }
+
+  .bare-host th[scope="rowgroup"] {
+    background: var(--bg-inset);
+    color: var(--text-secondary);
   }
 </style>

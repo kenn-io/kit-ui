@@ -128,18 +128,56 @@ When a theme sets `--shadow-panel`, its ring paints outside the scroll
 wrapper, so a parent with `overflow: hidden` clips it, and a Table inside a
 raised Card shows a second frame.
 
+## Bare tables
+
+Some tables need structure the standard shell does not render: several
+`<tbody>` row groups, a `<colgroup>`, or header rows that span columns. Pass
+`bare` and write the whole table body yourself.
+
+```svelte
+<div class="hosts">
+  <Table unsorted bare ariaLabel="Hosts by region">
+    <thead>
+      <tr>
+        <th scope="col">Host</th>
+        <th scope="col">Load</th>
+      </tr>
+    </thead>
+    {#each regions as region (region.name)}
+      <tbody>
+        <tr><th scope="rowgroup" colspan="2">{region.name}</th></tr>
+        {#each region.hosts as host (host.name)}
+          <tr>
+            <th scope="row">{host.name}</th>
+            <td>{host.load}%</td>
+          </tr>
+        {/each}
+      </tbody>
+    {/each}
+  </Table>
+</div>
+```
+
+A bare table renders only the `<table>` element, with `class` and `ariaLabel`.
+It has no scroll wrapper, sticky header, zebra striping or row hover, and
+kit-ui's table styles do not apply. Style it from an element your component
+owns, such as `.hosts :global(table)`, because the `<table>` belongs to
+`Table`. `unsorted` works as on any `Table`; without it, every labeled column
+header must sort.
+
 ## Table props
 
-| Prop           | Type               | Default  | Notes                                                                 |
-| -------------- | ------------------ | -------- | --------------------------------------------------------------------- |
-| `header`       | `Snippet`          | required | `<TableHeaderCell>` elements                                          |
-| `children`     | `Snippet`          | required | `<tr>` body rows                                                      |
-| `scroll`       | `"self" \| "page"` | `"self"` | What scrolls the rows ([Scrolling](#scrolling-and-the-sticky-header)) |
-| `stickyHeader` | `boolean`          | `true`   | Header stays visible while the rows scroll                            |
-| `zebra`        | `boolean`          | `true`   | Stripe even rows                                                      |
-| `ariaLabel`    | `string`           | —        |                                                                       |
-| `unsorted`     | `boolean`          | `false`  | Opts the table out of sorting; its headers need not sort              |
-| `class`        | `string`           | `""`     | Applied to the scroll wrapper                                         |
+| Prop           | Type               | Default                | Notes                                                                                                                                                           |
+| -------------- | ------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `header`       | `Snippet`          | required unless `bare` | `<TableHeaderCell>` elements                                                                                                                                    |
+| `children`     | `Snippet`          | required               | `<tr>` body rows; with `bare`, everything inside the `<table>`                                                                                                  |
+| `scroll`       | `"self" \| "page"` | `"self"`               | What scrolls the rows ([Scrolling](#scrolling-and-the-sticky-header))                                                                                           |
+| `stickyHeader` | `boolean`          | `true`                 | Header stays visible while the rows scroll                                                                                                                      |
+| `zebra`        | `boolean`          | `true`                 | Stripe even rows                                                                                                                                                |
+| `ariaLabel`    | `string`           | —                      |                                                                                                                                                                 |
+| `unsorted`     | `boolean`          | `false`                | Opts the table out of sorting; its headers need not sort                                                                                                        |
+| `bare`         | `boolean`          | `false`                | Render only a plain `<table>` with `class` and `ariaLabel`; `children` holds its whole content, and `header`, `scroll`, `stickyHeader` and `zebra` do not apply |
+| `class`        | `string`           | `""`                   | Applied to the scroll wrapper; with `bare`, to the table                                                                                                        |
 
 ## TableHeaderCell props
 

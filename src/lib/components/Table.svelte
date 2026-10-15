@@ -2,18 +2,9 @@
   import type { Snippet } from "svelte";
   import { scrollerOf } from "./virtual.js";
 
-  interface Props {
-    /** Header cells — <TableHeaderCell> (or <th>) elements. */
-    header: Snippet;
-    /** Body rows — <tr> elements. */
+  interface BaseProps {
+    /** Body rows — <tr> elements. With `bare`, everything inside the <table>. */
     children: Snippet;
-    /** What scrolls the rows: the table's own wrapper (give it a bounded
-     * height), or the page or panel the table sits in. */
-    scroll?: "self" | "page";
-    /** Keep the header visible while the body scrolls. */
-    stickyHeader?: boolean;
-    /** Stripe even rows. */
-    zebra?: boolean;
     ariaLabel?: string;
     /** Opts this table out of sorting. Every other table must sort:
      * kit-ui-check's `unsorted-table-header` rule requires sortable headers
@@ -22,13 +13,40 @@
     class?: string;
   }
 
+  type Props = BaseProps &
+    (
+      | {
+          /** Header cells — <TableHeaderCell> (or <th>) elements. */
+          header: Snippet;
+          /** What scrolls the rows: the table's own wrapper (give it a bounded
+           * height), or the page or panel the table sits in. */
+          scroll?: "self" | "page";
+          /** Keep the header visible while the body scrolls. */
+          stickyHeader?: boolean;
+          /** Stripe even rows. */
+          zebra?: boolean;
+          bare?: false;
+        }
+      | {
+          /** Render only a plain <table> carrying `class` and `ariaLabel`, so
+           * `children` can hold its own <thead>, several <tbody> groups or a
+           * <colgroup>. kit-ui's table styles do not apply. */
+          bare: true;
+          header?: undefined;
+          scroll?: undefined;
+          stickyHeader?: undefined;
+          zebra?: undefined;
+        }
+    );
+
   let {
-    header,
+    header = undefined,
     children,
     scroll = "self",
     stickyHeader = true,
     zebra = true,
     ariaLabel = undefined,
+    bare = false,
     class: className = "",
   }: Props = $props();
 
@@ -84,30 +102,36 @@
   }
 </script>
 
-<div
-  class={["kit-table-wrapper", className]}
-  class:kit-table-wrapper--page={scroll === "page"}
-  class:kit-table-wrapper--wide={scroll === "page" && wide}
-  {@attach watchHeader}
-  {@attach fitWidth}
->
-  <table
-    class="kit-table"
-    class:kit-table--zebra={zebra}
-    class:kit-table--sticky={stickyHeader}
-    class:kit-table--scrolled={scrolled}
-    aria-label={ariaLabel}
-  >
-    <thead>
-      <tr>
-        {@render header()}
-      </tr>
-    </thead>
-    <tbody>
-      {@render children()}
-    </tbody>
+{#if bare}
+  <table class={className || undefined} aria-label={ariaLabel}>
+    {@render children()}
   </table>
-</div>
+{:else}
+  <div
+    class={["kit-table-wrapper", className]}
+    class:kit-table-wrapper--page={scroll === "page"}
+    class:kit-table-wrapper--wide={scroll === "page" && wide}
+    {@attach watchHeader}
+    {@attach fitWidth}
+  >
+    <table
+      class="kit-table"
+      class:kit-table--zebra={zebra}
+      class:kit-table--sticky={stickyHeader}
+      class:kit-table--scrolled={scrolled}
+      aria-label={ariaLabel}
+    >
+      <thead>
+        <tr>
+          {@render header?.()}
+        </tr>
+      </thead>
+      <tbody>
+        {@render children()}
+      </tbody>
+    </table>
+  </div>
+{/if}
 
 <style>
   /* min-width: 0 lets the wrapper shrink in a flex row, so a wide table
