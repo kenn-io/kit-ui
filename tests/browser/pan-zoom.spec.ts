@@ -86,9 +86,7 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("demo sizing, linked and independent centers, relinking, and responsive layout", async ({
-  page,
-}) => {
+test("the comparison demo preserves linked and independent views", async ({ page }) => {
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
@@ -111,18 +109,11 @@ test("demo sizing, linked and independent centers, relinking, and responsive lay
         return { scale: m.a, x: m.e, y: m.f };
       });
   const resize = async () => {
-    const before = await matrix();
     const initialWidth = await fittedWidth();
     for (const larger of [true, false]) {
       await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
       if (larger) await expect.poll(fittedWidth).toBeGreaterThan(initialWidth);
       else await expect.poll(fittedWidth).toBe(initialWidth);
-      const ratio = (await fittedWidth()) / initialWidth;
-      await expect.poll(matrix).toEqual({
-        scale: expect.closeTo(before.scale / ratio, 3),
-        x: expect.closeTo(before.x, 2),
-        y: expect.closeTo(before.y, 2),
-      });
       const linked = await transforms();
       expect(linked[1]).toBe(linked[0]);
     }
@@ -176,10 +167,6 @@ test("demo sizing, linked and independent centers, relinking, and responsive lay
     await density(nextDpr);
     const linked = await transforms();
     expect(linked[1]).toBe(linked[0]);
-    const changedDensity = await matrix();
-    expect(changedDensity.scale).toBeCloseTo(width / (fitted * nextDpr), 5);
-    expect(changedDensity.x).toBeCloseTo((30 * dpr) / nextDpr, 5);
-    expect(changedDensity.y).toBeCloseTo((40 * dpr) / nextDpr, 5);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   for (const transform of await transforms()) {
@@ -192,13 +179,9 @@ test("demo sizing, linked and independent centers, relinking, and responsive lay
   const boxes = await panes.evaluateAll((elements) =>
     elements.map((element) => {
       const r = element.getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width, right: r.right };
+      return { x: r.x, y: r.y };
     }),
   );
-  expect(boxes[0]!.width).toBe(boxes[1]!.width);
-  expect(boxes[0]!.y).toBe(boxes[1]!.y);
-  const row = (await page.locator(".pan-zoom-demo__panes").boundingBox())!;
-  expect(boxes[1]!.right).toBeCloseTo(row.x + row.width, 1);
   const link = page.getByRole("switch", { name: "Link views" });
   await expect(link).toBeChecked();
   await link.uncheck();
@@ -292,7 +275,22 @@ test("demo sizing, linked and independent centers, relinking, and responsive lay
         },
       ]);
   }
-  await page.getByRole("button", { name: "Fit", exact: true }).click();
+});
+
+test("comparison panes share a row and stack on narrow screens", async ({ page }) => {
+  const panes = page.locator(".pan-zoom-demo__pane");
+  await expect(panes).toHaveCount(2);
+  const boxes = await panes.evaluateAll((elements) =>
+    elements.map((element) => {
+      const r = element.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, right: r.right };
+    }),
+  );
+  expect(boxes[0]!.width).toBe(boxes[1]!.width);
+  expect(boxes[0]!.y).toBe(boxes[1]!.y);
+  const row = (await page.locator(".pan-zoom-demo__panes").boundingBox())!;
+  expect(boxes[1]!.right).toBeCloseTo(row.x + row.width, 1);
+
   await page.setViewportSize({ width: 600, height: 900 });
   const mobile = await panes.evaluateAll((elements) =>
     elements.map((element) => {

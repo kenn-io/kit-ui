@@ -101,7 +101,7 @@ function transformOf(pan: Locator) {
   });
 }
 
-test("swipes page", async ({ browser }) => {
+test("a touch swipe pages the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -220,7 +220,7 @@ test("touch devices get 44px controls", async ({ browser }) => {
   await close();
 });
 
-test("inline Mermaid wires scroll handoff, horizontal pan, pinch, and touch-action", async ({
+test("an inline diagram hands vertical swipes to the page and zooms with pinches", async ({
   browser,
 }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
