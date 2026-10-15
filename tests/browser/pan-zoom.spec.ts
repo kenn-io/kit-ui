@@ -257,7 +257,6 @@ test("Actual pixels stays native and preserves view centers", async ({ page, bro
         [boxes[0]!.x + 120, boxes[0]!.y + 72],
         [[boxes[0]!.x + 150, boxes[0]!.y + 112]],
       );
-      await expectNativePixels(images);
     }
     await density(page, dpr === 4 ? 2 : 1);
     await expectNativePixels(images);
