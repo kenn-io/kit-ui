@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import type { PanZoom, PanZoomOptions, PanZoomView } from "../../src/lib/utils/pan-zoom.js";
 import { gotoPage } from "./helpers.js";
 
@@ -96,8 +96,9 @@ test("the comparison demo preserves linked and independent views", async ({ page
       .locator("img")
       .evaluate((image) =>
         Math.min(
-          image.clientWidth,
-          (image.clientHeight * image.naturalWidth) / image.naturalHeight,
+          Number.parseFloat(getComputedStyle(image).width),
+          (Number.parseFloat(getComputedStyle(image).height) * image.naturalWidth) /
+            image.naturalHeight,
         ),
       );
   const matrix = () =>
@@ -210,9 +211,10 @@ test("the comparison demo preserves linked and independent views", async ({ page
     panes.locator("img").evaluateAll((images) =>
       images.map((image) => {
         const matrix = new DOMMatrix(image.style.transform);
+        const style = getComputedStyle(image);
         const fitted = Math.min(
-          image.clientWidth,
-          (image.clientHeight * image.naturalWidth) / image.naturalHeight,
+          Number.parseFloat(style.width),
+          (Number.parseFloat(style.height) * image.naturalWidth) / image.naturalHeight,
         );
         return {
           scale: matrix.a,
@@ -277,7 +279,92 @@ test("the comparison demo preserves linked and independent views", async ({ page
   }
 });
 
-test("comparison panes share a row and stack on narrow screens", async ({ page }) => {
+async function preservesFractionalActualPixels(
+  browser: Browser,
+  browserName: "chromium" | "firefox" | "webkit",
+  deviceScaleFactor: number,
+) {
+  const context = await browser.newContext({
+    viewport: { width: 1281, height: 800 },
+    // This WebKit build uses a 2× backing scale for test contexts.
+    deviceScaleFactor: browserName === "webkit" ? deviceScaleFactor / 2 : deviceScaleFactor,
+  });
+  try {
+    const page = await context.newPage();
+    await gotoPage(page, "pan-zoom");
+    const image = page.locator(".pan-zoom-demo__pane img").first();
+    const measure = () =>
+      image.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const width = Number.parseFloat(style.width);
+        const height = Number.parseFloat(style.height);
+        const aspect = element.naturalWidth / element.naturalHeight;
+        const fittedWidth = Math.min(width, height * aspect);
+        const renderedWidth = Math.min(rect.width, rect.height * aspect);
+        return {
+          fittedWidth,
+          renderedWidth,
+          renderedHeight: renderedWidth / aspect,
+          naturalWidth: element.naturalWidth,
+          naturalHeight: element.naturalHeight,
+          dpr: window.devicePixelRatio,
+        };
+      });
+    const expectFractionalFit = async () => {
+      await expect
+        .poll(async () => {
+          const width = (await measure()).fittedWidth;
+          return Math.abs(width - Math.round(width));
+        })
+        .toBeGreaterThan(0.01);
+    };
+    const expectNativePixels = async () => {
+      // Transformed bounds are subpixel-quantized across engines.
+      await expect
+        .poll(async () => {
+          const size = await measure();
+          return Math.max(
+            Math.abs(size.renderedWidth * size.dpr - size.naturalWidth),
+            Math.abs(size.renderedHeight * size.dpr - size.naturalHeight),
+          );
+        })
+        .toBeLessThan(0.5);
+    };
+
+    await expect(page.getByRole("button", { name: "Actual pixels", exact: true })).toBeEnabled();
+    expect((await measure()).dpr).toBe(deviceScaleFactor);
+    await expectFractionalFit();
+    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
+    await expectNativePixels();
+
+    await page.setViewportSize({ width: 1297, height: 800 });
+    await expectFractionalFit();
+    await expectNativePixels();
+
+    await page.getByRole("button", { name: "Larger panes", exact: true }).click();
+    await expectFractionalFit();
+    await expectNativePixels();
+  } finally {
+    await context.close();
+  }
+}
+
+for (const deviceScaleFactor of [1, 2]) {
+  test.describe(`fractional actual-pixel sizing at DPR ${deviceScaleFactor}`, () => {
+    test("renders the contained source at native physical size", async ({
+      browser,
+      browserName,
+    }) => {
+      await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
+    });
+  });
+}
+
+test("comparison panes share a row and stack on narrow screens", async ({ page, browserName }) => {
+  // WebKit applies its 2× backing scale to the configured viewport size.
+  const factor = browserName === "webkit" ? 2 : 1;
+  await page.setViewportSize({ width: 1280 * factor, height: 800 * factor });
   const panes = page.locator(".pan-zoom-demo__pane");
   await expect(panes).toHaveCount(2);
   const boxes = await panes.evaluateAll((elements) =>

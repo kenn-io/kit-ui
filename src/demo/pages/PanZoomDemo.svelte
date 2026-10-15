@@ -65,14 +65,22 @@
   function linkedPanes(node: HTMLElement) {
     const panes = Array.from(node.querySelectorAll<HTMLElement>(".pan-zoom-demo__pane"));
     imageNodes = panes.map((pane) => pane.querySelector("img")!);
+    const imageSizes = panes.map(() => ({ width: 0, height: 0 }));
     const oldFittedWidths = [0, 0];
     refresh = () => {
-      if (!imageNodes.every((image) => image.complete && image.naturalWidth)) return;
+      if (
+        !imageNodes.every(
+          (image, index) =>
+            image.complete &&
+            image.naturalWidth &&
+            imageSizes[index]!.width > 0 &&
+            imageSizes[index]!.height > 0,
+        )
+      )
+        return;
       imageNodes.forEach((image, index) => {
-        const fittedWidth = Math.min(
-          image.clientWidth,
-          (image.clientHeight * image.naturalWidth) / image.naturalHeight,
-        );
+        const { width, height } = imageSizes[index]!;
+        const fittedWidth = Math.min(width, (height * image.naturalWidth) / image.naturalHeight);
         const sourceScale = image.naturalWidth / (fittedWidth * window.devicePixelRatio);
         sourceScales[index] = sourceScale;
         const view = views[index]!;
@@ -98,8 +106,18 @@
       );
       controllers.forEach((controller, index) => controller.setView(views[index]!));
     };
-    const observer = new ResizeObserver(() => refresh());
-    panes.forEach((pane) => observer.observe(pane));
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const index = imageNodes.indexOf(entry.target as HTMLImageElement);
+        if (index >= 0)
+          imageSizes[index] = {
+            width: entry.contentRect.width,
+            height: entry.contentRect.height,
+          };
+      }
+      refresh();
+    });
+    imageNodes.forEach((image) => observer.observe(image));
     let query: MediaQueryList;
     const watchDpr = () => {
       query?.removeEventListener("change", watchDpr);

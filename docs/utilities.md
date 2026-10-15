@@ -61,13 +61,15 @@ Read `getView()` after setting a view to obtain the effective clamped values.
 Views containing non-finite values or a scale at or below zero are ignored.
 
 For actual pixels, the example computes one image pixel per physical screen
-pixel. With `object-fit: contain`, `boxW` and `boxH` are the untransformed CSS
-content dimensions after any rotation; put rotation on an outer wrapper,
-because `attachPanZoom` owns the pan element's transform. `displayW` and `displayH` swap the
-original dimensions for 90° and 270° turns. `fittedW` accounts for letterboxing.
-`clientWidth` and `clientHeight` include padding, so subtract it before using
-them as content dimensions; the demo images have no padding or border.
-`offsetWidth` includes letterboxing and produces the wrong scale. Choose
+pixel. With `object-fit: contain`, `boxW` and `boxH` are fractional,
+untransformed content-box dimensions after any rotation; use a
+`ResizeObserverEntry.contentRect` or an equivalent precise layout measurement.
+Put rotation on an outer wrapper, because `attachPanZoom` owns the pan element's
+transform. `displayW` and `displayH` swap the original dimensions for 90° and
+270° turns. `fittedW` accounts for letterboxing. `clientWidth`/`clientHeight`
+and `offsetWidth`/`offsetHeight` round to integers, so they can't establish an
+exact pixel size. Transformed `getBoundingClientRect()` dimensions also can't
+be used as fit inputs. The demo images have no padding or border. Choose
 shared bounds that include the defaults, actual-pixel scale, and current scale,
 as above. After image load, pane resize, or a density change, destroy and
 reattach both controllers with the new shared bounds, then restore the view.
