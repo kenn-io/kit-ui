@@ -56,6 +56,7 @@
       attachPanZoom(pane, imageNodes[index]!, {
         ...limits,
         onChange: (next) => {
+          if (next.scale !== view.scale) exactIndex = null;
           view = next;
           controllers.forEach((other, i) => i !== index && other.setView(next));
         },
@@ -66,7 +67,7 @@
       query?.removeEventListener("change", watchDpr);
       dpr = window.devicePixelRatio;
       if (exactIndex !== null) exactSize(exactIndex);
-      query = matchMedia(`(resolution: ${dpr}dppx)`);
+      query = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
       query.addEventListener("change", watchDpr);
     };
     watchDpr();

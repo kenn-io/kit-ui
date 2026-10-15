@@ -9,6 +9,7 @@ import { gotoPage } from "./helpers.js";
 declare global {
   interface Window {
     fixture: { controller: PanZoom; changes: PanZoomView[]; swipes: number[] };
+    resolutionQuery: MediaQueryList;
   }
 }
 
@@ -78,6 +79,15 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
 }
 
 test("demo panes size actual pixels, link view changes, and Fit", async ({ page }) => {
+  await page.addInitScript(() => {
+    const match = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const result = match(query);
+      if (query.startsWith("(resolution:")) window.resolutionQuery = result;
+      return result;
+    };
+  });
+  await page.reload();
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
@@ -101,6 +111,20 @@ test("demo panes size actual pixels, link view changes, and Fit", async ({ page 
     const after = await transforms();
     expect(after[1]).toBe(after[0]);
     expect(after[0]).not.toBe(before[0]);
+    await panes.nth(index).dispatchEvent(index === 0 ? "dblclick" : "wheel", {
+      clientX: box.x + 120,
+      clientY: box.y + 72,
+      deltaY: -100,
+    });
+    const manual = await transforms();
+    expect(manual[0]).not.toBe(after[0]);
+    const deviceScaleFactor = index === 0 ? 2 : 1;
+    await page.evaluate((value) => {
+      Object.defineProperty(window, "devicePixelRatio", { value, configurable: true });
+      window.resolutionQuery.dispatchEvent(new Event("change"));
+    }, deviceScaleFactor);
+    await expect(page.locator("output")).toContainText(`DPR ${deviceScaleFactor}`);
+    expect(await transforms()).toEqual(manual);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   expect(await transforms()).toEqual([
