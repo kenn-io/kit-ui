@@ -269,6 +269,7 @@ test("Actual pixels keeps size, readout, and view positions across changes", asy
     await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
     await expectNativePixels(images);
     if (width === 80) {
+      // A scale-neutral drag must leave Actual pixels selected for the density change below.
       await mouseDrag(
         page,
         [boxes[0]!.x + 120, boxes[0]!.y + 72],
