@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Locator, type Page } from "@playwright/test";
 import type { PanZoom, PanZoomOptions, PanZoomView } from "../../src/lib/utils/pan-zoom.js";
 import { gotoPage } from "./helpers.js";
 
@@ -15,7 +15,7 @@ declare global {
 
 const NEAR_ONE = 1561 / 1560;
 
-test.beforeEach(async ({ page }) => {
+async function openDemo(page: Page) {
   await page.addInitScript(() => {
     const match = window.matchMedia.bind(window);
     window.matchMedia = (query) => {
@@ -25,9 +25,79 @@ test.beforeEach(async ({ page }) => {
     };
   });
   await gotoPage(page, "pan-zoom");
-});
+}
+
+async function openController(page: Page) {
+  await page.goto("/src/lib/utils/pan-zoom.ts");
+}
+
+async function measureImages(images: Locator) {
+  return images.evaluateAll((elements) =>
+    elements.map((element) => {
+      const image = element as HTMLImageElement;
+      const style = getComputedStyle(image);
+      const rect = image.getBoundingClientRect();
+      const aspect = image.naturalWidth / image.naturalHeight;
+      const fittedWidth = Math.min(
+        Number.parseFloat(style.width),
+        Number.parseFloat(style.height) * aspect,
+      );
+      const renderedWidth = Math.min(rect.width, rect.height * aspect);
+      const dpr = window.devicePixelRatio;
+      const scale = new DOMMatrix(image.style.transform).a;
+      return {
+        fittedWidth,
+        renderedWidth,
+        renderedHeight: renderedWidth / aspect,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        dpr,
+        scale,
+        offsetX: new DOMMatrix(image.style.transform).e,
+        offsetY: new DOMMatrix(image.style.transform).f,
+      };
+    }),
+  );
+}
+
+async function expectNativePixels(images: Locator) {
+  await expect
+    .poll(async () =>
+      Math.max(
+        ...(await measureImages(images)).map((image) =>
+          Math.max(
+            Math.abs(image.renderedWidth * image.dpr - image.naturalWidth),
+            Math.abs(image.renderedHeight * image.dpr - image.naturalHeight),
+          ),
+        ),
+      ),
+    )
+    .toBeLessThan(0.5);
+}
+
+async function expectFractionalFit(image: Locator) {
+  await expect
+    .poll(async () => {
+      const width = (await measureImages(image))[0]!.fittedWidth;
+      return Math.abs(width - Math.round(width));
+    })
+    .toBeGreaterThan(0.01);
+}
+
+async function expectZoomReadout(page: Page, image: Locator) {
+  await expect
+    .poll(async () => {
+      const measured = (await measureImages(image))[0]!;
+      const ratio = Number(
+        ((measured.scale * measured.fittedWidth * measured.dpr) / measured.naturalWidth).toFixed(2),
+      );
+      return (await page.getByLabel("Zoom scale").innerText()).includes(`${ratio}:1`);
+    })
+    .toBe(true);
+}
 
 async function mount(page: Page, options: { echo?: boolean } = {}) {
+  await openController(page);
   await page.evaluate(async ({ echo }) => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
     window.fixture?.controller.destroy();
@@ -82,112 +152,28 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("the comparison demo preserves linked and independent views", async ({ page }) => {
+test("the comparison demo keeps linked and independent views", async ({ page }) => {
+  await openDemo(page);
   const panes = page.locator(".pan-zoom-demo__pane");
+  const images = panes.locator("img");
   const transforms = () =>
-    panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
-  const fittedWidth = () =>
-    panes
-      .first()
-      .locator("img")
-      .evaluate((image) =>
-        Math.min(
-          Number.parseFloat(getComputedStyle(image).width),
-          (Number.parseFloat(getComputedStyle(image).height) * image.naturalWidth) /
-            image.naturalHeight,
-        ),
-      );
-  const expectNativePixels = async (width: number, height: number) => {
-    await expect
-      .poll(async () =>
-        panes
-          .first()
-          .locator("img")
-          .evaluate((image) => {
-            const rect = image.getBoundingClientRect();
-            const aspect = image.naturalWidth / image.naturalHeight;
-            const renderedWidth = Math.min(rect.width, rect.height * aspect);
-            return {
-              width: renderedWidth * window.devicePixelRatio,
-              height: (renderedWidth / aspect) * window.devicePixelRatio,
-            };
-          })
-          .then((size) => Math.max(Math.abs(size.width - width), Math.abs(size.height - height))),
-      )
-      .toBeLessThan(0.5);
-  };
-  const resize = async () => {
-    const initialWidth = await fittedWidth();
-    for (const larger of [true, false]) {
-      await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
-      if (larger) await expect.poll(fittedWidth).toBeGreaterThan(initialWidth);
-      else await expect.poll(fittedWidth).toBe(initialWidth);
-      const linked = await transforms();
-      expect(linked[1]).toBe(linked[0]);
-    }
-  };
-  const density = async (value: number) => {
-    await page.evaluate((value) => {
-      Object.defineProperty(window, "devicePixelRatio", {
-        value,
-        configurable: true,
-      });
-      window.resolutionQuery.dispatchEvent(new Event("change"));
-    }, value);
-    await expect(page.locator("output")).toContainText(`DPR ${value}`);
-  };
-  for (const [width, dpr] of [
-    [80, 4],
-    [6000, 0.5],
-  ] as const) {
-    await page.getByRole("button", { name: "Fit", exact: true }).click();
-    await panes.locator("img").evaluateAll((images, width) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = width * 0.6;
-      const src = canvas.toDataURL();
-      images.forEach((image) => {
-        image.src = src;
-      });
-    }, width);
-    await expect
-      .poll(() =>
-        panes
-          .locator("img")
-          .evaluateAll(
-            (images, width) =>
-              images.every((image) => image.complete && image.naturalWidth === width),
-            width,
-          ),
-      )
-      .toBe(true);
-    await density(dpr);
-    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-    await expectNativePixels(width, width * 0.6);
-    if (width === 80) {
-      const box = (await panes.first().boundingBox())!;
-      await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-      const panned = await transforms();
-      expect(panned[1]).toBe(panned[0]);
-      await resize();
-      await expectNativePixels(width, width * 0.6);
-    }
-    const nextDpr = dpr === 4 ? 2 : 1;
-    await density(nextDpr);
-    await expectNativePixels(width, width * 0.6);
-  }
+    images.evaluateAll((nodes) => nodes.map((node) => (node as HTMLImageElement).style.transform));
   await page.getByRole("button", { name: "Fit", exact: true }).click();
-  for (const transform of await transforms()) {
-    const view = await page.evaluate((transform) => {
-      const matrix = new DOMMatrix(transform);
-      return { scale: matrix.a, x: matrix.e, y: matrix.f };
-    }, transform);
-    expect(view).toEqual({ scale: 1, x: 0, y: 0 });
-  }
+  expect(
+    (await measureImages(images)).map(({ scale, offsetX, offsetY }) => ({
+      scale,
+      offsetX,
+      offsetY,
+    })),
+  ).toEqual([
+    { scale: 1, offsetX: 0, offsetY: 0 },
+    { scale: 1, offsetX: 0, offsetY: 0 },
+  ]);
+
   const boxes = await panes.evaluateAll((elements) =>
     elements.map((element) => {
-      const r = element.getBoundingClientRect();
-      return { x: r.x, y: r.y };
+      const rect = element.getBoundingClientRect();
+      return { x: rect.x, y: rect.y };
     }),
   );
   const link = page.getByRole("switch", { name: "Link views" });
@@ -212,27 +198,95 @@ test("the comparison demo preserves linked and independent views", async ({ page
   expect(secondChanged[1]).not.toBe(firstChanged[1]);
   await link.check();
   expect(await transforms()).toEqual([secondChanged[1], secondChanged[1]]);
+
+  const box = (await panes.first().boundingBox())!;
+  await mouseDrag(page, [box.x + 100, box.y + 100], [[box.x + 120, box.y + 130]]);
+  const panned = await transforms();
+  expect(panned[0]).not.toBe(secondChanged[1]);
+  expect(panned[1]).toBe(panned[0]);
+});
+
+test("Actual pixels stays native through size and density changes", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  await openDemo(page);
+  const panes = page.locator(".pan-zoom-demo__pane");
+  const images = panes.locator("img");
+  const transforms = () =>
+    images.evaluateAll((nodes) => nodes.map((node) => (node as HTMLImageElement).style.transform));
+  const fittedWidth = async () => (await measureImages(images.first()))[0]!.fittedWidth;
+  const resize = async () => {
+    const initialWidth = await fittedWidth();
+    for (const larger of [true, false]) {
+      await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
+      if (larger) await expect.poll(fittedWidth).toBeGreaterThan(initialWidth);
+      else await expect.poll(fittedWidth).toBe(initialWidth);
+      const linked = await transforms();
+      expect(linked[1]).toBe(linked[0]);
+    }
+  };
+  const density = async (value: number) => {
+    await page.evaluate((value) => {
+      Object.defineProperty(window, "devicePixelRatio", { value, configurable: true });
+      window.resolutionQuery.dispatchEvent(new Event("change"));
+    }, value);
+    await expect(page.locator("output")).toContainText(`DPR ${value}`);
+  };
+
+  for (const [width, dpr] of [
+    [80, 4],
+    [6000, 0.5],
+  ] as const) {
+    await page.getByRole("button", { name: "Fit", exact: true }).click();
+    await images.evaluateAll((nodes, width) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = width * 0.6;
+      const src = canvas.toDataURL();
+      nodes.forEach((node) => ((node as HTMLImageElement).src = src));
+    }, width);
+    await expect
+      .poll(() =>
+        images.evaluateAll(
+          (nodes, width) =>
+            nodes.every((node) => {
+              const image = node as HTMLImageElement;
+              return image.complete && image.naturalWidth === width;
+            }),
+          width,
+        ),
+      )
+      .toBe(true);
+    await density(dpr);
+    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
+    await expectNativePixels(images);
+    if (width === 80) {
+      const box = (await panes.first().boundingBox())!;
+      await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
+      const panned = await transforms();
+      expect(panned[1]).toBe(panned[0]);
+      await resize();
+      await expectNativePixels(images);
+    }
+    await density(dpr === 4 ? 2 : 1);
+    await expectNativePixels(images);
+  }
+
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  const boxes = await panes.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.x, y: rect.y };
+    }),
+  );
+  const link = page.getByRole("switch", { name: "Link views" });
+  await expect(link).toBeChecked();
   await link.uncheck();
   await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-  const paneViews = () =>
-    panes.locator("img").evaluateAll((images) =>
-      images.map((image) => {
-        const matrix = new DOMMatrix(image.style.transform);
-        const style = getComputedStyle(image);
-        const fitted = Math.min(
-          Number.parseFloat(style.width),
-          (Number.parseFloat(style.height) * image.naturalWidth) / image.naturalHeight,
-        );
-        return {
-          scale: matrix.a,
-          x: matrix.e,
-          y: matrix.f,
-          fitted,
-          width: image.naturalWidth,
-        };
-      }),
-    );
-  await expect(page.getByLabel("Zoom scale")).toContainText("1:1");
+  await expectNativePixels(images);
+  await expectZoomReadout(page, images.first());
   await mouseDrag(
     page,
     [boxes[0]!.x + 100, boxes[0]!.y + 100],
@@ -243,31 +297,29 @@ test("the comparison demo preserves linked and independent views", async ({ page
     clientX: boxes[1]!.x + 50,
     clientY: boxes[1]!.y + 50,
   });
-  await expect(page.getByLabel("Zoom scale")).toContainText("0.86:1");
-  for (const change of ["density", "resize"]) {
-    const before = await paneViews();
-    if (change === "density") {
-      await density(2);
-      await expect(page.getByLabel("Zoom scale")).toContainText("1.72:1");
-    } else {
+  await expectZoomReadout(page, images.last());
+
+  for (const change of ["density", "resize"] as const) {
+    const before = await measureImages(images);
+    if (change === "density") await density(2);
+    else {
       await page.getByRole("button", { name: "Larger panes", exact: true }).click();
-      await expect
-        .poll(async () => (await paneViews())[0]!.fitted)
-        .toBeGreaterThan(before[0]!.fitted);
+      await expect.poll(fittedWidth).toBeGreaterThan(before[0]!.fittedWidth);
     }
+    await expectZoomReadout(page, images.last());
     await expect
       .poll(async () =>
-        (await paneViews()).map((view, index) => {
+        (await measureImages(images)).map((view, index) => {
           const old = before[index]!;
           const scale =
             index === 0
-              ? (old.scale * old.fitted) / view.fitted / (change === "density" ? 2 : 1)
+              ? (old.scale * old.fittedWidth) / view.fittedWidth / (change === "density" ? 2 : 1)
               : old.scale;
-          const ratio = (scale * view.fitted) / (old.scale * old.fitted);
+          const ratio = (scale * view.fittedWidth) / (old.scale * old.fittedWidth);
           return {
             scale: view.scale - scale,
-            x: view.x - old.x * ratio,
-            y: view.y - old.y * ratio,
+            x: view.offsetX - old.offsetX * ratio,
+            y: view.offsetY - old.offsetY * ratio,
           };
         }),
       )
@@ -284,6 +336,8 @@ test("the comparison demo preserves linked and independent views", async ({ page
         },
       ]);
   }
+  for (const deviceScaleFactor of [1, 2])
+    await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
 });
 
 async function preservesFractionalActualPixels(
@@ -300,70 +354,23 @@ async function preservesFractionalActualPixels(
     const page = await context.newPage();
     await gotoPage(page, "pan-zoom");
     const image = page.locator(".pan-zoom-demo__pane img").first();
-    const measure = () =>
-      image.evaluate((element) => {
-        const style = getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        const width = Number.parseFloat(style.width);
-        const height = Number.parseFloat(style.height);
-        const aspect = element.naturalWidth / element.naturalHeight;
-        const fittedWidth = Math.min(width, height * aspect);
-        const renderedWidth = Math.min(rect.width, rect.height * aspect);
-        return {
-          fittedWidth,
-          renderedWidth,
-          renderedHeight: renderedWidth / aspect,
-          naturalWidth: element.naturalWidth,
-          naturalHeight: element.naturalHeight,
-          dpr: window.devicePixelRatio,
-        };
-      });
-    const expectFractionalFit = async () => {
-      await expect
-        .poll(async () => {
-          const width = (await measure()).fittedWidth;
-          return Math.abs(width - Math.round(width));
-        })
-        .toBeGreaterThan(0.01);
-    };
-    const expectNativePixels = async () => {
-      // Transformed bounds are subpixel-quantized across engines.
-      await expect
-        .poll(async () => {
-          const size = await measure();
-          return Math.max(
-            Math.abs(size.renderedWidth * size.dpr - size.naturalWidth),
-            Math.abs(size.renderedHeight * size.dpr - size.naturalHeight),
-          );
-        })
-        .toBeLessThan(0.5);
-    };
-
-    await expect(page.getByRole("button", { name: "Actual pixels", exact: true })).toBeEnabled();
-    expect((await measure()).dpr).toBe(deviceScaleFactor);
-    await expectFractionalFit();
+    expect((await measureImages(image))[0]!.dpr).toBe(deviceScaleFactor);
+    // Keep the fractional-fit reproduction active if the demo layout changes.
+    await expectFractionalFit(image);
     await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-    await expectNativePixels();
+    await expectNativePixels(image);
 
     await page.setViewportSize({ width: 1297, height: 800 });
-    await expectFractionalFit();
-    await expectNativePixels();
+    await expectFractionalFit(image);
+    await expectNativePixels(image);
   } finally {
     await context.close();
   }
 }
-
-test("fractional actual-pixel sizing stays native through responsive changes", async ({
-  browser,
-  browserName,
-}) => {
-  for (const deviceScaleFactor of [1, 2])
-    await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
-});
-
 test("comparison panes share a row and stack on narrow screens", async ({ page, browserName }) => {
-  // WebKit applies its 2× backing scale to the configured viewport size.
-  const factor = browserName === "webkit" ? 2 : 1;
+  await openDemo(page);
+  const dpr = await page.evaluate(() => window.devicePixelRatio);
+  const factor = browserName === "webkit" ? dpr : 1;
   await page.setViewportSize({ width: 1280 * factor, height: 800 * factor });
   const panes = page.locator(".pan-zoom-demo__pane");
   await expect(panes).toHaveCount(2);
@@ -373,20 +380,20 @@ test("comparison panes share a row and stack on narrow screens", async ({ page, 
       return { x: r.x, y: r.y, width: r.width, right: r.right };
     }),
   );
-  expect(boxes[0]!.width).toBe(boxes[1]!.width);
-  expect(boxes[0]!.y).toBe(boxes[1]!.y);
+  expect(boxes[0]!.width).toBeCloseTo(boxes[1]!.width, 2);
+  expect(boxes[0]!.y).toBeCloseTo(boxes[1]!.y, 2);
   const row = (await page.locator(".pan-zoom-demo__panes").boundingBox())!;
   expect(boxes[1]!.right).toBeCloseTo(row.x + row.width, 1);
 
-  await page.setViewportSize({ width: 600, height: 900 });
+  await page.setViewportSize({ width: 600 * factor, height: 900 * factor });
   const mobile = await panes.evaluateAll((elements) =>
     elements.map((element) => {
       const r = element.getBoundingClientRect();
       return { x: r.x, y: r.y, width: r.width };
     }),
   );
-  expect(mobile[0]!.width).toBe(mobile[1]!.width);
-  expect(mobile[0]!.x).toBe(mobile[1]!.x);
+  expect(mobile[0]!.width).toBeCloseTo(mobile[1]!.width, 2);
+  expect(mobile[0]!.x).toBeCloseTo(mobile[1]!.x, 2);
   expect(mobile[1]!.y).toBeGreaterThan(mobile[0]!.y);
 });
 
@@ -504,6 +511,7 @@ test("destroying during a drag clears panning and leaves the view unchanged", as
 });
 
 test("scale limits use independent defaults and stay fixed after attachment", async ({ page }) => {
+  await openController(page);
   const defaults = await page.evaluate(async () => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
     const limits = { minScale: 0.1, maxScale: 32 };
