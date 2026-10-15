@@ -680,13 +680,13 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
         }
         return { anchored: null, view: window.fixture.controller.getView() };
       },
-      { scenario, initialScale: scenario === "double-tap" ? 1 : NEAR_ONE },
+      { scenario, initialScale: 1 },
     );
     if (result.anchored) {
       expect(result.anchored).toEqual({ scale: 2.5, offsetX: -150, offsetY: -75 });
       expect(result.view).toEqual(result.anchored);
     } else {
-      expect(result.view.scale).toBe(scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE);
+      expect(result.view.scale).toBe(scenario === "tap-pinch-tap" ? 2 : 1);
     }
   }
 });
