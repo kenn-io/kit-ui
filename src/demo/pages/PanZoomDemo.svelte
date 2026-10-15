@@ -116,24 +116,6 @@
 <DemoSection
   title="Linked panes"
   description="Drag either image to move both. Wheel or pinch to zoom, double-click to toggle. Actual pixels shows one image pixel per screen pixel."
-  code={`const rotation = 0; // These originals are unrotated.
-const quarterTurn = rotation % 180 !== 0;
-const displayW = quarterTurn ? image.naturalHeight : image.naturalWidth;
-const displayH = quarterTurn ? image.naturalWidth : image.naturalHeight;
-// client dimensions equal content dimensions here: no image padding or border.
-const fittedW = Math.min(image.clientWidth, image.clientHeight * displayW / displayH);
-const scale = displayW / (fittedW * devicePixelRatio);
-const limits = { minScale: Math.min(0.4, scale, view.scale), maxScale: Math.max(8, scale, view.scale) };
-const right = attachPanZoom(rightPane, rightImage, {
-  ...limits,
-  onChange: (view) => left.setView(view),
-});
-const left = attachPanZoom(leftPane, leftImage, {
-  ...limits,
-  onChange: (view) => right.setView(view),
-});
-left.setView({ scale, offsetX: 0, offsetY: 0 });
-right.setView(left.getView());`}
 >
   {#if images.length}
     <div class="pan-zoom-demo" {@attach linkedPanes}>

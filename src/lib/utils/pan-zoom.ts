@@ -76,8 +76,8 @@ export function attachPanZoom(
   const requestedMax = options.maxScale ?? MAX_SCALE;
   const maxScale = Number.isFinite(requestedMax) && requestedMax >= 1 ? requestedMax : MAX_SCALE;
   // Scale keeps full precision: a pinch or slow wheel arrives as many tiny
-  // ratios, and rounding each step would discard them. CSS gets the same
-  // precision, so exact image sizing survives.
+  // ratios, and rounding each step would discard them. CSS serialization
+  // may round the rendered transform; controller state stays unrounded.
   const clamp = (value: number) => Math.min(maxScale, Math.max(minScale, value));
   // Active pointers by id, at their last seen position. One pointer
   // drags; two pinch (zoom around their midpoint) and pan together.
@@ -351,6 +351,7 @@ export function attachPanZoom(
     setView,
     reset,
     destroy() {
+      delete viewport.dataset["panning"];
       viewport.removeEventListener("dblclick", onDoubleClick);
       viewport.removeEventListener("pointerdown", onPointerDown);
       viewport.removeEventListener("pointermove", onPointerMove);

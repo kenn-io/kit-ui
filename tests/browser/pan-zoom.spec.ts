@@ -299,6 +299,21 @@ test("wheel zoom anchors and accumulates gradual steps", async ({ page }) => {
   expect((await state(page)).zoomed).toBe("true");
 });
 
+test("destroying during a drag clears panning and leaves the view unchanged", async ({ page }) => {
+  await mount(page);
+  await page.mouse.move(200, 200);
+  await page.mouse.down();
+  await page.mouse.move(230, 220);
+  const viewport = page.locator("#fixture");
+  await expect(viewport).toHaveAttribute("data-panning", "true");
+  const before = await state(page);
+  await page.evaluate(() => window.fixture.controller.destroy());
+  await expect(viewport).not.toHaveAttribute("data-panning");
+  await page.mouse.move(250, 240);
+  await page.mouse.up();
+  expect(await state(page)).toEqual(before);
+});
+
 test("scale limits use independent defaults and stay fixed after attachment", async ({ page }) => {
   const defaults = await page.evaluate(async () => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
