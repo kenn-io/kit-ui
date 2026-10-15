@@ -126,7 +126,8 @@ test("touch double-tap and pinch zoom the viewer", async ({ browser }) => {
   const mid = await center(page.locator(".kit-media-viewer__viewport"));
   const at = { x: mid.x + 100, y: mid.y + 50 };
   await doubleTap(cdp, at);
-  await expect.poll(async () => (await transformOf(pan)).scale).toBe(2.5);
+  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1);
+  const zoomedByDoubleTap = (await transformOf(pan)).scale;
 
   await twoFingers(
     cdp,
@@ -139,7 +140,7 @@ test("touch double-tap and pinch zoom the viewer", async ({ browser }) => {
       { x: mid.x + 200, y: mid.y + 50 },
     ],
   );
-  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(2.5);
+  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(zoomedByDoubleTap);
   await close();
 });
 

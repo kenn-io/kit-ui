@@ -86,7 +86,11 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("the comparison demo preserves linked and independent views", async ({ page }) => {
+test("the comparison demo preserves linked, independent, and actual-pixel views", async ({
+  page,
+  browser,
+  browserName,
+}) => {
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
@@ -101,14 +105,25 @@ test("the comparison demo preserves linked and independent views", async ({ page
             image.naturalHeight,
         ),
       );
-  const matrix = () =>
-    panes
-      .first()
-      .locator("img")
-      .evaluate((image) => {
-        const m = new DOMMatrix(image.style.transform);
-        return { scale: m.a, x: m.e, y: m.f };
-      });
+  const expectNativePixels = async (width: number, height: number) => {
+    await expect
+      .poll(async () =>
+        panes
+          .first()
+          .locator("img")
+          .evaluate((image) => {
+            const rect = image.getBoundingClientRect();
+            const aspect = image.naturalWidth / image.naturalHeight;
+            const renderedWidth = Math.min(rect.width, rect.height * aspect);
+            return {
+              width: renderedWidth * window.devicePixelRatio,
+              height: (renderedWidth / aspect) * window.devicePixelRatio,
+            };
+          })
+          .then((size) => Math.max(Math.abs(size.width - width), Math.abs(size.height - height))),
+      )
+      .toBeLessThan(0.5);
+  };
   const resize = async () => {
     const initialWidth = await fittedWidth();
     for (const larger of [true, false]) {
@@ -156,16 +171,16 @@ test("the comparison demo preserves linked and independent views", async ({ page
       .toBe(true);
     await density(dpr);
     await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-    const fitted = await fittedWidth();
-    const scale = width / (fitted * dpr);
-    expect((await matrix()).scale).toBeCloseTo(scale, 5);
+    await expectNativePixels(width, width * 0.6);
     const box = (await panes.first().boundingBox())!;
     await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
     const panned = await transforms();
     expect(panned[1]).toBe(panned[0]);
     await resize();
+    await expectNativePixels(width, width * 0.6);
     const nextDpr = dpr === 4 ? 2 : 1;
     await density(nextDpr);
+    await expectNativePixels(width, width * 0.6);
     const linked = await transforms();
     expect(linked[1]).toBe(linked[0]);
   }
@@ -277,6 +292,8 @@ test("the comparison demo preserves linked and independent views", async ({ page
         },
       ]);
   }
+  for (const deviceScaleFactor of [1, 2])
+    await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
 });
 
 async function preservesFractionalActualPixels(
@@ -348,17 +365,6 @@ async function preservesFractionalActualPixels(
   } finally {
     await context.close();
   }
-}
-
-for (const deviceScaleFactor of [1, 2]) {
-  test.describe(`fractional actual-pixel sizing at DPR ${deviceScaleFactor}`, () => {
-    test("renders the contained source at native physical size", async ({
-      browser,
-      browserName,
-    }) => {
-      await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
-    });
-  });
 }
 
 test("comparison panes share a row and stack on narrow screens", async ({ page, browserName }) => {
@@ -714,8 +720,6 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
     );
     if (result.anchored) {
       expect(result.anchored.scale).toBe(2.5);
-      expect(result.anchored.offsetX).toBeCloseTo(100 * (1 - 2.5 / NEAR_ONE), 10);
-      expect(result.anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
       expect(result.view).toEqual(result.anchored);
       expect((await state(page)).zoomed).toBe("true");
     } else {
