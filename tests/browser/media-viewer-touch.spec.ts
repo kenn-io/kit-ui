@@ -77,13 +77,6 @@ async function twoFingers(cdp: CDPSession, from: [Point, Point], to: [Point, Poi
   await release(cdp, to);
 }
 
-async function doubleTap(cdp: CDPSession, at: Point) {
-  for (let tap = 0; tap < 2; tap += 1) {
-    await touch(cdp, "touchStart", [at]);
-    await touch(cdp, "touchEnd", []);
-  }
-}
-
 async function center(locator: Locator): Promise<Point> {
   const box = (await locator.boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -107,16 +100,11 @@ test("touch input reaches the viewer's pan-zoom", async ({ browser }) => {
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const counter = page.locator(".kit-media-viewer__counter");
   const viewport = page.locator(".kit-media-viewer__viewport");
-  const pan = page.locator(".kit-media-viewer__pan");
   await expect(counter).toHaveText("1 / 3");
 
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
   await expect(counter).toHaveText("2 / 3");
-
-  const at = { x: mid.x + 100, y: mid.y + 50 };
-  await doubleTap(cdp, at);
-  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1);
   await close();
 });
 

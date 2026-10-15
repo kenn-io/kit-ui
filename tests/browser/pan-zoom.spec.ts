@@ -235,7 +235,10 @@ test("the comparison demo links, separates, and fits its views", async ({ page }
   expect(panned[1]).toBe(panned[0]);
 });
 
-test("Actual pixels stays native and preserves view centers", async ({ page, browser }) => {
+test("Actual pixels keeps native sizing, centers, and its zoom readout", async ({
+  page,
+  browser,
+}) => {
   const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
   await link.uncheck();
   for (const [width, dpr] of [
@@ -322,7 +325,7 @@ test("Actual pixels stays native and preserves view centers", async ({ page, bro
         },
       ]);
   }
-  await preservesFractionalActualPixels(browser, 2);
+  await preservesFractionalActualPixels(browser);
 });
 
 async function density(page: Page, value: number) {
@@ -333,10 +336,10 @@ async function density(page: Page, value: number) {
   await expect(page.locator("output")).toContainText(`DPR ${value}`);
 }
 
-async function preservesFractionalActualPixels(browser: Browser, deviceScaleFactor: number) {
+async function preservesFractionalActualPixels(browser: Browser) {
   const context = await browser.newContext({
     viewport: { width: 1281, height: 800 },
-    deviceScaleFactor,
+    deviceScaleFactor: 2,
   });
   try {
     const page = await context.newPage();
