@@ -152,7 +152,7 @@
   code={`<div tabindex="0" bind:this={target} oncontextmenu={open}>…</div>
 <Menu bind:open anchor={{ x, y }} returnFocus={target}>
   <MenuContent ariaLabel="File actions">
-    <MenuItem onselect={rename}>
+    <MenuItem onselect={rename} keyshortcuts="F2">
       {#snippet icon()}<PencilIcon size={14} />{/snippet}
       Rename
       {#snippet trailing()}F2{/snippet}
@@ -173,7 +173,7 @@
   <TextInput bind:value={fileName} bind:inputEl={fileNameInput} ariaLabel="File name" />
   <Menu bind:open={contextMenuOpen} anchor={contextMenuAnchor} returnFocus={contextTarget}>
     <MenuContent ariaLabel="File actions">
-      <MenuItem textValue="Rename" onselect={startRename}>
+      <MenuItem textValue="Rename" keyshortcuts="F2" onselect={startRename}>
         {#snippet icon()}<PencilIcon size={14} />{/snippet}
         Rename
         {#snippet trailing()}F2{/snippet}

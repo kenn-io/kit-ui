@@ -11,9 +11,15 @@
     textValue?: string;
     class?: ClassValue;
     /** Decorative leading icon. The icon column shows when any item in the menu passes one. */
-    icon?: Snippet;
+    icon?: Snippet | undefined;
     /** Right-aligned secondary text, such as a count or a shortcut hint. */
-    trailing?: Snippet;
+    trailing?: Snippet | undefined;
+    /**
+     * The shortcut the trailing hint shows, in `aria-keyshortcuts` form such as `F2` or
+     * `Meta+1`. Assistive technology reads the shortcut from this attribute, so the
+     * visual hint is left out of the item's name.
+     */
+    keyshortcuts?: string | undefined;
     children: Snippet;
   }
 
@@ -26,6 +32,7 @@
     class: className = "",
     icon,
     trailing,
+    keyshortcuts,
     children,
   }: Props = $props();
 
@@ -53,6 +60,7 @@
   role="menuitem"
   tabindex="-1"
   aria-disabled={disabled || undefined}
+  aria-keyshortcuts={keyshortcuts}
   onclick={(event) => {
     if (disabled) {
       event.preventDefault();
@@ -67,7 +75,9 @@
   </span>
   {@render children()}
   {#if trailing}
-    <span class="kit-menu__trailing">{@render trailing()}</span>
+    <span class="kit-menu__trailing" aria-hidden={keyshortcuts ? "true" : undefined}>
+      {@render trailing()}
+    </span>
   {/if}
 </button>
 
@@ -104,7 +114,10 @@
     cursor: pointer;
   }
 
-  .kit-menu__item:hover:not([aria-disabled="true"]),
+  /* Moving the pointer over an item focuses it, so focus alone drives the
+     fill. Filling on :hover too would leave two items lit when the pointer
+     rests on one and the arrow keys move to another. */
+  .kit-menu__item:focus:not([aria-disabled="true"]),
   .kit-menu__item:focus-visible {
     background: var(--bg-surface-hover);
     color: var(--text-primary);

@@ -179,6 +179,17 @@ test("context menu shows trailing text at the item's right edge", async ({ page 
   ).toBeLessThanOrEqual(1);
 });
 
+test("a shortcut hint is announced as a key shortcut, not as part of the item's name", async ({
+  page,
+}) => {
+  await gotoPage(page, "menu");
+  const { box } = await placeContextTarget(page, "start");
+  await page.mouse.click(box.x + 20, box.y + 30, { button: "right" });
+  const rename = page.getByRole("menuitem", { name: "Rename", exact: true });
+  await expect(rename).toHaveAttribute("aria-keyshortcuts", "F2");
+  await expect(rename.getByText("F2")).toBeVisible();
+});
+
 test("context menu stays inside the viewport and closes when the page scrolls", async ({
   page,
 }) => {
@@ -196,4 +207,20 @@ test("context menu stays inside the viewport and closes when the page scrolls", 
   await page.mouse.move(box.x + 4, box.y + 4);
   await page.mouse.wheel(0, -200);
   await expect(menu).toBeHidden();
+});
+
+test("only the focused item is filled when the pointer rests on another", async ({ page }) => {
+  await gotoPage(page, "menu");
+  await page.getByRole("button", { name: "Task actions" }).click();
+  const move = page.getByRole("menuitem", { name: "Move issue" });
+  const remove = page.getByRole("menuitem", { name: "Delete issue" });
+  await move.hover();
+  await expect(move).toBeFocused();
+  const fill = await move.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(fill).not.toBe("rgba(0, 0, 0, 0)");
+
+  await page.keyboard.press("End");
+  await expect(remove).toBeFocused();
+  await expect(remove).toHaveCSS("background-color", fill);
+  await expect(move).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
