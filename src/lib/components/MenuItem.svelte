@@ -11,9 +11,9 @@
     textValue?: string;
     class?: ClassValue;
     /** Decorative leading icon. The icon column shows when any item in the menu passes one. */
-    icon?: Snippet;
+    icon?: Snippet | undefined;
     /** Right-aligned secondary text, such as a count or a shortcut hint. */
-    trailing?: Snippet;
+    trailing?: Snippet | undefined;
     children: Snippet;
   }
 
