@@ -39,6 +39,16 @@ test("wheel zoom keeps the live diagram vector-backed", async ({ page }) => {
     .toBeGreaterThan(1);
   expect(await svg.evaluate((node, original) => node === original, originalSvg)).toBe(true);
   await expect(pan).toHaveCSS("will-change", "auto");
+
+  await firstViewer(page).getByRole("button", { name: "Reset diagram view" }).click();
+  await expect
+    .poll(() =>
+      pan.evaluate((node) => {
+        const matrix = new DOMMatrix(node.style.transform);
+        return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f];
+      }),
+    )
+    .toEqual([1, 0, 0, 1, 0, 0]);
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {
