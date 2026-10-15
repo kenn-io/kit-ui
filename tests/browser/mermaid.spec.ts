@@ -45,10 +45,10 @@ test("wheel zoom and reset keep the live diagram vector-backed", async ({ page }
     .poll(() =>
       pan.evaluate((node) => {
         const matrix = new DOMMatrix(node.style.transform);
-        return [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f];
+        return { scale: matrix.a, x: matrix.e, y: matrix.f };
       }),
     )
-    .toEqual([1, 0, 0, 1, 0, 0]);
+    .toEqual({ scale: 1, x: 0, y: 0 });
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {

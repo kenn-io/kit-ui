@@ -60,8 +60,7 @@ async function measureImages(images: Locator) {
   );
 }
 
-async function openComparisonDemo(page: Page) {
-  await openDemo(page);
+async function waitForDemoReady(page: Page) {
   const panes = page.locator(".pan-zoom-demo__pane");
   const images = panes.locator("img");
   await expect(panes).toHaveCount(2);
@@ -73,6 +72,12 @@ async function openComparisonDemo(page: Page) {
       ),
     )
     .toBe(true);
+  return { panes, images };
+}
+
+async function openComparisonDemo(page: Page) {
+  await openDemo(page);
+  const { panes, images } = await waitForDemoReady(page);
   const boxes = await panes.evaluateAll((elements) =>
     elements.map((element) => {
       const rect = element.getBoundingClientRect();
@@ -336,7 +341,8 @@ async function preservesFractionalActualPixels(browser: Browser, deviceScaleFact
   try {
     const page = await context.newPage();
     await gotoPage(page, "pan-zoom");
-    const image = page.locator(".pan-zoom-demo__pane img").first();
+    const { images } = await waitForDemoReady(page);
+    const image = images.first();
     const initialFit = (await measureImages(image))[0]!;
     await setImageFitWidth(image, Math.ceil(initialFit.fittedWidth) + 0.375);
     await expectFractionalFit(image);
@@ -622,12 +628,7 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
   for (const scenario of ["double-tap", "release-away", "tap-drag", "tap-pinch-tap"]) {
     await mount(page);
     const result = await page.evaluate(
-      ({ scenario, initialScale }) => {
-        window.fixture.controller.setView({
-          scale: initialScale,
-          offsetX: 0,
-          offsetY: 0,
-        });
+      ({ scenario }) => {
         const viewport = document.querySelector("#fixture")!;
         const fire = (type: string, id: number, x: number, y: number) =>
           viewport.dispatchEvent(
@@ -680,7 +681,7 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
         }
         return { anchored: null, view: window.fixture.controller.getView() };
       },
-      { scenario, initialScale: 1 },
+      { scenario },
     );
     if (result.anchored) {
       expect(result.anchored).toEqual({ scale: 2.5, offsetX: -150, offsetY: -75 });
