@@ -2,6 +2,40 @@
 
 All exported from the package root (or the granular `/utils/*` subpaths).
 
+## Pan and zoom
+
+`attachPanZoom(viewport, pan, options)` handles dragging, wheel zoom, touch
+pinch, and double-tap zoom. The viewport clips the transformed `pan` element.
+Set its transform origin to its center.
+
+```ts
+import { attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
+
+const right = attachPanZoom(rightViewport, rightImage, { maxScale: 16 });
+const left = attachPanZoom(leftViewport, leftImage, {
+  maxScale: 16,
+  onChange: (view: PanZoomView) => right.setView(view),
+});
+
+left.setView({ scale: naturalWidth / displayedWidth, offsetX: 0, offsetY: 0 });
+const view = left.getView();
+left.reset();
+left.destroy();
+right.destroy();
+```
+
+`getView()` returns a detached `{ scale, offsetX, offsetY }`. Offsets are CSS
+pixels relative to the viewport center. Gestures and `reset()` call `onChange`
+with a fresh view. `setView()` applies the view silently so linked viewers
+can update each other without a callback loop. Construction emits no change.
+
+Scale retains full precision and is clamped between 0.4 and `maxScale`, which
+defaults to 8. A non-finite maximum or one below 1 uses the default. `setView()`
+ignores a view containing non-finite values or a scale at or below zero.
+For 1:1 sizing, set `maxScale` high enough for the image's natural-to-displayed
+width ratio. Apps comparing different image sizes map offsets and scale to
+their own image coordinates before calling `setView()`.
+
 ## Clipboard
 
 ```ts

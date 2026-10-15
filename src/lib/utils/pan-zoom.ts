@@ -29,13 +29,28 @@ const DOUBLE_TAP_SLOP = 30;
 const SWIPE_MIN = 50;
 const SWIPE_AXIS_RATIO = 1.5;
 
+export interface PanZoomView {
+  scale: number;
+  /** CSS pixel offsets from the viewport center. */
+  offsetX: number;
+  offsetY: number;
+}
+
 export interface PanZoomOptions {
   /** One-finger touch or pen swipe at scale 1 (not mouse drags): 1 when
    * the finger moved left (show the next item), -1 when it moved right. */
   onSwipe?: (direction: 1 | -1) => void;
+  /** Gestures and reset report their view; setView does not. */
+  onChange?: (view: PanZoomView) => void;
+  /** Maximum scale, at least 1. Defaults to 8 for invalid values. */
+  maxScale?: number;
 }
 
 export interface PanZoom {
+  /** A detached copy of the current view. */
+  getView: () => PanZoomView;
+  /** Apply a view silently. Invalid views are ignored; scale is clamped. */
+  setView: (view: PanZoomView) => void;
   /** Back to scale 1, no offset. */
   reset: () => void;
   /** Remove the listeners (the transform is left as is). */
@@ -50,6 +65,8 @@ export function attachPanZoom(
   let scale = 1;
   let offsetX = 0;
   let offsetY = 0;
+  const requestedMax = options.maxScale ?? MAX_SCALE;
+  const maxScale = Number.isFinite(requestedMax) && requestedMax >= 1 ? requestedMax : MAX_SCALE;
   // Active pointers by id, at their last seen position. One pointer
   // drags; two pinch (zoom around their midpoint) and pan together.
   const pointers = new Map<number, { x: number; y: number }>();
@@ -71,10 +88,27 @@ export function attachPanZoom(
   // browser may send for the same taps is not handled again.
   let doubleTapTime = -Infinity;
 
-  const updateTransform = () => {
-    pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${formatScale(scale)})`;
+  const getView = (): PanZoomView => ({ scale, offsetX, offsetY });
+
+  const updateTransform = (notify = true) => {
+    pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
     if (atRest(scale)) delete viewport.dataset["zoomed"];
     else viewport.dataset["zoomed"] = "true";
+    if (notify) options.onChange?.(getView());
+  };
+
+  const setView = (view: PanZoomView) => {
+    if (
+      !Number.isFinite(view.scale) ||
+      view.scale <= 0 ||
+      !Number.isFinite(view.offsetX) ||
+      !Number.isFinite(view.offsetY)
+    )
+      return;
+    scale = clampScale(view.scale, maxScale);
+    offsetX = view.offsetX;
+    offsetY = view.offsetY;
+    updateTransform(false);
   };
 
   const reset = () => {
@@ -85,7 +119,7 @@ export function attachPanZoom(
   };
 
   const zoomTo = (nextScale: number, originX: number, originY: number) => {
-    nextScale = clampScale(nextScale);
+    nextScale = clampScale(nextScale, maxScale);
     if (nextScale === scale) return;
     const scaleRatio = nextScale / scale;
     offsetX = originX - (originX - offsetX) * scaleRatio;
@@ -257,9 +291,11 @@ export function attachPanZoom(
   viewport.addEventListener("pointerup", endPointer);
   viewport.addEventListener("pointercancel", endPointer);
   viewport.addEventListener("wheel", onWheel, { passive: false });
-  updateTransform();
+  updateTransform(false);
 
   return {
+    getView,
+    setView,
     reset,
     destroy() {
       viewport.removeEventListener("dblclick", onDoubleClick);
@@ -288,18 +324,14 @@ function normalizeWheelDelta(event: WheelEvent, viewport: HTMLElement): number {
 }
 
 // Scale keeps full precision: a pinch or slow wheel arrives as many tiny
-// ratios, and rounding or snapping each step would discard them. Only the
-// CSS value is rounded.
-function clampScale(value: number): number {
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+// ratios, and rounding or snapping each step would discard them. Send the
+// same precision to CSS for exact image sizing.
+function clampScale(value: number, maxScale: number): number {
+  return Math.min(maxScale, Math.max(MIN_SCALE, value));
 }
 
 /** Unzoomed for paging, page scroll, and double tap: within 0.1% of 1,
  * so float residue from a pinch out and back does not count as zoom. */
 function atRest(value: number): boolean {
   return Math.abs(value - 1) < 0.001;
-}
-
-function formatScale(value: number): string {
-  return Number(value.toFixed(4)).toString();
 }
