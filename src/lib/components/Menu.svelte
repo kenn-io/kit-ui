@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { setContext, tick, type Snippet } from "svelte";
+  import { setContext, type Snippet } from "svelte";
   import {
     menuContextKey,
     type MenuAlign,
+    type MenuAnchorPoint,
     type MenuContext,
     type MenuInitialFocus,
     type MenuItemRegistration,
@@ -11,6 +12,10 @@
   interface Props {
     open?: boolean;
     align?: MenuAlign;
+    /** Opens the content at a viewport point instead of below a trigger (context menus). */
+    anchor?: MenuAnchorPoint;
+    /** Receives focus when a trigger-less menu closes, such as the right-clicked row. */
+    returnFocus?: HTMLElement;
     onopenchange?: (open: boolean) => void;
     class?: string;
     children: Snippet;
@@ -19,6 +24,8 @@
   let {
     open = $bindable(false),
     align = "start",
+    anchor,
+    returnFocus,
     onopenchange,
     class: className = "",
     children,
@@ -61,8 +68,12 @@
     get align() {
       return align;
     },
+    get anchor() {
+      return anchor;
+    },
     triggerElement: () => triggerElement,
     contentElement: () => contentElement,
+    focusReturnElement: () => triggerElement ?? returnFocus,
     setTriggerElement: (element) => (triggerElement = element),
     setContentElement: (element) => (contentElement = element),
     openMenu(focus) {
@@ -70,8 +81,10 @@
       setOpen(true);
     },
     closeMenu(restoreFocus) {
+      // Synchronous, so an item whose onselect moves focus elsewhere (a
+      // dialog, a field) keeps it.
+      if (restoreFocus) context.focusReturnElement()?.focus();
       setOpen(false);
-      if (restoreFocus) void tick().then(() => triggerElement?.focus());
     },
     registerItem(item) {
       items.add(item);
