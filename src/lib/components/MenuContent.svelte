@@ -163,6 +163,7 @@
     tabindex="-1"
     aria-label={ariaLabel}
     onkeydown={handleKeydown}
+    oncontextmenu={menu.anchor ? (event) => event.preventDefault() : undefined}
   >
     {@render children()}
   </div>

@@ -117,6 +117,11 @@ test("context menu opens at the pointer and returns focus to its target", async 
   expect(Math.abs(menuBox.x - (box.x + 20))).toBeLessThanOrEqual(1);
   expect(Math.abs(menuBox.y - (box.y + 30))).toBeLessThanOrEqual(1);
   await expect(page.getByRole("menuitem", { name: /Rename/ })).toBeFocused();
+  // A right-click inside the menu must not open the browser's own menu over it.
+  const nativeMenuAllowed = await menu.evaluate((el) =>
+    el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })),
+  );
+  expect(nativeMenuAllowed).toBe(false);
 
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menuitem", { name: "Copy path" })).toBeFocused();
