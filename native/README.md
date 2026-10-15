@@ -10,7 +10,7 @@ On macOS, install Rust and Xcode with its command-line tools, then run from the 
 cargo run --locked --manifest-path native/Cargo.toml
 ```
 
-The app opens a native window. Select components in the left sidebar, search by name, switch between light and dark themes, and reset the current demo. Interactive demos update their displayed state. Scroll the sidebar to reach all 70 components. The footer shows the executable size and current resident memory, refreshed once per second, plus the build mode. Executable size excludes external assets; resident memory measures the current process.
+The app opens a native window. Select components in the left sidebar, search by name, switch between light and dark themes, and reset the current demo. Interactive demos update their displayed state. Scroll the sidebar to reach all 70 components. The footer shows the build mode. Memory sampling runs outside the application so the measurement does not trigger redraws.
 
 For a release build suitable for size comparisons, run:
 
@@ -61,6 +61,23 @@ Counts are opening component tags in production `.svelte` files under Forge's `f
 | CopyButton        |           4 |
 | CommentCard       |           4 |
 | CodeBlock         |           3 |
+
+## Measuring memory
+
+Build and launch the release app, then observe its PID from another terminal:
+
+```bash
+cargo build --release --locked --manifest-path native/Cargo.toml
+native/target/release/kit-ui-gpui &
+gallery_pid=$!
+python3 native/scripts/observe-memory.py "$gallery_pid" > /tmp/kit-ui-memory.csv
+```
+
+The macOS observer prints executable size to stderr and writes timestamped CSV samples once per second. Use `--duration 60` for a bounded run or Ctrl-C to stop observing; the application keeps running. `--interval` changes the sampling cadence. The gallery has no memory sampler or measurement timer.
+
+`resident_bytes` measures resident mappings; shared mappings can be counted in several processes. `physical_footprint_bytes` uses the kernel's process footprint accounting, including charged graphics memory. Neither is the Rust heap size. Executable size excludes assets and is not an installer size. This observer measures one PID; an Electron comparison must include its renderer, GPU, and utility processes too.
+
+Compare the same window size, build mode, navigation sequence, and idle duration. Record startup, warmed navigation, and idle separately. Component demos that animate or update timers remain active workloads.
 
 ## Using the ports
 

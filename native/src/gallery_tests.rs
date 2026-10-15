@@ -28,7 +28,6 @@ fn gallery_mounts_every_demo_in_both_themes(cx: &mut TestAppContext) {
             focus,
             search,
             query: String::new(),
-            runtime_stats: cx.new(super::runtime_stats::RuntimeStats::new),
         }
     });
     for viewport in [size(px(1100.), px(760.)), size(px(760.), px(520.))] {
@@ -81,7 +80,6 @@ fn gallery_search_filters_navigation(cx: &mut TestAppContext) {
             focus,
             search,
             query: String::new(),
-            runtime_stats: cx.new(super::runtime_stats::RuntimeStats::new),
         }
     });
     cx.simulate_input("checkbox");
@@ -127,7 +125,6 @@ fn replacing_a_focused_demo_restores_gallery_navigation(cx: &mut TestAppContext)
             focus,
             search,
             query: String::new(),
-            runtime_stats: cx.new(super::runtime_stats::RuntimeStats::new),
         }
     });
     cx.dispatch_action(super::Tab);
