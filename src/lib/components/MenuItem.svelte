@@ -110,6 +110,12 @@
     color: var(--text-primary);
   }
 
+  /* The hover fill is too faint to mark keyboard focus alone, so keep the
+     ring, inset, so the active item reads as one block between separators. */
+  .kit-menu__item:focus-visible {
+    outline-offset: -2px;
+  }
+
   .kit-menu__trailing {
     margin-left: auto;
     padding-left: var(--space-7);
