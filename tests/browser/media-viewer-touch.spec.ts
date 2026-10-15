@@ -94,7 +94,7 @@ function transformOf(pan: Locator) {
   });
 }
 
-test("touch input reaches the viewer's pan-zoom", async ({ browser }) => {
+test("a swipe pages the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();

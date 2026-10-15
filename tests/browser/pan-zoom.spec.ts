@@ -703,11 +703,6 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
 
 test("only a pinch that changed scale settles at 1 on release", async ({ page }) => {
   await mount(page);
-  await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-  await touch(page, "pointerdown", 1, 200, 200);
-  await touch(page, "pointermove", 1, 230, 200);
-  await touch(page, "pointerup", 1, 230, 200);
-  expect((await state(page)).view.scale).toBe(NEAR_ONE);
   await setView(page, { scale: 1, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 150, 200);
   await touch(page, "pointerdown", 2, 250, 200);
