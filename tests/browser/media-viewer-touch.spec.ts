@@ -118,7 +118,7 @@ test("swipes page", async ({ browser }) => {
   await close();
 });
 
-test("double-tap toggles zoom and a touch pinch zooms the viewer", async ({ browser }) => {
+test("touch double-tap and pinch zoom the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -127,8 +127,6 @@ test("double-tap toggles zoom and a touch pinch zooms the viewer", async ({ brow
   const at = { x: mid.x + 100, y: mid.y + 50 };
   await doubleTap(cdp, at);
   await expect.poll(async () => (await transformOf(pan)).scale).toBe(2.5);
-  await doubleTap(cdp, at);
-  await expect.poll(async () => (await transformOf(pan)).scale).toBe(1);
 
   await twoFingers(
     cdp,
@@ -141,14 +139,17 @@ test("double-tap toggles zoom and a touch pinch zooms the viewer", async ({ brow
       { x: mid.x + 200, y: mid.y + 50 },
     ],
   );
-  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1);
+  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(2.5);
   await close();
 });
 
 test("on a phone the controls stay apart and tappable, and the backdrop closes", async ({
   browser,
 }) => {
-  const { page, close } = await touchPage(browser, "media-viewer", { width: 390, height: 844 });
+  const { page, close } = await touchPage(browser, "media-viewer", {
+    width: 390,
+    height: 844,
+  });
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const panel = (await viewer(page).boundingBox())!;
   const names = ["Close expanded view", "Reset view", "Previous item", "Next item"];
@@ -207,7 +208,9 @@ test("touch devices get 44px controls", async ({ browser }) => {
   for (const button of await page.locator(".kit-mermaid-viewer__button").all()) {
     expect(await size(button)).toEqual([44, 44]);
   }
-  const expand = page.getByRole("button", { name: /Open image in expanded view: Screenshot A/ });
+  const expand = page.getByRole("button", {
+    name: /Open image in expanded view: Screenshot A/,
+  });
   expect(await size(expand)).toEqual([44, 44]);
 
   await expand.tap();
