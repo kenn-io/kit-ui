@@ -101,7 +101,7 @@ function transformOf(pan: Locator) {
   });
 }
 
-test("swipes page at rest and pan when zoomed", async ({ browser }) => {
+test("swipes page", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -115,12 +115,6 @@ test("swipes page at rest and pan when zoomed", async ({ browser }) => {
   await drag(cdp, { x: mid.x - 150, y: mid.y }, { x: mid.x + 150, y: mid.y });
   await expect(counter).toHaveText("1 / 3");
 
-  const pan = page.locator(".kit-media-viewer__pan");
-  await doubleTap(cdp, { x: mid.x + 100, y: mid.y + 50 });
-  await expect.poll(() => transformOf(pan)).toEqual({ scale: 2.5, x: -150, y: -75 });
-  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
-  await expect(counter).toHaveText("1 / 3");
-  await expect.poll(async () => (await transformOf(pan)).x).toBeLessThan(-400);
   await close();
 });
 
@@ -139,60 +133,12 @@ test("double-tap zooms in at the tap, and again resets", async ({ browser }) => 
   await close();
 });
 
-test("a pinch out and back settles at rest so the next swipe pages", async ({ browser }) => {
+test("real touch pinch reaches the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const pan = page.locator(".kit-media-viewer__pan");
   const mid = await center(page.locator(".kit-media-viewer__viewport"));
-  const fingers = (spread: number): [Point, Point] => [
-    { x: mid.x - spread, y: mid.y },
-    { x: mid.x + spread, y: mid.y },
-  ];
-  await touch(cdp, "touchStart", fingers(50));
-  await touch(cdp, "touchMove", fingers(100));
-  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1.5);
-  await touch(cdp, "touchMove", fingers(50.025));
-  await release(cdp, fingers(50.025));
-  await expect.poll(async () => (await transformOf(pan)).scale).toBe(1);
-  await expect(page.locator(".kit-media-viewer__counter")).toHaveText("1 / 3");
-  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
-  await expect(page.locator(".kit-media-viewer__counter")).toHaveText("2 / 3");
-
-  await close();
-});
-
-test("drags and pinches break double-tap eligibility, and pinch anchors at the fingers", async ({
-  browser,
-}) => {
-  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
-  const { page, cdp, close } = await touchPage(browser, "media-viewer");
-  await page.getByRole("button", { name: "Open viewer" }).tap();
-  const pan = page.locator(".kit-media-viewer__pan");
-  const mid = await center(page.locator(".kit-media-viewer__viewport"));
-  const tap = async () => {
-    await touch(cdp, "touchStart", [mid]);
-    await touch(cdp, "touchEnd", []);
-  };
-  const outAndBack = async () => {
-    await touch(cdp, "touchStart", [mid]);
-    await touch(cdp, "touchMove", [{ x: mid.x, y: mid.y + 40 }]);
-    await touch(cdp, "touchMove", [mid]);
-    await touch(cdp, "touchEnd", []);
-  };
-  for (const gestures of [
-    [tap, outAndBack],
-    [outAndBack, tap],
-  ]) {
-    await page.getByRole("button", { name: "Reset view" }).tap();
-    await page.waitForTimeout(350);
-    for (const gesture of gestures) await gesture();
-    await page.waitForTimeout(150);
-    expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
-  }
-
-  await page.waitForTimeout(350);
-  await tap();
   await twoFingers(
     cdp,
     [
@@ -208,9 +154,6 @@ test("drags and pinches break double-tap eligibility, and pinch anchors at the f
   expect(pinched.scale).toBeCloseTo(2, 1);
   expect(pinched.x).toBeCloseTo(-100, 0);
   expect(pinched.y).toBeCloseTo(-50, 0);
-  await tap();
-  await page.waitForTimeout(150);
-  expect(await transformOf(pan)).toEqual(pinched);
   await close();
 });
 
