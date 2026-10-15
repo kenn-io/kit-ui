@@ -55,14 +55,14 @@ test("Reset, paging, and same-index item replacement reset pan and zoom", async 
       return [matrix.a, matrix.e, matrix.f];
     });
 
-  await page.locator(".kit-media-viewer__viewport").hover();
+  await page.locator(".kit-media-viewer__viewport").hover({ position: { x: 20, y: 20 } });
   await page.mouse.wheel(0, -300);
   await expect.poll(async () => (await transform())[0]!).toBeGreaterThan(1);
 
   await page.getByRole("button", { name: "Reset view" }).click();
   await expect.poll(transform).toEqual([1, 0, 0]);
 
-  await page.locator(".kit-media-viewer__viewport").hover();
+  await page.locator(".kit-media-viewer__viewport").hover({ position: { x: 20, y: 20 } });
   await page.mouse.wheel(0, -300);
   await expect.poll(async () => (await transform())[0]!).toBeGreaterThan(1);
   await page.keyboard.press("ArrowRight");
@@ -78,7 +78,7 @@ test("Reset, paging, and same-index item replacement reset pan and zoom", async 
       host.replaceItems([{ ...items[1], alt: "Replacement" }, ...items.slice(1)]);
   }, swatchItems);
   const viewport = page.locator(".kit-media-viewer__viewport");
-  await viewport.hover();
+  await viewport.hover({ position: { x: 20, y: 20 } });
   await page.mouse.wheel(0, -400);
   await expect.poll(transform).not.toEqual([1, 0, 0]);
 

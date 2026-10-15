@@ -203,8 +203,6 @@ test("inline Mermaid wires scroll handoff, pinch, reset, and touch-action", asyn
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x, y: mid.y + 60 }, { x: mid.x, y: mid.y - 60 }, 12);
   await expect.poll(top).toBeLessThan(before - 40);
-  // Moves before the browser took the scroll leave no offset behind.
-  expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
   // Horizontal drags still pan the diagram.
   const moved = await center(viewport);

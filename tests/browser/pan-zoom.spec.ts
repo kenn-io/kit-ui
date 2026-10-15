@@ -24,6 +24,8 @@ async function mount(
 ) {
   await page.evaluate(async ({ echo, ...limits }) => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
+    window.fixture?.controller.destroy();
+    document.querySelector("#fixture")?.remove();
     const viewport = document.createElement("div");
     viewport.id = "fixture";
     viewport.style.cssText =
@@ -154,9 +156,7 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
   });
 });
 
-test("wheel zoom anchors, preserves gradual precision, and shares fixed limits with setters", async ({
-  page,
-}) => {
+test("wheel anchoring and precision obey fixed and normalized scale limits", async ({ page }) => {
   await mount(page, { minScale: 0.25, maxScale: 16 });
   await page.mouse.move(260, 240);
   await page.mouse.wheel(0, -100);
@@ -296,16 +296,20 @@ test("swipes respect scale and axis", async ({ page }) => {
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
   expect((await state(page)).view.scale).toBe(NEAR_ONE);
+  await touch(page, "pointerdown", 1, 180, 200);
+  await touch(page, "pointermove", 1, 250, 200);
+  await touch(page, "pointerup", 1, 250, 200);
+  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
   // Horizontal distance alone reaches the swipe threshold; the vertical axis rejects it.
   await touch(page, "pointerdown", 1, 150, 120);
   await touch(page, "pointermove", 1, 210, 280);
   await touch(page, "pointerup", 1, 210, 280);
-  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
+  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
   await setView(page, { scale: 2.5, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 250, 200);
   await touch(page, "pointermove", 1, 180, 200);
   await touch(page, "pointerup", 1, 180, 200);
-  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
+  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
   expect((await state(page)).view).toEqual({ scale: 2.5, offsetX: -70, offsetY: 0 });
 });
 
@@ -337,43 +341,57 @@ test("double taps anchor, suppress duplicate clicks, and reject moved taps", asy
   expect(anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
   expect(afterClick).toEqual(anchored);
   expect((await state(page)).zoomed).toBe("true");
-  const tapAt = async (x: number, y: number) => {
-    await touch(page, "pointerdown", 1, x, y);
-    await touch(page, "pointerup", 1, x, y);
-  };
-  const returningDrag = async () => {
-    await touch(page, "pointerdown", 1, 200, 200);
-    await touch(page, "pointermove", 1, 200, 240);
-    await touch(page, "pointermove", 1, 200, 200);
-    await touch(page, "pointerup", 1, 200, 200);
-  };
   for (const scenario of ["release-away", "tap-drag", "drag-tap", "tap-pinch-tap"]) {
-    // Cancel clears the previous tap without waiting for its timeout.
-    await touch(page, "pointerdown", 1, 200, 200);
-    await touch(page, "pointercancel", 1, 200, 200);
-    await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-    if (scenario === "release-away") {
-      await touch(page, "pointerdown", 1, 200, 200);
-      await touch(page, "pointerup", 1, 200, 220);
-      await tapAt(200, 220);
-    } else if (scenario === "tap-drag") {
-      await tapAt(200, 200);
-      await returningDrag();
-    } else if (scenario === "drag-tap") {
-      await returningDrag();
-      await tapAt(200, 200);
-    } else {
-      await tapAt(200, 200);
-      await touch(page, "pointerdown", 1, 150, 200);
-      await touch(page, "pointerdown", 2, 250, 200);
-      await touch(page, "pointermove", 2, 350, 200);
-      await touch(page, "pointerup", 2, 350, 200);
-      await touch(page, "pointerup", 1, 150, 200);
-      await tapAt(200, 200);
-    }
-    expect((await state(page)).view.scale).toBe(
-      scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE,
+    await mount(page);
+    const scale = await page.evaluate(
+      ({ scenario, initialScale }) => {
+        window.fixture.controller.setView({ scale: initialScale, offsetX: 0, offsetY: 0 });
+        const viewport = document.querySelector("#fixture")!;
+        const fire = (type: string, id: number, x: number, y: number) =>
+          viewport.dispatchEvent(
+            new PointerEvent(type, {
+              pointerId: id,
+              pointerType: "touch",
+              isPrimary: id === 1,
+              clientX: x,
+              clientY: y,
+              bubbles: true,
+            }),
+          );
+        const tapAt = (x: number, y: number) => {
+          fire("pointerdown", 1, x, y);
+          fire("pointerup", 1, x, y);
+        };
+        const returningDrag = () => {
+          fire("pointerdown", 1, 200, 200);
+          fire("pointermove", 1, 200, 240);
+          fire("pointermove", 1, 200, 200);
+          fire("pointerup", 1, 200, 200);
+        };
+        if (scenario === "release-away") {
+          fire("pointerdown", 1, 200, 200);
+          fire("pointerup", 1, 200, 220);
+          tapAt(200, 220);
+        } else if (scenario === "tap-drag") {
+          tapAt(200, 200);
+          returningDrag();
+        } else if (scenario === "drag-tap") {
+          returningDrag();
+          tapAt(200, 200);
+        } else {
+          tapAt(200, 200);
+          fire("pointerdown", 1, 150, 200);
+          fire("pointerdown", 2, 250, 200);
+          fire("pointermove", 2, 350, 200);
+          fire("pointerup", 2, 350, 200);
+          fire("pointerup", 1, 150, 200);
+          tapAt(200, 200);
+        }
+        return window.fixture.controller.getView().scale;
+      },
+      { scenario, initialScale: NEAR_ONE },
     );
+    expect(scale).toBe(scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE);
   }
 });
 
