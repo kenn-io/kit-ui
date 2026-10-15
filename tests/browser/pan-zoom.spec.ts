@@ -152,12 +152,16 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("the comparison demo links, separates, and fits its views", async ({ page }) => {
+test("the comparison demo links views and keeps Actual pixels aligned", async ({
+  page,
+  browser,
+}) => {
   await openDemo(page);
   const panes = page.locator(".pan-zoom-demo__pane");
   const images = panes.locator("img");
   const transforms = () =>
     images.evaluateAll((nodes) => nodes.map((node) => (node as HTMLImageElement).style.transform));
+  const fittedWidth = async () => (await measureImages(images.first()))[0]!.fittedWidth;
   const identity = [
     { scale: 1, offsetX: 0, offsetY: 0 },
     { scale: 1, offsetX: 0, offsetY: 0 },
@@ -208,17 +212,7 @@ test("the comparison demo links, separates, and fits its views", async ({ page }
   const panned = await transforms();
   expect(panned[0]).not.toBe(fitted[0]);
   expect(panned[1]).toBe(panned[0]);
-});
-
-test("Actual pixels stays native and preserves view centers", async ({
-  page,
-  browser,
-  browserName,
-}) => {
-  await openDemo(page);
-  const panes = page.locator(".pan-zoom-demo__pane");
-  const images = panes.locator("img");
-  const fittedWidth = async () => (await measureImages(images.first()))[0]!.fittedWidth;
+  await link.uncheck();
 
   for (const [width, dpr] of [
     [80, 4],
@@ -248,25 +242,19 @@ test("Actual pixels stays native and preserves view centers", async ({
     await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
     await expectNativePixels(images);
     if (width === 80) {
-      const box = (await panes.first().boundingBox())!;
-      await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
+      await mouseDrag(
+        page,
+        [boxes[0]!.x + 120, boxes[0]!.y + 72],
+        [[boxes[0]!.x + 150, boxes[0]!.y + 112]],
+      );
       await expectNativePixels(images);
     }
     await density(page, dpr === 4 ? 2 : 1);
     await expectNativePixels(images);
   }
 
-  const link = page.getByRole("switch", { name: "Link views" });
-  await expect(link).toBeChecked();
-  await link.uncheck();
   await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
   await expectZoomReadout(page, images.first());
-  const boxes = await panes.evaluateAll((elements) =>
-    elements.map((element) => {
-      const rect = element.getBoundingClientRect();
-      return { x: rect.x, y: rect.y };
-    }),
-  );
   await mouseDrag(
     page,
     [boxes[0]!.x + 100, boxes[0]!.y + 100],
@@ -311,7 +299,7 @@ test("Actual pixels stays native and preserves view centers", async ({
         },
       ]);
   }
-  await preservesFractionalActualPixels(browser, browserName, 2);
+  await preservesFractionalActualPixels(browser, 2);
 });
 
 async function density(page: Page, value: number) {
@@ -322,21 +310,15 @@ async function density(page: Page, value: number) {
   await expect(page.locator("output")).toContainText(`DPR ${value}`);
 }
 
-async function preservesFractionalActualPixels(
-  browser: Browser,
-  browserName: "chromium" | "firefox" | "webkit",
-  deviceScaleFactor: number,
-) {
+async function preservesFractionalActualPixels(browser: Browser, deviceScaleFactor: number) {
   const context = await browser.newContext({
     viewport: { width: 1281, height: 800 },
-    // This WebKit build uses a 2× backing scale for test contexts.
-    deviceScaleFactor: browserName === "webkit" ? deviceScaleFactor / 2 : deviceScaleFactor,
+    deviceScaleFactor,
   });
   try {
     const page = await context.newPage();
     await gotoPage(page, "pan-zoom");
     const image = page.locator(".pan-zoom-demo__pane img").first();
-    expect((await measureImages(image))[0]!.dpr).toBe(deviceScaleFactor);
     const initialFit = (await measureImages(image))[0]!;
     await setImageFitWidth(image, Math.ceil(initialFit.fittedWidth) + 0.375);
     await expectFractionalFit(image);

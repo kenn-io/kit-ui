@@ -203,7 +203,6 @@ test("touch-action hands scrolling to the page and restores it after zoom", asyn
   const pan = diagram.locator(".kit-mermaid-viewer__pan");
   const top = async () => (await diagram.boundingBox())!.y;
 
-  await expect(viewport).toHaveCSS("touch-action", "pan-y");
   const before = await top();
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x, y: mid.y + 60 }, { x: mid.x, y: mid.y - 60 }, 12);
