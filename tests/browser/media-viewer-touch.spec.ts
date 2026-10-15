@@ -130,15 +130,6 @@ test("double-tap zooms in at the tap, and again resets", async ({ browser }) => 
   await doubleTap(cdp, at);
   await expect.poll(async () => (await transformOf(pan)).scale).toBe(1);
 
-  await close();
-});
-
-test("real touch pinch reaches the viewer", async ({ browser }) => {
-  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
-  const { page, cdp, close } = await touchPage(browser, "media-viewer");
-  await page.getByRole("button", { name: "Open viewer" }).tap();
-  const pan = page.locator(".kit-media-viewer__pan");
-  const mid = await center(page.locator(".kit-media-viewer__viewport"));
   await twoFingers(
     cdp,
     [

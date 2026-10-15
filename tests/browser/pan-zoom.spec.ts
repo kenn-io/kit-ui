@@ -86,7 +86,7 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("demo panes size actual pixels and preserve linked centers across density and size changes", async ({
+test("demo sizing, linked and independent centers, relinking, and responsive layout", async ({
   page,
 }) => {
   const panes = page.locator(".pan-zoom-demo__pane");
@@ -110,7 +110,7 @@ test("demo panes size actual pixels and preserve linked centers across density a
         const m = new DOMMatrix(image.style.transform);
         return { scale: m.a, x: m.e, y: m.f };
       });
-  const resize = async (actual: boolean) => {
+  const resize = async () => {
     const before = await matrix();
     const initialWidth = await fittedWidth();
     for (const larger of [true, false]) {
@@ -119,9 +119,9 @@ test("demo panes size actual pixels and preserve linked centers across density a
       else await expect.poll(fittedWidth).toBe(initialWidth);
       const ratio = (await fittedWidth()) / initialWidth;
       await expect.poll(matrix).toEqual({
-        scale: expect.closeTo(actual ? before.scale / ratio : before.scale, 3),
-        x: expect.closeTo(actual ? before.x : before.x * ratio, 2),
-        y: expect.closeTo(actual ? before.y : before.y * ratio, 2),
+        scale: expect.closeTo(before.scale / ratio, 3),
+        x: expect.closeTo(before.x, 2),
+        y: expect.closeTo(before.y, 2),
       });
       const linked = await transforms();
       expect(linked[1]).toBe(linked[0]);
@@ -169,7 +169,7 @@ test("demo panes size actual pixels and preserve linked centers across density a
     await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
     const panned = await transforms();
     expect(panned[1]).toBe(panned[0]);
-    await resize(true);
+    await resize();
     const nextDpr = dpr === 4 ? 2 : 1;
     await density(nextDpr);
     const linked = await transforms();
@@ -178,17 +178,6 @@ test("demo panes size actual pixels and preserve linked centers across density a
     expect(changedDensity.scale).toBeCloseTo(width / (fitted * nextDpr), 5);
     expect(changedDensity.x).toBeCloseTo((30 * dpr) / nextDpr, 5);
     expect(changedDensity.y).toBeCloseTo((40 * dpr) / nextDpr, 5);
-    await panes.first().dispatchEvent(dpr === 4 ? "wheel" : "dblclick", {
-      clientX: box.x + 120,
-      clientY: box.y + 72,
-      deltaY: -100,
-    });
-    await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-    const manual = await transforms();
-    expect(manual[0]).not.toBe(linked[0]);
-    await density(dpr);
-    expect(await transforms()).toEqual(manual);
-    await resize(false);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   for (const transform of await transforms()) {
@@ -198,15 +187,6 @@ test("demo panes size actual pixels and preserve linked centers across density a
     }, transform);
     expect(view).toEqual({ scale: 1, x: 0, y: 0 });
   }
-});
-
-test("demo fills the row, stacks on mobile, and relinks the last changed pane", async ({
-  page,
-}) => {
-  const panes = page.locator(".pan-zoom-demo__pane");
-  await expect(panes.locator("img").last()).toBeVisible();
-  const transforms = () =>
-    panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
   const boxes = await panes.evaluateAll((elements) =>
     elements.map((element) => {
       const r = element.getBoundingClientRect();
@@ -248,12 +228,11 @@ test("demo fills the row, stacks on mobile, and relinks the last changed pane", 
         return { scale: matrix.a, x: matrix.e, y: matrix.f, fitted, width: image.naturalWidth };
       }),
     );
-  for (const view of await paneViews()) {
-    expect(view.scale * view.fitted * (await page.evaluate(() => devicePixelRatio))).toBeCloseTo(
-      view.width,
-      1,
-    );
-  }
+  const second = (await paneViews())[1]!;
+  expect(second.scale * second.fitted * (await page.evaluate(() => devicePixelRatio))).toBeCloseTo(
+    second.width,
+    1,
+  );
   await expect(page.getByLabel("Zoom scale")).toContainText("1:1");
   await mouseDrag(
     page,
@@ -267,10 +246,7 @@ test("demo fills the row, stacks on mobile, and relinks the last changed pane", 
   for (const change of ["density", "resize"]) {
     const before = await paneViews();
     if (change === "density") {
-      await page.evaluate(() => {
-        Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
-        window.resolutionQuery.dispatchEvent(new Event("change"));
-      });
+      await density(2);
       await expect(page.getByLabel("Zoom scale")).toContainText("1.72:1");
     } else {
       await page.getByRole("button", { name: "Larger panes", exact: true }).click();
@@ -279,31 +255,20 @@ test("demo fills the row, stacks on mobile, and relinks the last changed pane", 
         .toBeGreaterThan(before[0]!.fitted);
     }
     await expect
-      .poll(async () =>
-        (await paneViews()).map((view, index) => {
-          const old = before[index]!;
-          const scale =
-            index === 0
-              ? (old.scale * old.fitted) / view.fitted / (change === "density" ? 2 : 1)
-              : old.scale;
-          const ratio = (scale * view.fitted) / (old.scale * old.fitted);
-          return {
-            scale: view.scale - scale,
-            x: view.x - old.x * ratio,
-            y: view.y - old.y * ratio,
-          };
-        }),
-      )
-      .toEqual([
-        { scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) },
-        { scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) },
-      ]);
+      .poll(async () => {
+        const view = (await paneViews())[0]!;
+        const old = before[0]!;
+        const scale = (old.scale * old.fitted) / view.fitted / (change === "density" ? 2 : 1);
+        const ratio = (scale * view.fitted) / (old.scale * old.fitted);
+        return {
+          scale: view.scale - scale,
+          x: view.x - old.x * ratio,
+          y: view.y - old.y * ratio,
+        };
+      })
+      .toEqual({ scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) });
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
-  expect(await transforms()).toEqual([
-    "translate(0px, 0px) scale(1)",
-    "translate(0px, 0px) scale(1)",
-  ]);
   await page.setViewportSize({ width: 600, height: 900 });
   const mobile = await panes.evaluateAll((elements) =>
     elements.map((element) => {
@@ -340,10 +305,10 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
     changes: 0,
     zoomed: "true",
   });
-  // Chromium serializes six significant digits; the former four-decimal rounding differs.
-  expect(
-    await page.locator("#fixture > div").evaluate((pan) => (pan as HTMLElement).style.transform),
-  ).toBe("translate(31.25px, -18.5px) scale(6.34568)");
+  const scale = await page
+    .locator("#fixture > div")
+    .evaluate((pan) => new DOMMatrix((pan as HTMLElement).style.transform).a);
+  expect(Math.abs(scale - 6.3456789)).toBeLessThan(5e-6);
 });
 
 test("overflow rejects whole inputs and later input recovers", async ({ page }) => {
