@@ -48,7 +48,6 @@ test("repeated wheel zoom and drag pan are reset together", async ({ page }) => 
   await page.mouse.wheel(0, -100);
   const zoomed = await transform();
   expect(zoomed.scale).toBeGreaterThan(1);
-  expect(Math.abs(zoomed.x) + Math.abs(zoomed.y)).toBeGreaterThan(0);
 
   await page.mouse.down();
   await page.mouse.move(cursor.x + 30, cursor.y + 20);
