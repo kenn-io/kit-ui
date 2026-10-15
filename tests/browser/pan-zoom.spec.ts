@@ -255,18 +255,25 @@ test("demo sizing, linked and independent centers, relinking, and responsive lay
         .toBeGreaterThan(before[0]!.fitted);
     }
     await expect
-      .poll(async () => {
-        const view = (await paneViews())[0]!;
-        const old = before[0]!;
-        const scale = (old.scale * old.fitted) / view.fitted / (change === "density" ? 2 : 1);
-        const ratio = (scale * view.fitted) / (old.scale * old.fitted);
-        return {
-          scale: view.scale - scale,
-          x: view.x - old.x * ratio,
-          y: view.y - old.y * ratio,
-        };
-      })
-      .toEqual({ scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) });
+      .poll(async () =>
+        (await paneViews()).map((view, index) => {
+          const old = before[index]!;
+          const scale =
+            index === 0
+              ? (old.scale * old.fitted) / view.fitted / (change === "density" ? 2 : 1)
+              : old.scale;
+          const ratio = (scale * view.fitted) / (old.scale * old.fitted);
+          return {
+            scale: view.scale - scale,
+            x: view.x - old.x * ratio,
+            y: view.y - old.y * ratio,
+          };
+        }),
+      )
+      .toEqual([
+        { scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) },
+        { scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) },
+      ]);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await page.setViewportSize({ width: 600, height: 900 });
