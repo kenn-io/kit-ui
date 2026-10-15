@@ -47,8 +47,8 @@
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
   import NoticeDemo from "./pages/NoticeDemo.svelte";
-  import PanZoomDemo from "./pages/PanZoomDemo.svelte";
   import PageFrameDemo from "./pages/PageFrameDemo.svelte";
+  import PanZoomDemo from "./pages/PanZoomDemo.svelte";
   import ProviderBrandDemo from "./pages/ProviderBrandDemo.svelte";
   import DatePickerDemo from "./pages/DatePickerDemo.svelte";
   import DateRangePickerDemo from "./pages/DateRangePickerDemo.svelte";

@@ -23,6 +23,7 @@
   let loaded = $state(0);
   let view = $state<PanZoomView>({ scale: 1, offsetX: 0, offsetY: 0 });
   let dpr = $state(window.devicePixelRatio);
+  let largerPanes = $state(false);
   let actualPixels = false;
   let controllers: PanZoom[] = [];
   let imageNodes: HTMLImageElement[] = [];
@@ -32,14 +33,14 @@
   onMount(() => {
     let disposed = false;
     let urls: string[] = [];
-    void Promise.all([raster(6000, 3600, "#6366f1"), raster(6000, 3600, "#22c55e")]).then(
+    void Promise.all([raster(3200, 1920, "#6366f1"), raster(3200, 1920, "#22c55e")]).then(
       (srcs) => {
         urls = srcs;
         if (disposed) urls.forEach((url) => URL.revokeObjectURL(url));
         else
           images = srcs.map((src, i) => ({
             src,
-            alt: `Photo ${i + 1}, 6000 by 3600 original`,
+            alt: `Photo ${i + 1}, 3200 by 1920 original`,
           }));
       },
     );
@@ -62,9 +63,10 @@
         (image.clientHeight * image.naturalWidth) / image.naturalHeight,
       );
       sourceScale = image.naturalWidth / (fittedWidth * window.devicePixelRatio);
-      if (actualPixels) {
-        const ratio = (sourceScale * fittedWidth) / (view.scale * oldFittedWidth);
-        view = { scale: sourceScale, offsetX: view.offsetX * ratio, offsetY: view.offsetY * ratio };
+      if (oldFittedWidth) {
+        const scale = actualPixels ? sourceScale : view.scale;
+        const ratio = (scale * fittedWidth) / (view.scale * oldFittedWidth);
+        view = { scale, offsetX: view.offsetX * ratio, offsetY: view.offsetY * ratio };
       }
       oldFittedWidth = fittedWidth;
       const limits = {
@@ -84,6 +86,8 @@
       );
       controllers.forEach((controller) => controller.setView(view));
     };
+    const observer = new ResizeObserver(() => refresh());
+    panes.forEach((pane) => observer.observe(pane));
     let query: MediaQueryList;
     const watchDpr = () => {
       query?.removeEventListener("change", watchDpr);
@@ -94,6 +98,7 @@
     };
     untrack(watchDpr);
     return () => {
+      observer.disconnect();
       query.removeEventListener("change", watchDpr);
       controllers.forEach((controller) => controller.destroy());
     };
@@ -118,7 +123,11 @@
   description="Drag either image to move both. Wheel or pinch to zoom, double-click to toggle. Actual pixels shows one image pixel per screen pixel."
 >
   {#if images.length}
-    <div class="pan-zoom-demo" {@attach linkedPanes}>
+    <div
+      class="pan-zoom-demo"
+      style:--pane-width={largerPanes ? "300px" : "240px"}
+      {@attach linkedPanes}
+    >
       {#each images as image (image.src)}
         <div class="pan-zoom-demo__pane">
           <img
@@ -136,8 +145,13 @@
     <div class="pan-zoom-demo__actions">
       <Button disabled={loaded < 2} onclick={exactSize}>Actual pixels</Button>
       <Button onclick={fit}>Fit</Button>
+      <Button onclick={() => (largerPanes = !largerPanes)}
+        >{largerPanes ? "Smaller panes" : "Larger panes"}</Button
+      >
     </div>
-    <output aria-live="polite">Scale {view.scale.toFixed(4)} · DPR {dpr}</output>
+    <output aria-live="off" aria-label="Zoom scale"
+      >Scale {view.scale.toFixed(4)} · DPR {dpr}</output
+    >
   {/if}
 </DemoSection>
 
@@ -154,8 +168,8 @@
   }
 
   .pan-zoom-demo__pane {
-    width: 240px;
-    height: 144px;
+    width: var(--pane-width);
+    aspect-ratio: 5 / 3;
     box-sizing: content-box;
     overflow: hidden;
     border: var(--border-width) solid var(--border-default);

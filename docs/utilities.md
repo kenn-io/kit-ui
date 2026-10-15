@@ -55,13 +55,15 @@ Scale retains full precision. `minScale` accepts a finite value above 0 and at
 most 1, otherwise it defaults to 0.4. `maxScale` accepts a finite value at least
 1, otherwise it defaults to 8. Each bound falls back independently and stays
 fixed at attachment time. Gestures and `setView()` clamp to these limits.
-Linked panes need identical limits because `setView()` clamps silently.
+Sharing the same view assumes matching pane and fitted-image geometry.
+These linked panes need identical limits because `setView()` clamps silently.
 Read `getView()` after setting a view to obtain the effective clamped values.
 Views containing non-finite values or a scale at or below zero are ignored.
 
 For actual pixels, the example computes one image pixel per physical screen
 pixel. With `object-fit: contain`, `boxW` and `boxH` are the untransformed CSS
-content dimensions after any rotation; `displayW` and `displayH` swap the
+content dimensions after any rotation; put rotation on an outer wrapper,
+because `attachPanZoom` owns the pan element's transform. `displayW` and `displayH` swap the
 original dimensions for 90° and 270° turns. `fittedW` accounts for letterboxing.
 `clientWidth` and `clientHeight` include padding, so subtract it before using
 them as content dimensions; the demo images have no padding or border.
@@ -74,8 +76,9 @@ Keep manual scale or recompute scale while actual pixels remains selected.
 Multiply both offsets by
 `(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same
 image point centered. With a fixed fitted width, this is `newScale / oldScale`.
-Manual scale changes clear that selection; panning preserves it. Apps comparing
-different image sizes map offsets and scale to their own image coordinates.
+Manual scale changes clear that selection; panning preserves it. Different-size
+panes or images require coordinate mapping before `setView()`; copying the
+same view between them is unsupported.
 
 Scales within 0.1% of 1 count as resting for paging and double-tap zoom.
 Only a pinch that changed scale settles a near-1 scale to exactly 1 on release.
