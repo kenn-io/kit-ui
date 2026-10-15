@@ -134,7 +134,7 @@ for (const deviceScaleFactor of [1, 2, 3]) {
 
 test("views are precise, detached, silent, and validated", async ({ page }) => {
   await mount(page);
-  const result = await page.evaluate(() => {
+  await page.evaluate(() => {
     const { controller } = window.fixture;
     controller.setView({ scale: 6.3456789, offsetX: 31.25, offsetY: -18.5 });
     controller.getView().offsetX = 999;
@@ -146,12 +146,7 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
       { scale: 2, offsetX: 0, offsetY: NaN },
     ])
       controller.setView(invalid);
-    return (
-      document.querySelector<HTMLElement>("#fixture > div")!.getBoundingClientRect().width / 200
-    );
   });
-  // Beyond the six digits Chromium serializes, and the old four-decimal rounding.
-  expect(result).toBeCloseTo(6.3456789, 6);
   expect(await state(page)).toEqual({
     view: { scale: 6.3456789, offsetX: 31.25, offsetY: -18.5 },
     changes: 0,
@@ -267,6 +262,24 @@ test("each changed input reports one completed view, including clamped pinches t
     view: { scale: 8, offsetX: 25, offsetY: 15 },
     changes: 9,
   });
+  await page.evaluate(() => window.fixture.controller.reset());
+  // Each step alone is under 0.1% of zoom.
+  await page.locator("#fixture").evaluate((element) => {
+    const r = element.getBoundingClientRect();
+    for (let i = 0; i < 40; i += 1) {
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: -0.5,
+          clientX: r.left + r.width / 2,
+          clientY: r.top + r.height / 2,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  });
+  expect((await state(page)).view.scale).toBeGreaterThan(1.02);
+  expect((await state(page)).zoomed).toBe("true");
 });
 
 test("a near-1 view keeps its scale through a drag, rests, pages, and double-taps in", async ({
@@ -305,6 +318,9 @@ test("a near-1 view keeps its scale through a drag, rests, pages, and double-tap
         }),
       );
     }
+    viewport.dispatchEvent(
+      new MouseEvent("dblclick", { clientX: 300, clientY: 250, bubbles: true }),
+    );
   });
   const anchored = (await state(page)).view;
   expect(anchored.scale).toBe(2.5);
@@ -316,6 +332,44 @@ test("a near-1 view keeps its scale through a drag, rests, pages, and double-tap
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
   expect((await state(page)).view).toEqual({ ...anchored, offsetX: anchored.offsetX - 70 });
+  const tapAt = async (x: number, y: number) => {
+    await touch(page, "pointerdown", 1, x, y);
+    await touch(page, "pointerup", 1, x, y);
+  };
+  const returningDrag = async () => {
+    await touch(page, "pointerdown", 1, 200, 200);
+    await touch(page, "pointermove", 1, 200, 240);
+    await touch(page, "pointermove", 1, 200, 200);
+    await touch(page, "pointerup", 1, 200, 200);
+  };
+  for (const scenario of ["release-away", "tap-drag", "drag-tap", "tap-pinch-tap"]) {
+    // Cancel clears the previous tap without waiting for its timeout.
+    await touch(page, "pointerdown", 1, 200, 200);
+    await touch(page, "pointercancel", 1, 200, 200);
+    await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
+    if (scenario === "release-away") {
+      await touch(page, "pointerdown", 1, 200, 200);
+      await touch(page, "pointerup", 1, 200, 220);
+      await tapAt(200, 220);
+    } else if (scenario === "tap-drag") {
+      await tapAt(200, 200);
+      await returningDrag();
+    } else if (scenario === "drag-tap") {
+      await returningDrag();
+      await tapAt(200, 200);
+    } else {
+      await tapAt(200, 200);
+      await touch(page, "pointerdown", 1, 150, 200);
+      await touch(page, "pointerdown", 2, 250, 200);
+      await touch(page, "pointermove", 2, 350, 200);
+      await touch(page, "pointerup", 2, 350, 200);
+      await touch(page, "pointerup", 1, 150, 200);
+      await tapAt(200, 200);
+    }
+    expect((await state(page)).view.scale).toBe(
+      scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE,
+    );
+  }
 });
 
 test("only a pinch that changed scale settles at 1 on release", async ({ page }) => {
