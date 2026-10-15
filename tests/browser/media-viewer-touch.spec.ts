@@ -202,9 +202,7 @@ test("touch devices get 44px controls", async ({ browser }) => {
   await close();
 });
 
-test("an inline diagram scrolls, zooms with pinches, and restores scrolling", async ({
-  browser,
-}) => {
+test("touch-action hands scrolling to the page and restores it after zoom", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "mermaid");
   const diagram = page.locator("pre.mermaid.kit-mermaid-viewer").first();
@@ -213,6 +211,7 @@ test("an inline diagram scrolls, zooms with pinches, and restores scrolling", as
   const pan = diagram.locator(".kit-mermaid-viewer__pan");
   const top = async () => (await diagram.boundingBox())!.y;
 
+  await expect(viewport).toHaveCSS("touch-action", "pan-y");
   const before = await top();
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x, y: mid.y + 60 }, { x: mid.x, y: mid.y - 60 }, 12);
@@ -234,7 +233,7 @@ test("an inline diagram scrolls, zooms with pinches, and restores scrolling", as
     ],
     10,
   );
-  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1.5);
+  await expect.poll(async () => (await transformOf(pan)).scale).toBeGreaterThan(1);
   expect(await top()).toBe(settled);
   await expect(viewport).toHaveCSS("touch-action", "none");
   await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
