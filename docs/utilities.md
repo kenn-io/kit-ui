@@ -18,6 +18,7 @@ declare const naturalW: number, naturalH: number;
 declare const boxW: number, boxH: number;
 declare const currentView: PanZoomView;
 declare const leftViewport: HTMLElement, rightViewport: HTMLElement;
+declare const leftPan: HTMLElement, rightPan: HTMLElement;
 declare const leftImage: HTMLImageElement, rightImage: HTMLImageElement;
 
 const quarterTurn = rotation % 180 !== 0;
@@ -29,11 +30,11 @@ const limits = {
   minScale: Math.min(0.4, scale, currentView.scale),
   maxScale: Math.max(8, scale, currentView.scale),
 };
-const right = attachPanZoom(rightViewport, rightImage, {
+const right = attachPanZoom(rightViewport, rightPan, {
   ...limits,
   onChange: (view: PanZoomView) => left.setView(view),
 });
-const left = attachPanZoom(leftViewport, leftImage, {
+const left = attachPanZoom(leftViewport, leftPan, {
   ...limits,
   onChange: (view: PanZoomView) => right.setView(view),
 });
@@ -43,6 +44,8 @@ right.setView(left.getView());
 ```
 
 Call `reset()` to fit the view and `destroy()` when removing each pane.
+Keep each pan element as an unrotated wrapper around its image. Apply rotation
+to the image so pointer and pan coordinates stay aligned.
 
 `getView()` returns a detached `{ scale, offsetX, offsetY }`. Offsets are CSS
 pixels relative to the viewport center. Each changed gesture input reports
@@ -61,11 +64,10 @@ Read `getView()` after setting a view to obtain the effective clamped values.
 Views containing non-finite values or a scale at or below zero are ignored.
 
 For actual pixels, the example computes one image pixel per physical screen
-pixel. With `object-fit: contain`, `boxW` and `boxH` are fractional,
-untransformed content-box dimensions after any rotation; use a
+pixel. Use `object-fit: contain` for the image. `boxW` and `boxH` are the
+viewport's fractional, untransformed content-box dimensions; use a
 `ResizeObserverEntry.contentRect` or an equivalent precise layout measurement.
-Put rotation on an outer wrapper, because `attachPanZoom` owns the pan element's
-transform. `displayW` and `displayH` swap the original dimensions for 90° and
+`displayW` and `displayH` swap the original dimensions for 90° and
 270° turns. `fittedW` accounts for letterboxing. `clientWidth`/`clientHeight`
 and `offsetWidth`/`offsetHeight` round to integers, so they can't establish an
 exact pixel size. Transformed `getBoundingClientRect()` dimensions also can't
