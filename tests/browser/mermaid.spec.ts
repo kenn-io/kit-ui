@@ -27,12 +27,10 @@ test("renders mermaid fences into pan/zoom viewers", async ({ page }) => {
   await expect(viewer.locator(".kit-mermaid-viewer__button svg.lucide")).toHaveCount(3);
 });
 
-test("wheel zoom stays vector-backed, and Reset clears zoom and pan", async ({ page }) => {
+test("repeated wheel zoom and drag pan are reset together", async ({ page }) => {
   const viewer = firstViewer(page);
   const viewport = viewer.locator(".kit-mermaid-viewer__viewport");
   const pan = viewer.locator(".kit-mermaid-viewer__pan");
-  const svg = pan.locator(":scope > svg");
-  const originalSvg = await svg.elementHandle();
   const transform = () =>
     pan.evaluate((node) => {
       const matrix = new DOMMatrix((node as HTMLElement).style.transform);
@@ -50,9 +48,7 @@ test("wheel zoom stays vector-backed, and Reset clears zoom and pan", async ({ p
   await page.mouse.wheel(0, -100);
   const zoomed = await transform();
   expect(zoomed.scale).toBeGreaterThan(1);
-  // Keep the live SVG instead of enlarging a fixed compositing layer.
-  expect(await svg.evaluate((node, original) => node === original, originalSvg)).toBe(true);
-  await expect(pan).toHaveCSS("will-change", "auto");
+  expect(Math.abs(zoomed.x) + Math.abs(zoomed.y)).toBeGreaterThan(0);
 
   await page.mouse.down();
   await page.mouse.move(cursor.x + 30, cursor.y + 20);
@@ -64,6 +60,20 @@ test("wheel zoom stays vector-backed, and Reset clears zoom and pan", async ({ p
 
   await viewer.getByRole("button", { name: "Reset diagram view" }).click();
   await expect.poll(transform).toEqual({ scale: 1, x: 0, y: 0 });
+});
+
+test("wheel zoom keeps the live diagram vector-backed", async ({ page }) => {
+  const viewport = firstViewer(page).locator(".kit-mermaid-viewer__viewport");
+  const pan = firstViewer(page).locator(".kit-mermaid-viewer__pan");
+  const svg = pan.locator(":scope > svg");
+  const originalSvg = await svg.elementHandle();
+  await viewport.hover();
+  await page.mouse.wheel(0, -300);
+  await expect
+    .poll(() => pan.evaluate((node) => new DOMMatrix(node.style.transform).a))
+    .toBeGreaterThan(1);
+  expect(await svg.evaluate((node, original) => node === original, originalSvg)).toBe(true);
+  await expect(pan).toHaveCSS("will-change", "auto");
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {

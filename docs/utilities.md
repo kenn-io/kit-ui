@@ -8,8 +8,17 @@ All exported from the package root (or the granular `/utils/*` subpaths).
 pinch, and double-tap zoom. The viewport clips the transformed `pan` element.
 Set its transform origin to its center.
 
+Host integration fragment, after image load and measurement:
+
 ```ts
 import { attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
+
+declare const rotation: number;
+declare const naturalW: number, naturalH: number;
+declare const boxW: number, boxH: number;
+declare const currentView: PanZoomView;
+declare const leftViewport: HTMLElement, rightViewport: HTMLElement;
+declare const leftImage: HTMLImageElement, rightImage: HTMLImageElement;
 
 const quarterTurn = rotation % 180 !== 0;
 const displayW = quarterTurn ? naturalH : naturalW;
@@ -31,11 +40,9 @@ const left = attachPanZoom(leftViewport, leftImage, {
 
 left.setView({ scale, offsetX: 0, offsetY: 0 });
 right.setView(left.getView());
-const view = left.getView();
-left.reset();
-left.destroy();
-right.destroy();
 ```
+
+Call `reset()` to fit the view and `destroy()` when removing each pane.
 
 `getView()` returns a detached `{ scale, offsetX, offsetY }`. Offsets are CSS
 pixels relative to the viewport center. Each changed gesture input reports

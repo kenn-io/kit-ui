@@ -137,7 +137,7 @@ export function attachPanZoom(
   };
 
   const setView = (view: PanZoomView) => {
-    if (!valid(view)) return;
+    if (view == null || !Number.isFinite(view.scale) || view.scale <= 0) return;
     if (apply({ scale: clamp(view.scale), offsetX: view.offsetX, offsetY: view.offsetY }))
       updateTransform(false);
   };

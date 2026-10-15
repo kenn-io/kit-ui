@@ -101,9 +101,7 @@ function transformOf(pan: Locator) {
   });
 }
 
-test("swipes page at rest, pan when zoomed, and double-tap toggles the view", async ({
-  browser,
-}) => {
+test("swipes page at rest and pan when zoomed", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -123,7 +121,19 @@ test("swipes page at rest, pan when zoomed, and double-tap toggles the view", as
   await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
   await expect(counter).toHaveText("1 / 3");
   await expect.poll(async () => (await transformOf(pan)).x).toBeLessThan(-400);
-  await doubleTap(cdp, mid);
+  await close();
+});
+
+test("double-tap zooms in at the tap, and again resets", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const pan = page.locator(".kit-media-viewer__pan");
+  const mid = await center(page.locator(".kit-media-viewer__viewport"));
+  const at = { x: mid.x + 100, y: mid.y + 50 };
+  await doubleTap(cdp, at);
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 2.5, x: -150, y: -75 });
+  await doubleTap(cdp, at);
   await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
   await close();
