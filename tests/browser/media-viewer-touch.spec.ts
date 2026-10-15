@@ -147,10 +147,7 @@ test("touch double-tap and pinch zoom the viewer", async ({ browser }) => {
 test("on a phone the controls stay apart and tappable, and the backdrop closes", async ({
   browser,
 }) => {
-  const { page, close } = await touchPage(browser, "media-viewer", {
-    width: 390,
-    height: 844,
-  });
+  const { page, close } = await touchPage(browser, "media-viewer", { width: 390, height: 844 });
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const panel = (await viewer(page).boundingBox())!;
   const names = ["Close expanded view", "Reset view", "Previous item", "Next item"];
@@ -209,9 +206,7 @@ test("touch devices get 44px controls", async ({ browser }) => {
   for (const button of await page.locator(".kit-mermaid-viewer__button").all()) {
     expect(await size(button)).toEqual([44, 44]);
   }
-  const expand = page.getByRole("button", {
-    name: /Open image in expanded view: Screenshot A/,
-  });
+  const expand = page.getByRole("button", { name: /Open image in expanded view: Screenshot A/ });
   expect(await size(expand)).toEqual([44, 44]);
 
   await expand.tap();
