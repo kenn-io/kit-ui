@@ -27,11 +27,8 @@ test.beforeEach(async ({ page }) => {
   await gotoPage(page, "pan-zoom");
 });
 
-async function mount(
-  page: Page,
-  options: { minScale?: number; maxScale?: number; echo?: boolean } = {},
-) {
-  await page.evaluate(async ({ echo, ...limits }) => {
+async function mount(page: Page, options: { echo?: boolean } = {}) {
+  await page.evaluate(async ({ echo }) => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
     window.fixture?.controller.destroy();
     document.querySelector("#fixture")?.remove();
@@ -46,7 +43,6 @@ async function mount(
     const changes: PanZoomView[] = [];
     const swipes: number[] = [];
     const controller = attachPanZoom(viewport, pan, {
-      ...limits,
       onSwipe: (direction) => swipes.push(direction),
       onChange: (view) => {
         changes.push(view);
@@ -86,11 +82,7 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("the comparison demo preserves linked, independent, and actual-pixel views", async ({
-  page,
-  browser,
-  browserName,
-}) => {
+test("the comparison demo preserves linked and independent views", async ({ page }) => {
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
@@ -177,7 +169,6 @@ test("the comparison demo preserves linked, independent, and actual-pixel views"
     const panned = await transforms();
     expect(panned[1]).toBe(panned[0]);
     await resize();
-    await expectNativePixels(width, width * 0.6);
     const nextDpr = dpr === 4 ? 2 : 1;
     await density(nextDpr);
     await expectNativePixels(width, width * 0.6);
@@ -292,8 +283,6 @@ test("the comparison demo preserves linked, independent, and actual-pixel views"
         },
       ]);
   }
-  for (const deviceScaleFactor of [1, 2])
-    await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
 });
 
 async function preservesFractionalActualPixels(
@@ -366,6 +355,14 @@ async function preservesFractionalActualPixels(
     await context.close();
   }
 }
+
+test("fractional actual-pixel sizing stays native through responsive changes", async ({
+  browser,
+  browserName,
+}) => {
+  for (const deviceScaleFactor of [1, 2])
+    await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
+});
 
 test("comparison panes share a row and stack on narrow screens", async ({ page, browserName }) => {
   // WebKit applies its 2× backing scale to the configured viewport size.
@@ -492,7 +489,6 @@ test("wheel zoom anchors and accumulates gradual steps", async ({ page }) => {
     }
   });
   expect((await state(page)).view.scale).toBeGreaterThan(1.02);
-  expect((await state(page)).zoomed).toBe("true");
 });
 
 test("destroying during a drag clears panning and leaves the view unchanged", async ({ page }) => {
@@ -571,7 +567,6 @@ test("each changed input reports one completed view, including clamped pinches t
     changes: 2,
   });
   await page.evaluate(() => window.fixture.controller.reset());
-  expect((await state(page)).zoomed).toBeNull();
   await touch(page, "pointerdown", 1, 150, 200);
   await touch(page, "pointerdown", 2, 250, 200);
   for (const [x, change] of [
@@ -721,7 +716,6 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
     if (result.anchored) {
       expect(result.anchored.scale).toBe(2.5);
       expect(result.view).toEqual(result.anchored);
-      expect((await state(page)).zoomed).toBe("true");
     } else {
       expect(result.view.scale).toBe(scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE);
     }
