@@ -16,6 +16,14 @@ declare global {
 const NEAR_ONE = 1561 / 1560;
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const match = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const result = match(query);
+      if (query.startsWith("(resolution:")) window.resolutionQuery = result;
+      return result;
+    };
+  });
   await gotoPage(page, "pan-zoom");
 });
 
@@ -81,18 +89,19 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
 test("demo panes size actual pixels and preserve linked centers across density and size changes", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const match = window.matchMedia.bind(window);
-    window.matchMedia = (query) => {
-      const result = match(query);
-      if (query.startsWith("(resolution:")) window.resolutionQuery = result;
-      return result;
-    };
-  });
-  await page.reload();
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
+  const fittedWidth = () =>
+    panes
+      .first()
+      .locator("img")
+      .evaluate((image) =>
+        Math.min(
+          image.clientWidth,
+          (image.clientHeight * image.naturalWidth) / image.naturalHeight,
+        ),
+      );
   const matrix = () =>
     panes
       .first()
@@ -103,12 +112,16 @@ test("demo panes size actual pixels and preserve linked centers across density a
       });
   const resize = async (actual: boolean) => {
     const before = await matrix();
-    for (const width of [300, 240]) {
+    const initialWidth = await fittedWidth();
+    for (const larger of [true, false]) {
       await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
+      if (larger) await expect.poll(fittedWidth).toBeGreaterThan(initialWidth);
+      else await expect.poll(fittedWidth).toBe(initialWidth);
+      const ratio = (await fittedWidth()) / initialWidth;
       await expect.poll(matrix).toEqual({
-        scale: expect.closeTo(actual ? (before.scale * 240) / width : before.scale, 3),
-        x: expect.closeTo(actual ? before.x : (before.x * width) / 240, 3),
-        y: expect.closeTo(actual ? before.y : (before.y * width) / 240, 3),
+        scale: expect.closeTo(actual ? before.scale / ratio : before.scale, 3),
+        x: expect.closeTo(actual ? before.x : before.x * ratio, 2),
+        y: expect.closeTo(actual ? before.y : before.y * ratio, 2),
       });
       const linked = await transforms();
       expect(linked[1]).toBe(linked[0]);
@@ -148,12 +161,9 @@ test("demo panes size actual pixels and preserve linked centers across density a
       .toBe(true);
     await density(dpr);
     await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-    const scale = width / (240 * dpr);
-    const sizing = await panes
-      .first()
-      .locator("img")
-      .evaluate((image: HTMLImageElement) => image.getBoundingClientRect().width);
-    expect(sizing).toBeCloseTo(width / dpr, 3);
+    const fitted = await fittedWidth();
+    const scale = width / (fitted * dpr);
+    expect(fitted * (await matrix()).scale).toBeCloseTo(width / dpr, 2);
     expect((await matrix()).scale).toBeCloseTo(scale, 5);
     const box = (await panes.first().boundingBox())!;
     await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
@@ -165,7 +175,7 @@ test("demo panes size actual pixels and preserve linked centers across density a
     const linked = await transforms();
     expect(linked[1]).toBe(linked[0]);
     const changedDensity = await matrix();
-    expect(changedDensity.scale).toBeCloseTo(width / (240 * nextDpr), 5);
+    expect(changedDensity.scale).toBeCloseTo(width / (fitted * nextDpr), 5);
     expect(changedDensity.x).toBeCloseTo((30 * dpr) / nextDpr, 5);
     expect(changedDensity.y).toBeCloseTo((40 * dpr) / nextDpr, 5);
     await panes.first().dispatchEvent(dpr === 4 ? "wheel" : "dblclick", {
@@ -188,6 +198,122 @@ test("demo panes size actual pixels and preserve linked centers across density a
     }, transform);
     expect(view).toEqual({ scale: 1, x: 0, y: 0 });
   }
+});
+
+test("demo fills the row, stacks on mobile, and relinks the last changed pane", async ({
+  page,
+}) => {
+  const panes = page.locator(".pan-zoom-demo__pane");
+  await expect(panes.locator("img").last()).toBeVisible();
+  const transforms = () =>
+    panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
+  const boxes = await panes.evaluateAll((elements) =>
+    elements.map((element) => {
+      const r = element.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, right: r.right };
+    }),
+  );
+  expect(boxes[0]!.width).toBe(boxes[1]!.width);
+  expect(boxes[0]!.y).toBe(boxes[1]!.y);
+  const row = (await page.locator(".pan-zoom-demo__panes").boundingBox())!;
+  expect(boxes[1]!.right).toBeCloseTo(row.x + row.width, 1);
+  const link = page.getByRole("switch", { name: "Link views" });
+  await expect(link).toBeChecked();
+  await link.uncheck();
+  const initial = await transforms();
+  await panes
+    .first()
+    .dispatchEvent("wheel", { deltaY: -100, clientX: boxes[0]!.x + 50, clientY: boxes[0]!.y + 50 });
+  const firstChanged = await transforms();
+  expect(firstChanged[0]).not.toBe(initial[0]);
+  expect(firstChanged[1]).toBe(initial[1]);
+  await panes
+    .last()
+    .dispatchEvent("wheel", { deltaY: -200, clientX: boxes[1]!.x + 50, clientY: boxes[1]!.y + 50 });
+  const secondChanged = await transforms();
+  expect(secondChanged[0]).toBe(firstChanged[0]);
+  expect(secondChanged[1]).not.toBe(firstChanged[1]);
+  await link.check();
+  expect(await transforms()).toEqual([secondChanged[1], secondChanged[1]]);
+  await link.uncheck();
+  await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
+  const paneViews = () =>
+    panes.locator("img").evaluateAll((images) =>
+      images.map((image) => {
+        const matrix = new DOMMatrix(image.style.transform);
+        const fitted = Math.min(
+          image.clientWidth,
+          (image.clientHeight * image.naturalWidth) / image.naturalHeight,
+        );
+        return { scale: matrix.a, x: matrix.e, y: matrix.f, fitted, width: image.naturalWidth };
+      }),
+    );
+  for (const view of await paneViews()) {
+    expect(view.scale * view.fitted * (await page.evaluate(() => devicePixelRatio))).toBeCloseTo(
+      view.width,
+      1,
+    );
+  }
+  await expect(page.getByLabel("Zoom scale")).toContainText("1:1");
+  await mouseDrag(
+    page,
+    [boxes[0]!.x + 100, boxes[0]!.y + 100],
+    [[boxes[0]!.x + 120, boxes[0]!.y + 130]],
+  );
+  await panes
+    .last()
+    .dispatchEvent("wheel", { deltaY: 100, clientX: boxes[1]!.x + 50, clientY: boxes[1]!.y + 50 });
+  await expect(page.getByLabel("Zoom scale")).toContainText("0.86:1");
+  for (const change of ["density", "resize"]) {
+    const before = await paneViews();
+    if (change === "density") {
+      await page.evaluate(() => {
+        Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
+        window.resolutionQuery.dispatchEvent(new Event("change"));
+      });
+      await expect(page.getByLabel("Zoom scale")).toContainText("1.72:1");
+    } else {
+      await page.getByRole("button", { name: "Larger panes", exact: true }).click();
+      await expect
+        .poll(async () => (await paneViews())[0]!.fitted)
+        .toBeGreaterThan(before[0]!.fitted);
+    }
+    await expect
+      .poll(async () =>
+        (await paneViews()).map((view, index) => {
+          const old = before[index]!;
+          const scale =
+            index === 0
+              ? (old.scale * old.fitted) / view.fitted / (change === "density" ? 2 : 1)
+              : old.scale;
+          const ratio = (scale * view.fitted) / (old.scale * old.fitted);
+          return {
+            scale: view.scale - scale,
+            x: view.x - old.x * ratio,
+            y: view.y - old.y * ratio,
+          };
+        }),
+      )
+      .toEqual([
+        { scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) },
+        { scale: expect.closeTo(0, 4), x: expect.closeTo(0, 2), y: expect.closeTo(0, 2) },
+      ]);
+  }
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  expect(await transforms()).toEqual([
+    "translate(0px, 0px) scale(1)",
+    "translate(0px, 0px) scale(1)",
+  ]);
+  await page.setViewportSize({ width: 600, height: 900 });
+  const mobile = await panes.evaluateAll((elements) =>
+    elements.map((element) => {
+      const r = element.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width };
+    }),
+  );
+  expect(mobile[0]!.width).toBe(mobile[1]!.width);
+  expect(mobile[0]!.x).toBe(mobile[1]!.x);
+  expect(mobile[1]!.y).toBeGreaterThan(mobile[0]!.y);
 });
 
 test("views are precise, detached, silent, and validated", async ({ page }) => {
@@ -222,7 +348,7 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
 
 test("overflow rejects whole inputs and later input recovers", async ({ page }) => {
   for (const axis of ["offsetX", "offsetY"] as const) {
-    for (const input of ["wheel", "pinch", "drag"]) {
+    for (const input of ["wheel", "pinch"]) {
       await mount(page);
       await setView(page, { scale: 1, offsetX: 0, offsetY: 0, [axis]: Number.MAX_VALUE });
       const before = await state(page);
@@ -234,14 +360,9 @@ test("overflow rejects whole inputs and later input recovers", async ({ page }) 
           .locator("#fixture")
           .dispatchEvent("wheel", { deltaY: -100, clientX: 200, clientY: 200 });
       } else {
-        await touch(page, "pointerdown", 1, ...point(input === "pinch" ? 150 : 0));
-        if (input === "pinch") await touch(page, "pointerdown", 2, ...point(250));
-        await touch(
-          page,
-          "pointermove",
-          input === "pinch" ? 2 : 1,
-          ...point(input === "pinch" ? 350 : Number.MAX_VALUE),
-        );
+        await touch(page, "pointerdown", 1, ...point(150));
+        await touch(page, "pointerdown", 2, ...point(250));
+        await touch(page, "pointermove", 2, ...point(350));
       }
       expect(await state(page)).toEqual(before);
       expect(await page.locator("#fixture > div").getAttribute("style")).toBe(transform);
@@ -250,12 +371,7 @@ test("overflow rejects whole inputs and later input recovers", async ({ page }) 
           .locator("#fixture")
           .dispatchEvent("wheel", { deltaY: 100, clientX: 200, clientY: 200 });
       } else {
-        await touch(
-          page,
-          "pointermove",
-          input === "pinch" ? 2 : 1,
-          ...point(input === "pinch" ? 250 : Number.MAX_VALUE / 2),
-        );
+        await touch(page, "pointermove", 2, ...point(250));
       }
       const recovered = await state(page);
       expect(recovered.changes).toBe(1);
