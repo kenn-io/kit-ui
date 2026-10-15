@@ -126,7 +126,7 @@
   <thead>
     <tr>
       <th scope="col">Host</th>
-      <th scope="col">Load</th>
+      <th scope="col" class="num">Load</th>
     </tr>
   </thead>
   {#each regions as region (region.name)}
@@ -135,7 +135,7 @@
       {#each region.hosts as host (host.name)}
         <tr>
           <th scope="row">{host.name}</th>
-          <td>{host.load}%</td>
+          <td class="num">{host.load}%</td>
         </tr>
       {/each}
     </tbody>
@@ -147,7 +147,7 @@
       <thead>
         <tr>
           <th scope="col">Host</th>
-          <th scope="col">Load</th>
+          <th scope="col" class="num">Load</th>
         </tr>
       </thead>
       {#each regions as region (region.name)}
@@ -199,7 +199,7 @@
     border-bottom: var(--border-width) solid var(--border-muted);
   }
 
-  .bare-host th {
+  .bare-host th:not(.num) {
     text-align: left;
   }
 
