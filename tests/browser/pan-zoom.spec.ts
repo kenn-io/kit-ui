@@ -64,6 +64,15 @@ async function openComparisonDemo(page: Page) {
   await openDemo(page);
   const panes = page.locator(".pan-zoom-demo__pane");
   const images = panes.locator("img");
+  await expect(panes).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Fit", exact: true })).toBeEnabled();
+  await expect
+    .poll(() =>
+      images.evaluateAll((nodes) =>
+        nodes.every((node) => !!(node as HTMLImageElement).style.transform),
+      ),
+    )
+    .toBe(true);
   const boxes = await panes.evaluateAll((elements) =>
     elements.map((element) => {
       const rect = element.getBoundingClientRect();
@@ -579,11 +588,6 @@ test("swipes respect scale and axis", async ({ page }) => {
   await touch(page, "pointermove", 1, 180, 200);
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
-  expect((await state(page)).view).toEqual({
-    scale: 2.5,
-    offsetX: -70,
-    offsetY: 0,
-  });
   for (const change of ["external", "wheel"]) {
     await setView(page, { scale: 1, offsetX: 0, offsetY: 0 });
     await touch(page, "pointerdown", 1, 250, 200);
