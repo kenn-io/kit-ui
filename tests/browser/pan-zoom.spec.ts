@@ -472,7 +472,63 @@ test("destroying during a drag clears panning and leaves the view unchanged", as
   expect(await state(page)).toEqual(before);
 });
 
-test("scale limits use independent defaults and stay fixed after attachment", async ({ page }) => {
+test("updated limits retain pointer capture and keep cancellation within bounds", async ({
+  page,
+}) => {
+  await mount(page);
+  await setView(page, { scale: 4, offsetX: 10, offsetY: 20 });
+  await page.mouse.move(150, 150);
+  await page.mouse.down();
+  await page.mouse.move(170, 160);
+  await page.evaluate(() => window.fixture.controller.setLimits({ minScale: 0.2, maxScale: 2 }));
+  expect(await state(page)).toMatchObject({
+    view: { scale: 2, offsetX: 30, offsetY: 30 },
+    changes: 1,
+  });
+  await page.mouse.move(400, 170);
+  await page.mouse.up();
+  expect(await state(page)).toMatchObject({
+    view: { scale: 2, offsetX: 260, offsetY: 40 },
+    changes: 2,
+  });
+  await page.evaluate(() =>
+    window.fixture.controller.setView({ scale: 0.1, offsetX: 0, offsetY: 0 }),
+  );
+  expect((await state(page)).view.scale).toBe(0.2);
+
+  await page.evaluate(() => window.fixture.controller.setLimits({ maxScale: 8 }));
+  await setView(page, { scale: 4, offsetX: 0, offsetY: 0 });
+  await touch(page, "pointerdown", 1, 150, 200);
+  await touch(page, "pointerdown", 2, 250, 200);
+  await touch(page, "pointermove", 2, 200, 200);
+  expect((await state(page)).view.scale).toBe(2);
+  await page.evaluate(() => window.fixture.controller.setLimits({ maxScale: 2 }));
+  await touch(page, "pointercancel", 1, 150, 200);
+  await touch(page, "pointerup", 2, 200, 200);
+  expect((await state(page)).view.scale).toBe(2);
+});
+
+test("actual pixel sizing accounts for fractional letterboxing, rotation, and density", async ({
+  page,
+}) => {
+  await openController(page);
+  const sizes = await page.evaluate(async () => {
+    const { actualPixelSize } = await import("/src/lib/utils/pan-zoom.ts");
+    const image = { width: 3200, height: 1920 };
+    const box = { width: 800.375, height: 400.25 };
+    return [0, 90, 180, 270].map((rotation) => actualPixelSize(image, box, 2, rotation));
+  });
+  for (const index of [0, 2]) {
+    expect(sizes[index]!.fittedWidth).toBeCloseTo((400.25 * 3200) / 1920);
+    expect(sizes[index]!.fittedWidth * sizes[index]!.scale * 2).toBeCloseTo(3200);
+  }
+  for (const index of [1, 3]) {
+    expect(sizes[index]!.fittedWidth).toBeCloseTo((400.25 * 1920) / 3200);
+    expect(sizes[index]!.fittedWidth * sizes[index]!.scale * 2).toBeCloseTo(1920);
+  }
+});
+
+test("scale limits use independent defaults and copy attachment options", async ({ page }) => {
   await openController(page);
   const defaults = await page.evaluate(async () => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");

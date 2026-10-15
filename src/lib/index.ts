@@ -260,8 +260,10 @@ export {
   type OpenMediaViewerOptions,
 } from "./utils/media-gallery.js";
 export {
+  actualPixelSize,
   attachPanZoom,
   type PanZoom,
+  type PanZoomLimits,
   type PanZoomOptions,
   type PanZoomView,
 } from "./utils/pan-zoom.js";

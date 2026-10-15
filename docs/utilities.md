@@ -11,7 +11,7 @@ Set its transform origin to its center.
 Host integration fragment, after image load and measurement:
 
 ```ts
-import { attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
+import { actualPixelSize, attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
 
 declare const rotation: number;
 declare const naturalW: number, naturalH: number;
@@ -21,11 +21,12 @@ declare const leftViewport: HTMLElement, rightViewport: HTMLElement;
 declare const leftPan: HTMLElement, rightPan: HTMLElement;
 declare const leftImage: HTMLImageElement, rightImage: HTMLImageElement;
 
-const quarterTurn = rotation % 180 !== 0;
-const displayW = quarterTurn ? naturalH : naturalW;
-const displayH = quarterTurn ? naturalW : naturalH;
-const fittedW = Math.min(boxW, (boxH * displayW) / displayH);
-const scale = displayW / (fittedW * devicePixelRatio);
+const { fittedWidth, scale } = actualPixelSize(
+  { width: naturalW, height: naturalH },
+  { width: boxW, height: boxH },
+  devicePixelRatio,
+  rotation,
+);
 const limits = {
   minScale: Math.min(0.4, scale, currentView.scale),
   maxScale: Math.max(8, scale, currentView.scale),
@@ -56,8 +57,10 @@ other without a callback loop.
 
 Scale retains full precision. `minScale` accepts a finite value above 0 and at
 most 1, otherwise it defaults to 0.4. `maxScale` accepts a finite value at least
-1, otherwise it defaults to 8. Each bound falls back independently and stays
-fixed at attachment time. Gestures and `setView()` clamp to these limits.
+1, otherwise it defaults to 8. Each bound falls back independently.
+`setLimits({ minScale, maxScale })` replaces both bounds using the same defaults
+and silently clamps the current view. It retains active gestures and pointer
+capture. Gestures and `setView()` clamp to these limits.
 Sharing the same view assumes matching pane and fitted-image geometry.
 These linked panes need identical limits because `setView()` clamps silently.
 Read `getView()` after setting a view to obtain the effective clamped values.
@@ -67,15 +70,15 @@ For actual pixels, the example computes one image pixel per physical screen
 pixel. Use `object-fit: contain` for the image. `boxW` and `boxH` are the
 viewport's fractional, untransformed content-box dimensions; use a
 `ResizeObserverEntry.contentRect` or an equivalent precise layout measurement.
-`displayW` and `displayH` swap the original dimensions for 90° and
-270° turns. `fittedW` accounts for letterboxing. `clientWidth`/`clientHeight`
+`actualPixelSize` accepts positive image and box dimensions, a positive DPR,
+and rotation in multiples of 90°. It returns the fitted width and scale,
+accounting for letterboxing and quarter turns. `clientWidth`/`clientHeight`
 and `offsetWidth`/`offsetHeight` round to integers, so they can't establish an
 exact pixel size. Transformed `getBoundingClientRect()` dimensions also can't
 be used as fit inputs. The demo images have no padding or border. Choose
 shared bounds that include the defaults, actual-pixel scale, and current scale,
-as above. After image load, pane resize, or a density change, destroy and
-reattach both controllers with the new shared bounds, then restore the view.
-Reattachment ends any active drag or pinch.
+as above. After image load, pane resize, or a density change, recompute sizing
+and call `setLimits(limits)` on both controllers, then `setView(view)`.
 Keep manual scale or recompute scale while actual pixels remains selected.
 Multiply both offsets by
 `(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same

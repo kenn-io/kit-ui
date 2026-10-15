@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
   import {
+    actualPixelSize,
     attachPanZoom,
     Button,
     Card,
@@ -67,6 +68,16 @@
     imageNodes = panes.map((pane) => pane.querySelector("img")!);
     const imageSizes = panes.map(() => ({ width: 0, height: 0 }));
     const oldFittedWidths = [0, 0];
+    controllers = panes.map((pane, index) =>
+      attachPanZoom(pane, imageNodes[index]!, {
+        onChange: (next) => {
+          if (next.scale !== views[index]!.scale) actualPixels[index] = false;
+          views[index] = next;
+          lastChanged = index;
+          if (linked) synchronize();
+        },
+      }),
+    );
     refresh = () => {
       if (
         !imageNodes.every(
@@ -79,9 +90,11 @@
       )
         return;
       imageNodes.forEach((image, index) => {
-        const { width, height } = imageSizes[index]!;
-        const fittedWidth = Math.min(width, (height * image.naturalWidth) / image.naturalHeight);
-        const sourceScale = image.naturalWidth / (fittedWidth * window.devicePixelRatio);
+        const { fittedWidth, scale: sourceScale } = actualPixelSize(
+          { width: image.naturalWidth, height: image.naturalHeight },
+          imageSizes[index]!,
+          window.devicePixelRatio,
+        );
         sourceScales[index] = sourceScale;
         const view = views[index]!;
         if (oldFittedWidths[index]) {
@@ -91,17 +104,10 @@
         }
         oldFittedWidths[index] = fittedWidth;
       });
-      controllers.forEach((controller) => controller.destroy());
-      controllers = panes.map((pane, index) =>
-        attachPanZoom(pane, imageNodes[index]!, {
+      controllers.forEach((controller) =>
+        controller.setLimits({
           minScale: Math.min(0.4, ...sourceScales, ...views.map((view) => view.scale)),
           maxScale: Math.max(8, ...sourceScales, ...views.map((view) => view.scale)),
-          onChange: (next) => {
-            if (next.scale !== views[index]!.scale) actualPixels[index] = false;
-            views[index] = next;
-            lastChanged = index;
-            if (linked) synchronize();
-          },
         }),
       );
       controllers.forEach((controller, index) => controller.setView(views[index]!));

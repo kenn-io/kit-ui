@@ -36,17 +36,35 @@ export interface PanZoomView {
   offsetY: number;
 }
 
-export interface PanZoomOptions {
+export interface PanZoomLimits {
+  /** Minimum scale, above 0 and at most 1. Defaults to 0.4 for invalid values. */
+  minScale?: number;
+  /** Maximum scale, at least 1. Defaults to 8 for invalid values. */
+  maxScale?: number;
+}
+
+/** Contained image sizing, after load, using positive fractional CSS box dimensions.
+ * Rotation is a multiple of 90 degrees; dpr is physical pixels per CSS pixel. */
+export function actualPixelSize(
+  image: { width: number; height: number },
+  box: { width: number; height: number },
+  dpr: number,
+  rotation = 0,
+): { fittedWidth: number; scale: number } {
+  const quarterTurn = rotation % 180 !== 0;
+  const width = quarterTurn ? image.height : image.width;
+  const height = quarterTurn ? image.width : image.height;
+  const fittedWidth = Math.min(box.width, (box.height * width) / height);
+  return { fittedWidth, scale: width / (fittedWidth * dpr) };
+}
+
+export interface PanZoomOptions extends PanZoomLimits {
   /** One-finger touch or pen swipe at scale 1 (not mouse drags): 1 when
    * the finger moved left (show the next item), -1 when it moved right. */
   onSwipe?: (direction: 1 | -1) => void;
   /** Changed gesture input, settling, and cancellation report the completed view.
    * reset() always reports, even at identity; construction and setView are silent. */
   onChange?: (view: PanZoomView) => void;
-  /** Minimum scale, above 0 and at most 1. Defaults to 0.4 for invalid values. */
-  minScale?: number;
-  /** Maximum scale, at least 1. Defaults to 8 for invalid values. */
-  maxScale?: number;
 }
 
 export interface PanZoom {
@@ -54,6 +72,8 @@ export interface PanZoom {
   getView: () => PanZoomView;
   /** Apply a view silently. Invalid views are ignored; scale is clamped. */
   setView: (view: PanZoomView) => void;
+  /** Replace limits silently, clamping the current view while retaining active gestures. */
+  setLimits: (limits: PanZoomLimits) => void;
   /** Back to scale 1, no offset. */
   reset: () => void;
   /** Remove the listeners (the transform is left as is). */
@@ -68,13 +88,8 @@ export function attachPanZoom(
   let scale = 1;
   let offsetX = 0;
   let offsetY = 0;
-  const requestedMin = options.minScale ?? MIN_SCALE;
-  const minScale =
-    Number.isFinite(requestedMin) && requestedMin > 0 && requestedMin <= 1
-      ? requestedMin
-      : MIN_SCALE;
-  const requestedMax = options.maxScale ?? MAX_SCALE;
-  const maxScale = Number.isFinite(requestedMax) && requestedMax >= 1 ? requestedMax : MAX_SCALE;
+  let minScale = MIN_SCALE;
+  let maxScale = MAX_SCALE;
   // Scale keeps full precision: a pinch or slow wheel arrives as many tiny
   // ratios, and rounding each step would discard them. CSS serialization
   // may round the rendered transform; controller state stays unrounded.
@@ -140,6 +155,18 @@ export function attachPanZoom(
     if (view == null || !Number.isFinite(view.scale) || view.scale <= 0) return;
     if (apply({ scale: clamp(view.scale), offsetX: view.offsetX, offsetY: view.offsetY }))
       updateTransform(false);
+  };
+
+  const setLimits = (limits: PanZoomLimits) => {
+    const requestedMin = limits.minScale ?? MIN_SCALE;
+    const requestedMax = limits.maxScale ?? MAX_SCALE;
+    minScale =
+      Number.isFinite(requestedMin) && requestedMin > 0 && requestedMin <= 1
+        ? requestedMin
+        : MIN_SCALE;
+    maxScale = Number.isFinite(requestedMax) && requestedMax >= 1 ? requestedMax : MAX_SCALE;
+    setView(getView());
+    if (gesture) gesture.scale = clamp(gesture.scale);
   };
 
   const reset = () => {
@@ -337,6 +364,7 @@ export function attachPanZoom(
     );
   };
 
+  setLimits(options);
   viewport.addEventListener("dblclick", onDoubleClick);
   viewport.addEventListener("pointerdown", onPointerDown);
   viewport.addEventListener("pointermove", onPointerMove);
@@ -348,6 +376,7 @@ export function attachPanZoom(
   return {
     getView,
     setView,
+    setLimits,
     reset,
     destroy() {
       delete viewport.dataset["panning"];
