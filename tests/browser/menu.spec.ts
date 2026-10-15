@@ -179,6 +179,17 @@ test("context menu shows trailing text at the item's right edge", async ({ page 
   ).toBeLessThanOrEqual(1);
 });
 
+test("a shortcut hint is announced as a key shortcut, not as part of the item's name", async ({
+  page,
+}) => {
+  await gotoPage(page, "menu");
+  const { box } = await placeContextTarget(page, "start");
+  await page.mouse.click(box.x + 20, box.y + 30, { button: "right" });
+  const rename = page.getByRole("menuitem", { name: "Rename", exact: true });
+  await expect(rename).toHaveAttribute("aria-keyshortcuts", "F2");
+  await expect(rename.getByText("F2")).toBeVisible();
+});
+
 test("context menu stays inside the viewport and closes when the page scrolls", async ({
   page,
 }) => {

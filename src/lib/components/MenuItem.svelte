@@ -14,6 +14,12 @@
     icon?: Snippet | undefined;
     /** Right-aligned secondary text, such as a count or a shortcut hint. */
     trailing?: Snippet | undefined;
+    /**
+     * The shortcut the trailing hint shows, in `aria-keyshortcuts` form such as `F2` or
+     * `Meta+1`. Assistive technology reads the shortcut from this attribute, so the
+     * visual hint is left out of the item's name.
+     */
+    keyshortcuts?: string | undefined;
     children: Snippet;
   }
 
@@ -26,6 +32,7 @@
     class: className = "",
     icon,
     trailing,
+    keyshortcuts,
     children,
   }: Props = $props();
 
@@ -53,6 +60,7 @@
   role="menuitem"
   tabindex="-1"
   aria-disabled={disabled || undefined}
+  aria-keyshortcuts={keyshortcuts}
   onclick={(event) => {
     if (disabled) {
       event.preventDefault();
@@ -67,7 +75,9 @@
   </span>
   {@render children()}
   {#if trailing}
-    <span class="kit-menu__trailing">{@render trailing()}</span>
+    <span class="kit-menu__trailing" aria-hidden={keyshortcuts ? "true" : undefined}>
+      {@render trailing()}
+    </span>
   {/if}
 </button>
 

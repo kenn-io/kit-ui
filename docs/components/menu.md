@@ -72,7 +72,7 @@ was right-clicked so Escape and item selection hand focus back to it:
 <div role="button" tabindex="0" bind:this={row} oncontextmenu={openAt}>…</div>
 <Menu bind:open {anchor} returnFocus={row}>
   <MenuContent ariaLabel="File actions">
-    <MenuItem onselect={rename}>
+    <MenuItem onselect={rename} keyshortcuts="F2">
       Rename
       {#snippet trailing()}F2{/snippet}
     </MenuItem>
@@ -86,7 +86,9 @@ matches a triggered menu.
 
 `MenuItem`'s `trailing` snippet renders right-aligned muted text, such as a
 count or a shortcut hint. Show a shortcut only for an action that really has
-that binding.
+that binding. With a shortcut hint, also pass `keyshortcuts` in
+`aria-keyshortcuts` form, such as `F2` or `Meta+1`. Screen readers then announce
+the shortcut from that attribute, and the item's name stays just its label.
 
 For single-choice menus, nest radio items in a group:
 
@@ -102,15 +104,15 @@ buttons. Those need normal Tab navigation and belong in a popover or dialog.
 
 ## Interface
 
-| Part             | Main props                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| `Menu`           | `bind:open`, `align="start" \| "end"`, `anchor`, `returnFocus`, `onopenchange`, `class`, `children`         |
-| `MenuTrigger`    | `ariaLabel`, `title`, `disabled`, `class`, `children`, `child`                                              |
-| `MenuContent`    | `ariaLabel`, `class`, `children`                                                                            |
-| `MenuItem`       | `onselect`, `disabled`, `closeOnSelect=true`, `tone="neutral" \| "danger"`, `textValue`, `icon`, `trailing` |
-| `MenuRadioGroup` | `value`, `onchange`, `ariaLabel`, `children`                                                                |
-| `MenuRadioItem`  | `value`, `disabled`, `closeOnSelect=false`, `textValue`, `class`, `children`                                |
-| `MenuSeparator`  | none                                                                                                        |
+| Part             | Main props                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `Menu`           | `bind:open`, `align="start" \| "end"`, `anchor`, `returnFocus`, `onopenchange`, `class`, `children`                         |
+| `MenuTrigger`    | `ariaLabel`, `title`, `disabled`, `class`, `children`, `child`                                                              |
+| `MenuContent`    | `ariaLabel`, `class`, `children`                                                                                            |
+| `MenuItem`       | `onselect`, `disabled`, `closeOnSelect=true`, `tone="neutral" \| "danger"`, `textValue`, `icon`, `trailing`, `keyshortcuts` |
+| `MenuRadioGroup` | `value`, `onchange`, `ariaLabel`, `children`                                                                                |
+| `MenuRadioItem`  | `value`, `disabled`, `closeOnSelect=false`, `textValue`, `class`, `children`                                                |
+| `MenuSeparator`  | none                                                                                                                        |
 
 ## Icon alignment
 
