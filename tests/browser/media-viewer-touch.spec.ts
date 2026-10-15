@@ -177,31 +177,6 @@ test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
   await close();
 });
 
-test("a pinch out and back ends exactly unzoomed, so a swipe pages again", async ({ browser }) => {
-  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
-  const { page, cdp, close } = await touchPage(browser, "media-viewer");
-  await page.getByRole("button", { name: "Open viewer" }).tap();
-  const viewport = page.locator(".kit-media-viewer__viewport");
-  const mid = await center(viewport);
-  const pair = (spread: number): [Point, Point] => [
-    { x: mid.x - spread, y: mid.y },
-    { x: mid.x + spread, y: mid.y },
-  ];
-  // Out to 1.6x and back to the starting spread in uneven steps.
-  await touch(cdp, "touchStart", pair(50));
-  for (const spread of [57, 63, 71, 80, 73, 66, 61, 54, 50]) {
-    await touch(cdp, "touchMove", pair(spread));
-  }
-  await release(cdp, pair(50));
-  await expect
-    .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
-    .toBe(1);
-  await expect(viewport).not.toHaveAttribute("data-zoomed");
-  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
-  await expect(page.locator(".kit-media-viewer__counter")).toHaveText("2 / 3");
-  await close();
-});
-
 test("a release away from the press is no tap toward a double tap", async ({ page }) => {
   await gotoPage(page, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).click();

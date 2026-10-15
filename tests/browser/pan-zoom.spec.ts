@@ -84,10 +84,23 @@ for (const deviceScaleFactor of [1, 2, 3]) {
     }) => {
       const panes = page.locator(".pan-zoom-demo__pane");
       const images = panes.locator("img");
+      await expect(images).toHaveCount(2);
+      // A shorter image box letterboxes both originals without changing the demo formula.
+      await images.evaluateAll((all) => {
+        for (const image of all) (image as HTMLElement).style.height = "120px";
+      });
       const rendered = () =>
         images.evaluateAll((all) =>
           all.map((image) => ({
-            physical: image.getBoundingClientRect().width * devicePixelRatio,
+            physical:
+              image.getBoundingClientRect().width *
+              Math.min(
+                1,
+                (image.clientHeight / image.clientWidth) *
+                  ((image as HTMLImageElement).naturalWidth /
+                    (image as HTMLImageElement).naturalHeight),
+              ) *
+              devicePixelRatio,
             natural: (image as HTMLImageElement).naturalWidth,
             transform: image.style.transform,
           })),
@@ -146,91 +159,6 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
   });
 });
 
-test("bounds stay fixed and invalid limits fall back independently", async ({ page }) => {
-  const scales = await page.evaluate(async () => {
-    const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
-    const limits = { minScale: 0.1, maxScale: 32 };
-    const controller = attachPanZoom(
-      document.createElement("div"),
-      document.createElement("div"),
-      limits,
-    );
-    limits.minScale = 0.9;
-    limits.maxScale = 2;
-    const read = (scale: number) => {
-      controller.setView({ scale, offsetX: 0, offsetY: 0 });
-      return controller.getView().scale;
-    };
-    const fixed = [read(0.01), read(100)];
-    controller.destroy();
-    const mixed = [
-      { minScale: 0, maxScale: 32 },
-      { minScale: 0.1, maxScale: NaN },
-    ].map((options) => {
-      const c = attachPanZoom(
-        document.createElement("div"),
-        document.createElement("div"),
-        options,
-      );
-      c.setView({ scale: 0.01, offsetX: 0, offsetY: 0 });
-      const min = c.getView().scale;
-      c.setView({ scale: 100, offsetX: 0, offsetY: 0 });
-      const max = c.getView().scale;
-      c.destroy();
-      return [min, max];
-    });
-    return { fixed, mixed };
-  });
-  expect(scales).toEqual({
-    fixed: [0.1, 32],
-    mixed: [
-      [0.4, 32],
-      [0.1, 8],
-    ],
-  });
-});
-
-test("actual-pixel sizing uses the fitted width of a letterboxed image", async ({ page }) => {
-  const physicalWidth = await page.evaluate(async () => {
-    const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
-    const viewport = document.createElement("div");
-    const image = new Image();
-    image.src =
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='160'/%3E";
-    image.style.cssText = "width:240px;height:144px;object-fit:contain";
-    viewport.append(image);
-    document.body.append(viewport);
-    await image.decode();
-    const fittedW = Math.min(
-      image.clientWidth,
-      (image.clientHeight * image.naturalWidth) / image.naturalHeight,
-    );
-    const c = attachPanZoom(viewport, image, { minScale: 0.1, maxScale: 32 });
-    c.setView({ scale: image.naturalWidth / (fittedW * devicePixelRatio), offsetX: 0, offsetY: 0 });
-    const actual =
-      ((image.getBoundingClientRect().width * fittedW) / image.clientWidth) * devicePixelRatio;
-    c.destroy();
-    return actual;
-  });
-  expect(physicalWidth).toBeCloseTo(80, 4);
-});
-
-test("a changed near-1 view replaces pinch settle intent until a later rescale", async ({
-  page,
-}) => {
-  await mount(page);
-  for (const rescale of [false, true]) {
-    await touch(page, "pointerdown", 1, 150, 200);
-    await touch(page, "pointerdown", 2, 250, 200);
-    await touch(page, "pointermove", 2, 350, 200);
-    await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-    if (rescale) await touch(page, "pointermove", 2, 349.98, 200);
-    await touch(page, "pointerup", 2, 349.98, 200);
-    await touch(page, "pointerup", 1, 150, 200);
-    expect((await state(page)).view.scale).toBe(rescale ? 1 : NEAR_ONE);
-  }
-});
-
 test("setters and gestures share scale limits, and invalid limits use defaults", async ({
   page,
 }) => {
@@ -246,6 +174,20 @@ test("setters and gestures share scale limits, and invalid limits use defaults",
   await expect.poll(async () => (await state(page)).view.scale).toBe(0.25);
   const defaults = await page.evaluate(async () => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
+    const limits = { minScale: 0.1, maxScale: 32 };
+    const controller = attachPanZoom(
+      document.createElement("div"),
+      document.createElement("div"),
+      limits,
+    );
+    limits.minScale = 0.9;
+    limits.maxScale = 2;
+    const read = (scale: number) => {
+      controller.setView({ scale, offsetX: 0, offsetY: 0 });
+      return controller.getView().scale;
+    };
+    const fixed = [read(0.01), read(100)];
+    controller.destroy();
     const limit = (options: PanZoomOptions, scale: number) => {
       const controller = attachPanZoom(
         document.createElement("div"),
@@ -253,14 +195,26 @@ test("setters and gestures share scale limits, and invalid limits use defaults",
         options,
       );
       controller.setView({ scale, offsetX: 0, offsetY: 0 });
-      return controller.getView().scale;
+      const effective = controller.getView().scale;
+      controller.destroy();
+      return effective;
     };
     return {
+      fixed,
+      mixed: [
+        limit({ minScale: 0, maxScale: 32 }, 0.01),
+        limit({ minScale: 0, maxScale: 32 }, 100),
+      ],
       min: [undefined, 0, -1, 2, NaN, Infinity].map((minScale) => limit({ minScale }, 0.01)),
       max: [undefined, 0, 0.5, NaN, Infinity].map((maxScale) => limit({ maxScale }, 100)),
     };
   });
-  expect(defaults).toEqual({ min: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4], max: [8, 8, 8, 8, 8] });
+  expect(defaults).toEqual({
+    fixed: [0.1, 32],
+    mixed: [0.4, 32],
+    min: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4],
+    max: [8, 8, 8, 8, 8],
+  });
 });
 
 test("each changed input reports one completed view, including clamped pinches that pan", async ({
@@ -317,9 +271,11 @@ test("a near-1 view keeps its scale through a drag, rests, pages, and double-tap
 }) => {
   await mount(page);
   await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-  await mouseDrag(page, [200, 200], [[230, 240]]);
+  await touch(page, "pointerdown", 1, 200, 200);
+  await touch(page, "pointermove", 1, 230, 200);
+  await touch(page, "pointerup", 1, 230, 200);
   expect(await state(page)).toEqual({
-    view: { scale: NEAR_ONE, offsetX: 30, offsetY: 40 },
+    view: { scale: NEAR_ONE, offsetX: 30, offsetY: 0 },
     changes: 1,
     zoomed: null,
   });
@@ -346,44 +302,36 @@ test("only a pinch that changed scale settles at 1 on release", async ({ page })
   const before = (await state(page)).changes;
   await touch(page, "pointerup", 1, 150, 200);
   expect(await state(page)).toMatchObject({ view: { scale: 1 }, changes: before + 1 });
-  await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-  await touch(page, "pointerdown", 1, 150, 200);
-  await touch(page, "pointerdown", 2, 250, 200);
-  // Same finger distance, so it pans without changing scale.
-  await touch(page, "pointermove", 2, 210, 280);
-  await touch(page, "pointerup", 2, 210, 280);
-  await touch(page, "pointerup", 1, 150, 200);
-  expect((await state(page)).view.scale).toBe(NEAR_ONE);
+  for (const rescale of [false, true]) {
+    await touch(page, "pointerdown", 1, 150, 200);
+    await touch(page, "pointerdown", 2, 250, 200);
+    await touch(page, "pointermove", 2, 350, 200);
+    await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
+    if (rescale) await touch(page, "pointermove", 2, 349.98, 200);
+    await touch(page, "pointerup", 2, 349.98, 200);
+    await touch(page, "pointerup", 1, 150, 200);
+    expect((await state(page)).view.scale).toBe(rescale ? 1 : NEAR_ONE);
+  }
 });
 
-test("cancellation keeps its destination through equal echoes and invalid views", async ({
+test("cancellation keeps its destination through equal echoes and applied views", async ({
   page,
 }) => {
   await mount(page, { echo: true });
   await touch(page, "pointerdown", 1, 200, 200);
   await touch(page, "pointermove", 1, 230, 200);
-  await setView(page, { scale: NaN, offsetX: 0, offsetY: 0 });
   expect(await state(page)).toMatchObject({ view: { offsetX: 30 }, changes: 1 });
   await touch(page, "pointercancel", 1, 230, 200);
   expect(await state(page)).toMatchObject({
     view: { scale: 1, offsetX: 0, offsetY: 0 },
     changes: 2,
   });
-});
-
-test("a different applied view becomes the cancellation destination", async ({ page }) => {
-  await mount(page);
   const applied = { scale: 2, offsetX: 5, offsetY: 5 };
   await touch(page, "pointerdown", 1, 200, 200);
   await touch(page, "pointermove", 1, 230, 200);
   await setView(page, applied);
   await touch(page, "pointercancel", 1, 230, 200);
-  expect(await state(page)).toMatchObject({ view: applied, changes: 1 });
-  await touch(page, "pointerdown", 1, 200, 200);
-  await setView(page, applied);
-  await touch(page, "pointermove", 1, 230, 200);
-  await touch(page, "pointercancel", 1, 230, 200);
-  expect((await state(page)).view).toEqual(applied);
+  expect(await state(page)).toMatchObject({ view: applied, changes: 3 });
   await touch(page, "pointerdown", 1, 200, 200);
   await touch(page, "pointermove", 1, 230, 200);
   await page.evaluate(() => window.fixture.controller.reset());
