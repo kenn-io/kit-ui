@@ -13,9 +13,9 @@
     open?: boolean;
     align?: MenuAlign;
     /** Opens the content at a viewport point instead of below a trigger (context menus). */
-    anchor?: MenuAnchorPoint;
+    anchor?: MenuAnchorPoint | undefined;
     /** Receives focus when a trigger-less menu closes, such as the right-clicked row. */
-    returnFocus?: HTMLElement;
+    returnFocus?: HTMLElement | undefined;
     onopenchange?: (open: boolean) => void;
     class?: string;
     children: Snippet;
