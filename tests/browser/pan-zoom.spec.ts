@@ -137,8 +137,6 @@ async function mount(page: Page, options: { echo?: boolean } = {}) {
   await openController(page);
   await page.evaluate(async ({ echo }) => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
-    window.fixture?.controller.destroy();
-    document.querySelector("#fixture")?.remove();
     const viewport = document.createElement("div");
     viewport.id = "fixture";
     viewport.style.cssText =
@@ -596,6 +594,7 @@ test("swipes respect scale and axis", async ({ page }) => {
   await setView(page, { scale: 2.5, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 250, 200);
   await touch(page, "pointermove", 1, 180, 200);
+  // 611 ≈ ln(2.5) / 0.0015, returning the scale to rest before release.
   await page.locator("#fixture").dispatchEvent("wheel", {
     deltaY: 611,
     clientX: 200,
