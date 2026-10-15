@@ -137,6 +137,25 @@ test("context menu opens at the pointer and returns focus to its target", async 
   await expect(target).toBeFocused();
 });
 
+test("a second right-click moves an open context menu to the new pointer", async ({ page }) => {
+  await gotoPage(page, "menu");
+  const { box } = await placeContextTarget(page, "start");
+  const menu = page.getByRole("menu", { name: "File actions" });
+  await page.mouse.click(box.x + 20, box.y + 30, { button: "right" });
+  await expect(menu).toBeVisible();
+
+  await page.mouse.click(box.x + 6, box.y + 8, { button: "right" });
+  await expect(menu).toBeVisible();
+  await expect
+    .poll(async () => {
+      const menuBox = await menu.boundingBox();
+      if (!menuBox) return false;
+      return Math.abs(menuBox.x - (box.x + 6)) <= 1 && Math.abs(menuBox.y - (box.y + 8)) <= 1;
+    })
+    .toBe(true);
+  await expect(page.getByRole("menuitem", { name: /Rename/ })).toBeFocused();
+});
+
 test("an item that moves focus keeps it after the menu closes", async ({ page }) => {
   await gotoPage(page, "menu");
   const { box } = await placeContextTarget(page, "start");
