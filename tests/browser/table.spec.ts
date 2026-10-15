@@ -46,3 +46,20 @@ test("numeric and text header labels share a baseline", async ({ page }) => {
   expect(Math.abs((await top("Cost")) - repo)).toBeLessThan(1);
   expect(Math.abs((await top("Elapsed")) - repo)).toBeLessThan(1);
 });
+
+test("a bare table renders only the table its rows describe", async ({ page }) => {
+  const table = page.getByRole("table", { name: "Hosts by region" });
+  await expect(table).toHaveClass(/\bregions\b/);
+  expect(
+    await table.evaluate((element) =>
+      [...element.classList].filter((name) => name.startsWith("kit-")),
+    ),
+  ).toEqual([]);
+  expect(
+    await table.evaluate((element) =>
+      element.parentElement?.classList.contains("kit-table-wrapper"),
+    ),
+  ).toBe(false);
+  expect(await table.evaluate((element) => (element as HTMLTableElement).tBodies.length)).toBe(2);
+  await expect(table.getByRole("rowheader", { name: "Frankfurt" })).toBeVisible();
+});
