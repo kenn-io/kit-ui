@@ -60,6 +60,29 @@ async function measureImages(images: Locator) {
   );
 }
 
+async function openComparisonDemo(page: Page) {
+  await openDemo(page);
+  const panes = page.locator(".pan-zoom-demo__pane");
+  const images = panes.locator("img");
+  const boxes = await panes.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.x, y: rect.y };
+    }),
+  );
+  return {
+    panes,
+    images,
+    boxes,
+    link: page.getByRole("switch", { name: "Link views" }),
+    transforms: () =>
+      images.evaluateAll((nodes) =>
+        nodes.map((node) => (node as HTMLImageElement).style.transform),
+      ),
+    fittedWidth: async () => (await measureImages(images.first()))[0]!.fittedWidth,
+  };
+}
+
 async function expectNativePixels(images: Locator) {
   await expect
     .poll(async () =>
@@ -152,28 +175,12 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("the comparison demo links views and keeps Actual pixels aligned", async ({
-  page,
-  browser,
-}) => {
-  await openDemo(page);
-  const panes = page.locator(".pan-zoom-demo__pane");
-  const images = panes.locator("img");
-  const transforms = () =>
-    images.evaluateAll((nodes) => nodes.map((node) => (node as HTMLImageElement).style.transform));
-  const fittedWidth = async () => (await measureImages(images.first()))[0]!.fittedWidth;
+test("the comparison demo links, separates, and fits its views", async ({ page }) => {
+  const { panes, images, boxes, link, transforms } = await openComparisonDemo(page);
   const identity = [
     { scale: 1, offsetX: 0, offsetY: 0 },
     { scale: 1, offsetX: 0, offsetY: 0 },
   ];
-
-  const boxes = await panes.evaluateAll((elements) =>
-    elements.map((element) => {
-      const rect = element.getBoundingClientRect();
-      return { x: rect.x, y: rect.y };
-    }),
-  );
-  const link = page.getByRole("switch", { name: "Link views" });
   await expect(link).toBeChecked();
   await link.uncheck();
   const initial = await transforms();
@@ -212,8 +219,11 @@ test("the comparison demo links views and keeps Actual pixels aligned", async ({
   const panned = await transforms();
   expect(panned[0]).not.toBe(fitted[0]);
   expect(panned[1]).toBe(panned[0]);
-  await link.uncheck();
+});
 
+test("Actual pixels stays native and preserves view centers", async ({ page, browser }) => {
+  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
+  await link.uncheck();
   for (const [width, dpr] of [
     [80, 4],
     [6000, 0.5],

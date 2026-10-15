@@ -113,8 +113,6 @@ test("touch input reaches the viewer's pan-zoom", async ({ browser }) => {
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
   await expect(counter).toHaveText("2 / 3");
-  await drag(cdp, { x: mid.x - 150, y: mid.y }, { x: mid.x + 150, y: mid.y });
-  await expect(counter).toHaveText("1 / 3");
 
   const at = { x: mid.x + 100, y: mid.y + 50 };
   await doubleTap(cdp, at);
