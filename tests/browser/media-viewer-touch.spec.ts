@@ -151,7 +151,7 @@ test("double-tap zooms in at the tap, and again resets", async ({ browser }) => 
   await close();
 });
 
-test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
+test("a gradual two-finger pinch reaches twice the scale", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
