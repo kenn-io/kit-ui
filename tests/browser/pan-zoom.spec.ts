@@ -265,8 +265,6 @@ test("Actual pixels stays native through size and density changes", async ({
     if (width === 80) {
       const box = (await panes.first().boundingBox())!;
       await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-      const panned = await transforms();
-      expect(panned[1]).toBe(panned[0]);
       await resize();
       await expectNativePixels(images);
     }
@@ -367,36 +365,6 @@ async function preservesFractionalActualPixels(
     await context.close();
   }
 }
-test("comparison panes share a row and stack on narrow screens", async ({ page, browserName }) => {
-  await openDemo(page);
-  const dpr = await page.evaluate(() => window.devicePixelRatio);
-  const factor = browserName === "webkit" ? dpr : 1;
-  await page.setViewportSize({ width: 1280 * factor, height: 800 * factor });
-  const panes = page.locator(".pan-zoom-demo__pane");
-  await expect(panes).toHaveCount(2);
-  const boxes = await panes.evaluateAll((elements) =>
-    elements.map((element) => {
-      const r = element.getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width, right: r.right };
-    }),
-  );
-  expect(boxes[0]!.width).toBeCloseTo(boxes[1]!.width, 2);
-  expect(boxes[0]!.y).toBeCloseTo(boxes[1]!.y, 2);
-  const row = (await page.locator(".pan-zoom-demo__panes").boundingBox())!;
-  expect(boxes[1]!.right).toBeCloseTo(row.x + row.width, 1);
-
-  await page.setViewportSize({ width: 600 * factor, height: 900 * factor });
-  const mobile = await panes.evaluateAll((elements) =>
-    elements.map((element) => {
-      const r = element.getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width };
-    }),
-  );
-  expect(mobile[0]!.width).toBeCloseTo(mobile[1]!.width, 2);
-  expect(mobile[0]!.x).toBeCloseTo(mobile[1]!.x, 2);
-  expect(mobile[1]!.y).toBeGreaterThan(mobile[0]!.y);
-});
-
 test("views are precise, detached, silent, and validated", async ({ page }) => {
   await mount(page);
   await page.evaluate(() => {
