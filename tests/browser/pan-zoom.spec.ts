@@ -78,7 +78,9 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("demo panes size actual pixels, link view changes, and Fit", async ({ page }) => {
+test("demo panes size actual pixels, link views, and preserve the center across density changes", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     const match = window.matchMedia.bind(window);
     window.matchMedia = (query) => {
@@ -91,39 +93,83 @@ test("demo panes size actual pixels, link view changes, and Fit", async ({ page 
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
-  for (const [index, label] of [
-    [0, "Large"],
-    [1, "Small"],
+  const density = async (value: number) => {
+    await page.evaluate((value) => {
+      Object.defineProperty(window, "devicePixelRatio", { value, configurable: true });
+      window.resolutionQuery.dispatchEvent(new Event("change"));
+    }, value);
+    await expect(page.locator("output")).toContainText(`DPR ${value}`);
+  };
+  for (const [width, dpr] of [
+    [80, 4],
+    [6000, 0.5],
   ] as const) {
-    await page.getByRole("button", { name: `${label} at actual pixels` }).click();
+    await page.getByRole("button", { name: "Fit", exact: true }).click();
+    await panes.locator("img").evaluateAll((images, width) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = width * 0.6;
+      const src = canvas.toDataURL();
+      images.forEach((image) => {
+        image.src = src;
+      });
+    }, width);
+    await expect
+      .poll(() =>
+        panes
+          .locator("img")
+          .evaluateAll(
+            (images, width) =>
+              images.every((image) => image.complete && image.naturalWidth === width),
+            width,
+          ),
+      )
+      .toBe(true);
+    await density(dpr);
+    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
+    const scale = width / (240 * dpr);
     const sizing = await panes
-      .nth(index)
+      .first()
       .locator("img")
-      .evaluate((image: HTMLImageElement) => ({
-        rendered: image.getBoundingClientRect().width,
-        expected: image.naturalWidth / devicePixelRatio,
-      }));
-    expect(sizing.rendered).toBeCloseTo(sizing.expected, 3);
-    const before = await transforms();
-    expect(before[1]).toBe(before[0]);
-    const box = (await panes.nth(index).boundingBox())!;
+      .evaluate((image: HTMLImageElement) => image.getBoundingClientRect().width);
+    expect(sizing).toBeCloseTo(width / dpr, 3);
+    // Both attachments share bounds that include defaults and actual-pixel sizing.
+    for (const [index, deltaY, limit] of [
+      [0, -10000, Math.max(8, scale)],
+      [1, 10000, Math.min(0.4, scale)],
+    ] as const) {
+      await panes.nth(index).dispatchEvent("wheel", { deltaY });
+      const linked = await transforms();
+      expect(linked[1]).toBe(linked[0]);
+      expect(Number(linked[0]!.match(/scale\(([^)]+)\)/)![1])).toBeCloseTo(limit, 5);
+    }
+    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
+    const box = (await panes.first().boundingBox())!;
     await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-    const after = await transforms();
-    expect(after[1]).toBe(after[0]);
-    expect(after[0]).not.toBe(before[0]);
-    await panes.nth(index).dispatchEvent(index === 0 ? "dblclick" : "wheel", {
+    const panned = await transforms();
+    expect(panned[1]).toBe(panned[0]);
+    const nextDpr = dpr === 4 ? 2 : 1;
+    await density(nextDpr);
+    const linked = await transforms();
+    expect(linked[1]).toBe(linked[0]);
+    const matrix = await panes
+      .first()
+      .locator("img")
+      .evaluate((image) => {
+        const m = new DOMMatrix(image.style.transform);
+        return { scale: m.a, x: m.e, y: m.f };
+      });
+    expect(matrix.scale).toBeCloseTo(width / (240 * nextDpr), 5);
+    expect(matrix.x).toBeCloseTo((30 * dpr) / nextDpr, 5);
+    expect(matrix.y).toBeCloseTo((40 * dpr) / nextDpr, 5);
+    await panes.first().dispatchEvent(dpr === 4 ? "wheel" : "dblclick", {
       clientX: box.x + 120,
       clientY: box.y + 72,
       deltaY: -100,
     });
     const manual = await transforms();
-    expect(manual[0]).not.toBe(after[0]);
-    const deviceScaleFactor = index === 0 ? 2 : 1;
-    await page.evaluate((value) => {
-      Object.defineProperty(window, "devicePixelRatio", { value, configurable: true });
-      window.resolutionQuery.dispatchEvent(new Event("change"));
-    }, deviceScaleFactor);
-    await expect(page.locator("output")).toContainText(`DPR ${deviceScaleFactor}`);
+    expect(manual[0]).not.toBe(linked[0]);
+    await density(dpr);
     expect(await transforms()).toEqual(manual);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
@@ -301,6 +347,20 @@ test("swipes respect scale and axis", async ({ page }) => {
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
   expect((await state(page)).view).toEqual({ scale: 2.5, offsetX: -70, offsetY: 0 });
+  for (const change of ["reset", "external", "wheel"]) {
+    await setView(page, { scale: change === "reset" ? 2.5 : 1, offsetX: 0, offsetY: 0 });
+    await touch(page, "pointerdown", 1, 250, 200);
+    await touch(page, "pointermove", 1, 180, 200);
+    if (change === "reset") await page.evaluate(() => window.fixture.controller.reset());
+    else if (change === "external") {
+      await setView(page, { scale: 2.5, offsetX: 0, offsetY: 0 });
+      await setView(page, { scale: 1, offsetX: 0, offsetY: 0 });
+    } else {
+      await page.locator("#fixture").dispatchEvent("wheel", { deltaY: -100 });
+    }
+    await touch(page, "pointerup", 1, 180, 200);
+    expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
+  }
 });
 
 test("double clicks and taps anchor and toggle; duplicate clicks and moved taps are ignored", async ({

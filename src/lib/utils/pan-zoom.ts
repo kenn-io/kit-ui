@@ -94,6 +94,7 @@ export function attachPanZoom(
     offsetY: number;
     multi: boolean;
     moved: boolean;
+    swipeEligible: boolean;
   } | null = null;
   let lastTap: { x: number; y: number; time: number } | null = null;
   // When the pointer path last handled a double tap, so the dblclick the
@@ -115,7 +116,10 @@ export function attachPanZoom(
   const apply = (view: PanZoomView): boolean => {
     if (view.scale === scale && view.offsetX === offsetX && view.offsetY === offsetY) return false;
     ({ scale, offsetX, offsetY } = view);
-    if (gesture) Object.assign(gesture, view);
+    if (gesture) {
+      Object.assign(gesture, view);
+      if (!atRest(scale)) gesture.swipeEligible = false;
+    }
     return true;
   };
 
@@ -171,6 +175,7 @@ export function attachPanZoom(
           offsetY,
           multi: false,
           moved: false,
+          swipeEligible: atRest(scale),
         };
       } else if (gesture) {
         gesture.multi = true;
@@ -257,7 +262,8 @@ export function attachPanZoom(
     const dy = event.clientY - start.y;
     if (
       options.onSwipe &&
-      atRest(start.scale) &&
+      start.swipeEligible &&
+      atRest(scale) &&
       Math.abs(dx) >= SWIPE_MIN &&
       Math.abs(dx) > Math.abs(dy) * SWIPE_AXIS_RATIO
     ) {

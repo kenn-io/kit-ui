@@ -11,18 +11,21 @@ Set its transform origin to its center.
 ```ts
 import { attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
 
-const limits = { minScale: 0.1, maxScale: 32 };
+const quarterTurn = rotation % 180 !== 0;
+const displayW = quarterTurn ? naturalH : naturalW;
+const displayH = quarterTurn ? naturalW : naturalH;
+const fittedW = Math.min(boxW, (boxH * displayW) / displayH);
+const scale = displayW / (fittedW * devicePixelRatio);
+const limits = {
+  minScale: Math.min(0.4, scale, currentView.scale),
+  maxScale: Math.max(8, scale, currentView.scale),
+};
 const right = attachPanZoom(rightViewport, rightImage, limits);
 const left = attachPanZoom(leftViewport, leftImage, {
   ...limits,
   onChange: (view: PanZoomView) => right.setView(view),
 });
 
-const quarterTurn = rotation % 180 !== 0;
-const displayW = quarterTurn ? naturalH : naturalW;
-const displayH = quarterTurn ? naturalW : naturalH;
-const fittedW = Math.min(boxW, (boxH * displayW) / displayH);
-const scale = displayW / (fittedW * devicePixelRatio);
 left.setView({ scale, offsetX: 0, offsetY: 0 });
 right.setView(left.getView());
 const view = left.getView();
@@ -53,7 +56,13 @@ original dimensions for 90° and 270° turns. `fittedW` accounts for letterboxin
 `clientWidth` and `clientHeight` include padding, so subtract it before using
 them as content dimensions; the demo images have no padding or border.
 `offsetWidth` includes letterboxing and produces the wrong scale. Choose
-bounds that include the resulting scale and recompute it when DPR changes. Apps comparing
+shared bounds that include the defaults, actual-pixel scale, and current scale,
+as above. After image load or a density change, destroy and reattach both
+controllers with the new shared bounds, then restore the view. While actual
+pixels remains selected, recompute scale and multiply both offsets by
+`(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same
+image point centered. With a fixed fitted width, this is `newScale / oldScale`.
+Manual scale changes clear that selection; panning preserves it. Apps comparing
 different image sizes map offsets and scale to their own image coordinates.
 
 Scales within 0.1% of 1 count as resting for touch paging and double-tap zoom.
@@ -62,6 +71,9 @@ settles a near-1 scale to exactly 1 only when it differs from the gesture's
 saved scale. Near-1 wheel residue keeps its precise scale until reset or a
 later zoom. A changed `setView()` or `reset()` replaces the active gesture's
 saved view for cancellation and settling; an equal echo leaves it alone.
+Paging requires a gesture that started at rest and ends at rest. Applying a
+zoomed view during the gesture disables paging, even if a later reset returns
+it to rest.
 
 ## Clipboard
 
