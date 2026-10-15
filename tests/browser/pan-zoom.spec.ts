@@ -77,7 +77,7 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("demo panes link view changes and Fit", async ({ page }) => {
+test("demo panes size actual pixels, link view changes, and Fit", async ({ page }) => {
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
@@ -86,6 +86,14 @@ test("demo panes link view changes and Fit", async ({ page }) => {
     [1, "Small"],
   ] as const) {
     await page.getByRole("button", { name: `${label} at actual pixels` }).click();
+    const sizing = await panes
+      .nth(index)
+      .locator("img")
+      .evaluate((image: HTMLImageElement) => ({
+        rendered: image.getBoundingClientRect().width,
+        expected: image.naturalWidth / devicePixelRatio,
+      }));
+    expect(sizing.rendered).toBeCloseTo(sizing.expected, 3);
     const before = await transforms();
     expect(before[1]).toBe(before[0]);
     const box = (await panes.nth(index).boundingBox())!;
@@ -279,35 +287,9 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
   expect((await state(page)).view).toEqual({ scale: 2.5, offsetX: -150, offsetY: -75 });
   await page.locator("#fixture").dispatchEvent("dblclick", { clientX: 300, clientY: 250 });
   expect((await state(page)).view).toEqual({ scale: 1, offsetX: 0, offsetY: 0 });
-  await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-  const { anchored, afterClick } = await page.evaluate(() => {
-    const viewport = document.querySelector("#fixture")!;
-    for (const type of ["pointerdown", "pointerup", "pointerdown", "pointerup"]) {
-      viewport.dispatchEvent(
-        new PointerEvent(type, {
-          pointerId: 1,
-          pointerType: "touch",
-          isPrimary: true,
-          clientX: 300,
-          clientY: 250,
-          bubbles: true,
-        }),
-      );
-    }
-    const anchored = window.fixture.controller.getView();
-    viewport.dispatchEvent(
-      new MouseEvent("dblclick", { clientX: 300, clientY: 250, bubbles: true }),
-    );
-    return { anchored, afterClick: window.fixture.controller.getView() };
-  });
-  expect(anchored.scale).toBe(2.5);
-  expect(anchored.offsetX).toBeCloseTo(100 * (1 - 2.5 / NEAR_ONE), 10);
-  expect(anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
-  expect(afterClick).toEqual(anchored);
-  expect((await state(page)).zoomed).toBe("true");
-  for (const scenario of ["release-away", "tap-drag", "tap-pinch-tap"]) {
+  for (const scenario of ["double-tap", "release-away", "tap-drag", "tap-pinch-tap"]) {
     await mount(page);
-    const scale = await page.evaluate(
+    const result = await page.evaluate(
       ({ scenario, initialScale }) => {
         window.fixture.controller.setView({ scale: initialScale, offsetX: 0, offsetY: 0 });
         const viewport = document.querySelector("#fixture")!;
@@ -332,7 +314,15 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
           fire("pointermove", 1, 200, 200);
           fire("pointerup", 1, 200, 200);
         };
-        if (scenario === "release-away") {
+        if (scenario === "double-tap") {
+          tapAt(300, 250);
+          tapAt(300, 250);
+          const anchored = window.fixture.controller.getView();
+          viewport.dispatchEvent(
+            new MouseEvent("dblclick", { clientX: 300, clientY: 250, bubbles: true }),
+          );
+          return { anchored, view: window.fixture.controller.getView() };
+        } else if (scenario === "release-away") {
           fire("pointerdown", 1, 200, 200);
           fire("pointerup", 1, 200, 220);
           tapAt(200, 220);
@@ -348,11 +338,19 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
           fire("pointerup", 1, 150, 200);
           tapAt(200, 200);
         }
-        return window.fixture.controller.getView().scale;
+        return { anchored: null, view: window.fixture.controller.getView() };
       },
       { scenario, initialScale: NEAR_ONE },
     );
-    expect(scale).toBe(scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE);
+    if (result.anchored) {
+      expect(result.anchored.scale).toBe(2.5);
+      expect(result.anchored.offsetX).toBeCloseTo(100 * (1 - 2.5 / NEAR_ONE), 10);
+      expect(result.anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
+      expect(result.view).toEqual(result.anchored);
+      expect((await state(page)).zoomed).toBe("true");
+    } else {
+      expect(result.view.scale).toBe(scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE);
+    }
   }
 });
 
