@@ -178,10 +178,13 @@ test("demo panes size actual pixels, link views, and preserve the center across 
     expect(await transforms()).toEqual(manual);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
-  expect(await transforms()).toEqual([
-    "translate(0px, 0px) scale(1)",
-    "translate(0px, 0px) scale(1)",
-  ]);
+  for (const transform of await transforms()) {
+    const view = await page.evaluate((transform) => {
+      const matrix = new DOMMatrix(transform);
+      return { scale: matrix.a, x: matrix.e, y: matrix.f };
+    }, transform);
+    expect(view).toEqual({ scale: 1, x: 0, y: 0 });
+  }
 });
 
 test("views are precise, detached, silent, and validated", async ({ page }) => {

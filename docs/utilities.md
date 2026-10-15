@@ -62,6 +62,7 @@ them as content dimensions; the demo images have no padding or border.
 shared bounds that include the defaults, actual-pixel scale, and current scale,
 as above. After image load, pane resize, or a density change, destroy and
 reattach both controllers with the new shared bounds, then restore the view.
+Reattachment ends any active drag or pinch.
 Keep manual scale or recompute scale while actual pixels remains selected.
 Multiply both offsets by
 `(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same
@@ -69,15 +70,12 @@ image point centered. With a fixed fitted width, this is `newScale / oldScale`.
 Manual scale changes clear that selection; panning preserves it. Apps comparing
 different image sizes map offsets and scale to their own image coordinates.
 
-Scales within 0.1% of 1 count as resting for touch paging and double-tap zoom.
-Mouse and one-finger drags preserve their precise scale. A multi-touch release
-settles a near-1 scale to exactly 1 only when it differs from the gesture's
-saved scale. Near-1 wheel residue keeps its precise scale until reset or a
-later zoom. A changed `setView()` or `reset()` replaces the active gesture's
-saved view for cancellation and settling; an equal echo leaves it alone.
-Paging requires a gesture that started at rest and ends at rest. Applying a
-zoomed view during the gesture disables paging, even if a later reset returns
-it to rest.
+Scales within 0.1% of 1 count as resting for paging and double-tap zoom.
+Only a pinch that changed scale settles a near-1 scale to exactly 1 on release.
+A changed `setView()` or `reset()` replaces the gesture's cancellation and
+settling destination; an equal echo preserves it. `setView()` stays silent.
+Paging requires starting and ending at rest. Applying a zoomed view disables
+paging for that gesture, even after reset.
 
 ## Clipboard
 

@@ -58,7 +58,9 @@ test("wheel zoom stays vector-backed, and Reset clears zoom and pan", async ({ p
   await page.mouse.move(cursor.x + 30, cursor.y + 20);
   await page.mouse.up();
   const panned = await transform();
-  expect([panned.x, panned.y]).not.toEqual([zoomed.x, zoomed.y]);
+  expect(panned.x).toBeCloseTo(zoomed.x + 30, 2);
+  expect(panned.y).toBeCloseTo(zoomed.y + 20, 2);
+  expect(panned.scale).toBe(zoomed.scale);
 
   await viewer.getByRole("button", { name: "Reset diagram view" }).click();
   await expect.poll(transform).toEqual({ scale: 1, x: 0, y: 0 });

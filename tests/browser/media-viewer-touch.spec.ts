@@ -152,6 +152,58 @@ test("a pinch out and back settles at rest so the next swipe pages", async ({ br
   await close();
 });
 
+test("drags and pinches break double-tap eligibility, and pinch anchors at the fingers", async ({
+  browser,
+}) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const pan = page.locator(".kit-media-viewer__pan");
+  const mid = await center(page.locator(".kit-media-viewer__viewport"));
+  const tap = async () => {
+    await touch(cdp, "touchStart", [mid]);
+    await touch(cdp, "touchEnd", []);
+  };
+  const outAndBack = async () => {
+    await touch(cdp, "touchStart", [mid]);
+    await touch(cdp, "touchMove", [{ x: mid.x, y: mid.y + 40 }]);
+    await touch(cdp, "touchMove", [mid]);
+    await touch(cdp, "touchEnd", []);
+  };
+  for (const gestures of [
+    [tap, outAndBack],
+    [outAndBack, tap],
+  ]) {
+    await page.getByRole("button", { name: "Reset view" }).tap();
+    await page.waitForTimeout(350);
+    for (const gesture of gestures) await gesture();
+    await page.waitForTimeout(150);
+    expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
+  }
+
+  await page.waitForTimeout(350);
+  await tap();
+  await twoFingers(
+    cdp,
+    [
+      { x: mid.x + 50, y: mid.y + 50 },
+      { x: mid.x + 150, y: mid.y + 50 },
+    ],
+    [
+      { x: mid.x, y: mid.y + 50 },
+      { x: mid.x + 200, y: mid.y + 50 },
+    ],
+  );
+  const pinched = await transformOf(pan);
+  expect(pinched.scale).toBeCloseTo(2, 1);
+  expect(pinched.x).toBeCloseTo(-100, 0);
+  expect(pinched.y).toBeCloseTo(-50, 0);
+  await tap();
+  await page.waitForTimeout(150);
+  expect(await transformOf(pan)).toEqual(pinched);
+  await close();
+});
+
 test("on a phone the controls stay apart and tappable, and the backdrop closes", async ({
   browser,
 }) => {
