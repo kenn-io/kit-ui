@@ -241,20 +241,23 @@ test("each changed input reports one completed view, including clamped pinches t
     view: { scale: 1, offsetX: 0, offsetY: 0 },
     changes: 4,
   });
-  await page.mouse.dblclick(200, 200);
-  expect(await state(page)).toMatchObject({ view: { scale: 2.5 }, changes: 5 });
+  await page.locator("#fixture").dispatchEvent("dblclick", { clientX: 300, clientY: 250 });
+  expect(await state(page)).toMatchObject({
+    view: { scale: 2.5, offsetX: -150, offsetY: -75 },
+    changes: 5,
+  });
   await page.evaluate(() => window.fixture.controller.reset());
   await touch(page, "pointerdown", 1, 150, 200);
   await touch(page, "pointerdown", 2, 250, 200);
   for (const [x, change] of [
-    [300, 6],
-    [300, 6],
-    [350, 7],
+    [300, 7],
+    [300, 7],
+    [350, 8],
   ] as const) {
     await touch(page, "pointermove", 2, x, 200);
     const { view, changes } = await state(page);
     const last = await page.evaluate(() => window.fixture.changes.at(-1));
-    expect(changes).toBe(change + 1);
+    expect(changes).toBe(change);
     expect(last).toEqual(view);
   }
   expect((await state(page)).view.scale).toBeCloseTo(2, 10);
@@ -282,6 +285,12 @@ test("a near-1 view keeps its scale through a drag, rests, pages, and double-tap
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
   expect((await state(page)).view.scale).toBe(NEAR_ONE);
+  // Horizontal distance alone reaches the swipe threshold; the vertical axis rejects it.
+  await touch(page, "pointerdown", 1, 150, 120);
+  await touch(page, "pointermove", 1, 210, 280);
+  await touch(page, "pointerup", 1, 210, 280);
+  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
+  await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
   await page.evaluate(() => {
     const viewport = document.querySelector("#fixture")!;
     for (const type of ["pointerdown", "pointerup", "pointerdown", "pointerup"]) {
@@ -290,14 +299,23 @@ test("a near-1 view keeps its scale through a drag, rests, pages, and double-tap
           pointerId: 1,
           pointerType: "touch",
           isPrimary: true,
-          clientX: 200,
-          clientY: 200,
+          clientX: 300,
+          clientY: 250,
           bubbles: true,
         }),
       );
     }
   });
-  expect(await state(page)).toMatchObject({ view: { scale: 2.5 }, zoomed: "true" });
+  const anchored = (await state(page)).view;
+  expect(anchored.scale).toBe(2.5);
+  expect(anchored.offsetX).toBeCloseTo(100 * (1 - 2.5 / NEAR_ONE), 10);
+  expect(anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
+  expect((await state(page)).zoomed).toBe("true");
+  await touch(page, "pointerdown", 1, 250, 200);
+  await touch(page, "pointermove", 1, 180, 200);
+  await touch(page, "pointerup", 1, 180, 200);
+  expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1]);
+  expect((await state(page)).view).toEqual({ ...anchored, offsetX: anchored.offsetX - 70 });
 });
 
 test("only a pinch that changed scale settles at 1 on release", async ({ page }) => {

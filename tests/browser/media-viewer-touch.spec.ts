@@ -106,7 +106,7 @@ function transformOf(pan: Locator) {
   });
 }
 
-test("a swipe pages the viewer; once zoomed, a swipe pans instead", async ({ browser }) => {
+test("left and right swipes page the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -120,66 +120,24 @@ test("a swipe pages the viewer; once zoomed, a swipe pans instead", async ({ bro
   await drag(cdp, { x: mid.x - 150, y: mid.y }, { x: mid.x + 150, y: mid.y });
   await expect(counter).toHaveText("1 / 3");
 
-  // A mostly vertical drag is a pan, not a swipe.
-  await drag(cdp, { x: mid.x, y: mid.y + 100 }, { x: mid.x + 40, y: mid.y - 100 });
-  await expect(counter).toHaveText("1 / 3");
-
-  await page.getByRole("button", { name: "Reset view" }).tap();
-  await doubleTap(cdp, mid);
-  await expect
-    .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
-    .toBe(2.5);
-  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
-  await expect(counter).toHaveText("1 / 3");
   await close();
 });
 
-test("double-tap zooms in at the tap, and again resets", async ({ browser }) => {
+test("only a still, quick touch counts toward a double tap", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
   const pan = page.locator(".kit-media-viewer__pan");
+  const reset = page.getByRole("button", { name: "Reset view" });
   const mid = await center(page.locator(".kit-media-viewer__viewport"));
+  const scale = async () => (await transformOf(pan)).scale;
+  const outAndBack = async () => {
+    await touch(cdp, "touchStart", [mid]);
+    await touch(cdp, "touchMove", [{ x: mid.x, y: mid.y + 40 }]);
+    await touch(cdp, "touchMove", [mid]);
+    await touch(cdp, "touchEnd", []);
+  };
 
-  // Off-center, so the zoom must also shift the content to keep the
-  // tapped point under the finger.
-  await doubleTap(cdp, { x: mid.x + 100, y: mid.y + 50 });
-  await expect.poll(() => transformOf(pan)).toEqual({ scale: 2.5, x: -150, y: -75 });
-
-  await doubleTap(cdp, { x: mid.x + 100, y: mid.y + 50 });
-  await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
-  await close();
-});
-
-test("a gradual two-finger pinch reaches twice the scale", async ({ browser }) => {
-  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
-  const { page, cdp, close } = await touchPage(browser, "media-viewer");
-  await page.getByRole("button", { name: "Open viewer" }).tap();
-  const mid = await center(page.locator(".kit-media-viewer__viewport"));
-
-  // Fingers 100px apart spread to 200px in quarter-pixel steps, the size
-  // real fingers report: twice the scale, with no step lost to rounding.
-  await twoFingers(
-    cdp,
-    [
-      { x: mid.x - 50, y: mid.y },
-      { x: mid.x + 50, y: mid.y },
-    ],
-    [
-      { x: mid.x - 100, y: mid.y },
-      { x: mid.x + 100, y: mid.y },
-    ],
-    200,
-  );
-  await expect
-    .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
-    .toBeCloseTo(2, 1);
-  await close();
-});
-
-test("a release away from the press is no tap toward a double tap", async ({ page }) => {
-  await gotoPage(page, "media-viewer");
-  await page.getByRole("button", { name: "Open viewer" }).click();
   // Pointer events as a browser sends them when it reports no move: the
   // release is the first event to show the finger travelled 20px.
   await page.locator(".kit-media-viewer__viewport").evaluate((viewport) => {
@@ -202,26 +160,9 @@ test("a release away from the press is no tap toward a double tap", async ({ pag
     fire("pointerup", 2, y + 20);
   });
   await page.waitForTimeout(150);
-  const scale = await page
-    .locator(".kit-media-viewer__pan")
-    .evaluate((node) => new DOMMatrix((node as HTMLElement).style.transform).a);
-  expect(scale).toBe(1);
-});
-
-test("only a still, quick touch counts toward a double tap", async ({ browser }) => {
-  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
-  const { page, cdp, close } = await touchPage(browser, "media-viewer");
-  await page.getByRole("button", { name: "Open viewer" }).tap();
-  const pan = page.locator(".kit-media-viewer__pan");
-  const reset = page.getByRole("button", { name: "Reset view" });
-  const mid = await center(page.locator(".kit-media-viewer__viewport"));
-  const scale = async () => (await transformOf(pan)).scale;
-  const outAndBack = async () => {
-    await touch(cdp, "touchStart", [mid]);
-    await touch(cdp, "touchMove", [{ x: mid.x, y: mid.y + 40 }]);
-    await touch(cdp, "touchMove", [mid]);
-    await touch(cdp, "touchEnd", []);
-  };
+  expect(await scale()).toBe(1);
+  await reset.tap();
+  await page.waitForTimeout(350);
 
   // A tap, then a drag that ends where it started: no zoom.
   await tap(cdp, mid);
