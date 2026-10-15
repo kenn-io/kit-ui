@@ -39,10 +39,13 @@
         dismissable({
           owners: () => [menu.triggerElement(), element],
           dismiss: () => menu.closeMenu(false),
-          escapeFocus: menu.triggerElement,
+          escapeFocus: menu.focusReturnElement,
         }),
         autoReposition(() => [menu.triggerElement(), element], positionContent),
       ];
+      // A point-anchored menu belongs to what was under the pointer; once the
+      // page scrolls that target moves away, so close as native menus do.
+      if (menu.anchor) cleanups.push(dismissOnOutsideScroll());
     });
     return () => {
       active = false;
@@ -50,13 +53,41 @@
     };
   });
 
+  function dismissOnOutsideScroll(): () => void {
+    function handleScroll(event: Event): void {
+      if (event.target instanceof Node && element?.contains(event.target)) return;
+      menu.closeMenu(false);
+    }
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }
+
   function positionContent(): void {
-    const trigger = menu.triggerElement();
-    if (!trigger || !element) return;
+    if (!element) return;
     // Fixed offsets and offsetWidth/Height use the menu's unzoomed CSS units.
     // Engines without currentCSSZoom (WebKit's Linux ports) get the
     // pre-zoom-aware maths; dividing by undefined would NaN the whole style.
     const zoom = element.currentCSSZoom ?? 1;
+    const anchor = menu.anchor;
+    if (anchor) {
+      const point = {
+        left: anchor.x / zoom,
+        right: anchor.x / zoom,
+        top: anchor.y / zoom,
+        bottom: anchor.y / zoom,
+      };
+      position = floatingPopoverStyle({
+        trigger: point,
+        viewportWidth: window.innerWidth / zoom,
+        viewportHeight: window.innerHeight / zoom,
+        popoverWidth: element.offsetWidth,
+        popoverHeight: element.offsetHeight,
+        triggerGap: 0,
+      });
+      return;
+    }
+    const trigger = menu.triggerElement();
+    if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
     const triggerRect = new DOMRect(
       rect.x / zoom,
@@ -78,7 +109,7 @@
 
   function leaveMenu(event: KeyboardEvent): void {
     const trigger =
-      menu.triggerElement() ??
+      menu.focusReturnElement() ??
       document.querySelector<HTMLElement>(`[aria-controls="${menu.id}-content"]`);
     const focusable = Array.from(
       document.querySelectorAll<HTMLElement>(
@@ -132,6 +163,7 @@
     tabindex="-1"
     aria-label={ariaLabel}
     onkeydown={handleKeydown}
+    oncontextmenu={menu.anchor ? (event) => event.preventDefault() : undefined}
   >
     {@render children()}
   </div>

@@ -48,7 +48,7 @@ export { default as MenuRadioGroup } from "./components/MenuRadioGroup.svelte";
 export { default as MenuRadioItem } from "./components/MenuRadioItem.svelte";
 export { default as MenuSeparator } from "./components/MenuSeparator.svelte";
 export { default as MenuTrigger } from "./components/MenuTrigger.svelte";
-export type { MenuAlign } from "./components/menu.js";
+export type { MenuAlign, MenuAnchorPoint } from "./components/menu.js";
 export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
 export type { MentionOption, MentionTrigger } from "./components/mention.js";
 export { default as MetricCard } from "./components/MetricCard.svelte";

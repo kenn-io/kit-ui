@@ -12,6 +12,8 @@
     class?: ClassValue;
     /** Decorative leading icon. The icon column shows when any item in the menu passes one. */
     icon?: Snippet;
+    /** Right-aligned secondary text, such as a count or a shortcut hint. */
+    trailing?: Snippet;
     children: Snippet;
   }
 
@@ -23,6 +25,7 @@
     textValue,
     class: className = "",
     icon,
+    trailing,
     children,
   }: Props = $props();
 
@@ -63,6 +66,9 @@
     {@render icon?.()}
   </span>
   {@render children()}
+  {#if trailing}
+    <span class="kit-menu__trailing">{@render trailing()}</span>
+  {/if}
 </button>
 
 <style>
@@ -102,6 +108,20 @@
   .kit-menu__item:focus-visible {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
+  }
+
+  /* The hover fill is too faint to mark keyboard focus alone, so keep the
+     ring, inset, so the active item reads as one block between separators. */
+  .kit-menu__item:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .kit-menu__trailing {
+    margin-left: auto;
+    padding-left: var(--space-7);
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
   }
 
   .kit-menu__item--danger {

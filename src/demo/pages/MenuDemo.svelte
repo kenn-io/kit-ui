@@ -1,6 +1,8 @@
 <script lang="ts">
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
   import MoreHorizontalIcon from "@lucide/svelte/icons/ellipsis";
+  import PencilIcon from "@lucide/svelte/icons/pencil";
+  import CopyIcon from "@lucide/svelte/icons/copy";
   import {
     Menu,
     MenuContent,
@@ -9,11 +11,28 @@
     MenuRadioItem,
     MenuSeparator,
     MenuTrigger,
+    TextInput,
   } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let lastAction = $state("none");
   let daemon = $state("local");
+  let contextMenuOpen = $state(false);
+  let contextMenuAnchor = $state<{ x: number; y: number }>();
+  let contextTarget = $state<HTMLElement>();
+  let fileName = $state("notes.md");
+  let fileNameInput = $state<HTMLInputElement>();
+
+  function startRename(): void {
+    lastAction = "rename";
+    fileNameInput?.select();
+  }
+
+  function openContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    contextMenuAnchor = { x: event.clientX, y: event.clientY };
+    contextMenuOpen = true;
+  }
 </script>
 
 <DemoSection
@@ -127,11 +146,61 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Context menu"
+  description="Pass anchor to open at the pointer instead of below a trigger, and returnFocus to hand focus back to the right-clicked element. The menu flips to stay inside the viewport and closes when the page scrolls."
+  code={`<div tabindex="0" bind:this={target} oncontextmenu={open}>…</div>
+<Menu bind:open anchor={{ x, y }} returnFocus={target}>
+  <MenuContent ariaLabel="File actions">
+    <MenuItem onselect={rename}>
+      {#snippet icon()}<PencilIcon size={14} />{/snippet}
+      Rename
+      {#snippet trailing()}F2{/snippet}
+    </MenuItem>
+  </MenuContent>
+</Menu>`}
+>
+  <div
+    class="menu-demo-context-target"
+    data-testid="menu-context-target"
+    role="button"
+    tabindex="0"
+    bind:this={contextTarget}
+    oncontextmenu={openContextMenu}
+  >
+    Right-click here
+  </div>
+  <TextInput bind:value={fileName} bind:inputEl={fileNameInput} ariaLabel="File name" />
+  <Menu bind:open={contextMenuOpen} anchor={contextMenuAnchor} returnFocus={contextTarget}>
+    <MenuContent ariaLabel="File actions">
+      <MenuItem textValue="Rename" onselect={startRename}>
+        {#snippet icon()}<PencilIcon size={14} />{/snippet}
+        Rename
+        {#snippet trailing()}F2{/snippet}
+      </MenuItem>
+      <MenuItem textValue="Copy path" onselect={() => (lastAction = "copy")}>
+        {#snippet icon()}<CopyIcon size={14} />{/snippet}
+        Copy path
+      </MenuItem>
+    </MenuContent>
+  </Menu>
+</DemoSection>
+
 <style>
   .menu-demo-row {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .menu-demo-context-target {
+    display: grid;
+    place-items: center;
+    height: 96px;
+    border: var(--border-width) dashed var(--border-default);
+    border-radius: var(--radius-sm);
     color: var(--text-muted);
     font-size: var(--font-size-sm);
   }
