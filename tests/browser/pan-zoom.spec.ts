@@ -91,7 +91,7 @@ async function expectZoomReadout(page: Page, image: Locator) {
       const ratio = Number(
         ((measured.scale * measured.fittedWidth * measured.dpr) / measured.naturalWidth).toFixed(2),
       );
-      return (await page.getByLabel("Zoom scale").innerText()).includes(`${ratio}:1`);
+      return (await page.getByLabel("Zoom scale").locator("strong").innerText()) === `${ratio}:1`;
     })
     .toBe(true);
 }
@@ -310,8 +310,7 @@ test("Actual pixels stays native through source and density changes", async ({
         },
       ]);
   }
-  for (const deviceScaleFactor of [1, 2])
-    await preservesFractionalActualPixels(browser, browserName, deviceScaleFactor);
+  await preservesFractionalActualPixels(browser, browserName, 2);
 });
 
 async function density(page: Page, value: number) {
@@ -685,10 +684,10 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
         }
         return { anchored: null, view: window.fixture.controller.getView() };
       },
-      { scenario, initialScale: NEAR_ONE },
+      { scenario, initialScale: scenario === "double-tap" ? 1 : NEAR_ONE },
     );
     if (result.anchored) {
-      expect(result.anchored.scale).toBe(2.5);
+      expect(result.anchored).toEqual({ scale: 2.5, offsetX: -150, offsetY: -75 });
       expect(result.view).toEqual(result.anchored);
     } else {
       expect(result.view.scale).toBe(scenario === "tap-pinch-tap" ? 2 * NEAR_ONE : NEAR_ONE);

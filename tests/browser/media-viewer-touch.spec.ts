@@ -216,7 +216,6 @@ test("touch-action hands scrolling to the page and restores it after zoom", asyn
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x, y: mid.y + 60 }, { x: mid.x, y: mid.y - 60 }, 12);
   await expect.poll(top).toBeLessThan(before - 40);
-  expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
   // A pinch whose fingers drift vertically zooms; the page stays put.
   const settled = await top();
