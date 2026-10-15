@@ -118,7 +118,7 @@ test("swipes page", async ({ browser }) => {
   await close();
 });
 
-test("double-tap zooms in at the tap, and again resets", async ({ browser }) => {
+test("double-tap toggles zoom and a touch pinch zooms the viewer", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
