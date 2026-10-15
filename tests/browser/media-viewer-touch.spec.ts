@@ -77,11 +77,6 @@ async function twoFingers(cdp: CDPSession, from: [Point, Point], to: [Point, Poi
   await release(cdp, to);
 }
 
-async function tap(cdp: CDPSession, at: Point) {
-  await touch(cdp, "touchStart", [at]);
-  await touch(cdp, "touchEnd", []);
-}
-
 async function doubleTap(cdp: CDPSession, at: Point) {
   for (let tap = 0; tap < 2; tap += 1) {
     await touch(cdp, "touchStart", [at]);

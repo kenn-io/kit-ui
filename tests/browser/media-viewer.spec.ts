@@ -46,7 +46,7 @@ test("pages with buttons and arrow keys, wrapping at the ends", async ({ page })
   await expect(open).toBeFocused();
 });
 
-test("paging resets pan and zoom", async ({ page }) => {
+test("Reset, paging, and same-index item replacement reset pan and zoom", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
   const pan = page.locator(".kit-media-viewer__pan");
   const scale = () => pan.evaluate((node) => new DOMMatrix(node.style.transform).a);
@@ -64,6 +64,7 @@ test("paging resets pan and zoom", async ({ page }) => {
   await page.keyboard.press("ArrowRight");
   await expect.poll(scale).toBe(1);
   await page.keyboard.press("Escape");
+  await expect(viewer(page)).toHaveCount(0);
   await page.evaluate(async (itemsSource) => {
     const { mountMediaViewer } =
       await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");

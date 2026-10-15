@@ -132,7 +132,9 @@ for (const deviceScaleFactor of [1, 2, 3]) {
   });
 }
 
-test("views are precise, detached, silent, and validated", async ({ page }) => {
+test("views are detached, silent, validated, and preserve gradual-wheel precision", async ({
+  page,
+}) => {
   await mount(page);
   await page.evaluate(() => {
     const { controller } = window.fixture;
@@ -152,6 +154,24 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
     changes: 0,
     zoomed: "true",
   });
+  await page.evaluate(() => window.fixture.controller.reset());
+  // Each step alone is under 0.1% of zoom.
+  await page.locator("#fixture").evaluate((element) => {
+    const r = element.getBoundingClientRect();
+    for (let i = 0; i < 40; i += 1) {
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: -0.5,
+          clientX: r.left + r.width / 2,
+          clientY: r.top + r.height / 2,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  });
+  expect((await state(page)).view.scale).toBeGreaterThan(1.02);
+  expect((await state(page)).zoomed).toBe("true");
 });
 
 test("setters and gestures share scale limits, and invalid limits use defaults", async ({
@@ -262,27 +282,9 @@ test("each changed input reports one completed view, including clamped pinches t
     view: { scale: 8, offsetX: 25, offsetY: 15 },
     changes: 9,
   });
-  await page.evaluate(() => window.fixture.controller.reset());
-  // Each step alone is under 0.1% of zoom.
-  await page.locator("#fixture").evaluate((element) => {
-    const r = element.getBoundingClientRect();
-    for (let i = 0; i < 40; i += 1) {
-      element.dispatchEvent(
-        new WheelEvent("wheel", {
-          deltaY: -0.5,
-          clientX: r.left + r.width / 2,
-          clientY: r.top + r.height / 2,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    }
-  });
-  expect((await state(page)).view.scale).toBeGreaterThan(1.02);
-  expect((await state(page)).zoomed).toBe("true");
 });
 
-test("a near-1 view keeps its scale through a drag, rests, pages, and double-taps in", async ({
+test("swipes respect scale and direction; double taps suppress clicks and reject moved taps", async ({
   page,
 }) => {
   await mount(page);
