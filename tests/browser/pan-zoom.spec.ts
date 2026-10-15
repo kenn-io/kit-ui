@@ -235,11 +235,8 @@ test("the comparison demo links, separates, and fits its views", async ({ page }
   expect(panned[1]).toBe(panned[0]);
 });
 
-test("Actual pixels keeps native sizing, centers, and its zoom readout", async ({
-  page,
-  browser,
-}) => {
-  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
+test("Actual pixels stays native through source and density changes", async ({ page, browser }) => {
+  const { images, boxes, link } = await openComparisonDemo(page);
   await link.uncheck();
   for (const [width, dpr] of [
     [80, 4],
@@ -279,6 +276,14 @@ test("Actual pixels keeps native sizing, centers, and its zoom readout", async (
     await expectNativePixels(images);
   }
 
+  await preservesFractionalActualPixels(browser);
+});
+
+test("Actual pixels readout follows pane changes and preserves view positions", async ({
+  page,
+}) => {
+  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
+  await link.uncheck();
   await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
   await expectZoomReadout(page, images.first());
   await mouseDrag(
@@ -325,7 +330,6 @@ test("Actual pixels keeps native sizing, centers, and its zoom readout", async (
         },
       ]);
   }
-  await preservesFractionalActualPixels(browser);
 });
 
 async function density(page: Page, value: number) {
@@ -595,6 +599,12 @@ test("swipes respect scale and axis", async ({ page }) => {
   await setView(page, { scale: 2.5, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 250, 200);
   await touch(page, "pointermove", 1, 180, 200);
+  await page.locator("#fixture").dispatchEvent("wheel", {
+    deltaY: 611,
+    clientX: 200,
+    clientY: 200,
+  });
+  await expect.poll(async () => (await state(page)).view.scale).toBeCloseTo(1, 3);
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
   for (const change of ["external", "wheel"]) {
