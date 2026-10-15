@@ -57,9 +57,10 @@ original dimensions for 90° and 270° turns. `fittedW` accounts for letterboxin
 them as content dimensions; the demo images have no padding or border.
 `offsetWidth` includes letterboxing and produces the wrong scale. Choose
 shared bounds that include the defaults, actual-pixel scale, and current scale,
-as above. After image load or a density change, destroy and reattach both
-controllers with the new shared bounds, then restore the view. While actual
-pixels remains selected, recompute scale and multiply both offsets by
+as above. After image load, pane resize, or a density change, destroy and
+reattach both controllers with the new shared bounds, then restore the view.
+Keep manual scale or recompute scale while actual pixels remains selected.
+Multiply both offsets by
 `(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same
 image point centered. With a fixed fitted width, this is `newScale / oldScale`.
 Manual scale changes clear that selection; panning preserves it. Apps comparing

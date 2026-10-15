@@ -103,6 +103,19 @@ export function attachPanZoom(
 
   const getView = (): PanZoomView => ({ scale, offsetX, offsetY });
 
+  const valid = (view: PanZoomView) =>
+    Number.isFinite(view.scale) &&
+    view.scale > 0 &&
+    Number.isFinite(view.offsetX) &&
+    Number.isFinite(view.offsetY);
+
+  const commit = (view: PanZoomView): boolean => {
+    if (!valid(view)) return false;
+    if (view.scale === scale && view.offsetX === offsetX && view.offsetY === offsetY) return false;
+    ({ scale, offsetX, offsetY } = view);
+    return true;
+  };
+
   const updateTransform = (notify = true) => {
     pan.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
     if (atRest(scale)) delete viewport.dataset["zoomed"];
@@ -114,8 +127,7 @@ export function attachPanZoom(
    * the active touch gesture's cancellation destination, so only later
    * movement rolls back; an equal echo leaves the destination alone. */
   const apply = (view: PanZoomView): boolean => {
-    if (view.scale === scale && view.offsetX === offsetX && view.offsetY === offsetY) return false;
-    ({ scale, offsetX, offsetY } = view);
+    if (!commit(view)) return false;
     if (gesture) {
       Object.assign(gesture, view);
       if (!atRest(scale)) gesture.swipeEligible = false;
@@ -124,13 +136,7 @@ export function attachPanZoom(
   };
 
   const setView = (view: PanZoomView) => {
-    if (
-      !Number.isFinite(view.scale) ||
-      view.scale <= 0 ||
-      !Number.isFinite(view.offsetX) ||
-      !Number.isFinite(view.offsetY)
-    )
-      return;
+    if (!valid(view)) return;
     if (apply({ scale: clamp(view.scale), offsetX: view.offsetX, offsetY: view.offsetY }))
       updateTransform(false);
   };
@@ -141,18 +147,24 @@ export function attachPanZoom(
   };
 
   /** Scale around a viewport-center-relative origin without committing. */
-  const scaleAround = (nextScale: number, originX: number, originY: number): boolean => {
+  const scaleAround = (
+    view: PanZoomView,
+    nextScale: number,
+    originX: number,
+    originY: number,
+  ): PanZoomView => {
     nextScale = clamp(nextScale);
-    if (nextScale === scale) return false;
-    const scaleRatio = nextScale / scale;
-    offsetX = originX - (originX - offsetX) * scaleRatio;
-    offsetY = originY - (originY - offsetY) * scaleRatio;
-    scale = nextScale;
-    return true;
+    if (nextScale === view.scale) return view;
+    const scaleRatio = nextScale / view.scale;
+    return {
+      scale: nextScale,
+      offsetX: originX - (originX - view.offsetX) * scaleRatio,
+      offsetY: originY - (originY - view.offsetY) * scaleRatio,
+    };
   };
 
   const zoomTo = (nextScale: number, originX: number, originY: number) => {
-    if (scaleAround(nextScale, originX, originY)) updateTransform();
+    if (commit(scaleAround(getView(), nextScale, originX, originY))) updateTransform();
   };
 
   /** Viewport-center-relative coordinates, the origin zoomTo expects. */
@@ -199,9 +211,14 @@ export function attachPanZoom(
     if (pointers.size === 1) {
       pointers.set(event.pointerId, next);
       if (next.x === previous.x && next.y === previous.y) return;
-      offsetX += next.x - previous.x;
-      offsetY += next.y - previous.y;
-      updateTransform();
+      if (
+        commit({
+          scale,
+          offsetX: offsetX + (next.x - previous.x),
+          offsetY: offsetY + (next.y - previous.y),
+        })
+      )
+        updateTransform();
       return;
     }
     const other = Array.from(pointers.entries()).find(([id]) => id !== event.pointerId)?.[1];
@@ -211,14 +228,15 @@ export function attachPanZoom(
     pointers.set(event.pointerId, next);
     // Follow the fingers' midpoint, then scale around it, and commit both
     // as one view. A pinch clamped at a limit still pans.
-    const panned = after.mid.x !== before.mid.x || after.mid.y !== before.mid.y;
-    offsetX += after.mid.x - before.mid.x;
-    offsetY += after.mid.y - before.mid.y;
+    let view = {
+      scale,
+      offsetX: offsetX + (after.mid.x - before.mid.x),
+      offsetY: offsetY + (after.mid.y - before.mid.y),
+    };
     const origin = fromCenter(after.mid.x, after.mid.y);
-    const zoomed =
-      before.distance > 0 &&
-      scaleAround(scale * (after.distance / before.distance), origin.x, origin.y);
-    if (panned || zoomed) updateTransform();
+    if (before.distance > 0)
+      view = scaleAround(view, scale * (after.distance / before.distance), origin.x, origin.y);
+    if (commit(view)) updateTransform();
   };
 
   const endPointer = (event: PointerEvent) => {

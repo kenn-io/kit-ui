@@ -8,7 +8,7 @@ import { gotoPage } from "./helpers.js";
 
 declare global {
   interface Window {
-    fixture: { controller: PanZoom; changes: PanZoomView[]; swipes: number[] };
+    fixture: { controller: PanZoom; linked?: PanZoom; changes: PanZoomView[]; swipes: number[] };
     resolutionQuery: MediaQueryList;
   }
 }
@@ -21,11 +21,12 @@ test.beforeEach(async ({ page }) => {
 
 async function mount(
   page: Page,
-  options: { minScale?: number; maxScale?: number; echo?: boolean } = {},
+  options: { minScale?: number; maxScale?: number; echo?: boolean; link?: boolean } = {},
 ) {
-  await page.evaluate(async ({ echo, ...limits }) => {
+  await page.evaluate(async ({ echo, link, ...limits }) => {
     const { attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
     window.fixture?.controller.destroy();
+    window.fixture?.linked?.destroy();
     document.querySelector("#fixture")?.remove();
     const viewport = document.createElement("div");
     viewport.id = "fixture";
@@ -37,15 +38,19 @@ async function mount(
     document.body.append(viewport);
     const changes: PanZoomView[] = [];
     const swipes: number[] = [];
+    const linked = link
+      ? attachPanZoom(document.createElement("div"), document.createElement("div"), limits)
+      : undefined;
     const controller = attachPanZoom(viewport, pan, {
       ...limits,
       onSwipe: (direction) => swipes.push(direction),
       onChange: (view) => {
         changes.push(view);
+        linked?.setView(view);
         if (echo) controller.setView({ ...view });
       },
     } satisfies PanZoomOptions);
-    window.fixture = { controller, changes, swipes };
+    window.fixture = { controller, linked, changes, swipes };
   }, options);
 }
 
@@ -203,6 +208,62 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
   expect(
     await page.locator("#fixture > div").evaluate((pan) => (pan as HTMLElement).style.transform),
   ).toBe("translate(31.25px, -18.5px) scale(6.34568)");
+});
+
+for (const axis of ["offsetX", "offsetY"] as const) {
+  for (const sign of [1, -1]) {
+    test(`wheel overflow preserves linked views: ${axis}, sign ${sign}`, async ({ page }) => {
+      await mount(page, { link: true });
+      await page.evaluate(
+        ({ axis, sign }) => {
+          const view = { scale: 1, offsetX: 0, offsetY: 0, [axis]: sign * Number.MAX_VALUE };
+          window.fixture.controller.setView(view);
+          window.fixture.linked!.setView(view);
+        },
+        { axis, sign },
+      );
+      const before = await state(page);
+      const transform = await page.locator("#fixture > div").getAttribute("style");
+      await page.locator("#fixture").dispatchEvent("wheel", {
+        deltaY: -100,
+        clientX: 200,
+        clientY: 200,
+      });
+      expect(await state(page)).toEqual(before);
+      expect(await page.locator("#fixture > div").getAttribute("style")).toBe(transform);
+      expect(await page.evaluate(() => window.fixture.linked!.getView())).toEqual(before.view);
+      await page.locator("#fixture").dispatchEvent("wheel", {
+        deltaY: 100,
+        clientX: 200,
+        clientY: 200,
+      });
+      const recovered = await state(page);
+      expect(recovered.changes).toBe(1);
+      expect(recovered.view.scale).toBeLessThan(1);
+      expect(await page.evaluate(() => window.fixture.linked!.getView())).toEqual(recovered.view);
+    });
+  }
+}
+
+test("overflow rejects the whole pinch or drag and later pointer input recovers", async ({
+  page,
+}) => {
+  for (const pinch of [false, true]) {
+    await mount(page);
+    await setView(page, { scale: 1, offsetX: Number.MAX_VALUE, offsetY: 0 });
+    const before = await state(page);
+    const transform = await page.locator("#fixture > div").getAttribute("style");
+    await touch(page, "pointerdown", 1, pinch ? 150 : 0, 200);
+    if (pinch) await touch(page, "pointerdown", 2, 250, 200);
+    await touch(page, "pointermove", pinch ? 2 : 1, pinch ? 350 : Number.MAX_VALUE, 230);
+    expect(await state(page)).toEqual(before);
+    expect(await page.locator("#fixture > div").getAttribute("style")).toBe(transform);
+    await touch(page, "pointermove", pinch ? 2 : 1, pinch ? 250 : Number.MAX_VALUE / 2, 200);
+    const recovered = await state(page);
+    expect(recovered.changes).toBe(1);
+    expect(Number.isFinite(recovered.view.offsetX)).toBe(true);
+    expect(recovered.view.offsetX).toBeLessThan(before.view.offsetX);
+  }
 });
 
 test("wheel zoom anchors and accumulates gradual steps", async ({ page }) => {
