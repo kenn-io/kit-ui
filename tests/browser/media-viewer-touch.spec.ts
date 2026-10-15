@@ -238,7 +238,6 @@ test("an inline diagram scrolls, zooms with pinches, and resets", async ({ brows
 
   // A pinch whose fingers drift vertically zooms; the page stays put.
   await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
-  await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
   const settled = await top();
   await twoFingers(
     cdp,

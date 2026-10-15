@@ -27,7 +27,7 @@ test("renders mermaid fences into pan/zoom viewers", async ({ page }) => {
   await expect(viewer.locator(".kit-mermaid-viewer__button svg.lucide")).toHaveCount(3);
 });
 
-test("wheel zoom keeps the live diagram vector-backed", async ({ page }) => {
+test("wheel zoom and reset keep the live diagram vector-backed", async ({ page }) => {
   const viewport = firstViewer(page).locator(".kit-mermaid-viewer__viewport");
   const pan = firstViewer(page).locator(".kit-mermaid-viewer__pan");
   const svg = pan.locator(":scope > svg");
