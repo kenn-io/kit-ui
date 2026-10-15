@@ -11,13 +11,17 @@ Set its transform origin to its center.
 ```ts
 import { attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
 
-const right = attachPanZoom(rightViewport, rightImage, { maxScale: 16 });
+const limits = { minScale: 0.1, maxScale: 32 };
+const right = attachPanZoom(rightViewport, rightImage, limits);
 const left = attachPanZoom(leftViewport, leftImage, {
-  maxScale: 16,
+  ...limits,
   onChange: (view: PanZoomView) => right.setView(view),
 });
 
-left.setView({ scale: naturalWidth / displayedWidth, offsetX: 0, offsetY: 0 });
+const fittedW = Math.min(boxW, (boxH * naturalW) / naturalH);
+const scale = naturalW / (fittedW * devicePixelRatio);
+left.setView({ scale, offsetX: 0, offsetY: 0 });
+right.setView(left.getView());
 const view = left.getView();
 left.reset();
 left.destroy();
@@ -25,16 +29,32 @@ right.destroy();
 ```
 
 `getView()` returns a detached `{ scale, offsetX, offsetY }`. Offsets are CSS
-pixels relative to the viewport center. Gestures and `reset()` call `onChange`
-with a fresh view. `setView()` applies the view silently so linked viewers
-can update each other without a callback loop. Construction emits no change.
+pixels relative to the viewport center. Each changed gesture input reports
+one completed view through `onChange`, including a pinch that pans and zooms.
+Settling and cancellation report their changed view; `reset()` always reports.
+Construction and `setView()` emit no change, so linked viewers can update each
+other without a callback loop.
 
-Scale retains full precision and is clamped between 0.4 and `maxScale`, which
-defaults to 8. A non-finite maximum or one below 1 uses the default. `setView()`
-ignores a view containing non-finite values or a scale at or below zero.
-For 1:1 sizing, set `maxScale` high enough for the image's natural-to-displayed
-width ratio. Apps comparing different image sizes map offsets and scale to
-their own image coordinates before calling `setView()`.
+Scale retains full precision. `minScale` accepts a finite value above 0 and at
+most 1, otherwise it defaults to 0.4. `maxScale` accepts a finite value at least
+1, otherwise it defaults to 8. Each bound falls back independently and stays
+fixed at attachment time. Gestures and `setView()` clamp to these limits.
+Linked panes need identical limits because `setView()` clamps silently.
+Views containing non-finite values or a scale at or below zero are ignored.
+
+For actual pixels, the example computes one image pixel per physical screen
+pixel. With `object-fit: contain`, `boxW` and `boxH` are the untransformed CSS
+content dimensions; `fittedW` accounts for letterboxing. `offsetWidth` includes
+letterboxing and produces the wrong scale. Choose bounds that
+include the resulting scale and recompute it when DPR changes. Apps comparing
+different image sizes map offsets and scale to their own image coordinates.
+
+Scales within 0.1% of 1 count as resting for touch paging and double-tap zoom.
+Mouse and one-finger drags preserve their precise scale. A multi-touch release
+settles a near-1 scale to exactly 1 only when it differs from the gesture's
+saved scale. Near-1 wheel residue keeps its precise scale until reset or a
+later zoom. A changed `setView()` or `reset()` replaces the active gesture's
+saved view for cancellation and settling; an equal echo leaves it alone.
 
 ## Clipboard
 

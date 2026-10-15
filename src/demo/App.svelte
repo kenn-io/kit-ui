@@ -47,6 +47,7 @@
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
   import NoticeDemo from "./pages/NoticeDemo.svelte";
+  import PanZoomDemo from "./pages/PanZoomDemo.svelte";
   import PageFrameDemo from "./pages/PageFrameDemo.svelte";
   import ProviderBrandDemo from "./pages/ProviderBrandDemo.svelte";
   import DatePickerDemo from "./pages/DatePickerDemo.svelte";
@@ -133,6 +134,7 @@
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "notice", label: "Notice", component: NoticeDemo },
     { id: "page-frame", label: "PageFrame", component: PageFrameDemo },
+    { id: "pan-zoom", label: "Pan and zoom", component: PanZoomDemo },
     { id: "provider-brand", label: "Provider brand", component: ProviderBrandDemo },
     { id: "date-picker", label: "DatePicker", component: DatePickerDemo },
     { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },

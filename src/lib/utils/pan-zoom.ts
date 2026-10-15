@@ -40,8 +40,11 @@ export interface PanZoomOptions {
   /** One-finger touch or pen swipe at scale 1 (not mouse drags): 1 when
    * the finger moved left (show the next item), -1 when it moved right. */
   onSwipe?: (direction: 1 | -1) => void;
-  /** Gestures and reset report their view; setView does not. */
+  /** Each changed gesture input, settle, cancellation, and reset reports
+   * its completed view; construction and setView do not. */
   onChange?: (view: PanZoomView) => void;
+  /** Minimum scale, above 0 and at most 1. Defaults to 0.4 for invalid values. */
+  minScale?: number;
   /** Maximum scale, at least 1. Defaults to 8 for invalid values. */
   maxScale?: number;
 }
@@ -65,8 +68,17 @@ export function attachPanZoom(
   let scale = 1;
   let offsetX = 0;
   let offsetY = 0;
+  const requestedMin = options.minScale ?? MIN_SCALE;
+  const minScale =
+    Number.isFinite(requestedMin) && requestedMin > 0 && requestedMin <= 1
+      ? requestedMin
+      : MIN_SCALE;
   const requestedMax = options.maxScale ?? MAX_SCALE;
   const maxScale = Number.isFinite(requestedMax) && requestedMax >= 1 ? requestedMax : MAX_SCALE;
+  // Scale keeps full precision: a pinch or slow wheel arrives as many tiny
+  // ratios, and rounding each step would discard them. CSS gets the same
+  // precision, so exact image sizing survives.
+  const clamp = (value: number) => Math.min(maxScale, Math.max(minScale, value));
   // Active pointers by id, at their last seen position. One pointer
   // drags; two pinch (zoom around their midpoint) and pan together.
   const pointers = new Map<number, { x: number; y: number }>();
@@ -97,6 +109,16 @@ export function attachPanZoom(
     if (notify) options.onChange?.(getView());
   };
 
+  /** Apply a view from outside the gesture. A changed view also becomes
+   * the active touch gesture's cancellation destination, so only later
+   * movement rolls back; an equal echo leaves the destination alone. */
+  const apply = (view: PanZoomView): boolean => {
+    if (view.scale === scale && view.offsetX === offsetX && view.offsetY === offsetY) return false;
+    ({ scale, offsetX, offsetY } = view);
+    if (gesture) Object.assign(gesture, view);
+    return true;
+  };
+
   const setView = (view: PanZoomView) => {
     if (
       !Number.isFinite(view.scale) ||
@@ -105,27 +127,28 @@ export function attachPanZoom(
       !Number.isFinite(view.offsetY)
     )
       return;
-    scale = clampScale(view.scale, maxScale);
-    offsetX = view.offsetX;
-    offsetY = view.offsetY;
-    updateTransform(false);
+    if (apply({ scale: clamp(view.scale), offsetX: view.offsetX, offsetY: view.offsetY }))
+      updateTransform(false);
   };
 
   const reset = () => {
-    scale = 1;
-    offsetX = 0;
-    offsetY = 0;
+    apply({ scale: 1, offsetX: 0, offsetY: 0 });
     updateTransform();
   };
 
-  const zoomTo = (nextScale: number, originX: number, originY: number) => {
-    nextScale = clampScale(nextScale, maxScale);
-    if (nextScale === scale) return;
+  /** Scale around a viewport-center-relative origin without committing. */
+  const scaleAround = (nextScale: number, originX: number, originY: number): boolean => {
+    nextScale = clamp(nextScale);
+    if (nextScale === scale) return false;
     const scaleRatio = nextScale / scale;
     offsetX = originX - (originX - offsetX) * scaleRatio;
     offsetY = originY - (originY - offsetY) * scaleRatio;
     scale = nextScale;
-    updateTransform();
+    return true;
+  };
+
+  const zoomTo = (nextScale: number, originX: number, originY: number) => {
+    if (scaleAround(nextScale, originX, originY)) updateTransform();
   };
 
   /** Viewport-center-relative coordinates, the origin zoomTo expects. */
@@ -169,9 +192,10 @@ export function attachPanZoom(
     const next = { x: event.clientX, y: event.clientY };
     if (gesture && !gesture.moved && distance(next, gesture) >= TAP_SLOP) gesture.moved = true;
     if (pointers.size === 1) {
+      pointers.set(event.pointerId, next);
+      if (next.x === previous.x && next.y === previous.y) return;
       offsetX += next.x - previous.x;
       offsetY += next.y - previous.y;
-      pointers.set(event.pointerId, next);
       updateTransform();
       return;
     }
@@ -180,14 +204,16 @@ export function attachPanZoom(
     const before = { distance: distance(previous, other), mid: midpoint(previous, other) };
     const after = { distance: distance(next, other), mid: midpoint(next, other) };
     pointers.set(event.pointerId, next);
-    // Follow the fingers' midpoint, then scale around it.
+    // Follow the fingers' midpoint, then scale around it, and commit both
+    // as one view. A pinch clamped at a limit still pans.
+    const panned = after.mid.x !== before.mid.x || after.mid.y !== before.mid.y;
     offsetX += after.mid.x - before.mid.x;
     offsetY += after.mid.y - before.mid.y;
-    updateTransform();
-    if (before.distance > 0) {
-      const origin = fromCenter(after.mid.x, after.mid.y);
-      zoomTo(scale * (after.distance / before.distance), origin.x, origin.y);
-    }
+    const origin = fromCenter(after.mid.x, after.mid.y);
+    const zoomed =
+      before.distance > 0 &&
+      scaleAround(scale * (after.distance / before.distance), origin.x, origin.y);
+    if (panned || zoomed) updateTransform();
   };
 
   const endPointer = (event: PointerEvent) => {
@@ -200,17 +226,19 @@ export function attachPanZoom(
     if (event.type === "pointercancel" && gesture) {
       // The browser took the gesture (e.g. to scroll the page past an
       // inline diagram): undo what its first moves did, and it is no tap.
-      scale = gesture.scale;
-      offsetX = gesture.offsetX;
-      offsetY = gesture.offsetY;
-      updateTransform();
+      const start = gesture;
       gesture = null;
+      if (start.scale !== scale || start.offsetX !== offsetX || start.offsetY !== offsetY) {
+        ({ scale, offsetX, offsetY } = start);
+        updateTransform();
+      }
       lastTap = null;
     }
     if (pointers.size > 0) return;
     delete viewport.dataset["panning"];
-    // A pinch out and back ends a hair off 1: settle it at exactly 1.
-    if (atRest(scale) && scale !== 1) {
+    // A pinch out and back ends a hair off 1: settle it at exactly 1. Drags
+    // keep whatever scale they started from, such as exact image sizing.
+    if (gesture?.multi && scale !== gesture.scale && atRest(scale) && scale !== 1) {
       scale = 1;
       updateTransform();
     }
@@ -321,13 +349,6 @@ function normalizeWheelDelta(event: WheelEvent, viewport: HTMLElement): number {
   if (event.deltaMode === WHEEL_DELTA_PAGE)
     return event.deltaY * (viewport.clientHeight || window.innerHeight || 800);
   return event.deltaY;
-}
-
-// Scale keeps full precision: a pinch or slow wheel arrives as many tiny
-// ratios, and rounding or snapping each step would discard them. Send the
-// same precision to CSS for exact image sizing.
-function clampScale(value: number, maxScale: number): number {
-  return Math.min(maxScale, Math.max(MIN_SCALE, value));
 }
 
 /** Unzoomed for paging, page scroll, and double tap: within 0.1% of 1,

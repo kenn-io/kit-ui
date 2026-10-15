@@ -8,8 +8,11 @@ export interface PanZoomOptions {
     /** One-finger touch or pen swipe at scale 1 (not mouse drags): 1 when
      * the finger moved left (show the next item), -1 when it moved right. */
     onSwipe?: (direction: 1 | -1) => void;
-    /** Gestures and reset report their view; setView does not. */
+    /** Each changed gesture input, settle, cancellation, and reset reports
+     * its completed view; construction and setView do not. */
     onChange?: (view: PanZoomView) => void;
+    /** Minimum scale, above 0 and at most 1. Defaults to 0.4 for invalid values. */
+    minScale?: number;
     /** Maximum scale, at least 1. Defaults to 8 for invalid values. */
     maxScale?: number;
 }
