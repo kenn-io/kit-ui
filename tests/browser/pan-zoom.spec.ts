@@ -262,14 +262,6 @@ test("comparison demo links and fits views; Actual pixels preserves size, readou
     await density(page, dpr);
     await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
     await expectNativePixels(images);
-    if (width === 80) {
-      // A scale-neutral drag must leave Actual pixels selected for the density change below.
-      await mouseDrag(
-        page,
-        [boxes[0]!.x + 120, boxes[0]!.y + 72],
-        [[boxes[0]!.x + 150, boxes[0]!.y + 112]],
-      );
-    }
     await density(page, dpr === 4 ? 2 : 1);
     await expectNativePixels(images);
   }
@@ -587,13 +579,7 @@ test("swipes respect scale and axis", async ({ page }) => {
   await setView(page, { scale: 2.5, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 250, 200);
   await touch(page, "pointermove", 1, 180, 200);
-  // 611 ≈ ln(2.5) / 0.0015, returning the scale to rest before release.
-  await page.locator("#fixture").dispatchEvent("wheel", {
-    deltaY: 611,
-    clientX: 200,
-    clientY: 200,
-  });
-  await expect.poll(async () => (await state(page)).view.scale).toBeCloseTo(1, 3);
+  await setView(page, { scale: 1, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerup", 1, 180, 200);
   expect(await page.evaluate(() => window.fixture.swipes)).toEqual([1, -1]);
   for (const change of ["external", "wheel"]) {
@@ -694,8 +680,13 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
   }
 });
 
-test("only a pinch that changed scale settles at 1 on release", async ({ page }) => {
+test("drags keep scale; changed pinches settle at 1 on release", async ({ page }) => {
   await mount(page);
+  await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
+  await touch(page, "pointerdown", 1, 200, 200);
+  await touch(page, "pointermove", 1, 230, 200);
+  await touch(page, "pointerup", 1, 230, 200);
+  expect((await state(page)).view.scale).toBe(NEAR_ONE);
   await setView(page, { scale: 1, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 150, 200);
   await touch(page, "pointerdown", 2, 250, 200);
