@@ -48,21 +48,25 @@ test("pages with buttons and arrow keys, wrapping at the ends", async ({ page })
 
 test("Reset, paging, and same-index item replacement reset pan and zoom", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
-  const pan = page.locator(".kit-media-viewer__pan");
-  const scale = () => pan.evaluate((node) => new DOMMatrix(node.style.transform).a);
+  // [scale, x, y]; engines differ in how they write an identity transform.
+  const transform = () =>
+    page.locator(".kit-media-viewer__pan").evaluate((node) => {
+      const matrix = new DOMMatrix((node as HTMLElement).style.transform);
+      return [matrix.a, matrix.e, matrix.f];
+    });
 
   await page.locator(".kit-media-viewer__viewport").hover();
   await page.mouse.wheel(0, -300);
-  await expect.poll(scale).toBeGreaterThan(1);
+  await expect.poll(async () => (await transform())[0]!).toBeGreaterThan(1);
 
   await page.getByRole("button", { name: "Reset view" }).click();
-  await expect.poll(scale).toBe(1);
+  await expect.poll(transform).toEqual([1, 0, 0]);
 
   await page.locator(".kit-media-viewer__viewport").hover();
   await page.mouse.wheel(0, -300);
-  await expect.poll(scale).toBeGreaterThan(1);
+  await expect.poll(async () => (await transform())[0]!).toBeGreaterThan(1);
   await page.keyboard.press("ArrowRight");
-  await expect.poll(scale).toBe(1);
+  await expect.poll(transform).toEqual([1, 0, 0]);
   await page.keyboard.press("Escape");
   await expect(viewer(page)).toHaveCount(0);
   await page.evaluate(async (itemsSource) => {
@@ -74,12 +78,6 @@ test("Reset, paging, and same-index item replacement reset pan and zoom", async 
       host.replaceItems([{ ...items[1], alt: "Replacement" }, ...items.slice(1)]);
   }, swatchItems);
   const viewport = page.locator(".kit-media-viewer__viewport");
-  // [scale, x, y]; engines differ in how they write an identity transform.
-  const transform = () =>
-    page.locator(".kit-media-viewer__pan").evaluate((node) => {
-      const matrix = new DOMMatrix((node as HTMLElement).style.transform);
-      return [matrix.a, matrix.e, matrix.f];
-    });
   await viewport.hover();
   await page.mouse.wheel(0, -400);
   await expect.poll(transform).not.toEqual([1, 0, 0]);

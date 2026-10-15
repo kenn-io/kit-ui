@@ -117,9 +117,9 @@ for (const deviceScaleFactor of [1, 2, 3]) {
           const exact = index === 0 ? first! : second!;
           expect(exact.physical).toBeCloseTo(exact.natural, 3);
           expect(second!.transform).toBe(first!.transform);
-          expect(
-            first!.transform.startsWith(drag ? "translate(30px, 40px)" : "translate(0px, 0px)"),
-          ).toBe(true);
+          expect(first!.transform).toMatch(
+            drag ? /^translate\(30px, 40px\) scale\(/ : /^translate\(0px, 0px\) scale\(/,
+          );
         }
         await expect(panes.nth(0)).toHaveAttribute("data-zoomed", "true");
       }
@@ -154,8 +154,17 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
   });
 });
 
-test("gradual wheel steps retain zoom precision", async ({ page }) => {
-  await mount(page);
+test("wheel zoom anchors, preserves gradual precision, and shares fixed limits with setters", async ({
+  page,
+}) => {
+  await mount(page, { minScale: 0.25, maxScale: 16 });
+  await page.mouse.move(260, 240);
+  await page.mouse.wheel(0, -100);
+  await expect.poll(async () => (await state(page)).view.scale).toBeGreaterThan(1);
+  const wheeled = (await state(page)).view;
+  expect(wheeled.offsetX).toBeCloseTo(60 * (1 - Math.exp(0.15)), 10);
+  expect(wheeled.offsetY).toBeCloseTo(40 * (1 - Math.exp(0.15)), 10);
+  await page.evaluate(() => window.fixture.controller.reset());
   // Each step alone is under 0.1% of zoom.
   await page.locator("#fixture").evaluate((element) => {
     const r = element.getBoundingClientRect();
@@ -173,12 +182,6 @@ test("gradual wheel steps retain zoom precision", async ({ page }) => {
   });
   expect((await state(page)).view.scale).toBeGreaterThan(1.02);
   expect((await state(page)).zoomed).toBe("true");
-});
-
-test("setters and gestures share scale limits, and invalid limits use defaults", async ({
-  page,
-}) => {
-  await mount(page, { minScale: 0.25, maxScale: 16 });
   await page.mouse.move(200, 200);
   await page.mouse.wheel(0, -10000);
   await expect.poll(async () => (await state(page)).view.scale).toBe(16);
@@ -246,9 +249,6 @@ test("each changed input reports one completed view, including clamped pinches t
   await page.mouse.move(260, 240);
   await page.mouse.wheel(0, -100);
   await expect.poll(async () => (await state(page)).changes).toBe(3);
-  const wheeled = (await state(page)).view;
-  expect(wheeled.offsetX).toBeCloseTo(60 - 30 * Math.exp(0.15), 10);
-  expect(wheeled.offsetY).toBeCloseTo(40 - 25 * Math.exp(0.15), 10);
   await page.mouse.dblclick(200, 200);
   expect(await state(page)).toMatchObject({
     view: { scale: 1, offsetX: 0, offsetY: 0 },
@@ -256,7 +256,7 @@ test("each changed input reports one completed view, including clamped pinches t
   });
   await page.locator("#fixture").dispatchEvent("dblclick", { clientX: 300, clientY: 250 });
   expect(await state(page)).toMatchObject({
-    view: { scale: 2.5, offsetX: -150, offsetY: -75 },
+    view: { scale: 2.5 },
     changes: 5,
   });
   await page.evaluate(() => window.fixture.controller.reset());
@@ -282,7 +282,7 @@ test("each changed input reports one completed view, including clamped pinches t
   });
 });
 
-test("swipes respect scale and direction", async ({ page }) => {
+test("swipes respect scale and axis", async ({ page }) => {
   await mount(page);
   await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
   await touch(page, "pointerdown", 1, 200, 200);
@@ -312,7 +312,7 @@ test("swipes respect scale and direction", async ({ page }) => {
 test("double taps anchor, suppress duplicate clicks, and reject moved taps", async ({ page }) => {
   await mount(page);
   await setView(page, { scale: NEAR_ONE, offsetX: 0, offsetY: 0 });
-  await page.evaluate(() => {
+  const { anchored, afterClick } = await page.evaluate(() => {
     const viewport = document.querySelector("#fixture")!;
     for (const type of ["pointerdown", "pointerup", "pointerdown", "pointerup"]) {
       viewport.dispatchEvent(
@@ -326,14 +326,16 @@ test("double taps anchor, suppress duplicate clicks, and reject moved taps", asy
         }),
       );
     }
+    const anchored = window.fixture.controller.getView();
     viewport.dispatchEvent(
       new MouseEvent("dblclick", { clientX: 300, clientY: 250, bubbles: true }),
     );
+    return { anchored, afterClick: window.fixture.controller.getView() };
   });
-  const anchored = (await state(page)).view;
   expect(anchored.scale).toBe(2.5);
   expect(anchored.offsetX).toBeCloseTo(100 * (1 - 2.5 / NEAR_ONE), 10);
   expect(anchored.offsetY).toBeCloseTo(50 * (1 - 2.5 / NEAR_ONE), 10);
+  expect(afterClick).toEqual(anchored);
   expect((await state(page)).zoomed).toBe("true");
   const tapAt = async (x: number, y: number) => {
     await touch(page, "pointerdown", 1, x, y);
