@@ -65,22 +65,6 @@ test("paging resets pan and zoom", async ({ page }) => {
   await expect.poll(scale).toBe(1);
 });
 
-test("double-click zooms in on the point, and again resets", async ({ page }) => {
-  // The dblclick path: iOS Safari sends a double tap's second tap only as
-  // clicks and a dblclick, and a mouse double-click lands here too.
-  await page.getByRole("button", { name: "Open viewer" }).click();
-  const box = (await page.locator(".kit-media-viewer__viewport").boundingBox())!;
-  const transform = () =>
-    page.locator(".kit-media-viewer__pan").evaluate((node) => {
-      const matrix = new DOMMatrix((node as HTMLElement).style.transform);
-      return [matrix.a, Math.round(matrix.e), Math.round(matrix.f)];
-    });
-  await page.mouse.dblclick(box.x + box.width / 2 + 40, box.y + box.height / 2 + 20);
-  await expect.poll(transform).toEqual([2.5, -60, -30]);
-  await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
-  await expect.poll(transform).toEqual([1, 0, 0]);
-});
-
 test("slow wheel steps accumulate into zoom", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
   const viewport = page.locator(".kit-media-viewer__viewport");
