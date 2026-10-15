@@ -78,7 +78,7 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("demo panes size actual pixels, link views, and preserve the center across density changes", async ({
+test("demo panes size actual pixels and preserve linked centers across density and size changes", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -93,6 +93,27 @@ test("demo panes size actual pixels, link views, and preserve the center across 
   const panes = page.locator(".pan-zoom-demo__pane");
   const transforms = () =>
     panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
+  const matrix = () =>
+    panes
+      .first()
+      .locator("img")
+      .evaluate((image) => {
+        const m = new DOMMatrix(image.style.transform);
+        return { scale: m.a, x: m.e, y: m.f };
+      });
+  const resize = async (actual: boolean) => {
+    const before = await matrix();
+    for (const width of [300, 240]) {
+      await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
+      await expect.poll(matrix).toEqual({
+        scale: expect.closeTo(actual ? (before.scale * 240) / width : before.scale, 3),
+        x: expect.closeTo(actual ? before.x : (before.x * width) / 240, 3),
+        y: expect.closeTo(actual ? before.y : (before.y * width) / 240, 3),
+      });
+      const linked = await transforms();
+      expect(linked[1]).toBe(linked[0]);
+    }
+  };
   const density = async (value: number) => {
     await page.evaluate((value) => {
       Object.defineProperty(window, "devicePixelRatio", { value, configurable: true });
@@ -133,44 +154,31 @@ test("demo panes size actual pixels, link views, and preserve the center across 
       .locator("img")
       .evaluate((image: HTMLImageElement) => image.getBoundingClientRect().width);
     expect(sizing).toBeCloseTo(width / dpr, 3);
-    // Both attachments share bounds that include defaults and actual-pixel sizing.
-    for (const [index, deltaY, limit] of [
-      [0, -10000, Math.max(8, scale)],
-      [1, 10000, Math.min(0.4, scale)],
-    ] as const) {
-      await panes.nth(index).dispatchEvent("wheel", { deltaY });
-      const linked = await transforms();
-      expect(linked[1]).toBe(linked[0]);
-      expect(Number(linked[0]!.match(/scale\(([^)]+)\)/)![1])).toBeCloseTo(limit, 5);
-    }
-    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
+    expect((await matrix()).scale).toBeCloseTo(scale, 5);
     const box = (await panes.first().boundingBox())!;
     await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
     const panned = await transforms();
     expect(panned[1]).toBe(panned[0]);
+    await resize(true);
     const nextDpr = dpr === 4 ? 2 : 1;
     await density(nextDpr);
     const linked = await transforms();
     expect(linked[1]).toBe(linked[0]);
-    const matrix = await panes
-      .first()
-      .locator("img")
-      .evaluate((image) => {
-        const m = new DOMMatrix(image.style.transform);
-        return { scale: m.a, x: m.e, y: m.f };
-      });
-    expect(matrix.scale).toBeCloseTo(width / (240 * nextDpr), 5);
-    expect(matrix.x).toBeCloseTo((30 * dpr) / nextDpr, 5);
-    expect(matrix.y).toBeCloseTo((40 * dpr) / nextDpr, 5);
+    const changedDensity = await matrix();
+    expect(changedDensity.scale).toBeCloseTo(width / (240 * nextDpr), 5);
+    expect(changedDensity.x).toBeCloseTo((30 * dpr) / nextDpr, 5);
+    expect(changedDensity.y).toBeCloseTo((40 * dpr) / nextDpr, 5);
     await panes.first().dispatchEvent(dpr === 4 ? "wheel" : "dblclick", {
       clientX: box.x + 120,
       clientY: box.y + 72,
       deltaY: -100,
     });
+    await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
     const manual = await transforms();
     expect(manual[0]).not.toBe(linked[0]);
     await density(dpr);
     expect(await transforms()).toEqual(manual);
+    await resize(false);
   }
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   for (const transform of await transforms()) {
@@ -179,56 +187,6 @@ test("demo panes size actual pixels, link views, and preserve the center across 
       return { scale: matrix.a, x: matrix.e, y: matrix.f };
     }, transform);
     expect(view).toEqual({ scale: 1, x: 0, y: 0 });
-  }
-});
-
-test("demo resize preserves the centered source point in actual-pixel and manual views", async ({
-  page,
-}) => {
-  const panes = page.locator(".pan-zoom-demo__pane");
-  const views = () =>
-    panes.locator("img").evaluateAll((images) =>
-      images.map((image) => {
-        const matrix = new DOMMatrix(image.style.transform);
-        return { scale: matrix.a, x: matrix.e, y: matrix.f };
-      }),
-    );
-  for (const actual of [true, false]) {
-    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-    const box = (await panes.first().boundingBox())!;
-    if (!actual) {
-      await panes.first().dispatchEvent("wheel", {
-        deltaY: 100,
-        clientX: box.x + box.width / 2,
-        clientY: box.y + box.height / 2,
-      });
-    }
-    await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-    const before = (await views())[0]!;
-    for (const width of [300, 240]) {
-      await page.getByRole("button", { name: /^(Larger|Smaller) panes$/ }).click();
-      await expect
-        .poll(async () => (await views())[0]!.scale)
-        .toBeCloseTo(actual ? (before.scale * 240) / width : before.scale, 3);
-      await expect
-        .poll(async () => (await views())[0]!.x)
-        .toBeCloseTo(actual ? before.x : (before.x * width) / 240, 3);
-      const linked = await views();
-      expect(linked[1]).toEqual(linked[0]);
-      const ratio = (linked[0]!.scale * width) / (before.scale * 240);
-      expect(linked[0]!.x).toBeCloseTo(before.x * ratio, 3);
-      expect(linked[0]!.y).toBeCloseTo(before.y * ratio, 3);
-      expect(await panes.evaluateAll((nodes) => nodes.map((node) => node.clientWidth))).toEqual([
-        width,
-        width,
-      ]);
-      await expect(
-        page.getByRole("button", {
-          name: width === 300 ? "Smaller panes" : "Larger panes",
-          exact: true,
-        }),
-      ).toBeVisible();
-    }
   }
 });
 

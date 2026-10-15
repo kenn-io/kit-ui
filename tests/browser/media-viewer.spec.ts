@@ -53,35 +53,32 @@ test("pages with buttons and arrow keys, wrapping at the ends", async ({ page })
   await expect(open).toBeFocused();
 });
 
-test("Reset and paging clear pan and zoom", async ({ page }) => {
+test("Reset, paging and item replacement clear pan and zoom", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
-  for (const action of ["reset", "page"]) {
+  for (const action of ["reset", "page", "replace"]) {
+    if (action === "replace") {
+      await page.keyboard.press("Escape");
+      await expect(viewer(page)).toHaveCount(0);
+      await page.evaluate(async (itemsSource) => {
+        const { mountMediaViewer } =
+          await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+        const items = new Function(`return ${itemsSource}`)();
+        const host = mountMediaViewer(items, 0);
+        (window as unknown as { __replace: () => void }).__replace = () =>
+          host.replaceItems([{ ...items[1], alt: "Replacement" }, ...items.slice(1)]);
+      }, swatchItems);
+    }
     await page.locator(".kit-media-viewer__viewport").hover({ position: { x: 20, y: 20 } });
     await page.mouse.wheel(0, -300);
     await expect.poll(async () => (await transform(page))[0]!).toBeGreaterThan(1);
     if (action === "reset") await page.getByRole("button", { name: "Reset view" }).click();
-    else await page.keyboard.press("ArrowRight");
+    else if (action === "page") await page.keyboard.press("ArrowRight");
+    else {
+      await page.evaluate(() => (window as unknown as { __replace: () => void }).__replace());
+      await expect(viewer(page)).toHaveAccessibleName("Replacement (1 of 3)");
+    }
     await expect.poll(() => transform(page)).toEqual([1, 0, 0]);
   }
-});
-
-test("a different item at the same index resets pan and zoom", async ({ page }) => {
-  await page.evaluate(async (itemsSource) => {
-    const { mountMediaViewer } =
-      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
-    const items = new Function(`return ${itemsSource}`)();
-    const host = mountMediaViewer(items, 0);
-    (window as unknown as { __replace: () => void }).__replace = () =>
-      host.replaceItems([{ ...items[1], alt: "Replacement" }, ...items.slice(1)]);
-  }, swatchItems);
-  const viewport = page.locator(".kit-media-viewer__viewport");
-  await viewport.hover({ position: { x: 20, y: 20 } });
-  await page.mouse.wheel(0, -400);
-  await expect.poll(() => transform(page)).not.toEqual([1, 0, 0]);
-
-  await page.evaluate(() => (window as unknown as { __replace: () => void }).__replace());
-  await expect(viewer(page)).toHaveAccessibleName("Replacement (1 of 3)");
-  await expect.poll(() => transform(page)).toEqual([1, 0, 0]);
 });
 
 test("images keep their natural size instead of upscaling", async ({ page }) => {
