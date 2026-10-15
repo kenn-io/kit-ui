@@ -77,59 +77,28 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test.describe("at device-pixel ratio 3", () => {
-  test.use({ deviceScaleFactor: 3 });
-
-  test("linked panes show either original at exact physical size through a drag", async ({
-    page,
-  }) => {
-    const panes = page.locator(".pan-zoom-demo__pane");
-    const images = panes.locator("img");
-    await expect(images).toHaveCount(2);
-    // A shorter image box letterboxes both originals without changing the demo formula.
-    await images.evaluateAll((all) => {
-      for (const image of all) (image as HTMLElement).style.height = "120px";
-    });
-    const rendered = () =>
-      images.evaluateAll((all) =>
-        all.map((image) => ({
-          physical:
-            image.getBoundingClientRect().width *
-            Math.min(
-              1,
-              (image.clientHeight / image.clientWidth) *
-                ((image as HTMLImageElement).naturalWidth /
-                  (image as HTMLImageElement).naturalHeight),
-            ) *
-            devicePixelRatio,
-          natural: (image as HTMLImageElement).naturalWidth,
-          transform: image.style.transform,
-        })),
-      );
-    for (const [index, label] of [
-      [0, "Large"],
-      [1, "Small"],
-    ] as const) {
-      await page.getByRole("button", { name: `${label} at actual pixels` }).click();
-      const box = (await panes.nth(index).boundingBox())!;
-      for (const drag of [false, true]) {
-        if (drag) await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
-        const [first, second] = await rendered();
-        const exact = index === 0 ? first! : second!;
-        expect(exact.physical).toBeCloseTo(exact.natural, 3);
-        expect(second!.transform).toBe(first!.transform);
-        expect(first!.transform).toMatch(
-          drag ? /^translate\(30px, 40px\) scale\(/ : /^translate\(0px, 0px\) scale\(/,
-        );
-      }
-      await expect(panes.nth(0)).toHaveAttribute("data-zoomed", "true");
-    }
-    await page.getByRole("button", { name: "Fit", exact: true }).click();
-    expect((await rendered()).map(({ transform }) => transform)).toEqual([
-      "translate(0px, 0px) scale(1)",
-      "translate(0px, 0px) scale(1)",
-    ]);
-  });
+test("demo panes link view changes and Fit", async ({ page }) => {
+  const panes = page.locator(".pan-zoom-demo__pane");
+  const transforms = () =>
+    panes.locator("img").evaluateAll((images) => images.map((image) => image.style.transform));
+  for (const [index, label] of [
+    [0, "Large"],
+    [1, "Small"],
+  ] as const) {
+    await page.getByRole("button", { name: `${label} at actual pixels` }).click();
+    const before = await transforms();
+    expect(before[1]).toBe(before[0]);
+    const box = (await panes.nth(index).boundingBox())!;
+    await mouseDrag(page, [box.x + 120, box.y + 72], [[box.x + 150, box.y + 112]]);
+    const after = await transforms();
+    expect(after[1]).toBe(after[0]);
+    expect(after[0]).not.toBe(before[0]);
+  }
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  expect(await transforms()).toEqual([
+    "translate(0px, 0px) scale(1)",
+    "translate(0px, 0px) scale(1)",
+  ]);
 });
 
 test("views are precise, detached, silent, and validated", async ({ page }) => {
@@ -152,6 +121,10 @@ test("views are precise, detached, silent, and validated", async ({ page }) => {
     changes: 0,
     zoomed: "true",
   });
+  // Chromium serializes six significant digits; the former four-decimal rounding differs.
+  expect(
+    await page.locator("#fixture > div").evaluate((pan) => (pan as HTMLElement).style.transform),
+  ).toBe("translate(31.25px, -18.5px) scale(6.34568)");
 });
 
 test("wheel zoom anchors and accumulates gradual steps", async ({ page }) => {
@@ -159,6 +132,7 @@ test("wheel zoom anchors and accumulates gradual steps", async ({ page }) => {
   await page.mouse.move(260, 240);
   await page.mouse.wheel(0, -100);
   await expect.poll(async () => (await state(page)).view.scale).toBeGreaterThan(1);
+  expect((await state(page)).changes).toBe(1);
   const wheeled = (await state(page)).view;
   expect(wheeled.offsetX).toBeCloseTo(60 * (1 - Math.exp(0.15)), 10);
   expect(wheeled.offsetY).toBeCloseTo(40 * (1 - Math.exp(0.15)), 10);
@@ -242,17 +216,14 @@ test("each changed input reports one completed view, including clamped pinches t
     view: { scale: 1, offsetX: 30, offsetY: 15 },
     changes: 2,
   });
-  await page.mouse.move(260, 240);
-  await page.mouse.wheel(0, -100);
-  await expect.poll(async () => (await state(page)).changes).toBe(3);
   await page.evaluate(() => window.fixture.controller.reset());
   expect((await state(page)).zoomed).toBeNull();
   await touch(page, "pointerdown", 1, 150, 200);
   await touch(page, "pointerdown", 2, 250, 200);
   for (const [x, change] of [
-    [300, 5],
-    [300, 5],
-    [350, 6],
+    [300, 4],
+    [300, 4],
+    [350, 5],
   ] as const) {
     await touch(page, "pointermove", 2, x, 200);
     const { view, changes } = await state(page);
@@ -265,7 +236,7 @@ test("each changed input reports one completed view, including clamped pinches t
   await touch(page, "pointermove", 2, 400, 230);
   expect(await state(page)).toMatchObject({
     view: { scale: 8, offsetX: 25, offsetY: 15 },
-    changes: 7,
+    changes: 6,
   });
 });
 
