@@ -187,7 +187,7 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("comparison demo links and fits views; Actual pixels preserves size, readout, and positions", async ({
+test("comparison demo links and fits views; Actual pixels preserves size, readout, and fractional fit", async ({
   page,
   browser,
 }) => {
@@ -320,6 +320,29 @@ test("comparison demo links and fits views; Actual pixels preserves size, readou
         },
       ]);
   }
+
+  const fractionalContext = await browser.newContext({
+    viewport: { width: 1281, height: 800 },
+    deviceScaleFactor: 2,
+  });
+  try {
+    const fractionalPage = await fractionalContext.newPage();
+    await gotoPage(fractionalPage, "pan-zoom");
+    const { images: fractionalImages } = await waitForDemoReady(fractionalPage);
+    const image = fractionalImages.first();
+    const initialFit = (await measureImages(image))[0]!;
+    await setImageFitWidth(image, Math.ceil(initialFit.fittedWidth) + 0.375);
+    await expectFractionalFit(image);
+    await fractionalPage.getByRole("button", { name: "Actual pixels", exact: true }).click();
+    await expectNativePixels(image);
+
+    const resizedFit = (await measureImages(image))[0]!;
+    await setImageFitWidth(image, Math.ceil(resizedFit.fittedWidth) + 0.375);
+    await expectFractionalFit(image);
+    await expectNativePixels(image);
+  } finally {
+    await fractionalContext.close();
+  }
 });
 
 async function density(page: Page, value: number) {
@@ -329,31 +352,6 @@ async function density(page: Page, value: number) {
   }, value);
   await expect(page.locator("output")).toContainText(`DPR ${value}`);
 }
-
-test("Actual pixels preserves fractional sizing", async ({ browser }) => {
-  const context = await browser.newContext({
-    viewport: { width: 1281, height: 800 },
-    deviceScaleFactor: 2,
-  });
-  try {
-    const page = await context.newPage();
-    await gotoPage(page, "pan-zoom");
-    const { images } = await waitForDemoReady(page);
-    const image = images.first();
-    const initialFit = (await measureImages(image))[0]!;
-    await setImageFitWidth(image, Math.ceil(initialFit.fittedWidth) + 0.375);
-    await expectFractionalFit(image);
-    await page.getByRole("button", { name: "Actual pixels", exact: true }).click();
-    await expectNativePixels(image);
-
-    const resizedFit = (await measureImages(image))[0]!;
-    await setImageFitWidth(image, Math.ceil(resizedFit.fittedWidth) + 0.375);
-    await expectFractionalFit(image);
-    await expectNativePixels(image);
-  } finally {
-    await context.close();
-  }
-});
 
 async function setImageFitWidth(image: Locator, fittedWidth: number) {
   const { naturalWidth, naturalHeight } = (await measureImages(image))[0]!;
