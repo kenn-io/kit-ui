@@ -17,7 +17,7 @@ import { actualPixelSize, attachPanZoom, type PanZoomView } from "@kenn-io/kit-u
 declare const rotation: number;
 declare const naturalW: number, naturalH: number;
 declare const boxW: number, boxH: number;
-declare let currentView: PanZoomView;
+let currentView: PanZoomView = { scale: 1, offsetX: 0, offsetY: 0 };
 declare const panes: {
   viewport: HTMLElement;
   pan: HTMLElement;
@@ -85,8 +85,8 @@ Scale retains full precision. `minScale` accepts a finite value above 0 and at
 most 1, otherwise it defaults to 0.4. `maxScale` accepts a finite value at least
 1, otherwise it defaults to 8. Each bound falls back independently.
 `setLimits({ minScale, maxScale })` replaces both bounds using the same defaults
-and silently clamps the current view. It retains active gestures and pointer
-capture. Gestures and `setView()` clamp to these limits.
+and silently clamps scale, leaving offsets unchanged. It retains active gestures
+and pointer capture. Gestures and `setView()` clamp to these limits.
 Sharing the same view assumes matching pane and fitted-image geometry.
 These linked panes need identical limits because `setView()` clamps silently.
 Read `getView()` after setting a view to obtain the effective clamped values.
@@ -97,15 +97,18 @@ pixel. For quarter turns, `object-fit: contain` in the original box alone
 doesn't produce the rotated fit; size the image as above. `boxW` and `boxH` are the
 viewport's fractional, untransformed content-box dimensions; use a
 `ResizeObserverEntry.contentRect` or an equivalent precise layout measurement.
-`actualPixelSize` accepts positive image and box dimensions, a positive DPR,
-and rotation in multiples of 90°. It returns the fitted width and scale,
+`actualPixelSize` requires positive finite image and box dimensions and DPR,
+and finite rotation in multiples of 90°. Invalid inputs throw a `RangeError`.
+It returns the fitted width and scale,
 accounting for letterboxing and quarter turns. `clientWidth`/`clientHeight`
 and `offsetWidth`/`offsetHeight` round to integers, so they can't establish an
 exact pixel size. Transformed `getBoundingClientRect()` dimensions also can't
 be used as fit inputs. The demo images have no padding or border. Choose
 shared bounds that include the defaults, actual-pixel scale, and current scale,
 as above. After image load, pane resize, or a density change, recompute sizing
-and update every controller's limits. Read the clamped view back into host
+and update every controller's limits. Include the current scale in those bounds
+when preserving the centered image point so clamping doesn't change it before
+the offset adjustment. Read the clamped view back into host
 state before deriving and applying the next view:
 
 ```ts

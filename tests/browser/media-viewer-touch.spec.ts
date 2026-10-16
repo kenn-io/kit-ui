@@ -99,7 +99,7 @@ function transformOf(pan: Locator) {
   });
 }
 
-test("a swipe pages the viewer", async ({ browser }) => {
+test("a swipe pages at rest and pans while zoomed", async ({ browser }) => {
   test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
   const { page, cdp, close } = await touchPage(browser, "media-viewer");
   await page.getByRole("button", { name: "Open viewer" }).tap();
@@ -110,6 +110,19 @@ test("a swipe pages the viewer", async ({ browser }) => {
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
   await expect(counter).toHaveText("2 / 3");
+
+  await drag(cdp, { x: mid.x, y: mid.y + 100 }, { x: mid.x + 40, y: mid.y - 100 });
+  await expect(counter).toHaveText("2 / 3");
+
+  await page.getByRole("button", { name: "Reset view" }).tap();
+  await tap(cdp, mid);
+  await tap(cdp, mid);
+  const pan = page.locator(".kit-media-viewer__pan");
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 2.5, x: 0, y: 0 });
+  await expect(viewport).toHaveCSS("touch-action", "none");
+  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
+  await expect(counter).toHaveText("2 / 3");
+  await expect.poll(async () => (await transformOf(pan)).x).toBeLessThan(-250);
   await close();
 });
 

@@ -51,6 +51,16 @@ export function actualPixelSize(
   dpr: number,
   rotation = 0,
 ): { fittedWidth: number; scale: number } {
+  if (
+    ![image.width, image.height, box.width, box.height, dpr].every(
+      (value) => Number.isFinite(value) && value > 0,
+    )
+  )
+    throw new RangeError(
+      "Image dimensions, box dimensions, and DPR must be positive finite numbers",
+    );
+  if (!Number.isFinite(rotation) || rotation % 90 !== 0)
+    throw new RangeError("Rotation must be a finite multiple of 90 degrees");
   const quarterTurn = rotation % 180 !== 0;
   const width = quarterTurn ? image.height : image.width;
   const height = quarterTurn ? image.width : image.height;

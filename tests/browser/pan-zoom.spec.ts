@@ -516,16 +516,58 @@ test("actual pixel sizing accounts for fractional letterboxing, rotation, and de
     const { actualPixelSize } = await import("/src/lib/utils/pan-zoom.ts");
     const image = { width: 3200, height: 1920 };
     const box = { width: 800.375, height: 400.25 };
-    return [0, 90, 180, 270].map((rotation) => actualPixelSize(image, box, 2, rotation));
+    return [0, 90, 180, 270, -90, 360].map((rotation) => actualPixelSize(image, box, 2, rotation));
   });
-  for (const index of [0, 2]) {
+  for (const index of [0, 2, 5]) {
     expect(sizes[index]!.fittedWidth).toBeCloseTo((400.25 * 3200) / 1920);
     expect(sizes[index]!.fittedWidth * sizes[index]!.scale * 2).toBeCloseTo(3200);
   }
-  for (const index of [1, 3]) {
+  for (const index of [1, 3, 4]) {
     expect(sizes[index]!.fittedWidth).toBeCloseTo((400.25 * 1920) / 3200);
     expect(sizes[index]!.fittedWidth * sizes[index]!.scale * 2).toBeCloseTo(1920);
   }
+});
+
+test("actual pixel sizing rejects invalid dimensions, density, and rotation", async ({ page }) => {
+  await openController(page);
+  const results = await page.evaluate(async () => {
+    const { actualPixelSize } = await import("/src/lib/utils/pan-zoom.ts");
+    const cases = [0, 1, 2, 3, 4].flatMap((index) =>
+      [0, -1, NaN, Infinity, -Infinity].map((value) => {
+        const input: [number, number, number, number, number, number] = [
+          3200, 1920, 800, 400, 2, 0,
+        ];
+        input[index] = value;
+        return input;
+      }),
+    );
+    cases.push(
+      ...[45, -45, NaN, Infinity, -Infinity].map(
+        (rotation): [number, number, number, number, number, number] => [
+          3200,
+          1920,
+          800,
+          400,
+          2,
+          rotation,
+        ],
+      ),
+    );
+    return cases.map(([width, height, boxWidth, boxHeight, dpr, rotation]) => {
+      try {
+        actualPixelSize({ width, height }, { width: boxWidth, height: boxHeight }, dpr, rotation);
+        return null;
+      } catch (error) {
+        return error instanceof RangeError ? error.message : String(error);
+      }
+    });
+  });
+  expect(results.slice(0, 25)).toEqual(
+    Array(25).fill("Image dimensions, box dimensions, and DPR must be positive finite numbers"),
+  );
+  expect(results.slice(25)).toEqual(
+    Array(5).fill("Rotation must be a finite multiple of 90 degrees"),
+  );
 });
 
 test("scale limits use independent defaults and copy attachment options", async ({ page }) => {
