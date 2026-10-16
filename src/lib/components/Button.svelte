@@ -148,6 +148,13 @@
     padding-inline: var(--space-5);
   }
 
+  /* A theme can soften the raised highlight on solid fills, where it would
+   * read as a bright line. Before the pressed rule, so a pressed solid
+   * button still sinks. */
+  .kit-button--solid {
+    box-shadow: var(--shadow-raised-solid, var(--shadow-raised, none));
+  }
+
   .kit-button:where(:active:not(:disabled), [aria-expanded="true"]) {
     --kit-button-fill: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);

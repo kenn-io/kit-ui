@@ -1,10 +1,11 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { gotoPage, resolvedStyle, setTheme, useTheme } from "./helpers.js";
 
-// Five depth tokens are fallback-only, and --edge-highlight is declared
+// Six depth tokens are fallback-only, and --edge-highlight is declared
 // transparent. A theme that leaves them unset keeps today's look; quiet sets
 // them and its controls, fields and panels take the raised, sunken and panel
-// shadows, and in dark mode its raised controls take a lighter fill.
+// shadows, solid buttons a softer highlight, and in dark mode its raised
+// controls a lighter fill.
 
 const OTHER_THEMES = [
   null,
@@ -19,6 +20,7 @@ const OTHER_THEMES = [
 ] as const;
 
 const RAISED = "var(--shadow-raised)";
+const RAISED_SOLID = "var(--shadow-raised-solid)";
 const SUNKEN = "var(--shadow-sunken)";
 const PANEL = "var(--shadow-panel)";
 
@@ -33,7 +35,10 @@ interface Probe {
 const body = (selector: string) => `.content__body ${selector}`;
 
 const PROBES: Record<string, Probe[]> = {
-  button: [{ selector: body(".kit-button"), today: "none", quiet: RAISED }],
+  button: [
+    { selector: body(".kit-button:not(.kit-button--solid)"), today: "none", quiet: RAISED },
+    { selector: body(".kit-button--solid"), today: "none", quiet: RAISED_SOLID },
+  ],
   "icon-button": [{ selector: body(".kit-icon-button"), today: "none", quiet: RAISED }],
   "copy-button": [{ selector: body(".kit-copy-btn"), today: "none", quiet: RAISED }],
   "provider-brand": [{ selector: body(".kit-provider-button"), today: "none", quiet: RAISED }],
@@ -81,7 +86,7 @@ const PROBES: Record<string, Probe[]> = {
   table: [{ selector: body(".kit-table-wrapper"), today: "none", quiet: PANEL }],
 };
 
-const DEPTH = new Set([RAISED, SUNKEN, PANEL]);
+const DEPTH = new Set([RAISED, RAISED_SOLID, SUNKEN, PANEL]);
 
 async function expectShadow(page: Page, selector: string, css: string): Promise<void> {
   const expected = await resolvedStyle(page, "box-shadow", css);
@@ -160,8 +165,45 @@ test("quiet: the raised shadow carries the edge highlight", async ({ page }) => 
     const layer = await resolvedStyle(page, "box-shadow", "inset 0 1px var(--edge-highlight)");
     expect(layer, `the highlight layer in ${mode}`).not.toBe("none");
     await expect
-      .poll(() => settledShadow(page, body(".kit-button")), { message: `quiet ${mode}` })
+      .poll(() => settledShadow(page, body(".kit-button:not(.kit-button--solid)")), {
+        message: `quiet ${mode}`,
+      })
       .toContain(layer);
+  }
+});
+
+/** Alpha of the inset top highlight, the first layer of a raised shadow. */
+async function highlightAlpha(page: Page, selector: string): Promise<number> {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) => {
+      for (const animation of element.getAnimations()) animation.finish();
+      const shadow = getComputedStyle(element).boxShadow;
+      const layer = shadow.match(/^((?:rgba?|color)\([^)]*\))[^,]*inset/);
+      if (!layer) throw new Error(`no highlight layer in ${shadow}`);
+      // Painting a pixel reads any color syntax, color(srgb …) included.
+      const pixel = document.createElement("canvas").getContext("2d")!;
+      pixel.fillStyle = layer[1]!;
+      pixel.fillRect(0, 0, 1, 1);
+      return pixel.getImageData(0, 0, 1, 1).data[3]! / 255;
+    });
+}
+
+// On a saturated solid fill the full highlight reads as a bright line, so
+// quiet softens it to a sheen there. Neutral buttons keep the full highlight.
+test("quiet: solid buttons soften the edge highlight to a sheen", async ({ page }) => {
+  await gotoPage(page, "button");
+  await useTheme(page, "quiet");
+  for (const dark of [false, true]) {
+    await setTheme(page, { dark });
+    const mode = dark ? "dark" : "light";
+    const full = await highlightAlpha(page, body(".kit-button--outline.kit-button--neutral"));
+    for (const tone of ["info", "success", "danger", "workflow", "neutral"]) {
+      const sheen = await highlightAlpha(page, body(`.kit-button--solid.kit-button--${tone}`));
+      expect(sheen, `${tone} in ${mode}`).toBeGreaterThan(0);
+      expect(sheen, `${tone} in ${mode}`).toBeLessThan(full);
+    }
   }
 });
 
@@ -440,14 +482,14 @@ const SETTINGS_ICON_BUTTON = body(".kit-icon-button[aria-label='Settings']");
 
 // No gallery page opens a Button or an IconButton, so these tests set the
 // state the components document for menu and popover triggers.
-for (const { id, selector } of [
-  { id: "icon-button", selector: SETTINGS_ICON_BUTTON },
-  { id: "button", selector: body(".kit-button") },
+for (const { id, selector, raised } of [
+  { id: "icon-button", selector: SETTINGS_ICON_BUTTON, raised: RAISED },
+  { id: "button", selector: body(".kit-button--solid"), raised: RAISED_SOLID },
 ]) {
   test(`quiet: an open ${id} sinks like other open triggers`, async ({ page }) => {
     await gotoPage(page, id);
     await useTheme(page, "quiet");
-    await expectShadow(page, selector, RAISED);
+    await expectShadow(page, selector, raised);
 
     await page
       .locator(selector)

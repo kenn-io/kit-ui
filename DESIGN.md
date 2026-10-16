@@ -166,13 +166,16 @@ Tinted cool-grey neutrals with a restrained six-accent semantic vocabulary; the 
 Borders first, shadows whisper. Resting structure is drawn entirely with 1px borders and tonal background steps (fog → paper → well). Shadows exist only to lift **transient** surfaces off the page: popovers, dropdowns, modals, tooltips. Nothing at rest casts a shadow heavier than `--shadow-sm`.
 
 Themes may opt into resting depth with the depth tokens (`--shadow-raised`,
-`--shadow-sunken`, `--shadow-panel`, `--bg-table-header`, `--edge-highlight`,
-`--bg-raised`; see docs/theming.md). The shadow tokens build on `--shadow-sm`: a
-top highlight, a hairline ring, or the same shadow turned inward, never a
-heavier drop shadow, so the rule above still holds. Where the well is darker
-than the page, as in a dark palette, `--bg-raised` fills raised controls lighter
-than the surface they sit on, so a raised control never reads as a well. The
-default pair leaves the tokens off, so its resting surfaces keep today's look.
+`--shadow-raised-solid`, `--shadow-sunken`, `--shadow-panel`,
+`--bg-table-header`, `--edge-highlight`, `--bg-raised`; see docs/theming.md).
+The shadow tokens build on `--shadow-sm`: a top highlight, a hairline ring, or
+the same shadow turned inward, never a heavier drop shadow, so the rule above
+still holds. A theme that lights the top edge softens it on solid buttons with
+`--shadow-raised-solid`, so it reads as a sheen, not a bright line across a
+saturated fill. Where the well is darker than the page, as in a dark palette,
+`--bg-raised` fills raised controls lighter than the surface they sit on, so a
+raised control never reads as a well. The default pair leaves the tokens off, so
+its resting surfaces keep today's look.
 
 ### Shadow Vocabulary
 

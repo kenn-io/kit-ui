@@ -163,6 +163,7 @@ and each call site keeps its own tuned default until a theme opts in.
 | `--overlay-filter`                             | `none` (fallback)                                                                  | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                                                                                                                                                                                                       |
 | `--edge-highlight`                             | `transparent` (declared)                                                           | top-edge highlight inside a theme's own `--shadow-raised` and `--shadow-panel`; declared because an unset reference there would void the whole composite; no component reads it directly, so set it in both modes                                                                                                                     |
 | `--shadow-raised`                              | `none` (fallback; the active SegmentedControl segment falls back to `--shadow-sm`) | controls that stand up: Button and ProviderButton, IconButton, CopyButton, FilterDropdown and SelectDropdown triggers, MenuTrigger, the Typeahead trigger, the active SegmentedControl segment (except borderless), a scrolled sticky Table header, AppSidebar                                                                        |
+| `--shadow-raised-solid`                        | `--shadow-raised` (fallback)                                                       | solid Buttons in place of `--shadow-raised`, such as a softer top highlight that does not read as a bright line on a saturated fill; pressed or open, they still take `--shadow-sunken`                                                                                                                                               |
 | `--bg-raised`                                  | `--bg-inset` (fallback)                                                            | resting fill of raised controls that otherwise fill with `--bg-inset`: neutral and danger outline Buttons, neutral soft Buttons, the SSO ProviderButton, FilterDropdown, SelectDropdown and Typeahead triggers, MenuTrigger, and AdaptiveActionGrid icon buttons; pressed or open controls keep `--bg-inset`                          |
 | `--shadow-sunken`                              | `none` (fallback)                                                                  | fields and pressed or open controls: TextInput and SearchInput, MentionTextarea (except embedded), the open Typeahead input, the SegmentedControl track (except borderless), pressed buttons and triggers, toggled IconButtons (`aria-pressed`), and open Button, IconButton, FilterDropdown, SelectDropdown and MenuTrigger triggers |
 | `--shadow-panel`                               | per site (fallback)                                                                | panels: Card `raised` and MetricCard (`--shadow-sm`; MetricCard only at `level="raised"`, its default), the Table scroll wrapper (`none`)                                                                                                                                                                                             |
@@ -518,16 +519,19 @@ Two cascade rules to respect (see the comment atop `themes.css`):
   `data-kit-theme` — a custom theme file should copy those two blocks (or
   simply be imported before `themes.css`).
 
-Depth is optional. The six depth tokens (`--edge-highlight`, `--shadow-raised`,
-`--shadow-sunken`, `--shadow-panel`, `--bg-table-header`, `--bg-raised`) have no
-effect until a theme sets them, so components keep today's look. A theme that
-sets them can declare the composites once in its light block, because each
-`var()` inside them resolves against the root's current palette:
+Depth is optional. The seven depth tokens (`--edge-highlight`,
+`--shadow-raised`, `--shadow-raised-solid`, `--shadow-sunken`, `--shadow-panel`,
+`--bg-table-header`, `--bg-raised`) have no effect until a theme sets them, so
+components keep today's look. A theme that sets them can declare the composites
+once in its light block, because each `var()` inside them resolves against the
+root's current palette:
 
 ```css
 :root[data-kit-theme="acme"] {
   --edge-highlight: #ffffff;
   --shadow-raised: inset 0 1px var(--edge-highlight), var(--shadow-sm);
+  --shadow-raised-solid:
+    inset 0 1px color-mix(in srgb, var(--edge-highlight) 25%, transparent), var(--shadow-sm);
   --shadow-sunken: inset var(--shadow-sm);
   --shadow-panel: 0 0 0 1px var(--border-muted), var(--shadow-raised);
   --bg-table-header: linear-gradient(var(--bg-surface), var(--bg-inset));
@@ -538,6 +542,10 @@ sets them can declare the composites once in its light block, because each
   --bg-raised: var(--bg-surface-hover);
 }
 ```
+
+Solid Buttons take `--shadow-raised-solid`, or `--shadow-raised` when it is
+unset. A bright highlight that suits a pale control reads as a hard line on a
+saturated fill, so the example softens it to a quarter there.
 
 Set `--bg-raised` where the inset well is darker than the page, as in most dark
 palettes. Raised controls that would fill with `--bg-inset` then fill lighter

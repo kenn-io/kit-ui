@@ -694,6 +694,10 @@
    * the dark block re-sets only the highlight and the shadows. */
   --edge-highlight: #ffffff;
   --shadow-raised: inset 0 1px var(--edge-highlight), var(--shadow-sm);
+  /* On a saturated solid fill the full highlight reads as a bright line, so
+   * solid buttons take a quarter of it as a soft sheen. */
+  --shadow-raised-solid:
+    inset 0 1px color-mix(in srgb, var(--edge-highlight) 25%, transparent), var(--shadow-sm);
   --shadow-sunken: inset var(--shadow-sm);
   --shadow-panel: 0 0 0 1px var(--border-muted), var(--shadow-raised);
   --bg-table-header: linear-gradient(
