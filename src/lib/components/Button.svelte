@@ -97,6 +97,10 @@
 
 <style>
   .kit-button {
+    /* The fill of the neutral and danger outline and the neutral soft
+     * surfaces: a theme's raised fill at rest, so the button stands lighter
+     * than the surface it sits on, and the inset well while pressed or open. */
+    --kit-button-fill: var(--bg-raised, var(--bg-inset));
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -115,7 +119,7 @@
     /* Neutral-outline appearance as the base so every tone × surface combo
      * has a sane look — without this, a combo missing a rule below renders
      * with UA button chrome (black border, platform background). */
-    background: var(--bg-inset);
+    background: var(--kit-button-fill);
     color: var(--text-secondary);
     border: var(--border-width) solid var(--border-default);
     box-shadow: var(--shadow-raised, none);
@@ -144,7 +148,15 @@
     padding-inline: var(--space-5);
   }
 
+  /* A theme can soften the raised highlight on solid fills, where it would
+   * read as a bright line. Before the pressed rule, so a pressed solid
+   * button still sinks. */
+  .kit-button--solid {
+    box-shadow: var(--shadow-raised-solid, var(--shadow-raised, none));
+  }
+
   .kit-button:where(:active:not(:disabled), [aria-expanded="true"]) {
+    --kit-button-fill: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
 
@@ -178,7 +190,7 @@
 
   /* Neutral outline — cancel / secondary */
   .kit-button--outline.kit-button--neutral {
-    background: var(--bg-inset);
+    background: var(--kit-button-fill);
     color: var(--text-secondary);
     border: var(--border-width) solid var(--border-default);
   }
@@ -189,7 +201,7 @@
 
   /* Neutral soft — low-emphasis secondary actions */
   .kit-button--soft.kit-button--neutral {
-    background: color-mix(in srgb, var(--text-muted) 8%, var(--bg-inset));
+    background: color-mix(in srgb, var(--text-muted) 8%, var(--kit-button-fill));
     color: var(--text-secondary);
     border: var(--border-width) solid color-mix(in srgb, var(--border-default) 80%, transparent);
   }
@@ -204,7 +216,7 @@
    * solid fill, so it moves the same distance on hover as every other
    * outline. The full-red confirmation moment belongs to danger+solid. */
   .kit-button--outline.kit-button--danger {
-    background: var(--bg-inset);
+    background: var(--kit-button-fill);
     color: var(--text-secondary);
     border: var(--border-width) solid var(--border-default);
   }

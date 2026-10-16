@@ -299,7 +299,7 @@
     font-size: var(--kit-control-font-size, var(--font-size-xs));
     font-weight: var(--font-weight-medium, 500);
     color: var(--text-muted);
-    background: var(--bg-inset);
+    background: var(--bg-raised, var(--bg-inset));
     border: var(--border-width) solid var(--border-muted);
     box-shadow: var(--shadow-raised, none);
     border-radius: var(--kit-control-radius, var(--radius-sm));
@@ -313,6 +313,7 @@
   }
 
   .kit-filter-dropdown__btn:where([aria-expanded="true"], :active:not(:disabled)) {
+    background: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
 

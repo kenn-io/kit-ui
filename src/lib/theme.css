@@ -25,10 +25,11 @@
   --provider-google-button-disabled-color: rgba(31, 31, 31, 0.38);
 }
 
-/* Depth tokens: --shadow-raised, --shadow-sunken, --shadow-panel and
- * --bg-table-header stay unset by default, and components fall back to
- * today's look. --edge-highlight is declared because themes use it inside
- * those values, where an unset reference would void the whole shadow. */
+/* Depth tokens: --shadow-raised, --shadow-raised-solid, --shadow-sunken,
+ * --shadow-panel, --bg-table-header and --bg-raised stay unset by default,
+ * and components fall back to today's look. --edge-highlight is declared
+ * because themes use it inside those values, where an unset reference would
+ * void the whole shadow. */
 :root {
   --edge-highlight: transparent;
 }

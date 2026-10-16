@@ -515,14 +515,17 @@
     flex-direction: column;
     gap: var(--space-5);
     min-height: 100%;
-    padding: var(--space-5) var(--space-4);
+    padding: 0 var(--space-4) var(--space-5);
   }
 
+  /* As tall as a TopBar and flush with the top, so a brand lines up with a
+   * TopBar beside the sidebar. A taller brand grows the row. */
   .kit-app-sidebar__brand {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
+    min-height: var(--header-height);
     padding-inline: var(--space-2);
   }
 
