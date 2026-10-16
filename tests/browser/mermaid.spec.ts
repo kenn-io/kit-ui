@@ -27,9 +27,14 @@ test("renders mermaid fences into pan/zoom viewers", async ({ page }) => {
   await expect(viewer.locator(".kit-mermaid-viewer__button svg.lucide")).toHaveCount(3);
 });
 
-test("wheel zoom keeps the diagram vector-backed; Reset restores identity", async ({ page }) => {
+test("wheel zoom stays vector-backed; drag pans and Reset restores identity", async ({ page }) => {
   const viewport = firstViewer(page).locator(".kit-mermaid-viewer__viewport");
   const pan = firstViewer(page).locator(".kit-mermaid-viewer__pan");
+  const transform = () =>
+    pan.evaluate((node) => {
+      const matrix = new DOMMatrix(node.style.transform);
+      return { scale: matrix.a, x: matrix.e, y: matrix.f };
+    });
   const svg = pan.locator(":scope > svg");
   const originalSvg = await svg.elementHandle();
   await viewport.hover();
@@ -40,15 +45,20 @@ test("wheel zoom keeps the diagram vector-backed; Reset restores identity", asyn
   expect(await svg.evaluate((node, original) => node === original, originalSvg)).toBe(true);
   await expect(pan).toHaveCSS("will-change", "auto");
 
+  const zoomed = await transform();
+  const box = (await viewport.boundingBox())!;
+  const cursor = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(cursor.x, cursor.y);
+  await page.mouse.down();
+  await page.mouse.move(cursor.x + 30, cursor.y + 20);
+  await page.mouse.up();
+  const panned = await transform();
+  expect(panned.scale).toBe(zoomed.scale);
+  expect(panned.x).toBeCloseTo(zoomed.x + 30);
+  expect(panned.y).toBeCloseTo(zoomed.y + 20);
+
   await firstViewer(page).getByRole("button", { name: "Reset diagram view" }).click();
-  await expect
-    .poll(() =>
-      pan.evaluate((node) => {
-        const matrix = new DOMMatrix(node.style.transform);
-        return { scale: matrix.a, x: matrix.e, y: matrix.f };
-      }),
-    )
-    .toEqual({ scale: 1, x: 0, y: 0 });
+  await expect.poll(transform).toEqual({ scale: 1, x: 0, y: 0 });
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {

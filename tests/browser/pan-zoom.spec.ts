@@ -528,6 +528,80 @@ test("actual pixel sizing accounts for fractional letterboxing, rotation, and de
   }
 });
 
+test("the documented quarter-turn layout renders source pixels at DPR 2", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "Chromium layout regression");
+  const context = await browser.newContext({ deviceScaleFactor: 2 });
+  try {
+    const page = await context.newPage();
+    await openController(page);
+    const result = await page.evaluate(async () => {
+      const { actualPixelSize, attachPanZoom } = await import("/src/lib/utils/pan-zoom.ts");
+      const source = document.createElement("canvas");
+      source.width = 3200;
+      source.height = 1920;
+      const image = new Image();
+      image.src = source.toDataURL();
+      await image.decode();
+      const viewport = document.createElement("div");
+      viewport.style.cssText = "width:800px;height:400px;overflow:hidden";
+      const pan = document.createElement("div");
+      Object.assign(pan.style, {
+        width: "800px",
+        height: "400px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transformOrigin: "center",
+      });
+      const { fittedWidth, scale } = actualPixelSize(
+        { width: image.naturalWidth, height: image.naturalHeight },
+        { width: 800, height: 400 },
+        devicePixelRatio,
+        90,
+      );
+      const imageWidth = (fittedWidth * image.naturalWidth) / image.naturalHeight;
+      Object.assign(image.style, {
+        width: `${imageWidth}px`,
+        height: `${(imageWidth * image.naturalHeight) / image.naturalWidth}px`,
+        maxWidth: "none",
+        maxHeight: "none",
+        flexShrink: "0",
+        transform: "rotate(90deg)",
+        transformOrigin: "center",
+      });
+      pan.append(image);
+      viewport.append(pan);
+      document.body.append(viewport);
+      const fitted = image.getBoundingClientRect();
+      const controller = attachPanZoom(viewport, pan);
+      controller.setView({ scale, offsetX: 0, offsetY: 0 });
+      const scaled = image.getBoundingClientRect();
+      const box = viewport.getBoundingClientRect();
+      controller.destroy();
+      return {
+        fittedWidth,
+        fitted: { width: fitted.width, height: fitted.height },
+        physical: {
+          width: scaled.width * devicePixelRatio,
+          height: scaled.height * devicePixelRatio,
+        },
+        center: {
+          x: scaled.x + scaled.width / 2 - box.x - box.width / 2,
+          y: scaled.y + scaled.height / 2 - box.y - box.height / 2,
+        },
+      };
+    });
+    expect(result).toEqual({
+      fittedWidth: 240,
+      fitted: { width: 240, height: 400 },
+      physical: { width: 1920, height: 3200 },
+      center: { x: 0, y: 0 },
+    });
+  } finally {
+    await context.close();
+  }
+});
+
 test("actual pixel sizing rejects invalid dimensions, density, and rotation", async ({ page }) => {
   await openController(page);
   const results = await page.evaluate(async () => {
