@@ -27,6 +27,28 @@ const { fittedWidth, scale } = actualPixelSize(
   devicePixelRatio,
   rotation,
 );
+const imageWidth = rotation % 180 !== 0 ? (fittedWidth * naturalW) / naturalH : fittedWidth;
+for (const pan of [leftPan, rightPan]) {
+  Object.assign(pan.style, {
+    width: `${boxW}px`,
+    height: `${boxH}px`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transformOrigin: "center",
+  });
+}
+for (const image of [leftImage, rightImage]) {
+  Object.assign(image.style, {
+    width: `${imageWidth}px`,
+    height: `${(imageWidth * naturalH) / naturalW}px`,
+    maxWidth: "none",
+    maxHeight: "none",
+    flexShrink: "0",
+    transform: `rotate(${rotation}deg)`,
+    transformOrigin: "center",
+  });
+}
 const limits = {
   minScale: Math.min(0.4, scale, currentView.scale),
   maxScale: Math.max(8, scale, currentView.scale),
@@ -45,8 +67,10 @@ right.setView(left.getView());
 ```
 
 Call `reset()` to fit the view and `destroy()` when removing each pane.
-Keep each pan element as an unrotated wrapper around its image. Apply rotation
-to the image so pointer and pan coordinates stay aligned.
+Keep each pan element as an unrotated wrapper around its image. The example
+centers the image and sets its dimensions before rotation so its rotated bounds
+match the helper's fit. Apply rotation to the image so pointer and pan
+coordinates stay aligned.
 
 `getView()` returns a detached `{ scale, offsetX, offsetY }`. Offsets are CSS
 pixels relative to the viewport center. Each changed gesture input reports
@@ -67,7 +91,8 @@ Read `getView()` after setting a view to obtain the effective clamped values.
 Views containing non-finite values or a scale at or below zero are ignored.
 
 For actual pixels, the example computes one image pixel per physical screen
-pixel. Use `object-fit: contain` for the image. `boxW` and `boxH` are the
+pixel. For quarter turns, `object-fit: contain` in the original box alone
+doesn't produce the rotated fit; size the image as above. `boxW` and `boxH` are the
 viewport's fractional, untransformed content-box dimensions; use a
 `ResizeObserverEntry.contentRect` or an equivalent precise layout measurement.
 `actualPixelSize` accepts positive image and box dimensions, a positive DPR,
