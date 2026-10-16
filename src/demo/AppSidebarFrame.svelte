@@ -6,6 +6,7 @@
   import FileTextIcon from "@lucide/svelte/icons/file-text";
   import HouseIcon from "@lucide/svelte/icons/house";
   import SettingsIcon from "@lucide/svelte/icons/settings";
+  import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
   import type { ComponentProps } from "svelte";
   import { AppSidebar, ThemeToggle, TopBar, type SidebarGroup } from "../lib/index.js";
 
@@ -56,6 +57,19 @@
           label: "Settings",
           href: link("settings"),
           icon: SettingsIcon,
+          viewRuns: [],
+        },
+      ],
+    },
+    {
+      label: "This device",
+      end: true,
+      sections: [
+        {
+          id: "preferences",
+          label: "Preferences",
+          href: link("preferences"),
+          icon: SlidersHorizontalIcon,
           viewRuns: [],
         },
       ],
