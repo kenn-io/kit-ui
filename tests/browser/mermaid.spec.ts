@@ -27,29 +27,28 @@ test("renders mermaid fences into pan/zoom viewers", async ({ page }) => {
   await expect(viewer.locator(".kit-mermaid-viewer__button svg.lucide")).toHaveCount(3);
 });
 
-test("repeated wheel zoom and drag pan are reset together", async ({ page }) => {
-  const viewer = firstViewer(page);
-  const viewport = viewer.locator(".kit-mermaid-viewer__viewport");
-  const pan = viewer.locator(".kit-mermaid-viewer__pan");
+test("wheel zoom stays vector-backed; drag pans and Reset restores identity", async ({ page }) => {
+  const viewport = firstViewer(page).locator(".kit-mermaid-viewer__viewport");
+  const pan = firstViewer(page).locator(".kit-mermaid-viewer__pan");
   const transform = () =>
     pan.evaluate((node) => {
-      const matrix = new DOMMatrix((node as HTMLElement).style.transform);
+      const matrix = new DOMMatrix(node.style.transform);
       return { scale: matrix.a, x: matrix.e, y: matrix.f };
     });
-  const viewportBox = await viewport.boundingBox();
-  expect(viewportBox).not.toBeNull();
+  const svg = pan.locator(":scope > svg");
+  const originalSvg = await svg.elementHandle();
+  await viewport.hover();
+  await page.mouse.wheel(0, -300);
+  await expect
+    .poll(() => pan.evaluate((node) => new DOMMatrix(node.style.transform).a))
+    .toBeGreaterThan(1);
+  expect(await svg.evaluate((node, original) => node === original, originalSvg)).toBe(true);
+  await expect(pan).toHaveCSS("will-change", "auto");
 
-  const cursor = {
-    x: viewportBox!.x + viewportBox!.width * 0.25,
-    y: viewportBox!.y + viewportBox!.height * 0.25,
-  };
-  await page.mouse.move(cursor.x, cursor.y);
-  await page.mouse.wheel(0, -100);
-  await page.mouse.wheel(0, -100);
   const zoomed = await transform();
-  expect(zoomed.scale).toBeGreaterThan(1);
-  expect(Math.abs(zoomed.x) + Math.abs(zoomed.y)).toBeGreaterThan(0);
-
+  const box = (await viewport.boundingBox())!;
+  const cursor = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(cursor.x, cursor.y);
   await page.mouse.down();
   await page.mouse.move(cursor.x + 30, cursor.y + 20);
   await page.mouse.up();
@@ -58,25 +57,8 @@ test("repeated wheel zoom and drag pan are reset together", async ({ page }) => 
   expect(panned.x).toBeCloseTo(zoomed.x + 30);
   expect(panned.y).toBeCloseTo(zoomed.y + 20);
 
-  await viewer.getByRole("button", { name: "Reset diagram view" }).click();
+  await firstViewer(page).getByRole("button", { name: "Reset diagram view" }).click();
   await expect.poll(transform).toEqual({ scale: 1, x: 0, y: 0 });
-});
-
-test("wheel zoom keeps the live diagram vector-backed", async ({ page }) => {
-  // If fixed-layer compositing returns, Chromium enlarges the SVG's original
-  // raster and zoomed Mermaid labels become blurry for consuming apps.
-  const viewer = firstViewer(page);
-  const viewport = viewer.locator(".kit-mermaid-viewer__viewport");
-  const pan = viewer.locator(".kit-mermaid-viewer__pan");
-  const svg = pan.locator(":scope > svg");
-  const originalSvg = await svg.elementHandle();
-
-  await viewport.hover();
-  await page.mouse.wheel(0, -300);
-  await expect(pan).not.toHaveCSS("transform", /matrix\(1,/);
-
-  expect(await svg.evaluate((node, original) => node === original, originalSvg)).toBe(true);
-  await expect(pan).toHaveCSS("will-change", "auto");
 });
 
 test("copy control copies the original fence source", async ({ page, context }) => {

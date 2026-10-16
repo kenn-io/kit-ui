@@ -2,6 +2,136 @@
 
 All exported from the package root (or the granular `/utils/*` subpaths).
 
+## Pan and zoom
+
+`attachPanZoom(viewport, pan, options)` handles dragging, wheel zoom, touch
+pinch, and double-tap zoom. The viewport clips the transformed `pan` element.
+Set its transform origin to its center.
+
+Host integration fragment for two or more same-geometry panes, after image
+load and measurement:
+
+```ts
+import { actualPixelSize, attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
+
+declare const rotation: number;
+declare const naturalW: number, naturalH: number;
+declare const boxW: number, boxH: number;
+let currentView: PanZoomView = { scale: 1, offsetX: 0, offsetY: 0 };
+declare const panes: {
+  viewport: HTMLElement;
+  pan: HTMLElement;
+  image: HTMLImageElement;
+}[];
+
+const { fittedWidth, scale } = actualPixelSize(
+  { width: naturalW, height: naturalH },
+  { width: boxW, height: boxH },
+  devicePixelRatio,
+  rotation,
+);
+const imageWidth = rotation % 180 !== 0 ? (fittedWidth * naturalW) / naturalH : fittedWidth;
+for (const { pan, image } of panes) {
+  Object.assign(pan.style, {
+    width: `${boxW}px`,
+    height: `${boxH}px`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transformOrigin: "center",
+  });
+  Object.assign(image.style, {
+    width: `${imageWidth}px`,
+    height: `${(imageWidth * naturalH) / naturalW}px`,
+    maxWidth: "none",
+    maxHeight: "none",
+    flexShrink: "0",
+    transform: `rotate(${rotation}deg)`,
+    transformOrigin: "center",
+  });
+}
+const limits = {
+  minScale: Math.min(0.4, scale, currentView.scale),
+  maxScale: Math.max(8, scale, currentView.scale),
+};
+const controllers = panes.map(({ viewport, pan }) =>
+  attachPanZoom(viewport, pan, {
+    ...limits,
+    onChange: (view: PanZoomView) => {
+      currentView = view;
+      controllers.forEach((controller) => controller.setView(view));
+    },
+  }),
+);
+
+controllers.forEach((controller) => controller.setView({ scale, offsetX: 0, offsetY: 0 }));
+currentView = controllers[0]!.getView();
+```
+
+Call `reset()` to fit the view and `destroy()` when removing each pane.
+Keep each pan element as an unrotated wrapper around its image. The example
+centers the image and sets its dimensions before rotation so its rotated bounds
+match the helper's fit. Apply rotation to the image so pointer and pan
+coordinates stay aligned.
+
+`getView()` returns a detached `{ scale, offsetX, offsetY }`. Offsets are CSS
+pixels relative to the viewport center. Each changed gesture input reports
+one completed view through `onChange`, including a pinch that pans and zooms.
+Settling and cancellation report their changed view; `reset()` always reports.
+Construction and `setView()` emit no change, so linked viewers can update each
+other without a callback loop.
+
+Scale retains full precision. `minScale` accepts a finite value above 0 and at
+most 1, otherwise it defaults to 0.4. `maxScale` accepts a finite value at least
+1, otherwise it defaults to 8. Each bound falls back independently.
+`setLimits({ minScale, maxScale })` replaces both bounds using the same defaults
+and silently clamps scale, leaving offsets unchanged. It retains active gestures
+and pointer capture. Gestures and `setView()` clamp to these limits.
+Sharing the same view assumes matching pane and fitted-image geometry.
+These linked panes need identical limits because `setView()` clamps silently.
+Read `getView()` after setting a view to obtain the effective clamped values.
+Views containing non-finite values or a scale at or below zero are ignored.
+
+For actual pixels, the example computes one image pixel per physical screen
+pixel. For quarter turns, `object-fit: contain` in the original box alone
+doesn't produce the rotated fit; size the image as above. `boxW` and `boxH` are the
+viewport's fractional, untransformed content-box dimensions; use a
+`ResizeObserverEntry.contentRect` or an equivalent precise layout measurement.
+`actualPixelSize` requires positive finite image and box dimensions and DPR,
+and finite rotation in multiples of 90°. Invalid inputs throw a `RangeError`.
+It returns the fitted width and scale,
+accounting for letterboxing and quarter turns. `clientWidth`/`clientHeight`
+and `offsetWidth`/`offsetHeight` round to integers, so they can't establish an
+exact pixel size. Transformed `getBoundingClientRect()` dimensions also can't
+be used as fit inputs. The demo images have no padding or border. Choose
+shared bounds that include the defaults, actual-pixel scale, and current scale,
+as above. After image load, pane resize, or a density change, recompute sizing
+and update every controller's limits. Include the current scale in those bounds
+when preserving the centered image point so clamping doesn't change it before
+the offset adjustment. Read the clamped view back into host
+state before deriving and applying the next view:
+
+```ts
+controllers.forEach((controller) => controller.setLimits(limits));
+currentView = controllers[0]!.getView();
+```
+
+Apply the next view with `controllers.forEach((controller) => controller.setView(view))`.
+Keep manual scale or recompute scale while actual pixels remains selected.
+Multiply both offsets by
+`(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same
+image point centered. With a fixed fitted width, this is `newScale / oldScale`.
+Manual scale changes clear that selection; panning preserves it. Different-size
+panes or images require coordinate mapping before `setView()`; copying the
+same view between them is unsupported.
+
+Scales within 0.1% of 1 count as resting for paging and double-tap zoom.
+Only a pinch that changed scale settles a near-1 scale to exactly 1 on release.
+A changed `setView()` or `reset()` replaces the gesture's cancellation and
+settling destination; an equal echo preserves it. `setView()` stays silent.
+Paging requires starting and ending at rest. Applying a zoomed view disables
+paging for that gesture, even after reset.
+
 ## Clipboard
 
 ```ts
