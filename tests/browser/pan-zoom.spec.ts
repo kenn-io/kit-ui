@@ -187,11 +187,8 @@ async function mouseDrag(page: Page, from: [number, number], moves: [number, num
   await page.mouse.up();
 }
 
-test("comparison demo links and fits views; Actual pixels preserves size, readout, and fractional fit", async ({
-  page,
-  browser,
-}) => {
-  const { panes, images, boxes, link, transforms, fittedWidth } = await openComparisonDemo(page);
+test("comparison demo links and fits views", async ({ page }) => {
+  const { panes, images, boxes, link, transforms } = await openComparisonDemo(page);
   const identity = [
     { scale: 1, offsetX: 0, offsetY: 0 },
     { scale: 1, offsetX: 0, offsetY: 0 },
@@ -234,6 +231,10 @@ test("comparison demo links and fits views; Actual pixels preserves size, readou
   const panned = await transforms();
   expect(panned[0]).not.toBe(fitted[0]);
   expect(panned[1]).toBe(panned[0]);
+});
+
+test("Actual pixels preserves size, readout, and fractional fit", async ({ page, browser }) => {
+  const { panes, images, boxes, link, fittedWidth } = await openComparisonDemo(page);
   await link.uncheck();
   for (const [width, dpr] of [
     [80, 4],
@@ -785,7 +786,7 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
     offsetX: 0,
     offsetY: 0,
   });
-  for (const scenario of ["double-tap", "release-away", "tap-drag", "tap-pinch-tap"]) {
+  for (const scenario of ["double-tap", "release-away", "tap-drag", "drag-tap", "tap-pinch-tap"]) {
     await mount(page);
     const result = await page.evaluate(
       ({ scenario }) => {
@@ -830,6 +831,9 @@ test("double clicks and taps anchor and toggle; duplicate clicks and moved taps 
         } else if (scenario === "tap-drag") {
           tapAt(200, 200);
           returningDrag();
+        } else if (scenario === "drag-tap") {
+          returningDrag();
+          tapAt(200, 200);
         } else {
           tapAt(200, 200);
           fire("pointerdown", 1, 150, 200);

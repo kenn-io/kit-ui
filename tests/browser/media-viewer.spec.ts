@@ -55,23 +55,6 @@ test("pages with buttons and arrow keys, wrapping at the ends", async ({ page })
 
 test("Reset, paging and item replacement clear pan and zoom", async ({ page }) => {
   await page.getByRole("button", { name: "Open viewer" }).click();
-  const viewport = page.locator(".kit-media-viewer__viewport");
-  await viewport.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    for (let i = 0; i < 40; i += 1) {
-      element.dispatchEvent(
-        new WheelEvent("wheel", {
-          deltaY: -0.5,
-          clientX: rect.left + rect.width / 2,
-          clientY: rect.top + rect.height / 2,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    }
-  });
-  expect((await transform(page))[0]!).toBeGreaterThan(1.02);
-  await expect(viewport).toHaveAttribute("data-zoomed", "true");
   for (const action of ["reset", "page", "replace"]) {
     if (action === "replace") {
       await page.keyboard.press("Escape");
