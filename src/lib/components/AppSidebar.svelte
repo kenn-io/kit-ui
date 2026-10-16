@@ -26,6 +26,11 @@
   export interface SidebarGroup {
     label: string | null;
     sections: SidebarSection[];
+    /**
+     * Places the group at the bottom of the panel, above the footer, apart
+     * from the groups before it. List end groups last.
+     */
+    end?: boolean;
   }
 
   export interface SidebarLocation {
@@ -346,7 +351,7 @@
     <div class="kit-app-sidebar__brand">{@render brand({ rail })}</div>
     <div class="kit-app-sidebar__nav">
       {#each groups as group, index (index)}
-        <div class="kit-app-sidebar__group">
+        <div class={["kit-app-sidebar__group", group.end && "kit-app-sidebar__group--end"]}>
           {#if group.label !== null && !rail}
             <span class="kit-app-sidebar__group-label" aria-hidden="true">{group.label}</span>
           {/if}
@@ -529,9 +534,20 @@
     padding-inline: var(--space-2);
   }
 
+  /* The nav takes the panel's free height, so an end group can sit at its
+   * bottom, just above the footer. */
   .kit-app-sidebar__nav {
-    display: grid;
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
     gap: var(--space-5);
+  }
+
+  /* The first end group takes the free height above it, including when it
+   * is the only group. */
+  .kit-app-sidebar__group--end:first-child,
+  .kit-app-sidebar__group:not(.kit-app-sidebar__group--end) + .kit-app-sidebar__group--end {
+    margin-top: auto;
   }
 
   .kit-app-sidebar__group {

@@ -21,6 +21,11 @@ export interface SidebarSection {
 export interface SidebarGroup {
     label: string | null;
     sections: SidebarSection[];
+    /**
+     * Places the group at the bottom of the panel, above the footer, apart
+     * from the groups before it. List end groups last.
+     */
+    end?: boolean;
 }
 export interface SidebarLocation {
     section: string | null;

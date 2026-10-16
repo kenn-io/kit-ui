@@ -1,11 +1,13 @@
 <script lang="ts">
   // The sample app inside the AppSidebar gallery iframes and browser tests:
   // ?app-sidebar-frame=<section>[/<view>] picks the current location,
-  // ?app-sidebar-footer=none renders the sidebar without a footer, and
+  // ?app-sidebar-footer=none renders the sidebar without a footer,
+  // ?app-sidebar-groups=end-only renders only the end group, and
   // ?app-sidebar-labels=es names every control in Spanish.
   import FileTextIcon from "@lucide/svelte/icons/file-text";
   import HouseIcon from "@lucide/svelte/icons/house";
   import SettingsIcon from "@lucide/svelte/icons/settings";
+  import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
   import type { ComponentProps } from "svelte";
   import { AppSidebar, ThemeToggle, TopBar, type SidebarGroup } from "../lib/index.js";
 
@@ -24,7 +26,7 @@
         }
       : {};
 
-  const groups: SidebarGroup[] = [
+  const allGroups: SidebarGroup[] = [
     {
       label: null,
       sections: [{ id: "home", label: "Home", href: link("home"), icon: HouseIcon, viewRuns: [] }],
@@ -60,7 +62,24 @@
         },
       ],
     },
+    {
+      label: "This device",
+      end: true,
+      sections: [
+        {
+          id: "preferences",
+          label: "Preferences",
+          href: link("preferences"),
+          icon: SlidersHorizontalIcon,
+          viewRuns: [],
+        },
+      ],
+    },
   ];
+  const groups =
+    params.get("app-sidebar-groups") === "end-only"
+      ? allGroups.filter((group) => group.end)
+      : allGroups;
 
   let address = $state(new URL(location.href));
   const route = $derived((address.searchParams.get(PARAM) || "home").split("/"));

@@ -708,3 +708,33 @@ test("the sidebar stands raised only under a theme with depth tokens", async ({ 
     await expect(sidebar(page)).toHaveCSS("box-shadow", raised);
   }
 });
+
+test("an end group sits at the bottom of the panel, above the footer", async ({ page }) => {
+  for (const width of [1440, 1024]) {
+    await open(page, "home", width, 900);
+    const settings = await sectionLink(page, "Settings").boundingBox();
+    const preferences = await sectionLink(page, "Preferences").boundingBox();
+    const footer = await page.locator(".kit-app-sidebar__footer").boundingBox();
+    if (!settings || !preferences || !footer) throw new Error("sidebar rows not laid out");
+    // Apart from the groups before it, and directly above the footer.
+    expect(preferences.y - (settings.y + settings.height), `gap at ${width}px`).toBeGreaterThan(
+      200,
+    );
+    expect(footer.y - (preferences.y + preferences.height), `footer at ${width}px`).toBeLessThan(
+      40,
+    );
+  }
+  await expect(nav(page).getByRole("list", { name: "This device" })).toBeAttached();
+});
+
+test("an end group that is the only group still sits at the bottom", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?app-sidebar-frame=preferences&app-sidebar-groups=end-only");
+  await page.locator(".frame__main").waitFor();
+  const brand = await page.locator(".kit-app-sidebar__brand").boundingBox();
+  const preferences = await sectionLink(page, "Preferences").boundingBox();
+  const footer = await page.locator(".kit-app-sidebar__footer").boundingBox();
+  if (!brand || !preferences || !footer) throw new Error("sidebar rows not laid out");
+  expect(preferences.y - (brand.y + brand.height)).toBeGreaterThan(400);
+  expect(footer.y - (preferences.y + preferences.height)).toBeLessThan(40);
+});

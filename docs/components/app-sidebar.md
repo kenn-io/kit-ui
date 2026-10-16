@@ -96,7 +96,7 @@ Sections and views are plain links. The component does not route: update `locati
 
 ## Types
 
-- `SidebarGroup`: `{ label: string | null; sections: SidebarSection[] }`. A `null` label renders no group heading. The rail hides group headings.
+- `SidebarGroup`: `{ label: string | null; sections: SidebarSection[]; end?: boolean }`. A `null` label renders no group heading. The rail hides group headings. An `end` group sits at the bottom of the panel, just above the footer, apart from the groups before it, in the full sidebar, the rail and the drawer. Use it for a group that belongs to the device or the account rather than the product, such as local settings. List end groups last; when the panel is too short to separate them, they follow the other groups and the panel scrolls.
 - `SidebarSection`: `{ id; label; href; icon: Component; viewRuns: SidebarViewRun[] }`. The icon renders at size 16, so any `@lucide/svelte` icon works. `viewRuns` is empty when the section has no views.
 - `SidebarViewRun`: `{ heading: string | null; views: SidebarView[] }`. A run of views under an optional heading.
 - `SidebarView`: `{ id; label; href }`.
