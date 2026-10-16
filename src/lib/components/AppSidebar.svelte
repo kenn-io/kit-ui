@@ -543,6 +543,9 @@
     gap: var(--space-5);
   }
 
+  /* The first end group takes the free height above it, including when it
+   * is the only group. */
+  .kit-app-sidebar__group--end:first-child,
   .kit-app-sidebar__group:not(.kit-app-sidebar__group--end) + .kit-app-sidebar__group--end {
     margin-top: auto;
   }

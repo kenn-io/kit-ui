@@ -726,3 +726,15 @@ test("an end group sits at the bottom of the panel, above the footer", async ({ 
   }
   await expect(nav(page).getByRole("list", { name: "This device" })).toBeAttached();
 });
+
+test("an end group that is the only group still sits at the bottom", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?app-sidebar-frame=preferences&app-sidebar-groups=end-only");
+  await page.locator(".frame__main").waitFor();
+  const brand = await page.locator(".kit-app-sidebar__brand").boundingBox();
+  const preferences = await sectionLink(page, "Preferences").boundingBox();
+  const footer = await page.locator(".kit-app-sidebar__footer").boundingBox();
+  if (!brand || !preferences || !footer) throw new Error("sidebar rows not laid out");
+  expect(preferences.y - (brand.y + brand.height)).toBeGreaterThan(400);
+  expect(footer.y - (preferences.y + preferences.height)).toBeLessThan(40);
+});
