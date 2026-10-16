@@ -63,12 +63,19 @@ for (const dark of [false, true]) {
     await gotoPage(page, "chip");
     await useTheme(page, "quiet");
     await setTheme(page, { dark });
-    for (const surface of ["--bg-inset", "--bg-primary", "--bg-surface", "--bg-surface-hover"]) {
+    // The last entry is the fill of a raised control.
+    for (const surface of [
+      "var(--bg-inset)",
+      "var(--bg-primary)",
+      "var(--bg-surface)",
+      "var(--bg-surface-hover)",
+      "var(--bg-raised, var(--bg-inset))",
+    ]) {
       const probe = await page.evaluate((background) => {
         document.querySelector("[data-quiet-muted-probe]")?.remove();
         const host = document.createElement("div");
         host.dataset.quietMutedProbe = "";
-        host.style.background = `var(${background})`;
+        host.style.background = background;
         host.style.position = "fixed";
         host.style.inset = "0 auto auto 0";
         const text = document.createElement("span");

@@ -131,7 +131,7 @@
     padding: 5px 8px;
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--kit-control-radius, var(--radius-sm));
-    background: var(--bg-inset);
+    background: var(--bg-raised, var(--bg-inset));
     box-shadow: var(--shadow-raised, none);
     color: var(--text-secondary);
     font: inherit;
@@ -153,6 +153,7 @@
   }
 
   .kit-menu__trigger:where([aria-expanded="true"], :active:not(:disabled)) {
+    background: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
 </style>

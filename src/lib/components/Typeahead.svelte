@@ -653,7 +653,7 @@
     align-items: center;
     gap: 4px;
     padding: var(--typeahead-control-padding, 0 8px);
-    background: var(--bg-inset);
+    background: var(--bg-raised, var(--bg-inset));
     border: var(--border-width) solid var(--border-muted);
     box-shadow: var(--shadow-raised, none);
     border-radius: var(--radius-sm);
@@ -678,6 +678,7 @@
 
   /* A press only: while open, the input replaces the trigger and sinks as a field. */
   .kit-typeahead__trigger:where(:active:not(:disabled)) {
+    background: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
 

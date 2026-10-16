@@ -626,6 +626,15 @@
     border: var(--border-width) solid var(--border-default);
   }
 
+  /* Like a Button, a resting icon button takes the theme's raised fill and
+   * keeps the inset well while pressed or open. The segmented track stays a
+   * well. */
+  .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
+    .kit-adaptive-action-grid__item
+    > :global(.kit-icon-button:not([aria-pressed="true"], [aria-expanded="true"], :active)) {
+    background: var(--bg-raised, var(--bg-inset));
+  }
+
   .kit-adaptive-action-grid:not(.kit-adaptive-action-grid--row)
     .kit-adaptive-action-grid__item
     > :global(.kit-filter-dropdown)

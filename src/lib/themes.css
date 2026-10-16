@@ -648,7 +648,8 @@
  * (--label-transform: none) instead of uppercase tracking. Surfaces layer
  * inset < page < surface in both modes. Quiet turns on the depth tokens:
  * controls stand raised, fields sit sunken, panels get a hairline ring, and
- * table headers are lit, all with short, crisp shadows. Muted text clears
+ * table headers are lit, all with short, crisp shadows. In dark mode raised
+ * controls also fill lighter than the surfaces. Muted text clears
  * WCAG AA on every surface in both modes. No canvas decor: the ground
  * stays a flat neutral.
  * ──────────────────────────────────────────────────────────────────────── */
@@ -726,6 +727,10 @@
   --shadow-lg: 0 3px 8px rgba(0, 0, 0, 0.55);
   --overlay-bg: rgba(0, 0, 0, 0.55);
   --edge-highlight: rgba(255, 255, 255, 0.06);
+  /* The inset well is darker than the page here, so raised controls fill
+   * lighter than the surfaces instead of reading as wells. Light leaves the
+   * token unset, so they keep the inset fill there. */
+  --bg-raised: #26282b;
 }
 
 /* ────────────────────────────────────────────────────────────────────────

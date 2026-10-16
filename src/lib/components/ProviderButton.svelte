@@ -75,13 +75,14 @@
     transform: translateY(var(--provider-button-mark-offset-y, calc(var(--space-1) * -1)));
   }
 
+  /* Button's own resting fill, which sinks to the inset well while pressed. */
   :global(.kit-provider-button--sso) {
-    --provider-button-default-background: var(--bg-inset);
+    --provider-button-default-background: var(--kit-button-fill);
     --provider-button-default-border: var(--border-default);
     --provider-button-default-color: var(--text-secondary);
     --provider-button-default-hover-background: var(--bg-surface-hover);
     --provider-button-default-hover-color: var(--text-primary);
-    --provider-button-default-disabled-background: var(--bg-inset);
+    --provider-button-default-disabled-background: var(--kit-button-fill);
     --provider-button-default-disabled-border: var(--border-muted);
     --provider-button-default-disabled-color: var(--text-muted);
   }

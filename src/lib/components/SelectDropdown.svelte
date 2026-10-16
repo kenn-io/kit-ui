@@ -269,7 +269,7 @@
     width: 100%;
     height: var(--kit-control-height, 26px);
     padding: 0 8px;
-    background: var(--bg-inset);
+    background: var(--bg-raised, var(--bg-inset));
     border: var(--border-width) solid var(--border-muted);
     box-shadow: var(--shadow-raised, none);
     border-radius: var(--kit-control-radius, var(--radius-sm));
@@ -293,6 +293,7 @@
   }
 
   .kit-select-dropdown__trigger:where([aria-expanded="true"], :active:not(:disabled)) {
+    background: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
 

@@ -1,10 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { gotoPage, resolvedStyle, setTheme, useTheme } from "./helpers.js";
 
-// Four depth tokens are fallback-only, and --edge-highlight is declared
+// Five depth tokens are fallback-only, and --edge-highlight is declared
 // transparent. A theme that leaves them unset keeps today's look; quiet sets
 // them and its controls, fields and panels take the raised, sunken and panel
-// shadows.
+// shadows, and in dark mode its raised controls take a lighter fill.
 
 const OTHER_THEMES = [
   null,
@@ -185,6 +185,136 @@ test("quiet re-sets its edge highlight and shadows for dark mode", async ({ page
   expect(inDark.shadowSm, "--shadow-sm").not.toBe(inLight.shadowSm);
   expect(inDark.shadowMd, "--shadow-md").not.toBe(inLight.shadowMd);
   expect(inDark.shadowLg, "--shadow-lg").not.toBe(inLight.shadowLg);
+});
+
+// Raised controls that rest on the inset well color. A theme without
+// --bg-raised keeps that fill; quiet sets it in dark mode, where the inset
+// color is darker than the page and would make the controls read as wells.
+const INSET = "var(--bg-inset)";
+const RAISED_FILLS: Record<string, { selector: string; today: string }[]> = {
+  button: [
+    { selector: body(".kit-button--outline.kit-button--neutral"), today: INSET },
+    {
+      selector: body(".kit-button--soft.kit-button--neutral"),
+      today: "color-mix(in srgb, var(--text-muted) 8%, var(--bg-inset))",
+    },
+    { selector: body(".kit-button--outline.kit-button--danger"), today: INSET },
+  ],
+  "provider-brand": [{ selector: body(".kit-provider-button--sso"), today: INSET }],
+  "select-dropdown": [{ selector: body(".kit-select-dropdown__trigger"), today: INSET }],
+  "filter-dropdown": [{ selector: body(".kit-filter-dropdown__btn"), today: INSET }],
+  menu: [{ selector: body(".kit-menu__trigger"), today: INSET }],
+  typeahead: [{ selector: body(".kit-typeahead__trigger"), today: INSET }],
+  "adaptive-action-grid": [{ selector: body(".icon-action-grid .kit-icon-button"), today: INSET }],
+};
+
+/** WCAG relative luminance of an element's background and of the nearest
+ * background behind it, read after any background transition finishes. */
+async function fillAndGround(locator: Locator): Promise<[number, number]> {
+  return locator.evaluate((element) => {
+    for (const animation of element.getAnimations()) animation.finish();
+    // Painting a pixel reads any color syntax, color(srgb …) included.
+    const pixel = document.createElement("canvas").getContext("2d")!;
+    const luminance = (color: string) => {
+      pixel.clearRect(0, 0, 1, 1);
+      pixel.fillStyle = color;
+      pixel.fillRect(0, 0, 1, 1);
+      const [r = 0, g = 0, b = 0] = pixel.getImageData(0, 0, 1, 1).data;
+      const linear = (channel: number) => {
+        const s = channel / 255;
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+    };
+    let ground = element.parentElement;
+    while (ground && getComputedStyle(ground).backgroundColor === "rgba(0, 0, 0, 0)") {
+      ground = ground.parentElement;
+    }
+    return [
+      luminance(getComputedStyle(element).backgroundColor),
+      luminance(getComputedStyle(ground ?? document.body).backgroundColor),
+    ];
+  });
+}
+
+for (const [id, probes] of Object.entries(RAISED_FILLS)) {
+  test(`${id}: raised controls keep today's fill until a theme sets a raised fill`, async ({
+    page,
+  }) => {
+    await gotoPage(page, id);
+    for (const theme of [...OTHER_THEMES, "quiet"] as const) {
+      await useTheme(page, theme);
+      // Quiet sets a raised fill only in dark mode.
+      for (const dark of theme === "quiet" ? [false] : [false, true]) {
+        await setTheme(page, { dark });
+        for (const probe of probes) {
+          const today = await resolvedStyle(page, "background-color", probe.today);
+          await expect(page.locator(probe.selector).first(), probe.selector).toHaveCSS(
+            "background-color",
+            today,
+          );
+        }
+      }
+    }
+  });
+
+  test(`${id}: quiet dark fills raised controls lighter than the surface behind them`, async ({
+    page,
+  }) => {
+    await gotoPage(page, id);
+    await useTheme(page, "quiet");
+    await setTheme(page, { dark: true });
+    for (const { selector } of probes) {
+      const [fill, ground] = await fillAndGround(page.locator(selector).first());
+      expect(fill, selector).toBeGreaterThan(ground);
+    }
+  });
+}
+
+test("quiet dark: fields and the segmented track stay no lighter than the surface", async ({
+  page,
+}) => {
+  for (const [id, selector] of [
+    ["text-input", body(".kit-text-input")],
+    ["segmented-control", body(".kit-segmented:not(.kit-segmented--borderless)")],
+  ] as const) {
+    await gotoPage(page, id);
+    await useTheme(page, "quiet");
+    await setTheme(page, { dark: true });
+    const [fill, ground] = await fillAndGround(page.locator(selector).first());
+    expect(fill, selector).toBeLessThanOrEqual(ground);
+  }
+});
+
+test("quiet dark: pressed or open controls sink back to the inset fill", async ({ page }) => {
+  const sink = async (id: string, selector: string, act: (control: Locator) => Promise<void>) => {
+    await gotoPage(page, id);
+    await useTheme(page, "quiet");
+    await setTheme(page, { dark: true });
+    const control = page.locator(selector).first();
+    // Off every control, so no hover fill stands in for the sunken one.
+    await page.mouse.move(0, 0);
+    await act(control);
+    const inset = await resolvedStyle(page, "background-color", INSET);
+    await expect(control, selector).toHaveCSS("background-color", inset);
+  };
+  const click = (control: Locator) => control.click();
+  const expand = (control: Locator) =>
+    control.evaluate((element) => element.setAttribute("aria-expanded", "true"));
+  const press = async (control: Locator) => {
+    await control.hover();
+    await page.mouse.down();
+  };
+
+  await sink("select-dropdown", body(".kit-select-dropdown__trigger"), click);
+  await sink("filter-dropdown", body(".kit-filter-dropdown__btn"), click);
+  await sink("menu", body(".kit-menu__trigger"), click);
+  await sink("button", body(".kit-button--outline.kit-button--neutral"), expand);
+  await sink("typeahead", body(".kit-typeahead__trigger"), press);
+  await page.mouse.up();
+  await sink("adaptive-action-grid", body(".icon-action-grid .kit-icon-button"), (control) =>
+    control.evaluate((element) => element.setAttribute("aria-pressed", "true")),
+  );
 });
 
 test("table headers keep today's background until a theme lights them", async ({ page }) => {
