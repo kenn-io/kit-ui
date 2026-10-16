@@ -77,6 +77,11 @@ async function twoFingers(cdp: CDPSession, from: [Point, Point], to: [Point, Poi
   await release(cdp, to);
 }
 
+async function tap(cdp: CDPSession, at: Point) {
+  await touch(cdp, "touchStart", [at]);
+  await touch(cdp, "touchEnd", []);
+}
+
 async function center(locator: Locator): Promise<Point> {
   const box = (await locator.boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -105,6 +110,126 @@ test("a swipe pages the viewer", async ({ browser }) => {
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
   await expect(counter).toHaveText("2 / 3");
+  await close();
+});
+
+test("double-tap zooms in at the tap, and again resets", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const pan = page.locator(".kit-media-viewer__pan");
+  const mid = await center(page.locator(".kit-media-viewer__viewport"));
+
+  // Off-center, so the zoom must also shift the content to keep the
+  // tapped point under the finger.
+  const at = { x: mid.x + 100, y: mid.y + 50 };
+  await tap(cdp, at);
+  await tap(cdp, at);
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 2.5, x: -150, y: -75 });
+
+  await tap(cdp, at);
+  await tap(cdp, at);
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
+  await close();
+});
+
+test("a two-finger pinch zooms around the fingers", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const mid = await center(page.locator(".kit-media-viewer__viewport"));
+
+  // Fingers 100px apart spread to 200px in quarter-pixel steps, the size
+  // real fingers report: twice the scale, with no step lost to rounding.
+  await twoFingers(
+    cdp,
+    [
+      { x: mid.x - 50, y: mid.y },
+      { x: mid.x + 50, y: mid.y },
+    ],
+    [
+      { x: mid.x - 100, y: mid.y },
+      { x: mid.x + 100, y: mid.y },
+    ],
+    200,
+  );
+  await expect
+    .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
+    .toBeCloseTo(2, 1);
+  await close();
+});
+
+test("a pinch out and back ends exactly unzoomed, so a swipe pages again", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const viewport = page.locator(".kit-media-viewer__viewport");
+  const mid = await center(viewport);
+  const pair = (spread: number): [Point, Point] => [
+    { x: mid.x - spread, y: mid.y },
+    { x: mid.x + spread, y: mid.y },
+  ];
+  // Out to 1.6x and back to the starting spread in uneven steps.
+  await touch(cdp, "touchStart", pair(50));
+  for (const spread of [57, 63, 71, 80, 73, 66, 61, 54, 50]) {
+    await touch(cdp, "touchMove", pair(spread));
+  }
+  await release(cdp, pair(50));
+  await expect
+    .poll(async () => (await transformOf(page.locator(".kit-media-viewer__pan"))).scale)
+    .toBe(1);
+  await expect(viewport).not.toHaveAttribute("data-zoomed");
+  await drag(cdp, { x: mid.x + 150, y: mid.y }, { x: mid.x - 150, y: mid.y });
+  await expect(page.locator(".kit-media-viewer__counter")).toHaveText("2 / 3");
+  await close();
+});
+
+test("only a still, quick touch counts toward a double tap", async ({ browser }) => {
+  test.skip(browser.browserType().name() !== "chromium", "CDP touch input");
+  const { page, cdp, close } = await touchPage(browser, "media-viewer");
+  await page.getByRole("button", { name: "Open viewer" }).tap();
+  const pan = page.locator(".kit-media-viewer__pan");
+  const reset = page.getByRole("button", { name: "Reset view" });
+  const mid = await center(page.locator(".kit-media-viewer__viewport"));
+  const scale = async () => (await transformOf(pan)).scale;
+  const outAndBack = async () => {
+    await touch(cdp, "touchStart", [mid]);
+    await touch(cdp, "touchMove", [{ x: mid.x, y: mid.y + 40 }]);
+    await touch(cdp, "touchMove", [mid]);
+    await touch(cdp, "touchEnd", []);
+  };
+
+  // A tap, then a drag that ends where it started: no zoom.
+  await tap(cdp, mid);
+  await outAndBack();
+  await page.waitForTimeout(150);
+  expect(await scale()).toBe(1);
+
+  // The drag first, then a tap: no zoom.
+  await reset.tap();
+  await page.waitForTimeout(350);
+  await outAndBack();
+  await tap(cdp, mid);
+  await page.waitForTimeout(150);
+  expect(await scale()).toBe(1);
+
+  // A tap, a pinch, a tap: the pinch's zoom stays.
+  await page.waitForTimeout(350);
+  await tap(cdp, mid);
+  await twoFingers(
+    cdp,
+    [
+      { x: mid.x - 50, y: mid.y },
+      { x: mid.x + 50, y: mid.y },
+    ],
+    [
+      { x: mid.x - 100, y: mid.y },
+      { x: mid.x + 100, y: mid.y },
+    ],
+  );
+  await tap(cdp, mid);
+  await page.waitForTimeout(150);
+  expect(await scale()).toBeCloseTo(2, 1);
   await close();
 });
 
@@ -193,6 +318,13 @@ test("touch-action hands scrolling to the page and restores it after zoom", asyn
   const mid = await center(viewport);
   await drag(cdp, { x: mid.x, y: mid.y + 60 }, { x: mid.x, y: mid.y - 60 }, 12);
   await expect.poll(top).toBeLessThan(before - 40);
+  expect(await transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
+
+  const scrolled = await center(viewport);
+  await drag(cdp, { x: scrolled.x + 60, y: scrolled.y }, { x: scrolled.x - 60, y: scrolled.y });
+  await expect.poll(async () => (await transformOf(pan)).x).toBeLessThan(-40);
+  await page.getByRole("button", { name: "Reset diagram view" }).first().tap();
+  await expect.poll(() => transformOf(pan)).toEqual({ scale: 1, x: 0, y: 0 });
 
   // A pinch whose fingers drift vertically zooms; the page stays put.
   const settled = await top();

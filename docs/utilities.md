@@ -8,7 +8,8 @@ All exported from the package root (or the granular `/utils/*` subpaths).
 pinch, and double-tap zoom. The viewport clips the transformed `pan` element.
 Set its transform origin to its center.
 
-Host integration fragment, after image load and measurement:
+Host integration fragment for two or more same-geometry panes, after image
+load and measurement:
 
 ```ts
 import { actualPixelSize, attachPanZoom, type PanZoomView } from "@kenn-io/kit-ui";
@@ -16,10 +17,12 @@ import { actualPixelSize, attachPanZoom, type PanZoomView } from "@kenn-io/kit-u
 declare const rotation: number;
 declare const naturalW: number, naturalH: number;
 declare const boxW: number, boxH: number;
-declare const currentView: PanZoomView;
-declare const leftViewport: HTMLElement, rightViewport: HTMLElement;
-declare const leftPan: HTMLElement, rightPan: HTMLElement;
-declare const leftImage: HTMLImageElement, rightImage: HTMLImageElement;
+declare let currentView: PanZoomView;
+declare const panes: {
+  viewport: HTMLElement;
+  pan: HTMLElement;
+  image: HTMLImageElement;
+}[];
 
 const { fittedWidth, scale } = actualPixelSize(
   { width: naturalW, height: naturalH },
@@ -28,7 +31,7 @@ const { fittedWidth, scale } = actualPixelSize(
   rotation,
 );
 const imageWidth = rotation % 180 !== 0 ? (fittedWidth * naturalW) / naturalH : fittedWidth;
-for (const pan of [leftPan, rightPan]) {
+for (const { pan, image } of panes) {
   Object.assign(pan.style, {
     width: `${boxW}px`,
     height: `${boxH}px`,
@@ -37,8 +40,6 @@ for (const pan of [leftPan, rightPan]) {
     justifyContent: "center",
     transformOrigin: "center",
   });
-}
-for (const image of [leftImage, rightImage]) {
   Object.assign(image.style, {
     width: `${imageWidth}px`,
     height: `${(imageWidth * naturalH) / naturalW}px`,
@@ -53,17 +54,18 @@ const limits = {
   minScale: Math.min(0.4, scale, currentView.scale),
   maxScale: Math.max(8, scale, currentView.scale),
 };
-const right = attachPanZoom(rightViewport, rightPan, {
-  ...limits,
-  onChange: (view: PanZoomView) => left.setView(view),
-});
-const left = attachPanZoom(leftViewport, leftPan, {
-  ...limits,
-  onChange: (view: PanZoomView) => right.setView(view),
-});
+const controllers = panes.map(({ viewport, pan }) =>
+  attachPanZoom(viewport, pan, {
+    ...limits,
+    onChange: (view: PanZoomView) => {
+      currentView = view;
+      controllers.forEach((controller) => controller.setView(view));
+    },
+  }),
+);
 
-left.setView({ scale, offsetX: 0, offsetY: 0 });
-right.setView(left.getView());
+controllers.forEach((controller) => controller.setView({ scale, offsetX: 0, offsetY: 0 }));
+currentView = controllers[0]!.getView();
 ```
 
 Call `reset()` to fit the view and `destroy()` when removing each pane.
@@ -103,7 +105,15 @@ exact pixel size. Transformed `getBoundingClientRect()` dimensions also can't
 be used as fit inputs. The demo images have no padding or border. Choose
 shared bounds that include the defaults, actual-pixel scale, and current scale,
 as above. After image load, pane resize, or a density change, recompute sizing
-and call `setLimits(limits)` on both controllers, then `setView(view)`.
+and update every controller's limits. Read the clamped view back into host
+state before deriving and applying the next view:
+
+```ts
+controllers.forEach((controller) => controller.setLimits(limits));
+currentView = controllers[0]!.getView();
+```
+
+Apply the next view with `controllers.forEach((controller) => controller.setView(view))`.
 Keep manual scale or recompute scale while actual pixels remains selected.
 Multiply both offsets by
 `(newScale * newFittedWidth) / (oldScale * oldFittedWidth)` to keep the same
