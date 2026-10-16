@@ -7,7 +7,7 @@
   import HouseIcon from "@lucide/svelte/icons/house";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import type { ComponentProps } from "svelte";
-  import { AppSidebar, ThemeToggle, type SidebarGroup } from "../lib/index.js";
+  import { AppSidebar, ThemeToggle, TopBar, type SidebarGroup } from "../lib/index.js";
 
   const PARAM = "app-sidebar-frame";
   const link = (route: string) => `${location.pathname}?${PARAM}=${route}`;
@@ -107,10 +107,20 @@
       <span class="frame__where">{sectionLabel}</span>
     {/snippet}
   </AppSidebar>
-  <main class="frame__main">
-    <h1 class="frame__title">{sectionLabel}</h1>
-    <p>Sample page. Resize the window to move between the drawer, the rail and the full sidebar.</p>
-  </main>
+  <div class="frame__column">
+    <!-- The narrow bar takes over from the top bar at 900px and narrower. -->
+    <div class="frame__top-bar">
+      <TopBar>
+        {#snippet left()}<span class="frame__where">{sectionLabel}</span>{/snippet}
+      </TopBar>
+    </div>
+    <main class="frame__main">
+      <h1 class="frame__title">{sectionLabel}</h1>
+      <p>
+        Sample page. Resize the window to move between the drawer, the rail and the full sidebar.
+      </p>
+    </main>
+  </div>
 </div>
 
 <style>
@@ -121,14 +131,18 @@
     color: var(--text-primary);
   }
 
-  .frame__main {
+  .frame__column {
     flex: 1;
     min-width: 0;
+  }
+
+  .frame__main {
     padding: var(--space-7);
   }
 
   .frame__brand {
     color: var(--text-primary);
+    font-size: var(--font-size-xl);
     font-weight: var(--font-weight-semibold, 600);
     text-decoration: none;
   }
@@ -145,6 +159,10 @@
   @media (max-width: 900px) {
     .frame {
       flex-direction: column;
+    }
+
+    .frame__top-bar {
+      display: none;
     }
   }
 </style>

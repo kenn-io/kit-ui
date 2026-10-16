@@ -122,6 +122,8 @@ Sections and views are plain links. The component does not route: update `locati
 
 The full sidebar and the rail are `position: sticky` and `100dvh` tall, so give their parent a flex row and let the main column take the remaining width (`min-width: 0`). At 900px and narrower the component renders a sticky top bar instead, so stack the bar above the main column (`flex-direction: column`), as in the example.
 
+The brand row at the top of the panel is `--header-height` tall and centers the brand, so the brand lines up with a `TopBar` at the top of the main column. A brand taller than the row makes the row taller.
+
 ## Stacking
 
 The sidebar and the narrow bar sit just below kit-ui's overlay layer (`--z-overlay`). `Modal`, `DetailDrawer`, `CommandPalette` and `FlashBanner` cover them, whatever their DOM order. See Stacking in the [theming guide](../theming.md#identity-tokens) for the z tokens.

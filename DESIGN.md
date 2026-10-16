@@ -212,7 +212,7 @@ resting surfaces keep today's look.
 
 ### Navigation
 
-- **Style:** 44px TopBar and 24px StatusBar chrome; sidebar links are quiet text rows that gain Hover Wash. In AppSidebar the current row keeps that wash, the current section's icon turns Action Blue, and the current view gains a 2px Action Blue indicator on its leading edge. `aria-current="page"` marks the current section or view, and `aria-current="true"` marks a section whose view is current.
+- **Style:** 44px TopBar and 24px StatusBar chrome; sidebar links are quiet text rows that gain Hover Wash. In AppSidebar the brand row is as tall as the TopBar, so a brand lines up with the bar beside it; the current row keeps that wash, the current section's icon turns Action Blue, and the current view gains a 2px Action Blue indicator on its leading edge. `aria-current="page"` marks the current section or view, and `aria-current="true"` marks a section whose view is current.
 
 ### StatusDot (signature)
 

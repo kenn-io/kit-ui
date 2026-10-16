@@ -125,6 +125,26 @@ test("the brand snippet knows when it sits in the rail", async ({ page }) => {
   await expect(brand).toHaveText("Acme");
 });
 
+/** An element's top, height and vertical center in the viewport. */
+const verticalExtent = (locator: Locator) =>
+  locator.evaluate((element) => {
+    const { top, height } = element.getBoundingClientRect();
+    return { top, height, center: top + height / 2 };
+  });
+
+test("the brand row lines up with a TopBar beside the sidebar", async ({ page }) => {
+  // The sample app puts a TopBar beside the full sidebar and the rail.
+  for (const width of [1440, 1024]) {
+    await open(page, "home", width);
+    const bar = await verticalExtent(page.locator(".kit-top-bar"));
+    const row = await verticalExtent(page.locator(".kit-app-sidebar__brand"));
+    const brand = await verticalExtent(nav(page).getByRole("link", { name: "Acme", exact: true }));
+    expect(row.top, `brand row top at ${width}px`).toBe(bar.top);
+    expect(row.height, `brand row height at ${width}px`).toBe(bar.height);
+    expect(brand.center, `brand center at ${width}px`).toBeCloseTo(row.center, 0);
+  }
+});
+
 test("hovering a rail icon opens its flyout until the pointer leaves", async ({ page }) => {
   await open(page, "reports/overview", 1024);
   await sectionLink(page, "Reports").hover();
