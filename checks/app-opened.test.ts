@@ -9,6 +9,11 @@ import {
 
 const ROUTE = "/api/v1/telemetry/events";
 const STORAGE_KEY = "kit-ui.app-opened.example.web";
+const VISIT = {
+  event: "session_ended",
+  properties: { surface: "web", duration_bucket: "under_1m" },
+};
+const STATE = { version: 1, day: "2026-10-03", quiet: false, screens: [] };
 const DAY_ONE = new Date("2026-10-03T12:00:00Z");
 const DAY_TWO = new Date("2026-10-04T00:30:00Z");
 
@@ -124,8 +129,7 @@ describe("startAppOpenedReporting", () => {
     async (status) => {
       statuses = ["held"];
       const reporter = start();
-      const visit = { event: "session_ended", properties: { duration_seconds: 12 } };
-      reporter.reportVisit(visit, { keepalive: true });
+      reporter.reportVisit(VISIT, { keepalive: true });
       reporter.reportScreen("A");
       expect(sent).toHaveLength(1);
       release({ status: 202, data: { status } });
@@ -134,7 +138,7 @@ describe("startAppOpenedReporting", () => {
       if (status !== "disabled")
         expect(sent.find(({ event }) => event.event === "session_ended")).toEqual({
           route: ROUTE,
-          event: visit,
+          event: VISIT,
           options: { keepalive: true },
         });
     },
@@ -151,7 +155,7 @@ describe("startAppOpenedReporting", () => {
     });
     await settle();
     reporter.reportScreen("A");
-    reporter.reportVisit({ event: "session_ended", properties: {} });
+    reporter.reportVisit(VISIT);
     const reloaded = start();
     reloaded.reportScreen("A");
     focus();
@@ -185,7 +189,7 @@ describe("startAppOpenedReporting", () => {
     second();
     focus();
     await settle();
-    first.reportVisit({ event: "session_ended", properties: {} });
+    first.reportVisit(VISIT);
     await settle();
     expect(quiet).toBe(false);
     expect(sent).toHaveLength(3);
@@ -196,55 +200,45 @@ describe("startAppOpenedReporting", () => {
     await settle();
     statuses = ["held", { status: 202, data: { status: "disabled" } }];
     reporter.reportScreen("A");
-    reporter.reportVisit({ event: "session_ended", properties: {} }, { keepalive: true });
+    reporter.reportVisit(VISIT, { keepalive: true });
     await settle();
     expect(sent).toHaveLength(3);
     release({ status: 202, data: { status: "queued" } });
     await settle();
     reporter.reportScreen("B");
-    reporter.reportVisit({ event: "session_ended", properties: {} });
+    reporter.reportVisit(VISIT);
     focus();
     await settle();
     expect(sent).toHaveLength(3);
   });
 
-  test.each([false, true])(
-    "six consecutive failures cap daily and visit reports: %s",
-    async (visitsOnly) => {
-      statuses = visitsOnly ? [] : Array(6).fill(503);
-      const reporter = start();
+  test("visit failures share backoff and stop after six failures", async () => {
+    const reporter = start();
+    await settle();
+    statuses = Array(6).fill(503);
+    for (const [i, delay] of [1000, 2000, 4000, 8000, 16000, 32000].entries()) {
+      reporter.reportVisit(VISIT);
       await settle();
-      if (visitsOnly) statuses = Array(6).fill(503);
-      for (const [i, delay] of [1000, 2000, 4000, 8000, 16000, 32000].entries()) {
-        if (visitsOnly) reporter.reportVisit({ event: "session_ended", properties: {} });
-        await settle();
-        const count = i + (visitsOnly ? 2 : 1);
-        reporter.reportVisit({ event: "session_ended", properties: {} });
-        await advance(delay - 1);
-        expect(sent).toHaveLength(count);
-        await advance(1);
-      }
-      const count = visitsOnly ? 7 : 6;
-      reporter.reportVisit({ event: "session_ended", properties: {} });
-      reporter.reportScreen("A");
-      focus();
-      await advance(60000);
-      expect(sent).toHaveLength(count);
-      jest.setSystemTime(DAY_TWO);
-      focus();
-      await settle();
-      expect(sent).toHaveLength(count + 2);
-    },
-  );
+      reporter.reportVisit(VISIT);
+      await advance(delay - 1);
+      expect(sent).toHaveLength(i + 2);
+      await advance(1);
+    }
+    reporter.reportVisit(VISIT);
+    reporter.reportScreen("A");
+    focus();
+    await settle();
+    expect(sent).toHaveLength(7);
+  });
 
   test("visit failures share backoff and a terminal response resets consecutive failures", async () => {
     const reporter = start();
     await settle();
     for (let i = 0; i < 6; i++) {
       statuses = [503];
-      reporter.reportVisit({ event: "session_ended", properties: {} });
+      reporter.reportVisit(VISIT);
       await settle();
-      reporter.reportVisit({ event: "session_ended", properties: {} });
+      reporter.reportVisit(VISIT);
       await advance(1000);
       reporter.reportScreen(String(i));
       await settle();
@@ -300,7 +294,7 @@ describe("startAppOpenedReporting", () => {
     yesterday({ status: 202, data: { status: "disabled" } });
     await settle();
     focus();
-    reporter.reportVisit({ event: "session_ended", properties: {} });
+    reporter.reportVisit(VISIT);
     await settle();
     statuses = [503];
     reporter.reportScreen("A");
@@ -312,7 +306,7 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(4);
   });
 
-  test.each([400, 500, 202])("terminal status %s ends a day's attempt", async (status) => {
+  test.each([400, 202])("terminal status %s ends a day's attempt", async (status) => {
     statuses = [status];
     start();
     await settle();
@@ -326,7 +320,7 @@ describe("startAppOpenedReporting", () => {
     reporter.reportScreen("A");
     await settle();
     jest.setSystemTime(DAY_TWO);
-    reporter.reportVisit({ event: "session_ended", properties: {} });
+    reporter.reportVisit(VISIT);
     await settle();
     focus();
     await settle();
@@ -335,5 +329,118 @@ describe("startAppOpenedReporting", () => {
       "app_opened",
       "screen_viewed",
     ]);
+  });
+  test("a legacy app date still makes one receipt check and holds visits", async () => {
+    stored.set(STORAGE_KEY, "2026-10-03");
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(1);
+    release({ status: 202, data: { status: "disabled" } });
+    await settle();
+    expect(sent).toHaveLength(1);
+  });
+
+  test.each([false, true])(
+    "one user-triggered retry chain after 15 minutes caps a dead daemon at twelve: %s",
+    async (visitTrigger) => {
+      statuses = Array(12).fill(503);
+      const reporter = start();
+      await settle();
+      for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
+      await advance(15 * 60000 - 1);
+      focus();
+      await settle();
+      expect(sent).toHaveLength(6);
+      await advance(1);
+      expect(sent).toHaveLength(6);
+      if (visitTrigger) reporter.reportVisit(VISIT, { keepalive: true });
+      else focus();
+      await settle();
+      expect(sent).toHaveLength(7);
+      for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
+      await advance(60 * 60000);
+      focus();
+      reporter.reportVisit(VISIT);
+      await settle();
+      expect(sent).toHaveLength(12);
+      jest.setSystemTime(DAY_TWO);
+      focus();
+      await settle();
+      expect(sent).toHaveLength(13);
+    },
+  );
+
+  test.each([
+    { ...STATE, version: 2 },
+    { ...STATE, day: "2026-02-30" },
+    { ...STATE, quiet: "false" },
+    { ...STATE, screens: [12] },
+    "broken JSON",
+  ])("refuses unknown or malformed state without overwriting either key: %p", async (value) => {
+    const raw = typeof value === "string" ? value : JSON.stringify(value);
+    stored.set(STORAGE_KEY, "2026-10-02");
+    stored.set(`${STORAGE_KEY}.state`, raw);
+    const reporter = start();
+    let quiet = false;
+    reporter.onQuietChange((value) => (quiet = value));
+    reporter.reportScreen("A");
+    reporter.reportVisit(VISIT);
+    focus();
+    await settle();
+    expect(sent).toHaveLength(0);
+    expect(quiet).toBe(true);
+    expect([...stored.values()]).toEqual(["2026-10-02", raw]);
+  });
+
+  test("500 replies retry app-open and screen before claiming either", async () => {
+    statuses = [
+      500,
+      { status: 202, data: { status: "queued" } },
+      500,
+      { status: 202, data: { status: "queued" } },
+    ];
+    const reporter = start();
+    reporter.reportScreen("A");
+    await settle();
+    expect(stored.has(STORAGE_KEY)).toBe(false);
+    await advance(1000);
+    expect(JSON.parse(stored.get(`${STORAGE_KEY}.state`)!).screens).toEqual([]);
+    await advance(1000);
+    focus();
+    reporter.reportScreen("A");
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "app_opened",
+      "screen_viewed",
+      "screen_viewed",
+    ]);
+  });
+  test("concurrent visits cannot oversubscribe either six-attempt burst", async () => {
+    const reporter = start();
+    await settle();
+    statuses = Array(12).fill(503);
+    for (let i = 0; i < 20; i++) reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent).toHaveLength(7);
+    await advance(15 * 60000);
+    for (let i = 0; i < 20; i++) reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent).toHaveLength(13);
+  });
+
+  test("a terminal receipt resets failures while other unresolved posts retain their slots", async () => {
+    const reporter = start();
+    await settle();
+    statuses = Array(6).fill("held");
+    for (let i = 0; i < 6; i++) reporter.reportVisit(VISIT);
+    release(202);
+    await settle();
+    statuses = Array(20).fill(503);
+    for (let i = 0; i < 20; i++) reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent).toHaveLength(8);
   });
 });

@@ -323,7 +323,7 @@ const unsubscribe = reporter.onQuietChange((quiet) => {
   else startVisitTimers();
 });
 reporter.reportVisit(
-  { event: "session_ended", properties: { duration_seconds: 12 } },
+  { event: "session_ended", properties: { surface: "web", duration_bucket: "under_1m" } },
   { keepalive: true },
 );
 // On teardown:
@@ -335,8 +335,11 @@ The callable reporter keeps existing cleanup call sites working. It sends
 `app_opened` once per UTC day and `screen_viewed` once per screen per UTC day,
 including the active screen on next-day focus. Choose a stable `storageKey`
 unique to the product or installation and surface. The original key keeps
-the app-open date; a derived `.state` key holds the day's quiet flag and
-screen claims. Tabs merge claims, and failed writes stay in page memory.
+the app-open date; a derived `.state` key holds format version 1, the UTC
+day, the quiet flag, and screen claims. Tabs merge claims, and failed writes
+stay in page memory. Unknown or malformed state stops this helper instance
+and leaves both keys untouched. A legacy app-open date without receipt state
+requires one new check before visits can send.
 Tabs opening together may each send one check.
 
 `post` resolves HTTP errors and rejects transport failures. Return a
@@ -348,11 +351,17 @@ and malformed or unknown receipts still finish the daily attempt.
 A visit waits while the first daily check is unresolved, then sends with its
 original properties and optional `keepalive`, or is discarded after `disabled`.
 A page closing during that wait can lose the visit. Once enabled, visits
-send immediately even while a screen request is pending. Visits never retry.
+send immediately even while a screen request is pending. Unresolved posts
+reserve attempt slots, so a full budget drops concurrent visits. Visits never
+retry.
 Their failures share the daily backoff: 1, 2, 4, 8, and 16 seconds, then all
-reports stop after six consecutive failures. HTTP 502, 503, and 504 count as
-failures. Any terminal response resets the count. Backoff suppresses new
-visits; reload or next-day focus gives an exhausted page a fresh budget.
+reports stop after six consecutive failures. Every HTTP 5xx response counts
+as a failure and leaves daily claims pending. After 15 minutes, one later
+focus or report can start one additional chain of six attempts that UTC day.
+Exhaustion schedules no timer, so a continuously unavailable daemon receives
+at most twelve failed requests per page per UTC day. Any terminal response
+resets the consecutive-failure count. Backoff suppresses new visits; reload
+or next-day focus gives an exhausted page a fresh budget.
 
 `onQuietChange` immediately supplies the current state and returns an
 unsubscribe function. Use it to stop and restart visit timers. Cleanup
