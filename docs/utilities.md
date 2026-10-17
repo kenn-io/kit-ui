@@ -322,6 +322,7 @@ const unsubscribe = reporter.onQuietChange((quiet) => {
   if (quiet) stopVisitTimers();
   else startVisitTimers();
 });
+// When a visit session ends:
 reporter.reportVisit(
   { event: "session_ended", properties: { surface: "web", duration_bucket: "under_1m" } },
   { keepalive: true },
@@ -332,43 +333,47 @@ reporter();
 ```
 
 The callable reporter keeps existing cleanup call sites working. It sends
-`app_opened` once per UTC day and `screen_viewed` once per screen per UTC day,
-including the active screen on next-day focus. Choose a stable `storageKey`
-unique to the product or installation and surface. The original key keeps
-the app-open date. `${storageKey}.browser.v1.` prefixes separate `quiet`,
-`check`, and `screen.${encodeURIComponent(screen)}` keys, each holding a UTC
-date. Distinct screen keys preserve claims across tabs. Blocked storage and
-failed writes use page memory; malformed dates act as missing claims.
-A legacy app-open date alone requires a receipt check before other reports.
-Tabs opening together may each send one check.
+`app_opened` and each screen once per UTC day, including the active screen
+after rollover. Use a stable, finite set of screen names, such as route names
+without record IDs, query strings, or timestamps. Each name creates a durable
+storage key.
+
+Choose a `storageKey` unique to the product or installation and surface. The
+original key keeps the app-open date. `${storageKey}.browser.v1.` prefixes
+separate `quiet`, `check`, and `screen.${encodeURIComponent(screen)}` date keys.
+Distinct screen keys preserve claims across tabs. Blocked storage and failed
+writes use page memory; malformed dates act as missing claims.
+
+A legacy app-open date alone requires a receipt check. The first pump waits
+one microtask so an initial screen can register and make that check. With no
+pending screen, one app-open fallback obtains the receipt; a daemon that
+already captured today's event returns `skipped`. Tabs opening together may
+each make an initial check.
 
 `post` resolves HTTP errors and rejects transport failures. Return a
 `Response` or `TelemetryReceipt` (`{ status, data }`) to preserve the daemon's
-HTTP 202 receipt.
-`disabled` suppresses reports across reloads until next-day load or focus
-makes one check. `queued` and `skipped` resume reporting. Status-only results
-and malformed or unknown receipts still finish the daily attempt.
+HTTP 202 receipt. Valid `queued` and `skipped` receipts enable reports;
+`disabled` suppresses them across reloads until the next day's check. Legacy
+status-only 202 results also enable reports. Malformed or unknown receipts
+and terminal non-5xx responses keep this helper quiet for the day, without
+claiming delivery.
 
-A visit waits while the first daily check is unresolved, then sends with its
-original properties and optional `keepalive`, or is discarded after `disabled`.
-A page closing during that wait can lose the visit. Once enabled, visits
-send immediately even while a screen request is pending. Unresolved posts
-reserve at most six attempt slots. Additional visits wait for a slot and
-drain after terminal replies; disabled or exhausted reporting clears the queue.
-Visits never retry.
-Their failures share the daily backoff: 1, 2, 4, 8, and 16 seconds, then all
-reports stop after six consecutive failures. Every HTTP 5xx response counts
-as a failure and leaves daily claims pending. Exhaustion schedules no timer;
-reload or the next UTC day starts a fresh budget. Any terminal response
-resets the consecutive-failure count while preserving a pending retry delay.
-A disabled receipt cancels that retry and discards pending reports.
+Visits called before the first receipt are dropped and can trigger the daily
+check. Start visit timers after `onQuietChange(false)`. Once enabled, visits
+send immediately with their original properties and optional `keepalive`,
+even during a pending screen request or its retry delay. Visits never retry;
+when the six unresolved/failure slots are full, new visits are dropped.
+
+Transport failures and HTTP 5xx share backoff waits of 1, 2, 4, 8, and 16
+seconds. Six consecutive failures stop reporting and pause trackers until
+reload or the next UTC day. Exhaustion schedules no timer. A terminal reply
+resets the consecutive count while preserving an unrelated screen's pending
+retry delay. A disabled receipt cancels retries and clears pending screens.
 
 `onQuietChange` immediately supplies the current state and returns an
-unsubscribe function. Unknown and disabled gates both pause trackers. Visits
-called while the gate is unknown can start or join its check; a visit making
-that check keeps its event, and app-open sends separately. Use the callback
-to stop and restart visit timers. Cleanup signals quiet, cancels retries,
-discards held events, and removes the focus
+unsubscribe function. Unknown, disabled, exhausted, and stopped reporters
+signal quiet. Use the callback to stop and restart visit timers. Cleanup
+signals quiet, cancels retries, clears pending screens, and removes the focus
 listener. `BrowserTelemetryOptions` types the event-capable callback;
 explicitly typed `AppOpenedOptions` callbacks retain their original signature.
 

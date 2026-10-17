@@ -40,6 +40,7 @@ export interface BrowserTelemetryOptions extends Omit<AppOpenedOptions, "post"> 
 }
 export interface AppOpenedReporter {
     (): void;
+    /** Use a stable, finite set of screen names, such as route names without IDs. */
     reportScreen(screen: string): void;
     reportVisit(event: VisitEvent, options?: VisitOptions): void;
     /** Immediately receives the current state; returns an unsubscribe function. */

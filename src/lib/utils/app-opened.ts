@@ -39,6 +39,7 @@ export interface BrowserTelemetryOptions extends Omit<AppOpenedOptions, "post"> 
 }
 export interface AppOpenedReporter {
   (): void;
+  /** Use a stable, finite set of screen names, such as route names without IDs. */
   reportScreen(screen: string): void;
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
   /** Immediately receives the current state; returns an unsubscribe function. */
@@ -60,17 +61,17 @@ export function startAppOpenedReporting({
     claims = new Set<string>();
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
-  const visits: [VisitEvent, VisitOptions | undefined][] = [];
   let day = today(),
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     daily = false,
+    scheduled = true,
     failures = 0,
     inFlight = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
     lastQuiet = true;
-  const quiet = () => stopped || gate !== "enabled";
+  const quiet = () => stopped || failures >= 6 || gate !== "enabled";
   const notify = () => {
     if (lastQuiet === quiet()) return;
     lastQuiet = quiet();
@@ -105,14 +106,10 @@ export function startAppOpenedReporting({
           : "unknown";
     if (gate === "disabled") {
       cancelRetry();
-      clear();
+      screens.clear();
     }
     notify();
     return gate === "disabled";
-  };
-  const clear = () => {
-    visits.length = 0;
-    screens.clear();
   };
   const rollover = () => {
     if (day === today()) return;
@@ -122,7 +119,7 @@ export function startAppOpenedReporting({
     daily = false;
     failures = inFlight = 0;
     cancelRetry();
-    clear();
+    screens.clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
   };
@@ -137,13 +134,14 @@ export function startAppOpenedReporting({
         try {
           data = response.data ?? (await response.json?.());
         } catch {
-          /* Legacy terminal receipt. */
+          /* Malformed receipts keep the gate quiet. */
         }
       }
     } catch {
       /* Transport failures share the retry budget. */
     }
-    if (sending !== day || sending !== today() || stopped) return;
+    rollover();
+    if (sending !== day || stopped) return;
     inFlight--;
     if (key) daily = false;
     if (disabled()) return;
@@ -157,58 +155,55 @@ export function startAppOpenedReporting({
           },
           1000 * 2 ** (failures - 1),
         );
-      else clear();
+      else screens.clear();
+      notify();
       return;
     }
     failures = 0;
-    if (key) write(key);
-    if (data && typeof data === "object" && "status" in data && data.status === "disabled") {
-      write(`${prefix}quiet`);
-      gate = "disabled";
-    } else {
+    const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
+    const accepted =
+      response.status === 202 &&
+      (status === "queued" ||
+        status === "skipped" ||
+        (!response.json && response.data === undefined));
+    gate = accepted ? "enabled" : "disabled";
+    if (accepted) {
       write(`${prefix}check`);
-      gate = "enabled";
-    }
+      if (key) write(key);
+    } else if (response.status === 202 && status === "disabled") write(`${prefix}quiet`);
     pump();
   };
   const pump = () => {
     rollover();
-    if (stopped || disabled()) return;
-    while (!retry && failures + inFlight < 6 && (gate === "enabled" || !inFlight)) {
-      const visit = visits.shift();
-      if (visit) {
-        void send(visit[0], undefined, visit[1]);
-        continue;
-      }
-      if (daily) return;
-      if (!claimed(storageKey) || gate === "unknown") {
-        void send({ event: "app_opened", properties: { surface } }, storageKey);
-        continue;
-      }
-      const screen = [...screens].find(
-        (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
-      );
-      if (screen === undefined) return;
+    if (stopped || disabled() || scheduled || retry || daily || failures + inFlight >= 6) return;
+    const screen = [...screens].find(
+      (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
+    );
+    if (!claimed(storageKey) || (gate === "unknown" && screen === undefined))
+      void send({ event: "app_opened", properties: { surface } }, storageKey);
+    else if (screen !== undefined)
       void send(
         { event: "screen_viewed", properties: { surface, screen } },
         `${prefix}screen.${encodeURIComponent(screen)}`,
       );
-    }
   };
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
-    if (stopped || gate === "disabled" || failures >= 6) return;
-    if (visit) visits.push([visit, options]);
-    pump();
+    if (stopped || disabled() || failures + inFlight >= 6) return;
+    if (visit && gate === "enabled") void send(visit, undefined, options);
+    else pump();
   };
   const report = () => request();
-  report();
+  queueMicrotask(() => {
+    scheduled = false;
+    pump();
+  });
   window.addEventListener("focus", report);
   return Object.assign(
     () => {
       stopped = true;
       cancelRetry();
-      clear();
+      screens.clear();
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
