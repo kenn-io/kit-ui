@@ -390,6 +390,40 @@ describe("startAppOpenedReporting", () => {
       "screen_viewed",
     ]);
   });
+  test.each([false, true])(
+    "a stale screen reply checks the new day unless stopped: %s",
+    async (stopped) => {
+      const reporter = start();
+      await settle();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      statuses = ["held"];
+      reporter.reportScreen("A");
+      await settle();
+      const previousDay = release;
+      if (stopped) reporter();
+      jest.setSystemTime(DAY_TWO);
+      statuses = ["held"];
+      previousDay({ status: 202, data: { status: "disabled" } });
+      await settle();
+      if (stopped) {
+        expect(sent).toHaveLength(2);
+        return;
+      }
+      expect(sent.slice(2).map(({ event }) => event.event)).toEqual(["app_opened"]);
+      expect(quiet).toEqual([false, true]);
+      release({ status: 202, data: { status: "queued" } });
+      await settle();
+      expect(quiet).toEqual([false, true, false]);
+      expect(sent.at(-1)?.event).toEqual({
+        event: "screen_viewed",
+        properties: { surface: "web", screen: "A" },
+      });
+      expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-04");
+      expect(stored.get(STORAGE_KEY)).toBe("2026-10-04");
+    },
+  );
+
   test.each(["failed", "held"])(
     "six request slots remain bounded across rollover: %s",
     async (mode) => {
@@ -423,7 +457,7 @@ describe("startAppOpenedReporting", () => {
         jest.setSystemTime(DAY_TWO);
         boundaryReply({ status: 202, data: { status: "disabled" } });
         await settle();
-        expect(changes).toEqual([false, true]);
+        expect(changes).toEqual([false, true, false]);
         focus();
         await settle();
         expect(sent).toHaveLength(8);

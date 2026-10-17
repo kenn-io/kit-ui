@@ -337,6 +337,7 @@ The callable reporter keeps existing cleanup call sites working. It sends
 after rollover. Use a stable, finite set of screen names, such as route names
 without record IDs, query strings, or timestamps. Each name creates a durable
 storage key.
+A pending request finishing on a later UTC day starts that day's check and discards its old receipt.
 
 Choose a `storageKey` unique to the product or installation and surface. The
 original key keeps the app-open date. `${storageKey}.browser.v1.` prefixes

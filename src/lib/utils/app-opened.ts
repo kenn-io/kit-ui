@@ -143,7 +143,11 @@ export function startAppOpenedReporting({
       /* Transport failures share the retry budget. */
     }
     rollover();
-    if (sending !== day || stopped) return;
+    if (stopped) return;
+    if (sending !== day) {
+      pump();
+      return;
+    }
     inFlight--;
     if (key) daily = false;
     if (disabled()) return;
