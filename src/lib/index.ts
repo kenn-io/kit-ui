@@ -208,6 +208,7 @@ export {
   type AppOpenedOptions,
   type AppOpenedReporter,
   type BrowserTelemetryEvent,
+  type BrowserTelemetryOptions,
   type ScreenViewedEvent,
   type VisitEvent,
   type VisitOptions,

@@ -3,200 +3,194 @@ export interface AppOpenedEvent {
   event: "app_opened";
   properties: { surface: string };
 }
-
-export interface ScreenViewedEvent {
-  event: "screen_viewed";
-  properties: { surface: string; screen: string };
-}
-
-/** Visit names and properties belong to the consuming product. */
-export interface VisitEvent {
-  event: string;
-  properties: Record<string, unknown>;
-}
-
-export type BrowserTelemetryEvent = AppOpenedEvent | ScreenViewedEvent | VisitEvent;
-export interface VisitOptions {
-  keepalive?: boolean;
+interface Receipt {
+  status: number;
+  data?: unknown;
+  json?: () => Promise<unknown>;
 }
 export interface AppOpenedOptions {
-  /** Daemon route that accepts UI telemetry. */
   route: string;
   surface: string;
   /** Stable key unique to the product or installation and surface. */
   storageKey: string;
-  /** Resolve HTTP errors; reject only when no response arrived. Preserve receipts. */
-  post: (
-    route: string,
-    event: BrowserTelemetryEvent,
-    options?: VisitOptions,
-  ) => Promise<{
-    status: number;
-    data?: unknown;
-    json?: () => Promise<unknown>;
-  }>;
+  /** Resolve HTTP errors; reject only when no response arrived. */
+  post: (route: string, event: AppOpenedEvent) => Promise<Receipt>;
 }
-
+export interface VisitEvent {
+  event: string;
+  properties: Record<string, unknown>;
+}
+export interface ScreenViewedEvent {
+  event: "screen_viewed";
+  properties: { surface: string; screen: string };
+}
+export type BrowserTelemetryEvent = AppOpenedEvent | ScreenViewedEvent | VisitEvent;
+export interface VisitOptions {
+  keepalive?: boolean;
+}
+export interface BrowserTelemetryOptions extends Omit<AppOpenedOptions, "post"> {
+  post: (route: string, event: BrowserTelemetryEvent, options?: VisitOptions) => Promise<Receipt>;
+}
 export interface AppOpenedReporter {
   (): void;
   reportScreen(screen: string): void;
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
-  /** Immediately receives the current quiet state; returns an unsubscribe function. */
+  /** Immediately receives the current state; returns an unsubscribe function. */
   onQuietChange(listener: (quiet: boolean) => void): () => void;
 }
-
+interface DailyState {
+  day: string;
+  quiet: boolean;
+  screens: string[];
+}
 const NOT_READY = new Set([502, 503, 504]);
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-/** Shared daily browser reports, bounded retries, and a persisted quiet UTC day. */
+export function startAppOpenedReporting(options: BrowserTelemetryOptions): AppOpenedReporter;
+export function startAppOpenedReporting(options: AppOpenedOptions): () => void;
+/** Shared daily reports and visit admission, with a persisted quiet UTC day. */
 export function startAppOpenedReporting({
   route,
   surface,
   storageKey,
   post,
-}: AppOpenedOptions): AppOpenedReporter {
-  let day = "";
-  let stopped = false;
-  let quiet = false;
-  let quietDay = "";
-  let active = false;
-  let failures = 0;
-  let currentScreen: string | undefined;
-  let retry: ReturnType<typeof setTimeout> | undefined;
-  const pending = new Set<string>();
-  const memory = new Map<string, string>();
-  const unwritten = new Set<string>();
-  const listeners = new Set<(quiet: boolean) => void>();
-  const quietKey = `${storageKey}.quiet`;
-  const screensKey = `${storageKey}.screens`;
-  const storedDay = (key: string): string => {
-    if (unwritten.has(key)) return memory.get(key) ?? "";
+}: AppOpenedOptions | BrowserTelemetryOptions): AppOpenedReporter {
+  let day = today(),
+    appDay = "",
+    stopped = false,
+    active = false,
+    failures = 0;
+  let state: DailyState = { day: "", quiet: false, screens: [] };
+  let currentScreen: string | undefined,
+    retry: ReturnType<typeof setTimeout> | undefined,
+    lastQuiet = false;
+  const pending = new Set<string>(),
+    listeners = new Set<(quiet: boolean) => void>();
+  const visits: [VisitEvent, VisitOptions | undefined][] = [];
+  const stateKey = `${storageKey}.state`;
+  const quiet = (): boolean => stopped || state.quiet;
+  const notify = (): void => {
+    if (lastQuiet === quiet()) return;
+    lastQuiet = quiet();
+    for (const listener of listeners) listener(lastQuiet);
+  };
+  const sync = (): void => {
     try {
-      return localStorage.getItem(key) ?? memory.get(key) ?? "";
+      appDay = [appDay, localStorage.getItem(storageKey) ?? ""].sort().at(-1)!;
+      const saved: DailyState = JSON.parse(localStorage.getItem(stateKey) ?? "null");
+      if (saved?.day > state.day) state = saved;
+      else if (saved?.day === state.day)
+        state = {
+          day: state.day,
+          quiet: state.quiet || saved.quiet,
+          screens: [...new Set([...state.screens, ...saved.screens])],
+        };
     } catch {
-      return memory.get(key) ?? "";
+      /* Missing or blocked storage leaves page memory intact. */
     }
+    notify();
   };
-  const store = (key: string, value: string): void => {
-    memory.set(key, value);
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      unwritten.add(key);
-    }
-  };
-  const setQuiet = (value: boolean): void => {
-    if (quiet === value) return;
-    quiet = value;
-    for (const listener of listeners) listener(value);
-  };
-  const screens = (): string[] => {
-    try {
-      const value = JSON.parse(storedDay(screensKey));
-      return value.day === day && Array.isArray(value.screens) ? value.screens : [];
-    } catch {
-      return [];
-    }
-  };
-  const receipt = async (
-    response: Awaited<ReturnType<AppOpenedOptions["post"]>>,
-    sending: string,
-  ): Promise<void> => {
-    if (response.status !== 202) return;
-    let data = response.data;
-    try {
-      if (data === undefined) data = await response.json?.();
-    } catch {
+  const enabled = (): boolean =>
+    (state.day === day && !state.quiet) || (appDay >= day && state.day !== day);
+  const send = async (visit?: VisitEvent, options?: VisitOptions): Promise<void> => {
+    if (stopped) return;
+    rollover();
+    if (retry || failures >= 6 || (state.day === day && state.quiet)) return;
+    sync();
+    if (state.day === day && state.quiet) return;
+    if (active && (!visit || !enabled())) {
+      if (visit) visits.push([visit, options]);
       return;
     }
-    if (stopped || sending !== day || sending !== today()) return;
-    const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
-    if (status === "disabled") {
-      quietDay = sending;
-      store(quietKey, sending);
-      clearTimeout(retry);
-      retry = undefined;
-      pending.clear();
-      setQuiet(true);
-    } else if ((status === "queued" || status === "skipped") && quietDay !== sending) {
-      setQuiet(false);
-    }
-  };
-
-  const send = (): void => {
-    retry = undefined;
-    if (stopped || active || failures >= 6) return;
-    if (today() !== day) {
-      report();
-      return;
-    }
-    if (quietDay === day || storedDay(quietKey) === day) {
-      quietDay = day;
-      pending.clear();
-      setQuiet(true);
-      return;
-    }
-    let screen: string | undefined;
-    if (storedDay(storageKey) >= day) {
-      const claimed = screens();
-      for (const candidate of pending) {
-        pending.delete(candidate);
-        if (!claimed.includes(candidate)) {
-          screen = candidate;
-          break;
+    const screen = [...pending].find((name) => state.day !== day || !state.screens.includes(name));
+    const event =
+      visit ??
+      (appDay < day
+        ? { event: "app_opened", properties: { surface } }
+        : screen === undefined
+          ? undefined
+          : { event: "screen_viewed", properties: { surface, screen } });
+    if (!event) return;
+    const sending = day;
+    const blocking = !visit || !enabled();
+    if (blocking) active = true;
+    let response: Receipt | undefined, data: unknown;
+    try {
+      response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
+      if (response.status === 202) {
+        try {
+          data = response.data ?? (await response.json?.());
+        } catch {
+          /* Legacy terminal response. */
         }
       }
-      if (screen === undefined) return;
+    } catch {
+      /* Transport failures share the retry budget. */
     }
-    const sending = day;
-    active = true;
-    const event: BrowserTelemetryEvent =
-      screen === undefined
-        ? { event: "app_opened", properties: { surface } }
-        : { event: "screen_viewed", properties: { surface, screen } };
-    void (async () => {
-      let answered = false;
-      try {
-        const response = await post(route, event);
-        answered = !NOT_READY.has(response.status);
-        await receipt(response, sending);
-      } catch {
-        /* Transport failures use the daily retry budget. */
+    if (stopped || sending !== day || sending !== today()) return;
+    if (blocking) active = false;
+    if (state.day === day && state.quiet) return;
+    if (!response || NOT_READY.has(response.status)) {
+      clearTimeout(retry);
+      if (++failures < 6)
+        retry = setTimeout(
+          () => {
+            retry = undefined;
+            void send();
+          },
+          1000 * 2 ** (failures - 1),
+        );
+      else {
+        retry = undefined;
+        visits.length = 0;
       }
-      if (stopped || sending !== day) return;
-      active = false;
-      if (quietDay === sending) return;
-      if (!answered) {
-        if (screen !== undefined) pending.add(screen);
-        failures++;
-        if (failures < 6) retry = setTimeout(send, 1000 * 2 ** (failures - 1));
-        return;
-      }
-      if (screen === undefined) {
-        if (storedDay(storageKey) <= sending) store(storageKey, sending);
-      } else if (sending === today()) {
-        store(screensKey, JSON.stringify({ day, screens: [...new Set([...screens(), screen])] }));
-      }
-      send();
-    })();
+      return;
+    }
+    failures = 0;
+    clearTimeout(retry);
+    retry = undefined;
+    sync();
+    const disabled =
+      data && typeof data === "object" && "status" in data && data.status === "disabled";
+    const screens = state.day === day ? state.screens : [];
+    state = { day, quiet: (state.day === day && state.quiet) || !!disabled, screens };
+    if (!visit && event.event === "app_opened") {
+      appDay = [appDay, sending].sort().at(-1)!;
+    }
+    if (!visit && event.event === "screen_viewed" && screen !== undefined) {
+      state.screens = [...new Set([...screens, screen])];
+      pending.delete(screen);
+    }
+    try {
+      localStorage.setItem(storageKey, appDay);
+      localStorage.setItem(stateKey, JSON.stringify(state));
+    } catch {
+      /* Page memory holds failed writes. */
+    }
+    notify();
+    if (state.quiet) {
+      pending.clear();
+      visits.length = 0;
+      return;
+    }
+    for (const [visit, options] of visits.splice(0)) void send(visit, options);
+    void send();
+  };
+  const rollover = (): void => {
+    if (day === today()) return;
+    day = today();
+    active = false;
+    failures = 0;
+    clearTimeout(retry);
+    retry = undefined;
+    pending.clear();
+    visits.length = 0;
+    if (currentScreen !== undefined) pending.add(currentScreen);
   };
   const report = (): void => {
-    if (stopped) return;
-    const now = today();
-    if (now !== day) {
-      day = now;
-      clearTimeout(retry);
-      retry = undefined;
-      active = false;
-      failures = 0;
-      pending.clear();
-      if (currentScreen !== undefined) pending.add(currentScreen);
-      quietDay = storedDay(quietKey);
-      if (quietDay === day) setQuiet(true);
-    }
-    if (!retry) send();
+    if (stopped || (day === today() && state.day === day && state.quiet)) return;
+    void send();
   };
-
   report();
   window.addEventListener("focus", report);
   return Object.assign(
@@ -204,34 +198,25 @@ export function startAppOpenedReporting({
       stopped = true;
       clearTimeout(retry);
       pending.clear();
-      setQuiet(true);
+      visits.length = 0;
+      notify();
       listeners.clear();
       window.removeEventListener("focus", report);
     },
     {
       reportScreen(screen: string) {
         currentScreen = screen;
-        if (stopped || quiet) return;
+        if (quiet()) return;
         pending.add(screen);
-        if (!retry) send();
+        void send();
       },
       reportVisit(event: VisitEvent, options?: VisitOptions) {
-        if (stopped || quiet) return;
-        const sending = day;
-        void (async () => {
-          try {
-            await receipt(await post(route, event, options), sending);
-          } catch {
-            /* Visits are best effort and never join the daily retry queue. */
-          }
-        })();
+        if (!quiet()) void send(event, options);
       },
       onQuietChange(listener: (quiet: boolean) => void) {
-        listener(quiet);
+        listener(quiet());
         if (!stopped) listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
+        return () => void listeners.delete(listener);
       },
     },
   );

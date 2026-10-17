@@ -331,34 +331,34 @@ unsubscribe();
 reporter();
 ```
 
-The callable reporter keeps existing cleanup call sites working. It posts
-`app_opened` on load and the first focus of each UTC day, and `screen_viewed`
-once per screen per UTC day. The active screen is reported again on next-day
-focus. Choose a stable `storageKey` unique to the product or installation and
-surface. The original key stores the app-open date; derived `.screens` and
-`.quiet` keys hold the current day's screen claims and last disabled date.
-Reloads and later tabs reuse those claims. Tabs opening together may each
-send a report. Blocked storage falls back to memory for the page.
+The callable reporter keeps existing cleanup call sites working. It sends
+`app_opened` once per UTC day and `screen_viewed` once per screen per UTC day,
+including the active screen on next-day focus. Choose a stable `storageKey`
+unique to the product or installation and surface. The original key keeps
+the app-open date; a derived `.state` key holds the day's quiet flag and
+screen claims. Tabs merge claims, and failed writes stay in page memory.
+Tabs opening together may each send one check.
 
-`post` carries the product's auth headers and resolves with the actual HTTP
-status, including errors. Reject only when no response arrived. Return a
-`Response` or `{ status, data }` to expose the daemon's receipt. On HTTP 202,
-`disabled` stops all reports and signals visit trackers to stop. The first
-load or focus after UTC midnight makes one new check. A `queued` or `skipped`
-receipt resumes trackers. Missing, malformed, or unknown receipts and all
-other terminal HTTP responses still finish the daily attempt. Status-only
-callbacks remain valid, but cannot communicate the daemon's quiet state.
+`post` resolves HTTP errors and rejects transport failures. Return a
+`Response` or `{ status, data }` to preserve the daemon's HTTP 202 receipt.
+`disabled` suppresses reports across reloads until next-day load or focus
+makes one check. `queued` and `skipped` resume reporting. Status-only results
+and malformed or unknown receipts still finish the daily attempt.
 
-App-open and screen reports share one daily queue. Transport failures and
-HTTP 502, 503, and 504 retry after 1, 2, 4, 8, and 16 seconds, then stop after
-six failures. Focus and screen changes keep that budget; reload or next-day
-focus resets it. Visit reports preserve their product-specific names and
-properties, send immediately with optional `keepalive`, and never retry.
-Their receipts update the same quiet state even while a daily post is pending.
+A visit waits while the first daily check is unresolved, then sends with its
+original properties and optional `keepalive`, or is discarded after `disabled`.
+A page closing during that wait can lose the visit. Once enabled, visits
+send immediately even while a screen request is pending. Visits never retry.
+Their failures share the daily backoff: 1, 2, 4, 8, and 16 seconds, then all
+reports stop after six consecutive failures. HTTP 502, 503, and 504 count as
+failures. Any terminal response resets the count. Backoff suppresses new
+visits; reload or next-day focus gives an exhausted page a fresh budget.
 
-`onQuietChange` immediately calls its listener with the current state and
-returns an unsubscribe function. Cleanup cancels retries, signals quiet,
-drops pending daily reports, and removes the focus listener.
+`onQuietChange` immediately supplies the current state and returns an
+unsubscribe function. Use it to stop and restart visit timers. Cleanup
+signals quiet, cancels retries, discards held events, and removes the focus
+listener. `BrowserTelemetryOptions` types the event-capable callback;
+explicitly typed `AppOpenedOptions` callbacks retain their original signature.
 
 ## Color hashing
 
