@@ -185,6 +185,26 @@ describe("startAppOpenedReporting", () => {
     expect(ticks).toBe(1);
   });
 
+  test("next-day reload remembers its screen while a quiet check holds visit timers", async () => {
+    statuses = [{ status: 202, data: { status: "disabled" } }];
+    const first = start();
+    await settle();
+    first();
+    jest.setSystemTime(DAY_TWO);
+    statuses = ["held"];
+    const reloaded = start();
+    const quiet: boolean[] = [];
+    reloaded.onQuietChange((value) => quiet.push(value));
+    reloaded.reportScreen("A");
+    reloaded.reportVisit(VISIT);
+    expect(quiet).toEqual([true]);
+    expect(sent).toHaveLength(2);
+    release({ status: 202, data: { status: "queued" } });
+    await settle();
+    expect(quiet).toEqual([true, false]);
+    expect(sent.slice(1).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
+  });
+
   test("another tab's next-day enabled check resumes a quiet tab without a duplicate", async () => {
     statuses = [{ status: 202, data: { status: "disabled" } }];
     const first = start();

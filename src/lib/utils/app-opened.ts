@@ -239,7 +239,7 @@ export function startAppOpenedReporting({
     {
       reportScreen(screen: string) {
         currentScreen = screen;
-        if (quiet()) return;
+        if (stopped || refused || (state.day === day && state.quiet)) return;
         pending.add(screen);
         request();
       },
