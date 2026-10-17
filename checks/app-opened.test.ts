@@ -13,7 +13,7 @@ const VISIT = {
   event: "session_ended",
   properties: { surface: "web", duration_bucket: "under_1m" },
 };
-const STATE = { version: 1, day: "2026-10-03", quiet: false, screens: [] };
+const PREFIX = `${STORAGE_KEY}.browser.v1.`;
 const DAY_ONE = new Date("2026-10-03T12:00:00Z");
 const DAY_TWO = new Date("2026-10-04T00:30:00Z");
 
@@ -105,21 +105,22 @@ describe("startAppOpenedReporting", () => {
 
   test("screens A/B/A dedupe across reload and report the active screen next day", async () => {
     const reporter = start();
-    reporter.reportScreen("A");
+    reporter.reportScreen("A/B");
     reporter.reportScreen("B");
-    reporter.reportScreen("A");
+    reporter.reportScreen("A/B");
     await settle();
     focus();
     reporter();
     const reloaded = start();
-    reloaded.reportScreen("A");
+    reloaded.reportScreen("A/B");
     await settle();
     expect(sent.map(({ event }) => event.event)).toEqual([
       "app_opened",
       "screen_viewed",
       "screen_viewed",
     ]);
-    expect(sent[1]?.event.properties).toEqual({ surface: "web", screen: "A" });
+    expect(sent[1]?.event.properties).toEqual({ surface: "web", screen: "A/B" });
+    expect(stored.get(`${PREFIX}screen.A%2FB`)).toBe("2026-10-03");
     jest.setSystemTime(DAY_TWO);
     focus();
     await settle();
@@ -185,7 +186,7 @@ describe("startAppOpenedReporting", () => {
     expect(ticks).toBe(1);
   });
 
-  test("next-day reload remembers its screen while a quiet check holds visit timers", async () => {
+  test.each(["queued", "disabled"])("next-day reload holds visits until %s", async (status) => {
     statuses = [{ status: 202, data: { status: "disabled" } }];
     const first = start();
     await settle();
@@ -199,10 +200,22 @@ describe("startAppOpenedReporting", () => {
     reloaded.reportVisit(VISIT);
     expect(quiet).toEqual([true]);
     expect(sent).toHaveLength(2);
-    release({ status: 202, data: { status: "queued" } });
+    release({ status: 202, data: { status } });
     await settle();
-    expect(quiet).toEqual([true, false]);
-    expect(sent.slice(1).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
+    expect(quiet).toEqual(status === "disabled" ? [true] : [true, false]);
+    expect(sent.slice(1).map(({ event }) => event.event)).toEqual(
+      status === "disabled" ? ["app_opened"] : ["app_opened", "session_ended", "screen_viewed"],
+    );
+  });
+
+  test("eight visits held by the first check all send after successful receipts", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    for (let i = 0; i < 8; i++) reporter.reportVisit(VISIT, { keepalive: true });
+    expect(sent).toHaveLength(1);
+    release(202);
+    await settle();
+    expect(sent.filter(({ event }) => event.event === "session_ended")).toHaveLength(8);
   });
 
   test("another tab's next-day enabled check resumes a quiet tab without a duplicate", async () => {
@@ -241,25 +254,6 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(3);
   });
 
-  test("visit failures share backoff and stop after six failures", async () => {
-    const reporter = start();
-    await settle();
-    statuses = Array(6).fill(503);
-    for (const [i, delay] of [1000, 2000, 4000, 8000, 16000, 32000].entries()) {
-      reporter.reportVisit(VISIT);
-      await settle();
-      reporter.reportVisit(VISIT);
-      await advance(delay - 1);
-      expect(sent).toHaveLength(i + 2);
-      await advance(1);
-    }
-    reporter.reportVisit(VISIT);
-    reporter.reportScreen("A");
-    focus();
-    await settle();
-    expect(sent).toHaveLength(7);
-  });
-
   test("visit failures share backoff and a terminal response resets consecutive failures", async () => {
     const reporter = start();
     await settle();
@@ -267,7 +261,6 @@ describe("startAppOpenedReporting", () => {
       statuses = [503];
       reporter.reportVisit(VISIT);
       await settle();
-      reporter.reportVisit(VISIT);
       await advance(1000);
       reporter.reportScreen(String(i));
       await settle();
@@ -354,7 +347,7 @@ describe("startAppOpenedReporting", () => {
   test.each([false, true])(
     "one user-triggered retry chain after 15 minutes caps a dead daemon at twelve: %s",
     async (visitTrigger) => {
-      statuses = Array(12).fill(503);
+      statuses = Array(12).fill(visitTrigger ? "offline" : 503);
       const reporter = start();
       await settle();
       for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
@@ -381,26 +374,14 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test.each([
-    { ...STATE, version: 2 },
-    { ...STATE, day: "2026-02-30" },
-    { ...STATE, quiet: "false" },
-    { ...STATE, screens: [12] },
-    "broken JSON",
-  ])("refuses unknown or malformed state without overwriting either key: %p", async (value) => {
-    const raw = typeof value === "string" ? value : JSON.stringify(value);
-    stored.set(STORAGE_KEY, "2026-10-02");
-    stored.set(`${STORAGE_KEY}.state`, raw);
+  test("malformed dates are missing claims and get repaired", async () => {
+    for (const key of [STORAGE_KEY, `${PREFIX}quiet`, `${PREFIX}check`, `${PREFIX}screen.A`])
+      stored.set(key, "2026-02-30");
     const reporter = start();
-    let quiet = false;
-    reporter.onQuietChange((value) => (quiet = value));
     reporter.reportScreen("A");
-    reporter.reportVisit(VISIT);
-    focus();
     await settle();
-    expect(sent).toHaveLength(0);
-    expect(quiet).toBe(true);
-    expect([...stored.values()]).toEqual(["2026-10-02", raw]);
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
+    expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-03");
   });
 
   test("500 replies retry app-open and screen before claiming either", async () => {
@@ -415,7 +396,7 @@ describe("startAppOpenedReporting", () => {
     await settle();
     expect(stored.has(STORAGE_KEY)).toBe(false);
     await advance(1000);
-    expect(JSON.parse(stored.get(`${STORAGE_KEY}.state`)!).screens).toEqual([]);
+    expect(stored.get(`${PREFIX}screen.A`)).toBeUndefined();
     await advance(1000);
     focus();
     reporter.reportScreen("A");

@@ -5,7 +5,7 @@ export interface AppOpenedEvent {
         surface: string;
     };
 }
-interface Receipt {
+export interface TelemetryReceipt {
     status: number;
     data?: unknown;
     json?: () => Promise<unknown>;
@@ -16,7 +16,7 @@ export interface AppOpenedOptions {
     /** Stable key unique to the product or installation and surface. */
     storageKey: string;
     /** Resolve HTTP errors; reject only when no response arrived. */
-    post: (route: string, event: AppOpenedEvent) => Promise<Receipt>;
+    post: (route: string, event: AppOpenedEvent) => Promise<TelemetryReceipt>;
 }
 export interface VisitEvent {
     event: string;
@@ -34,7 +34,7 @@ export interface VisitOptions {
     keepalive?: boolean;
 }
 export interface BrowserTelemetryOptions extends Omit<AppOpenedOptions, "post"> {
-    post: (route: string, event: BrowserTelemetryEvent, options?: VisitOptions) => Promise<Receipt>;
+    post: (route: string, event: BrowserTelemetryEvent, options?: VisitOptions) => Promise<TelemetryReceipt>;
 }
 export interface AppOpenedReporter {
     (): void;
@@ -45,4 +45,3 @@ export interface AppOpenedReporter {
 }
 export declare function startAppOpenedReporting(options: BrowserTelemetryOptions): AppOpenedReporter;
 export declare function startAppOpenedReporting(options: AppOpenedOptions): () => void;
-export {};

@@ -210,6 +210,7 @@ export {
   type BrowserTelemetryEvent,
   type BrowserTelemetryOptions,
   type ScreenViewedEvent,
+  type TelemetryReceipt,
   type VisitEvent,
   type VisitOptions,
 } from "./utils/app-opened.js";
