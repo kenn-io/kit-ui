@@ -617,7 +617,11 @@
     min-height: 2rem;
   }
 
+  /* Square the leading corners so the indicator draws as a straight bar
+   * rather than following the row's rounding. */
   .kit-app-sidebar__view[aria-current="page"] {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
     box-shadow: inset 2px 0 0 var(--kit-sidebar-accent, var(--accent-blue));
   }
 

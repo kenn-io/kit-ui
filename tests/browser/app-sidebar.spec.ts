@@ -91,6 +91,15 @@ test("the full sidebar marks the current section and view", async ({ page }) => 
   await expect(sectionLink(page, "Overview")).toHaveCount(0);
 });
 
+test("the current view's indicator runs straight down its leading edge", async ({ page }) => {
+  await open(page, "reports/overview", 1440);
+  const overview = sectionLink(page, "Overview");
+  await expect(overview).toHaveCSS("border-top-left-radius", "0px");
+  await expect(overview).toHaveCSS("border-bottom-left-radius", "0px");
+  await expect(overview).not.toHaveCSS("border-top-right-radius", "0px");
+  await expect(sectionLink(page, "History")).not.toHaveCSS("border-top-left-radius", "0px");
+});
+
 test("each width band shows its own sidebar", async ({ page }) => {
   await open(page, "home", 1440);
   expect(await sidebarWidth(page)).toBe(240);
