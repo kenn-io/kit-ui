@@ -181,7 +181,7 @@ describe("startAppOpenedReporting", () => {
   });
 
   test.each([200, 202, 204])(
-    "a typed status-only %s callback claims app-open across focus, reload, and product keys",
+    "a typed status-only %s callback recovers invalid stored claims and dedupes app-open across focus, reload, and product keys",
     async (status) => {
       statuses = [status];
       for (const key of [STORAGE_KEY, `${PREFIX}quiet`, `${PREFIX}check`])
