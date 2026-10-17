@@ -299,40 +299,66 @@ onInput("ab"); // search("ab") fires once, 250ms later
 onInput.cancel(); // drop a pending call (e.g. on teardown)
 ```
 
-## App opened
+## Browser telemetry
 
 ```ts
 import { startAppOpenedReporting } from "@kenn-io/kit-ui";
 
-const stop = startAppOpenedReporting({
+const reporter = startAppOpenedReporting({
   route: "/api/v1/telemetry/events",
   surface: "web",
   storageKey: "example.app-opened.web",
-  post: (route, event) => fetch(route, { method: "POST", headers, body: JSON.stringify(event) }),
+  post: (route, event, options) =>
+    fetch(route, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(event),
+      keepalive: options?.keepalive,
+    }),
 });
+
+reporter.reportScreen("settings");
+const unsubscribe = reporter.onQuietChange((quiet) => {
+  if (quiet) stopVisitTimers();
+  else startVisitTimers();
+});
+reporter.reportVisit(
+  { event: "session_ended", properties: { duration_seconds: 12 } },
+  { keepalive: true },
+);
+// On teardown:
+unsubscribe();
+reporter();
 ```
 
-Posts `app_opened` on load and again when the window regains focus on a later
-UTC day. Choose a stable `storageKey` unique to the product or installation
-and surface. Products mounted at different paths on the same origin need
-different keys. The day lives in localStorage under that exact key, so
-reloads and tabs opened later send nothing more that day.
+The callable reporter keeps existing cleanup call sites working. It posts
+`app_opened` on load and the first focus of each UTC day, and `screen_viewed`
+once per screen per UTC day. The active screen is reported again on next-day
+focus. Choose a stable `storageKey` unique to the product or installation and
+surface. The original key stores the app-open date; derived `.screens` and
+`.quiet` keys hold the current day's screen claims and last disabled date.
+Reloads and later tabs reuse those claims. Tabs opening together may each
+send a report. Blocked storage falls back to memory for the page.
 
-`post` carries the product's own auth headers and must resolve with the
-actual HTTP status, including error statuses. Reject only when no response
-arrived. For a generated client that throws on HTTP errors, use its
-response-returning transport (for example, Forge's `orvalRequest`) or adapt
-its HTTP errors into `{ status }` results. Passing a throwing client without
-this adaptation makes permanent HTTP errors retry indefinitely.
+`post` carries the product's auth headers and resolves with the actual HTTP
+status, including errors. Reject only when no response arrived. Return a
+`Response` or `{ status, data }` to expose the daemon's receipt. On HTTP 202,
+`disabled` stops all reports and signals visit trackers to stop. The first
+load or focus after UTC midnight makes one new check. A `queued` or `skipped`
+receipt resumes trackers. Missing, malformed, or unknown receipts and all
+other terminal HTTP responses still finish the daily attempt. Status-only
+callbacks remain valid, but cannot communicate the daemon's quiet state.
 
-A rejection or a 502, 503 or 504 triggers retries after 1, 2, 4, 8 and 16
-seconds, then every 30 seconds until the backend answers. Any other status
-ends the day's attempt. A focus that starts a new day's attempt resets the
-delay to one second.
+App-open and screen reports share one daily queue. Transport failures and
+HTTP 502, 503, and 504 retry after 1, 2, 4, 8, and 16 seconds, then stop after
+six failures. Focus and screen changes keep that budget; reload or next-day
+focus resets it. Visit reports preserve their product-specific names and
+properties, send immediately with optional `keepalive`, and never retry.
+Their receipts update the same quiet state even while a daily post is pending.
 
-Tabs that open together may each send one, which doesn't move a count of
-installs active that day. When storage is blocked, memory holds the day for
-the page, so each page load sends at most once a day.
+`onQuietChange` immediately calls its listener with the current state and
+returns an unsubscribe function. Cleanup cancels retries, signals quiet,
+drops pending daily reports, and removes the focus listener.
 
 ## Color hashing
 

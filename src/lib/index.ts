@@ -206,6 +206,11 @@ export {
   startAppOpenedReporting,
   type AppOpenedEvent,
   type AppOpenedOptions,
+  type AppOpenedReporter,
+  type BrowserTelemetryEvent,
+  type ScreenViewedEvent,
+  type VisitEvent,
+  type VisitOptions,
 } from "./utils/app-opened.js";
 export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
