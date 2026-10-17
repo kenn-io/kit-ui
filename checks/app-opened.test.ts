@@ -83,35 +83,42 @@ afterEach(() => {
 
 describe("startAppOpenedReporting", () => {
   test.each([
-    401,
-    { status: 202, data: { status: "unknown" } },
-    new Response("broken", { status: 202 }),
-  ])("a non-receipt response stays quiet without delivery claims: %p", async (reply) => {
-    statuses = [reply];
-    const reporter = start();
-    const quiet: boolean[] = [];
-    reporter.onQuietChange((value) => quiet.push(value));
-    await settle();
-    reporter.reportVisit(VISIT);
-    reporter.reportScreen("A");
-    focus();
-    await advance(60000);
-    expect(sent).toHaveLength(1);
-    expect(quiet).toEqual([true]);
-    expect(stored.has(STORAGE_KEY)).toBe(false);
-    expect(stored.has(`${PREFIX}check`)).toBe(false);
-    reporter();
-    const reloaded = start();
-    await settle();
-    expect(sent).toHaveLength(1);
-    expect([...stored.entries()]).toEqual([[`${PREFIX}quiet`, "2026-10-03"]]);
-    jest.setSystemTime(DAY_TWO);
-    focus();
-    await settle();
-    reloaded.reportVisit(VISIT);
-    await settle();
-    expect(sent.slice(1).map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
-  });
+    [401, false],
+    [{ status: 202, data: { status: "unknown" } }, false],
+    [new Response("broken", { status: 202 }), false],
+    [new Response(JSON.stringify({ status: "queued" }), { status: 200 }), false],
+    [new Response(JSON.stringify({ status: "queued" }), { status: 201 }), false],
+    [{ status: 202, data: { status: "disabled" } }, true],
+  ] as const)(
+    "only disabled receipts keep a terminal first reply quiet across reloads: %p",
+    async (reply, persisted) => {
+      statuses = [reply];
+      const reporter = start();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      await settle();
+      reporter.reportVisit(VISIT);
+      reporter.reportScreen("A");
+      focus();
+      await advance(60000);
+      expect(sent).toHaveLength(1);
+      expect(quiet).toEqual([true]);
+      expect([...stored.entries()]).toEqual(persisted ? [[`${PREFIX}quiet`, "2026-10-03"]] : []);
+      reporter();
+      const reloaded = start();
+      await settle();
+      expect(sent).toHaveLength(persisted ? 1 : 2);
+      jest.setSystemTime(DAY_TWO);
+      focus();
+      await settle();
+      reloaded.reportVisit(VISIT);
+      await settle();
+      expect(sent.slice(persisted ? 1 : 2).map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "session_ended",
+      ]);
+    },
+  );
   test("a rejected screen preserves the enabled gate and is not posted again", async () => {
     statuses = [new Response(JSON.stringify({ status: "queued" }), { status: 202 }), 400];
     const reporter = start();
@@ -272,6 +279,39 @@ describe("startAppOpenedReporting", () => {
     reporter.reportVisit(VISIT, { keepalive: true });
     if (outcome === "cleanup") expect(sent).toHaveLength(1);
     else expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+  });
+
+  test("a held first receipt retains only the earliest six visits and their options", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    for (let index = 0; index < 3; index++)
+      reporter.reportVisit(
+        { event: "action", properties: { index } },
+        index % 2 === 0 ? { keepalive: true } : undefined,
+      );
+    await settle();
+    for (let index = 3; index < 20; index++)
+      reporter.reportVisit(
+        { event: "action", properties: { index } },
+        index % 2 === 0 ? { keepalive: true } : undefined,
+      );
+    expect(sent).toHaveLength(1);
+    release({ status: 202, data: { status: "queued" } });
+    await settle();
+    await advance(60000);
+    expect(sent).toHaveLength(7);
+    expect(
+      sent
+        .slice(1)
+        .map(({ event, options }) => [event.event, event.properties, options?.keepalive]),
+    ).toEqual([
+      ["action", { index: 0 }, true],
+      ["action", { index: 1 }, undefined],
+      ["action", { index: 2 }, true],
+      ["action", { index: 3 }, undefined],
+      ["action", { index: 4 }, true],
+      ["action", { index: 5 }, undefined],
+    ]);
   });
 
   test("quiet notifications pause a visit tracker and honor unsubscribe and cleanup", async () => {

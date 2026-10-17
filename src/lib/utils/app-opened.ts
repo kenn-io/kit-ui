@@ -177,10 +177,11 @@ export function startAppOpenedReporting({
       gate = "enabled";
       write(`${prefix}check`);
       if (key) write(key);
-    } else if ((response.status === 202 && status === "disabled") || gate === "unknown") {
+    } else if (response.status === 202 && status === "disabled") {
       gate = "disabled";
       write(`${prefix}quiet`);
-    } else if (key) claims.add(key);
+    } else if (gate === "unknown") gate = "disabled";
+    else if (key) claims.add(key);
     pump();
   };
   const pump = () => {
@@ -209,7 +210,7 @@ export function startAppOpenedReporting({
     if (stopped || disabled() || failures + inFlight >= 6) return;
     if (visit && gate === "enabled") void send(visit, undefined, options);
     else {
-      if (visit) visits.push({ event: visit, options });
+      if (visit && visits.length < 6) visits.push({ event: visit, options });
       pump();
     }
   };
