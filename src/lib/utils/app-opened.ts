@@ -89,6 +89,18 @@ export function startAppOpenedReporting({
   const write = (key: string) => {
     claims.add(key);
     try {
+      const saved = localStorage.getItem(key);
+      if (
+        saved &&
+        saved > day &&
+        Number.isFinite(Date.parse(saved)) &&
+        new Date(saved).toISOString().slice(0, 10) === saved
+      )
+        return;
+    } catch {
+      /* Failed reads still allow a write attempt. */
+    }
+    try {
       localStorage.setItem(key, day);
     } catch {
       /* Retain the page claim. */
