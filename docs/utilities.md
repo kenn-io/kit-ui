@@ -358,12 +358,10 @@ drain after terminal replies; disabled or exhausted reporting clears the queue.
 Visits never retry.
 Their failures share the daily backoff: 1, 2, 4, 8, and 16 seconds, then all
 reports stop after six consecutive failures. Every HTTP 5xx response counts
-as a failure and leaves daily claims pending. After 15 minutes, one later
-focus or report can start one additional chain of six attempts that UTC day.
-Exhaustion schedules no timer, so a continuously unavailable daemon receives
-at most twelve failed requests per page per UTC day. Any terminal response
-resets the consecutive-failure count. Backoff holds new visits; reload
-or next-day focus gives an exhausted page a fresh budget.
+as a failure and leaves daily claims pending. Exhaustion schedules no timer;
+reload or the next UTC day starts a fresh budget. Any terminal response
+resets the consecutive-failure count while preserving a pending retry delay.
+A disabled receipt cancels that retry and discards pending reports.
 
 `onQuietChange` immediately supplies the current state and returns an
 unsubscribe function. Unknown and disabled gates both pause trackers. Visits

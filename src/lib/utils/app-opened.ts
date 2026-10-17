@@ -9,7 +9,9 @@ export interface TelemetryReceipt {
   json?: () => Promise<unknown>;
 }
 export interface AppOpenedOptions {
+  /** Daemon route that accepts UI telemetry, e.g. "/api/v1/telemetry/events". */
   route: string;
+  /** Where the open happened, e.g. "web". */
   surface: string;
   /** Stable key unique to the product or installation and surface. */
   storageKey: string;
@@ -44,9 +46,10 @@ export interface AppOpenedReporter {
 }
 const today = (): string => new Date().toISOString().slice(0, 10);
 
+/** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. Call the reporter to stop. */
 export function startAppOpenedReporting(options: BrowserTelemetryOptions): AppOpenedReporter;
+/** Reports daily app-open on load or later UTC-day focus. Returns cleanup; retries stop after six failures until reload or the next UTC day. */
 export function startAppOpenedReporting(options: AppOpenedOptions): () => void;
-/** Shared daily reports and visit admission, with a persisted quiet UTC day. */
 export function startAppOpenedReporting({
   route,
   surface,
@@ -63,9 +66,7 @@ export function startAppOpenedReporting({
   let stopped = false,
     daily = false,
     failures = 0,
-    inFlight = 0,
-    rearmed = false,
-    resumeAt = 0;
+    inFlight = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
     lastQuiet = true;
@@ -91,6 +92,10 @@ export function startAppOpenedReporting({
       /* Retain the page claim. */
     }
   };
+  const cancelRetry = () => {
+    clearTimeout(retry);
+    retry = undefined;
+  };
   const disabled = (): boolean => {
     if (gate !== "disabled")
       gate = claimed(`${prefix}quiet`)
@@ -98,6 +103,10 @@ export function startAppOpenedReporting({
         : claimed(`${prefix}check`)
           ? "enabled"
           : "unknown";
+    if (gate === "disabled") {
+      cancelRetry();
+      clear();
+    }
     notify();
     return gate === "disabled";
   };
@@ -110,10 +119,9 @@ export function startAppOpenedReporting({
     day = today();
     claims.clear();
     gate = "unknown";
-    daily = rearmed = false;
+    daily = false;
     failures = inFlight = 0;
-    clearTimeout(retry);
-    retry = undefined;
+    cancelRetry();
     clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
@@ -138,13 +146,9 @@ export function startAppOpenedReporting({
     if (sending !== day || sending !== today() || stopped) return;
     inFlight--;
     if (key) daily = false;
-    if (disabled()) {
-      clear();
-      return;
-    }
-    clearTimeout(retry);
-    retry = undefined;
+    if (disabled()) return;
     if (!response || (response.status >= 500 && response.status < 600)) {
+      cancelRetry();
       if (++failures < 6)
         retry = setTimeout(
           () => {
@@ -153,10 +157,7 @@ export function startAppOpenedReporting({
           },
           1000 * 2 ** (failures - 1),
         );
-      else {
-        resumeAt = Date.now() + 15 * 60000;
-        clear();
-      }
+      else clear();
       return;
     }
     failures = 0;
@@ -164,20 +165,15 @@ export function startAppOpenedReporting({
     if (data && typeof data === "object" && "status" in data && data.status === "disabled") {
       write(`${prefix}quiet`);
       gate = "disabled";
-      clear();
     } else {
       write(`${prefix}check`);
       gate = "enabled";
     }
-    notify();
     pump();
   };
   const pump = () => {
     rollover();
-    if (stopped || disabled()) {
-      clear();
-      return;
-    }
+    if (stopped || disabled()) return;
     while (!retry && failures + inFlight < 6 && (gate === "enabled" || !inFlight)) {
       const visit = visits.shift();
       if (visit) {
@@ -201,12 +197,7 @@ export function startAppOpenedReporting({
   };
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
-    if (stopped || gate === "disabled") return;
-    if (failures >= 6 && !rearmed && Date.now() >= resumeAt) {
-      rearmed = true;
-      failures = 0;
-    }
-    if (failures >= 6) return;
+    if (stopped || gate === "disabled" || failures >= 6) return;
     if (visit) visits.push([visit, options]);
     pump();
   };
@@ -216,7 +207,7 @@ export function startAppOpenedReporting({
   return Object.assign(
     () => {
       stopped = true;
-      clearTimeout(retry);
+      cancelRetry();
       clear();
       notify();
       listeners.clear();
