@@ -576,8 +576,10 @@
     list-style: none;
   }
 
+  /* Indent the views to the section icon's edge, so the current view's
+   * indicator sits inside the section row above it. */
   .kit-app-sidebar__views {
-    margin: var(--space-1) 0 var(--space-2);
+    margin: var(--space-1) 0 var(--space-2) var(--space-5);
   }
 
   .kit-app-sidebar__section,
@@ -607,14 +609,15 @@
     color: var(--kit-sidebar-current-icon, var(--kit-sidebar-accent, var(--accent-blue)));
   }
 
-  /* Views and run headings line up with the section label, past the icon. */
-  .kit-app-sidebar__view,
+  /* Views and run headings line up with the section label, past the icon.
+   * The views list's indent supplies the views' first --space-5. */
   .kit-app-sidebar__run-heading {
     padding-left: calc(var(--space-5) + 16px + var(--space-4));
   }
 
   .kit-app-sidebar__view {
     min-height: 2rem;
+    padding-left: calc(16px + var(--space-4));
   }
 
   /* Square the leading corners so the indicator draws as a straight bar

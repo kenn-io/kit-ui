@@ -100,6 +100,23 @@ test("the current view's indicator runs straight down its leading edge", async (
   await expect(sectionLink(page, "History")).not.toHaveCSS("border-top-left-radius", "0px");
 });
 
+test("views sit indented under their section with labels still aligned", async ({ page }) => {
+  await open(page, "reports/overview", 1440);
+  const textLeft = (link: Locator) =>
+    link.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element.lastChild ?? element);
+      return range.getBoundingClientRect().left;
+    });
+  const reports = sectionLink(page, "Reports");
+  const overview = sectionLink(page, "Overview");
+  const sectionBox = await reports.boundingBox();
+  const viewBox = await overview.boundingBox();
+  expect(viewBox!.x).toBeGreaterThan(sectionBox!.x);
+  expect(viewBox!.x + viewBox!.width).toBeCloseTo(sectionBox!.x + sectionBox!.width, 0);
+  expect(await textLeft(overview)).toBeCloseTo(await textLeft(reports), 0);
+});
+
 test("each width band shows its own sidebar", async ({ page }) => {
   await open(page, "home", 1440);
   expect(await sidebarWidth(page)).toBe(240);
