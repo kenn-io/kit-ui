@@ -82,7 +82,8 @@ afterEach(() => {
 });
 
 describe("startAppOpenedReporting", () => {
-  test("legacy typed callback sends app-open once across focus and reload", async () => {
+  test.each([202, 400])("typed callbacks claim terminal %s", async (status) => {
+    statuses = [status];
     const options: AppOpenedOptions = {
       route: ROUTE,
       surface: "web",
@@ -92,6 +93,7 @@ describe("startAppOpenedReporting", () => {
     const stop: () => void = startAppOpenedReporting(options);
     stops.push(stop);
     await settle();
+    await advance(60000);
     focus();
     stop();
     start();
@@ -124,12 +126,19 @@ describe("startAppOpenedReporting", () => {
     expect(sent.slice(3).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
   });
 
-  test.each(["queued", "skipped", "disabled"])(
-    "first receipt %s releases or drops held visits",
-    async (status) => {
+  test.each([
+    ["queued", false],
+    ["skipped", false],
+    ["disabled", false],
+    ["disabled", true],
+  ] as const)(
+    "first receipt %s releases or drops held visits (legacy date: %s)",
+    async (status, legacyDate) => {
+      if (legacyDate) stored.set(STORAGE_KEY, "2026-10-03");
       statuses = ["held"];
       const reporter = start();
       reporter.reportVisit(VISIT, { keepalive: true });
+      if (legacyDate) reporter.reportVisit(VISIT);
       reporter.reportScreen("A");
       expect(sent).toHaveLength(1);
       release({ status: 202, data: { status } });
@@ -306,15 +315,6 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(4);
   });
 
-  test.each([400, 202])("terminal status %s ends a day's attempt", async (status) => {
-    statuses = [status];
-    start();
-    await settle();
-    jest.advanceTimersByTime(60000);
-    start();
-    await settle();
-    expect(sent).toHaveLength(1);
-  });
   test("a visit makes a new day's first check and preserves its active screen", async () => {
     const reporter = start();
     reporter.reportScreen("A");
@@ -329,17 +329,6 @@ describe("startAppOpenedReporting", () => {
       "app_opened",
       "screen_viewed",
     ]);
-  });
-  test("a legacy app date still makes one receipt check and holds visits", async () => {
-    stored.set(STORAGE_KEY, "2026-10-03");
-    statuses = ["held"];
-    const reporter = start();
-    reporter.reportVisit(VISIT);
-    reporter.reportVisit(VISIT);
-    expect(sent).toHaveLength(1);
-    release({ status: 202, data: { status: "disabled" } });
-    await settle();
-    expect(sent).toHaveLength(1);
   });
 
   test.each([false, true])(
@@ -442,5 +431,23 @@ describe("startAppOpenedReporting", () => {
     for (let i = 0; i < 20; i++) reporter.reportVisit(VISIT);
     await settle();
     expect(sent).toHaveLength(8);
+  });
+
+  test("rollover frees old reservations and late replies preserve current reservations", async () => {
+    const reporter = start();
+    await settle();
+    statuses = Array(6).fill("held");
+    for (let i = 0; i < 6; i++) reporter.reportVisit(VISIT);
+    const oldReply = release;
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    await settle();
+    expect(sent).toHaveLength(8);
+    statuses = Array(6).fill("held");
+    for (let i = 0; i < 6; i++) reporter.reportVisit(VISIT);
+    oldReply(202);
+    await settle();
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(14);
   });
 });

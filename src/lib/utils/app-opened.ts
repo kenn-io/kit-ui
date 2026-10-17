@@ -148,7 +148,7 @@ export function startAppOpenedReporting({
     } catch {
       /* Transport failures share the retry budget. */
     }
-    inFlight--;
+    if (sending === day) inFlight--;
     if (stopped || sending !== day || sending !== today()) return;
     if (blocking) active = false;
     if (state.day === day && state.quiet) return;
@@ -206,6 +206,7 @@ export function startAppOpenedReporting({
     rearmed = false;
     active = false;
     failures = 0;
+    inFlight = 0;
     clearTimeout(retry);
     retry = undefined;
     pending.clear();
