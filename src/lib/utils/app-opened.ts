@@ -61,6 +61,7 @@ export function startAppOpenedReporting({
     claims = new Set<string>();
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
+  const visits: { event: VisitEvent; options?: VisitOptions }[] = [];
   let day = today(),
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
@@ -106,7 +107,7 @@ export function startAppOpenedReporting({
           : "unknown";
     if (gate === "disabled") {
       cancelRetry();
-      screens.clear();
+      visits.length = 0;
     }
     notify();
     return gate === "disabled";
@@ -120,6 +121,7 @@ export function startAppOpenedReporting({
     failures = inFlight = 0;
     cancelRetry();
     screens.clear();
+    visits.length = 0;
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
   };
@@ -134,7 +136,7 @@ export function startAppOpenedReporting({
         try {
           data = response.data ?? (await response.json?.());
         } catch {
-          /* Malformed receipts keep the gate quiet. */
+          /* Malformed receipts cannot establish the gate. */
         }
       }
     } catch {
@@ -155,27 +157,38 @@ export function startAppOpenedReporting({
           },
           1000 * 2 ** (failures - 1),
         );
-      else screens.clear();
+      else visits.length = 0;
       notify();
       return;
     }
     failures = 0;
     const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
     const accepted =
-      response.status === 202 &&
-      (status === "queued" ||
-        status === "skipped" ||
-        (!response.json && response.data === undefined));
-    gate = accepted ? "enabled" : "disabled";
+      (response.status === 202 && (status === "queued" || status === "skipped")) ||
+      (response.status >= 200 &&
+        response.status < 300 &&
+        !response.json &&
+        response.data === undefined);
     if (accepted) {
+      gate = "enabled";
       write(`${prefix}check`);
       if (key) write(key);
-    } else if (response.status === 202 && status === "disabled") write(`${prefix}quiet`);
+    } else if ((response.status === 202 && status === "disabled") || gate === "unknown") {
+      gate = "disabled";
+      write(`${prefix}quiet`);
+    } else if (key) claims.add(key);
     pump();
   };
   const pump = () => {
     rollover();
-    if (stopped || disabled() || scheduled || retry || daily || failures + inFlight >= 6) return;
+    if (stopped || disabled() || scheduled || failures + inFlight >= 6) return;
+    if (gate === "enabled") {
+      while (visits.length && failures + inFlight < 6) {
+        const visit = visits.shift()!;
+        void send(visit.event, undefined, visit.options);
+      }
+    }
+    if (retry || daily || failures + inFlight >= 6) return;
     const screen = [...screens].find(
       (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
     );
@@ -191,7 +204,10 @@ export function startAppOpenedReporting({
     rollover();
     if (stopped || disabled() || failures + inFlight >= 6) return;
     if (visit && gate === "enabled") void send(visit, undefined, options);
-    else pump();
+    else {
+      if (visit) visits.push({ event: visit, options });
+      pump();
+    }
   };
   const report = () => request();
   queueMicrotask(() => {
@@ -204,6 +220,7 @@ export function startAppOpenedReporting({
       stopped = true;
       cancelRetry();
       screens.clear();
+      visits.length = 0;
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
