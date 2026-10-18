@@ -147,7 +147,7 @@ export function startAppOpenedReporting({
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
       response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
-      if (response.status === 202 && !(response as Response).bodyUsed) {
+      if (response.status === 202) {
         try {
           data = response.data ?? (await response.json?.());
         } catch {
