@@ -522,6 +522,49 @@ describe("startAppOpenedReporting", () => {
     expect(quiet).toEqual([true, false]);
   });
 
+  test("cleanup in an initial enabled callback stops the subscriber's visit timer", async () => {
+    const reporter = start();
+    await settle();
+    let timer: ReturnType<typeof setInterval>;
+    const changes: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      clearInterval(timer);
+      if (!quiet) {
+        timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+        reporter();
+      }
+    });
+    expect(changes).toEqual([false, true]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test.each([
+    ["subscribe", [false]],
+    ["unsubscribe", [true]],
+    ["rollover", [true, true]],
+  ] as const)("enabled notifications honor reentrant %s callbacks", async (action, expected) => {
+    statuses = ["held"];
+    const reporter = start();
+    const changes: boolean[] = [];
+    let unsubscribe = () => {};
+    reporter.onQuietChange((quiet) => {
+      if (quiet) return;
+      if (action === "subscribe") reporter.onQuietChange((value) => changes.push(value));
+      else if (action === "unsubscribe") unsubscribe();
+      else {
+        jest.setSystemTime(DAY_TWO);
+        statuses = ["held", "held"];
+        focus();
+      }
+    });
+    if (action !== "subscribe")
+      unsubscribe = reporter.onQuietChange((value) => changes.push(value));
+    release(202);
+    await settle();
+    expect(changes).toEqual(expected);
+  });
+
   test("quiet notifications pause a visit tracker and honor unsubscribe and cleanup", async () => {
     statuses = ["held"];
     const reporter = start();
@@ -558,17 +601,20 @@ describe("startAppOpenedReporting", () => {
     const remove = jest.spyOn(window, "removeEventListener");
     statuses = ["held"];
     const reporter = start();
-    const changes: boolean[] = [];
+    const changes: boolean[] = [],
+      later: boolean[] = [];
     reporter.onQuietChange((quiet) => {
       changes.push(quiet);
       if (!quiet) reporter();
     });
+    reporter.onQuietChange((quiet) => later.push(quiet));
     start();
     await settle();
     const beforeCleanup = sent.slice();
     reporter.reportVisit(VISIT);
     expect(sent).toEqual(beforeCleanup);
     expect(changes).toEqual([true, false, true]);
+    expect(later).toEqual([true, true]);
     expect(jest.getTimerCount()).toBe(0);
     expect(remove).toHaveBeenCalledWith("focus", expect.any(Function));
     stops.at(-1)?.();

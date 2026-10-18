@@ -116,9 +116,14 @@ export function startAppOpenedReporting({
     lastQuiet = true;
   const quiet = () => stopped || failures >= 6 || gate !== "enabled";
   const notify = () => {
-    if (lastQuiet === quiet()) return;
-    lastQuiet = quiet();
-    for (const listener of listeners) listener(lastQuiet);
+    const value = quiet();
+    if (lastQuiet === value) return;
+    lastQuiet = value;
+    const snapshot = [...listeners];
+    for (const listener of snapshot) {
+      if (lastQuiet !== value) break;
+      if (listeners.has(listener)) listener(value);
+    }
   };
   const cancelRetry = () => {
     clearTimeout(retry);
@@ -260,8 +265,8 @@ export function startAppOpenedReporting({
       },
       reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),
       onQuietChange(listener: (quiet: boolean) => void) {
-        listener(quiet());
         if (!stopped) listeners.add(listener);
+        listener(quiet());
         return () => void listeners.delete(listener);
       },
     },
