@@ -93,6 +93,40 @@ afterEach(() => {
 });
 
 describe("startAppOpenedReporting", () => {
+  test("keepalive permission checks wait for backoff without queuing visits", async () => {
+    statuses = [400];
+    const previous = start();
+    await settle();
+    previous();
+    const reporter = start();
+    statuses = [503, 202];
+    reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    expect(jest.getTimerCount()).toBe(0);
+
+    reporter.reportVisit(VISIT, { keepalive: true });
+    await settle();
+    expect(sent).toHaveLength(2);
+    await advance(999);
+    reporter.reportVisit(VISIT, { keepalive: true });
+    await settle();
+    expect(sent).toHaveLength(2);
+    await advance(1);
+    expect(sent).toHaveLength(2);
+    expect(jest.getTimerCount()).toBe(0);
+
+    reporter.reportVisit(VISIT, { keepalive: true });
+    await settle();
+    expect(sent.slice(2)).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    expect(quiet).toEqual([false]);
+    await advance(60000);
+    expect(sent).toHaveLength(3);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   test("a failed ordinary visit defers a new screen until the shared deadline", async () => {
     const reporter = start();
     await settle();

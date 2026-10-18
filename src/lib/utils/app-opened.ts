@@ -215,7 +215,8 @@ export function startAppOpenedReporting({
     rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
     if (visit) {
-      if (!options?.keepalive && performance.now() < ordinaryEligibleAt) return;
+      if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)
+        return;
       if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
       return;
     }
