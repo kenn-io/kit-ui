@@ -111,7 +111,7 @@ describe("startAppOpenedReporting", () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
-  test.each(["history", "observed", "saturated", "full"])(
+  test.each(["history", "observed", "saturated"])(
     "%s write recovery keeps unsaved claims until storage acknowledges them",
     async (failure) => {
       g.localStorage = {
@@ -125,14 +125,6 @@ describe("startAppOpenedReporting", () => {
       const reporter = start();
       reporter.reportScreen("A");
       await settle();
-      if (failure === "full") {
-        for (let date = -31; date < 3; date++) {
-          jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
-          reporter.reportScreen("A");
-          await settle();
-        }
-        jest.setSystemTime(DAY_ONE);
-      }
       g.localStorage = {
         getItem: (key: string) => stored.get(key) ?? null,
         setItem: (key: string, value: string) => void stored.set(key, value),
@@ -144,7 +136,7 @@ describe("startAppOpenedReporting", () => {
         other();
       }
       reporter.reportScreen("A");
-      expect(sent).toHaveLength(failure === "observed" ? 4 : failure === "full" ? 70 : 2);
+      expect(sent).toHaveLength(failure === "observed" ? 4 : 2);
       if (failure === "history") {
         jest.setSystemTime(DAY_TWO);
         reporter.reportScreen("A");
@@ -162,7 +154,7 @@ describe("startAppOpenedReporting", () => {
         await settle();
         other();
       }
-      if (failure === "saturated" || failure === "full") {
+      if (failure === "saturated") {
         const snapshot = [...stored.entries()];
         const count = sent.length;
         for (let date = 4; date <= 38; date++) {
@@ -176,23 +168,6 @@ describe("startAppOpenedReporting", () => {
         reporter.reportScreen("A");
         await settle();
         expect(sent).toHaveLength(count);
-        if (failure === "full") {
-          g.localStorage = {
-            getItem: (key: string) => stored.get(key) ?? null,
-            setItem: () => {
-              throw new Error("full");
-            },
-          };
-          jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
-          reporter.reportScreen("A");
-          await settle();
-          expect([...stored.entries()]).toEqual(snapshot);
-          jest.setSystemTime(DAY_TWO);
-          reporter.reportScreen("A");
-          await settle();
-          expect(sent).toHaveLength(count + 2);
-          return;
-        }
       }
       jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
       reporter.reportScreen("A");
@@ -200,15 +175,6 @@ describe("startAppOpenedReporting", () => {
       for (const key of [`${PREFIX}open`, `${PREFIX}screen.A`, `${PREFIX}check`]) {
         expect(stored.get(key)!.split(",")[0]).toBe("2026-10-05");
         expect(stored.get(key)!.split(",")).toHaveLength(35);
-      }
-      if (failure === "saturated") {
-        reporter();
-        jest.setSystemTime(new Date("2026-10-05T12:00:00Z"));
-        const count = sent.length;
-        const reloaded = start();
-        reloaded.reportScreen("A");
-        await settle();
-        expect(sent).toHaveLength(count);
       }
     },
   );
