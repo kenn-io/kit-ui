@@ -49,35 +49,30 @@ const today = (): string => new Date().toISOString().slice(0, 10);
 const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 /**
- * Keeps each key's last 35 claimed UTC dates in localStorage, or page memory when storage fails.
+ * Keeps each key's last 35 claimed UTC dates in localStorage. After a failed write,
+ * the page keeps its claims in page memory only.
  */
 function claimHistory(storageKey: string) {
   const memory = new Map<string, string[]>();
-  const pending = new Map<string, string[]>();
+  let pageOnly = false;
   const listKey = (key: string) => (key === storageKey ? `${key}.browser.v1.open` : key);
   const has = (key: string, date: string): boolean => {
-    let dates = memory.get(key) ?? [];
     try {
-      const saved = localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? [];
-      const unsaved = (pending.get(key) ?? []).filter((value) => !saved.includes(value));
-      pending.set(key, unsaved);
-      dates = saved;
+      if (!pageOnly)
+        memory.set(key, localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? []);
     } catch {
       /* Page memory survives blocked storage. */
     }
-    dates = dates.slice(-35);
-    memory.set(key, dates);
-    return dates.includes(date) || (pending.get(key) ?? []).includes(date);
+    return (memory.get(key) ?? []).slice(-35).includes(date);
   };
   const add = (key: string, date: string) => {
     if (has(key, date)) return;
     const dates = [...(memory.get(key) ?? []), date].slice(-35);
+    memory.set(key, dates);
     try {
-      localStorage.setItem(listKey(key), dates.join(","));
-      memory.set(key, dates);
+      if (!pageOnly) localStorage.setItem(listKey(key), dates.join(","));
     } catch {
-      pending.set(key, [...(pending.get(key) ?? []), date].slice(-35));
-      return;
+      pageOnly = true;
     }
   };
   return { has, add };

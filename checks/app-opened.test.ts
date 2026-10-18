@@ -139,8 +139,33 @@ describe("startAppOpenedReporting", () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
-  test.each(["history", "observed", "saturated"])(
-    "%s write recovery keeps unsaved claims until storage acknowledges them",
+  test("a page keeps 35 dates per key across failed and recovered writes", async () => {
+    const working = g.localStorage;
+    g.localStorage = {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: () => {
+        throw new Error("full");
+      },
+    };
+    start();
+    await settle();
+    const visit = async (offset: number) => {
+      jest.setSystemTime(new Date(Date.UTC(2026, 9, 3 + offset, 12)));
+      focus();
+      await settle();
+    };
+    for (let offset = 1; offset < 70; offset++) {
+      if (offset === 35) g.localStorage = working;
+      await visit(offset);
+    }
+    await visit(35);
+    expect(sent).toHaveLength(70);
+    await visit(34);
+    expect(sent.slice(70).map(({ event }) => event.event)).toEqual(["app_opened"]);
+  });
+
+  test.each(["recovered", "observed"])(
+    "%s storage after a failed write keeps the page's claims",
     async (failure) => {
       g.localStorage = {
         getItem: (key: string) => {
@@ -165,45 +190,14 @@ describe("startAppOpenedReporting", () => {
       }
       reporter.reportScreen("A");
       expect(sent).toHaveLength(failure === "observed" ? 4 : 2);
-      if (failure === "history") {
-        jest.setSystemTime(DAY_TWO);
-        reporter.reportScreen("A");
-        await settle();
-        expect(stored.get(`${PREFIX}open`)).toBe("2026-10-04");
-        jest.setSystemTime(DAY_ONE);
-        reporter.reportScreen("A");
-        await settle();
-        expect(sent).toHaveLength(4);
-      }
-      for (let date = 4; date <= 38; date++) {
-        jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
-        const other = start();
-        other.reportScreen("A");
-        await settle();
-        other();
-      }
-      if (failure === "saturated") {
-        const snapshot = [...stored.entries()];
-        const count = sent.length;
-        for (let date = 4; date <= 38; date++) {
-          jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
-          reporter.reportScreen("A");
-          await settle();
-          expect(sent).toHaveLength(count);
-          expect([...stored.entries()]).toEqual(snapshot);
-        }
-        jest.setSystemTime(DAY_ONE);
-        reporter.reportScreen("A");
-        await settle();
-        expect(sent).toHaveLength(count);
-      }
-      jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
+      jest.setSystemTime(DAY_TWO);
       reporter.reportScreen("A");
       await settle();
-      for (const key of [`${PREFIX}open`, `${PREFIX}screen.A`, `${PREFIX}check`]) {
-        expect(stored.get(key)!.split(",")[0]).toBe("2026-10-05");
-        expect(stored.get(key)!.split(",")).toHaveLength(35);
-      }
+      jest.setSystemTime(DAY_ONE);
+      reporter.reportScreen("A");
+      await settle();
+      expect(sent).toHaveLength(failure === "observed" ? 6 : 4);
+      expect(stored.get(`${PREFIX}open`)).toBe(failure === "observed" ? "2026-10-03" : undefined);
     },
   );
 
@@ -255,9 +249,10 @@ describe("startAppOpenedReporting", () => {
       jest.setSystemTime(DAY_ONE);
       focus();
       await settle();
-      expect(sent.slice(count).map(({ event }) => event.event)).toEqual(
-        failure === "write" ? ["screen_viewed"] : ["app_opened", "screen_viewed"],
-      );
+      expect(sent.slice(count).map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+      ]);
     },
   );
 
