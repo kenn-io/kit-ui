@@ -578,6 +578,33 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test("midnight resets the day before a shared receipt can notify a screen subscriber", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const previousDay = release;
+    const changes: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      if (!quiet) reporter.reportScreen("A");
+    });
+    const other = start();
+    await settle();
+    other();
+    expect(stored.get(`${PREFIX}check`)).toBe("2026-10-03");
+    expect(changes).toEqual([true]);
+
+    jest.setSystemTime(DAY_TWO);
+    previousDay({ status: 202, data: { status: "disabled" } });
+    await settle();
+    expect(sent.slice(2).map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
+    ]);
+    expect(changes).toEqual([true, false]);
+    expect(stored.get(`${PREFIX}quiet`)).toBeUndefined();
+    expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-04");
+  });
+
   test("screen retries honor shared claims and midnight rollover", async () => {
     const reporter = start();
     await settle();

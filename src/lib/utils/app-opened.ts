@@ -106,13 +106,16 @@ export function startAppOpenedReporting({
     clearTimeout(retry?.handle);
     retry = undefined;
   };
-  const disabled = (): boolean => {
-    if (gate !== "disabled")
-      gate = claimed(`${prefix}quiet`)
+  const readGate = () =>
+    gate === "disabled"
+      ? gate
+      : claimed(`${prefix}quiet`)
         ? "disabled"
         : claimed(`${prefix}check`)
           ? "enabled"
           : "unknown";
+  const disabled = (): boolean => {
+    gate = readGate();
     if (gate === "disabled") {
       cancelRetry();
       visits.length = 0;
@@ -121,7 +124,7 @@ export function startAppOpenedReporting({
     return stopped || gate === "disabled";
   };
   const rollover = (wake = false) => {
-    if (day === today() || (!wake && disabled())) return;
+    if (day === today() || (!wake && (stopped || readGate() === "disabled"))) return;
     day = today();
     claims.clear();
     gate = "unknown";
