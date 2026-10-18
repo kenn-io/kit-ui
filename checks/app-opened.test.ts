@@ -500,6 +500,45 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test("cleanup during a shared enabled notification prevents a visit post", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const changes: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      if (!quiet) reporter();
+    });
+    start();
+    await settle();
+    const beforeCleanup = sent.slice();
+    reporter.reportVisit(VISIT);
+    expect(changes).toEqual([true, false, true]);
+    expect(sent).toEqual(beforeCleanup);
+    release(202);
+    await advance(60000);
+    expect(sent).toEqual(beforeCleanup);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("cleanup during a shared enabled notification prevents a failed reply retry", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const changes: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      if (!quiet) reporter();
+    });
+    start();
+    await settle();
+    const beforeCleanup = sent.slice();
+    release(503);
+    await settle();
+    expect(changes).toEqual([true, false, true]);
+    expect(jest.getTimerCount()).toBe(0);
+    await advance(60000);
+    expect(sent).toEqual(beforeCleanup);
+  });
+
   test.each([false, true])(
     "failed writes and blocked storage keep page claims: %s",
     async (blocked) => {

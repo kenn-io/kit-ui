@@ -118,7 +118,7 @@ export function startAppOpenedReporting({
       visits.length = 0;
     }
     notify();
-    return gate === "disabled";
+    return stopped || gate === "disabled";
   };
   const rollover = (wake = false) => {
     if (day === today() || (!wake && disabled())) return;
