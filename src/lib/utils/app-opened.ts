@@ -182,7 +182,6 @@ export function startAppOpenedReporting({
       notify();
       return;
     }
-    failures = 0;
     const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
     const accepted =
       (response.status === 202 && (status === "queued" || status === "skipped")) ||
@@ -190,6 +189,7 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
+    if (checking || accepted) failures = 0;
     if (accepted) {
       if (checking && key === undefined) visits.shift();
       gate = "enabled";

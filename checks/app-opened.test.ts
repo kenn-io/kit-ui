@@ -642,6 +642,44 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test("rejected one-shot visits preserve screen backoff and its six-failure cap", async () => {
+    const reporter = start();
+    await settle();
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    statuses = [500];
+    reporter.reportScreen("A");
+    await settle();
+    for (const delay of [1000, 2000, 4000, 8000, 16000]) {
+      const before = sent.length;
+      await advance(delay / 2);
+      expect(sent).toHaveLength(before);
+      statuses = [400, 500];
+      reporter.reportVisit({ event: "unallowlisted", properties: {} });
+      await settle();
+      expect(sent).toHaveLength(before + 1);
+      expect(jest.getTimerCount()).toBe(1);
+      await advance(delay / 2 - 1);
+      expect(sent).toHaveLength(before + 1);
+      await advance(1);
+      expect(sent).toHaveLength(before + 2);
+      expect(sent.at(-1)?.event).toEqual({
+        event: "screen_viewed",
+        properties: { surface: "web", screen: "A" },
+      });
+    }
+    expect(sent.filter(({ event }) => event.event === "screen_viewed")).toHaveLength(6);
+    expect(sent.filter(({ event }) => event.event === "unallowlisted")).toHaveLength(5);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(quiet).toEqual([false, true]);
+    await advance(60000);
+    focus();
+    reporter.reportVisit(VISIT);
+    reporter.reportScreen("B");
+    await settle();
+    expect(sent).toHaveLength(12);
+  });
+
   test("an enabled visit failure preserves an existing screen retry deadline", async () => {
     const reporter = start();
     await settle();

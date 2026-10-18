@@ -373,9 +373,10 @@ consecutive daily failures; at six, new calls are dropped.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4,
 8, and 16 seconds. Six consecutive failures stop reporting and pause trackers
-until reload or the next UTC day. Exhaustion schedules no timer. A terminal reply
-resets the consecutive count while preserving an unrelated screen's pending
-retry delay. A disabled receipt cancels retries and discards pending visits.
+until reload or the next UTC day. Exhaustion schedules no timer. A terminal
+daily-check reply or an accepted visit resets the consecutive count; a rejected
+one-shot visit preserves it. Both preserve an unrelated screen's pending retry
+delay. A disabled receipt cancels retries and discards pending visits.
 
 `onQuietChange` immediately supplies the current state and returns an
 unsubscribe function. Unknown, disabled, exhausted, and stopped reporters
