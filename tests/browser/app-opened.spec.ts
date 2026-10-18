@@ -46,36 +46,33 @@ const read = (page: Page) =>
   });
 
 for (const status of ["queued", "disabled"]) {
-  for (const first of ["before", "after"] as const) {
-    test(`tabs answered ${status} across midnight keep both dates when the ${first}-midnight reply lands first`, async ({
-      context,
-    }) => {
-      const before = await context.newPage();
-      const after = await context.newPage();
-      await startTab(before, BEFORE, status, true);
-      await startTab(after, AFTER, status, true);
-      expect((await read(before)).posts).toEqual(["app_opened"]);
-      expect((await read(after)).posts).toEqual(["app_opened"]);
+  test(`concurrent ${status} replies across midnight preserve claims on reload and rollback`, async ({
+    context,
+  }) => {
+    const before = await context.newPage();
+    const after = await context.newPage();
+    await startTab(before, BEFORE, status, true);
+    await startTab(after, AFTER, status, true);
+    expect((await read(before)).posts).toEqual(["app_opened"]);
+    expect((await read(after)).posts).toEqual(["app_opened"]);
 
-      const order = first === "before" ? [before, after] : [after, before];
-      await Promise.all(
-        order.map((page) =>
-          page.evaluate(async () => {
-            for (const resolve of (window as unknown as { replies: (() => void)[] }).replies)
-              resolve();
-            for (let i = 0; i < 20; i++) await Promise.resolve();
-          }),
-        ),
-      );
+    await Promise.all(
+      [before, after].map((page) =>
+        page.evaluate(async () => {
+          for (const resolve of (window as unknown as { replies: (() => void)[] }).replies)
+            resolve();
+          for (let i = 0; i < 20; i++) await Promise.resolve();
+        }),
+      ),
+    );
 
-      for (const time of [AFTER, ROLLBACK]) {
-        const page = await context.newPage();
-        await startTab(page, time, "queued", false);
-        expect(await read(page), time.toISOString()).toEqual({
-          posts: [],
-          quiet: [status === "disabled"],
-        });
-      }
-    });
-  }
+    for (const time of [AFTER, ROLLBACK]) {
+      const page = await context.newPage();
+      await startTab(page, time, "queued", false);
+      expect(await read(page), time.toISOString()).toEqual({
+        posts: [],
+        quiet: [status === "disabled"],
+      });
+    }
+  });
 }

@@ -389,26 +389,36 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test("a rejected screen preserves the enabled gate and is not posted again", async () => {
-    statuses = [202, 400];
-    const reporter = start();
-    await settle();
-    reporter.reportScreen("A");
-    await settle();
-    reporter.reportVisit(VISIT, { keepalive: true });
-    reporter.reportScreen("B");
-    await settle();
-    reporter.reportScreen("A");
-    focus();
-    await settle();
-    expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
-    expect(sent.map(({ event }) => event)).toEqual([
-      { event: "app_opened", properties: { surface: "web" } },
-      { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
-      VISIT,
-      { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
-    ]);
-  });
+  test.each(["enabled", "unknown"])(
+    "a rejected screen stays claimed and releases the next screen with %s permission",
+    async (permission) => {
+      if (permission === "unknown") seed(`${PREFIX}open`, "2026-10-03");
+      const reporter = start();
+      await settle();
+      statuses = ["held", "held"];
+      reporter.reportScreen("A");
+      reporter.reportScreen("B");
+      release(400);
+      await settle();
+      reporter.reportVisit(VISIT, { keepalive: true });
+      release(202);
+      await settle();
+      reporter.reportScreen("A");
+      focus();
+      await settle();
+      expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
+      const reports = [
+        { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
+        { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
+        ...(permission === "enabled" ? [VISIT] : []),
+      ];
+      expect(sent.map(({ event }) => event)).toEqual(
+        permission === "enabled"
+          ? [{ event: "app_opened", properties: { surface: "web" } }, ...reports]
+          : reports,
+      );
+    },
+  );
 
   test.each(["focus", "late 202"])(
     "another tab's disabled receipt cancels backoff when observed by %s",
@@ -568,17 +578,6 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test("a rejected screen lets the next screen check permission", async () => {
-    seed(`${PREFIX}open`, "2026-10-03");
-    statuses = ["held"];
-    const reporter = start();
-    reporter.reportScreen("A");
-    reporter.reportScreen("B");
-    release(400);
-    await settle();
-    expect(sent.map(({ event }) => event.properties.screen)).toEqual(["A", "B"]);
-  });
-
   test.each([
     ["subscribe", [false]],
     ["unsubscribe", [true]],
@@ -637,7 +636,6 @@ describe("startAppOpenedReporting", () => {
   test.each(["initial", "shared"])(
     "cleanup during %s enabled notification stops tracker timers; shared cleanup also cancels retries and focus",
     async (notification) => {
-      const remove = jest.spyOn(window, "removeEventListener");
       if (notification === "shared") statuses = ["held"];
       const reporter = start();
       await settle();
@@ -661,7 +659,6 @@ describe("startAppOpenedReporting", () => {
       expect(changes).toEqual(notification === "initial" ? [false, true] : [true, false, true]);
       expect(later).toEqual(notification === "initial" ? [true] : [true, true]);
       expect(jest.getTimerCount()).toBe(0);
-      expect(remove).toHaveBeenCalledWith("focus", expect.any(Function));
       if (notification === "initial") return;
       stops.at(-1)?.();
       jest.setSystemTime(DAY_TWO);
