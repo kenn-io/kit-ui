@@ -203,17 +203,16 @@ export {
 
 // Utilities
 export {
-  startAppOpenedReporting,
+  startBrowserTelemetry,
   type AppOpenedEvent,
-  type AppOpenedOptions,
-  type AppOpenedReporter,
   type BrowserTelemetryEvent,
   type BrowserTelemetryOptions,
+  type BrowserTelemetryReporter,
   type ScreenViewedEvent,
   type TelemetryReceipt,
   type VisitEvent,
   type VisitOptions,
-} from "./utils/app-opened.js";
+} from "./utils/browser-telemetry.js";
 export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";

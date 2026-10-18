@@ -302,12 +302,12 @@ onInput.cancel(); // drop a pending call (e.g. on teardown)
 ## Browser telemetry
 
 ```ts
-import { startAppOpenedReporting } from "@kenn-io/kit-ui";
+import { startBrowserTelemetry } from "@kenn-io/kit-ui";
 
-const reporter = startAppOpenedReporting({
+const telemetry = startBrowserTelemetry({
   route: "/api/v1/telemetry/events",
   surface: "web",
-  storageKey: "example.app-opened.web",
+  storageKey: "example.telemetry.web",
   post: (route, event, options) =>
     fetch(route, {
       method: "POST",
@@ -317,120 +317,75 @@ const reporter = startAppOpenedReporting({
     }),
 });
 
-reporter.reportScreen("settings");
-const unsubscribe = reporter.onQuietChange((quiet) => {
+telemetry.reportScreen("settings");
+const unsubscribe = telemetry.onQuietChange((quiet) => {
   if (quiet) stopVisitTimers();
   else startVisitTimers();
 });
 // When a visit session ends:
-reporter.reportVisit(
+telemetry.reportVisit(
   { event: "session_ended", properties: { surface: "web", duration_bucket: "under_1m" } },
   { keepalive: true },
 );
 // On teardown:
-reporter();
+telemetry.stop();
 unsubscribe();
 ```
 
-The callable reporter keeps existing cleanup call sites working. It sends
-`app_opened` and each screen once per UTC day, including the active screen
-after rollover. Use a stable, finite set of screen names, such as route names
-without record IDs, query strings, or timestamps. Each name creates a durable
-storage key. A request answered on a later UTC day records its claim for the
-day it was sent, then starts that day's check unless the receipt says `disabled`.
-A disabled receipt stops the current tab until a later UTC day's focus or load,
-even when the reply arrives after midnight. The receipt records only its sending
-date; a reload after midnight can check permission for the new day.
+Sends `app_opened` on load and on the first focus of each later UTC day, and
+`screen_viewed` once per screen per UTC day, including the active screen after
+midnight. Sent days are kept in localStorage, so reloads and other tabs send
+nothing more that day; tabs that open at the same moment may each send one.
+When storage is blocked, page memory holds them until reload. Upgrading from
+`startAppOpenedReporting` can send one extra `app_opened` that day.
 
-Choose a `storageKey` unique to the product or installation and surface. The
-helper can send one extra `app_opened` on upgrade day, and each tab still running
-the earlier helper can send one extra per day until it reloads. `${storageKey}.browser.v1.`
-prefixes separate `open`, `quiet`, `check`, and
-`screen.${encodeURIComponent(screen)}` claim keys. Each claimed date is its own
-`${key}:${date}` item, so tabs answered at the same moment, even on opposite
-sides of midnight, never overwrite each other's claims. Each key claims its 35
-most recently recorded dates; tabs claiming at the same moment can briefly leave
-older items stored, which claim nothing and are pruned by the next claim. A
-future clock setting doesn't suppress reports or enable trackers after
-correction, and returning to a date still claimed doesn't resend it or check
-permission again. Until a write fails, readable storage is authoritative,
-including other tabs' evictions. Blocked reads use page memory. After a failed
-write, the page keeps its claims only in page memory until reload, ignoring
-later storage changes; reloading loses unsaved claims.
+### Receipts and opt-out
 
-A stored app-open date never sends `app_opened` again that day, because it
-is written only after the daemon answered, and a daemon may count each
-accepted `app_opened`.
-Without today's receipt, an unclaimed screen checks; a visit checks with its
-original properties and options when no check is in flight or backing off. If
-neither can check, the page stays quiet, even with an `onQuietChange` subscriber, until a
-screen or visit report or the next UTC day. Tabs opening together may each make
-an initial check.
-
-`post` resolves HTTP errors and rejects transport failures. Return a `Response`
-with an unread body or `TelemetryReceipt` (`{ status, data }`) to preserve the
-daemon's HTTP 202 receipt. For example, a JSON adapter can return:
+`post` resolves HTTP errors and rejects only when no response arrived. It must
+return the daemon's reply body: a `Response` with an unread body, or
+`{ status, data }` from a JSON client.
 
 ```ts
 const post = async (route, event) => {
   const response = await api.post(route, event);
   return { status: response.status, data: response.data };
 };
-// A successful receipt: { status: 202, data: { status: "queued" } }
 ```
 
-An already-consumed, malformed, or interrupted 202
-body is a terminal unreadable receipt: it cannot enable reports, and the helper
-never resends that event, because the daemon accepts it before replying.
-Valid `queued` and `skipped` receipts and legacy status-only successful
-2xx replies enable reports. A status-only reply is a `TelemetryReceipt` with
-neither `data` nor `json`, as the earlier `{ status }` callback returned. A
-native `Response` always has `json`, so it enables reports only as a 202 with a
-`queued` or `skipped` body. A 200 or 201 `Response`, or a 202 without a
-recognized receipt, is a terminal reply that leaves permission unknown.
-Only a 202 `disabled` receipt persists quiet across
-reloads until a later UTC day's load or focus makes a check; screen and visit
-calls cannot wake a disabled page. A terminal reply leaves unknown permission
-unknown, so trackers stay paused until a later actual report receives an enabled
-receipt. Another screen or visit can check permission on the same page.
-Terminal app-open and screen replies retain their daily attempt claims across
-reloads, including unreadable accepted receipts. Visits remain one-shot.
-
-While enabled, ordinary visits send immediately outside the cooldown after a
-transport or HTTP 5xx failure. Calls during that 1, 2, 4, 8, or 16-second
-cooldown are dropped. While enabled, visits with `{ keepalive: true }` bypass the cooldown
-and send immediately, including during screen backoff. When permission is
-unknown and no check is in flight or backing off, a visit makes
-the check itself and reaches `post` synchronously with its original options.
-Other visits are dropped. This lets a closing page send a keepalive visit as
-the first report after midnight. Start visit timers after `onQuietChange(false)`.
-Disabled and exhausted reporters suppress visits.
-
-Visits are one-shot reports, including when they make the day's check. Their
-transport and HTTP 5xx failures count toward the shared six-failure limit, as
-does any visit check whose reply earns neither an enabled nor a disabled receipt.
-After such a rejected check, the next check waits out the cooldown.
-App-open and screen work waiting during cooldown uses the existing retry timer
-to send at the shared deadline. The cooldown measures elapsed time, so wall-clock
-corrections leave its duration unchanged. Visits themselves are never retried.
-An existing timer checks the latest deadline before sending; exhaustion cancels
-it. Before exhaustion, one-shot successes and terminal replies reset failures
-only when no check is in flight or backing off.
-
-Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4, 8,
-and 16 seconds. Before exhaustion, any other app-open or screen reply resets the
-failure count. Six failures without a reset stop reporting and pause trackers
-until reload or the next UTC day. Exhaustion cancels pending backoff. A disabled
-receipt cancels retries.
+Only an HTTP 202 receipt decides permission. `queued` and `skipped` enable
+reports; `disabled` makes the reporter quiet. Any other reply, including a
+missing or unreadable body, leaves permission unknown, so trackers stay
+paused; a later screen or visit checks again. A disabled receipt keeps reports
+quiet across reloads until a load or focus on a later UTC day checks again.
 
 `onQuietChange` immediately supplies the current state and returns an
-unsubscribe function. Unknown, disabled, exhausted, and stopped reporters signal
-quiet. Use the callback to stop and restart visit timers. Cleanup signals quiet,
-cancels retries, clears pending screens, and removes the focus
-listener. `BrowserTelemetryOptions` types the event-capable callback; explicitly
-typed `AppOpenedOptions` callbacks retain their original signature. Call the
-reporter's cleanup before unsubscribing so the quiet callback stops visit
-timers.
+unsubscribe function. Unknown, disabled, exhausted, and stopped reporters are
+quiet. Start visit timers on `false` and stop them on `true`.
+
+`stop()` signals quiet, cancels retries, and removes the focus listener. Call
+it before unsubscribing so the callback stops visit timers.
+
+### Visits
+
+Visits are one-shot: never queued or retried. While permission is unknown, a
+visit makes the check itself when no other check is in flight, and is
+dropped otherwise.
+
+### Failures
+
+Transport failures and HTTP 5xx back off for 1, 2, 4, 8, and 16 seconds.
+App-open and screen reports retry after the delay; visits during it are
+dropped. While enabled, `{ keepalive: true }` visits skip the delay so a
+closing page can still send. Six failures in a row stop reporting until
+reload or the next UTC day.
+
+### Storage keys
+
+Choose a `storageKey` unique to the product or installation and surface.
+Claims live under `${storageKey}.browser.v1.`, one item per key and date, and
+each key keeps its 35 most recent dates. Every screen name gets its own key, so
+use a stable, finite set, such as route names without record IDs, query
+strings, or timestamps.
 
 ## Color hashing
 

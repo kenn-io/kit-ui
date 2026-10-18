@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import {
-  startAppOpenedReporting,
+  startBrowserTelemetry,
   type BrowserTelemetryEvent,
   type BrowserTelemetryOptions,
-  type AppOpenedOptions,
-} from "../src/lib/utils/app-opened.js";
+  type TelemetryReceipt,
+} from "../src/lib/utils/browser-telemetry.js";
 
 const ROUTE = "/api/v1/telemetry/events";
 const STORAGE_KEY = "kit-ui.app-opened.example.web";
@@ -19,29 +19,31 @@ const DAY_TWO = new Date("2026-10-04T00:30:00Z");
 const g = globalThis as Record<string, unknown>;
 let stored: Map<string, string>;
 let sent: { route: string; event: BrowserTelemetryEvent; options?: { keepalive?: boolean } }[];
-type Reply = Awaited<ReturnType<AppOpenedOptions["post"]>>;
+type Reply = TelemetryReceipt;
 let statuses: (number | "offline" | "held" | Reply)[];
 let release: (status: number | Reply) => void;
 let stops: (() => void)[];
 let elapsed: number;
 let advancingFrom: number | undefined;
 
+/** A bare status is a body-less reply, except 202, which carries a `queued` receipt. */
+const reply = (status: number | Reply): Reply =>
+  typeof status === "number"
+    ? { status, data: status === 202 ? { status: "queued" } : undefined }
+    : status;
 const post: BrowserTelemetryOptions["post"] = (route, event, options) => {
   sent.push(options ? { route, event, options } : { route, event });
   const next = statuses.shift() ?? 202;
   if (next === "held")
-    return new Promise<Reply>(
-      (resolve) =>
-        (release = (status) => resolve(typeof status === "number" ? { status } : status)),
-    );
+    return new Promise<Reply>((resolve) => (release = (status) => resolve(reply(status))));
   return next === "offline"
     ? Promise.reject(new TypeError("Failed to fetch"))
-    : Promise.resolve(typeof next === "number" ? { status: next } : next);
+    : Promise.resolve(reply(next));
 };
 const start = (storageKey = STORAGE_KEY) => {
-  const stop = startAppOpenedReporting({ route: ROUTE, surface: "web", storageKey, post });
-  stops.push(stop);
-  return stop;
+  const reporter = startBrowserTelemetry({ route: ROUTE, surface: "web", storageKey, post });
+  stops.push(reporter.stop);
+  return reporter;
 };
 const focus = () => window.dispatchEvent(new Event("focus"));
 const settle = async () => {
@@ -120,12 +122,12 @@ afterEach(() => {
   delete g.window;
 });
 
-describe("startAppOpenedReporting", () => {
+describe("startBrowserTelemetry", () => {
   test("unknown permission drops keepalive visits until the cooldown expires", async () => {
     statuses = [400];
     const previous = start();
     await settle();
-    previous();
+    previous.stop();
     const reporter = start();
     statuses = [503, 202];
     reporter.reportVisit(VISIT);
@@ -164,7 +166,7 @@ describe("startAppOpenedReporting", () => {
         const other = start();
         other.reportScreen("A");
         await settle();
-        other();
+        other.stop();
       }
       reporter.reportScreen("A");
       expect(sent).toHaveLength(failure === "observed" ? 4 : 2);
@@ -232,6 +234,16 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test("an app-open answered after cleanup stays claimed for the next page", async () => {
+    statuses = ["held"];
+    start().stop();
+    release(202);
+    await settle();
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
+  });
+
   test("another page's evictions from readable storage bound this page's claims to 35 dates", async () => {
     const reporter = start();
     await settle();
@@ -240,14 +252,14 @@ describe("startAppOpenedReporting", () => {
       const other = date <= 37 ? undefined : start();
       if (!other) focus();
       await settle();
-      other?.();
+      other?.stop();
     }
     const count = sent.length;
     jest.setSystemTime(DAY_ONE);
     focus();
     await settle();
     expect(sent.slice(count).map(({ event }) => event.event)).toEqual(["app_opened"]);
-    reporter();
+    reporter.stop();
   });
 
   test("unpruned stored extras beyond the newest 35 dates claim nothing", async () => {
@@ -329,11 +341,15 @@ describe("startAppOpenedReporting", () => {
     [new Response(JSON.stringify({ status: "queued" }), { status: 200 }), "unknown"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 201 }), "unknown"],
     [{ status: 202, data: { status: "disabled" } }, "disabled"],
-    [200, "enabled"],
+    [200, "unknown"],
+    [202 as const, "enabled"],
+    // A status-only adapter can't show an opt-out, so it never enables reports.
+    [{ status: 202, data: undefined }, "unknown"],
+    [{ status: 202 } as unknown as Reply, "unknown"],
     [{ status: 202, data: { status: "skipped" } }, "enabled"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 202 }), "enabled"],
   ] as const)(
-    "first replies persist only disabled quiet and accept status-only success: %p",
+    "first replies persist only disabled quiet and enable only queued or skipped receipts: %p",
     async (reply, outcome) => {
       statuses = [reply];
       const reporter = start();
@@ -354,7 +370,7 @@ describe("startAppOpenedReporting", () => {
             : { [`${PREFIX}open`]: "2026-10-03" },
       );
       expect(quiet).toEqual(outcome === "enabled" ? [true, false] : [true]);
-      reporter();
+      reporter.stop();
       const reloaded = start();
       const reloadedQuiet: boolean[] = [];
       reloaded.onQuietChange((value) => reloadedQuiet.push(value));
@@ -434,7 +450,7 @@ describe("startAppOpenedReporting", () => {
       const other = start();
       other.reportVisit(VISIT);
       await settle();
-      other();
+      other.stop();
       if (observation === "late 202") release(202);
       else focus();
       await settle();
@@ -525,7 +541,7 @@ describe("startAppOpenedReporting", () => {
       ]);
       await advance(60000);
       focus();
-      reporter();
+      reporter.stop();
       start("");
       await settle();
       expect(sent).toHaveLength(1);
@@ -546,7 +562,7 @@ describe("startAppOpenedReporting", () => {
     reporter.reportScreen("A/B");
     await settle();
     focus();
-    reporter();
+    reporter.stop();
     const reloaded = start();
     reloaded.reportScreen("A/B");
     await settle();
@@ -568,7 +584,7 @@ describe("startAppOpenedReporting", () => {
       reporter.reportVisit(VISIT);
       reporter.reportScreen("A");
       expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
-      if (outcome === "cleanup") reporter();
+      if (outcome === "cleanup") reporter.stop();
       release(outcome === "rejected" ? 400 : { status: 202, data: { status: "queued" } });
       await advance(60000);
       expect(sent.map(({ event }) => event.event)).toEqual(
@@ -647,7 +663,7 @@ describe("startAppOpenedReporting", () => {
         clearInterval(timer);
         if (!quiet) {
           timer = setInterval(() => reporter.reportVisit(VISIT), 100);
-          reporter();
+          reporter.stop();
         }
       });
       reporter.onQuietChange((quiet) => later.push(quiet));
@@ -666,7 +682,7 @@ describe("startAppOpenedReporting", () => {
       const retrying = start();
       await settle();
       expect(jest.getTimerCount()).toBe(1);
-      retrying();
+      retrying.stop();
       expect(jest.getTimerCount()).toBe(0);
       const count = sent.length;
       focus();
@@ -686,7 +702,7 @@ describe("startAppOpenedReporting", () => {
     });
     const other = start();
     await settle();
-    other();
+    other.stop();
     expect(claims()[`${PREFIX}check`]).toBe("2026-10-03");
     expect(changes).toEqual([true]);
 
@@ -711,7 +727,7 @@ describe("startAppOpenedReporting", () => {
     const other = start();
     other.reportScreen("A");
     await settle();
-    other();
+    other.stop();
     await advance(1000);
     expect(sent).toHaveLength(3);
     jest.setSystemTime(new Date("2026-10-03T23:59:59.500Z"));
@@ -881,7 +897,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each(["enabled-first", "disabled-first"])(
-    "yesterday's disabled reply stops today's page with %s replies",
+    "yesterday's disabled reply quiets today's page and its reloads with %s replies",
     async (wake) => {
       jest.setSystemTime(new Date("2026-10-03T23:59:59.900Z"));
       statuses = ["held"];
@@ -914,16 +930,19 @@ describe("startAppOpenedReporting", () => {
         await settle();
       }
       expect(quiet).toEqual(wake === "enabled-first" ? [true, false, true] : [true]);
-      expect(claims()[`${PREFIX}quiet`]).toBe("2026-10-03");
+      expect(claims()[`${PREFIX}quiet`]).toBe("2026-10-03,2026-10-04");
       expect(claims()[`${PREFIX}check`]).toBe("2026-10-04");
       reporter.reportScreen("A");
       reporter.reportVisit(VISIT, { keepalive: true });
       await advance(60000);
       expect(sent).toHaveLength(2);
       expect(jest.getTimerCount()).toBe(0);
-      reporter();
+      reporter.stop();
       reporter = start();
       await settle();
+      const reloaded: boolean[] = [];
+      reporter.onQuietChange((value) => reloaded.push(value));
+      expect(reloaded).toEqual([true]);
       expect(sent).toHaveLength(2);
       jest.setSystemTime(new Date("2026-10-05T00:00:00Z"));
       focus();
@@ -970,7 +989,7 @@ describe("startAppOpenedReporting", () => {
         await advance(60000);
         expect(sent).toHaveLength(before);
         if (wake === "reload") {
-          reporter();
+          reporter.stop();
           reporter = start();
           reporter.onQuietChange((value) => quiet.push(value));
           reporter.reportScreen("A");
@@ -1127,7 +1146,7 @@ describe("startAppOpenedReporting", () => {
       reporter.reportVisit(VISIT);
       expect(sent).toHaveLength(2);
       if (reset === "reload") {
-        reporter();
+        reporter.stop();
         reporter = start();
       } else if (reset === "rollover") jest.setSystemTime(new Date("2026-10-04T00:00:00Z"));
       else {
@@ -1199,14 +1218,14 @@ describe("startAppOpenedReporting", () => {
     const reporter = start();
     if (next !== "screen") jest.setSystemTime(DAY_TWO);
     reporter.reportVisit(VISIT, { keepalive: true });
-    if (next === "cleanup") reporter();
+    if (next === "cleanup") reporter.stop();
     release(reply);
     await settle();
     if (next === "screen") focus();
     await settle();
     expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     expect(jest.getTimerCount()).toBe(reply === 503 && next === "app" ? 1 : 0);
-    if (next === "cleanup") expect(`${PREFIX}check` in claims()).toBe(false);
+    if (next === "cleanup") expect(claims()[`${PREFIX}check`]).toBe("2026-10-04");
     if (next === "screen" && reply !== 503)
       expect(claims()[`${PREFIX}check`]).toBe(reply === 202 ? "2026-10-03" : undefined);
     if (reply === 503) {
@@ -1240,7 +1259,7 @@ describe("startAppOpenedReporting", () => {
     const other = start();
     other.reportScreen("B");
     await settle();
-    other();
+    other.stop();
     checking(202);
     await settle();
     expect(sent.map(({ event }) => event)).toEqual([

@@ -3,21 +3,6 @@ export interface AppOpenedEvent {
   event: "app_opened";
   properties: { surface: string };
 }
-export interface TelemetryReceipt {
-  status: number;
-  data?: unknown;
-  json?: () => Promise<unknown>;
-}
-export interface AppOpenedOptions {
-  /** Daemon route that accepts UI telemetry, e.g. "/api/v1/telemetry/events". */
-  route: string;
-  /** Where the open happened, e.g. "web". */
-  surface: string;
-  /** Stable key unique to the product or installation and surface. */
-  storageKey: string;
-  /** Resolve HTTP errors; reject only when no response arrived. */
-  post: (route: string, event: AppOpenedEvent) => Promise<TelemetryReceipt>;
-}
 export interface VisitEvent {
   event: string;
   properties: Record<string, unknown>;
@@ -30,15 +15,27 @@ export type BrowserTelemetryEvent = AppOpenedEvent | ScreenViewedEvent | VisitEv
 export interface VisitOptions {
   keepalive?: boolean;
 }
-export interface BrowserTelemetryOptions extends Omit<AppOpenedOptions, "post"> {
+/** A daemon reply with its body: a `Response` with an unread body, or the parsed `data`. */
+export type TelemetryReceipt =
+  | { status: number; data: unknown }
+  | { status: number; json: () => Promise<unknown> };
+export interface BrowserTelemetryOptions {
+  /** Daemon route that accepts UI telemetry, e.g. "/api/v1/telemetry/events". */
+  route: string;
+  /** Where the open happened, e.g. "web". */
+  surface: string;
+  /** Stable key unique to the product or installation and surface. */
+  storageKey: string;
+  /** Resolve HTTP errors with their receipt; reject only when no response arrived. */
   post: (
     route: string,
     event: BrowserTelemetryEvent,
     options?: VisitOptions,
   ) => Promise<TelemetryReceipt>;
 }
-export interface AppOpenedReporter {
-  (): void;
+export interface BrowserTelemetryReporter {
+  /** Stops reporting, signals quiet, and removes listeners. */
+  stop(): void;
   /** Use a stable, finite set of screen names, such as route names without IDs. */
   reportScreen(screen: string): void;
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
@@ -92,29 +89,21 @@ function claimHistory(storageKey: string) {
   return { has, add };
 }
 
-/** Names the gate claim a reply earns: `check` when enabled, `quiet` when disabled, none when terminal. */
-const receiptClaim = (response: TelemetryReceipt, data: unknown) => {
-  const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
-  if (response.status === 202 && status === "disabled") return "quiet";
-  return (response.status === 202 && (status === "queued" || status === "skipped")) ||
-    (response.status >= 200 &&
-      response.status < 300 &&
-      !response.json &&
-      response.data === undefined)
-    ? "check"
-    : undefined;
+/** Names the gate claim a 202 receipt earns: `check` when enabled, `quiet` when disabled. */
+const receiptClaim = (status: number, data: unknown) => {
+  const reply = data && typeof data === "object" && "status" in data ? data.status : undefined;
+  if (status !== 202) return undefined;
+  if (reply === "disabled") return "quiet";
+  return reply === "queued" || reply === "skipped" ? "check" : undefined;
 };
 
-/** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. Call the reporter to stop. */
-export function startAppOpenedReporting(options: BrowserTelemetryOptions): AppOpenedReporter;
-/** Reports daily app-open on load or later UTC-day focus. Returns cleanup; retries stop after six failures until reload or the next UTC day. */
-export function startAppOpenedReporting(options: AppOpenedOptions): () => void;
-export function startAppOpenedReporting({
+/** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. */
+export function startBrowserTelemetry({
   route,
   surface,
   storageKey,
   post,
-}: AppOpenedOptions | BrowserTelemetryOptions): AppOpenedReporter {
+}: BrowserTelemetryOptions): BrowserTelemetryReporter {
   const prefix = `${storageKey}.browser.v1.`,
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
@@ -185,10 +174,10 @@ export function startAppOpenedReporting({
     };
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
-      response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
+      response = await post(route, event, options);
       if (response.status === 202) {
         try {
-          data = response.data ?? (await response.json?.());
+          data = "data" in response ? response.data : await response.json();
         } catch {
           /* Unreadable receipts cannot establish the gate; the daemon may already have accepted the event. */
         }
@@ -197,17 +186,22 @@ export function startAppOpenedReporting({
       response = undefined;
       /* Receipt checks retry transport failures. */
     }
-    if (stopped) return release();
     // An unknown visit check that earns no claim fails like an outage; daily claims stay terminal.
-    const claim = response && receiptClaim(response, data);
+    const claim = response && receiptClaim(response.status, data);
     const failed =
       !response ||
       (response.status >= 500 && response.status < 600) ||
       (checking && key === undefined && !claim);
-    // Claims keep the sending date; disabled receipts also stop the current page.
+    // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
     if (!failed && key !== undefined && claim !== "quiet") claims.add(key, sending);
-    if (claim === "quiet") gate = "disabled";
+    if (stopped) return release();
+    // A disabled receipt stops the current page. One that lands after this page began a
+    // later day also claims that day, so a reload stays as quiet as this page.
+    if (claim === "quiet") {
+      gate = "disabled";
+      if (owner !== generation) claims.add(`${prefix}quiet`, day);
+    }
     rollover();
     const isDisabled = disabled();
     if (owner !== generation) {
@@ -268,8 +262,8 @@ export function startAppOpenedReporting({
   const report = () => pump(undefined, undefined, true);
   pump();
   window.addEventListener("focus", report);
-  return Object.assign(
-    () => {
+  return {
+    stop() {
       stopped = true;
       ordinaryEligibleAt = 0;
       cancelRetry();
@@ -278,18 +272,16 @@ export function startAppOpenedReporting({
       listeners.clear();
       window.removeEventListener("focus", report);
     },
-    {
-      reportScreen(screen: string) {
-        currentScreen = screen;
-        screens.add(screen);
-        pump();
-      },
-      reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),
-      onQuietChange(listener: (quiet: boolean) => void) {
-        if (!stopped) listeners.add(listener);
-        listener(quiet());
-        return () => void listeners.delete(listener);
-      },
+    reportScreen(screen: string) {
+      currentScreen = screen;
+      screens.add(screen);
+      pump();
     },
-  );
+    reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),
+    onQuietChange(listener: (quiet: boolean) => void) {
+      if (!stopped) listeners.add(listener);
+      listener(quiet());
+      return () => void listeners.delete(listener);
+    },
+  };
 }

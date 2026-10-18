@@ -16,13 +16,13 @@ async function startTab(page: Page, time: Date, status: string, held: boolean) {
   await page.goto("/blank");
   await page.evaluate(
     async ({ status, held }) => {
-      const { startAppOpenedReporting } = await import("/src/lib/utils/app-opened.ts");
+      const { startBrowserTelemetry } = await import("/src/lib/utils/browser-telemetry.ts");
       const w = window as unknown as Record<string, unknown[]>;
       w.posts = [];
       w.replies = [];
       w.quiet = [];
       const reply = { status: 202, data: { status } };
-      const reporter = startAppOpenedReporting({
+      const reporter = startBrowserTelemetry({
         route: "/api/v1/telemetry/events",
         surface: "web",
         storageKey: "kit-ui.app-opened.example.web",

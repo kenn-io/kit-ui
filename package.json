@@ -34,9 +34,9 @@
       "types": "./types/check/rules.d.mts",
       "default": "./checks/rules.mjs"
     },
-    "./utils/app-opened": {
-      "types": "./types/utils/app-opened.d.ts",
-      "default": "./src/lib/utils/app-opened.ts"
+    "./utils/browser-telemetry": {
+      "types": "./types/utils/browser-telemetry.d.ts",
+      "default": "./src/lib/utils/browser-telemetry.ts"
     },
     "./utils/clipboard": {
       "types": "./types/utils/clipboard.d.ts",
