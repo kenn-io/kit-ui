@@ -65,7 +65,8 @@ export function startAppOpenedReporting({
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     daily = false,
-    failures = 0;
+    failures = 0,
+    visitEligibleAt = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
     lastQuiet = true;
@@ -128,6 +129,7 @@ export function startAppOpenedReporting({
     gate = "unknown";
     daily = false;
     failures = 0;
+    visitEligibleAt = 0;
     cancelRetry();
     screens.clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
@@ -166,15 +168,14 @@ export function startAppOpenedReporting({
       return;
     }
     if (!response || (response.status >= 500 && response.status < 600)) {
-      if (++failures >= 6) cancelRetry();
+      const delay = 1000 * 2 ** failures++;
+      visitEligibleAt = Date.now() + delay;
+      if (failures >= 6) cancelRetry();
       else if (checking && key !== undefined && !retry)
-        retry = setTimeout(
-          () => {
-            retry = undefined;
-            pump();
-          },
-          1000 * 2 ** (failures - 1),
-        );
+        retry = setTimeout(() => {
+          retry = undefined;
+          pump();
+        }, delay);
       if (checking) daily = false;
       notify();
       return;
@@ -186,7 +187,10 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if (failures < 6 && (checking || (!daily && !retry))) failures = 0;
+    if (failures < 6 && (checking || (!daily && !retry))) {
+      failures = 0;
+      visitEligibleAt = 0;
+    }
     if (accepted) {
       gate = "enabled";
       write(`${prefix}check`, 1);
@@ -205,6 +209,7 @@ export function startAppOpenedReporting({
     rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
     if (visit) {
+      if (!options?.keepalive && Date.now() < visitEligibleAt) return;
       if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
       return;
     }
@@ -226,6 +231,7 @@ export function startAppOpenedReporting({
   return Object.assign(
     () => {
       stopped = true;
+      visitEligibleAt = 0;
       cancelRetry();
       screens.clear();
       notify();

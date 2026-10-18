@@ -286,7 +286,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each([false, true])(
-    "visits during screen backoff post immediately: keepalive=%s",
+    "screen backoff drops ordinary visits and admits keepalive immediately: keepalive=%s",
     async (keepalive) => {
       const reporter = start();
       await settle();
@@ -296,16 +296,35 @@ describe("startAppOpenedReporting", () => {
       await advance(500);
       const options = keepalive ? { keepalive: true } : undefined;
       reporter.reportVisit(VISIT, options);
-      expect(sent.at(-1)).toEqual(
-        keepalive ? { route: ROUTE, event: VISIT, options } : { route: ROUTE, event: VISIT },
-      );
       if (keepalive) {
+        expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options });
         reporter();
         await advance(60000);
         expect(sent).toHaveLength(3);
         expect(jest.getTimerCount()).toBe(0);
         return;
       }
+      expect(sent).toHaveLength(2);
+      await advance(499);
+      reporter.reportVisit(VISIT);
+      expect(sent).toHaveLength(2);
+      await advance(1);
+      expect(sent.map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+        "screen_viewed",
+      ]);
+      reporter.reportVisit(VISIT);
+      expect(sent).toHaveLength(3);
+      await advance(2000);
+      await advance(4000);
+      expect(sent.map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+        "screen_viewed",
+        "screen_viewed",
+        "screen_viewed",
+      ]);
     },
   );
 
@@ -315,7 +334,7 @@ describe("startAppOpenedReporting", () => {
     statuses = [503, "held", "held"];
     reporter.reportScreen("A");
     await settle();
-    reporter.reportVisit(VISIT);
+    reporter.reportVisit(VISIT, { keepalive: true });
     const resolveVisit = release;
     await advance(1000);
     expect(sent.slice(2).map(({ event }) => event.event)).toEqual([
@@ -768,7 +787,7 @@ describe("startAppOpenedReporting", () => {
   });
 
   test.each([503, "offline"] as const)(
-    "enabled visits stop and signal quiet after six %s failures",
+    "enabled visits pace admission and stop after six %s failures",
     async (failure) => {
       const reporter = start();
       await settle();
@@ -780,6 +799,15 @@ describe("startAppOpenedReporting", () => {
         await settle();
         expect(sent).toHaveLength(i + 2);
         expect(jest.getTimerCount()).toBe(0);
+        if (i < 5) {
+          reporter.reportVisit(VISIT);
+          expect(sent).toHaveLength(i + 2);
+          await advance([1000, 2000, 4000, 8000, 16000][i] - 1);
+          reporter.reportVisit(VISIT);
+          expect(sent).toHaveLength(i + 2);
+          await advance(1);
+          expect(sent).toHaveLength(i + 2);
+        }
       }
       reporter.reportVisit(VISIT, { keepalive: true });
       reporter.reportScreen("A");
@@ -788,6 +816,15 @@ describe("startAppOpenedReporting", () => {
       expect(sent).toHaveLength(7);
       expect(jest.getTimerCount()).toBe(0);
       expect(quiet).toEqual([false, true]);
+      jest.setSystemTime(DAY_TWO);
+      reporter.reportVisit(VISIT);
+      await settle();
+      expect(sent.slice(7).map(({ event }) => event.event)).toEqual([
+        "session_ended",
+        "app_opened",
+        "screen_viewed",
+      ]);
+      expect(quiet).toEqual([false, true, false]);
     },
   );
 
@@ -815,6 +852,7 @@ describe("startAppOpenedReporting", () => {
           statuses = [503, reply];
           reporter.reportVisit(VISIT);
           await settle();
+          await advance(1000);
           reporter.reportVisit(VISIT);
           await settle();
         }
@@ -822,8 +860,29 @@ describe("startAppOpenedReporting", () => {
       }
       expect(quiet).toEqual([false]);
       expect(jest.getTimerCount()).toBe(0);
+      reporter.reportVisit(VISIT);
+      expect(sent).toHaveLength(16);
     },
   );
+
+  test.each(["reload", "rollover"])("%s clears an active visit cooldown", async (reset) => {
+    jest.setSystemTime(new Date("2026-10-03T23:59:59.500Z"));
+    let reporter = start();
+    await settle();
+    statuses = [503];
+    reporter.reportVisit(VISIT);
+    await settle();
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(2);
+    if (reset === "reload") {
+      reporter();
+      reporter = start();
+    } else jest.setSystemTime(new Date("2026-10-04T00:00:00Z"));
+    reporter.reportVisit(VISIT);
+    expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
+    await settle();
+    expect(jest.getTimerCount()).toBe(0);
+  });
 
   test.each([false, true])(
     "successful keepalive visits preserve screen exhaustion: overlapping=%s",
