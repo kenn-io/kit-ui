@@ -388,8 +388,11 @@ Reload can check permission again through a screen or visit. A
 rejected screen still claims its daily date across reloads and leaves an unknown
 gate available for another screen or visit to check.
 
-Visits send immediately while enabled, including during screen backoff. When
-permission is unknown and no check is in flight or backing off, a visit makes
+While enabled, ordinary visits send immediately outside the cooldown after a
+transport or HTTP 5xx failure. Calls during that 1, 2, 4, 8, or 16-second
+cooldown are dropped. Visits with `{ keepalive: true }` bypass the cooldown
+and send immediately, including during screen backoff. When permission is
+unknown and no check is in flight or backing off, a visit makes
 the check itself and reaches `post` synchronously with its original options.
 Other visits are dropped. This lets a closing page send a keepalive visit as
 the first report after midnight. Start visit timers after `onQuietChange(false)`.
