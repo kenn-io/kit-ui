@@ -11,10 +11,13 @@
     todayStr,
     weekdayLabels,
     type CalendarNavLabels,
+    type WeekStart,
     type DateRange,
   } from "./date-range.js";
 
   interface Props extends CalendarNavLabels {
+    /** First weekday for calendar layout and week selection. */
+    weekStart?: WeekStart | undefined;
     /** Any date inside the visible month (YYYY-MM-DD, bindable). */
     month?: string;
     /** Inclusive range to highlight (e.g. the current selection). */
@@ -45,6 +48,7 @@
     chooseMonthLabel = "Choose month",
     chooseYearLabel = "Choose year",
     locale = undefined,
+    weekStart = "monday",
     class: className = "",
   }: Props = $props();
 
@@ -58,10 +62,10 @@
   let view = $state<"days" | "months" | "years">("days");
   let zoomYear = $state(0);
 
-  const weekdays = $derived(weekdayLabels(locale));
+  const weekdays = $derived(weekdayLabels(locale, weekStart));
   const today = todayStr();
 
-  const cells = $derived(monthGridDates(month));
+  const cells = $derived(monthGridDates(month, weekStart));
   const monthPrefix = $derived(month.slice(0, 7));
   const nextMonthDisabled = $derived.by(() => {
     if (maxDate == null) return false;

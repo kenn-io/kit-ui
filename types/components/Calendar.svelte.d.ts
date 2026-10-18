@@ -1,5 +1,7 @@
-import { type CalendarNavLabels, type DateRange } from "./date-range.js";
+import { type CalendarNavLabels, type WeekStart, type DateRange } from "./date-range.js";
 interface Props extends CalendarNavLabels {
+    /** First weekday for calendar layout and week selection. */
+    weekStart?: WeekStart | undefined;
     /** Any date inside the visible month (YYYY-MM-DD, bindable). */
     month?: string;
     /** Inclusive range to highlight (e.g. the current selection). */

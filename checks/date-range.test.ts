@@ -5,6 +5,9 @@ import {
   formatShortDate,
   formatWeekOfLabel,
   monthLabels,
+  periodBounds,
+  resolveRange,
+  monthGridDates,
   weekdayLabels,
 } from "../src/lib/components/date-range.js";
 
@@ -69,4 +72,30 @@ describe("date label locale", () => {
     m[0] = "corrupted";
     expect(monthLabels("short", "en-US")[0]).toBe("Jan");
   });
+});
+
+// Week boundaries and grid must agree, including across a year boundary.
+test("Sunday-start calendar weeks and grid", () => {
+  expect(periodBounds("week", "2027-01-01", "sunday")).toEqual({
+    from: "2026-12-27",
+    to: "2027-01-02",
+  });
+  expect(periodBounds("week", "2027-01-03", "sunday")).toEqual({
+    from: "2027-01-03",
+    to: "2027-01-09",
+  });
+  expect(
+    resolveRange({ mode: "calendar", unit: "week", anchor: "2027-01-03" }, undefined, "sunday"),
+  ).toEqual({ from: "2027-01-03", to: "2027-01-09" });
+  expect(monthGridDates("2027-01-01", "sunday")[0]).toBe("2026-12-27");
+  expect(weekdayLabels("en-US", "sunday")).toEqual([
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ]);
+  expect(weekdayLabels("en-US")[0]).toBe("Mon");
 });
