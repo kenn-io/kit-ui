@@ -522,23 +522,6 @@ describe("startAppOpenedReporting", () => {
     expect(quiet).toEqual([true, false]);
   });
 
-  test("cleanup in an initial enabled callback stops the subscriber's visit timer", async () => {
-    const reporter = start();
-    await settle();
-    let timer: ReturnType<typeof setInterval>;
-    const changes: boolean[] = [];
-    reporter.onQuietChange((quiet) => {
-      changes.push(quiet);
-      clearInterval(timer);
-      if (!quiet) {
-        timer = setInterval(() => reporter.reportVisit(VISIT), 100);
-        reporter();
-      }
-    });
-    expect(changes).toEqual([false, true]);
-    expect(jest.getTimerCount()).toBe(0);
-  });
-
   test.each([
     ["subscribe", [false]],
     ["unsubscribe", [true]],
@@ -597,39 +580,49 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(2);
   });
 
-  test("cleanup during a shared enabled notification prevents further work", async () => {
-    const remove = jest.spyOn(window, "removeEventListener");
-    statuses = ["held"];
-    const reporter = start();
-    const changes: boolean[] = [],
-      later: boolean[] = [];
-    reporter.onQuietChange((quiet) => {
-      changes.push(quiet);
-      if (!quiet) reporter();
-    });
-    reporter.onQuietChange((quiet) => later.push(quiet));
-    start();
-    await settle();
-    const beforeCleanup = sent.slice();
-    reporter.reportVisit(VISIT);
-    expect(sent).toEqual(beforeCleanup);
-    expect(changes).toEqual([true, false, true]);
-    expect(later).toEqual([true, true]);
-    expect(jest.getTimerCount()).toBe(0);
-    expect(remove).toHaveBeenCalledWith("focus", expect.any(Function));
-    stops.at(-1)?.();
-    jest.setSystemTime(DAY_TWO);
-    statuses = [503];
-    const retrying = start();
-    await settle();
-    expect(jest.getTimerCount()).toBe(1);
-    retrying();
-    expect(jest.getTimerCount()).toBe(0);
-    const count = sent.length;
-    focus();
-    await advance(60000);
-    expect(sent).toHaveLength(count);
-  });
+  test.each(["initial", "shared"])(
+    "cleanup during %s enabled notification stops tracker timers; shared cleanup also cancels retries and focus",
+    async (notification) => {
+      const remove = jest.spyOn(window, "removeEventListener");
+      if (notification === "shared") statuses = ["held"];
+      const reporter = start();
+      await settle();
+      let timer: ReturnType<typeof setInterval>;
+      const changes: boolean[] = [],
+        later: boolean[] = [];
+      reporter.onQuietChange((quiet) => {
+        changes.push(quiet);
+        clearInterval(timer);
+        if (!quiet) {
+          timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+          reporter();
+        }
+      });
+      reporter.onQuietChange((quiet) => later.push(quiet));
+      if (notification === "shared") start();
+      await settle();
+      const beforeCleanup = sent.slice();
+      reporter.reportVisit(VISIT);
+      expect(sent).toEqual(beforeCleanup);
+      expect(changes).toEqual(notification === "initial" ? [false, true] : [true, false, true]);
+      expect(later).toEqual(notification === "initial" ? [true] : [true, true]);
+      expect(jest.getTimerCount()).toBe(0);
+      expect(remove).toHaveBeenCalledWith("focus", expect.any(Function));
+      if (notification === "initial") return;
+      stops.at(-1)?.();
+      jest.setSystemTime(DAY_TWO);
+      statuses = [503];
+      const retrying = start();
+      await settle();
+      expect(jest.getTimerCount()).toBe(1);
+      retrying();
+      expect(jest.getTimerCount()).toBe(0);
+      const count = sent.length;
+      focus();
+      await advance(60000);
+      expect(sent).toHaveLength(count);
+    },
+  );
 
   test("midnight resets the day before a shared receipt can notify a screen subscriber", async () => {
     statuses = ["held"];
@@ -658,7 +651,7 @@ describe("startAppOpenedReporting", () => {
     expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-04");
   });
 
-  test("screen retries honor shared claims and midnight rollover", async () => {
+  test("shared claims stop screen retries; rollover cancels backoff and carries the current screen", async () => {
     const reporter = start();
     await settle();
     statuses = [503];
@@ -1013,7 +1006,7 @@ describe("startAppOpenedReporting", () => {
         await advance(999);
         reporter.reportVisit(VISIT);
         expect(sent).toHaveLength(2);
-        return;
+        await advance(2);
       }
       reporter.reportVisit(VISIT);
       expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
