@@ -46,34 +46,34 @@ export interface AppOpenedReporter {
   onQuietChange(listener: (quiet: boolean) => void): () => void;
 }
 const today = (): string => new Date().toISOString().slice(0, 10);
-const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 /**
- * Keeps each key's last 35 claimed UTC dates in localStorage. After a failed write,
- * the page keeps its claims in page memory only.
+ * Keeps each key's last 35 claimed UTC dates in localStorage, one item per date, so
+ * concurrent tabs never overwrite each other's claims. Page memory keeps claims that
+ * storage cannot read or write.
  */
 function claimHistory(storageKey: string) {
   const memory = new Map<string, string[]>();
-  let pageOnly = false;
-  const listKey = (key: string) => (key === storageKey ? `${key}.browser.v1.open` : key);
+  const base = (key: string) => (key === storageKey ? `${key}.browser.v1.open:` : `${key}:`);
+  const rank = (item: string) => Number(localStorage.getItem(item)) || 0;
+  const byRank = (a: string, b: string) => rank(a) - rank(b);
   const has = (key: string, date: string): boolean => {
     try {
-      if (!pageOnly)
-        memory.set(key, localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? []);
+      if (localStorage.getItem(base(key) + date) !== null) return true;
     } catch {
       /* Page memory survives blocked storage. */
     }
-    return (memory.get(key) ?? []).slice(-35).includes(date);
+    return (memory.get(key) ?? []).includes(date);
   };
   const add = (key: string, date: string) => {
     if (has(key, date)) return;
-    const dates = [...(memory.get(key) ?? []), date].slice(-35);
-    memory.set(key, dates);
+    memory.set(key, [...(memory.get(key) ?? []), date].slice(-35));
+    // Ranks order claims by recency; a failed write leaves the claim in page memory.
     try {
-      if (!pageOnly) localStorage.setItem(listKey(key), dates.join(","));
-    } catch {
-      pageOnly = true;
-    }
+      const items = Object.keys(localStorage).filter((item) => item.startsWith(base(key)));
+      localStorage.setItem(base(key) + date, String(Math.max(0, ...items.map(rank)) + 1));
+      for (const item of items.sort(byRank).slice(0, -34)) localStorage.removeItem(item);
+    } catch {}
   };
   return { has, add };
 }

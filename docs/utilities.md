@@ -346,15 +346,15 @@ Choose a `storageKey` unique to the product or installation and surface. The
 helper can send one extra `app_opened` on upgrade day, and each tab still running
 the earlier helper can send one extra per day until it reloads. `${storageKey}.browser.v1.`
 prefixes separate `open`, `quiet`, `check`, and
-`screen.${encodeURIComponent(screen)}` claim keys. Distinct screen keys preserve
-claims across tabs. Blocked storage uses page memory. After a failed write, the
-page keeps its claims only in page memory until reload, ignoring later storage
-changes; reloading loses unsaved claims. Each of
-these keys keeps the last 35 recorded UTC dates as a comma-separated list, and
-ignores entries that aren't dates. A future clock setting doesn't suppress
-reports or enable trackers after correction, and returning to a date still in
-the list doesn't resend it or check permission again.
-Until a write fails, readable storage is authoritative, including its evictions.
+`screen.${encodeURIComponent(screen)}` claim keys. Each claimed date is its own
+`${key}:${date}` item, so tabs answered at the same moment, even on opposite
+sides of midnight, never overwrite each other's claims. Each key keeps its 35
+most recently recorded dates; tabs claiming at the same moment can briefly leave
+extras until the next claim prunes them. A future clock setting doesn't suppress
+reports or enable trackers after correction, and returning to a date still
+stored doesn't resend it or check permission again. Page memory keeps the
+page's claims, including any storage refused, and covers blocked storage;
+reloading loses unsaved claims.
 
 A stored app-open date never sends `app_opened` again that day, because it
 is written only after the daemon answered, and a daemon may count each
