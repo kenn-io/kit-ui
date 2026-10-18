@@ -175,9 +175,7 @@ describe("startAppOpenedReporting", () => {
       reporter.reportScreen("A");
       await settle();
       expect(sent).toHaveLength(failure === "observed" ? 6 : 4);
-      expect(claims()[`${PREFIX}open`]).toBe(
-        failure === "observed" ? "2026-10-03,2026-10-04" : "2026-10-04",
-      );
+      expect(claims()[`${PREFIX}open`]).toBe(failure === "observed" ? "2026-10-03" : undefined);
     },
   );
 
@@ -227,12 +225,41 @@ describe("startAppOpenedReporting", () => {
       jest.setSystemTime(DAY_ONE);
       focus();
       await settle();
-      // Storage that refuses writes still holds the seeded app-open claim.
-      expect(sent.slice(count).map(({ event }) => event.event)).toEqual(
-        failure === "write" ? ["screen_viewed"] : ["app_opened", "screen_viewed"],
-      );
+      expect(sent.slice(count).map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+      ]);
     },
   );
+
+  test("another page's evictions from readable storage bound this page's claims to 35 dates", async () => {
+    const reporter = start();
+    await settle();
+    for (let date = 4; date <= 72; date++) {
+      jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+      const other = date <= 37 ? undefined : start();
+      if (!other) focus();
+      await settle();
+      other?.();
+    }
+    const count = sent.length;
+    jest.setSystemTime(DAY_ONE);
+    focus();
+    await settle();
+    expect(sent.slice(count).map(({ event }) => event.event)).toEqual(["app_opened"]);
+    reporter();
+  });
+
+  test("unpruned stored extras beyond the newest 35 dates claim nothing", async () => {
+    const dates = Array.from({ length: 36 }, (_, i) =>
+      new Date(Date.UTC(2026, 9, 3 + i)).toISOString().slice(0, 10),
+    );
+    seed(`${PREFIX}open`, dates.join(","));
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
+    expect(claims()[`${PREFIX}open`]!.split(",")).toEqual([...dates.slice(2), "2026-10-03"]);
+  });
 
   test("a rejected visit check after rollover leaves later reports able to check permission", async () => {
     const reporter = start();
@@ -245,7 +272,7 @@ describe("startAppOpenedReporting", () => {
     await settle();
     reporter.reportScreen("A");
     reporter.reportVisit(VISIT);
-    await settle();
+    await advance(1000);
     expect(sent.slice(1).map(({ event }) => event)).toEqual([
       VISIT,
       { event: "app_opened", properties: { surface: "web" } },
@@ -261,6 +288,39 @@ describe("startAppOpenedReporting", () => {
     ]);
     expect(quiet).toEqual([false, true, false]);
   });
+
+  test.each([503, { status: 202, data: { status: "queued" } }])(
+    "unknown visit checks rejected without a claim back off toward the cap; sixth reply %p",
+    async (last) => {
+      statuses = [404];
+      const reporter = start();
+      await settle();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      statuses = Array.from({ length: 20 }, () => 429);
+      for (let i = 0; i < 20; i++) {
+        reporter.reportVisit(VISIT);
+        await settle();
+      }
+      expect(sent).toHaveLength(2);
+      for (const [index, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
+        await advance(delay - 1);
+        reporter.reportVisit(VISIT);
+        await settle();
+        expect(sent).toHaveLength(2 + index);
+        await advance(1);
+        statuses = [index === 4 ? last : index % 2 ? 429 : 503];
+        reporter.reportVisit(VISIT);
+        await settle();
+      }
+      expect(sent).toHaveLength(7);
+      await advance(60000);
+      reporter.reportVisit(VISIT);
+      await settle();
+      expect(sent).toHaveLength(last === 503 ? 7 : 8);
+      expect(quiet).toEqual(last === 503 ? [true] : [true, false]);
+    },
+  );
 
   test.each([
     [401, "unknown"],

@@ -348,13 +348,15 @@ the earlier helper can send one extra per day until it reloads. `${storageKey}.b
 prefixes separate `open`, `quiet`, `check`, and
 `screen.${encodeURIComponent(screen)}` claim keys. Each claimed date is its own
 `${key}:${date}` item, so tabs answered at the same moment, even on opposite
-sides of midnight, never overwrite each other's claims. Each key keeps its 35
+sides of midnight, never overwrite each other's claims. Each key claims its 35
 most recently recorded dates; tabs claiming at the same moment can briefly leave
-extras until the next claim prunes them. A future clock setting doesn't suppress
-reports or enable trackers after correction, and returning to a date still
-stored doesn't resend it or check permission again. Page memory keeps the
-page's claims, including any storage refused, and covers blocked storage;
-reloading loses unsaved claims.
+older items stored, which claim nothing and are pruned by the next claim. A
+future clock setting doesn't suppress reports or enable trackers after
+correction, and returning to a date still claimed doesn't resend it or check
+permission again. Until a write fails, readable storage is authoritative,
+including other tabs' evictions. Blocked reads use page memory. After a failed
+write, the page keeps its claims only in page memory until reload, ignoring
+later storage changes; reloading loses unsaved claims.
 
 A stored app-open date never sends `app_opened` again that day, because it
 is written only after the daemon answered, and a daemon may count each
@@ -405,7 +407,9 @@ the first report after midnight. Start visit timers after `onQuietChange(false)`
 Disabled and exhausted reporters suppress visits.
 
 Visits are one-shot reports, including when they make the day's check. Their
-transport and HTTP 5xx failures count toward the shared six-failure limit.
+transport and HTTP 5xx failures count toward the shared six-failure limit, as
+does any visit check whose reply earns neither an enabled nor a disabled receipt.
+After such a rejected check, the next check waits out the cooldown.
 App-open and screen work waiting during cooldown uses the existing retry timer
 to send at the shared deadline. The cooldown measures elapsed time, so wall-clock
 corrections leave its duration unchanged. Visits themselves are never retried.
@@ -414,7 +418,7 @@ it. Before exhaustion, one-shot successes and terminal replies reset failures
 only when no check is in flight or backing off.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4, 8,
-and 16 seconds. Before exhaustion, any other check or screen reply resets the
+and 16 seconds. Before exhaustion, any other app-open or screen reply resets the
 failure count. Six failures without a reset stop reporting and pause trackers
 until reload or the next UTC day. Exhaustion cancels pending backoff. A disabled
 receipt cancels retries.

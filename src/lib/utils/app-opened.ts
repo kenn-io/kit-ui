@@ -47,33 +47,47 @@ export interface AppOpenedReporter {
 }
 const today = (): string => new Date().toISOString().slice(0, 10);
 
+const rank = (item: string) => Number(localStorage.getItem(item)) || 0;
+const byRank = (a: string, b: string) => rank(a) - rank(b);
+/** Dates claimed under `prefix` in storage, oldest first. */
+const stored = (prefix: string) =>
+  Object.keys(localStorage)
+    .filter((item) => item.startsWith(prefix))
+    .sort(byRank)
+    .map((item) => item.slice(prefix.length));
+/** Ranks a claim newest under `prefix` and evicts all but the 35 newest. */
+const store = (prefix: string, date: string) => {
+  const items = stored(prefix).flatMap((claimed) => (claimed === date ? [] : [prefix + claimed]));
+  localStorage.setItem(prefix + date, String(Math.max(0, ...items.map(rank)) + 1));
+  for (const item of items.slice(0, -34)) localStorage.removeItem(item);
+};
+
 /**
  * Keeps each key's last 35 claimed UTC dates in localStorage, one item per date, so
- * concurrent tabs never overwrite each other's claims. Page memory keeps claims that
- * storage cannot read or write.
+ * concurrent tabs never overwrite each other's claims. Until a write fails, readable
+ * storage is authoritative, including its evictions. Page memory mirrors it, covers
+ * blocked reads, and alone holds the page's claims after a failed write.
  */
 function claimHistory(storageKey: string) {
   const memory = new Map<string, string[]>();
+  let pageOnly = false;
   const base = (key: string) => (key === storageKey ? `${key}.browser.v1.open:` : `${key}:`);
-  const rank = (item: string) => Number(localStorage.getItem(item)) || 0;
-  const byRank = (a: string, b: string) => rank(a) - rank(b);
   const has = (key: string, date: string): boolean => {
     try {
-      if (localStorage.getItem(base(key) + date) !== null) return true;
+      if (!pageOnly) memory.set(key, stored(base(key)));
     } catch {
       /* Page memory survives blocked storage. */
     }
-    return (memory.get(key) ?? []).includes(date);
+    return (memory.get(key) ?? []).slice(-35).includes(date);
   };
   const add = (key: string, date: string) => {
     if (has(key, date)) return;
     memory.set(key, [...(memory.get(key) ?? []), date].slice(-35));
-    // Ranks order claims by recency; a failed write leaves the claim in page memory.
     try {
-      const items = Object.keys(localStorage).filter((item) => item.startsWith(base(key)));
-      localStorage.setItem(base(key) + date, String(Math.max(0, ...items.map(rank)) + 1));
-      for (const item of items.sort(byRank).slice(0, -34)) localStorage.removeItem(item);
-    } catch {}
+      if (!pageOnly) store(base(key), date);
+    } catch {
+      pageOnly = true;
+    }
   };
   return { has, add };
 }
@@ -184,17 +198,16 @@ export function startAppOpenedReporting({
       /* Receipt checks retry transport failures. */
     }
     if (stopped) return release();
-    const failed = !response || (response.status >= 500 && response.status < 600);
-    if (response && !failed) {
-      // Claims keep the sending date; disabled receipts also stop the current page.
-      const claim = receiptClaim(response, data);
-      if (claim) claims.add(`${prefix}${claim}`, sending);
-      if (key !== undefined && claim !== "quiet") claims.add(key, sending);
-      if (claim === "quiet") {
-        gate = "disabled";
-        disabled();
-      }
-    }
+    // An unknown visit check that earns no claim fails like an outage; daily claims stay terminal.
+    const claim = response && receiptClaim(response, data);
+    const failed =
+      !response ||
+      (response.status >= 500 && response.status < 600) ||
+      (checking && key === undefined && !claim);
+    // Claims keep the sending date; disabled receipts also stop the current page.
+    if (claim) claims.add(`${prefix}${claim}`, sending);
+    if (!failed && key !== undefined && claim !== "quiet") claims.add(key, sending);
+    if (claim === "quiet") gate = "disabled";
     rollover();
     const isDisabled = disabled();
     if (owner !== generation) {
