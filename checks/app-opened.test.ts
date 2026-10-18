@@ -712,13 +712,61 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test("future valid claims remain claimed after clock rollback and reload", async () => {
+  test.each([
+    ["2099-01-01", undefined],
+    ["2099-01-01", "2099-01-01"],
+    ["2026-10-02", "2099-01-01"],
+  ] as const)("gate dates require today's check: quiet=%s, check=%s", async (quiet, check) => {
+    stored.set(STORAGE_KEY, "2026-10-03");
+    stored.set(`${PREFIX}quiet`, quiet);
+    if (check) stored.set(`${PREFIX}check`, check);
+    statuses = ["held"];
+    const reporter = start();
+    reporter.onQuietChange(() => {});
+    await settle();
+    reporter.reportScreen("A");
+    reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
+    if (!check) {
+      release({ status: 202, data: { status: "disabled" } });
+      await settle();
+      expect(stored.get(`${PREFIX}quiet`)).toBe("2026-10-03");
+      reporter();
+      const reloaded = start();
+      await settle();
+      expect(sent).toHaveLength(1);
+      jest.setSystemTime(DAY_TWO);
+      statuses = ["held"];
+      focus();
+      await settle();
+      expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
+      reloaded.reportVisit(VISIT);
+      await settle();
+      expect(sent).toHaveLength(2);
+    }
+    release({ status: 202, data: { status: "queued" } });
+    await settle();
+    expect(stored.get(`${PREFIX}check`)).toBe(check ? "2026-10-03" : "2026-10-04");
+    expect(sent.map(({ event }) => event.event)).toEqual(
+      check
+        ? ["app_opened", "session_ended", "screen_viewed"]
+        : ["app_opened", "app_opened", "session_ended"],
+    );
+    for (const stop of stops) stop();
+    start();
+    await settle();
+    expect(sent).toHaveLength(3);
+  });
+
+  test("future app-open and screen claims remain claimed after clock rollback and reload", async () => {
     jest.setSystemTime(DAY_TWO);
     const reporter = start();
     reporter.reportScreen("A");
     await settle();
     reporter();
     jest.setSystemTime(DAY_ONE);
+    stored.set(`${PREFIX}check`, "2026-10-03");
     const reloaded = start();
     reloaded.reportScreen("A");
     await settle();
@@ -762,6 +810,50 @@ describe("startAppOpenedReporting", () => {
       expect(quiet).toEqual([false, true]);
     },
   );
+
+  test.each([202, 400])(
+    "standalone visit reply %s clears intermittent outage failures",
+    async (reply) => {
+      const reporter = start();
+      await settle();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      for (let i = 0; i < 7; i++) {
+        statuses = [503, reply];
+        reporter.reportVisit(VISIT);
+        await settle();
+        reporter.reportVisit(VISIT);
+        await advance(999);
+        expect(sent).toHaveLength(2 * i + 2);
+        await advance(1);
+        expect(sent).toHaveLength(2 * i + 3);
+      }
+      expect(quiet).toEqual([false]);
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
+
+  test("successful keepalive visits during backoff preserve screen exhaustion", async () => {
+    const reporter = start();
+    await settle();
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    statuses = [503];
+    reporter.reportScreen("A");
+    await settle();
+    for (const [i, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
+      reporter.reportVisit(VISIT, { keepalive: true });
+      await settle();
+      statuses = [503];
+      await advance(delay - 1);
+      expect(sent).toHaveLength(2 * i + 3);
+      await advance(1);
+      expect(sent).toHaveLength(2 * i + 4);
+    }
+    expect(sent.filter(({ event }) => event.event === "screen_viewed")).toHaveLength(6);
+    expect(quiet).toEqual([false, true]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
 
   test("unsettled enabled visits leave timers untouched", async () => {
     const reporter = start();

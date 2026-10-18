@@ -343,8 +343,9 @@ Choose a `storageKey` unique to the product or installation and surface. The
 original key keeps the app-open date. `${storageKey}.browser.v1.` prefixes
 separate `quiet`, `check`, and `screen.${encodeURIComponent(screen)}` date keys.
 Distinct screen keys preserve claims across tabs. Blocked storage and failed
-writes use page memory; malformed dates act as missing claims, while future
-valid dates remain claimed after clock rollback.
+writes use page memory; malformed dates act as missing claims. Future valid
+app-open and screen dates remain claimed after clock rollback. The `quiet` and
+`check` dates count only for the current UTC day.
 
 A legacy app-open date alone requires a receipt check. An unclaimed screen
 can check; otherwise the earliest waiting visit checks with its original
@@ -377,16 +378,17 @@ visits wait in the same six-slot queue; enabled visits with `keepalive: true`
 reach `post` immediately, before cleanup. Disabled and exhausted reporters
 suppress both kinds. These one-shot visits never retry. Their transport and HTTP
 5xx failures count toward the shared six-failure limit. Replies during backoff
-retain its existing deadline unless exhaustion cancels it. One-shot successes
-and terminal replies never reset the daily failure count, including while a
-retried screen is pending. A visit serving as the receipt check retains its
-event and options through retries and is delivered once accepted.
+retain its existing deadline unless exhaustion cancels it. Before exhaustion,
+one-shot successes and terminal replies reset the failure count only when no
+daily check is in flight or waiting on a retry timer. A visit serving as the
+receipt check retains its event and options through retries and is delivered
+once accepted.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4, 8,
-and 16 seconds. Any other check or screen reply resets the failure count. Six
-failures without such a reply stop reporting and pause trackers until reload or
-the next UTC day. Exhaustion cancels pending backoff. A disabled receipt cancels
-retries and discards pending visits.
+and 16 seconds. Before exhaustion, any other check or screen reply resets the
+failure count. Six failures without a reset stop reporting and pause trackers
+until reload or the next UTC day. Exhaustion cancels pending backoff. A disabled
+receipt cancels retries and discards pending visits.
 
 `onQuietChange` immediately supplies the current state and returns an
 unsubscribe function. Unknown, disabled, exhausted, and stopped reporters signal

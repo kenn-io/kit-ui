@@ -82,7 +82,7 @@ export function startAppOpenedReporting({
       const saved = localStorage.getItem(key);
       if (
         saved &&
-        saved >= day &&
+        (key === `${prefix}quiet` || key === `${prefix}check` ? saved === day : saved >= day) &&
         Number.isFinite(Date.parse(saved)) &&
         new Date(saved).toISOString().slice(0, 10) === saved
       )
@@ -191,7 +191,7 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if (failures < 6 && checking) failures = 0;
+    if (failures < 6 && (checking || (!daily && !retry))) failures = 0;
     if (checking && key === undefined) {
       checkingVisit = false;
       visits.shift();
