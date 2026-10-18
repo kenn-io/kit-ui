@@ -69,7 +69,7 @@ export function startAppOpenedReporting({
     checkingVisit = false,
     failures = 0;
   let currentScreen: string | undefined,
-    retry: ReturnType<typeof setTimeout> | undefined,
+    retry: { handle: ReturnType<typeof setTimeout>; checking: boolean } | undefined,
     lastQuiet = true;
   const quiet = () => stopped || failures >= 6 || gate !== "enabled";
   const notify = () => {
@@ -103,7 +103,7 @@ export function startAppOpenedReporting({
     claims.add(key);
   };
   const cancelRetry = () => {
-    clearTimeout(retry);
+    clearTimeout(retry?.handle);
     retry = undefined;
   };
   const disabled = (): boolean => {
@@ -165,22 +165,29 @@ export function startAppOpenedReporting({
       pump();
       return;
     }
-    if (checking) daily = false;
-    if (disabled()) return;
+    if (disabled()) {
+      if (checking) daily = false;
+      return;
+    }
     if (!response || (response.status >= 500 && response.status < 600)) {
       if (++failures < 6) {
         if (!retry)
-          retry = setTimeout(
-            () => {
-              retry = undefined;
-              pump();
-            },
-            1000 * 2 ** (failures - 1),
-          );
+          retry = {
+            checking,
+            handle: setTimeout(
+              () => {
+                retry = undefined;
+                pump();
+              },
+              1000 * 2 ** (failures - 1),
+            ),
+          };
+        else if (checking) retry.checking = true;
       } else {
         cancelRetry();
         visits.length = 0;
       }
+      if (checking) daily = false;
       notify();
       return;
     }
@@ -191,7 +198,7 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if (failures < 6 && (checking || (!daily && !retry))) failures = 0;
+    if (failures < 6 && (checking || (!daily && !retry?.checking))) failures = 0;
     if (checking && key === undefined) {
       checkingVisit = false;
       visits.shift();
@@ -207,6 +214,7 @@ export function startAppOpenedReporting({
       if (key !== undefined) write(key);
       if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
     }
+    if (checking) daily = false;
     pump();
   };
   const pump = () => {

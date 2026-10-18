@@ -379,10 +379,10 @@ reach `post` immediately, before cleanup. Disabled and exhausted reporters
 suppress both kinds. These one-shot visits never retry. Their transport and HTTP
 5xx failures count toward the shared six-failure limit. Replies during backoff
 retain its existing deadline unless exhaustion cancels it. Before exhaustion,
-one-shot successes and terminal replies reset the failure count only when no
-daily check is in flight or waiting on a retry timer. A visit serving as the
-receipt check retains its event and options through retries and is delivered
-once accepted.
+one-shot successes and terminal replies reset the failure count during visit-only
+cooldown, while a daily check in flight or owning the retry timer keeps its failure
+budget. A visit serving as the receipt check retains its event and options through
+retries and is delivered once accepted.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4, 8,
 and 16 seconds. Before exhaustion, any other check or screen reply resets the

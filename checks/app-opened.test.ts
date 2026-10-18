@@ -811,27 +811,65 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test("successful keepalive visits during backoff preserve screen exhaustion", async () => {
-    const reporter = start();
-    await settle();
-    const quiet: boolean[] = [];
-    reporter.onQuietChange((value) => quiet.push(value));
-    statuses = [503];
-    reporter.reportScreen("A");
-    await settle();
-    for (const [i, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
-      reporter.reportVisit(VISIT, { keepalive: true });
+  test.each([202, 400])(
+    "standalone keepalive reply %s clears visit-only failures during cooldown",
+    async (reply) => {
+      const reporter = start();
       await settle();
-      statuses = [503];
-      await advance(delay - 1);
-      expect(sent).toHaveLength(2 * i + 3);
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      for (let i = 0; i < 7; i++) {
+        statuses = ["held", 503];
+        reporter.reportVisit(VISIT, { keepalive: true });
+        reporter.reportVisit(VISIT, { keepalive: true });
+        await settle();
+        release(reply);
+        await advance(100);
+        expect(sent).toHaveLength(2 * i + 3);
+      }
+      expect(quiet).toEqual([false]);
+      reporter.reportVisit({ event: "action", properties: { count: 2 } });
+      await advance(299);
+      expect(sent).toHaveLength(15);
       await advance(1);
-      expect(sent).toHaveLength(2 * i + 4);
-    }
-    expect(sent.filter(({ event }) => event.event === "screen_viewed")).toHaveLength(6);
-    expect(quiet).toEqual([false, true]);
-    expect(jest.getTimerCount()).toBe(0);
-  });
+      expect(sent.at(-1)?.event).toEqual({ event: "action", properties: { count: 2 } });
+      expect(sent).toHaveLength(16);
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
+
+  test.each([false, true])(
+    "successful keepalive visits preserve screen exhaustion: joined cooldown=%s",
+    async (joined) => {
+      const reporter = start();
+      await settle();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      statuses = joined ? ["held", 503] : [503];
+      reporter.reportScreen("A");
+      if (joined) {
+        reporter.reportVisit(VISIT, { keepalive: true });
+        await settle();
+        release(503);
+      }
+      await settle();
+      const delays = joined ? [1000, 4000, 8000, 16000] : [1000, 2000, 4000, 8000, 16000];
+      for (const [i, delay] of delays.entries()) {
+        reporter.reportVisit(VISIT, { keepalive: true });
+        await settle();
+        statuses = [503];
+        await advance(delay - 1);
+        expect(sent).toHaveLength(2 * i + (joined ? 4 : 3));
+        await advance(1);
+        expect(sent).toHaveLength(2 * i + (joined ? 5 : 4));
+      }
+      expect(sent.filter(({ event }) => event.event === "screen_viewed")).toHaveLength(
+        joined ? 5 : 6,
+      );
+      expect(quiet).toEqual([false, true]);
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
 
   test("unsettled enabled visits leave timers untouched", async () => {
     const reporter = start();
@@ -876,6 +914,7 @@ describe("startAppOpenedReporting", () => {
     [false, "retry"],
     [false, 503],
     [false, 400],
+    [false, "reentrant"],
   ] as const)(
     "the earliest pending visit checks a legacy app date: claimed screen=%s, outcome=%s",
     async (screen, outcome) => {
@@ -888,20 +927,26 @@ describe("startAppOpenedReporting", () => {
       reporter.reportVisit({ event: "action", properties: { count: 2 } });
       await settle();
       expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
-      if (typeof outcome === "number") {
+      if (typeof outcome === "number" || outcome === "reentrant") {
         const checking = release;
+        if (outcome === "reentrant")
+          reporter.onQuietChange((quiet) => {
+            if (!quiet) reporter.reportScreen("A");
+          });
         const other = start();
         other.reportScreen("B");
         await settle();
         other();
-        checking(outcome);
+        checking(outcome === "reentrant" ? 202 : outcome);
         await settle();
         focus();
         await settle();
         expect(sent.map(({ event }) => event.event)).toEqual(
           outcome === 503
             ? ["session_ended", "screen_viewed"]
-            : ["session_ended", "screen_viewed", "action"],
+            : outcome === "reentrant"
+              ? ["session_ended", "screen_viewed", "action", "screen_viewed"]
+              : ["session_ended", "screen_viewed", "action"],
         );
         if (outcome === 503) {
           await advance(999);
