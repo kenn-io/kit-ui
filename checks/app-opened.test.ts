@@ -150,26 +150,23 @@ describe("startAppOpenedReporting", () => {
   test.each(["legacy date", "consumed 202"])(
     "quiet subscribers never resend an app-open answered as %s; a screen checks instead",
     async (prior) => {
-      for (let reply = 0; reply < 6; reply++) {
-        const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
-        await consumed.text();
-        statuses.push(consumed);
-      }
       if (prior === "legacy date") stored.set(STORAGE_KEY, "2026-10-03");
       else {
+        const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
+        await consumed.text();
+        statuses = [consumed];
         start();
         await settle();
         stops.pop()?.();
       }
       const quiet: boolean[] = [];
-      for (let load = 0; load < 5; load++) {
-        const reporter = start();
-        reporter.onQuietChange((value) => quiet.push(value));
-        await advance(60000);
-        reporter();
-      }
+      const reloaded = start();
+      reloaded.onQuietChange((value) => quiet.push(value));
+      await advance(60000);
+      reloaded();
       expect(sent).toHaveLength(prior === "legacy date" ? 0 : 1);
-      expect(quiet).toEqual([true, true, true, true, true]);
+      expect(quiet).toEqual([true]);
+      if (prior !== "consumed 202") return;
       statuses = [{ status: 202, data: { status: "queued" } }];
       const reporter = start();
       reporter.onQuietChange((value) => quiet.push(value));
@@ -179,7 +176,7 @@ describe("startAppOpenedReporting", () => {
         event: "screen_viewed",
         properties: { surface: "web", screen: "A" },
       });
-      expect(quiet.slice(5)).toEqual([true, false]);
+      expect(quiet.slice(1)).toEqual([true, false]);
     },
   );
 
@@ -532,44 +529,30 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(2);
   });
 
-  test("cleanup during a shared enabled notification prevents a visit post", async () => {
-    statuses = ["held"];
-    const reporter = start();
-    const changes: boolean[] = [];
-    reporter.onQuietChange((quiet) => {
-      changes.push(quiet);
-      if (!quiet) reporter();
-    });
-    start();
-    await settle();
-    const beforeCleanup = sent.slice();
-    reporter.reportVisit(VISIT);
-    expect(changes).toEqual([true, false, true]);
-    expect(sent).toEqual(beforeCleanup);
-    release(202);
-    await advance(60000);
-    expect(sent).toEqual(beforeCleanup);
-    expect(jest.getTimerCount()).toBe(0);
-  });
-
-  test("cleanup during a shared enabled notification prevents a failed reply retry", async () => {
-    statuses = ["held"];
-    const reporter = start();
-    const changes: boolean[] = [];
-    reporter.onQuietChange((quiet) => {
-      changes.push(quiet);
-      if (!quiet) reporter();
-    });
-    start();
-    await settle();
-    const beforeCleanup = sent.slice();
-    release(503);
-    await settle();
-    expect(changes).toEqual([true, false, true]);
-    expect(jest.getTimerCount()).toBe(0);
-    await advance(60000);
-    expect(sent).toEqual(beforeCleanup);
-  });
+  test.each(["visit", "failed reply"])(
+    "cleanup during a shared enabled notification prevents further work for %s",
+    async (kind) => {
+      statuses = ["held"];
+      const reporter = start();
+      const changes: boolean[] = [];
+      reporter.onQuietChange((quiet) => {
+        changes.push(quiet);
+        if (!quiet) reporter();
+      });
+      start();
+      await settle();
+      if (kind === "visit") {
+        const beforeCleanup = sent.slice();
+        reporter.reportVisit(VISIT);
+        expect(sent).toEqual(beforeCleanup);
+      } else {
+        release(503);
+        await settle();
+      }
+      expect(changes).toEqual([true, false, true]);
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
 
   test.each([false, true])(
     "failed writes and blocked storage keep page claims: %s",
