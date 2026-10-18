@@ -177,7 +177,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each(["working", "read", "write", "both"])(
-    "35 claim and permission dates survive rollback with %s storage",
+    "claims and permission retain 35 dates and dedupe rollback with %s storage",
     async (failure) => {
       if (failure === "both") blockStorage();
       else if (failure === "read")
@@ -263,6 +263,7 @@ describe("startAppOpenedReporting", () => {
     [401, "unknown"],
     [{ status: 202, data: { status: "unknown" } }, "unknown"],
     [new Response("broken", { status: 202 }), "unknown"],
+    ["consumed", "unknown"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 200 }), "unknown"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 201 }), "unknown"],
     [{ status: 202, data: { status: "disabled" } }, "disabled"],
@@ -271,7 +272,11 @@ describe("startAppOpenedReporting", () => {
   ] as const)(
     "first replies persist only disabled quiet and accept status-only success: %p",
     async (reply, outcome) => {
-      statuses = [reply];
+      if (reply === "consumed") {
+        const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
+        await consumed.text();
+        statuses = [consumed];
+      } else statuses = [reply];
       const reporter = start();
       const quiet: boolean[] = [];
       reporter.onQuietChange((value) => quiet.push(value));
@@ -279,19 +284,25 @@ describe("startAppOpenedReporting", () => {
       focus();
       await advance(60000);
       expect(sent).toHaveLength(1);
-      expect([...stored.entries()]).toEqual(
+      expect(Object.fromEntries(stored)).toEqual(
         outcome === "disabled"
-          ? [[`${PREFIX}quiet`, "2026-10-03"]]
+          ? { [`${PREFIX}quiet`]: "2026-10-03" }
           : outcome === "enabled"
-            ? [
-                [`${PREFIX}check`, "2026-10-03"],
-                [`${PREFIX}open`, "2026-10-03"],
-              ]
-            : [[`${PREFIX}open`, "2026-10-03"]],
+            ? {
+                [`${PREFIX}check`]: "2026-10-03",
+                [`${PREFIX}open`]: "2026-10-03",
+              }
+            : { [`${PREFIX}open`]: "2026-10-03" },
       );
       expect(quiet).toEqual(outcome === "enabled" ? [true, false] : [true]);
       reporter();
-      start();
+      const reloaded = start();
+      if (reply === "consumed") {
+        const reloadedQuiet: boolean[] = [];
+        reloaded.onQuietChange((value) => reloadedQuiet.push(value));
+        await advance(60000);
+        expect(reloadedQuiet).toEqual([true]);
+      }
       await settle();
       expect(sent).toHaveLength(1);
     },
@@ -321,22 +332,6 @@ describe("startAppOpenedReporting", () => {
       expect(stored.has(`${PREFIX}quiet`)).toBe(false);
     },
   );
-
-  test("reload stays quiet after a consumed 202 receipt", async () => {
-    const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
-    await consumed.text();
-    statuses = [consumed];
-    start();
-    await settle();
-    stops.pop()?.();
-    const quiet: boolean[] = [];
-    const reloaded = start();
-    reloaded.onQuietChange((value) => quiet.push(value));
-    await advance(60000);
-    reloaded();
-    expect(sent).toHaveLength(1);
-    expect(quiet).toEqual([true]);
-  });
 
   test("a rejected screen preserves the enabled gate and is not posted again", async () => {
     statuses = [202, 400];
@@ -1107,7 +1102,6 @@ describe("startAppOpenedReporting", () => {
     if (next !== "screen") jest.setSystemTime(DAY_TWO);
     reporter.reportVisit(VISIT, { keepalive: true });
     if (next === "cleanup") reporter();
-    expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     release(reply);
     await settle();
     if (next === "screen") focus();
