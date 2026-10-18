@@ -197,7 +197,7 @@ export function startAppOpenedReporting({
     }
     if (failed) {
       const delay = 1000 * 2 ** failures++;
-      ordinaryEligibleAt = performance.now() + delay;
+      if (retry === undefined) ordinaryEligibleAt = performance.now() + delay;
       if (failures >= 6) cancelRetry();
       if (checking) daily = false;
       notify();

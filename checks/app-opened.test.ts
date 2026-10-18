@@ -430,7 +430,7 @@ describe("startAppOpenedReporting", () => {
     [503, 500],
     [202, 1000],
   ] as const)(
-    "a late one-shot visit reply %s at %sms retains the pending screen failure budget",
+    "a late one-shot visit reply %s at %sms preserves the pending screen deadline and failure budget",
     async (reply, at) => {
       const reporter = start();
       await settle();
@@ -447,12 +447,6 @@ describe("startAppOpenedReporting", () => {
         await advance(499);
         expect(sent).toHaveLength(3);
         await advance(1);
-        if (reply === 503) {
-          expect(sent).toHaveLength(3);
-          await advance(1499);
-          expect(sent).toHaveLength(3);
-          await advance(1);
-        }
       } else release(503);
       await settle();
       expect(sent).toHaveLength(4);
