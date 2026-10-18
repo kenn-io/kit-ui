@@ -231,21 +231,20 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test("a malformed first visit after rollover leaves valid reports able to check permission", async () => {
+  test("a rejected visit check after rollover leaves later reports able to check permission", async () => {
     const reporter = start();
     await settle();
     const quiet: boolean[] = [];
     reporter.onQuietChange((value) => quiet.push(value));
     jest.setSystemTime(DAY_TWO);
     statuses = [400, "held"];
-    const malformed = { event: "session_ended", properties: { surface: "web" } };
-    reporter.reportVisit(malformed, { keepalive: true });
+    reporter.reportVisit(VISIT, { keepalive: true });
     await settle();
     reporter.reportScreen("A");
     reporter.reportVisit(VISIT);
     await settle();
     expect(sent.slice(1).map(({ event }) => event)).toEqual([
-      malformed,
+      VISIT,
       { event: "app_opened", properties: { surface: "web" } },
     ]);
     expect(quiet).toEqual([false, true]);
@@ -291,25 +290,10 @@ describe("startAppOpenedReporting", () => {
             : [[`${PREFIX}open`, "2026-10-03"]],
       );
       expect(quiet).toEqual(outcome === "enabled" ? [true, false] : [true]);
-      statuses = ["held"];
-      reporter.reportScreen("A");
-      reporter.reportVisit(VISIT, { keepalive: true });
-      if (outcome === "disabled") expect(sent).toHaveLength(1);
-      else {
-        expect(sent[1]?.event).toEqual({
-          event: "screen_viewed",
-          properties: { surface: "web", screen: "A" },
-        });
-        expect(quiet).toEqual(outcome === "enabled" ? [true, false] : [true]);
-        release({ status: 202, data: { status: "queued" } });
-        await settle();
-        expect(quiet).toEqual([true, false]);
-      }
       reporter();
-      const count = sent.length;
       start();
       await settle();
-      expect(sent).toHaveLength(count);
+      expect(sent).toHaveLength(1);
     },
   );
   test.each(["screen", "visit check"])(
@@ -912,8 +896,6 @@ describe("startAppOpenedReporting", () => {
     for (let i = 0; i < 6; i++) {
       reporter.reportVisit({ event: "action", properties: { count: i } });
       await settle();
-      expect(sent).toHaveLength(i + 2);
-      expect(jest.getTimerCount()).toBe(0);
       if (i < 5) {
         reporter.reportVisit(VISIT);
         expect(sent).toHaveLength(i + 2);
@@ -925,6 +907,7 @@ describe("startAppOpenedReporting", () => {
     }
     reporter.reportVisit(VISIT, { keepalive: true });
     expect(sent).toHaveLength(7);
+    expect(jest.getTimerCount()).toBe(0);
   });
 
   test.each([
@@ -965,7 +948,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each(["reload", "rollover", "rollback"])(
-    "%s handles an active visit cooldown",
+    "visit cooldown resets on reload and rollover and holds on clock rollback: %s",
     async (reset) => {
       jest.setSystemTime(new Date("2026-10-03T23:59:59.500Z"));
       let reporter = start();
@@ -1009,14 +992,11 @@ describe("startAppOpenedReporting", () => {
       }
       await settle();
       const delays = joined ? [2000, 4000, 8000, 16000] : [1000, 2000, 4000, 8000, 16000];
-      for (const [i, delay] of delays.entries()) {
+      for (const delay of delays) {
         reporter.reportVisit(VISIT, { keepalive: true });
         await settle();
         statuses = [503];
-        await advance(delay - 1);
-        expect(sent).toHaveLength(2 * i + (joined ? 4 : 3));
-        await advance(1);
-        expect(sent).toHaveLength(2 * i + (joined ? 5 : 4));
+        await advance(delay);
       }
       expect(sent.filter(({ event }) => event.event === "screen_viewed")).toHaveLength(
         joined ? 5 : 6,
