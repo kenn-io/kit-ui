@@ -8,6 +8,7 @@
  * - custom: an explicit from/to span.
  */
 export type RangeMode = "relative" | "calendar" | "custom";
+export type WeekStart = "monday" | "sunday";
 export type CalendarUnit = "day" | "week" | "month";
 export interface RelativeSelection {
     mode: "relative";
@@ -75,10 +76,10 @@ export declare function allFromDate(earliestDate: string | null | undefined): st
 export declare function presetRange(days: number, earliestDate?: string | null): DateRange;
 /**
  * The inclusive from/to bounds of a calendar period containing `anchor`.
- * Day is a single date; week is the Monday-Sunday ISO week; month is the
+ * Day is a single date; week starts on Monday unless weekStart is sunday; month is the
  * calendar month.
  */
-export declare function periodBounds(unit: CalendarUnit, anchor: string): DateRange;
+export declare function periodBounds(unit: CalendarUnit, anchor: string, weekStart?: WeekStart): DateRange;
 /**
  * Move a calendar anchor one period in `dir`: one day, seven days, or one
  * calendar month (clamping the day so Jan 31 -> Feb 28 rather than
@@ -86,19 +87,19 @@ export declare function periodBounds(unit: CalendarUnit, anchor: string): DateRa
  */
 export declare function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): string;
 /**
- * The 42 dates (six Monday-first weeks) covering `anchor`'s month — the
+ * The 42 dates (six weeks, Monday-first by default) covering `anchor`'s month — the
  * cells of a fixed-height month grid. Leading/trailing dates belong to the
  * adjacent months.
  */
-export declare function monthGridDates(anchor: string): string[];
-/** Monday-first weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
+export declare function monthGridDates(anchor: string, weekStart?: WeekStart): string[];
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
  * omitted = the browser locale. */
-export declare function weekdayLabels(locale?: string): string[];
+export declare function weekdayLabels(locale?: string, weekStart?: WeekStart): string[];
 /** January-first month labels ("Jan"/"January", …). `locale` omitted = the
  * browser locale. */
 export declare function monthLabels(style: "short" | "long", locale?: string): string[];
 /** Turn any selection into concrete inclusive {from, to} bounds. */
-export declare function resolveRange(sel: RangeSelection, earliestDate?: string | null): DateRange;
+export declare function resolveRange(sel: RangeSelection, earliestDate?: string | null, weekStart?: WeekStart): DateRange;
 /** "Jun 29" style short label. `locale` omitted = the browser locale. */
 export declare function formatShortDate(date: string, locale?: string): string;
 /**

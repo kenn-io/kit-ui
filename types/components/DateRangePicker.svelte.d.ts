@@ -1,5 +1,7 @@
-import { type CalendarNavLabels, type RangePreset, type RangeSelection } from "./date-range.js";
+import { type CalendarNavLabels, type WeekStart, type RangePreset, type RangeSelection } from "./date-range.js";
 interface Props extends CalendarNavLabels {
+    /** First weekday for calendar layout and week selection. */
+    weekStart?: WeekStart | undefined;
     selection: RangeSelection;
     onSelect: (selection: RangeSelection) => void;
     /** Dim the trigger while the consumer reloads data. */
