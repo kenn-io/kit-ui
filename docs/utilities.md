@@ -336,40 +336,44 @@ The callable reporter keeps existing cleanup call sites working. It sends
 `app_opened` and each screen once per UTC day, including the active screen
 after rollover. Use a stable, finite set of screen names, such as route names
 without record IDs, query strings, or timestamps. Each name creates a durable
-storage key. A pending request finishing on a later UTC day starts that day's
-check and discards its old receipt.
+storage key. While enabled or awaiting a receipt, a pending request finishing
+on a later UTC day starts that day's check and discards its old receipt.
 
 Choose a `storageKey` unique to the product or installation and surface. The
 original key keeps the app-open date. `${storageKey}.browser.v1.` prefixes
 separate `quiet`, `check`, and `screen.${encodeURIComponent(screen)}` date keys.
 Distinct screen keys preserve claims across tabs. Blocked storage and failed
-writes use page memory; malformed dates act as missing claims.
+writes use page memory; malformed dates act as missing claims, while future
+valid dates remain claimed after clock rollback.
 
-A legacy app-open date alone requires a receipt check. The first pump waits
-one microtask so an initial screen can register and make that check. With no
-pending screen, one app-open fallback obtains the receipt; a daemon that
-already captured today's event returns `skipped`. Tabs opening together may
-each make an initial check.
+A legacy app-open date alone requires a receipt check. An unclaimed screen
+can check; otherwise the earliest waiting visit checks with its original
+properties and options. With neither, the helper waits for a report instead
+of repeating app-open. Tabs opening together may each make an initial check.
 
 `post` resolves HTTP errors and rejects transport failures. Return a
 `Response` or `TelemetryReceipt` (`{ status, data }`) to preserve the daemon's
 HTTP 202 receipt. Valid `queued` and `skipped` receipts and legacy status-only
 successful 2xx replies enable reports. Only a 202 `disabled` receipt persists
-quiet across reloads until the next day's check. Other terminal replies keep
-an unknown gate quiet for this page; a fresh page checks again. Once enabled,
-a rejected event leaves the gate open and is suppressed for this page.
+quiet across reloads until a later UTC day's load or focus makes a check;
+screen and visit calls cannot wake a disabled page. A terminal app-open or
+visit-check rejection leaves this page quiet until a later UTC day's focus;
+reload can check again. A rejected screen still claims its daily date across reloads and leaves
+an unknown gate available for another screen or waiting visit to check.
 
 Before the first receipt, up to six visits wait in memory with their original
 properties and `keepalive`; later arrivals are dropped. An enabled receipt
 releases them. Disable, exhaustion, cleanup, or rollover discards them. Start
 visit timers after `onQuietChange(false)`. Enabled visits send immediately,
-even during a pending screen or its backoff. Visits never retry. Separately,
-the request budget counts unresolved posts plus consecutive failures; at six,
-new calls are dropped.
+even during a pending screen or its backoff. Their failures never retry or
+change a daily retry's budget or deadline. A visit serving as the receipt
+check retains its event and options through retries, then leaves the queue
+once accepted. Separately, the request budget counts unresolved posts plus
+consecutive daily failures; at six, new calls are dropped.
 
-Transport failures and HTTP 5xx share backoff waits of 1, 2, 4, 8, and 16
-seconds. Six consecutive failures stop reporting and pause trackers until
-reload or the next UTC day. Exhaustion schedules no timer. A terminal reply
+Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4,
+8, and 16 seconds. Six consecutive failures stop reporting and pause trackers
+until reload or the next UTC day. Exhaustion schedules no timer. A terminal reply
 resets the consecutive count while preserving an unrelated screen's pending
 retry delay. A disabled receipt cancels retries and discards pending visits.
 

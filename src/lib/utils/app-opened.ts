@@ -66,7 +66,7 @@ export function startAppOpenedReporting({
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     daily = false,
-    scheduled = true,
+    checkingVisit = false,
     failures = 0,
     inFlight = 0;
   let currentScreen: string | undefined,
@@ -80,31 +80,28 @@ export function startAppOpenedReporting({
   };
   const claimed = (key: string): boolean => {
     try {
-      if (localStorage.getItem(key) === day) claims.add(key);
+      const saved = localStorage.getItem(key);
+      if (
+        saved &&
+        saved >= day &&
+        Number.isFinite(Date.parse(saved)) &&
+        new Date(saved).toISOString().slice(0, 10) === saved
+      )
+        claims.add(key);
     } catch {
       /* Page memory survives blocked storage. */
     }
     return claims.has(key);
   };
   const write = (key: string) => {
+    if (!claimed(key)) {
+      try {
+        localStorage.setItem(key, day);
+      } catch {
+        /* Retain the page claim. */
+      }
+    }
     claims.add(key);
-    try {
-      const saved = localStorage.getItem(key);
-      if (
-        saved &&
-        saved > day &&
-        Number.isFinite(Date.parse(saved)) &&
-        new Date(saved).toISOString().slice(0, 10) === saved
-      )
-        return;
-    } catch {
-      /* Failed reads still allow a write attempt. */
-    }
-    try {
-      localStorage.setItem(key, day);
-    } catch {
-      /* Retain the page claim. */
-    }
   };
   const cancelRetry = () => {
     clearTimeout(retry);
@@ -124,12 +121,12 @@ export function startAppOpenedReporting({
     notify();
     return gate === "disabled";
   };
-  const rollover = () => {
-    if (day === today()) return;
+  const rollover = (wake = false) => {
+    if (day === today() || (!wake && disabled())) return;
     day = today();
     claims.clear();
     gate = "unknown";
-    daily = false;
+    daily = checkingVisit = false;
     failures = inFlight = 0;
     cancelRetry();
     screens.clear();
@@ -138,9 +135,13 @@ export function startAppOpenedReporting({
     notify();
   };
   const send = async (event: VisitEvent, key?: string, options?: VisitOptions) => {
-    const sending = day;
+    const sending = day,
+      checking = key !== undefined || gate === "unknown";
     inFlight++;
-    if (key) daily = true;
+    if (checking) {
+      daily = true;
+      checkingVisit = key === undefined;
+    }
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
       response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
@@ -152,7 +153,7 @@ export function startAppOpenedReporting({
         }
       }
     } catch {
-      /* Transport failures share the retry budget. */
+      /* Receipt checks retry transport failures. */
     }
     rollover();
     if (stopped) return;
@@ -161,9 +162,13 @@ export function startAppOpenedReporting({
       return;
     }
     inFlight--;
-    if (key) daily = false;
+    if (checking) daily = checkingVisit = false;
     if (disabled()) return;
     if (!response || (response.status >= 500 && response.status < 600)) {
+      if (!checking) {
+        pump();
+        return;
+      }
       cancelRetry();
       if (++failures < 6)
         retry = setTimeout(
@@ -186,20 +191,21 @@ export function startAppOpenedReporting({
         !response.json &&
         response.data === undefined);
     if (accepted) {
+      if (checking && key === undefined) visits.shift();
       gate = "enabled";
       write(`${prefix}check`);
       if (key) write(key);
     } else if (response.status === 202 && status === "disabled") {
       gate = "disabled";
       write(`${prefix}quiet`);
-    } else if (gate === "unknown") gate = "disabled";
-    else if (key) claims.add(key);
+    } else if (key && key !== storageKey) write(key);
+    else if (gate === "unknown") gate = "disabled";
     pump();
   };
   const pump = () => {
     rollover();
-    if (stopped || disabled() || scheduled || failures + inFlight >= 6) return;
-    if (gate === "enabled") {
+    if (stopped || disabled() || failures + inFlight >= 6) return;
+    if (gate === "enabled" && !checkingVisit) {
       while (visits.length && failures + inFlight < 6) {
         const visit = visits.shift()!;
         void send(visit.event, undefined, visit.options);
@@ -209,13 +215,17 @@ export function startAppOpenedReporting({
     const screen = [...screens].find(
       (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
     );
-    if (!claimed(storageKey) || (gate === "unknown" && screen === undefined))
+    if (!claimed(storageKey))
       void send({ event: "app_opened", properties: { surface } }, storageKey);
     else if (screen !== undefined)
       void send(
         { event: "screen_viewed", properties: { surface, screen } },
         `${prefix}screen.${encodeURIComponent(screen)}`,
       );
+    else if (gate === "unknown") {
+      const visit = visits[0];
+      if (visit) void send(visit.event, undefined, visit.options);
+    }
   };
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
@@ -226,11 +236,11 @@ export function startAppOpenedReporting({
       pump();
     }
   };
-  const report = () => request();
-  queueMicrotask(() => {
-    scheduled = false;
-    pump();
-  });
+  const report = () => {
+    rollover(true);
+    request();
+  };
+  pump();
   window.addEventListener("focus", report);
   return Object.assign(
     () => {
