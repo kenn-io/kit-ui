@@ -365,7 +365,9 @@ missing or unreadable body, leaves permission unknown, so trackers stay
 paused; a later screen or visit checks again. A disabled receipt keeps reports
 quiet across reloads until a load or focus on a later UTC day checks again.
 It also deletes the stored screen names, the only browsing history the helper
-keeps.
+keeps. Tabs can't check and write storage in one step, so a tab racing the
+opt-out can write one name back; the next page or report that sees the opt-out
+deletes it again.
 
 When the user opts out in your app, call `disable()` as well as telling the
 daemon. The reporter goes quiet at once, sends nothing more, and behaves as if

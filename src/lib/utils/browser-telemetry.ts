@@ -153,14 +153,19 @@ export function startBrowserTelemetry({
         : claims.has(`${prefix}check`, day)
           ? "enabled"
           : "unknown";
+  // Opting out also drops the stored screen names, the only browsing history kept here.
+  const forgetScreens = () => claims.forget(`${prefix}screen.`);
   const disabled = (): boolean => {
     gate = readGate();
-    if (gate === "disabled") cancelRetry();
+    if (gate === "disabled") {
+      cancelRetry();
+      // Storage can't check and write atomically across tabs, so a racing tab's late
+      // screen claim can outlive the opt-out; every page that sees the opt-out drops it.
+      forgetScreens();
+    }
     notify();
     return stopped || gate === "disabled";
   };
-  // Opting out also drops the stored screen names, the only browsing history kept here.
-  const forgetScreens = () => claims.forget(`${prefix}screen.`);
   const rollover = (wake = false) => {
     if (day === today() || (!wake && (stopped || readGate() === "disabled"))) return;
     day = today();

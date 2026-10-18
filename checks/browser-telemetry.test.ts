@@ -317,6 +317,35 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
+  test.each(["running", "stopped"])(
+    "screen history a racing %s tab writes after an opt-out is dropped when the opt-out is seen",
+    async (variant) => {
+      const tab = start();
+      await settle();
+      statuses = ["held"];
+      tab.reportScreen("A");
+      const held = release;
+      const other = start();
+      await settle();
+      // Another renderer's opt-out lands between this tab's opt-out check and its write.
+      g.localStorage = storage({
+        setItem: (key: string, value: string) => {
+          if (key.startsWith(`${PREFIX}screen.A:`)) other.disable();
+          stored.set(key, value);
+        },
+      });
+      if (variant === "stopped") tab.stop();
+      held(202);
+      await settle();
+      if (variant === "stopped") {
+        expect(`${PREFIX}screen.A` in claims()).toBe(true);
+        other.reportScreen("B");
+      }
+      expect(`${PREFIX}screen.A` in claims()).toBe(false);
+      expect(sent).toHaveLength(2);
+    },
+  );
+
   test("an app-open answered after cleanup stays claimed for the next page", async () => {
     statuses = ["held"];
     start().stop();
