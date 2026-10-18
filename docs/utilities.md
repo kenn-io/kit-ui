@@ -299,40 +299,109 @@ onInput("ab"); // search("ab") fires once, 250ms later
 onInput.cancel(); // drop a pending call (e.g. on teardown)
 ```
 
-## App opened
+## Browser telemetry
 
 ```ts
-import { startAppOpenedReporting } from "@kenn-io/kit-ui";
+import { startBrowserTelemetry } from "@kenn-io/kit-ui";
 
-const stop = startAppOpenedReporting({
+const telemetry = startBrowserTelemetry({
   route: "/api/v1/telemetry/events",
   surface: "web",
-  storageKey: "example.app-opened.web",
-  post: (route, event) => fetch(route, { method: "POST", headers, body: JSON.stringify(event) }),
+  storageKey: "example.telemetry.web",
+  post: (route, event, options) =>
+    fetch(route, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(event),
+      keepalive: options?.keepalive,
+    }),
 });
+
+telemetry.reportScreen("settings");
+const unsubscribe = telemetry.onQuietChange((quiet) => {
+  if (quiet) stopVisitTimers();
+  else startVisitTimers();
+});
+// When a visit session ends:
+telemetry.reportVisit(
+  { event: "session_ended", properties: { surface: "web", duration_bucket: "under_1m" } },
+  { keepalive: true },
+);
+// On teardown:
+telemetry.stop();
+unsubscribe();
 ```
 
-Posts `app_opened` on load and again when the window regains focus on a later
-UTC day. Choose a stable `storageKey` unique to the product or installation
-and surface. Products mounted at different paths on the same origin need
-different keys. The day lives in localStorage under that exact key, so
-reloads and tabs opened later send nothing more that day.
+Sends `app_opened` on load and on the first focus of each later UTC day, and
+`screen_viewed` once per screen per UTC day, including the active screen after
+midnight. Sent days are kept in localStorage, so reloads and other tabs send
+nothing more that day; tabs that open at the same moment may each send one.
+When storage is blocked, page memory holds them until reload. Upgrading from
+`startAppOpenedReporting` can send one extra `app_opened` that day.
 
-`post` carries the product's own auth headers and must resolve with the
-actual HTTP status, including error statuses. Reject only when no response
-arrived. For a generated client that throws on HTTP errors, use its
-response-returning transport (for example, Forge's `orvalRequest`) or adapt
-its HTTP errors into `{ status }` results. Passing a throwing client without
-this adaptation makes permanent HTTP errors retry indefinitely.
+### Receipts and opt-out
 
-A rejection or a 502, 503 or 504 triggers retries after 1, 2, 4, 8 and 16
-seconds, then every 30 seconds until the backend answers. Any other status
-ends the day's attempt. A focus that starts a new day's attempt resets the
-delay to one second.
+The daemon enforces the opt-out, not this helper. While telemetry is disabled,
+the daemon must reply HTTP 202 `{ "status": "disabled" }` and must not capture
+or forward the event. The helper only stops a browser from sending events the
+daemon would drop. After an opt-out, a browser still sends one check per UTC
+day. Unless the app calls `disable()`, each open tab can also send about one
+event before its first `disabled` reply arrives.
 
-Tabs that open together may each send one, which doesn't move a count of
-installs active that day. When storage is blocked, memory holds the day for
-the page, so each page load sends at most once a day.
+`post` resolves HTTP errors and rejects only when no response arrived. It must
+return the daemon's reply body: a `Response` with an unread body, or
+`{ status, data }` from a JSON client.
+
+```ts
+const post = async (route, event) => {
+  const response = await api.post(route, event);
+  return { status: response.status, data: response.data };
+};
+```
+
+Only an HTTP 202 receipt decides permission. `queued` and `skipped` enable
+reports; `disabled` makes the reporter quiet. Any other reply, including a
+missing or unreadable body, leaves permission unknown, so trackers stay
+paused; a later screen or visit checks again. A disabled receipt keeps reports
+quiet across reloads until a load or focus on a later UTC day checks again.
+It also deletes the stored screen names, the only browsing history the helper
+keeps. Tabs can't check and write storage in one step, so a tab racing the
+opt-out can write one name back; the next page or report that sees the opt-out
+deletes it again.
+
+When the user opts out in your app, call `disable()` as well as telling the
+daemon. The reporter goes quiet at once, sends nothing more, and behaves as if
+it had received a disabled receipt. Opting back in takes effect on the next
+UTC day's check.
+
+`onQuietChange` immediately supplies the current state and returns an
+unsubscribe function. Unknown, disabled, exhausted, and stopped reporters are
+quiet. Start visit timers on `false` and stop them on `true`.
+
+`stop()` signals quiet, cancels retries, and removes the focus listener. Call
+it before unsubscribing so the callback stops visit timers.
+
+### Visits
+
+Visits are one-shot: never queued or retried. While permission is unknown, a
+visit makes the check itself when no other check is in flight, and is
+dropped otherwise.
+
+### Failures
+
+Transport failures and HTTP 5xx back off for 1, 2, 4, 8, and 16 seconds.
+App-open and screen reports retry after the delay; visits during it are
+dropped. While enabled, `{ keepalive: true }` visits skip the delay so a
+closing page can still send. Six failures in a row stop reporting until
+reload or the next UTC day.
+
+### Storage keys
+
+Choose a `storageKey` unique to the product or installation and surface.
+Claims live under `${storageKey}.browser.v1.`, one item per key and date, and
+each key keeps its 35 most recent dates. Every screen name gets its own key, so
+use a stable, finite set, such as route names without record IDs, query
+strings, or timestamps.
 
 ## Color hashing
 
