@@ -98,6 +98,7 @@ describe("startAppOpenedReporting", () => {
       await settle();
       if (outcome !== "enabled") {
         reporter.reportVisit(VISIT);
+        reporter.reportVisit(VISIT, { keepalive: true });
         reporter.reportScreen("A");
       }
       focus();
@@ -117,6 +118,24 @@ describe("startAppOpenedReporting", () => {
       start();
       await settle();
       expect(sent).toHaveLength(1);
+    },
+  );
+  test.each(["app", "screen", "visit check"])(
+    "an already-consumed 202 Response is terminal unreadable for %s",
+    async (kind) => {
+      if (kind !== "app") stored.set(STORAGE_KEY, "2026-10-03");
+      const response = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
+      await response.text();
+      statuses = [response];
+      const reporter = start();
+      if (kind === "screen") reporter.reportScreen("A");
+      if (kind === "visit check") reporter.reportVisit(VISIT);
+      await settle();
+      await advance(60000);
+      expect(sent).toHaveLength(1);
+      expect(jest.getTimerCount()).toBe(0);
+      expect(stored.has(`${PREFIX}check`)).toBe(false);
+      expect(stored.has(`${PREFIX}quiet`)).toBe(false);
     },
   );
   test.each(["app", "screen", "visit check", "one-shot visit"])(
@@ -250,7 +269,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each([202, 503, 400])(
-    "a visit queued during screen backoff waits for its deadline (reply: %s)",
+    "an ordinary visit queued during screen backoff waits for its deadline (reply: %s)",
     async (reply) => {
       const reporter = start();
       await settle();
@@ -258,13 +277,13 @@ describe("startAppOpenedReporting", () => {
       reporter.reportScreen("A");
       await settle();
       await advance(500);
-      reporter.reportVisit(VISIT, { keepalive: true });
+      reporter.reportVisit(VISIT);
       await settle();
       await advance(499);
       expect(sent).toHaveLength(2);
       await advance(1);
       expect(sent).toHaveLength(4);
-      expect(sent[2]).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+      expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
       release(reply);
       await settle();
       await advance(1999);
@@ -277,6 +296,69 @@ describe("startAppOpenedReporting", () => {
       });
     },
   );
+
+  test("an enabled keepalive visit reaches post during screen backoff before cleanup", async () => {
+    const reporter = start();
+    await settle();
+    statuses = [503];
+    reporter.reportScreen("A");
+    await settle();
+    reporter.reportVisit(VISIT, { keepalive: true });
+    const beforeCleanup = sent.slice();
+    reporter();
+    expect(beforeCleanup).toEqual([
+      { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
+      {
+        route: ROUTE,
+        event: { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
+      },
+      { route: ROUTE, event: VISIT, options: { keepalive: true } },
+    ]);
+    await advance(60000);
+    expect(sent).toEqual(beforeCleanup);
+  });
+
+  test("a queued visit success after the retry fires preserves the pending screen failure budget", async () => {
+    let resolveVisit!: typeof release;
+    const reporter = startAppOpenedReporting({
+      route: ROUTE,
+      surface: "web",
+      storageKey: STORAGE_KEY,
+      post: (route, event, options) => {
+        const response = post(route, event, options);
+        if (event.event === "session_ended") resolveVisit = release;
+        return response;
+      },
+    });
+    stops.push(reporter);
+    await settle();
+    statuses = [503, "held", "held"];
+    reporter.reportScreen("A");
+    await settle();
+    reporter.reportVisit(VISIT);
+    await advance(1000);
+    expect(sent.slice(2).map(({ event }) => event.event)).toEqual([
+      "session_ended",
+      "screen_viewed",
+    ]);
+    resolveVisit({ status: 202, data: { status: "queued" } });
+    await settle();
+    statuses = Array(4).fill(503);
+    release(503);
+    await settle();
+    for (const [index, delay] of [2000, 4000, 8000, 16000].entries()) {
+      await advance(delay - 1);
+      expect(sent).toHaveLength(index + 4);
+      await advance(1);
+      expect(sent).toHaveLength(index + 5);
+    }
+    reporter.reportVisit(VISIT, { keepalive: true });
+    reporter.reportScreen("B");
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(8);
+    expect(jest.getTimerCount()).toBe(0);
+  });
 
   test.each([202, 400, 503])(
     "a late one-shot visit reply %s retains an existing screen deadline",
@@ -421,7 +503,7 @@ describe("startAppOpenedReporting", () => {
     let timer: ReturnType<typeof setInterval>;
     const changes: boolean[] = [],
       detached: boolean[] = [];
-    reporter.onQuietChange((quiet) => {
+    const unsubscribe = reporter.onQuietChange((quiet) => {
       changes.push(quiet);
       clearInterval(timer);
       if (!quiet) timer = setInterval(() => ticks++, 100);
@@ -434,6 +516,7 @@ describe("startAppOpenedReporting", () => {
     await advance(100);
     expect(ticks).toBe(1);
     reporter();
+    unsubscribe();
     focus();
     await advance(1000);
     expect(changes).toEqual([true, false, true]);
@@ -595,6 +678,7 @@ describe("startAppOpenedReporting", () => {
     await advance(60 * 60000);
     focus();
     reporter.reportVisit(VISIT);
+    reporter.reportVisit(VISIT, { keepalive: true });
     expect(sent).toHaveLength(6);
     reporter.reportScreen("A");
     jest.setSystemTime(DAY_TWO);
@@ -684,7 +768,7 @@ describe("startAppOpenedReporting", () => {
       reporter.reportVisit(VISIT);
       await settle();
       for (let i = 0; i < 6; i++) {
-        reporter.reportVisit({ event: "action", properties: { count: i } }, { keepalive: true });
+        reporter.reportVisit({ event: "action", properties: { count: i } });
         await settle();
         expect(sent).toHaveLength(i + 2);
         if (i === 5) break;
@@ -695,7 +779,6 @@ describe("startAppOpenedReporting", () => {
         expect(sent.at(-1)).toEqual({
           route: ROUTE,
           event: { event: "action", properties: { count: i } },
-          options: { keepalive: true },
         });
       }
       reporter.reportVisit(VISIT, { keepalive: true });

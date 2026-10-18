@@ -328,8 +328,8 @@ reporter.reportVisit(
   { keepalive: true },
 );
 // On teardown:
-unsubscribe();
 reporter();
+unsubscribe();
 ```
 
 The callable reporter keeps existing cleanup call sites working. It sends
@@ -353,42 +353,49 @@ subscriber triggers one app-open receipt check so visit timers can start.
 Without a subscriber, the helper waits for a report. Tabs opening together
 may each make an initial check.
 
-`post` resolves HTTP errors and rejects transport failures. Return a
-`Response` or `TelemetryReceipt` (`{ status, data }`) to preserve the daemon's
-HTTP 202 receipt. Valid `queued` and `skipped` receipts and legacy status-only
-successful 2xx replies enable reports. Only a 202 `disabled` receipt persists
-quiet across reloads until a later UTC day's load or focus makes a check;
-screen and visit calls cannot wake a disabled page. Before an enabled receipt,
-a terminal app-open or visit-check rejection leaves this page quiet until a
-later UTC day's focus. A terminal app-open reply retains its daily attempt
-claim across reloads. Reload can check permission again through a screen,
-visit, or subscriber. A rejected screen
-still claims its daily date across reloads and leaves an unknown gate
-available for another screen or waiting visit to check.
+`post` resolves HTTP errors and rejects transport failures. Return a `Response`
+with an unread body or `TelemetryReceipt` (`{ status, data }`) to preserve the
+daemon's HTTP 202 receipt. An already-consumed body is a terminal unreadable
+receipt. An interrupted body read counts as a transport failure; receipt checks
+retry. Valid `queued` and `skipped` receipts and legacy status-only successful
+2xx replies enable reports. Only a 202 `disabled` receipt persists quiet across
+reloads until a later UTC day's load or focus makes a check; screen and visit
+calls cannot wake a disabled page. Before an enabled receipt, a terminal
+app-open or visit-check rejection leaves this page quiet until a later UTC day's
+focus. A terminal app-open reply retains its daily attempt claim across reloads.
+Reload can check permission again through a screen, visit, or subscriber. A
+rejected screen still claims its daily date across reloads and leaves an unknown
+gate available for another screen or waiting visit to check.
 
 Before the first receipt, up to six visits wait in memory with their original
 properties and `keepalive`; later arrivals are dropped. Unloading the page
-before the first receipt can lose these visits, including keepalive requests.
-An enabled receipt releases them. Disable, exhaustion, cleanup, or rollover
-discards them. Start visit timers after `onQuietChange(false)`. Enabled visits send
-immediately during a pending screen request, but wait in the same six-slot queue
-while backoff is pending. These one-shot visits never retry. Their transport and
-HTTP 5xx failures count toward the shared six-failure limit. Replies during
-backoff retain its existing deadline unless exhaustion cancels it, and successful
-or terminal visit replies leave its failure count unchanged. A visit serving as the receipt check
-retains its event and options through retries and is delivered once accepted.
+before the first receipt can lose these visits, including keepalive requests. An
+enabled receipt releases them. Disable, exhaustion, cleanup, or rollover
+discards them. Start visit timers after `onQuietChange(false)`. Enabled visits
+send immediately during a pending screen request. During backoff, ordinary
+visits wait in the same six-slot queue; enabled visits with `keepalive: true`
+reach `post` immediately, before cleanup. Disabled and exhausted reporters
+suppress both kinds. These one-shot visits never retry. Their transport and HTTP
+5xx failures count toward the shared six-failure limit. Replies during backoff
+retain its existing deadline unless exhaustion cancels it. One-shot successes
+and terminal replies never reset the daily failure count, including while a
+retried screen is pending. A visit serving as the receipt check retains its
+event and options through retries and is delivered once accepted.
 
-Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4,
-8, and 16 seconds. Six consecutive failures stop reporting and pause trackers
-until reload or the next UTC day. Exhaustion cancels pending backoff. A disabled receipt cancels
+Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4, 8,
+and 16 seconds. Any other check or screen reply resets the failure count. Six
+failures without such a reply stop reporting and pause trackers until reload or
+the next UTC day. Exhaustion cancels pending backoff. A disabled receipt cancels
 retries and discards pending visits.
 
 `onQuietChange` immediately supplies the current state and returns an
-unsubscribe function. Unknown, disabled, exhausted, and stopped reporters
-signal quiet. Use the callback to stop and restart visit timers. Cleanup
-signals quiet, cancels retries, clears pending screens and visits, and removes
-the focus listener. `BrowserTelemetryOptions` types the event-capable callback;
-explicitly typed `AppOpenedOptions` callbacks retain their original signature.
+unsubscribe function. Unknown, disabled, exhausted, and stopped reporters signal
+quiet. Use the callback to stop and restart visit timers. Cleanup signals quiet,
+cancels retries, clears pending screens and visits, and removes the focus
+listener. `BrowserTelemetryOptions` types the event-capable callback; explicitly
+typed `AppOpenedOptions` callbacks retain their original signature. Call the
+reporter's cleanup before unsubscribing so the quiet callback stops visit
+timers.
 
 ## Color hashing
 

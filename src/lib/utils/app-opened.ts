@@ -147,7 +147,7 @@ export function startAppOpenedReporting({
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
       response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
-      if (response.status === 202) {
+      if (response.status === 202 && !(response as Response).bodyUsed) {
         try {
           data = response.data ?? (await response.json?.());
         } catch (error) {
@@ -191,7 +191,7 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if (failures < 6 && (checking || !retry)) failures = 0;
+    if (failures < 6 && checking) failures = 0;
     if (checking && key === undefined) {
       checkingVisit = false;
       visits.shift();
@@ -241,11 +241,10 @@ export function startAppOpenedReporting({
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
     if (stopped || disabled() || failures >= 6) return;
-    if (visit && gate === "enabled" && !retry) void send(visit, undefined, options);
-    else {
-      if (visit && visits.length < 6) visits.push({ event: visit, options });
-      pump();
-    }
+    if (visit && gate === "enabled" && (!retry || options?.keepalive))
+      return void send(visit, undefined, options);
+    if (visit && visits.length < 6) visits.push({ event: visit, options });
+    pump();
   };
   const report = () => {
     rollover(true);
