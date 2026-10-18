@@ -95,6 +95,7 @@ export {
   type CalendarNavLabels,
   type CalendarSelection,
   type CalendarUnit,
+  type WeekStart,
   type CustomSelection,
   type DateRange,
   type RangeMode,

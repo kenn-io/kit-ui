@@ -16,6 +16,7 @@
     resolveRange,
     todayStr,
     type CalendarNavLabels,
+    type WeekStart,
     type CalendarUnit,
     type DateRange,
     type RangeMode,
@@ -24,6 +25,8 @@
   } from "./date-range.js";
 
   interface Props extends CalendarNavLabels {
+    /** First weekday for calendar layout and week selection. */
+    weekStart?: WeekStart | undefined;
     selection: RangeSelection;
     onSelect: (selection: RangeSelection) => void;
     /** Dim the trigger while the consumer reloads data. */
@@ -89,6 +92,7 @@
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
     locale = undefined,
+    weekStart = "monday",
     // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
     // own English defaults stay the single source.
     ...calendarLabels
@@ -142,7 +146,7 @@
     if (unit === "month") return formatMonthLabel(anchor, locale);
     return formatWeekOfLabel(
       weekOfLabel,
-      formatShortDate(periodBounds("week", anchor).from, locale),
+      formatShortDate(periodBounds("week", anchor, weekStart).from, locale),
     );
   }
 
@@ -163,7 +167,7 @@
 
   // The period the calendar highlights: the day/week/month around the
   // current anchor.
-  const calSelected = $derived(periodBounds(calUnit, calAnchor));
+  const calSelected = $derived(periodBounds(calUnit, calAnchor, weekStart));
 
   // While an end pick is pending only the start day highlights.
   const calCustomSelected = $derived<DateRange | null>(
@@ -195,7 +199,7 @@
       calUnit = "week";
       calAnchor = selection.mode === "custom" && selection.to ? selection.to : todayStr();
     }
-    const resolved = resolveRange(selection, earliestDate);
+    const resolved = resolveRange(selection, earliestDate, weekStart);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
     // A controlled selection with only `from` is a range mid-pick: stay
@@ -250,7 +254,7 @@
   // so switching tabs after picking a preset edits that range, not a stale
   // seed.
   function syncCustomFields(sel: RangeSelection): void {
-    const resolved = resolveRange(sel, earliestDate);
+    const resolved = resolveRange(sel, earliestDate, weekStart);
     customFrom = resolved.from;
     customTo = resolved.to;
     customPending = false;
@@ -260,7 +264,7 @@
 
   function applyRelative(days: number): void {
     const sel: RangeSelection = { mode: "relative", days };
-    calAnchor = resolveRange(sel, earliestDate).to;
+    calAnchor = resolveRange(sel, earliestDate, weekStart).to;
     syncCustomFields(sel);
     onSelect(sel);
   }
@@ -411,6 +415,7 @@
             {maxDate}
             {...calendarLabels}
             {locale}
+            {weekStart}
             onpick={(date) => applyCalendar(calUnit, date)}
           />
         </div>
@@ -443,6 +448,7 @@
             {maxDate}
             {...calendarLabels}
             {locale}
+            {weekStart}
             onpick={pickCustomDay}
           />
         </div>

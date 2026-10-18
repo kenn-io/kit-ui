@@ -111,3 +111,11 @@ interface RangePreset {
 | `todayStr()` / `daysAgo(n)` / `localDateStr(d)` | Local `YYYY-MM-DD` helpers                           |
 | `allFromDate(earliestDate?)`                    | "All" lower bound (falls back to one year)           |
 | `DEFAULT_RANGE_PRESETS`                         | 7d / 30d / 90d / 1y / All                            |
+
+### First day of the week
+
+Set `weekStart="sunday"` for Sunday–Saturday weeks; the default is `"monday"`.
+This controls the calendar columns, highlighted week, and trigger label. Pass
+the same value to `resolveRange(selection, earliestDate, weekStart)` when
+resolving a selection. `Calendar` also accepts `weekStart`; `periodBounds` and
+`monthGridDates` take it as their last argument, as does `weekdayLabels`.

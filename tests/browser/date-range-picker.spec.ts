@@ -357,3 +357,12 @@ test("completed ISO range stays contained in a narrow block trigger", async ({ p
   expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(triggerBox!.x + triggerBox!.width);
   expect(await label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
 });
+
+test("Sunday-start picker highlights and commits Sunday through Saturday", async ({ page }) => {
+  const demo = page.getByTestId("sunday-picker");
+  await expect(demo.locator("output")).toHaveText("2026-06-14 → 2026-06-20");
+  await demo.getByRole("button", { name: /Week of Jun 14/ }).click();
+  await expect(panel(page).locator(".kit-calendar__weekday").first()).toHaveText("Sun");
+  await day(page, 21).click();
+  await expect(demo.locator("output")).toHaveText("2026-06-21 → 2026-06-27");
+});

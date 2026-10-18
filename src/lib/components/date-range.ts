@@ -16,6 +16,7 @@
  * - custom: an explicit from/to span.
  */
 export type RangeMode = "relative" | "calendar" | "custom";
+export type WeekStart = "monday" | "sunday";
 export type CalendarUnit = "day" | "week" | "month";
 
 export interface RelativeSelection {
@@ -132,22 +133,26 @@ export function presetRange(days: number, earliestDate?: string | null): DateRan
 
 /**
  * The inclusive from/to bounds of a calendar period containing `anchor`.
- * Day is a single date; week is the Monday-Sunday ISO week; month is the
+ * Day is a single date; week starts on Monday unless weekStart is sunday; month is the
  * calendar month.
  */
-export function periodBounds(unit: CalendarUnit, anchor: string): DateRange {
+export function periodBounds(
+  unit: CalendarUnit,
+  anchor: string,
+  weekStart: WeekStart = "monday",
+): DateRange {
   const d = parseLocal(anchor);
   if (unit === "day") {
     return { from: anchor, to: anchor };
   }
   if (unit === "week") {
-    // getDay(): 0=Sun..6=Sat. Days since Monday = (day + 6) % 7.
-    const sinceMonday = (d.getDay() + 6) % 7;
-    const monday = new Date(d);
-    monday.setDate(d.getDate() - sinceMonday);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    return { from: localDateStr(monday), to: localDateStr(sunday) };
+    // getDay(): 0=Sun..6=Sat.
+    const offset = (d.getDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
+    const first = new Date(d);
+    first.setDate(d.getDate() - offset);
+    const last = new Date(first);
+    last.setDate(first.getDate() + 6);
+    return { from: localDateStr(first), to: localDateStr(last) };
   }
   const first = new Date(d.getFullYear(), d.getMonth(), 1);
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -175,16 +180,16 @@ export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): str
 }
 
 /**
- * The 42 dates (six Monday-first weeks) covering `anchor`'s month — the
+ * The 42 dates (six weeks, Monday-first by default) covering `anchor`'s month — the
  * cells of a fixed-height month grid. Leading/trailing dates belong to the
  * adjacent months.
  */
-export function monthGridDates(anchor: string): string[] {
+export function monthGridDates(anchor: string, weekStart: WeekStart = "monday"): string[] {
   const d = parseLocal(anchor);
   const first = new Date(d.getFullYear(), d.getMonth(), 1);
-  const sinceMonday = (first.getDay() + 6) % 7;
+  const offset = (first.getDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
   const start = new Date(first);
-  start.setDate(first.getDate() - sinceMonday);
+  start.setDate(first.getDate() - offset);
   return Array.from({ length: 42 }, (_, i) => {
     const day = new Date(start);
     day.setDate(start.getDate() + i);
@@ -230,13 +235,15 @@ function labelTable(key: string, build: () => string[]): string[] {
   return labelTables.get(key) ?? capped(labelTables, key, build());
 }
 
-/** Monday-first weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
  * omitted = the browser locale. */
-export function weekdayLabels(locale?: string): string[] {
+export function weekdayLabels(locale?: string, weekStart: WeekStart = "monday"): string[] {
   // 2024-01-01 is a Monday. Sliced so callers can't mutate the shared cache.
-  return labelTable(`weekdays|${locale ?? ""}`, () => {
+  return labelTable(`weekdays|${locale ?? ""}|${weekStart}`, () => {
     const fmt = formatter({ weekday: "short" }, locale);
-    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
+    return Array.from({ length: 7 }, (_, i) =>
+      fmt.format(new Date(2024, 0, (weekStart === "sunday" ? 7 : 1) + i)),
+    );
   }).slice();
 }
 
@@ -251,12 +258,16 @@ export function monthLabels(style: "short" | "long", locale?: string): string[] 
 }
 
 /** Turn any selection into concrete inclusive {from, to} bounds. */
-export function resolveRange(sel: RangeSelection, earliestDate?: string | null): DateRange {
+export function resolveRange(
+  sel: RangeSelection,
+  earliestDate?: string | null,
+  weekStart: WeekStart = "monday",
+): DateRange {
   switch (sel.mode) {
     case "relative":
       return presetRange(sel.days, earliestDate);
     case "calendar":
-      return periodBounds(sel.unit, sel.anchor);
+      return periodBounds(sel.unit, sel.anchor, weekStart);
     case "custom":
       return { from: sel.from, to: sel.to };
   }

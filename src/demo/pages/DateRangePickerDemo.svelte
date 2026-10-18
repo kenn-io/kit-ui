@@ -26,6 +26,13 @@
     anchor: todayStr(),
   });
 
+  let sundaySelection = $state.raw<RangeSelection>({
+    mode: "calendar",
+    unit: "week",
+    anchor: "2026-06-15",
+  });
+  const sundayRange = $derived(resolveRange(sundaySelection, undefined, "sunday"));
+
   let blockSelection = $state.raw<RangeSelection>({
     mode: "custom",
     from: "2025-07-11",
@@ -115,6 +122,20 @@
       {earliestDate}
       block
     />
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Sunday-start weeks"
+  code={'<DateRangePicker weekStart="sunday" {selection} onSelect={onSelect} />'}
+>
+  <div data-testid="sunday-picker">
+    <DateRangePicker
+      selection={sundaySelection}
+      weekStart="sunday"
+      onSelect={(value) => (sundaySelection = value)}
+    />
+    <output>{sundayRange.from} → {sundayRange.to}</output>
   </div>
 </DemoSection>
 
