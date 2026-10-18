@@ -739,6 +739,48 @@ describe("startAppOpenedReporting", () => {
     expect(stored.get(`${PREFIX}open`)).toBe("2026-10-03,2026-10-04");
   });
 
+  test.each([202, 503, "disabled", "callback"] as const)("rollback owner: %s", async (reply) => {
+    const reporter = start();
+    await settle();
+    statuses = ["held", "held", "held"];
+    reporter.reportScreen("A");
+    const previous = release;
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    jest.setSystemTime(DAY_ONE);
+    reporter.reportScreen("B");
+    const current = release;
+    statuses = Array(6).fill(503);
+    const status = typeof reply === "number" ? reply : 202;
+    previous(reply === "disabled" ? { status, data: { status: "disabled" } } : status);
+    await settle();
+    expect(sent.filter(({ event }) => event.properties.screen === "B")).toHaveLength(1);
+    expect(stored.get(`${PREFIX}screen.A`)).toBe(
+      reply === 202 || reply === "callback" ? "2026-10-03" : undefined,
+    );
+    expect(stored.get(`${PREFIX}quiet`)).toBe(reply === "disabled" ? "2026-10-03" : undefined);
+    current(503);
+    await settle();
+    await advance(999);
+    expect(sent).toHaveLength(4);
+    await advance(1);
+    expect(sent).toHaveLength(reply === "disabled" ? 4 : 5);
+    reporter.onQuietChange((quiet) => {
+      if (reply !== "callback" || !quiet) return;
+      statuses = ["held", "held"];
+      jest.setSystemTime(DAY_TWO);
+      focus();
+      jest.setSystemTime(DAY_ONE);
+      reporter.reportScreen("B");
+    });
+    for (const delay of [2000, 4000, 8000, 16000]) await advance(delay);
+    expect(sent).toHaveLength(reply === "disabled" ? 4 : reply === "callback" ? 11 : 9);
+    await advance(60000);
+    if (reply === "callback") focus();
+    else reporter.reportVisit(VISIT, { keepalive: true });
+    expect(sent).toHaveLength(reply === "disabled" ? 4 : reply === "callback" ? 11 : 9);
+  });
+
   test.each(["enabled-first", "disabled-first"])(
     "yesterday's disabled reply stops today's page with %s replies",
     async (wake) => {

@@ -106,6 +106,7 @@ export function startAppOpenedReporting({
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
   let day = today(),
+    generation = {},
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     daily = false,
@@ -146,6 +147,7 @@ export function startAppOpenedReporting({
   const rollover = (wake = false) => {
     if (day === today() || (!wake && (stopped || readGate() === "disabled"))) return;
     day = today();
+    generation = {};
     gate = "unknown";
     daily = false;
     failures = 0;
@@ -162,6 +164,7 @@ export function startAppOpenedReporting({
     checking = key !== undefined || gate === "unknown",
   ) => {
     const sending = day;
+    const owner = generation;
     if (checking) daily = true;
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
@@ -191,7 +194,7 @@ export function startAppOpenedReporting({
     }
     rollover();
     const isDisabled = disabled();
-    if (sending !== day) {
+    if (owner !== generation) {
       pump();
       return;
     }
@@ -203,8 +206,8 @@ export function startAppOpenedReporting({
       const delay = 1000 * 2 ** failures++;
       if (retry === undefined) ordinaryEligibleAt = performance.now() + delay;
       if (failures >= 6) cancelRetry();
-      if (checking) daily = false;
       notify();
+      if (checking && owner === generation) daily = false;
       pump();
       return;
     }
