@@ -41,6 +41,8 @@ export interface BrowserTelemetryOptions {
 export interface BrowserTelemetryReporter {
     /** Stops reporting, signals quiet, and removes listeners. */
     stop(): void;
+    /** Records an opt-out made in this app: quiet until a later UTC day's load or focus checks again. */
+    disable(): void;
     /** Use a stable, finite set of screen names, such as route names without IDs. */
     reportScreen(screen: string): void;
     reportVisit(event: VisitEvent, options?: VisitOptions): void;

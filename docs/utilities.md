@@ -341,6 +341,13 @@ When storage is blocked, page memory holds them until reload. Upgrading from
 
 ### Receipts and opt-out
 
+The daemon enforces the opt-out, not this helper. While telemetry is disabled,
+the daemon must reply HTTP 202 `{ "status": "disabled" }` and must not capture
+or forward the event. The helper only stops a browser from sending events the
+daemon would drop. After an opt-out, a browser still sends one check per UTC
+day. Unless the app calls `disable()`, each open tab can also send about one
+event before its first `disabled` reply arrives.
+
 `post` resolves HTTP errors and rejects only when no response arrived. It must
 return the daemon's reply body: a `Response` with an unread body, or
 `{ status, data }` from a JSON client.
@@ -357,6 +364,13 @@ reports; `disabled` makes the reporter quiet. Any other reply, including a
 missing or unreadable body, leaves permission unknown, so trackers stay
 paused; a later screen or visit checks again. A disabled receipt keeps reports
 quiet across reloads until a load or focus on a later UTC day checks again.
+It also deletes the stored screen names, the only browsing history the helper
+keeps.
+
+When the user opts out in your app, call `disable()` as well as telling the
+daemon. The reporter goes quiet at once, sends nothing more, and behaves as if
+it had received a disabled receipt. Opting back in takes effect on the next
+UTC day's check.
 
 `onQuietChange` immediately supplies the current state and returns an
 unsubscribe function. Unknown, disabled, exhausted, and stopped reporters are

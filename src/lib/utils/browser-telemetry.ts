@@ -36,6 +36,8 @@ export interface BrowserTelemetryOptions {
 export interface BrowserTelemetryReporter {
   /** Stops reporting, signals quiet, and removes listeners. */
   stop(): void;
+  /** Records an opt-out made in this app: quiet until a later UTC day's load or focus checks again. */
+  disable(): void;
   /** Use a stable, finite set of screen names, such as route names without IDs. */
   reportScreen(screen: string): void;
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
@@ -86,7 +88,17 @@ function claimHistory(storageKey: string) {
       pageOnly = true;
     }
   };
-  return { has, add };
+  /** Drops every claim whose key starts with `keys`, from page memory and storage. */
+  const forget = (keys: string) => {
+    for (const key of memory.keys()) if (key.startsWith(keys)) memory.delete(key);
+    try {
+      for (const item of Object.keys(localStorage))
+        if (item.startsWith(keys)) localStorage.removeItem(item);
+    } catch {
+      /* Blocked storage holds no claims to drop. */
+    }
+  };
+  return { has, add, forget };
 }
 
 /** Names the gate claim a 202 receipt earns: `check` when enabled, `quiet` when disabled. */
@@ -147,6 +159,8 @@ export function startBrowserTelemetry({
     notify();
     return stopped || gate === "disabled";
   };
+  // Opting out also drops the stored screen names, the only browsing history kept here.
+  const forgetScreens = () => claims.forget(`${prefix}screen.`);
   const rollover = (wake = false) => {
     if (day === today() || (!wake && (stopped || readGate() === "disabled"))) return;
     day = today();
@@ -194,7 +208,9 @@ export function startBrowserTelemetry({
       (checking && key === undefined && !claim);
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
-    if (!failed && key !== undefined && claim !== "quiet") claims.add(key, sending);
+    if (!failed && key !== undefined && claim !== "quiet" && gate !== "disabled")
+      claims.add(key, sending);
+    if (claim === "quiet") forgetScreens();
     if (stopped) return release();
     // A disabled receipt stops the current page. One that lands after this page began a
     // later day also claims that day, so a reload stays as quiet as this page.
@@ -271,6 +287,13 @@ export function startBrowserTelemetry({
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
+    },
+    disable() {
+      for (const date of new Set([day, today()])) claims.add(`${prefix}quiet`, date);
+      gate = "disabled";
+      forgetScreens();
+      cancelRetry();
+      notify();
     },
     reportScreen(screen: string) {
       currentScreen = screen;

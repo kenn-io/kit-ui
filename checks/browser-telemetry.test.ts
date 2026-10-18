@@ -234,6 +234,68 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
+  test("disable() quiets the page and its reloads without sending until a later UTC day", async () => {
+    seed("unrelated.setting", "kept");
+    const reporter = start();
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    reporter.reportScreen("A");
+    await settle();
+    expect(sent.map(({ event }) => event.properties.screen ?? event.event)).toEqual([
+      "app_opened",
+      "A",
+    ]);
+    reporter.disable();
+    expect(quiet).toEqual([true, false, true]);
+    expect(claims()).toEqual({
+      "unrelated.setting": "kept",
+      [`${PREFIX}open`]: "2026-10-03",
+      [`${PREFIX}check`]: "2026-10-03",
+      [`${PREFIX}quiet`]: "2026-10-03",
+    });
+    reporter.reportScreen("B");
+    reporter.reportVisit(VISIT, { keepalive: true });
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(2);
+    reporter.stop();
+    const reloaded = start();
+    const reloadedQuiet: boolean[] = [];
+    reloaded.onQuietChange((value) => reloadedQuiet.push(value));
+    await settle();
+    expect(reloadedQuiet).toEqual([true]);
+    expect(sent).toHaveLength(2);
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    await settle();
+    expect(sent.slice(2).map(({ event }) => event.event)).toEqual(["app_opened"]);
+  });
+
+  test("a disabled receipt drops stored screen names from every day", async () => {
+    seed(`${PREFIX}screen.A`, "2026-10-01,2026-10-02");
+    seed(`${PREFIX}screen.B%2FC`, "2026-10-02");
+    seed(`${PREFIX}open`, "2026-10-02");
+    statuses = [{ status: 202, data: { status: "disabled" } }];
+    start();
+    await settle();
+    expect(claims()).toEqual({
+      [`${PREFIX}open`]: "2026-10-02",
+      [`${PREFIX}quiet`]: "2026-10-03",
+    });
+  });
+
+  test("a screen reply that lands after disable() stores no screen name", async () => {
+    const reporter = start();
+    await settle();
+    statuses = ["held"];
+    reporter.reportScreen("A");
+    reporter.disable();
+    release(202);
+    await settle();
+    expect(`${PREFIX}screen.A` in claims()).toBe(false);
+    expect(sent).toHaveLength(2);
+  });
+
   test("an app-open answered after cleanup stays claimed for the next page", async () => {
     statuses = ["held"];
     start().stop();
