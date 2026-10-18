@@ -180,10 +180,14 @@ export function startAppOpenedReporting({
     if (stopped) return;
     const failed = !response || (response.status >= 500 && response.status < 600);
     if (response && !failed) {
-      // Claims keep the sending date, so a reply landing after midnight never sets today's gate.
+      // Claims keep the sending date; disabled receipts also stop the current page.
       const claim = receiptClaim(response, data);
       if (claim) claims.add(`${prefix}${claim}`, sending);
       if (key !== undefined && claim !== "quiet") claims.add(key, sending);
+      if (claim === "quiet") {
+        gate = "disabled";
+        disabled();
+      }
     }
     rollover();
     if (sending !== day) {

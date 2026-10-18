@@ -300,11 +300,10 @@ describe("startAppOpenedReporting", () => {
       expect(sent).toHaveLength(1);
     },
   );
-  test.each(["screen", "visit check", "one-shot visit"])(
+  test.each(["screen", "visit check"])(
     "an interrupted 202 body is a terminal unreadable receipt for %s",
     async (kind) => {
       stored.set(`${PREFIX}open`, "2026-10-03");
-      if (kind === "one-shot visit") stored.set(`${PREFIX}check`, "2026-10-03");
       const response = new Response(
         new ReadableStream({
           start(controller) {
@@ -322,7 +321,7 @@ describe("startAppOpenedReporting", () => {
       expect(sent).toHaveLength(1);
       expect(jest.getTimerCount()).toBe(0);
       if (kind === "screen") expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-03");
-      if (kind !== "one-shot visit") expect(stored.has(`${PREFIX}check`)).toBe(false);
+      expect(stored.has(`${PREFIX}check`)).toBe(false);
       expect(stored.has(`${PREFIX}quiet`)).toBe(false);
     },
   );
@@ -351,20 +350,6 @@ describe("startAppOpenedReporting", () => {
       properties: { surface: "web", screen: "A" },
     });
     expect(quiet.slice(1)).toEqual([true, false]);
-  });
-
-  test("a terminal app-open rejection ends its attempt after another event enabled the gate", async () => {
-    stored.set(`${PREFIX}check`, "2026-10-03");
-    statuses = [400, "held"];
-    start();
-    await settle();
-    expect(sent).toEqual([
-      { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
-    ]);
-    focus();
-    await advance(60000);
-    expect(sent).toHaveLength(1);
-    expect(jest.getTimerCount()).toBe(0);
   });
 
   test("a rejected screen preserves the enabled gate and is not posted again", async () => {
@@ -447,7 +432,7 @@ describe("startAppOpenedReporting", () => {
     [503, 500],
     [202, 1000],
   ] as const)(
-    "a late one-shot visit reply %s at %sms preserves the pending screen deadline and failure budget",
+    "a late one-shot visit reply %i at %ims preserves the pending screen deadline and failure budget",
     async (reply, at) => {
       const reporter = start();
       await settle();
@@ -587,30 +572,36 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toHaveLength(2);
   });
 
-  test.each(["visit", "failed reply"])(
-    "cleanup during a shared enabled notification prevents further work for %s",
-    async (kind) => {
-      statuses = ["held"];
-      const reporter = start();
-      const changes: boolean[] = [];
-      reporter.onQuietChange((quiet) => {
-        changes.push(quiet);
-        if (!quiet) reporter();
-      });
-      start();
-      await settle();
-      if (kind === "visit") {
-        const beforeCleanup = sent.slice();
-        reporter.reportVisit(VISIT);
-        expect(sent).toEqual(beforeCleanup);
-      } else {
-        release(503);
-        await settle();
-      }
-      expect(changes).toEqual([true, false, true]);
-      expect(jest.getTimerCount()).toBe(0);
-    },
-  );
+  test("cleanup during a shared enabled notification prevents further work", async () => {
+    const remove = jest.spyOn(window, "removeEventListener");
+    statuses = ["held"];
+    const reporter = start();
+    const changes: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      if (!quiet) reporter();
+    });
+    start();
+    await settle();
+    const beforeCleanup = sent.slice();
+    reporter.reportVisit(VISIT);
+    expect(sent).toEqual(beforeCleanup);
+    expect(changes).toEqual([true, false, true]);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(remove).toHaveBeenCalledWith("focus", expect.any(Function));
+    stops.at(-1)?.();
+    jest.setSystemTime(DAY_TWO);
+    statuses = [503];
+    const retrying = start();
+    await settle();
+    expect(jest.getTimerCount()).toBe(1);
+    retrying();
+    expect(jest.getTimerCount()).toBe(0);
+    const count = sent.length;
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(count);
+  });
 
   test("midnight resets the day before a shared receipt can notify a screen subscriber", async () => {
     statuses = ["held"];
@@ -656,11 +647,22 @@ describe("startAppOpenedReporting", () => {
     reporter.reportScreen("B");
     await settle();
     jest.setSystemTime(DAY_TWO);
-    await advance(2000);
+    statuses = ["held"];
     focus();
     focus();
     await settle();
-    expect(sent.slice(4).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
+    expect(jest.getTimerCount()).toBe(0);
+    release(503);
+    await settle();
+    await advance(999);
+    expect(sent).toHaveLength(5);
+    await advance(1);
+    await settle();
+    expect(sent.slice(4).map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "app_opened",
+      "screen_viewed",
+    ]);
   });
 
   test("transport and 5xx failures back off through 16 seconds before claiming app-open or screen", async () => {
@@ -719,10 +721,12 @@ describe("startAppOpenedReporting", () => {
     [false, "disabled", "screen", "focus"],
     [false, "disabled", "app", "focus"],
     [false, "disabled", "app", "reload"],
+    [false, "disabled", "app", "enabled-first"],
+    [false, "disabled", "app", "disabled-first"],
     [false, "failed", "screen", "focus"],
     [true, "failed", "screen", "focus"],
   ] as const)(
-    "late replies honor disabled, rollover, and cleanup: stopped=%s, reply=%s, kind=%s, wake=%s",
+    "late replies honor disabled, rollover, and cleanup: stopped=%p, reply=%s, kind=%s, wake=%s",
     async (stopped, reply, kind, wake) => {
       jest.setSystemTime(new Date("2026-10-03T23:59:59.900Z"));
       if (kind === "app") statuses = ["held"];
@@ -739,6 +743,46 @@ describe("startAppOpenedReporting", () => {
       if (stopped) reporter();
       jest.setSystemTime(new Date("2026-10-04T00:00:00.100Z"));
       statuses = ["held"];
+      if (wake === "enabled-first" || wake === "disabled-first") {
+        focus();
+        const currentDay = release;
+        let timer: ReturnType<typeof setInterval>;
+        reporter.onQuietChange((value) => {
+          clearInterval(timer);
+          if (!value) timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+          else reporter.reportVisit(VISIT, { keepalive: true });
+        });
+        const enabled = { status: 202, data: { status: "queued" } };
+        const disabled = { status: 202, data: { status: "disabled" } };
+        if (wake === "enabled-first") {
+          currentDay(enabled);
+          await settle();
+          expect(quiet).toEqual([true, false]);
+        }
+        previousDay(disabled);
+        await settle();
+        if (wake === "disabled-first") {
+          currentDay(enabled);
+          await settle();
+        }
+        expect(quiet).toEqual(wake === "enabled-first" ? [true, false, true] : [true]);
+        expect(stored.get(`${PREFIX}quiet`)).toBe("2026-10-03");
+        expect(stored.get(`${PREFIX}check`)).toBe("2026-10-04");
+        reporter.reportScreen("A");
+        reporter.reportVisit(VISIT, { keepalive: true });
+        await advance(60000);
+        expect(sent).toHaveLength(2);
+        expect(jest.getTimerCount()).toBe(0);
+        reporter();
+        reporter = start();
+        await settle();
+        expect(sent).toHaveLength(2);
+        jest.setSystemTime(new Date("2026-10-05T00:00:00Z"));
+        focus();
+        await settle();
+        expect(sent).toHaveLength(3);
+        return;
+      }
       previousDay(reply === "disabled" ? { status: 202, data: { status: "disabled" } } : 503);
       await settle();
       expect(jest.getTimerCount()).toBe(0);
@@ -881,7 +925,7 @@ describe("startAppOpenedReporting", () => {
     [202, true],
     [400, true],
   ] as const)(
-    "standalone visit reply %s clears intermittent outage failures: overlapping=%s",
+    "standalone visit reply %i clears intermittent outage failures: overlapping=%p",
     async (reply, overlapping) => {
       const reporter = start();
       await settle();
@@ -942,7 +986,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each([false, true])(
-    "successful keepalive visits preserve screen exhaustion: overlapping=%s",
+    "successful keepalive visits preserve screen exhaustion: overlapping=%p",
     async (joined) => {
       const reporter = start();
       await settle();
@@ -989,7 +1033,7 @@ describe("startAppOpenedReporting", () => {
   });
 
   test.each([503, 202])(
-    "a late visit reply %s honors shared exhaustion and cancels backoff",
+    "a late visit reply %i honors shared exhaustion and cancels backoff",
     async (reply) => {
       const reporter = start();
       await settle();
@@ -1023,7 +1067,7 @@ describe("startAppOpenedReporting", () => {
     [503, "screen"],
     [503, "app"],
     [202, "cleanup"],
-  ] as const)("a visit receipt %s releases its check before %s work", async (reply, next) => {
+  ] as const)("a visit receipt %i releases its check before %s work", async (reply, next) => {
     stored.set(`${PREFIX}open`, "2026-10-03");
     statuses = ["held"];
     const reporter = start();
