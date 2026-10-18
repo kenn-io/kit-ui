@@ -370,16 +370,17 @@ Before the first receipt, up to six visits wait in memory with their original
 properties and `keepalive`; later arrivals are dropped. Unloading the page
 before the first receipt can lose these visits, including keepalive requests.
 An enabled receipt releases them. Disable, exhaustion, cleanup, or rollover
-discards them. Start visit timers after `onQuietChange(false)`. Admitted enabled visits send
-immediately, even during a pending screen or its backoff. These one-shot visits
-never retry, and their replies leave the daily failure count and retry deadline
-unchanged. A visit serving as the receipt check
+discards them. Start visit timers after `onQuietChange(false)`. Enabled visits send
+immediately during a pending screen request, but wait in the same six-slot queue
+while backoff is pending. These one-shot visits never retry. Their transport and
+HTTP 5xx failures count toward the shared six-failure limit. Replies during
+backoff retain its existing deadline unless exhaustion cancels it, and successful
+or terminal visit replies leave its failure count unchanged. A visit serving as the receipt check
 retains its event and options through retries and is delivered once accepted.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4,
 8, and 16 seconds. Six consecutive failures stop reporting and pause trackers
-until reload or the next UTC day. Exhaustion schedules no timer. Rejected
-one-shot visits leave this retry limit intact. A disabled receipt cancels
+until reload or the next UTC day. Exhaustion cancels pending backoff. A disabled receipt cancels
 retries and discards pending visits.
 
 `onQuietChange` immediately supplies the current state and returns an

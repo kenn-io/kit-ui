@@ -168,20 +168,19 @@ export function startAppOpenedReporting({
     if (checking) daily = false;
     if (disabled()) return;
     if (!response || (response.status >= 500 && response.status < 600)) {
-      if (!checking) {
-        pump();
-        return;
+      if (++failures < 6) {
+        if (!retry)
+          retry = setTimeout(
+            () => {
+              retry = undefined;
+              pump();
+            },
+            1000 * 2 ** (failures - 1),
+          );
+      } else {
+        cancelRetry();
+        visits.length = 0;
       }
-      cancelRetry();
-      if (++failures < 6)
-        retry = setTimeout(
-          () => {
-            retry = undefined;
-            pump();
-          },
-          1000 * 2 ** (failures - 1),
-        );
-      else visits.length = 0;
       notify();
       return;
     }
@@ -192,7 +191,7 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if (checking && failures < 6) failures = 0;
+    if (failures < 6 && (checking || !retry)) failures = 0;
     if (checking && key === undefined) {
       checkingVisit = false;
       visits.shift();
@@ -213,7 +212,7 @@ export function startAppOpenedReporting({
   const pump = () => {
     rollover();
     if (stopped || disabled() || failures >= 6) return;
-    if (gate === "enabled" && !checkingVisit) {
+    if (gate === "enabled" && !checkingVisit && !retry) {
       while (visits.length && failures < 6) {
         const visit = visits.shift()!;
         void send(visit.event, undefined, visit.options);
@@ -242,7 +241,7 @@ export function startAppOpenedReporting({
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
     if (stopped || disabled() || failures >= 6) return;
-    if (visit && gate === "enabled") void send(visit, undefined, options);
+    if (visit && gate === "enabled" && !retry) void send(visit, undefined, options);
     else {
       if (visit && visits.length < 6) visits.push({ event: visit, options });
       pump();

@@ -250,20 +250,23 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each([202, 503, 400])(
-    "a one-shot visit reply %s leaves the screen deadline and failure count unchanged",
+    "a visit queued during screen backoff waits for its deadline (reply: %s)",
     async (reply) => {
       const reporter = start();
       await settle();
-      statuses = [503, reply, 503, 202];
+      statuses = [503, "held", 503, 202];
       reporter.reportScreen("A");
       await settle();
       await advance(500);
       reporter.reportVisit(VISIT, { keepalive: true });
       await settle();
       await advance(499);
-      expect(sent).toHaveLength(3);
+      expect(sent).toHaveLength(2);
       await advance(1);
       expect(sent).toHaveLength(4);
+      expect(sent[2]).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+      release(reply);
+      await settle();
       await advance(1999);
       expect(sent).toHaveLength(4);
       await advance(1);
@@ -272,6 +275,30 @@ describe("startAppOpenedReporting", () => {
         event: "screen_viewed",
         properties: { surface: "web", screen: "A" },
       });
+    },
+  );
+
+  test.each([202, 400, 503])(
+    "a late one-shot visit reply %s retains an existing screen deadline",
+    async (reply) => {
+      const reporter = start();
+      await settle();
+      statuses = ["held", 503, 503, 202];
+      reporter.reportVisit(VISIT);
+      reporter.reportScreen("A");
+      await settle();
+      await advance(500);
+      release(reply);
+      await settle();
+      expect(jest.getTimerCount()).toBe(1);
+      await advance(499);
+      expect(sent).toHaveLength(3);
+      await advance(1);
+      expect(sent).toHaveLength(4);
+      await advance(reply === 503 ? 3999 : 1999);
+      expect(sent).toHaveLength(4);
+      await advance(1);
+      expect(sent).toHaveLength(5);
     },
   );
 
@@ -646,23 +673,85 @@ describe("startAppOpenedReporting", () => {
     expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-04");
   });
 
-  test.each([503, "held"] as const)(
-    "enabled visit %s replies leave the retry budget and timers untouched",
+  test.each([503, "offline"] as const)(
+    "enabled visits stop and signal quiet after six %s failures",
     async (failure) => {
       const reporter = start();
       await settle();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
       statuses = Array(6).fill(failure);
+      reporter.reportVisit(VISIT);
+      await settle();
       for (let i = 0; i < 6; i++) {
-        reporter.reportVisit(VISIT);
+        reporter.reportVisit({ event: "action", properties: { count: i } }, { keepalive: true });
         await settle();
-        expect(jest.getTimerCount()).toBe(0);
+        expect(sent).toHaveLength(i + 2);
+        if (i === 5) break;
+        const delay = [1000, 2000, 4000, 8000, 16000][i];
+        await advance(delay - 1);
+        expect(sent).toHaveLength(i + 2);
+        await advance(1);
+        expect(sent.at(-1)).toEqual({
+          route: ROUTE,
+          event: { event: "action", properties: { count: i } },
+          options: { keepalive: true },
+        });
       }
       reporter.reportVisit(VISIT, { keepalive: true });
+      reporter.reportScreen("A");
+      focus();
+      await advance(60000);
+      expect(sent).toHaveLength(7);
+      expect(jest.getTimerCount()).toBe(0);
+      expect(quiet).toEqual([false, true]);
+      jest.setSystemTime(DAY_TWO);
+      focus();
       await settle();
-      expect(sent).toHaveLength(8);
-      expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+      expect(sent.slice(7).map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+      ]);
+      expect(quiet).toEqual([false, true, false]);
     },
   );
+
+  test("unsettled enabled visits leave timers untouched", async () => {
+    const reporter = start();
+    await settle();
+    statuses = Array(6).fill("held");
+    for (let i = 0; i < 6; i++) {
+      reporter.reportVisit(VISIT);
+      await settle();
+      expect(jest.getTimerCount()).toBe(0);
+    }
+    reporter.reportVisit(VISIT, { keepalive: true });
+    await settle();
+    expect(sent).toHaveLength(8);
+    expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+  });
+
+  test("a late visit failure exhausts the shared cap and cancels existing backoff", async () => {
+    const reporter = start();
+    await settle();
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    statuses = ["held", ...Array(5).fill(503)];
+    reporter.reportVisit(VISIT);
+    reporter.reportScreen("A");
+    await settle();
+    for (const delay of [1000, 2000, 4000, 8000]) await advance(delay);
+    expect(sent).toHaveLength(7);
+    expect(jest.getTimerCount()).toBe(1);
+    release(503);
+    await settle();
+    expect(jest.getTimerCount()).toBe(0);
+    expect(quiet).toEqual([false, true]);
+    reporter.reportVisit(VISIT);
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(7);
+  });
 
   test.each([false, true])(
     "the earliest pending visit checks a legacy app date without an extra app-open (claimed screen: %s)",
