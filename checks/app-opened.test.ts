@@ -111,22 +111,7 @@ describe("startAppOpenedReporting", () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
-  test("a same-day wall-clock rollback preserves the one-second visit cooldown", async () => {
-    const reporter = start();
-    await settle();
-    statuses = [503];
-    reporter.reportVisit(VISIT);
-    await settle();
-    jest.setSystemTime(new Date("2026-10-03T11:00:00Z"));
-    await advance(999);
-    reporter.reportVisit(VISIT);
-    expect(sent).toHaveLength(2);
-    await advance(1);
-    reporter.reportVisit(VISIT);
-    expect(sent.slice(2)).toEqual([{ route: ROUTE, event: VISIT }]);
-  });
-
-  test.each(["history", "observed"])(
+  test.each(["history", "observed", "saturated", "full"])(
     "%s write recovery keeps unsaved claims until storage acknowledges them",
     async (failure) => {
       g.localStorage = {
@@ -140,6 +125,14 @@ describe("startAppOpenedReporting", () => {
       const reporter = start();
       reporter.reportScreen("A");
       await settle();
+      if (failure === "full") {
+        for (let date = -31; date < 3; date++) {
+          jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+          reporter.reportScreen("A");
+          await settle();
+        }
+        jest.setSystemTime(DAY_ONE);
+      }
       g.localStorage = {
         getItem: (key: string) => stored.get(key) ?? null,
         setItem: (key: string, value: string) => void stored.set(key, value),
@@ -151,12 +144,16 @@ describe("startAppOpenedReporting", () => {
         other();
       }
       reporter.reportScreen("A");
-      expect(sent).toHaveLength(failure === "observed" ? 4 : 2);
+      expect(sent).toHaveLength(failure === "observed" ? 4 : failure === "full" ? 70 : 2);
       if (failure === "history") {
         jest.setSystemTime(DAY_TWO);
         reporter.reportScreen("A");
         await settle();
-        expect(stored.get(`${PREFIX}open`)).toBe("2026-10-03,2026-10-04");
+        expect(stored.get(`${PREFIX}open`)).toBe("2026-10-04");
+        jest.setSystemTime(DAY_ONE);
+        reporter.reportScreen("A");
+        await settle();
+        expect(sent).toHaveLength(4);
       }
       for (let date = 4; date <= 38; date++) {
         jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
@@ -165,11 +162,53 @@ describe("startAppOpenedReporting", () => {
         await settle();
         other();
       }
+      if (failure === "saturated" || failure === "full") {
+        const snapshot = [...stored.entries()];
+        const count = sent.length;
+        for (let date = 4; date <= 38; date++) {
+          jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+          reporter.reportScreen("A");
+          await settle();
+          expect(sent).toHaveLength(count);
+          expect([...stored.entries()]).toEqual(snapshot);
+        }
+        jest.setSystemTime(DAY_ONE);
+        reporter.reportScreen("A");
+        await settle();
+        expect(sent).toHaveLength(count);
+        if (failure === "full") {
+          g.localStorage = {
+            getItem: (key: string) => stored.get(key) ?? null,
+            setItem: () => {
+              throw new Error("full");
+            },
+          };
+          jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
+          reporter.reportScreen("A");
+          await settle();
+          expect([...stored.entries()]).toEqual(snapshot);
+          jest.setSystemTime(DAY_TWO);
+          reporter.reportScreen("A");
+          await settle();
+          expect(sent).toHaveLength(count + 2);
+          return;
+        }
+      }
       jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
       reporter.reportScreen("A");
       await settle();
       for (const key of [`${PREFIX}open`, `${PREFIX}screen.A`, `${PREFIX}check`]) {
         expect(stored.get(key)!.split(",")[0]).toBe("2026-10-05");
+        expect(stored.get(key)!.split(",")).toHaveLength(35);
+      }
+      if (failure === "saturated") {
+        reporter();
+        jest.setSystemTime(new Date("2026-10-05T12:00:00Z"));
+        const count = sent.length;
+        const reloaded = start();
+        reloaded.reportScreen("A");
+        await settle();
+        expect(sent).toHaveLength(count);
       }
     },
   );
@@ -225,10 +264,9 @@ describe("startAppOpenedReporting", () => {
       jest.setSystemTime(DAY_ONE);
       focus();
       await settle();
-      expect(sent.slice(count).map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        "screen_viewed",
-      ]);
+      expect(sent.slice(count).map(({ event }) => event.event)).toEqual(
+        failure === "write" ? ["screen_viewed"] : ["app_opened", "screen_viewed"],
+      );
     },
   );
 
@@ -883,24 +921,34 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test.each(["reload", "rollover"])("%s clears an active visit cooldown", async (reset) => {
-    jest.setSystemTime(new Date("2026-10-03T23:59:59.500Z"));
-    let reporter = start();
-    await settle();
-    statuses = [503];
-    reporter.reportVisit(VISIT);
-    await settle();
-    reporter.reportVisit(VISIT);
-    expect(sent).toHaveLength(2);
-    if (reset === "reload") {
-      reporter();
-      reporter = start();
-    } else jest.setSystemTime(new Date("2026-10-04T00:00:00Z"));
-    reporter.reportVisit(VISIT);
-    expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
-    await settle();
-    expect(jest.getTimerCount()).toBe(0);
-  });
+  test.each(["reload", "rollover", "rollback"])(
+    "%s handles an active visit cooldown",
+    async (reset) => {
+      jest.setSystemTime(new Date("2026-10-03T23:59:59.500Z"));
+      let reporter = start();
+      await settle();
+      statuses = [503];
+      reporter.reportVisit(VISIT);
+      await settle();
+      reporter.reportVisit(VISIT);
+      expect(sent).toHaveLength(2);
+      if (reset === "reload") {
+        reporter();
+        reporter = start();
+      } else if (reset === "rollover") jest.setSystemTime(new Date("2026-10-04T00:00:00Z"));
+      else {
+        jest.setSystemTime(new Date("2026-10-03T11:00:00Z"));
+        await advance(999);
+        reporter.reportVisit(VISIT);
+        expect(sent).toHaveLength(2);
+        return;
+      }
+      reporter.reportVisit(VISIT);
+      expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
+      await settle();
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
 
   test.each([false, true])(
     "successful keepalive visits preserve screen exhaustion: overlapping=%s",
@@ -998,9 +1046,11 @@ describe("startAppOpenedReporting", () => {
       if (next === "app") focus();
       else reporter.reportScreen("A");
       await settle();
-      await advance(999);
-      expect(sent).toHaveLength(1);
-      await advance(1);
+      if (next === "app") {
+        await advance(999);
+        expect(sent).toHaveLength(1);
+        await advance(1);
+      } else await advance(1000);
       await advance(1999);
       expect(sent).toHaveLength(2);
       await advance(1);

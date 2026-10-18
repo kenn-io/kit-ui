@@ -61,21 +61,20 @@ function claimHistory(storageKey: string) {
       const saved = localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? [];
       const unsaved = (pending.get(key) ?? []).filter((value) => !saved.includes(value));
       pending.set(key, unsaved);
-      dates = [...new Set([...saved, ...unsaved])];
+      dates = saved;
     } catch {
       /* Page memory survives blocked storage. */
     }
     dates = dates.slice(-35);
     memory.set(key, dates);
-    return dates.includes(date);
+    return dates.includes(date) || (pending.get(key) ?? []).includes(date);
   };
   const add = (key: string, date: string) => {
     if (has(key, date)) return;
     const dates = [...(memory.get(key) ?? []), date].slice(-35);
-    memory.set(key, dates);
     try {
       localStorage.setItem(listKey(key), dates.join(","));
-      pending.delete(key);
+      memory.set(key, dates);
     } catch {
       pending.set(key, [...(pending.get(key) ?? []), date].slice(-35));
       return;

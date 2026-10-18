@@ -344,7 +344,9 @@ helper can send one extra `app_opened` on upgrade day, and each tab still runnin
 the earlier helper can send one extra per day until it reloads. `${storageKey}.browser.v1.`
 prefixes separate `open`, `quiet`, `check`, and
 `screen.${encodeURIComponent(screen)}` claim keys. Distinct screen keys preserve
-claims across tabs. Blocked storage and failed writes use page memory. Each of
+claims across tabs. Blocked storage and failed writes use page memory. Failed
+writes retain up to 35 additional dates per key for that page, even after later
+writes succeed; reloading loses those unsaved claims. Each of
 these keys keeps the last 35 recorded UTC dates as a comma-separated list, and
 ignores entries that aren't dates. A future clock setting doesn't suppress
 reports or enable trackers after correction, and returning to a date still in
@@ -353,7 +355,7 @@ When storage is readable, its evictions override cached dates unless their write
 
 A stored app-open date never sends `app_opened` again that day, because it
 is written only after the daemon answered, and a daemon may count each
-accepted `app_opened`. That includes dates written by the earlier helper.
+accepted `app_opened`.
 Without today's receipt, an unclaimed screen checks; a visit checks with its
 original properties and options when no check is in flight or backing off. If
 neither can check, the page stays quiet, even with an `onQuietChange` subscriber, until a
