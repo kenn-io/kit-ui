@@ -541,34 +541,17 @@ describe("startAppOpenedReporting", () => {
     expect(changes).toEqual([true, false]);
   });
 
-  test("six in-flight slots reset at rollover and late replies preserve current reservations", async () => {
+  test("enabled visits send while six earlier posts remain unresolved", async () => {
+    stored.set(STORAGE_KEY, "2026-10-03");
+    stored.set(`${PREFIX}check`, "2026-10-03");
+    statuses = Array(7).fill("held");
     const reporter = start();
-    await settle();
-    statuses = Array(6).fill("held");
-    for (let i = 0; i < 5; i++) reporter.reportVisit(VISIT);
-    const boundaryReply = release;
-    reporter.reportVisit(VISIT);
-    const oldReply = release;
-    for (let i = 0; i < 14; i++) reporter.reportVisit(VISIT);
-    expect(sent).toHaveLength(7);
-    jest.setSystemTime(DAY_TWO);
-    boundaryReply(202);
-    await settle();
-    focus();
-    await settle();
-    expect(sent).toHaveLength(8);
-    statuses = Array(6).fill("held");
     for (let i = 0; i < 6; i++) reporter.reportVisit(VISIT);
-    oldReply(202);
-    await settle();
-    reporter.reportVisit(VISIT);
-    expect(sent).toHaveLength(14);
-    release(202);
-    await settle();
-    statuses = Array(20).fill(503);
-    for (let i = 0; i < 20; i++) reporter.reportVisit(VISIT);
-    await settle();
-    expect(sent).toHaveLength(15);
+    expect(sent).toHaveLength(6);
+    reporter.reportVisit(VISIT, { keepalive: true });
+    expect(sent).toHaveLength(7);
+    expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+    expect(jest.getTimerCount()).toBe(0);
   });
 
   test.each(["screen", "visit"])(

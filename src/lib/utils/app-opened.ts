@@ -67,8 +67,7 @@ export function startAppOpenedReporting({
   let stopped = false,
     daily = false,
     checkingVisit = false,
-    failures = 0,
-    inFlight = 0;
+    failures = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
     lastQuiet = true;
@@ -127,7 +126,7 @@ export function startAppOpenedReporting({
     claims.clear();
     gate = "unknown";
     daily = checkingVisit = false;
-    failures = inFlight = 0;
+    failures = 0;
     cancelRetry();
     screens.clear();
     visits.length = 0;
@@ -137,7 +136,6 @@ export function startAppOpenedReporting({
   const send = async (event: VisitEvent, key?: string, options?: VisitOptions) => {
     const sending = day,
       checking = key !== undefined || gate === "unknown";
-    inFlight++;
     if (checking) {
       daily = true;
       checkingVisit = key === undefined;
@@ -161,7 +159,6 @@ export function startAppOpenedReporting({
       pump();
       return;
     }
-    inFlight--;
     if (checking) daily = checkingVisit = false;
     if (disabled()) return;
     if (!response || (response.status >= 500 && response.status < 600)) {
@@ -204,14 +201,14 @@ export function startAppOpenedReporting({
   };
   const pump = () => {
     rollover();
-    if (stopped || disabled() || failures + inFlight >= 6) return;
+    if (stopped || disabled() || failures >= 6) return;
     if (gate === "enabled" && !checkingVisit) {
-      while (visits.length && failures + inFlight < 6) {
+      while (visits.length && failures < 6) {
         const visit = visits.shift()!;
         void send(visit.event, undefined, visit.options);
       }
     }
-    if (retry || daily || failures + inFlight >= 6) return;
+    if (retry || daily || failures >= 6) return;
     const screen = [...screens].find(
       (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
     );
@@ -229,7 +226,7 @@ export function startAppOpenedReporting({
   };
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
-    if (stopped || disabled() || failures + inFlight >= 6) return;
+    if (stopped || disabled() || failures >= 6) return;
     if (visit && gate === "enabled") void send(visit, undefined, options);
     else {
       if (visit && visits.length < 6) visits.push({ event: visit, options });

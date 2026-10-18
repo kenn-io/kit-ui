@@ -368,8 +368,8 @@ available for another screen or waiting visit to check.
 Before the first receipt, up to six visits wait in memory with their original
 properties and `keepalive`; later arrivals are dropped. An enabled receipt
 releases them. Disable, exhaustion, cleanup, or rollover discards them. Start
-visit timers after `onQuietChange(false)`. Enabled visits send immediately,
-even during a pending screen or its backoff. Their failures never retry or
+visit timers after `onQuietChange(false)`. Admitted enabled visits send
+immediately, even during a pending screen or its backoff. Their failures never retry or
 change a pending daily retry's delay. A visit serving as the receipt check
 retains its event and options through retries and is delivered once accepted.
 
