@@ -177,7 +177,6 @@ export function startAppOpenedReporting({
       response = undefined;
       /* Receipt checks retry transport failures. */
     }
-    rollover();
     if (stopped) return;
     const failed = !response || (response.status >= 500 && response.status < 600);
     if (response && !failed) {
@@ -186,6 +185,7 @@ export function startAppOpenedReporting({
       if (claim) claims.add(`${prefix}${claim}`, sending);
       if (key !== undefined && claim !== "quiet") claims.add(key, sending);
     }
+    rollover();
     if (sending !== day) {
       pump();
       return;

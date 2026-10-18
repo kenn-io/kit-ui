@@ -337,7 +337,10 @@ The callable reporter keeps existing cleanup call sites working. It sends
 after rollover. Use a stable, finite set of screen names, such as route names
 without record IDs, query strings, or timestamps. Each name creates a durable
 storage key. A request answered on a later UTC day records its claim for the
-day it was sent, then starts that day's check.
+day it was sent, then starts that day's check unless the receipt says `disabled`.
+A disabled receipt stops the current tab until a later UTC day's focus or load,
+even when the reply arrives after midnight. The receipt records only its sending
+date; a reload after midnight can check permission for the new day.
 
 Choose a `storageKey` unique to the product or installation and surface. The
 helper can send one extra `app_opened` on upgrade day, and each tab still running

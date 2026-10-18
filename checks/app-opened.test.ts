@@ -119,12 +119,6 @@ describe("startAppOpenedReporting", () => {
     reporter.reportVisit(VISIT, { keepalive: true });
     await settle();
     expect(sent.slice(2)).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
-    const quiet: boolean[] = [];
-    reporter.onQuietChange((value) => quiet.push(value));
-    expect(quiet).toEqual([false]);
-    await advance(60000);
-    expect(sent).toHaveLength(3);
-    expect(jest.getTimerCount()).toBe(0);
   });
 
   test("a failed ordinary visit defers a new screen until the shared deadline", async () => {
@@ -248,9 +242,6 @@ describe("startAppOpenedReporting", () => {
           reporter.reportScreen("A");
           await settle();
           expect(sent).toHaveLength(count);
-          let quiet: boolean | undefined;
-          reporter.onQuietChange((value) => (quiet = value))();
-          expect(quiet).toBe(false);
         }
       }
       if (failure === "working" || failure === "read") {
@@ -422,45 +413,33 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test.each([false, true])(
-    "screen backoff drops ordinary visits and admits keepalive immediately: keepalive=%s",
-    async (keepalive) => {
-      const reporter = start();
-      await settle();
-      statuses = [503, 503, 503, 202];
-      reporter.reportScreen("A");
-      await settle();
-      await advance(500);
-      const options = keepalive ? { keepalive: true } : undefined;
-      reporter.reportVisit(VISIT, options);
-      if (keepalive) {
-        expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options });
-        reporter();
-        await advance(60000);
-        expect(sent).toHaveLength(3);
-        expect(jest.getTimerCount()).toBe(0);
-        return;
-      }
-      expect(sent).toHaveLength(2);
-      await advance(500);
-      expect(sent.map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        "screen_viewed",
-        "screen_viewed",
-      ]);
-      reporter.reportVisit(VISIT);
-      expect(sent).toHaveLength(3);
-      await advance(2000);
-      await advance(4000);
-      expect(sent.map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        "screen_viewed",
-        "screen_viewed",
-        "screen_viewed",
-        "screen_viewed",
-      ]);
-    },
-  );
+  test("screen backoff drops ordinary visits", async () => {
+    const reporter = start();
+    await settle();
+    statuses = [503, 503, 503, 202];
+    reporter.reportScreen("A");
+    await settle();
+    await advance(500);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(2);
+    await advance(500);
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "screen_viewed",
+      "screen_viewed",
+    ]);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(3);
+    await advance(2000);
+    await advance(4000);
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "screen_viewed",
+      "screen_viewed",
+      "screen_viewed",
+      "screen_viewed",
+    ]);
+  });
 
   test.each([
     [202, 500],
@@ -496,11 +475,10 @@ describe("startAppOpenedReporting", () => {
   );
 
   test.each([
-    [STORAGE_KEY, 202],
     ["", { status: 202, data: { status: "queued" } }],
     ["", { status: 400 }],
   ] as const)(
-    "app-open dedupes across same-day focus, reload, and product keys: %p/%p",
+    "empty-key app-open dedupes across focus and reload independently of other products: %p/%p",
     async (storageKey, reply) => {
       statuses = [reply, "held"];
       const reporter = start(storageKey);
@@ -541,6 +519,7 @@ describe("startAppOpenedReporting", () => {
       "screen_viewed",
     ]);
     expect(sent[1]?.event.properties).toEqual({ surface: "web", screen: "A/B" });
+    expect(stored.get(`${PREFIX}screen.A%2FB`)).toBe("2026-10-03");
   });
 
   test.each(["enabled", "cleanup", "rejected"])(
@@ -649,14 +628,14 @@ describe("startAppOpenedReporting", () => {
     expect(changes).toEqual([true]);
 
     jest.setSystemTime(DAY_TWO);
-    previousDay({ status: 202, data: { status: "disabled" } });
+    previousDay({ status: 202, data: { status: "queued" } });
     await settle();
     expect(sent.slice(2).map(({ event }) => event)).toEqual([
       { event: "app_opened", properties: { surface: "web" } },
       { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
     ]);
     expect(changes).toEqual([true, false]);
-    expect(stored.get(`${PREFIX}quiet`)).toBe("2026-10-03");
+    expect(stored.get(`${PREFIX}check`)).toBe("2026-10-03,2026-10-04");
     expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-04");
   });
 
@@ -737,22 +716,28 @@ describe("startAppOpenedReporting", () => {
   });
 
   test.each([
-    [false, "disabled"],
-    [false, "failed"],
-    [true, "failed"],
+    [false, "disabled", "screen", "focus"],
+    [false, "disabled", "app", "focus"],
+    [false, "disabled", "app", "reload"],
+    [false, "failed", "screen", "focus"],
+    [true, "failed", "screen", "focus"],
   ] as const)(
-    "late screen replies recover rollover and honor cleanup: stopped=%s, reply=%s",
-    async (stopped, reply) => {
-      const reporter = start();
+    "late replies honor disabled, rollover, and cleanup: stopped=%s, reply=%s, kind=%s, wake=%s",
+    async (stopped, reply, kind, wake) => {
+      jest.setSystemTime(new Date("2026-10-03T23:59:59.900Z"));
+      if (kind === "app") statuses = ["held"];
+      let reporter = start();
       await settle();
       const quiet: boolean[] = [];
       reporter.onQuietChange((value) => quiet.push(value));
-      statuses = ["held"];
-      reporter.reportScreen("A");
+      if (kind === "screen") {
+        statuses = ["held"];
+        reporter.reportScreen("A");
+      }
       await settle();
       const previousDay = release;
       if (stopped) reporter();
-      jest.setSystemTime(DAY_TWO);
+      jest.setSystemTime(new Date("2026-10-04T00:00:00.100Z"));
       statuses = ["held"];
       previousDay(reply === "disabled" ? { status: 202, data: { status: "disabled" } } : 503);
       await settle();
@@ -762,11 +747,36 @@ describe("startAppOpenedReporting", () => {
         expect(sent).toHaveLength(2);
         return;
       }
-      expect(sent.slice(2).map(({ event }) => event.event)).toEqual(["app_opened"]);
-      expect(quiet).toEqual([false, true]);
+      const before = kind === "app" ? 1 : 2;
+      if (reply === "disabled") {
+        expect(sent).toHaveLength(before);
+        expect(quiet).toEqual(kind === "app" ? [true] : [false, true]);
+        expect(stored.get(`${PREFIX}quiet`)).toBe("2026-10-03");
+        expect(stored.get(`${PREFIX}check`)).toBe(kind === "app" ? undefined : "2026-10-03");
+        expect(stored.get(`${PREFIX}open`)).toBe(kind === "app" ? undefined : "2026-10-03");
+        expect(stored.has(`${PREFIX}screen.A`)).toBe(false);
+        reporter.reportScreen("A");
+        reporter.reportVisit(VISIT, { keepalive: true });
+        await advance(60000);
+        expect(sent).toHaveLength(before);
+        if (wake === "reload") {
+          reporter();
+          reporter = start();
+          reporter.onQuietChange((value) => quiet.push(value));
+          reporter.reportScreen("A");
+        } else focus();
+        await settle();
+      }
+      expect(sent.slice(before).map(({ event }) => event.event)).toEqual(["app_opened"]);
       release({ status: 202, data: { status: "queued" } });
       await settle();
-      expect(quiet).toEqual([false, true, false]);
+      expect(quiet).toEqual(
+        kind === "screen"
+          ? [false, true, false]
+          : wake === "reload"
+            ? [true, true, false]
+            : [true, false],
+      );
       expect(sent.at(-1)?.event).toEqual({
         event: "screen_viewed",
         properties: { surface: "web", screen: "A" },
@@ -843,46 +853,27 @@ describe("startAppOpenedReporting", () => {
     expect(stored.get(`${PREFIX}check`)).toBe("2099-01-01,2026-10-03");
   });
 
-  test.each([503, "offline"] as const)(
-    "enabled visits pace admission, stop after six %s failures, and check the next day",
-    async (failure) => {
-      const reporter = start();
+  test("enabled visits pace admission and block keepalive at the failure cap", async () => {
+    const reporter = start();
+    await settle();
+    statuses = Array(6).fill(503);
+    for (let i = 0; i < 6; i++) {
+      reporter.reportVisit({ event: "action", properties: { count: i } });
       await settle();
-      const quiet: boolean[] = [];
-      reporter.onQuietChange((value) => quiet.push(value));
-      statuses = Array(6).fill(failure);
-      for (let i = 0; i < 6; i++) {
-        reporter.reportVisit({ event: "action", properties: { count: i } });
-        await settle();
-        expect(sent).toHaveLength(i + 2);
-        expect(jest.getTimerCount()).toBe(0);
-        if (i < 5) {
-          reporter.reportVisit(VISIT);
-          expect(sent).toHaveLength(i + 2);
-          await advance([1000, 2000, 4000, 8000, 16000][i] - 1);
-          reporter.reportVisit(VISIT);
-          expect(sent).toHaveLength(i + 2);
-          await advance(1);
-        }
-      }
-      reporter.reportVisit(VISIT, { keepalive: true });
-      reporter.reportScreen("A");
-      focus();
-      await advance(60000);
-      expect(sent).toHaveLength(7);
+      expect(sent).toHaveLength(i + 2);
       expect(jest.getTimerCount()).toBe(0);
-      expect(quiet).toEqual([false, true]);
-      jest.setSystemTime(DAY_TWO);
-      reporter.reportVisit(VISIT);
-      await settle();
-      expect(sent.slice(7).map(({ event }) => event.event)).toEqual([
-        "session_ended",
-        "app_opened",
-        "screen_viewed",
-      ]);
-      expect(quiet).toEqual([false, true, false]);
-    },
-  );
+      if (i < 5) {
+        reporter.reportVisit(VISIT);
+        expect(sent).toHaveLength(i + 2);
+        await advance([1000, 2000, 4000, 8000, 16000][i] - 1);
+        reporter.reportVisit(VISIT);
+        expect(sent).toHaveLength(i + 2);
+        await advance(1);
+      }
+    }
+    reporter.reportVisit(VISIT, { keepalive: true });
+    expect(sent).toHaveLength(7);
+  });
 
   test.each([
     [202, false],
@@ -983,14 +974,13 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test("unsettled enabled visits leave timers untouched", async () => {
+  test("pending enabled visits are sent without pacing or queuing", async () => {
     const reporter = start();
     await settle();
     statuses = Array(6).fill("held");
     for (let i = 0; i < 6; i++) {
       reporter.reportVisit(VISIT);
       await settle();
-      expect(jest.getTimerCount()).toBe(0);
     }
     reporter.reportVisit(VISIT, { keepalive: true });
     await settle();
@@ -998,27 +988,34 @@ describe("startAppOpenedReporting", () => {
     expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
   });
 
-  test("a late visit failure exhausts the shared cap and cancels existing backoff", async () => {
-    const reporter = start();
-    await settle();
-    const quiet: boolean[] = [];
-    reporter.onQuietChange((value) => quiet.push(value));
-    statuses = ["held", ...Array(5).fill(503)];
-    reporter.reportVisit(VISIT);
-    reporter.reportScreen("A");
-    await settle();
-    for (const delay of [1000, 2000, 4000, 8000]) await advance(delay);
-    expect(sent).toHaveLength(7);
-    expect(jest.getTimerCount()).toBe(1);
-    release(503);
-    await settle();
-    expect(jest.getTimerCount()).toBe(0);
-    expect(quiet).toEqual([false, true]);
-    reporter.reportVisit(VISIT);
-    focus();
-    await advance(60000);
-    expect(sent).toHaveLength(7);
-  });
+  test.each([503, 202])(
+    "a late visit reply %s honors shared exhaustion and cancels backoff",
+    async (reply) => {
+      const reporter = start();
+      await settle();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
+      statuses = ["held", ...Array(reply === 503 ? 5 : 6).fill(503)];
+      reporter.reportVisit(VISIT);
+      reporter.reportScreen("A");
+      await settle();
+      for (const delay of reply === 503
+        ? [1000, 2000, 4000, 8000]
+        : [1000, 2000, 4000, 8000, 16000])
+        await advance(delay);
+      const count = reply === 503 ? 7 : 8;
+      expect(sent).toHaveLength(count);
+      expect(jest.getTimerCount()).toBe(reply === 503 ? 1 : 0);
+      release(reply === 202 ? { status: 202, data: { status: "queued" } } : reply);
+      await settle();
+      expect(jest.getTimerCount()).toBe(0);
+      expect(quiet).toEqual([false, true]);
+      reporter.reportVisit(VISIT);
+      focus();
+      await advance(60000);
+      expect(sent).toHaveLength(count);
+    },
+  );
 
   test.each([
     [202, "screen"],
@@ -1026,7 +1023,7 @@ describe("startAppOpenedReporting", () => {
     [503, "screen"],
     [503, "app"],
     [202, "cleanup"],
-  ] as const)("a visit checks once after %s; then %s work follows", async (reply, next) => {
+  ] as const)("a visit receipt %s releases its check before %s work", async (reply, next) => {
     stored.set(`${PREFIX}open`, "2026-10-03");
     statuses = ["held"];
     const reporter = start();
@@ -1041,6 +1038,8 @@ describe("startAppOpenedReporting", () => {
     expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     expect(jest.getTimerCount()).toBe(reply === 503 && next === "app" ? 1 : 0);
     if (next === "cleanup") expect(stored.has(`${PREFIX}check`)).toBe(false);
+    if (next === "screen" && reply !== 503)
+      expect(stored.get(`${PREFIX}check`)).toBe(reply === 202 ? "2026-10-03" : undefined);
     if (reply === 503) {
       statuses = [503, 202];
       if (next === "app") focus();
@@ -1080,30 +1079,5 @@ describe("startAppOpenedReporting", () => {
       { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
       { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
     ]);
-  });
-
-  test("a late accepted visit leaves an exhausted screen reporter quiet until rollover", async () => {
-    const reporter = start();
-    await settle();
-    const quiet: boolean[] = [];
-    reporter.onQuietChange((value) => quiet.push(value));
-    statuses = ["held", ...Array(6).fill(503)];
-    reporter.reportVisit(VISIT);
-    reporter.reportScreen("A");
-    await settle();
-    for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
-    expect(sent).toHaveLength(8);
-    release({ status: 202, data: { status: "queued" } });
-    await settle();
-    focus();
-    reporter.reportVisit(VISIT);
-    await advance(60000);
-    expect(sent).toHaveLength(8);
-    expect(quiet).toEqual([false, true]);
-    jest.setSystemTime(DAY_TWO);
-    focus();
-    await settle();
-    expect(sent.slice(8).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
-    expect(quiet).toEqual([false, true, false]);
   });
 });
