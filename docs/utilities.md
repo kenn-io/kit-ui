@@ -340,8 +340,11 @@ storage key. A request answered on a later UTC day records its claim for the
 day it was sent, then starts that day's check.
 
 Choose a `storageKey` unique to the product or installation and surface. The
-original key keeps the latest app-open date, as the earlier helper wrote it, so
-tabs still running that helper see today's claim. `${storageKey}.browser.v1.`
+helper temporarily reads the original key and mirrors today's app-open date
+there for tabs still running the earlier helper. This dual read/write bridge expires in the first
+kit-ui change after a Forge release pinned past [kit-ui#107](https://github.com/kenn-io/kit-ui/pull/107)
+has been out for 7 days. Callers choose the key; the stored format is an
+implementation detail, with no permanent compatibility promise. `${storageKey}.browser.v1.`
 prefixes separate `open`, `quiet`, `check`, and
 `screen.${encodeURIComponent(screen)}` claim keys. Distinct screen keys preserve
 claims across tabs. Blocked storage and failed writes use page memory. Each of
@@ -391,7 +394,7 @@ gate available for another screen or visit to check.
 
 While enabled, ordinary visits send immediately outside the cooldown after a
 transport or HTTP 5xx failure. Calls during that 1, 2, 4, 8, or 16-second
-cooldown are dropped. Visits with `{ keepalive: true }` bypass the cooldown
+cooldown are dropped. While enabled, visits with `{ keepalive: true }` bypass the cooldown
 and send immediately, including during screen backoff. When permission is
 unknown and no check is in flight or backing off, a visit makes
 the check itself and reaches `post` synchronously with its original options.

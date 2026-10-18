@@ -604,12 +604,16 @@ describe("startAppOpenedReporting", () => {
   });
   test("an app-open accepted after midnight stays claimed for its sending date", async () => {
     stored.set(STORAGE_KEY, "2026-10-02");
-    statuses = ["held"];
+    statuses = ["held", "held"];
     start();
     jest.setSystemTime(DAY_TWO);
     release({ status: 202, data: { status: "queued" } });
     await settle();
     expect(sent).toHaveLength(2);
+    expect(stored.get(STORAGE_KEY)).toBe("2026-10-02");
+    release({ status: 202, data: { status: "queued" } });
+    await settle();
+    expect(stored.get(`${PREFIX}check`)).toBe("2026-10-03,2026-10-04");
     jest.setSystemTime(DAY_ONE);
     focus();
     await settle();
@@ -912,6 +916,7 @@ describe("startAppOpenedReporting", () => {
     await settle();
     expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     expect(jest.getTimerCount()).toBe(0);
+    if (next === "cleanup") expect(stored.has(`${PREFIX}check`)).toBe(false);
     if (reply === 503) {
       statuses = [503, 202];
       if (next === "app") focus();

@@ -50,7 +50,9 @@ const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 /**
  * Keeps each key's last 35 claimed UTC dates in localStorage, or page memory when storage fails.
- * `storageKey` keeps the shipped helper's single latest app-open date; its history lives beside it.
+ * Temporary dual read/write bridge at `storageKey` for tabs still running the earlier helper.
+ * Remove both branches in the first kit-ui change after a Forge release pinned past
+ * https://github.com/kenn-io/kit-ui/pull/107 has been out for 7 days.
  */
 function claimHistory(storageKey: string) {
   const memory = new Map<string, string[]>();
