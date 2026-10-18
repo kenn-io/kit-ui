@@ -336,18 +336,19 @@ The callable reporter keeps existing cleanup call sites working. It sends
 `app_opened` and each screen once per UTC day, including the active screen
 after rollover. Use a stable, finite set of screen names, such as route names
 without record IDs, query strings, or timestamps. Each name creates a durable
-storage key. While enabled or awaiting a receipt, a pending request finishing
-on a later UTC day starts that day's check and discards its old receipt.
+storage key. A request answered on a later UTC day records its claim for the
+day it was sent, then starts that day's check.
 
 Choose a `storageKey` unique to the product or installation and surface. The
-original key keeps the app-open claims. `${storageKey}.browser.v1.` prefixes
-separate `quiet`, `check`, and `screen.${encodeURIComponent(screen)}` claim keys.
-Distinct screen keys preserve claims across tabs. Blocked storage and failed
-writes use page memory. App-open and screen claims each keep the last 35
-recorded UTC dates as a comma-separated list. A future clock setting doesn't
-suppress reports after correction, and returning to a date still in the list
-doesn't resend it. The earlier helper's single-date claims already form one-entry lists. The
-`quiet` and `check` keys each retain only the exact date of their receipt.
+original key keeps the latest app-open date, as the earlier helper wrote it, so
+tabs still running that helper see today's claim. `${storageKey}.browser.v1.`
+prefixes separate `open`, `quiet`, `check`, and
+`screen.${encodeURIComponent(screen)}` claim keys. Distinct screen keys preserve
+claims across tabs. Blocked storage and failed writes use page memory. Each of
+these keys keeps the last 35 recorded UTC dates as a comma-separated list, and
+ignores entries that aren't dates. A future clock setting doesn't suppress
+reports or enable trackers after correction, and returning to a date still in
+the list doesn't resend it or check permission again.
 
 A stored app-open date never sends `app_opened` again that day, because it
 is written only after the daemon answered, and a daemon may count each

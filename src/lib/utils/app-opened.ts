@@ -46,6 +46,60 @@ export interface AppOpenedReporter {
   onQuietChange(listener: (quiet: boolean) => void): () => void;
 }
 const today = (): string => new Date().toISOString().slice(0, 10);
+const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+/**
+ * Keeps each key's last 35 claimed UTC dates in localStorage, or page memory when storage fails.
+ * `storageKey` keeps the shipped helper's single latest app-open date; its history lives beside it.
+ */
+function claimHistory(storageKey: string) {
+  const memory = new Map<string, string[]>();
+  const listKey = (key: string) => (key === storageKey ? `${key}.browser.v1.open` : key);
+  const has = (key: string, date: string): boolean => {
+    let dates = memory.get(key) ?? [];
+    try {
+      const saved = localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? [];
+      if (key === storageKey && localStorage.getItem(key) === date) saved.push(date);
+      dates = [
+        ...new Set([
+          ...saved.filter((value) => value !== date),
+          ...dates,
+          ...(saved.includes(date) ? [date] : []),
+        ]),
+      ];
+    } catch {
+      /* Page memory survives blocked storage. */
+    }
+    dates = dates.slice(-35);
+    memory.set(key, dates);
+    return dates.includes(date);
+  };
+  const add = (key: string, date: string) => {
+    if (has(key, date)) return;
+    const dates = [...(memory.get(key) ?? []), date].slice(-35);
+    memory.set(key, dates);
+    try {
+      localStorage.setItem(listKey(key), dates.join(","));
+      if (key === storageKey && date === today()) localStorage.setItem(key, date);
+    } catch {
+      /* Retain the page claim. */
+    }
+  };
+  return { has, add };
+}
+
+/** Names the gate claim a reply earns: `check` when enabled, `quiet` when disabled, none when terminal. */
+const receiptClaim = (response: TelemetryReceipt, data: unknown) => {
+  const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
+  if (response.status === 202 && status === "disabled") return "quiet";
+  return (response.status === 202 && (status === "queued" || status === "skipped")) ||
+    (response.status >= 200 &&
+      response.status < 300 &&
+      !response.json &&
+      response.data === undefined)
+    ? "check"
+    : undefined;
+};
 
 /** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. Call the reporter to stop. */
 export function startAppOpenedReporting(options: BrowserTelemetryOptions): AppOpenedReporter;
@@ -58,7 +112,7 @@ export function startAppOpenedReporting({
   post,
 }: AppOpenedOptions | BrowserTelemetryOptions): AppOpenedReporter {
   const prefix = `${storageKey}.browser.v1.`,
-    claims = new Map<string, string[]>();
+    claims = claimHistory(storageKey);
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
   let day = today(),
@@ -76,35 +130,6 @@ export function startAppOpenedReporting({
     lastQuiet = quiet();
     for (const listener of listeners) listener(lastQuiet);
   };
-  const claimed = (key: string, keep = 35): boolean => {
-    let dates = claims.get(key) ?? [];
-    try {
-      const saved = localStorage.getItem(key)?.split(",") ?? [];
-      dates = [
-        ...new Set([
-          ...saved.filter((date) => date !== day),
-          ...dates,
-          ...(saved.includes(day) ? [day] : []),
-        ]),
-      ];
-    } catch {
-      /* Page memory survives blocked storage. */
-    }
-    dates = dates.slice(-keep);
-    claims.set(key, dates);
-    return dates.includes(day);
-  };
-  const write = (key: string, keep = 35) => {
-    if (!claimed(key, keep)) {
-      const dates = [...(claims.get(key) ?? []), day].slice(-keep);
-      claims.set(key, dates);
-      try {
-        localStorage.setItem(key, dates.join(","));
-      } catch {
-        /* Retain the page claim. */
-      }
-    }
-  };
   const cancelRetry = () => {
     clearTimeout(retry);
     retry = undefined;
@@ -112,9 +137,9 @@ export function startAppOpenedReporting({
   const readGate = () =>
     gate === "disabled"
       ? gate
-      : claimed(`${prefix}quiet`, 1)
+      : claims.has(`${prefix}quiet`, day)
         ? "disabled"
-        : claimed(`${prefix}check`, 1)
+        : claims.has(`${prefix}check`, day)
           ? "enabled"
           : "unknown";
   const disabled = (): boolean => {
@@ -159,6 +184,13 @@ export function startAppOpenedReporting({
     }
     rollover();
     if (stopped) return;
+    const failed = !response || (response.status >= 500 && response.status < 600);
+    if (response && !failed) {
+      // Claims keep the sending date, so a reply landing after midnight never sets today's gate.
+      const claim = receiptClaim(response, data);
+      if (claim) claims.add(`${prefix}${claim}`, sending);
+      if (key !== undefined && claim !== "quiet") claims.add(key, sending);
+    }
     if (sending !== day) {
       pump();
       return;
@@ -167,7 +199,7 @@ export function startAppOpenedReporting({
       if (checking) daily = false;
       return;
     }
-    if (!response || (response.status >= 500 && response.status < 600)) {
+    if (failed) {
       const delay = 1000 * 2 ** failures++;
       visitEligibleAt = Date.now() + delay;
       if (failures >= 6) cancelRetry();
@@ -180,28 +212,11 @@ export function startAppOpenedReporting({
       notify();
       return;
     }
-    const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
-    const accepted =
-      (response.status === 202 && (status === "queued" || status === "skipped")) ||
-      (response.status >= 200 &&
-        response.status < 300 &&
-        !response.json &&
-        response.data === undefined);
     if (failures < 6 && (checking || (!daily && !retry))) {
       failures = 0;
       visitEligibleAt = 0;
     }
-    if (accepted) {
-      gate = "enabled";
-      write(`${prefix}check`, 1);
-      if (key !== undefined) write(key);
-    } else if (response.status === 202 && status === "disabled") {
-      gate = "disabled";
-      write(`${prefix}quiet`, 1);
-    } else {
-      if (key !== undefined) write(key);
-      if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
-    }
+    if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
     if (checking) daily = false;
     pump();
   };
@@ -215,9 +230,9 @@ export function startAppOpenedReporting({
     }
     if (retry || daily) return;
     const screen = [...screens].find(
-      (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
+      (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
     );
-    if (!claimed(storageKey))
+    if (!claims.has(storageKey, day))
       void send({ event: "app_opened", properties: { surface } }, storageKey);
     else if (screen !== undefined)
       void send(
