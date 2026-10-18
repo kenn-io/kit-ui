@@ -340,11 +340,8 @@ storage key. A request answered on a later UTC day records its claim for the
 day it was sent, then starts that day's check.
 
 Choose a `storageKey` unique to the product or installation and surface. The
-helper temporarily reads the original key and mirrors today's app-open date
-there for tabs still running the earlier helper. This dual read/write bridge expires in the first
-kit-ui change after a Forge release pinned past [kit-ui#107](https://github.com/kenn-io/kit-ui/pull/107)
-has been out for 7 days. Callers choose the key; the stored format is an
-implementation detail, with no permanent compatibility promise. `${storageKey}.browser.v1.`
+helper can send one extra `app_opened` on upgrade day, and each tab still running
+the earlier helper can send one extra per day until it reloads. `${storageKey}.browser.v1.`
 prefixes separate `open`, `quiet`, `check`, and
 `screen.${encodeURIComponent(screen)}` claim keys. Distinct screen keys preserve
 claims across tabs. Blocked storage and failed writes use page memory. Each of

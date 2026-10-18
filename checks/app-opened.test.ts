@@ -126,19 +126,15 @@ describe("startAppOpenedReporting", () => {
     expect(sent.slice(2)).toEqual([{ route: ROUTE, event: VISIT }]);
   });
 
-  test.each(["history", "observed", "mirror"])(
+  test.each(["history", "observed"])(
     "%s write recovery keeps unsaved claims until storage acknowledges them",
     async (failure) => {
-      let mirrorFailed = false;
       g.localStorage = {
         getItem: (key: string) => {
-          if (mirrorFailed && key === `${PREFIX}open`) throw new Error("blocked read");
           return stored.get(key) ?? null;
         },
-        setItem: (key: string, value: string) => {
-          mirrorFailed ||= failure === "mirror" && key === STORAGE_KEY;
-          if (failure !== "mirror" || key === STORAGE_KEY) throw new Error("full");
-          stored.set(key, value);
+        setItem: () => {
+          throw new Error("full");
         },
       };
       const reporter = start();
@@ -154,7 +150,7 @@ describe("startAppOpenedReporting", () => {
         await settle();
         other();
       }
-      if (failure !== "mirror") reporter.reportScreen("A");
+      reporter.reportScreen("A");
       expect(sent).toHaveLength(failure === "observed" ? 4 : 2);
       if (failure === "history") {
         jest.setSystemTime(DAY_TWO);
@@ -224,7 +220,6 @@ describe("startAppOpenedReporting", () => {
           expect(dates).toHaveLength(35);
           expect([dates[0], dates.at(-1)]).toEqual(["2026-10-04", "2026-11-07"]);
         }
-        expect(stored.get(STORAGE_KEY)).toBe("2026-11-07");
       }
       const count = sent.length;
       jest.setSystemTime(DAY_ONE);
@@ -267,12 +262,8 @@ describe("startAppOpenedReporting", () => {
             ? [
                 [`${PREFIX}check`, "2026-10-03"],
                 [`${PREFIX}open`, "2026-10-03"],
-                [STORAGE_KEY, "2026-10-03"],
               ]
-            : [
-                [`${PREFIX}open`, "2026-10-03"],
-                [STORAGE_KEY, "2026-10-03"],
-              ],
+            : [[`${PREFIX}open`, "2026-10-03"]],
       );
       reporter();
       start();
@@ -283,7 +274,7 @@ describe("startAppOpenedReporting", () => {
   test.each(["screen", "visit check", "one-shot visit"])(
     "an interrupted 202 body is a terminal unreadable receipt for %s",
     async (kind) => {
-      stored.set(STORAGE_KEY, "2026-10-03");
+      stored.set(`${PREFIX}open`, "2026-10-03");
       if (kind === "one-shot visit") stored.set(`${PREFIX}check`, "2026-10-03");
       const response = new Response(
         new ReadableStream({
@@ -307,38 +298,31 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test.each(["legacy date", "consumed 202"])(
-    "quiet subscribers never resend an app-open answered as %s; a screen checks instead",
-    async (prior) => {
-      if (prior === "legacy date") stored.set(STORAGE_KEY, "2026-10-03");
-      else {
-        const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
-        await consumed.text();
-        statuses = [consumed];
-        start();
-        await settle();
-        stops.pop()?.();
-      }
-      const quiet: boolean[] = [];
-      const reloaded = start();
-      reloaded.onQuietChange((value) => quiet.push(value));
-      await advance(60000);
-      reloaded();
-      expect(sent).toHaveLength(prior === "legacy date" ? 0 : 1);
-      expect(quiet).toEqual([true]);
-      if (prior !== "consumed 202") return;
-      statuses = [{ status: 202, data: { status: "queued" } }];
-      const reporter = start();
-      reporter.onQuietChange((value) => quiet.push(value));
-      reporter.reportScreen("A");
-      await settle();
-      expect(sent.at(-1)?.event).toEqual({
-        event: "screen_viewed",
-        properties: { surface: "web", screen: "A" },
-      });
-      expect(quiet.slice(1)).toEqual([true, false]);
-    },
-  );
+  test("quiet subscribers never resend an app-open with a consumed 202; a screen checks instead", async () => {
+    const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
+    await consumed.text();
+    statuses = [consumed];
+    start();
+    await settle();
+    stops.pop()?.();
+    const quiet: boolean[] = [];
+    const reloaded = start();
+    reloaded.onQuietChange((value) => quiet.push(value));
+    await advance(60000);
+    reloaded();
+    expect(sent).toHaveLength(1);
+    expect(quiet).toEqual([true]);
+    statuses = [{ status: 202, data: { status: "queued" } }];
+    const reporter = start();
+    reporter.onQuietChange((value) => quiet.push(value));
+    reporter.reportScreen("A");
+    await settle();
+    expect(sent.at(-1)?.event).toEqual({
+      event: "screen_viewed",
+      properties: { surface: "web", screen: "A" },
+    });
+    expect(quiet.slice(1)).toEqual([true, false]);
+  });
 
   test("a terminal app-open rejection ends its attempt after another event enabled the gate", async () => {
     stored.set(`${PREFIX}check`, "2026-10-03");
@@ -492,7 +476,6 @@ describe("startAppOpenedReporting", () => {
       expect(sent).toEqual([
         { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
       ]);
-      expect(stored.get(storageKey)).toBe("2026-10-03");
       await advance(60000);
       focus();
       reporter();
@@ -505,7 +488,6 @@ describe("startAppOpenedReporting", () => {
       start("example.other.web");
       await settle();
       expect(sent).toHaveLength(2);
-      expect(stored.get("example.other.web")).toBe("2026-10-03");
     },
   );
 
@@ -549,7 +531,7 @@ describe("startAppOpenedReporting", () => {
   );
 
   test("a rejected screen lets the next screen check permission", async () => {
-    stored.set(STORAGE_KEY, "2026-10-03");
+    stored.set(`${PREFIX}open`, "2026-10-03");
     statuses = ["held"];
     const reporter = start();
     const quiet: boolean[] = [];
@@ -684,7 +666,6 @@ describe("startAppOpenedReporting", () => {
     const reporter = start();
     reporter.reportScreen("A");
     await settle();
-    expect(stored.has(STORAGE_KEY)).toBe(false);
     for (const [i, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
       await advance(delay - 1);
       expect(sent).toHaveLength(i + 1);
@@ -707,14 +688,12 @@ describe("startAppOpenedReporting", () => {
     ]);
   });
   test("an app-open accepted after midnight stays claimed for its sending date", async () => {
-    stored.set(STORAGE_KEY, "2026-10-02");
     statuses = ["held", "held"];
     start();
     jest.setSystemTime(DAY_TWO);
     release({ status: 202, data: { status: "queued" } });
     await settle();
     expect(sent).toHaveLength(2);
-    expect(stored.get(STORAGE_KEY)).toBe("2026-10-02");
     release({ status: 202, data: { status: "queued" } });
     await settle();
     expect(stored.get(`${PREFIX}check`)).toBe("2026-10-03,2026-10-04");
@@ -723,7 +702,6 @@ describe("startAppOpenedReporting", () => {
     await settle();
     expect(sent).toHaveLength(2);
     expect(stored.get(`${PREFIX}open`)).toBe("2026-10-03,2026-10-04");
-    expect(stored.get(STORAGE_KEY)).toBe("2026-10-04");
   });
 
   test.each([
@@ -812,7 +790,7 @@ describe("startAppOpenedReporting", () => {
     ["2099-01-01", undefined],
     ["2026-10-02", "2099-01-01"],
   ] as const)("gate dates require today's check: quiet=%s, check=%s", async (quiet, check) => {
-    stored.set(STORAGE_KEY, "2026-10-03");
+    stored.set(`${PREFIX}open`, "2026-10-03");
     stored.set(`${PREFIX}quiet`, quiet);
     if (check) stored.set(`${PREFIX}check`, check);
     statuses = ["held"];
@@ -1007,7 +985,7 @@ describe("startAppOpenedReporting", () => {
     [503, "app"],
     [202, "cleanup"],
   ] as const)("a visit checks once after %s; then %s work follows", async (reply, next) => {
-    stored.set(STORAGE_KEY, "2026-10-03");
+    stored.set(`${PREFIX}open`, "2026-10-03");
     statuses = ["held"];
     const reporter = start();
     if (next !== "screen") jest.setSystemTime(DAY_TWO);
@@ -1039,7 +1017,7 @@ describe("startAppOpenedReporting", () => {
   });
 
   test("a visit-check reply keeps its reservation during a reentrant enabled callback", async () => {
-    stored.set(STORAGE_KEY, "2026-10-03");
+    stored.set(`${PREFIX}open`, "2026-10-03");
     statuses = ["held"];
     const reporter = start();
     reporter.reportVisit(VISIT);

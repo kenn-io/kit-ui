@@ -50,9 +50,6 @@ const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 /**
  * Keeps each key's last 35 claimed UTC dates in localStorage, or page memory when storage fails.
- * Temporary dual read/write bridge at `storageKey` for tabs still running the earlier helper.
- * Remove both branches in the first kit-ui change after a Forge release pinned past
- * https://github.com/kenn-io/kit-ui/pull/107 has been out for 7 days.
  */
 function claimHistory(storageKey: string) {
   const memory = new Map<string, string[]>();
@@ -62,7 +59,6 @@ function claimHistory(storageKey: string) {
     let dates = memory.get(key) ?? [];
     try {
       const saved = localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? [];
-      if (key === storageKey && localStorage.getItem(key) === date) saved.push(date);
       const unsaved = (pending.get(key) ?? []).filter((value) => !saved.includes(value));
       pending.set(key, unsaved);
       dates = [...new Set([...saved, ...unsaved])];
@@ -83,11 +79,6 @@ function claimHistory(storageKey: string) {
     } catch {
       pending.set(key, [...(pending.get(key) ?? []), date].slice(-35));
       return;
-    }
-    try {
-      if (key === storageKey && date === today()) localStorage.setItem(key, date);
-    } catch {
-      /* History already persisted the page claim. */
     }
   };
   return { has, add };
