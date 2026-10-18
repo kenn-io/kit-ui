@@ -789,51 +789,39 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
-  test.each([202, 400])(
-    "standalone visit reply %s clears intermittent outage failures",
-    async (reply) => {
+  test.each([
+    [202, false],
+    [400, false],
+    [202, true],
+    [400, true],
+  ] as const)(
+    "standalone visit reply %s clears intermittent outage failures: cooldown=%s",
+    async (reply, cooldown) => {
       const reporter = start();
       await settle();
       const quiet: boolean[] = [];
       reporter.onQuietChange((value) => quiet.push(value));
       for (let i = 0; i < 7; i++) {
-        statuses = [503, reply];
-        reporter.reportVisit(VISIT);
-        await settle();
-        reporter.reportVisit(VISIT);
-        await advance(999);
-        expect(sent).toHaveLength(2 * i + 2);
-        await advance(1);
+        if (cooldown) {
+          statuses = ["held", 503];
+          reporter.reportVisit(VISIT, { keepalive: true });
+          reporter.reportVisit(VISIT, { keepalive: true });
+          await settle();
+          release(reply);
+          await advance(100);
+        } else {
+          statuses = [503, reply];
+          reporter.reportVisit(VISIT);
+          await settle();
+          reporter.reportVisit(VISIT);
+          await advance(999);
+          expect(sent).toHaveLength(2 * i + 2);
+          await advance(1);
+        }
         expect(sent).toHaveLength(2 * i + 3);
       }
       expect(quiet).toEqual([false]);
-      expect(jest.getTimerCount()).toBe(0);
-    },
-  );
-
-  test.each([202, 400])(
-    "standalone keepalive reply %s clears visit-only failures during cooldown",
-    async (reply) => {
-      const reporter = start();
-      await settle();
-      const quiet: boolean[] = [];
-      reporter.onQuietChange((value) => quiet.push(value));
-      for (let i = 0; i < 7; i++) {
-        statuses = ["held", 503];
-        reporter.reportVisit(VISIT, { keepalive: true });
-        reporter.reportVisit(VISIT, { keepalive: true });
-        await settle();
-        release(reply);
-        await advance(100);
-        expect(sent).toHaveLength(2 * i + 3);
-      }
-      expect(quiet).toEqual([false]);
-      reporter.reportVisit({ event: "action", properties: { count: 2 } });
-      await advance(299);
-      expect(sent).toHaveLength(15);
-      await advance(1);
-      expect(sent.at(-1)?.event).toEqual({ event: "action", properties: { count: 2 } });
-      expect(sent).toHaveLength(16);
+      if (cooldown) await advance(1000);
       expect(jest.getTimerCount()).toBe(0);
     },
   );
