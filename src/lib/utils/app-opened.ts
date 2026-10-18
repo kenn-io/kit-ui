@@ -56,19 +56,16 @@ const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
  */
 function claimHistory(storageKey: string) {
   const memory = new Map<string, string[]>();
+  const pending = new Map<string, string[]>();
   const listKey = (key: string) => (key === storageKey ? `${key}.browser.v1.open` : key);
   const has = (key: string, date: string): boolean => {
     let dates = memory.get(key) ?? [];
     try {
       const saved = localStorage.getItem(listKey(key))?.split(",").filter(isDate) ?? [];
       if (key === storageKey && localStorage.getItem(key) === date) saved.push(date);
-      dates = [
-        ...new Set([
-          ...saved.filter((value) => value !== date),
-          ...dates,
-          ...(saved.includes(date) ? [date] : []),
-        ]),
-      ];
+      const unsaved = (pending.get(key) ?? []).filter((value) => !saved.includes(value));
+      pending.set(key, unsaved);
+      dates = [...new Set([...saved, ...unsaved])];
     } catch {
       /* Page memory survives blocked storage. */
     }
@@ -82,9 +79,15 @@ function claimHistory(storageKey: string) {
     memory.set(key, dates);
     try {
       localStorage.setItem(listKey(key), dates.join(","));
+      pending.delete(key);
+    } catch {
+      pending.set(key, [...(pending.get(key) ?? []), date].slice(-35));
+      return;
+    }
+    try {
       if (key === storageKey && date === today()) localStorage.setItem(key, date);
     } catch {
-      /* Retain the page claim. */
+      /* History already persisted the page claim. */
     }
   };
   return { has, add };

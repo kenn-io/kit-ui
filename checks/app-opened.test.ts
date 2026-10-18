@@ -81,6 +81,85 @@ afterEach(() => {
 });
 
 describe("startAppOpenedReporting", () => {
+  test("readable history keeps another reporter's evictions after 35 dates", async () => {
+    const reporter = start();
+    for (let date = 3; date <= 37; date++) {
+      jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+      reporter.reportScreen("A");
+      await settle();
+    }
+    jest.setSystemTime(new Date("2026-11-07T12:00:00Z"));
+    const other = start();
+    other.reportScreen("A");
+    await settle();
+    other();
+    jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
+    reporter.reportScreen("A");
+    await settle();
+    for (const key of [`${PREFIX}open`, `${PREFIX}screen.A`, `${PREFIX}check`]) {
+      expect(stored.get(key)).toBe(
+        "2026-10-05,2026-10-06,2026-10-07,2026-10-08,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13,2026-10-14,2026-10-15,2026-10-16,2026-10-17,2026-10-18,2026-10-19,2026-10-20,2026-10-21,2026-10-22,2026-10-23,2026-10-24,2026-10-25,2026-10-26,2026-10-27,2026-10-28,2026-10-29,2026-10-30,2026-10-31,2026-11-01,2026-11-02,2026-11-03,2026-11-04,2026-11-05,2026-11-06,2026-11-07,2026-11-08",
+      );
+    }
+    jest.setSystemTime(new Date("2026-10-05T12:00:00Z"));
+    focus();
+    await settle();
+    expect(sent).toHaveLength(74);
+    reporter.onQuietChange((quiet) => expect(quiet).toBe(false))();
+  });
+
+  test.each(["history", "observed", "mirror"])(
+    "%s write recovery keeps unsaved claims until storage acknowledges them",
+    async (failure) => {
+      let mirrorFailed = false;
+      g.localStorage = {
+        getItem: (key: string) => {
+          if (mirrorFailed && key === `${PREFIX}open`) throw new Error("blocked read");
+          return stored.get(key) ?? null;
+        },
+        setItem: (key: string, value: string) => {
+          mirrorFailed ||= failure === "mirror" && key === STORAGE_KEY;
+          if (failure !== "mirror" || key === STORAGE_KEY) throw new Error("full");
+          stored.set(key, value);
+        },
+      };
+      const reporter = start();
+      reporter.reportScreen("A");
+      await settle();
+      g.localStorage = {
+        getItem: (key: string) => stored.get(key) ?? null,
+        setItem: (key: string, value: string) => void stored.set(key, value),
+      };
+      if (failure === "observed") {
+        const other = start();
+        other.reportScreen("A");
+        await settle();
+        other();
+      }
+      if (failure !== "mirror") reporter.reportScreen("A");
+      expect(sent).toHaveLength(failure === "observed" ? 4 : 2);
+      if (failure === "history") {
+        jest.setSystemTime(DAY_TWO);
+        reporter.reportScreen("A");
+        await settle();
+        expect(stored.get(`${PREFIX}open`)).toBe("2026-10-03,2026-10-04");
+      }
+      for (let date = 4; date <= 38; date++) {
+        jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+        const other = start();
+        other.reportScreen("A");
+        await settle();
+        other();
+      }
+      jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
+      reporter.reportScreen("A");
+      await settle();
+      for (const key of [`${PREFIX}open`, `${PREFIX}screen.A`, `${PREFIX}check`]) {
+        expect(stored.get(key)!.split(",")[0]).toBe("2026-10-05");
+      }
+    },
+  );
+
   test.each(["working", "read", "write", "both"])(
     "35 claim and permission dates survive rollback with %s storage",
     async (failure) => {
@@ -133,9 +212,10 @@ describe("startAppOpenedReporting", () => {
       jest.setSystemTime(DAY_ONE);
       focus();
       await settle();
-      expect(sent.slice(count).map(({ event }) => event.event)).toEqual(
-        failure === "write" ? ["screen_viewed"] : ["app_opened", "screen_viewed"],
-      );
+      expect(sent.slice(count).map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+      ]);
     },
   );
 

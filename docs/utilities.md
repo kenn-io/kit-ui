@@ -352,6 +352,7 @@ these keys keeps the last 35 recorded UTC dates as a comma-separated list, and
 ignores entries that aren't dates. A future clock setting doesn't suppress
 reports or enable trackers after correction, and returning to a date still in
 the list doesn't resend it or check permission again.
+When storage is readable, its evictions override cached dates unless their writes failed.
 
 A stored app-open date never sends `app_opened` again that day, because it
 is written only after the daemon answered, and a daemon may count each
