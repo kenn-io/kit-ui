@@ -150,9 +150,8 @@ export function startAppOpenedReporting({
       if (response.status === 202 && !(response as Response).bodyUsed) {
         try {
           data = response.data ?? (await response.json?.());
-        } catch (error) {
-          if (!(error instanceof SyntaxError)) throw error;
-          /* Malformed receipts cannot establish the gate. */
+        } catch {
+          /* Unreadable receipts cannot establish the gate; the daemon may already have accepted the event. */
         }
       }
     } catch {

@@ -120,70 +120,36 @@ describe("startAppOpenedReporting", () => {
       expect(sent).toHaveLength(1);
     },
   );
-  test.each(["app", "screen", "visit check"])(
-    "an already-consumed 202 Response is terminal unreadable for %s",
-    async (kind) => {
-      if (kind !== "app") stored.set(STORAGE_KEY, "2026-10-03");
-      const response = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
+  test.each(
+    ["consumed", "interrupted"].flatMap((body) =>
+      ["app", "screen", "visit check", "one-shot visit"].map((kind) => [body, kind]),
+    ),
+  )("an %s 202 body is a terminal unreadable receipt for %s", async (body, kind) => {
+    if (kind !== "app") stored.set(STORAGE_KEY, "2026-10-03");
+    if (kind === "one-shot visit") stored.set(`${PREFIX}check`, "2026-10-03");
+    let response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.error(new TypeError("terminated"));
+        },
+      }),
+      { status: 202 },
+    );
+    if (body === "consumed") {
+      response = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
       await response.text();
-      statuses = [response];
-      const reporter = start();
-      if (kind === "screen") reporter.reportScreen("A");
-      if (kind === "visit check") reporter.reportVisit(VISIT);
-      await settle();
-      await advance(60000);
-      expect(sent).toHaveLength(1);
-      expect(jest.getTimerCount()).toBe(0);
-      expect(stored.has(`${PREFIX}check`)).toBe(false);
-      expect(stored.has(`${PREFIX}quiet`)).toBe(false);
-    },
-  );
-  test.each(["app", "screen", "visit check", "one-shot visit"])(
-    "an interrupted 202 body preserves the transport policy for %s",
-    async (kind) => {
-      if (kind !== "app") stored.set(STORAGE_KEY, "2026-10-03");
-      if (kind === "one-shot visit") stored.set(`${PREFIX}check`, "2026-10-03");
-      statuses = [
-        new Response(
-          new ReadableStream({
-            start(controller) {
-              controller.error(new TypeError("terminated"));
-            },
-          }),
-          { status: 202 },
-        ),
-      ];
-      const reporter = start();
-      if (kind === "screen") reporter.reportScreen("A");
-      if (kind.includes("visit")) reporter.reportVisit(VISIT, { keepalive: true });
-      await settle();
-      expect(sent).toHaveLength(1);
-      expect(stored.has(`${PREFIX}screen.A`)).toBe(false);
-      if (kind === "app") expect(stored.has(STORAGE_KEY)).toBe(false);
-      expect(stored.has(`${PREFIX}quiet`)).toBe(false);
-      expect(stored.has(`${PREFIX}check`)).toBe(kind === "one-shot visit");
-      await advance(999);
-      expect(sent).toHaveLength(1);
-      await advance(1);
-      if (kind === "one-shot visit") {
-        expect(sent).toHaveLength(1);
-        expect(jest.getTimerCount()).toBe(0);
-      } else {
-        expect(sent).toHaveLength(2);
-        expect(sent[1]).toEqual(
-          kind === "app"
-            ? { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } }
-            : kind === "screen"
-              ? {
-                  route: ROUTE,
-                  event: { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
-                }
-              : { route: ROUTE, event: VISIT, options: { keepalive: true } },
-        );
-        expect(stored.get(`${PREFIX}check`)).toBe("2026-10-03");
-      }
-    },
-  );
+    }
+    statuses = [response];
+    const reporter = start();
+    if (kind === "screen") reporter.reportScreen("A");
+    if (kind.includes("visit")) reporter.reportVisit(VISIT, { keepalive: true });
+    await settle();
+    await advance(60000);
+    expect(sent).toHaveLength(1);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(stored.has(`${PREFIX}check`)).toBe(kind === "one-shot visit");
+    expect(stored.has(`${PREFIX}quiet`)).toBe(false);
+  });
 
   test("a terminal app-open rejection ends its attempt after another event enabled the gate", async () => {
     stored.set(`${PREFIX}check`, "2026-10-03");

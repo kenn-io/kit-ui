@@ -356,9 +356,10 @@ may each make an initial check.
 
 `post` resolves HTTP errors and rejects transport failures. Return a `Response`
 with an unread body or `TelemetryReceipt` (`{ status, data }`) to preserve the
-daemon's HTTP 202 receipt. An already-consumed body is a terminal unreadable
-receipt. An interrupted body read counts as a transport failure; receipt checks
-retry. Valid `queued` and `skipped` receipts and legacy status-only successful
+daemon's HTTP 202 receipt. An already-consumed, malformed, or interrupted 202
+body is a terminal unreadable receipt: it cannot enable reports, and the helper
+never resends that event, because the daemon accepts it before replying.
+Valid `queued` and `skipped` receipts and legacy status-only successful
 2xx replies enable reports. Only a 202 `disabled` receipt persists quiet across
 reloads until a later UTC day's load or focus makes a check; screen and visit
 calls cannot wake a disabled page. Before an enabled receipt, a terminal
