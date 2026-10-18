@@ -231,12 +231,41 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test("a malformed first visit after rollover leaves valid reports able to check permission", async () => {
+    const reporter = start();
+    await settle();
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    jest.setSystemTime(DAY_TWO);
+    statuses = [400, "held"];
+    const malformed = { event: "session_ended", properties: { surface: "web" } };
+    reporter.reportVisit(malformed, { keepalive: true });
+    await settle();
+    reporter.reportScreen("A");
+    reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent.slice(1).map(({ event }) => event)).toEqual([
+      malformed,
+      { event: "app_opened", properties: { surface: "web" } },
+    ]);
+    expect(quiet).toEqual([false, true]);
+    release({ status: 202, data: { status: "queued" } });
+    await settle();
+    reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent.slice(3).map(({ event }) => event)).toEqual([
+      { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
+      VISIT,
+    ]);
+    expect(quiet).toEqual([false, true, false]);
+  });
+
   test.each([
-    [401, "quiet"],
-    [{ status: 202, data: { status: "unknown" } }, "quiet"],
-    [new Response("broken", { status: 202 }), "quiet"],
-    [new Response(JSON.stringify({ status: "queued" }), { status: 200 }), "quiet"],
-    [new Response(JSON.stringify({ status: "queued" }), { status: 201 }), "quiet"],
+    [401, "unknown"],
+    [{ status: 202, data: { status: "unknown" } }, "unknown"],
+    [new Response("broken", { status: 202 }), "unknown"],
+    [new Response(JSON.stringify({ status: "queued" }), { status: 200 }), "unknown"],
+    [new Response(JSON.stringify({ status: "queued" }), { status: 201 }), "unknown"],
     [{ status: 202, data: { status: "disabled" } }, "disabled"],
     [200, "enabled"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 202 }), "enabled"],
@@ -245,12 +274,9 @@ describe("startAppOpenedReporting", () => {
     async (reply, outcome) => {
       statuses = [reply];
       const reporter = start();
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
       await settle();
-      if (outcome !== "enabled") {
-        reporter.reportVisit(VISIT);
-        reporter.reportVisit(VISIT, { keepalive: true });
-        reporter.reportScreen("A");
-      }
       focus();
       await advance(60000);
       expect(sent).toHaveLength(1);
@@ -264,10 +290,26 @@ describe("startAppOpenedReporting", () => {
               ]
             : [[`${PREFIX}open`, "2026-10-03"]],
       );
+      expect(quiet).toEqual(outcome === "enabled" ? [true, false] : [true]);
+      statuses = ["held"];
+      reporter.reportScreen("A");
+      reporter.reportVisit(VISIT, { keepalive: true });
+      if (outcome === "disabled") expect(sent).toHaveLength(1);
+      else {
+        expect(sent[1]?.event).toEqual({
+          event: "screen_viewed",
+          properties: { surface: "web", screen: "A" },
+        });
+        expect(quiet).toEqual(outcome === "enabled" ? [true, false] : [true]);
+        release({ status: 202, data: { status: "queued" } });
+        await settle();
+        expect(quiet).toEqual([true, false]);
+      }
       reporter();
+      const count = sent.length;
       start();
       await settle();
-      expect(sent).toHaveLength(1);
+      expect(sent).toHaveLength(count);
     },
   );
   test.each(["screen", "visit check"])(
@@ -476,7 +518,7 @@ describe("startAppOpenedReporting", () => {
       release(outcome === "rejected" ? 400 : { status: 202, data: { status: "queued" } });
       await advance(60000);
       expect(sent.map(({ event }) => event.event)).toEqual(
-        outcome === "enabled" ? ["app_opened", "screen_viewed"] : ["app_opened"],
+        outcome === "cleanup" ? ["app_opened"] : ["app_opened", "screen_viewed"],
       );
       expect(jest.getTimerCount()).toBe(0);
     },

@@ -385,15 +385,14 @@ Valid `queued` and `skipped` receipts and legacy status-only successful
 neither `data` nor `json`, as the earlier `{ status }` callback returned. A
 native `Response` always has `json`, so it enables reports only as a 202 with a
 `queued` or `skipped` body. A 200 or 201 `Response`, or a 202 without a
-recognized receipt, is a terminal reply handled like the rejections below; it
-never persists quiet. Only a 202 `disabled` receipt persists quiet across
+recognized receipt, is a terminal reply that leaves permission unknown.
+Only a 202 `disabled` receipt persists quiet across
 reloads until a later UTC day's load or focus makes a check; screen and visit
-calls cannot wake a disabled page. Before an enabled receipt, a terminal
-app-open or visit-check rejection leaves this page quiet until a later UTC day's
-focus. A terminal app-open reply retains its daily attempt claim across reloads.
-Reload can check permission again through a screen or visit. A
-rejected screen still claims its daily date across reloads and leaves an unknown
-gate available for another screen or visit to check.
+calls cannot wake a disabled page. A terminal reply leaves unknown permission
+unknown, so trackers stay paused until a later actual report receives an enabled
+receipt. Another screen or visit can check permission on the same page.
+Terminal app-open and screen replies retain their daily attempt claims across
+reloads, including unreadable accepted receipts. Visits remain one-shot.
 
 While enabled, ordinary visits send immediately outside the cooldown after a
 transport or HTTP 5xx failure. Calls during that 1, 2, 4, 8, or 16-second

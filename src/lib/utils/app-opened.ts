@@ -206,7 +206,6 @@ export function startAppOpenedReporting({
       failures = 0;
       ordinaryEligibleAt = 0;
     }
-    if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
     if (checking) daily = false;
     pump();
   };
