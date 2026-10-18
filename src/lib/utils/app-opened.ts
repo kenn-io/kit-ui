@@ -3,91 +3,252 @@ export interface AppOpenedEvent {
   event: "app_opened";
   properties: { surface: string };
 }
-
+export interface TelemetryReceipt {
+  status: number;
+  data?: unknown;
+  json?: () => Promise<unknown>;
+}
 export interface AppOpenedOptions {
   /** Daemon route that accepts UI telemetry, e.g. "/api/v1/telemetry/events". */
   route: string;
   /** Where the open happened, e.g. "web". */
   surface: string;
-  /** Stable localStorage key, unique to the product or installation and surface. */
+  /** Stable key unique to the product or installation and surface. */
   storageKey: string;
-  /** Resolves with the HTTP status, including errors. Rejects only when no response arrived. */
-  post: (route: string, event: AppOpenedEvent) => Promise<{ status: number }>;
+  /** Resolve HTTP errors; reject only when no response arrived. */
+  post: (route: string, event: AppOpenedEvent) => Promise<TelemetryReceipt>;
 }
+export interface VisitEvent {
+  event: string;
+  properties: Record<string, unknown>;
+}
+export interface ScreenViewedEvent {
+  event: "screen_viewed";
+  properties: { surface: string; screen: string };
+}
+export type BrowserTelemetryEvent = AppOpenedEvent | ScreenViewedEvent | VisitEvent;
+export interface VisitOptions {
+  keepalive?: boolean;
+}
+export interface BrowserTelemetryOptions extends Omit<AppOpenedOptions, "post"> {
+  post: (
+    route: string,
+    event: BrowserTelemetryEvent,
+    options?: VisitOptions,
+  ) => Promise<TelemetryReceipt>;
+}
+export interface AppOpenedReporter {
+  (): void;
+  /** Use a stable, finite set of screen names, such as route names without IDs. */
+  reportScreen(screen: string): void;
+  reportVisit(event: VisitEvent, options?: VisitOptions): void;
+  /** Immediately receives the current state; returns an unsubscribe function. */
+  onQuietChange(listener: (quiet: boolean) => void): () => void;
+}
+const today = (): string => new Date().toISOString().slice(0, 10);
 
-const RETRY_MS = 1000;
-const MAX_RETRY_MS = 30000;
-// A daemon that is still starting, or a proxy in front of one, answers these.
-const NOT_READY = new Set([502, 503, 504]);
-
-/**
- * Posts `app_opened` now and on the first window focus of each later UTC day;
- * returns a cleanup. Retries back off from 1 to 30 seconds until the backend
- * answers, then ignores the outcome. localStorage carries the day across reloads
- * and tabs, though tabs that open together may each send one; when storage is
- * blocked, memory still holds it for this page.
- */
+/** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. Call the reporter to stop. */
+export function startAppOpenedReporting(options: BrowserTelemetryOptions): AppOpenedReporter;
+/** Reports daily app-open on load or later UTC-day focus. Returns cleanup; retries stop after six failures until reload or the next UTC day. */
+export function startAppOpenedReporting(options: AppOpenedOptions): () => void;
 export function startAppOpenedReporting({
   route,
   surface,
   storageKey,
   post,
-}: AppOpenedOptions): () => void {
-  let day = "";
-  let stopped = false;
-  let retry: ReturnType<typeof setTimeout> | undefined;
-  let retryMs = RETRY_MS;
-
-  const storedDay = (): string => {
+}: AppOpenedOptions | BrowserTelemetryOptions): AppOpenedReporter {
+  const prefix = `${storageKey}.browser.v1.`,
+    claims = new Set<string>();
+  const screens = new Set<string>(),
+    listeners = new Set<(quiet: boolean) => void>();
+  let day = today(),
+    gate: "unknown" | "enabled" | "disabled" = "unknown";
+  let stopped = false,
+    daily = false,
+    failures = 0;
+  let currentScreen: string | undefined,
+    retry: ReturnType<typeof setTimeout> | undefined,
+    lastQuiet = true;
+  const quiet = () => stopped || failures >= 6 || gate !== "enabled";
+  const notify = () => {
+    if (lastQuiet === quiet()) return;
+    lastQuiet = quiet();
+    for (const listener of listeners) listener(lastQuiet);
+  };
+  const claimed = (key: string): boolean => {
     try {
-      return localStorage.getItem(storageKey) ?? "";
+      const saved = localStorage.getItem(key);
+      if (saved?.split(",").includes(day)) claims.add(key);
     } catch {
-      return "";
+      /* Page memory survives blocked storage. */
     }
+    return claims.has(key);
   };
-
-  const today = (): string => new Date().toISOString().slice(0, 10);
-
-  // A retry that crosses UTC midnight counts for the day it lands on.
-  const send = (): void => {
-    const sending = (day = today());
-    // Another tab may have recorded the day while this one waited to retry.
-    if (storedDay() === sending) return;
-    post(route, { event: "app_opened", properties: { surface } })
-      .then(
-        (response) => !NOT_READY.has(response.status),
-        () => false,
-      )
-      .then((answered) => {
-        if (stopped || sending !== day) return;
-        if (!answered) {
-          retry = setTimeout(send, retryMs);
-          retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
-          return;
-        }
-        // An answer landing after midnight must not roll back a later day another tab recorded.
-        if (storedDay() > sending) return;
+  const write = (key: string, keep = 35) => {
+    if (!claimed(key)) {
+      let dates: string[] = [];
+      try {
+        dates = localStorage.getItem(key)?.split(",") ?? [];
+      } catch {
+        /* Still attempt the write when reads are blocked. */
+      }
+      try {
+        localStorage.setItem(key, [...dates, day].slice(-keep).join(","));
+      } catch {
+        /* Retain the page claim. */
+      }
+    }
+    claims.add(key);
+  };
+  const cancelRetry = () => {
+    clearTimeout(retry);
+    retry = undefined;
+  };
+  const readGate = () =>
+    gate === "disabled"
+      ? gate
+      : claimed(`${prefix}quiet`)
+        ? "disabled"
+        : claimed(`${prefix}check`)
+          ? "enabled"
+          : "unknown";
+  const disabled = (): boolean => {
+    gate = readGate();
+    if (gate === "disabled") cancelRetry();
+    notify();
+    return stopped || gate === "disabled";
+  };
+  const rollover = (wake = false) => {
+    if (day === today() || (!wake && (stopped || readGate() === "disabled"))) return;
+    day = today();
+    claims.clear();
+    gate = "unknown";
+    daily = false;
+    failures = 0;
+    cancelRetry();
+    screens.clear();
+    if (currentScreen !== undefined) screens.add(currentScreen);
+    notify();
+  };
+  const send = async (
+    event: VisitEvent,
+    key?: string,
+    options?: VisitOptions,
+    checking = key !== undefined || gate === "unknown",
+  ) => {
+    const sending = day;
+    if (checking) daily = true;
+    let response: TelemetryReceipt | undefined, data: unknown;
+    try {
+      response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
+      if (response.status === 202) {
         try {
-          localStorage.setItem(storageKey, sending);
+          data = response.data ?? (await response.json?.());
         } catch {
-          // Blocked storage: memory still holds the day for this page.
+          /* Unreadable receipts cannot establish the gate; the daemon may already have accepted the event. */
         }
-      });
+      }
+    } catch {
+      response = undefined;
+      /* Receipt checks retry transport failures. */
+    }
+    rollover();
+    if (stopped) return;
+    if (sending !== day) {
+      pump();
+      return;
+    }
+    if (disabled()) {
+      if (checking) daily = false;
+      return;
+    }
+    if (!response || (response.status >= 500 && response.status < 600)) {
+      if (++failures >= 6) cancelRetry();
+      else if (checking && key !== undefined && !retry)
+        retry = setTimeout(
+          () => {
+            retry = undefined;
+            pump();
+          },
+          1000 * 2 ** (failures - 1),
+        );
+      if (checking) daily = false;
+      notify();
+      return;
+    }
+    const status = data && typeof data === "object" && "status" in data ? data.status : undefined;
+    const accepted =
+      (response.status === 202 && (status === "queued" || status === "skipped")) ||
+      (response.status >= 200 &&
+        response.status < 300 &&
+        !response.json &&
+        response.data === undefined);
+    if (failures < 6 && (checking || (!daily && !retry))) failures = 0;
+    if (accepted) {
+      gate = "enabled";
+      write(`${prefix}check`, 1);
+      if (key !== undefined) write(key);
+    } else if (response.status === 202 && status === "disabled") {
+      gate = "disabled";
+      write(`${prefix}quiet`, 1);
+    } else {
+      if (key !== undefined) write(key);
+      if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
+    }
+    if (checking) daily = false;
+    pump();
   };
-
-  const report = (): void => {
-    const now = today();
-    if (now === day) return;
-    clearTimeout(retry);
-    retryMs = RETRY_MS;
-    send();
+  const pump = () => {
+    rollover();
+    if (stopped || disabled() || failures >= 6) return;
+    if (retry || daily || failures >= 6) return;
+    const screen = [...screens].find(
+      (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
+    );
+    if (!claimed(storageKey))
+      void send({ event: "app_opened", properties: { surface } }, storageKey);
+    else if (screen !== undefined)
+      void send(
+        { event: "screen_viewed", properties: { surface, screen } },
+        `${prefix}screen.${encodeURIComponent(screen)}`,
+      );
   };
-
-  report();
+  const request = (visit?: VisitEvent, options?: VisitOptions) => {
+    rollover();
+    if (stopped || disabled() || failures >= 6) return;
+    if (visit) {
+      if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
+      return;
+    }
+    pump();
+  };
+  const report = () => {
+    rollover(true);
+    request();
+  };
+  pump();
   window.addEventListener("focus", report);
-  return () => {
-    stopped = true;
-    clearTimeout(retry);
-    window.removeEventListener("focus", report);
-  };
+  return Object.assign(
+    () => {
+      stopped = true;
+      cancelRetry();
+      screens.clear();
+      notify();
+      listeners.clear();
+      window.removeEventListener("focus", report);
+    },
+    {
+      reportScreen(screen: string) {
+        currentScreen = screen;
+        screens.add(screen);
+        request();
+      },
+      reportVisit: (event: VisitEvent, options?: VisitOptions) => request(event, options),
+      onQuietChange(listener: (quiet: boolean) => void) {
+        listener(quiet());
+        if (!stopped) listeners.add(listener);
+        return () => void listeners.delete(listener);
+      },
+    },
+  );
 }

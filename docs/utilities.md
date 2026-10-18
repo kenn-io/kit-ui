@@ -299,40 +299,123 @@ onInput("ab"); // search("ab") fires once, 250ms later
 onInput.cancel(); // drop a pending call (e.g. on teardown)
 ```
 
-## App opened
+## Browser telemetry
 
 ```ts
 import { startAppOpenedReporting } from "@kenn-io/kit-ui";
 
-const stop = startAppOpenedReporting({
+const reporter = startAppOpenedReporting({
   route: "/api/v1/telemetry/events",
   surface: "web",
   storageKey: "example.app-opened.web",
-  post: (route, event) => fetch(route, { method: "POST", headers, body: JSON.stringify(event) }),
+  post: (route, event, options) =>
+    fetch(route, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(event),
+      keepalive: options?.keepalive,
+    }),
 });
+
+reporter.reportScreen("settings");
+const unsubscribe = reporter.onQuietChange((quiet) => {
+  if (quiet) stopVisitTimers();
+  else startVisitTimers();
+});
+// When a visit session ends:
+reporter.reportVisit(
+  { event: "session_ended", properties: { surface: "web", duration_bucket: "under_1m" } },
+  { keepalive: true },
+);
+// On teardown:
+reporter();
+unsubscribe();
 ```
 
-Posts `app_opened` on load and again when the window regains focus on a later
-UTC day. Choose a stable `storageKey` unique to the product or installation
-and surface. Products mounted at different paths on the same origin need
-different keys. The day lives in localStorage under that exact key, so
-reloads and tabs opened later send nothing more that day.
+The callable reporter keeps existing cleanup call sites working. It sends
+`app_opened` and each screen once per UTC day, including the active screen
+after rollover. Use a stable, finite set of screen names, such as route names
+without record IDs, query strings, or timestamps. Each name creates a durable
+storage key. While enabled or awaiting a receipt, a pending request finishing
+on a later UTC day starts that day's check and discards its old receipt.
 
-`post` carries the product's own auth headers and must resolve with the
-actual HTTP status, including error statuses. Reject only when no response
-arrived. For a generated client that throws on HTTP errors, use its
-response-returning transport (for example, Forge's `orvalRequest`) or adapt
-its HTTP errors into `{ status }` results. Passing a throwing client without
-this adaptation makes permanent HTTP errors retry indefinitely.
+Choose a `storageKey` unique to the product or installation and surface. The
+original key keeps the app-open claims. `${storageKey}.browser.v1.` prefixes
+separate `quiet`, `check`, and `screen.${encodeURIComponent(screen)}` claim keys.
+Distinct screen keys preserve claims across tabs. Blocked storage and failed
+writes use page memory. App-open and screen claims each keep the last 35
+recorded UTC dates as a comma-separated list. A future clock setting doesn't
+suppress reports after correction, and returning to a date still in the list
+doesn't resend it. The earlier helper's single-date claims already form one-entry lists. The
+`quiet` and `check` keys each retain only the exact date of their receipt.
 
-A rejection or a 502, 503 or 504 triggers retries after 1, 2, 4, 8 and 16
-seconds, then every 30 seconds until the backend answers. Any other status
-ends the day's attempt. A focus that starts a new day's attempt resets the
-delay to one second.
+A stored app-open date never sends `app_opened` again that day, because it
+is written only after the daemon answered, and a daemon may count each
+accepted `app_opened`. That includes dates written by the earlier helper.
+Without today's receipt, an unclaimed screen checks; a visit checks with its
+original properties and options when no check is in flight or backing off. If
+neither can check, the page stays quiet, even with an `onQuietChange` subscriber, until a
+screen or visit report or the next UTC day. Tabs opening together may each make
+an initial check.
 
-Tabs that open together may each send one, which doesn't move a count of
-installs active that day. When storage is blocked, memory holds the day for
-the page, so each page load sends at most once a day.
+`post` resolves HTTP errors and rejects transport failures. Return a `Response`
+with an unread body or `TelemetryReceipt` (`{ status, data }`) to preserve the
+daemon's HTTP 202 receipt. For example, a JSON adapter can return:
+
+```ts
+const post = async (route, event) => {
+  const response = await api.post(route, event);
+  return { status: response.status, data: response.data };
+};
+// A successful receipt: { status: 202, data: { status: "queued" } }
+```
+
+An already-consumed, malformed, or interrupted 202
+body is a terminal unreadable receipt: it cannot enable reports, and the helper
+never resends that event, because the daemon accepts it before replying.
+Valid `queued` and `skipped` receipts and legacy status-only successful
+2xx replies enable reports. A status-only reply is a `TelemetryReceipt` with
+neither `data` nor `json`, as the earlier `{ status }` callback returned. A
+native `Response` always has `json`, so it enables reports only as a 202 with a
+`queued` or `skipped` body. A 200 or 201 `Response`, or a 202 without a
+recognized receipt, is a terminal reply handled like the rejections below; it
+never persists quiet. Only a 202 `disabled` receipt persists quiet across
+reloads until a later UTC day's load or focus makes a check; screen and visit
+calls cannot wake a disabled page. Before an enabled receipt, a terminal
+app-open or visit-check rejection leaves this page quiet until a later UTC day's
+focus. A terminal app-open reply retains its daily attempt claim across reloads.
+Reload can check permission again through a screen or visit. A
+rejected screen still claims its daily date across reloads and leaves an unknown
+gate available for another screen or visit to check.
+
+Visits send immediately while enabled, including during screen backoff. When
+permission is unknown and no check is in flight or backing off, a visit makes
+the check itself and reaches `post` synchronously with its original options.
+Other visits are dropped. This lets a closing page send a keepalive visit as
+the first report after midnight. Start visit timers after `onQuietChange(false)`.
+Disabled and exhausted reporters suppress visits.
+
+Visits are one-shot reports, including when they make the day's check. Their
+transport and HTTP 5xx failures count toward the shared six-failure limit but
+arm no retry timer. A later app-open or screen report can still retry. Visit
+replies retain an existing check's backoff deadline unless exhaustion cancels
+it. Before exhaustion, one-shot successes and terminal replies reset failures
+only when no check is in flight or backing off.
+
+Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4, 8,
+and 16 seconds. Before exhaustion, any other check or screen reply resets the
+failure count. Six failures without a reset stop reporting and pause trackers
+until reload or the next UTC day. Exhaustion cancels pending backoff. A disabled
+receipt cancels retries.
+
+`onQuietChange` immediately supplies the current state and returns an
+unsubscribe function. Unknown, disabled, exhausted, and stopped reporters signal
+quiet. Use the callback to stop and restart visit timers. Cleanup signals quiet,
+cancels retries, clears pending screens, and removes the focus
+listener. `BrowserTelemetryOptions` types the event-capable callback; explicitly
+typed `AppOpenedOptions` callbacks retain their original signature. Call the
+reporter's cleanup before unsubscribing so the quiet callback stops visit
+timers.
 
 ## Color hashing
 
