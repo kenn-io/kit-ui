@@ -199,12 +199,12 @@ export function startAppOpenedReporting({
     if (accepted) {
       gate = "enabled";
       write(`${prefix}check`);
-      if (key) write(key);
+      if (key !== undefined) write(key);
     } else if (response.status === 202 && status === "disabled") {
       gate = "disabled";
       write(`${prefix}quiet`);
     } else {
-      if (key) write(key);
+      if (key !== undefined) write(key);
       if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
     }
     pump();

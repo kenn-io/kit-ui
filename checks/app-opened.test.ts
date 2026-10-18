@@ -384,6 +384,24 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test.each([{ status: 202, data: { status: "queued" } }, { status: 400 }])(
+    "an empty storage key dedupes app-open after reply %p",
+    async (reply) => {
+      statuses = [reply, "held"];
+      const reporter = start("");
+      await settle();
+      expect(sent).toEqual([
+        { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
+      ]);
+      expect(stored.get("")).toBe("2026-10-03");
+      focus();
+      reporter();
+      start("");
+      await settle();
+      expect(sent).toHaveLength(1);
+    },
+  );
+
   test("app-open dedupes across same-day focus, reload, and product keys", async () => {
     statuses = [202];
     const options = {
