@@ -150,11 +150,13 @@ export function startAppOpenedReporting({
       if (response.status === 202) {
         try {
           data = response.data ?? (await response.json?.());
-        } catch {
+        } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
           /* Malformed receipts cannot establish the gate. */
         }
       }
     } catch {
+      response = undefined;
       /* Receipt checks retry transport failures. */
     }
     rollover();
@@ -190,7 +192,7 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if ((checking || accepted) && failures < 6) failures = 0;
+    if (checking && failures < 6) failures = 0;
     if (checking && key === undefined) {
       checkingVisit = false;
       visits.shift();
@@ -202,8 +204,10 @@ export function startAppOpenedReporting({
     } else if (response.status === 202 && status === "disabled") {
       gate = "disabled";
       write(`${prefix}quiet`);
-    } else if (key && (key !== storageKey || gate === "enabled")) write(key);
-    else if (gate === "unknown") gate = "disabled";
+    } else {
+      if (key) write(key);
+      if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
+    }
     pump();
   };
   const pump = () => {

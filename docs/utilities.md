@@ -360,17 +360,20 @@ successful 2xx replies enable reports. Only a 202 `disabled` receipt persists
 quiet across reloads until a later UTC day's load or focus makes a check;
 screen and visit calls cannot wake a disabled page. Before an enabled receipt,
 a terminal app-open or visit-check rejection leaves this page quiet until a
-later UTC day's focus; reload can check again. After an enabled receipt, a
-terminal app-open reply ends that day's app-open attempt. A rejected screen
+later UTC day's focus. A terminal app-open reply retains its daily attempt
+claim across reloads. Reload can check permission again through a screen,
+visit, or subscriber. A rejected screen
 still claims its daily date across reloads and leaves an unknown gate
 available for another screen or waiting visit to check.
 
 Before the first receipt, up to six visits wait in memory with their original
-properties and `keepalive`; later arrivals are dropped. An enabled receipt
-releases them. Disable, exhaustion, cleanup, or rollover discards them. Start
-visit timers after `onQuietChange(false)`. Admitted enabled visits send
-immediately, even during a pending screen or its backoff. Their failures never retry or
-change a pending daily retry's delay. A visit serving as the receipt check
+properties and `keepalive`; later arrivals are dropped. Unloading the page
+before the first receipt can lose these visits, including keepalive requests.
+An enabled receipt releases them. Disable, exhaustion, cleanup, or rollover
+discards them. Start visit timers after `onQuietChange(false)`. Admitted enabled visits send
+immediately, even during a pending screen or its backoff. These one-shot visits
+never retry, and their replies leave the daily failure count and retry deadline
+unchanged. A visit serving as the receipt check
 retains its event and options through retries and is delivered once accepted.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4,
