@@ -404,9 +404,11 @@ the first report after midnight. Start visit timers after `onQuietChange(false)`
 Disabled and exhausted reporters suppress visits.
 
 Visits are one-shot reports, including when they make the day's check. Their
-transport and HTTP 5xx failures count toward the shared six-failure limit but
-arm no retry timer. A later app-open or screen report can still retry. Visit
-replies retain an existing check's backoff deadline unless exhaustion cancels
+transport and HTTP 5xx failures count toward the shared six-failure limit.
+App-open and screen work waiting during cooldown uses the existing retry timer
+to send at the shared deadline. The cooldown measures elapsed time, so wall-clock
+corrections leave its duration unchanged. Visits themselves are never retried.
+An existing timer checks the latest deadline before sending; exhaustion cancels
 it. Before exhaustion, one-shot successes and terminal replies reset failures
 only when no check is in flight or backing off.
 

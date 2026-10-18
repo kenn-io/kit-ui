@@ -23,6 +23,8 @@ type Reply = Awaited<ReturnType<AppOpenedOptions["post"]>>;
 let statuses: (number | "offline" | "held" | Reply)[];
 let release: (status: number | Reply) => void;
 let stops: (() => void)[];
+let elapsed: number;
+let advancingFrom: number | undefined;
 
 const post: BrowserTelemetryOptions["post"] = (route, event, options) => {
   sent.push(options ? { route, event, options } : { route, event });
@@ -46,7 +48,10 @@ const settle = async () => {
   for (let i = 0; i < 20; i++) await Promise.resolve();
 };
 const advance = async (ms: number) => {
+  advancingFrom = Date.now();
   jest.advanceTimersByTime(ms);
+  elapsed += ms;
+  advancingFrom = undefined;
   await settle();
 };
 const blockStorage = () => {
@@ -71,41 +76,54 @@ beforeEach(() => {
     setItem: (key: string, value: string) => void stored.set(key, value),
   };
   jest.useFakeTimers({ now: DAY_ONE });
+  elapsed = 0;
+  jest
+    .spyOn(performance, "now")
+    .mockImplementation(
+      () => elapsed + (advancingFrom === undefined ? 0 : Date.now() - advancingFrom),
+    );
 });
 
 afterEach(() => {
   for (const stop of stops) stop();
   jest.useRealTimers();
+  jest.restoreAllMocks();
   delete g.localStorage;
   delete g.window;
 });
 
 describe("startAppOpenedReporting", () => {
-  test("readable history keeps another reporter's evictions after 35 dates", async () => {
+  test("a failed ordinary visit defers a new screen until the shared deadline", async () => {
     const reporter = start();
-    for (let date = 3; date <= 37; date++) {
-      jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
-      reporter.reportScreen("A");
-      await settle();
-    }
-    jest.setSystemTime(new Date("2026-11-07T12:00:00Z"));
-    const other = start();
-    other.reportScreen("A");
     await settle();
-    other();
-    jest.setSystemTime(new Date("2026-11-08T12:00:00Z"));
-    reporter.reportScreen("A");
+    statuses = [503];
+    reporter.reportVisit(VISIT);
     await settle();
-    for (const key of [`${PREFIX}open`, `${PREFIX}screen.A`, `${PREFIX}check`]) {
-      expect(stored.get(key)).toBe(
-        "2026-10-05,2026-10-06,2026-10-07,2026-10-08,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13,2026-10-14,2026-10-15,2026-10-16,2026-10-17,2026-10-18,2026-10-19,2026-10-20,2026-10-21,2026-10-22,2026-10-23,2026-10-24,2026-10-25,2026-10-26,2026-10-27,2026-10-28,2026-10-29,2026-10-30,2026-10-31,2026-11-01,2026-11-02,2026-11-03,2026-11-04,2026-11-05,2026-11-06,2026-11-07,2026-11-08",
-      );
-    }
-    jest.setSystemTime(new Date("2026-10-05T12:00:00Z"));
-    focus();
+    reporter.reportScreen("settings");
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    await advance(999);
+    expect(sent).toHaveLength(2);
+    reporter.reportVisit(VISIT);
+    await advance(1);
+    expect(sent.slice(2).map(({ event }) => event)).toEqual([
+      { event: "screen_viewed", properties: { surface: "web", screen: "settings" } },
+    ]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("a same-day wall-clock rollback preserves the one-second visit cooldown", async () => {
+    const reporter = start();
     await settle();
-    expect(sent).toHaveLength(74);
-    reporter.onQuietChange((quiet) => expect(quiet).toBe(false))();
+    statuses = [503];
+    reporter.reportVisit(VISIT);
+    await settle();
+    jest.setSystemTime(new Date("2026-10-03T11:00:00Z"));
+    await advance(999);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(2);
+    await advance(1);
+    reporter.reportVisit(VISIT);
+    expect(sent.slice(2)).toEqual([{ route: ROUTE, event: VISIT }]);
   });
 
   test.each(["history", "observed", "mirror"])(
@@ -445,6 +463,12 @@ describe("startAppOpenedReporting", () => {
         await advance(499);
         expect(sent).toHaveLength(3);
         await advance(1);
+        if (reply === 503) {
+          expect(sent).toHaveLength(3);
+          await advance(1499);
+          expect(sent).toHaveLength(3);
+          await advance(1);
+        }
       } else release(503);
       await settle();
       expect(sent).toHaveLength(4);
@@ -991,17 +1015,20 @@ describe("startAppOpenedReporting", () => {
     if (next === "cleanup") reporter();
     expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     release(reply);
-    await advance(60000);
+    await settle();
     if (next === "screen") focus();
     await settle();
     expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
-    expect(jest.getTimerCount()).toBe(0);
+    expect(jest.getTimerCount()).toBe(reply === 503 && next === "app" ? 1 : 0);
     if (next === "cleanup") expect(stored.has(`${PREFIX}check`)).toBe(false);
     if (reply === 503) {
       statuses = [503, 202];
       if (next === "app") focus();
       else reporter.reportScreen("A");
       await settle();
+      await advance(999);
+      expect(sent).toHaveLength(1);
+      await advance(1);
       await advance(1999);
       expect(sent).toHaveLength(2);
       await advance(1);

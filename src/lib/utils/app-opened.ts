@@ -125,7 +125,7 @@ export function startAppOpenedReporting({
   let stopped = false,
     daily = false,
     failures = 0,
-    visitEligibleAt = 0;
+    ordinaryEligibleAt = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
     lastQuiet = true;
@@ -159,7 +159,7 @@ export function startAppOpenedReporting({
     gate = "unknown";
     daily = false;
     failures = 0;
-    visitEligibleAt = 0;
+    ordinaryEligibleAt = 0;
     cancelRetry();
     screens.clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
@@ -206,20 +206,16 @@ export function startAppOpenedReporting({
     }
     if (failed) {
       const delay = 1000 * 2 ** failures++;
-      visitEligibleAt = Date.now() + delay;
+      ordinaryEligibleAt = performance.now() + delay;
       if (failures >= 6) cancelRetry();
-      else if (checking && key !== undefined && !retry)
-        retry = setTimeout(() => {
-          retry = undefined;
-          pump();
-        }, delay);
       if (checking) daily = false;
       notify();
+      pump();
       return;
     }
     if (failures < 6 && (checking || (!daily && !retry))) {
       failures = 0;
-      visitEligibleAt = 0;
+      ordinaryEligibleAt = 0;
     }
     if (gate === "unknown" && (!key || key === storageKey)) gate = "disabled";
     if (checking) daily = false;
@@ -229,7 +225,7 @@ export function startAppOpenedReporting({
     rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
     if (visit) {
-      if (!options?.keepalive && Date.now() < visitEligibleAt) return;
+      if (!options?.keepalive && performance.now() < ordinaryEligibleAt) return;
       if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
       return;
     }
@@ -237,8 +233,17 @@ export function startAppOpenedReporting({
     const screen = [...screens].find(
       (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
     );
-    if (!claims.has(storageKey, day))
-      void send({ event: "app_opened", properties: { surface } }, storageKey);
+    const open = !claims.has(storageKey, day);
+    if (!open && screen === undefined) return;
+    const delay = ordinaryEligibleAt - performance.now();
+    if (delay > 0) {
+      retry = setTimeout(() => {
+        retry = undefined;
+        pump();
+      }, delay);
+      return;
+    }
+    if (open) void send({ event: "app_opened", properties: { surface } }, storageKey);
     else if (screen !== undefined)
       void send(
         { event: "screen_viewed", properties: { surface, screen } },
@@ -251,7 +256,7 @@ export function startAppOpenedReporting({
   return Object.assign(
     () => {
       stopped = true;
-      visitEligibleAt = 0;
+      ordinaryEligibleAt = 0;
       cancelRetry();
       screens.clear();
       notify();
