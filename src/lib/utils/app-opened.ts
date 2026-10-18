@@ -190,11 +190,12 @@ export function startAppOpenedReporting({
       }
     }
     rollover();
+    const isDisabled = disabled();
     if (sending !== day) {
       pump();
       return;
     }
-    if (disabled()) {
+    if (isDisabled) {
       if (checking) daily = false;
       return;
     }

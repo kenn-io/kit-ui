@@ -546,6 +546,12 @@ describe("startAppOpenedReporting", () => {
     release(202);
     await settle();
     expect(changes).toEqual(expected);
+    if (action === "rollover") {
+      expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
+      focus();
+      await settle();
+      expect(sent).toHaveLength(2);
+    }
   });
 
   test("quiet notifications pause a visit tracker and honor unsubscribe and cleanup", async () => {
