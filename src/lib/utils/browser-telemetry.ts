@@ -208,8 +208,12 @@ export function startBrowserTelemetry({
       (checking && key === undefined && !claim);
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
-    if (!failed && key !== undefined && claim !== "quiet" && gate !== "disabled")
-      claims.add(key, sending);
+    // Another tab's opt-out may have deleted screen history this page's stale gate can't see.
+    const optedOut =
+      claim === "quiet" ||
+      gate === "disabled" ||
+      [sending, day, today()].some((date) => claims.has(`${prefix}quiet`, date));
+    if (!failed && key !== undefined && !optedOut) claims.add(key, sending);
     if (claim === "quiet") forgetScreens();
     if (stopped) return release();
     // A disabled receipt stops the current page. One that lands after this page began a

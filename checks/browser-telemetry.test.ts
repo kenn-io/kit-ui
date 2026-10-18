@@ -296,6 +296,27 @@ describe("startBrowserTelemetry", () => {
     expect(sent).toHaveLength(2);
   });
 
+  test.each(["running", "stopped", "after midnight"])(
+    "a screen reply after another tab's opt-out stores no screen name: %s",
+    async (variant) => {
+      seed(`${PREFIX}screen.A`, "2026-10-02");
+      const tab = start();
+      await settle();
+      statuses = ["held"];
+      tab.reportScreen("A");
+      const held = release;
+      if (variant === "after midnight") jest.setSystemTime(DAY_TWO);
+      const other = start();
+      await settle();
+      other.disable();
+      expect(`${PREFIX}screen.A` in claims()).toBe(false);
+      if (variant === "stopped") tab.stop();
+      held(202);
+      await settle();
+      expect(`${PREFIX}screen.A` in claims()).toBe(false);
+    },
+  );
+
   test("an app-open answered after cleanup stays claimed for the next page", async () => {
     statuses = ["held"];
     start().stop();
