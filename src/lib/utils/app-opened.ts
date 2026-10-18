@@ -105,11 +105,11 @@ export function startAppOpenedReporting({
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
+  const pending = new Map<string, object>();
   let day = today(),
     generation = {},
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
-    daily = false,
     failures = 0,
     ordinaryEligibleAt = 0;
   let currentScreen: string | undefined,
@@ -149,7 +149,6 @@ export function startAppOpenedReporting({
     day = today();
     generation = {};
     gate = "unknown";
-    daily = false;
     failures = 0;
     ordinaryEligibleAt = 0;
     cancelRetry();
@@ -165,7 +164,11 @@ export function startAppOpenedReporting({
   ) => {
     const sending = day;
     const owner = generation;
-    if (checking) daily = true;
+    const record = {};
+    if (checking) pending.set(sending, record);
+    const release = () => {
+      if (checking && pending.get(sending) === record) pending.delete(sending);
+    };
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
       response = await (post as BrowserTelemetryOptions["post"])(route, event, options);
@@ -180,7 +183,7 @@ export function startAppOpenedReporting({
       response = undefined;
       /* Receipt checks retry transport failures. */
     }
-    if (stopped) return;
+    if (stopped) return release();
     const failed = !response || (response.status >= 500 && response.status < 600);
     if (response && !failed) {
       // Claims keep the sending date; disabled receipts also stop the current page.
@@ -195,11 +198,12 @@ export function startAppOpenedReporting({
     rollover();
     const isDisabled = disabled();
     if (owner !== generation) {
+      release();
       pump();
       return;
     }
     if (isDisabled) {
-      if (checking) daily = false;
+      release();
       return;
     }
     if (failed) {
@@ -207,15 +211,15 @@ export function startAppOpenedReporting({
       if (retry === undefined) ordinaryEligibleAt = performance.now() + delay;
       if (failures >= 6) cancelRetry();
       notify();
-      if (checking && owner === generation) daily = false;
+      release();
       pump();
       return;
     }
-    if (failures < 6 && (checking || (!daily && !retry))) {
+    if (failures < 6 && (checking || (!pending.has(day) && !retry))) {
       failures = 0;
       ordinaryEligibleAt = 0;
     }
-    if (checking) daily = false;
+    release();
     pump();
   };
   const pump = (visit?: VisitEvent, options?: VisitOptions, wake = false) => {
@@ -224,10 +228,10 @@ export function startAppOpenedReporting({
     if (visit) {
       if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)
         return;
-      if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
+      if (gate === "enabled" || (!pending.has(day) && !retry)) void send(visit, undefined, options);
       return;
     }
-    if (retry || daily) return;
+    if (retry || pending.has(day)) return;
     const screen = [...screens].find(
       (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
     );

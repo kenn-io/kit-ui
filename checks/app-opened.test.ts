@@ -726,7 +726,7 @@ describe("startAppOpenedReporting", () => {
     expect(stored.get(`${PREFIX}open`)).toBe("2026-10-03,2026-10-04");
   });
 
-  test.each([202, 503, "disabled", "callback"] as const)(
+  test.each([202, 503, "disabled", "callback", "same-success", "same-failure"] as const)(
     "old screen replies preserve the current request across clock rollback: %p",
     async (reply) => {
       const reporter = start();
@@ -736,14 +736,46 @@ describe("startAppOpenedReporting", () => {
       const previous = release;
       jest.setSystemTime(DAY_TWO);
       focus();
+      expect(sent.map(({ event }) => event.properties.screen ?? event.event)).toEqual([
+        "app_opened",
+        "A",
+        "app_opened",
+      ]);
       jest.setSystemTime(DAY_ONE);
+      if (reply === "same-success" || reply === "same-failure") {
+        reporter.reportScreen("A");
+        expect(sent).toHaveLength(3);
+        expect(stored.get(`${PREFIX}screen.A`)).toBeUndefined();
+        previous(reply === "same-success" ? 202 : 503);
+        await settle();
+        expect(stored.get(`${PREFIX}screen.A`)).toBe(
+          reply === "same-success" ? "2026-10-03" : undefined,
+        );
+        expect(sent.filter(({ event }) => event.properties.screen === "A")).toHaveLength(
+          reply === "same-success" ? 1 : 2,
+        );
+        if (reply === "same-failure") release(503);
+        statuses = Array(6).fill(503);
+        await settle();
+        await advance(999);
+        expect(sent).toHaveLength(reply === "same-success" ? 3 : 4);
+        await advance(1);
+        for (const delay of [2000, 4000, 8000, 16000, 60000]) await advance(delay);
+        reporter.reportScreen("A");
+        expect(sent.filter(({ event }) => event.properties.screen === "A")).toHaveLength(
+          reply === "same-success" ? 1 : 7,
+        );
+        return;
+      }
       reporter.reportScreen("B");
-      const current = release;
-      statuses = Array(6).fill(503);
       const status = typeof reply === "number" ? reply : 202;
       previous(reply === "disabled" ? { status, data: { status: "disabled" } } : status);
       await settle();
-      expect(sent.filter(({ event }) => event.properties.screen === "B")).toHaveLength(1);
+      const current = release;
+      statuses = Array(6).fill(503);
+      expect(sent.filter(({ event }) => event.properties.screen === "B")).toHaveLength(
+        reply === "disabled" ? 0 : 1,
+      );
       expect(stored.get(`${PREFIX}screen.A`)).toBe(
         reply === 202 || reply === "callback" ? "2026-10-03" : undefined,
       );
@@ -755,11 +787,11 @@ describe("startAppOpenedReporting", () => {
         "app_opened",
         "A",
         "app_opened",
-        "B",
+        ...(reply === "disabled" ? [] : ["B"]),
       ]);
       await advance(1);
       expect(sent.filter(({ event }) => event.properties.screen === "B")).toHaveLength(
-        reply === "disabled" ? 1 : 2,
+        reply === "disabled" ? 0 : 2,
       );
       reporter.onQuietChange((quiet) => {
         if (reply !== "callback" || !quiet) return;
@@ -771,12 +803,10 @@ describe("startAppOpenedReporting", () => {
       });
       for (const delay of [2000, 4000, 8000, 16000]) await advance(delay);
       expect(sent.filter(({ event }) => event.properties.screen === "B")).toHaveLength(
-        reply === "disabled" ? 1 : reply === "callback" ? 7 : 6,
+        reply === "disabled" ? 0 : reply === "callback" ? 7 : 6,
       );
       expect(sent.filter(({ event }) => event.properties.screen === "A")).toHaveLength(1);
-      expect(sent.filter(({ event }) => event.event === "app_opened")).toHaveLength(
-        reply === "callback" ? 3 : 2,
-      );
+      expect(sent.filter(({ event }) => event.event === "app_opened")).toHaveLength(2);
       const count = sent.length;
       await advance(60000);
       if (reply === "callback") focus();
