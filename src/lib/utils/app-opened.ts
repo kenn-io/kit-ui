@@ -133,9 +133,13 @@ export function startAppOpenedReporting({
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
   };
-  const send = async (event: VisitEvent, key?: string, options?: VisitOptions) => {
-    const sending = day,
-      checking = key !== undefined || gate === "unknown";
+  const send = async (
+    event: VisitEvent,
+    key?: string,
+    options?: VisitOptions,
+    checking = key !== undefined || gate === "unknown",
+  ) => {
+    const sending = day;
     if (checking) {
       daily = true;
       checkingVisit = key === undefined;
@@ -159,7 +163,7 @@ export function startAppOpenedReporting({
       pump();
       return;
     }
-    if (checking) daily = checkingVisit = false;
+    if (checking) daily = false;
     if (disabled()) return;
     if (!response || (response.status >= 500 && response.status < 600)) {
       if (!checking) {
@@ -186,9 +190,12 @@ export function startAppOpenedReporting({
         response.status < 300 &&
         !response.json &&
         response.data === undefined);
-    if (checking || accepted) failures = 0;
+    if ((checking || accepted) && failures < 6) failures = 0;
+    if (checking && key === undefined) {
+      checkingVisit = false;
+      visits.shift();
+    }
     if (accepted) {
-      if (checking && key === undefined) visits.shift();
       gate = "enabled";
       write(`${prefix}check`);
       if (key) write(key);
@@ -209,6 +216,10 @@ export function startAppOpenedReporting({
       }
     }
     if (retry || daily || failures >= 6) return;
+    if (checkingVisit && visits[0]) {
+      void send(visits[0].event, undefined, visits[0].options, true);
+      return;
+    }
     const screen = [...screens].find(
       (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
     );

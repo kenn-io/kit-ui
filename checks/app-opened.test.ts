@@ -790,4 +790,70 @@ describe("startAppOpenedReporting", () => {
       "action",
     ]);
   });
+
+  test("a late accepted visit leaves an exhausted screen reporter quiet until rollover", async () => {
+    const reporter = start();
+    await settle();
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
+    statuses = ["held", ...Array(6).fill(503)];
+    reporter.reportVisit(VISIT);
+    reporter.reportScreen("A");
+    await settle();
+    for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
+    expect(sent).toHaveLength(8);
+    release({ status: 202, data: { status: "queued" } });
+    await settle();
+    focus();
+    reporter.reportVisit(VISIT);
+    await advance(60000);
+    expect(sent).toHaveLength(8);
+    expect(quiet).toEqual([false, true]);
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    await settle();
+    expect(sent.slice(8).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
+    expect(quiet).toEqual([false, true, false]);
+  });
+
+  test.each([503, 400])(
+    "a visit check receiving %s after another tab enables reporting retains its outcome",
+    async (status) => {
+      stored.set(STORAGE_KEY, "2026-10-03");
+      statuses = ["held"];
+      const reporter = start();
+      reporter.reportVisit(VISIT, { keepalive: true });
+      reporter.reportVisit({ event: "action", properties: { count: 2 } });
+      const checking = release;
+      const other = start();
+      other.reportScreen("B");
+      await settle();
+      other();
+      checking(status);
+      await settle();
+      focus();
+      await settle();
+      expect(sent.map(({ event }) => event.event)).toEqual(
+        status === 503
+          ? ["session_ended", "screen_viewed"]
+          : ["session_ended", "screen_viewed", "action"],
+      );
+      if (status === 503) {
+        statuses = [503];
+        await advance(999);
+        expect(sent).toHaveLength(2);
+        await advance(1);
+        expect(sent.at(-1)).toEqual({ route: ROUTE, event: VISIT, options: { keepalive: true } });
+        focus();
+        await advance(1999);
+        expect(sent).toHaveLength(3);
+        await advance(1);
+        expect(sent.slice(2)).toEqual([
+          { route: ROUTE, event: VISIT, options: { keepalive: true } },
+          { route: ROUTE, event: VISIT, options: { keepalive: true } },
+          { route: ROUTE, event: { event: "action", properties: { count: 2 } } },
+        ]);
+      }
+    },
+  );
 });
