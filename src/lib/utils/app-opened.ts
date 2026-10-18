@@ -58,7 +58,7 @@ export function startAppOpenedReporting({
   post,
 }: AppOpenedOptions | BrowserTelemetryOptions): AppOpenedReporter {
   const prefix = `${storageKey}.browser.v1.`,
-    claims = new Set<string>();
+    claims = new Map<string, string[]>();
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
   let day = today(),
@@ -75,30 +75,34 @@ export function startAppOpenedReporting({
     lastQuiet = quiet();
     for (const listener of listeners) listener(lastQuiet);
   };
-  const claimed = (key: string): boolean => {
+  const claimed = (key: string, keep = 35): boolean => {
+    let dates = claims.get(key) ?? [];
     try {
-      const saved = localStorage.getItem(key);
-      if (saved?.split(",").includes(day)) claims.add(key);
+      const saved = localStorage.getItem(key)?.split(",") ?? [];
+      dates = [
+        ...new Set([
+          ...saved.filter((date) => date !== day),
+          ...dates,
+          ...(saved.includes(day) ? [day] : []),
+        ]),
+      ];
     } catch {
       /* Page memory survives blocked storage. */
     }
-    return claims.has(key);
+    dates = dates.slice(-keep);
+    claims.set(key, dates);
+    return dates.includes(day);
   };
   const write = (key: string, keep = 35) => {
-    if (!claimed(key)) {
-      let dates: string[] = [];
+    if (!claimed(key, keep)) {
+      const dates = [...(claims.get(key) ?? []), day].slice(-keep);
+      claims.set(key, dates);
       try {
-        dates = localStorage.getItem(key)?.split(",") ?? [];
-      } catch {
-        /* Still attempt the write when reads are blocked. */
-      }
-      try {
-        localStorage.setItem(key, [...dates, day].slice(-keep).join(","));
+        localStorage.setItem(key, dates.join(","));
       } catch {
         /* Retain the page claim. */
       }
     }
-    claims.add(key);
   };
   const cancelRetry = () => {
     clearTimeout(retry);
@@ -107,9 +111,9 @@ export function startAppOpenedReporting({
   const readGate = () =>
     gate === "disabled"
       ? gate
-      : claimed(`${prefix}quiet`)
+      : claimed(`${prefix}quiet`, 1)
         ? "disabled"
-        : claimed(`${prefix}check`)
+        : claimed(`${prefix}check`, 1)
           ? "enabled"
           : "unknown";
   const disabled = (): boolean => {
@@ -121,7 +125,6 @@ export function startAppOpenedReporting({
   const rollover = (wake = false) => {
     if (day === today() || (!wake && (stopped || readGate() === "disabled"))) return;
     day = today();
-    claims.clear();
     gate = "unknown";
     daily = false;
     failures = 0;
@@ -198,10 +201,14 @@ export function startAppOpenedReporting({
     if (checking) daily = false;
     pump();
   };
-  const pump = () => {
-    rollover();
+  const pump = (visit?: VisitEvent, options?: VisitOptions, wake = false) => {
+    rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
-    if (retry || daily || failures >= 6) return;
+    if (visit) {
+      if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
+      return;
+    }
+    if (retry || daily) return;
     const screen = [...screens].find(
       (name) => !claimed(`${prefix}screen.${encodeURIComponent(name)}`),
     );
@@ -213,19 +220,7 @@ export function startAppOpenedReporting({
         `${prefix}screen.${encodeURIComponent(screen)}`,
       );
   };
-  const request = (visit?: VisitEvent, options?: VisitOptions) => {
-    rollover();
-    if (stopped || disabled() || failures >= 6) return;
-    if (visit) {
-      if (gate === "enabled" || (!daily && !retry)) void send(visit, undefined, options);
-      return;
-    }
-    pump();
-  };
-  const report = () => {
-    rollover(true);
-    request();
-  };
+  const report = () => pump(undefined, undefined, true);
   pump();
   window.addEventListener("focus", report);
   return Object.assign(
@@ -241,9 +236,9 @@ export function startAppOpenedReporting({
       reportScreen(screen: string) {
         currentScreen = screen;
         screens.add(screen);
-        request();
+        pump();
       },
-      reportVisit: (event: VisitEvent, options?: VisitOptions) => request(event, options),
+      reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),
       onQuietChange(listener: (quiet: boolean) => void) {
         listener(quiet());
         if (!stopped) listeners.add(listener);

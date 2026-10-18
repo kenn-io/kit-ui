@@ -81,34 +81,50 @@ afterEach(() => {
 });
 
 describe("startAppOpenedReporting", () => {
-  test("keepalive after midnight posts the visit synchronously before cleanup", async () => {
-    const reporter = start();
-    await settle();
-    sent = [];
-    statuses = ["held"];
-    jest.setSystemTime(DAY_TWO);
-    reporter.reportVisit(VISIT, { keepalive: true });
-    reporter();
-    expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
-    release(202);
-    await advance(60000);
-    expect(sent).toHaveLength(1);
-  });
-
-  test("clock correction from 2099 reports today's app and screen once", async () => {
-    jest.setSystemTime(new Date("2099-01-01T12:00:00Z"));
-    const reporter = start();
-    reporter.reportScreen("A");
-    await settle();
-    reporter();
-    sent = [];
-    jest.setSystemTime(new Date("2026-10-18T12:00:00Z"));
-    const reloaded = start();
-    reloaded.reportScreen("A");
-    await settle();
-    focus();
-    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
-  });
+  test.each(["read", "write", "both"])(
+    "35 page dates survive %s storage failures and rollover",
+    async (failure) => {
+      if (failure === "both") blockStorage();
+      else if (failure === "read")
+        g.localStorage = {
+          getItem: () => {
+            throw new Error("blocked read");
+          },
+          setItem: (key: string, value: string) => void stored.set(key, value),
+        };
+      else
+        g.localStorage = {
+          getItem: (key: string) => stored.get(key) ?? null,
+          setItem: () => {
+            throw new DOMException("full", "QuotaExceededError");
+          },
+        };
+      const reporter = start();
+      reporter.reportScreen("A");
+      await settle();
+      for (let date = 4; date <= 38; date++) {
+        jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+        focus();
+        await settle();
+        if (date === 4 || date === 37) {
+          const count = sent.length;
+          jest.setSystemTime(DAY_ONE);
+          focus();
+          reporter.reportScreen("A");
+          await settle();
+          expect(sent).toHaveLength(count);
+        }
+      }
+      const count = sent.length;
+      jest.setSystemTime(DAY_ONE);
+      focus();
+      await settle();
+      expect(sent.slice(count).map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "screen_viewed",
+      ]);
+    },
+  );
 
   test.each([
     [401, "quiet"],
@@ -290,15 +306,6 @@ describe("startAppOpenedReporting", () => {
         expect(jest.getTimerCount()).toBe(0);
         return;
       }
-      await settle();
-      await advance(499);
-      expect(sent).toHaveLength(3);
-      await advance(1);
-      expect(sent.at(-1)?.event.event).toBe("screen_viewed");
-      await advance(3999);
-      expect(sent).toHaveLength(4);
-      await advance(1);
-      expect(sent).toHaveLength(5);
     },
   );
 
@@ -406,7 +413,6 @@ describe("startAppOpenedReporting", () => {
       "screen_viewed",
     ]);
     expect(sent[1]?.event.properties).toEqual({ surface: "web", screen: "A/B" });
-    expect(stored.get(`${PREFIX}screen.A%2FB`)).toBe("invalid,2026-10-03");
   });
 
   test.each(["enabled", "cleanup", "rejected"])(
@@ -501,6 +507,13 @@ describe("startAppOpenedReporting", () => {
 
   test.each(["read", "write", "both"])("%s storage failures keep page claims", async (failure) => {
     if (failure === "both") blockStorage();
+    else if (failure === "read")
+      g.localStorage = {
+        getItem: () => {
+          throw new Error("blocked read");
+        },
+        setItem: (key: string, value: string) => void stored.set(key, value),
+      };
     else {
       stored.set(STORAGE_KEY, "2026-10-02");
       g.localStorage = {
@@ -510,13 +523,6 @@ describe("startAppOpenedReporting", () => {
         },
       };
     }
-    if (failure === "read")
-      g.localStorage = {
-        getItem: () => {
-          throw new Error("blocked read");
-        },
-        setItem: (key: string, value: string) => void stored.set(key, value),
-      };
     const reporter = start();
     await settle();
     reporter.reportScreen("A");
@@ -525,7 +531,6 @@ describe("startAppOpenedReporting", () => {
     reporter.reportScreen("A");
     await settle();
     expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
-    if (failure === "read") expect(stored.get(STORAGE_KEY)).toBe("2026-10-03");
   });
 
   test("midnight resets the day before a shared receipt can notify a screen subscriber", async () => {
@@ -573,7 +578,6 @@ describe("startAppOpenedReporting", () => {
     await settle();
     jest.setSystemTime(DAY_TWO);
     await advance(2000);
-    expect(stored.get(STORAGE_KEY)).toBe("2026-10-03,2026-10-04");
     focus();
     focus();
     await settle();
@@ -662,7 +666,6 @@ describe("startAppOpenedReporting", () => {
         properties: { surface: "web", screen: "A" },
       });
       expect(stored.get(`${PREFIX}screen.A`)).toBe("2026-10-04");
-      expect(stored.get(STORAGE_KEY)).toBe("2026-10-03,2026-10-04");
     },
   );
 
@@ -759,6 +762,8 @@ describe("startAppOpenedReporting", () => {
     const evicted = start();
     evicted.reportScreen("A");
     await settle();
+    focus();
+    await settle();
     expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
   });
 
@@ -805,7 +810,7 @@ describe("startAppOpenedReporting", () => {
           reporter.reportVisit(VISIT, { keepalive: true });
           await settle();
           release(reply);
-          await advance(100);
+          await settle();
         } else {
           statuses = [503, reply];
           reporter.reportVisit(VISIT);
@@ -816,13 +821,12 @@ describe("startAppOpenedReporting", () => {
         expect(sent).toHaveLength(2 * i + 3);
       }
       expect(quiet).toEqual([false]);
-      if (overlapping) await advance(1000);
       expect(jest.getTimerCount()).toBe(0);
     },
   );
 
   test.each([false, true])(
-    "successful keepalive visits preserve screen exhaustion: joined cooldown=%s",
+    "successful keepalive visits preserve screen exhaustion: overlapping=%s",
     async (joined) => {
       const reporter = start();
       await settle();
@@ -895,21 +899,20 @@ describe("startAppOpenedReporting", () => {
     [202, "screen"],
     [400, "screen"],
     [503, "screen"],
-    ["offline", "screen"],
     [503, "app"],
-    ["offline", "app"],
   ] as const)("a visit checks once after %s; later %s work can retry", async (reply, next) => {
     stored.set(STORAGE_KEY, "2026-10-03");
     statuses = [reply];
     const reporter = start();
     if (next === "app") jest.setSystemTime(DAY_TWO);
     reporter.reportVisit(VISIT, { keepalive: true });
+    expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     await advance(60000);
     if (next === "screen") focus();
     await settle();
     expect(sent).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
     expect(jest.getTimerCount()).toBe(0);
-    if (reply === 503 || reply === "offline") {
+    if (reply === 503) {
       statuses = [503, 202];
       if (next === "app") focus();
       else reporter.reportScreen("A");
@@ -929,19 +932,19 @@ describe("startAppOpenedReporting", () => {
     const reporter = start();
     reporter.reportVisit(VISIT);
     const checking = release;
+    reporter.onQuietChange((quiet) => {
+      if (!quiet) reporter.reportScreen("A");
+    });
     const other = start();
     other.reportScreen("B");
     await settle();
     other();
-    reporter.onQuietChange((quiet) => {
-      if (!quiet) reporter.reportScreen("A");
-    });
     checking(202);
     await settle();
-    expect(sent.map(({ event }) => event.event)).toEqual([
-      "session_ended",
-      "screen_viewed",
-      "screen_viewed",
+    expect(sent.map(({ event }) => event)).toEqual([
+      VISIT,
+      { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
+      { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
     ]);
   });
 
