@@ -347,12 +347,14 @@ writes use page memory; malformed dates act as missing claims. Future valid
 app-open and screen dates remain claimed after clock rollback. The `quiet` and
 `check` dates count only for the current UTC day.
 
-A legacy app-open date alone requires a receipt check. An unclaimed screen
-can check; otherwise the earliest waiting visit checks with its original
-properties and options. If neither can check, an active `onQuietChange`
-subscriber triggers one app-open receipt check so visit timers can start.
-Without a subscriber, the helper waits for a report. Tabs opening together
-may each make an initial check.
+A stored app-open date never sends `app_opened` again that day, because it
+is written only after the daemon answered, and a daemon may count each
+accepted `app_opened`. That includes dates written by the earlier helper.
+Without today's receipt, an unclaimed screen checks; otherwise the earliest
+waiting visit checks with its original properties and options. If neither can
+check, the page stays quiet, even with an `onQuietChange` subscriber, until a
+screen or visit report or the next UTC day. Tabs opening together may each make
+an initial check.
 
 `post` resolves HTTP errors and rejects transport failures. Return a `Response`
 with an unread body or `TelemetryReceipt` (`{ status, data }`) to preserve the
@@ -360,12 +362,17 @@ daemon's HTTP 202 receipt. An already-consumed, malformed, or interrupted 202
 body is a terminal unreadable receipt: it cannot enable reports, and the helper
 never resends that event, because the daemon accepts it before replying.
 Valid `queued` and `skipped` receipts and legacy status-only successful
-2xx replies enable reports. Only a 202 `disabled` receipt persists quiet across
+2xx replies enable reports. A status-only reply is a `TelemetryReceipt` with
+neither `data` nor `json`, as the earlier `{ status }` callback returned. A
+native `Response` always has `json`, so it enables reports only as a 202 with a
+`queued` or `skipped` body. A 200 or 201 `Response`, or a 202 without a
+recognized receipt, is a terminal reply handled like the rejections below; it
+never persists quiet. Only a 202 `disabled` receipt persists quiet across
 reloads until a later UTC day's load or focus makes a check; screen and visit
 calls cannot wake a disabled page. Before an enabled receipt, a terminal
 app-open or visit-check rejection leaves this page quiet until a later UTC day's
 focus. A terminal app-open reply retains its daily attempt claim across reloads.
-Reload can check permission again through a screen, visit, or subscriber. A
+Reload can check permission again through a screen or visit. A
 rejected screen still claims its daily date across reloads and leaves an unknown
 gate available for another screen or waiting visit to check.
 

@@ -242,8 +242,6 @@ export function startAppOpenedReporting({
       );
     else if (gate === "unknown" && visits[0])
       void send(visits[0].event, undefined, visits[0].options);
-    else if (gate === "unknown" && listeners.size)
-      void send({ event: "app_opened", properties: { surface } }, storageKey);
   };
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
@@ -278,7 +276,7 @@ export function startAppOpenedReporting({
       reportVisit: (event: VisitEvent, options?: VisitOptions) => request(event, options),
       onQuietChange(listener: (quiet: boolean) => void) {
         listener(quiet());
-        if (!stopped && listeners.add(listener)) queueMicrotask(pump);
+        if (!stopped) listeners.add(listener);
         return () => void listeners.delete(listener);
       },
     },

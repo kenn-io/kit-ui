@@ -147,6 +147,42 @@ describe("startAppOpenedReporting", () => {
     },
   );
 
+  test.each(["legacy date", "consumed 202"])(
+    "quiet subscribers never resend an app-open answered as %s; a screen checks instead",
+    async (prior) => {
+      for (let reply = 0; reply < 6; reply++) {
+        const consumed = new Response(JSON.stringify({ status: "queued" }), { status: 202 });
+        await consumed.text();
+        statuses.push(consumed);
+      }
+      if (prior === "legacy date") stored.set(STORAGE_KEY, "2026-10-03");
+      else {
+        start();
+        await settle();
+        stops.pop()?.();
+      }
+      const quiet: boolean[] = [];
+      for (let load = 0; load < 5; load++) {
+        const reporter = start();
+        reporter.onQuietChange((value) => quiet.push(value));
+        await advance(60000);
+        reporter();
+      }
+      expect(sent).toHaveLength(prior === "legacy date" ? 0 : 1);
+      expect(quiet).toEqual([true, true, true, true, true]);
+      statuses = [{ status: 202, data: { status: "queued" } }];
+      const reporter = start();
+      reporter.onQuietChange((value) => quiet.push(value));
+      reporter.reportScreen("A");
+      await settle();
+      expect(sent.at(-1)?.event).toEqual({
+        event: "screen_viewed",
+        properties: { surface: "web", screen: "A" },
+      });
+      expect(quiet.slice(5)).toEqual([true, false]);
+    },
+  );
+
   test("a terminal app-open rejection ends its attempt after another event enabled the gate", async () => {
     stored.set(`${PREFIX}check`, "2026-10-03");
     statuses = [400, "held"];
@@ -464,41 +500,37 @@ describe("startAppOpenedReporting", () => {
     ]);
   });
 
-  test.each([false, true])(
-    "quiet notifications pause a visit tracker and honor unsubscribe and cleanup: legacy=%s",
-    async (legacy) => {
-      if (legacy) stored.set(STORAGE_KEY, "2026-10-03");
-      statuses = ["held"];
-      const reporter = start();
-      let timer: ReturnType<typeof setInterval>;
-      const changes: boolean[] = [],
-        detached: boolean[] = [];
-      reporter.onQuietChange((quiet) => {
-        changes.push(quiet);
-        clearInterval(timer);
-        if (!quiet) timer = setInterval(() => reporter.reportVisit(VISIT), 100);
-      });
-      reporter.onQuietChange((quiet) => detached.push(quiet))();
-      await advance(100);
-      expect(jest.getTimerCount()).toBe(0);
-      release({ status: 202, data: { status: "skipped" } });
-      await settle();
-      expect(changes).toEqual([true, false]);
-      expect(sent).toEqual([
-        { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
-      ]);
-      await advance(100);
-      expect(sent.at(-1)?.event).toEqual(VISIT);
-      expect(sent).toHaveLength(2);
-      reporter();
-      focus();
-      await advance(1000);
-      expect(changes).toEqual([true, false, true]);
-      expect(detached).toEqual([true]);
-      expect(jest.getTimerCount()).toBe(0);
-      expect(sent).toHaveLength(2);
-    },
-  );
+  test("quiet notifications pause a visit tracker and honor unsubscribe and cleanup", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    let timer: ReturnType<typeof setInterval>;
+    const changes: boolean[] = [],
+      detached: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      clearInterval(timer);
+      if (!quiet) timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+    });
+    reporter.onQuietChange((quiet) => detached.push(quiet))();
+    await advance(100);
+    expect(jest.getTimerCount()).toBe(0);
+    release({ status: 202, data: { status: "skipped" } });
+    await settle();
+    expect(changes).toEqual([true, false]);
+    expect(sent).toEqual([
+      { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
+    ]);
+    await advance(100);
+    expect(sent.at(-1)?.event).toEqual(VISIT);
+    expect(sent).toHaveLength(2);
+    reporter();
+    focus();
+    await advance(1000);
+    expect(changes).toEqual([true, false, true]);
+    expect(detached).toEqual([true]);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(sent).toHaveLength(2);
+  });
 
   test("cleanup during a shared enabled notification prevents a visit post", async () => {
     statuses = ["held"];
