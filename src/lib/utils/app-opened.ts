@@ -198,7 +198,7 @@ export function startAppOpenedReporting({
     } else if (response.status === 202 && status === "disabled") {
       gate = "disabled";
       write(`${prefix}quiet`);
-    } else if (key && key !== storageKey) write(key);
+    } else if (key && (key !== storageKey || gate === "enabled")) write(key);
     else if (gate === "unknown") gate = "disabled";
     pump();
   };
@@ -222,10 +222,10 @@ export function startAppOpenedReporting({
         { event: "screen_viewed", properties: { surface, screen } },
         `${prefix}screen.${encodeURIComponent(screen)}`,
       );
-    else if (gate === "unknown") {
-      const visit = visits[0];
-      if (visit) void send(visit.event, undefined, visit.options);
-    }
+    else if (gate === "unknown" && visits[0])
+      void send(visits[0].event, undefined, visits[0].options);
+    else if (gate === "unknown" && listeners.size)
+      void send({ event: "app_opened", properties: { surface } }, storageKey);
   };
   const request = (visit?: VisitEvent, options?: VisitOptions) => {
     rollover();
@@ -261,7 +261,7 @@ export function startAppOpenedReporting({
       reportVisit: (event: VisitEvent, options?: VisitOptions) => request(event, options),
       onQuietChange(listener: (quiet: boolean) => void) {
         listener(quiet());
-        if (!stopped) listeners.add(listener);
+        if (!stopped && listeners.add(listener)) queueMicrotask(pump);
         return () => void listeners.delete(listener);
       },
     },

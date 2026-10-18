@@ -348,35 +348,36 @@ valid dates remain claimed after clock rollback.
 
 A legacy app-open date alone requires a receipt check. An unclaimed screen
 can check; otherwise the earliest waiting visit checks with its original
-properties and options. With neither, the helper waits for a report instead
-of repeating app-open. Tabs opening together may each make an initial check.
+properties and options. If neither can check, an active `onQuietChange`
+subscriber triggers one app-open receipt check so visit timers can start.
+Without a subscriber, the helper waits for a report. Tabs opening together
+may each make an initial check.
 
 `post` resolves HTTP errors and rejects transport failures. Return a
 `Response` or `TelemetryReceipt` (`{ status, data }`) to preserve the daemon's
 HTTP 202 receipt. Valid `queued` and `skipped` receipts and legacy status-only
 successful 2xx replies enable reports. Only a 202 `disabled` receipt persists
 quiet across reloads until a later UTC day's load or focus makes a check;
-screen and visit calls cannot wake a disabled page. A terminal app-open or
-visit-check rejection leaves this page quiet until a later UTC day's focus;
-reload can check again. A rejected screen still claims its daily date across reloads and leaves
-an unknown gate available for another screen or waiting visit to check.
+screen and visit calls cannot wake a disabled page. Before an enabled receipt,
+a terminal app-open or visit-check rejection leaves this page quiet until a
+later UTC day's focus; reload can check again. After an enabled receipt, a
+terminal app-open reply ends that day's app-open attempt. A rejected screen
+still claims its daily date across reloads and leaves an unknown gate
+available for another screen or waiting visit to check.
 
 Before the first receipt, up to six visits wait in memory with their original
 properties and `keepalive`; later arrivals are dropped. An enabled receipt
 releases them. Disable, exhaustion, cleanup, or rollover discards them. Start
 visit timers after `onQuietChange(false)`. Enabled visits send immediately,
 even during a pending screen or its backoff. Their failures never retry or
-change a daily retry's budget or deadline. A visit serving as the receipt
-check retains its event and options through retries, then leaves the queue
-once accepted. Separately, the request budget counts unresolved posts plus
-consecutive daily failures; at six, new calls are dropped.
+change a pending daily retry's delay. A visit serving as the receipt check
+retains its event and options through retries and is delivered once accepted.
 
 Daily checks and screens retry transport failures and HTTP 5xx after 1, 2, 4,
 8, and 16 seconds. Six consecutive failures stop reporting and pause trackers
-until reload or the next UTC day. Exhaustion schedules no timer. A terminal
-daily-check reply or an accepted visit resets the consecutive count; a rejected
-one-shot visit preserves it. Both preserve an unrelated screen's pending retry
-delay. A disabled receipt cancels retries and discards pending visits.
+until reload or the next UTC day. Exhaustion schedules no timer. Rejected
+one-shot visits leave this retry limit intact. A disabled receipt cancels
+retries and discards pending visits.
 
 `onQuietChange` immediately supplies the current state and returns an
 unsubscribe function. Unknown, disabled, exhausted, and stopped reporters

@@ -129,6 +129,43 @@ describe("startAppOpenedReporting", () => {
       ]);
     },
   );
+  test("a terminal app-open rejection ends its attempt after another event enabled the gate", async () => {
+    stored.set(`${PREFIX}check`, "2026-10-03");
+    statuses = [400, "held"];
+    start();
+    await settle();
+    expect(sent).toEqual([
+      { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
+    ]);
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(1);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("a legacy app-open claim obtains a skipped receipt before starting visit timers", async () => {
+    stored.set(STORAGE_KEY, "2026-10-03");
+    statuses = [{ status: 202, data: { status: "skipped" } }];
+    const reporter = start();
+    const quiet: boolean[] = [];
+    let timer: ReturnType<typeof setInterval>;
+    reporter.onQuietChange((value) => {
+      quiet.push(value);
+      clearInterval(timer);
+      if (!value) timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+    });
+    await settle();
+    expect(sent).toEqual([
+      { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
+    ]);
+    expect(quiet).toEqual([true, false]);
+    await advance(100);
+    expect(sent).toHaveLength(2);
+    expect(sent.at(-1)?.event).toEqual(VISIT);
+    reporter();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   test("a rejected screen preserves the enabled gate and is not posted again", async () => {
     statuses = [202, 400];
     const reporter = start();
