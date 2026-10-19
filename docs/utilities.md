@@ -424,8 +424,9 @@ backoff.
 
 HTTP 401 means the request wasn't authorized, so the reporter claims nothing
 for that report and stops as if it had reached the six-failure cap. Held
-visits are kept. After the app restores authentication, a new reporter
-checks again; otherwise the next UTC day's load or focus does.
+visits remain only in the current reporter until `stop()` discards them.
+After the app restores authentication, a new reporter checks again without
+inheriting those visits; otherwise the next UTC day's load or focus does.
 
 ### Storage keys
 
