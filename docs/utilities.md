@@ -425,12 +425,10 @@ While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
 UTC day.
 
-While permission is unknown, any non-2xx HTTP check leaves the daily report
-unclaimed and retries with the same capped backoff, except HTTP 401 below.
 A 2xx reply with an unreadable or unknown body claims the daily event but
-leaves permission unknown. After permission is enabled, other non-401 4xx
-replies, such as HTTP 400, claim the daily report and let the next report
-proceed.
+leaves permission unknown. Other non-401 4xx replies, such as HTTP 400 or 404,
+also claim the daily report and let the next report proceed. Reloading that
+day does not retry the claimed app-open report.
 
 HTTP 401 means the request wasn't authorized, so the reporter claims nothing
 for that report and stops as if it had reached the six-failure cap. Held

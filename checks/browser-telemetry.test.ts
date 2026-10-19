@@ -123,6 +123,19 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test("a 404 app-open check stays claimed across a same-day reload", async () => {
+    statuses = Array(12).fill(404);
+    const reporter = start();
+    await settle();
+    reporter.stop();
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
+    await advance(60000);
+    expect(sent).toHaveLength(1);
+    expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
+  });
+
   test.each(["unknown", "unreadable"])(
     "a visit after an %s receipt waits for an enabled screen check",
     async (receipt) => {
@@ -150,14 +163,13 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
-  test.each([400, 401, "unknown screen", "enabled visit"] as const)(
-    "failed permission or authentication check leaves claims free: %p",
+  test.each([401, "unknown screen", "enabled visit"] as const)(
+    "HTTP 401 leaves daily claims free and stops reporting: %p",
     async (outcome) => {
       const seededOpen = typeof outcome === "string";
       if (seededOpen) seed(`${PREFIX}open`, "2026-10-03");
       if (outcome === "enabled visit") seed(`${PREFIX}check`, "2026-10-03");
-      const status = seededOpen ? 401 : outcome;
-      statuses = [status];
+      statuses = [401];
       const before = claims();
       const reporter = start();
       if (outcome === "unknown screen") reporter.reportScreen("initial");
@@ -169,17 +181,15 @@ describe("startBrowserTelemetry", () => {
       await advance(999);
       expect(sent).toHaveLength(1);
       await advance(1);
-      expect(sent).toHaveLength(status === 401 ? 1 : 2);
-      if (status === 401) {
-        reporter.reportScreen("A");
-        reporter.reportVisit(VISIT, { keepalive: true });
-        focus();
-        await advance(60000);
-        expect(sent).toHaveLength(1);
-        reporter.stop();
-        start().reportScreen("A");
-        await settle();
-      }
+      expect(sent).toHaveLength(1);
+      reporter.reportScreen("A");
+      reporter.reportVisit(VISIT, { keepalive: true });
+      focus();
+      await advance(60000);
+      expect(sent).toHaveLength(1);
+      reporter.stop();
+      start().reportScreen("A");
+      await settle();
       expect(claims()[`${PREFIX}check`]).toBe("2026-10-03");
     },
   );
@@ -459,7 +469,7 @@ describe("startBrowserTelemetry", () => {
     const quiet: boolean[] = [];
     reporter.onQuietChange((value) => quiet.push(value));
     jest.setSystemTime(DAY_TWO);
-    statuses = [400, "held"];
+    statuses = [503, "held"];
     reporter.reportScreen("A");
     await settle();
     reporter.reportScreen("A");
@@ -1410,14 +1420,14 @@ describe("startBrowserTelemetry", () => {
       reporter.reportScreen("A");
       release(status);
       await settle();
-      if (status !== 202) {
+      if (status === 503) {
         expect(claims()[`${PREFIX}screen.initial`]).toBeUndefined();
         await advance(999);
         expect(sent).toHaveLength(1);
         await advance(1);
       }
       expect(sent.map(({ event }) => event.properties.screen)).toEqual(
-        status === 202 ? ["initial", "A"] : ["initial", "initial", "A"],
+        status === 503 ? ["initial", "initial", "A"] : ["initial", "A"],
       );
       expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
     },

@@ -208,7 +208,6 @@ export function startBrowserTelemetry({
   ) => {
     const sending = day;
     const owner = generation;
-    const permissionUnknown = gate === "unknown";
     const record = { queued };
     if (checking || queued) pending.set(sending, record);
     const release = () => {
@@ -228,13 +227,10 @@ export function startBrowserTelemetry({
       response = undefined;
       /* Receipt checks retry transport failures. */
     }
-    // Failed permission checks leave daily claims free; ordinary enabled 4xx replies stay terminal.
+    // Transport failures, 5xx, and 401 leave daily claims free.
     const claim = response && receiptClaim(response.status, data);
     const unauthorized = response?.status === 401;
-    const failed =
-      !response ||
-      (response.status >= 500 && response.status < 600) ||
-      (permissionUnknown && (response.status < 200 || response.status >= 300));
+    const failed = !response || (response.status >= 500 && response.status < 600);
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
     // Another tab's opt-out may have deleted screen history this page's stale gate can't see.
