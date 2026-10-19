@@ -322,9 +322,13 @@ telemetry.reportDaily("message_opened", {
   event: "message_opened",
   properties: { surface: "web" },
 });
-const unsubscribe = telemetry.onQuietChange((quiet) => {
-  if (quiet) stopVisitTimers();
-  else startVisitTimers();
+let visitTimersRunning = false;
+const unsubscribe = telemetry.onQuietChange((quiet, reason) => {
+  const shouldRun = !quiet || reason === "checking";
+  if (shouldRun === visitTimersRunning) return;
+  visitTimersRunning = shouldRun;
+  if (shouldRun) startVisitTimers();
+  else stopVisitTimers();
 });
 // When a visit session ends:
 telemetry.reportVisit(
@@ -343,20 +347,13 @@ nothing more that day; tabs that open at the same moment may each send one.
 When storage is blocked, page memory holds them until reload. Upgrading from
 `startAppOpenedReporting` can send one extra `app_opened` that day.
 
-`reportDaily(key, event)` queues an event once per caller key per UTC day,
-sharing the screen queue, receipts, retries, and stored claims. Repeated calls
-while queued keep the first event. Accepted or dropped reports claim the key;
-transport and HTTP 5xx failures retry. Use a stable, finite set of keys without
-record IDs or search text. UTC day rollover drops queued old-day actions,
-including actions waiting behind an in-flight report. Call `reportDaily`
-again only when the action actually occurs on a later day. The current screen
-can still report after rollover. Screen names and daily keys have separate
-namespaces.
-
+Call `reportDaily(key, event)` to report one event per stable key per UTC day.
+It shares the screen queue and stored claims. The first event wins while a
+request is pending. The reporter retries transport and HTTP 5xx failures, and
+drops queued old-day actions at midnight. Use a finite set of keys without
+record IDs or search text. Event properties must be structured-cloneable.
 Actions reported while the gate is disabled are discarded. A later UTC day's
-load or focus check must enable reporting before new actions can send;
-discarded actions stay discarded. Payloads that cannot be copied, such as
-properties containing functions or DOM nodes, are also discarded.
+load or focus check must enable reporting before new actions can send.
 
 ### Receipts and opt-out
 
@@ -379,9 +376,9 @@ const post = async (route, event) => {
 ```
 
 Only an HTTP 202 receipt decides permission. `queued` and `skipped` enable
-reports; `disabled` makes the reporter quiet. Any other reply, including a
-missing or unreadable body, leaves permission unknown, so trackers stay
-paused; a later screen or visit checks again. A disabled receipt keeps reports
+reports; `disabled` makes the reporter quiet. Any other reply except HTTP 401,
+including a missing or unreadable body, leaves permission unknown. Held visits
+wait for a later screen check or the next UTC day's check. A disabled receipt keeps reports
 quiet across reloads until a load or focus on a later UTC day checks again.
 It also clears queued daily actions and deletes stored screen names and caller
 keys. Tabs can't check and write storage in one step, so a tab racing the
@@ -394,33 +391,80 @@ it had received a disabled receipt. Opting back in takes effect on the next
 UTC day's check.
 
 `onQuietChange` immediately supplies the current state and returns an
-unsubscribe function. Unknown, disabled, exhausted, and stopped reporters are
-quiet. Start visit timers on `false` and stop them on `true`.
+unsubscribe function. It calls the listener again whenever the reason changes,
+even when `quiet` stays the same. The reporter is quiet unless the reason is
+`enabled`:
+
+- `checking`: today's permission is unknown and a check is pending or still
+  to send.
+- `enabled`: today's check returned `queued` or `skipped`.
+- `disabled`: a disabled receipt or `disable()`.
+- `unavailable`: six failures in a row, an HTTP 401, or today's permission is
+  still unknown after the app open and every reported screen, if any, checked
+  it.
+- `stopped`: `stop()` was called.
+
+Visit timers can run through `checking`, since visits reported then are held
+for the enabled receipt, and should stop on the other quiet reasons. A
+reporter that reports only visits also becomes `unavailable` when an app-open
+reply leaves permission unknown, since no check can run. When replies that
+leave permission unknown use up today's checks, reporting a new screen checks
+again and returns the reason to `checking`; if that check is enabled, it also
+sends visits held during it.
 
 `stop()` signals quiet, cancels retries, and removes the focus listener. Call
 it before unsubscribing so the callback stops visit timers.
 
 ### Visits
 
-Visits are one-shot: never queued or retried. While permission is unknown, a
-visit makes the check itself when no other check is in flight, and is
-dropped otherwise.
+Visits are never retried. While permission is unknown, the reporter holds a
+copy of each visit and its options. App-open and screen reports check
+permission. The reporter holds up to 64 visits, oldest
+first, and drops new ones once full or when the payload can't be copied with
+`structuredClone`. Held visits are sent in order once the current UTC day's
+check returns `queued` or `skipped`. They survive midnight: a receipt for an
+earlier day can't release them, so they wait for the new day's check. A
+disabled receipt, `disable()`, or `stop()` discards them. Held visits live only
+in that reporter's memory and disappear on teardown or page unload. A new
+reporter checks again without inheriting them. Held visits send one at a time,
+including ordinary visits added while the queue drains. Once permission is
+enabled, keepalive visits send immediately, even while a queued request is in
+flight or waiting for backoff. A failed queued send drops that visit; later
+visits wait for backoff and share the six-failure limit. A successful queued
+send resets the failure count and cooldown. After a 2xx reply
+without a recognized receipt, held visits wait for a later unclaimed screen
+check or the next UTC day's enabled receipt.
 
 ### Failures
 
 Transport failures and HTTP 5xx back off for 1, 2, 4, 8, and 16 seconds.
-App-open, screen, and keyed daily reports retry after the delay; visits during
-it are dropped. While enabled, `{ keepalive: true }` visits skip the delay so a
-closing page can still send. Six failures in a row stop reporting until
-reload or the next UTC day.
+App-open, screen, and daily reports retry after the delay. Visits during the
+delay are held while permission is unknown or another queued visit remains,
+and dropped otherwise.
+While enabled, `{ keepalive: true }` visits skip the delay so a closing page
+can still send. Six failures in a row stop reporting until reload or the next
+UTC day.
+
+A 2xx reply with an unreadable or unknown body claims the daily event but
+leaves permission unknown. Other non-401 4xx replies, such as HTTP 400 or 404,
+also claim the daily report and let the next report proceed. Reloading that
+day does not retry the claimed app-open report.
+
+HTTP 401 means the request wasn't authorized, so the reporter claims nothing
+for that report and stops as if it had reached the six-failure cap. Held
+visits remain only in the current reporter until `stop()` discards them.
+Queued `reportDaily` actions also stay in that reporter's memory.
+After the app restores authentication, a new reporter checks again without
+inheriting those visits; otherwise the next UTC day's load or focus does.
 
 ### Storage keys
 
 Choose a `storageKey` unique to the product or installation and surface.
 Claims live under `${storageKey}.browser.v1.`, one item per key and date, and
-each key keeps its 35 most recent dates. Every screen name and daily caller
-key gets its own key, so use a stable, finite set, such as route names without
-record IDs, query strings, or timestamps.
+each key keeps its 35 most recent dates. Every screen name gets its own key, so
+use a stable, finite set, such as route names without record IDs, query
+strings, or timestamps. Daily caller keys use a separate namespace and should
+also stay stable and finite.
 
 ## Color hashing
 

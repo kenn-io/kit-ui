@@ -15,6 +15,13 @@ export type BrowserTelemetryEvent = AppOpenedEvent | ScreenViewedEvent | VisitEv
 export interface VisitOptions {
   keepalive?: boolean;
 }
+/** Why the reporter is quiet, or `enabled` when it is not. */
+export type BrowserTelemetryQuietReason =
+  | "checking"
+  | "enabled"
+  | "disabled"
+  | "unavailable"
+  | "stopped";
 /** A daemon reply with its body: a `Response` with an unread body, or the parsed `data`. */
 export type TelemetryReceipt =
   | { status: number; data: unknown }
@@ -46,9 +53,12 @@ export interface BrowserTelemetryReporter {
    * Discards actions while disabled until a later day's load or focus check enables reporting.
    */
   reportDaily(key: string, event: VisitEvent): void;
+  /** Holds up to 64 copied visits while a permission check is pending; a full queue drops new ones. */
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
-  /** Immediately receives the current state; returns an unsubscribe function. */
-  onQuietChange(listener: (quiet: boolean) => void): () => void;
+  /** Immediately receives the current state, then each reason change; returns an unsubscribe function. */
+  onQuietChange(
+    listener: (quiet: boolean, reason: BrowserTelemetryQuietReason) => void,
+  ): () => void;
 }
 const today = (): string => new Date().toISOString().slice(0, 10);
 
@@ -116,6 +126,24 @@ const receiptClaim = (status: number, data: unknown) => {
   return reply === "queued" || reply === "skipped" ? "check" : undefined;
 };
 
+/** Today's next unsent check as `send` arguments: the app open, then the first unclaimed screen. */
+const nextCheck = (
+  claims: ReturnType<typeof claimHistory>,
+  storageKey: string,
+  surface: string,
+  screens: Set<string>,
+  day: string,
+): [VisitEvent, string] | undefined => {
+  if (!claims.has(storageKey, day))
+    return [{ event: "app_opened", properties: { surface } }, storageKey];
+  for (const screen of screens) {
+    const key = `${storageKey}.browser.v1.screen.${encodeURIComponent(screen)}`;
+    if (!claims.has(key, day))
+      return [{ event: "screen_viewed", properties: { surface, screen } }, key];
+  }
+  return undefined;
+};
+
 /** Reports daily app-open, screens, and keyed events; gates visits until an enabled receipt. */
 export function startBrowserTelemetry({
   route,
@@ -127,8 +155,9 @@ export function startBrowserTelemetry({
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
     daily = new Map<string, VisitEvent | undefined>(),
-    listeners = new Set<(quiet: boolean) => void>();
-  const pending = new Map<string, object>();
+    listeners = new Set<(quiet: boolean, reason: BrowserTelemetryQuietReason) => void>(),
+    outcomes: { event: VisitEvent; options?: VisitOptions }[] = [];
+  const pending = new Map<string, { queued: boolean }>();
   let day = today(),
     generation = {},
     gate: "unknown" | "enabled" | "disabled" = "unknown";
@@ -137,16 +166,36 @@ export function startBrowserTelemetry({
     ordinaryEligibleAt = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
-    lastQuiet = true;
-  const quiet = () => stopped || failures >= 6 || gate !== "enabled";
+    lastReason: BrowserTelemetryQuietReason = "checking";
+  const due = () => nextCheck(claims, storageKey, surface, screens, day);
+  const nextDaily = (): [VisitEvent, string] | undefined => {
+    for (const [key, event] of daily) {
+      if (event && !claims.has(key, day)) return [event, key];
+      daily.set(key, undefined);
+    }
+    return undefined;
+  };
+  // No open, screen, or daily action remains to check, and permission is unknown.
+  const exhausted = () =>
+    gate === "unknown" && !pending.has(day) && !retry && !due() && !nextDaily();
+  const reason = (): BrowserTelemetryQuietReason =>
+    stopped
+      ? "stopped"
+      : gate === "disabled"
+        ? "disabled"
+        : failures >= 6 || exhausted()
+          ? "unavailable"
+          : gate === "enabled"
+            ? "enabled"
+            : "checking";
   const notify = () => {
-    const value = quiet();
-    if (lastQuiet === value) return;
-    lastQuiet = value;
+    const value = reason();
+    if (lastReason === value) return;
+    lastReason = value;
     const snapshot = [...listeners];
     for (const listener of snapshot) {
-      if (lastQuiet !== value) break;
-      if (listeners.has(listener)) listener(value);
+      if (lastReason !== value) break;
+      if (listeners.has(listener)) listener(value !== "enabled", value);
     }
   };
   const cancelRetry = () => {
@@ -161,7 +210,7 @@ export function startBrowserTelemetry({
         : claims.has(`${prefix}check`, day)
           ? "enabled"
           : "unknown";
-  // Opting out also drops the stored screen names and caller keys.
+  // Opting out also drops stored screen names and caller keys.
   const forgetHistory = () => {
     claims.forget(`${prefix}screen.`, `${prefix}daily.`);
     daily.clear();
@@ -169,9 +218,10 @@ export function startBrowserTelemetry({
   const disabled = (): boolean => {
     gate = readGate();
     if (gate === "disabled") {
+      outcomes.length = 0;
       cancelRetry();
       // Storage can't check and write atomically across tabs, so a racing tab's late
-      // screen or daily claim can outlive the opt-out; every page that sees the opt-out drops it.
+      // screen claim can outlive the opt-out; every page that sees the opt-out drops it.
       forgetHistory();
     }
     notify();
@@ -194,14 +244,15 @@ export function startBrowserTelemetry({
     event: VisitEvent,
     key?: string,
     options?: VisitOptions,
-    checking = key !== undefined || gate === "unknown",
+    queued = false,
+    checking = key !== undefined,
   ) => {
     const sending = day;
     const owner = generation;
-    const record = {};
-    if (checking) pending.set(sending, record);
+    const record = { queued };
+    if (checking || queued) pending.set(sending, record);
     const release = () => {
-      if (checking && pending.get(sending) === record) pending.delete(sending);
+      if ((checking || queued) && pending.get(sending) === record) pending.delete(sending);
     };
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
@@ -217,12 +268,10 @@ export function startBrowserTelemetry({
       response = undefined;
       /* Receipt checks retry transport failures. */
     }
-    // An unknown visit check that earns no claim fails like an outage; daily claims stay terminal.
+    // Transport failures, 5xx, and 401 leave daily claims free.
     const claim = response && receiptClaim(response.status, data);
-    const failed =
-      !response ||
-      (response.status >= 500 && response.status < 600) ||
-      (checking && key === undefined && !claim);
+    const unauthorized = response?.status === 401;
+    const failed = !response || (response.status >= 500 && response.status < 600);
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
     // Another tab's opt-out may have deleted screen history this page's stale gate can't see.
@@ -230,7 +279,7 @@ export function startBrowserTelemetry({
       claim === "quiet" ||
       gate === "disabled" ||
       [sending, day, today()].some((date) => claims.has(`${prefix}quiet`, date));
-    if (!failed && key !== undefined && !optedOut) {
+    if (!failed && !unauthorized && key !== undefined && !optedOut) {
       claims.add(key, sending);
       if (owner === generation && daily.has(key)) daily.set(key, undefined);
     }
@@ -249,6 +298,12 @@ export function startBrowserTelemetry({
       pump();
       return;
     }
+    if (unauthorized && !isDisabled) {
+      failures = 6;
+      cancelRetry();
+      notify();
+      return release();
+    }
     if (isDisabled) {
       release();
       return;
@@ -262,6 +317,7 @@ export function startBrowserTelemetry({
       pump();
       return;
     }
+    if (queued) release();
     if (failures < 6 && (checking || (!pending.has(day) && !retry))) {
       failures = 0;
       ordinaryEligibleAt = 0;
@@ -273,22 +329,24 @@ export function startBrowserTelemetry({
     rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
     if (visit) {
-      if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)
+      if (gate === "enabled" && options?.keepalive) return void send(visit, undefined, options);
+      if (gate === "unknown" || outcomes.length > 0 || pending.get(day)?.queued) {
+        try {
+          if (outcomes.length < 64) outcomes.push(structuredClone({ event: visit, options }));
+        } catch {
+          /* A payload that can't be copied is dropped rather than interrupting the caller. */
+        }
+        pump();
         return;
-      if (gate === "enabled" || (!pending.has(day) && !retry)) void send(visit, undefined, options);
+      }
+      if (performance.now() < ordinaryEligibleAt) return;
+      void send(visit, undefined, options);
       return;
     }
     if (retry || pending.has(day)) return;
-    const screen = [...screens].find(
-      (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
-    );
-    const open = !claims.has(storageKey, day);
-    const action = [...daily].find(([key, event]) => {
-      if (event && !claims.has(key, day)) return true;
-      daily.set(key, undefined);
-      return false;
-    });
-    if (!open && screen === undefined && action === undefined) return;
+    const check = due() ?? nextDaily();
+    const held = gate === "enabled" && outcomes.length > 0;
+    if (!held && !check) return;
     const delay = ordinaryEligibleAt - performance.now();
     if (delay > 0) {
       retry = setTimeout(() => {
@@ -297,13 +355,10 @@ export function startBrowserTelemetry({
       }, delay);
       return;
     }
-    if (open) void send({ event: "app_opened", properties: { surface } }, storageKey);
-    else if (screen !== undefined)
-      void send(
-        { event: "screen_viewed", properties: { surface, screen } },
-        `${prefix}screen.${encodeURIComponent(screen)}`,
-      );
-    else if (action?.[1]) void send(action[1], action[0]);
+    if (held) {
+      const outcome = outcomes.shift()!;
+      void send(outcome.event, undefined, outcome.options, true);
+    } else if (check) void send(...check);
   };
   const report = () => pump(undefined, undefined, true);
   pump();
@@ -315,6 +370,7 @@ export function startBrowserTelemetry({
       cancelRetry();
       screens.clear();
       daily.clear();
+      outcomes.length = 0;
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
@@ -322,6 +378,7 @@ export function startBrowserTelemetry({
     disable() {
       for (const date of new Set([day, today()])) claims.add(`${prefix}quiet`, date);
       gate = "disabled";
+      outcomes.length = 0;
       forgetHistory();
       cancelRetry();
       notify();
@@ -345,9 +402,10 @@ export function startBrowserTelemetry({
       pump();
     },
     reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),
-    onQuietChange(listener: (quiet: boolean) => void) {
+    onQuietChange(listener: (quiet: boolean, reason: BrowserTelemetryQuietReason) => void) {
       if (!stopped) listeners.add(listener);
-      listener(quiet());
+      const value = reason();
+      listener(value !== "enabled", value);
       return () => void listeners.delete(listener);
     },
   };
