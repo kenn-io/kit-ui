@@ -397,9 +397,9 @@ it before unsubscribing so the callback stops visit timers.
 
 ### Visits
 
-Visits are never retried. While permission is unknown, a visit makes the check
-itself when no check is in flight or waiting to retry. Otherwise the reporter
-holds a copy of the visit and its options. It holds up to 64 visits, oldest
+Visits are never retried. While permission is unknown, the reporter holds a
+copy of each visit and its options. App-open and screen reports check
+permission. The reporter holds up to 64 visits, oldest
 first, and drops new ones once full or when the payload can't be copied with
 `structuredClone`. Held visits are sent in order once the current UTC day's
 check returns `queued` or `skipped`. They survive midnight: a receipt for an
@@ -407,10 +407,11 @@ earlier day can't release them, so they wait for the new day's check. A
 disabled receipt, `disable()`, or `stop()` discards them. Held visits live only
 in that reporter's memory and disappear on teardown or page unload. A new
 reporter checks again without inheriting them. Held visits send one at a time,
-including visits added while the queue drains. A failed send drops that visit;
-later visits wait for backoff. Queue failures use a separate cooldown of 1, 2,
-4, 8, then at most 16 seconds, which resets after a successful queued send.
-They leave the permission check's failure budget intact. After a 2xx reply
+including ordinary visits added while the queue drains. Once permission is
+enabled, keepalive visits send immediately, even while a queued request is in
+flight or waiting for backoff. A failed queued send drops that visit; later
+visits wait for backoff and share the six-failure limit. A successful queued
+send resets the failure count and cooldown. After a 2xx reply
 without a recognized receipt, held visits wait for a later unclaimed screen
 check or the next UTC day's enabled receipt.
 
@@ -418,8 +419,8 @@ check or the next UTC day's enabled receipt.
 
 Transport failures and HTTP 5xx back off for 1, 2, 4, 8, and 16 seconds.
 App-open and screen reports retry after the delay. Visits during the delay
-are held while permission is unknown and an app-open or screen retry is
-waiting, and dropped otherwise.
+are held while permission is unknown or another queued visit remains, and
+dropped otherwise.
 While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
 UTC day.
@@ -429,9 +430,7 @@ unclaimed and retries with the same capped backoff, except HTTP 401 below.
 A 2xx reply with an unreadable or unknown body claims the daily event but
 leaves permission unknown. After permission is enabled, other non-401 4xx
 replies, such as HTTP 400, claim the daily report and let the next report
-proceed. A visit that checks permission and gets no `queued`,
-`skipped`, or `disabled` receipt counts as a failure and starts the same
-backoff.
+proceed.
 
 HTTP 401 means the request wasn't authorized, so the reporter claims nothing
 for that report and stops as if it had reached the six-failure cap. Held

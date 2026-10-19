@@ -137,7 +137,6 @@ export function startBrowserTelemetry({
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     failures = 0,
-    queueFailures = 0,
     ordinaryEligibleAt = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
@@ -194,7 +193,6 @@ export function startBrowserTelemetry({
     generation = {};
     gate = "unknown";
     failures = 0;
-    queueFailures = 0;
     ordinaryEligibleAt = 0;
     cancelRetry();
     screens.clear();
@@ -206,7 +204,7 @@ export function startBrowserTelemetry({
     key?: string,
     options?: VisitOptions,
     queued = false,
-    checking = key !== undefined || gate === "unknown",
+    checking = key !== undefined,
   ) => {
     const sending = day;
     const owner = generation;
@@ -236,8 +234,7 @@ export function startBrowserTelemetry({
     const failed =
       !response ||
       (response.status >= 500 && response.status < 600) ||
-      (permissionUnknown && (response.status < 200 || response.status >= 300)) ||
-      (checking && key === undefined && !claim);
+      (permissionUnknown && (response.status < 200 || response.status >= 300));
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
     // Another tab's opt-out may have deleted screen history this page's stale gate can't see.
@@ -271,13 +268,6 @@ export function startBrowserTelemetry({
       release();
       return;
     }
-    if (queued) {
-      queueFailures = failed ? Math.min(queueFailures + 1, 5) : 0;
-      ordinaryEligibleAt = failed ? performance.now() + 1000 * 2 ** (queueFailures - 1) : 0;
-      release();
-      pump();
-      return;
-    }
     if (failed) {
       const delay = 1000 * 2 ** failures++;
       if (retry === undefined) ordinaryEligibleAt = performance.now() + delay;
@@ -287,6 +277,7 @@ export function startBrowserTelemetry({
       pump();
       return;
     }
+    if (queued) release();
     if (failures < 6 && (checking || (!pending.has(day) && !retry))) {
       failures = 0;
       ordinaryEligibleAt = 0;
@@ -298,11 +289,8 @@ export function startBrowserTelemetry({
     rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
     if (visit) {
-      if (
-        outcomes.length > 0 ||
-        pending.get(day)?.queued ||
-        (gate === "unknown" && (pending.has(day) || retry))
-      ) {
+      if (gate === "enabled" && options?.keepalive) return void send(visit, undefined, options);
+      if (gate === "unknown" || outcomes.length > 0 || pending.get(day)?.queued) {
         try {
           if (outcomes.length < 64) outcomes.push(structuredClone({ event: visit, options }));
         } catch {
@@ -311,9 +299,8 @@ export function startBrowserTelemetry({
         pump();
         return;
       }
-      if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)
-        return;
-      if (gate === "enabled" || (!pending.has(day) && !retry)) void send(visit, undefined, options);
+      if (performance.now() < ordinaryEligibleAt) return;
+      void send(visit, undefined, options);
       return;
     }
     if (retry || pending.has(day)) return;
