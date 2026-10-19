@@ -353,6 +353,11 @@ again only when the action actually occurs on a later day. The current screen
 can still report after rollover. Screen names and daily keys have separate
 namespaces.
 
+Actions reported while the gate is disabled are discarded. A later UTC day's
+load or focus check must enable reporting before new actions can send;
+discarded actions stay discarded. Payloads that cannot be copied, such as
+properties containing functions or DOM nodes, are also discarded.
+
 ### Receipts and opt-out
 
 The daemon enforces the opt-out, not this helper. While telemetry is disabled,

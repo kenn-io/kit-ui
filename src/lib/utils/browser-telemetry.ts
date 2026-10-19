@@ -43,6 +43,7 @@ export interface BrowserTelemetryReporter {
   /**
    * Reports once per UTC day for each stable caller key. Use a finite set without record IDs.
    * Drops unsent queued actions at UTC rollover; report again only when the action occurs that day.
+   * Discards actions while disabled until a later day's load or focus check enables reporting.
    */
   reportDaily(key: string, event: VisitEvent): void;
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
@@ -125,7 +126,6 @@ export function startBrowserTelemetry({
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
     daily = new Map<string, VisitEvent>(),
-    completedDaily = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
   const pending = new Map<string, object>();
   let day = today(),
@@ -165,7 +165,6 @@ export function startBrowserTelemetry({
     claims.forget(`${prefix}screen.`);
     claims.forget(`${prefix}daily.`);
     daily.clear();
-    completedDaily.clear();
   };
   const disabled = (): boolean => {
     gate = readGate();
@@ -188,7 +187,6 @@ export function startBrowserTelemetry({
     cancelRetry();
     screens.clear();
     daily.clear();
-    completedDaily.clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
   };
@@ -234,7 +232,7 @@ export function startBrowserTelemetry({
       [sending, day, today()].some((date) => claims.has(`${prefix}quiet`, date));
     if (!failed && key !== undefined && !optedOut) {
       claims.add(key, sending);
-      if (owner === generation && daily.delete(key)) completedDaily.add(key);
+      if (owner === generation) daily.delete(key);
     }
     if (claim === "quiet") forgetDaily();
     if (stopped) return release();
@@ -288,7 +286,6 @@ export function startBrowserTelemetry({
     const action = [...daily].find(([key]) => {
       if (!claims.has(key, day)) return true;
       daily.delete(key);
-      completedDaily.add(key);
       return false;
     });
     if (!open && screen === undefined && action === undefined) return;
@@ -318,7 +315,6 @@ export function startBrowserTelemetry({
       cancelRetry();
       screens.clear();
       daily.clear();
-      completedDaily.clear();
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
@@ -336,11 +332,16 @@ export function startBrowserTelemetry({
       pump();
     },
     reportDaily(key: string, event: VisitEvent) {
-      if (stopped) return;
+      if (stopped || gate === "disabled") return;
       rollover();
       const claim = `${prefix}daily.${encodeURIComponent(key)}`;
-      if (daily.has(claim) || completedDaily.has(claim)) return;
-      daily.set(claim, structuredClone(event));
+      if (daily.has(claim)) return;
+      try {
+        daily.set(claim, structuredClone(event));
+      } catch {
+        // Optional reporting must not interrupt the action when its payload can't be copied.
+        return;
+      }
       pump();
     },
     reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),

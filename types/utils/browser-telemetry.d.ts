@@ -48,6 +48,7 @@ export interface BrowserTelemetryReporter {
     /**
      * Reports once per UTC day for each stable caller key. Use a finite set without record IDs.
      * Drops unsent queued actions at UTC rollover; report again only when the action occurs that day.
+     * Discards actions while disabled until a later day's load or focus check enables reporting.
      */
     reportDaily(key: string, event: VisitEvent): void;
     reportVisit(event: VisitEvent, options?: VisitOptions): void;

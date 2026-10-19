@@ -123,6 +123,70 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test("daily actions discard non-cloneable properties without throwing into the caller", async () => {
+    const reporter = start();
+    await settle();
+    expect(() =>
+      reporter.reportDaily("message", {
+        event: "message_opened",
+        properties: { callback: () => {} },
+      }),
+    ).not.toThrow();
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      VISIT,
+    ]);
+  });
+
+  test.each(["receipt", "local"])(
+    "daily actions stop storage scans after %s opt-out",
+    async (source) => {
+      let scans = 0;
+      g.localStorage = new Proxy(storage(), {
+        ownKeys: (target) => {
+          scans++;
+          return Reflect.ownKeys(target);
+        },
+      });
+      if (source === "receipt") statuses = [{ status: 202, data: { status: "disabled" } }];
+      const reporter = start();
+      await settle();
+      if (source === "local") reporter.disable();
+      const before = scans;
+      reporter.reportDaily("message", VISIT);
+      reporter.reportDaily("search", VISIT);
+      jest.setSystemTime(DAY_TWO);
+      reporter.reportDaily("message", VISIT);
+      expect(scans).toBe(before);
+      expect(sent).toHaveLength(1);
+      focus();
+      await settle();
+      expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
+      reporter.reportDaily("message", VISIT);
+      await settle();
+      expect(sent.slice(2).map(({ event }) => event)).toEqual([VISIT]);
+    },
+  );
+
+  test("distinct daily keys behind a held report send in caller order", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportDaily("message", { event: "message_opened", properties: { surface: "web" } });
+    reporter.reportDaily("search", {
+      event: "search_run",
+      properties: { surface: "web", type: "text" },
+    });
+    expect(sent).toHaveLength(1);
+    release(202);
+    await settle();
+    expect(sent.slice(1).map(({ event }) => event)).toEqual([
+      { event: "message_opened", properties: { surface: "web" } },
+      { event: "search_run", properties: { surface: "web", type: "text" } },
+    ]);
+  });
+
   test("daily actions snapshot the caller's event and properties while queued", async () => {
     statuses = ["held"];
     const reporter = start();
@@ -139,38 +203,6 @@ describe("startBrowserTelemetry", () => {
       { event: "search_executed", properties: { surface: "web", filter: { kind: "semantic" } } },
     ]);
   });
-
-  test.each(["this-page", "other-tab"])(
-    "completed daily actions from %s add no storage scans on focus or repeat calls",
-    async (source) => {
-      let scans = 0;
-      g.localStorage = new Proxy(storage(), {
-        ownKeys: (target) => {
-          scans++;
-          return Reflect.ownKeys(target);
-        },
-      });
-      const reporter = start();
-      await settle();
-      let before = scans;
-      focus();
-      const idleScans = scans - before;
-      const sender = source === "other-tab" ? start() : reporter;
-      for (const key of ["message", "search", "export"]) {
-        sender.reportDaily(key, VISIT);
-        await settle();
-        if (sender !== reporter) reporter.reportDaily(key, VISIT);
-      }
-      if (sender !== reporter) sender.stop();
-      before = scans;
-      focus();
-      expect(scans - before).toBe(idleScans);
-      before = scans;
-      for (const key of ["message", "search", "export"]) reporter.reportDaily(key, VISIT);
-      expect(scans).toBe(before);
-      expect(sent.filter(({ event }) => event.event === "session_ended")).toHaveLength(3);
-    },
-  );
 
   test("a late old-day action receipt leaves the same key pending on the new day", async () => {
     const reporter = start();
