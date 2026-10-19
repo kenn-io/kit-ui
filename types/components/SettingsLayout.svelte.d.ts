@@ -1,3 +1,4 @@
+import type { Component } from "svelte";
 export interface SettingsCategory {
     id: string;
     label: string;
@@ -6,6 +7,9 @@ export interface SettingsCategory {
     group?: string;
     /** Muted one-liner under the label describing the category. */
     summary?: string;
+    /** An icon component, such as one from @lucide/svelte, shown before the
+     * label. Rendered at size 16. */
+    icon?: Component;
 }
 import type { Snippet } from "svelte";
 interface Props {
@@ -22,6 +26,6 @@ interface Props {
     /** Pinned below the scrollable content, e.g. save/cancel actions. */
     footer?: Snippet;
 }
-declare const SettingsLayout: import("svelte").Component<Props, {}, "active">;
+declare const SettingsLayout: Component<Props, {}, "active">;
 type SettingsLayout = ReturnType<typeof SettingsLayout>;
 export default SettingsLayout;

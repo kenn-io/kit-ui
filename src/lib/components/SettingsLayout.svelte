@@ -1,4 +1,6 @@
 <script module lang="ts">
+  import type { Component } from "svelte";
+
   export interface SettingsCategory {
     id: string;
     label: string;
@@ -7,6 +9,9 @@
     group?: string;
     /** Muted one-liner under the label describing the category. */
     summary?: string;
+    /** An icon component, such as one from @lucide/svelte, shown before the
+     * label. Rendered at size 16. */
+    icon?: Component;
   }
 </script>
 
@@ -36,6 +41,13 @@
     sidebarHeader = undefined,
     footer = undefined,
   }: Props = $props();
+
+  type SizedIcon = Component<{ size?: number; "aria-hidden"?: "true" }>;
+
+  // The public type is a plain Component; lucide icons take a size.
+  function iconOf(category: SettingsCategory): SizedIcon | undefined {
+    return category.icon;
+  }
 
   // Group headings sit between runs of the same `group` value, so the
   // categories array order stays the display order.
@@ -84,6 +96,7 @@
           <div class="kit-settings__group-title">{run.group}</div>
         {/if}
         {#each run.items as category (category.id)}
+          {@const Icon = iconOf(category)}
           <button
             class={[
               "kit-settings__nav-item",
@@ -94,10 +107,15 @@
             aria-current={resolvedActive === category.id ? "true" : undefined}
             onclick={() => (active = category.id)}
           >
-            <span class="kit-settings__nav-label">{category.label}</span>
-            {#if category.summary}
-              <span class="kit-settings__nav-summary">{category.summary}</span>
+            {#if Icon}
+              <span class="kit-settings__nav-icon"><Icon size={16} aria-hidden="true" /></span>
             {/if}
+            <span class="kit-settings__nav-text">
+              <span class="kit-settings__nav-label">{category.label}</span>
+              {#if category.summary}
+                <span class="kit-settings__nav-summary">{category.summary}</span>
+              {/if}
+            </span>
           </button>
         {/each}
       {/each}
@@ -176,8 +194,8 @@
 
   .kit-settings__nav-item {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    align-items: flex-start;
+    gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
     border: 0;
     background: transparent;
@@ -189,6 +207,27 @@
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+  }
+
+  /* One label line tall, so the icon centers on the label, not the summary. */
+  .kit-settings__nav-icon {
+    display: flex;
+    flex: none;
+    align-items: center;
+    height: 1lh;
+    color: var(--text-muted);
+  }
+
+  .kit-settings__nav-item:hover .kit-settings__nav-icon,
+  .kit-settings__nav-item--active .kit-settings__nav-icon {
+    color: currentColor;
+  }
+
+  .kit-settings__nav-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
   }
 
   .kit-settings__nav-summary {
@@ -273,9 +312,10 @@
       flex-direction: row;
     }
 
-    /* The horizontal strip keeps only the labels: group headings and
+    /* The horizontal strip keeps only the labels: group headings, icons and
      * per-item summaries don't fit a single scrolling row. */
     .kit-settings__group-title,
+    .kit-settings__nav-icon,
     .kit-settings__nav-summary {
       display: none;
     }

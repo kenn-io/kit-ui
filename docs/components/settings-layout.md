@@ -5,14 +5,15 @@ scrollable content pane on the right, with an optional footer pinned below the
 content (save/cancel actions). Generalizes Forge's `SettingsPage` —
 category rendering is left to the `panel` snippet, which receives the active
 category id. Below 760px the sidebar collapses to a horizontal strip above the
-content (labels only: group headings and summaries are hidden there).
+content (labels only: group headings, icons and summaries are hidden there).
 
 Categories may carry a `group` — a muted heading is rendered above each run of
-categories sharing one, so the array order stays the display order — and a
-`summary` line shown under the label. The `sidebarHeader` snippet renders
-between the title and the nav for app chrome such as a settings search box or
-a back-to-app button (the host owns filtering: derive a filtered `categories`
-array and render any empty-state notice inside `sidebarHeader`).
+categories sharing one, so the array order stays the display order — an
+`icon` shown before the label, and a `summary` line shown under the label.
+The icon is hidden from assistive technology. The `sidebarHeader` snippet
+renders between the title and the nav for app chrome such as a settings search
+box or a back-to-app button (the host owns filtering: derive a filtered
+`categories` array and render any empty-state notice inside `sidebarHeader`).
 
 Pairs with [SettingsSection](#settingssection) for the content cards.
 
@@ -72,16 +73,16 @@ renders at all; put the "no matches" notice inside `sidebarHeader`.
 
 Below 760px the sidebar becomes a horizontal strip: `title`, `sidebarHeader`
 and the category labels flow inline (the strip scrolls horizontally), while
-group headings and summaries are hidden. A search box works fine inline; hide
-or restyle bulkier header chrome from the host's own styles if it crowds the
-strip. Group headings are plain text (not focusable, announced in reading
-order); a category's summary is part of its button's accessible name.
+group headings, icons and summaries are hidden. A search box works fine
+inline; hide or restyle bulkier header chrome from the host's own styles if
+it crowds the strip. Group headings are plain text (not focusable, announced
+in reading order); a category's summary is part of its button's accessible name.
 
 ## Props
 
 | Prop            | Type                 | Default           | Notes                                                        |
 | --------------- | -------------------- | ----------------- | ------------------------------------------------------------ |
-| `categories`    | `SettingsCategory[]` | —                 | `{ id, label, group?, summary? }` per category               |
+| `categories`    | `SettingsCategory[]` | —                 | `{ id, label, group?, summary?, icon? }` per category        |
 | `active`        | `string` (bindable)  | first category id | Selected category                                            |
 | `panel`         | `Snippet<[string]>`  | —                 | Content for the active category; receives its id             |
 | `title`         | `string`             | `"Settings"`      | Sidebar heading; pass `""` to hide                           |
