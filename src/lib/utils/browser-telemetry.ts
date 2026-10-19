@@ -298,6 +298,15 @@ export function startBrowserTelemetry({
           /* A payload that can't be copied is dropped rather than interrupting the caller. */
         }
         pump();
+        if (
+          reason() === "checking" &&
+          !pending.has(day) &&
+          !retry &&
+          performance.now() >= ordinaryEligibleAt
+        ) {
+          const oldest = outcomes.shift();
+          if (oldest) void send(oldest.event, undefined, oldest.options);
+        }
         return;
       }
       if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)

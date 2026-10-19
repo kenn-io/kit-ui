@@ -764,6 +764,27 @@ describe("startBrowserTelemetry", () => {
     expect(sent).toHaveLength(3);
   });
 
+  test("a later visit uses the oldest held visit to check after an unreadable app-open receipt", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const reasons: string[] = [];
+    reporter.onQuietChange((_, reason) => reasons.push(reason));
+    reporter.reportVisit({ event: "old", properties: {} }, { keepalive: true });
+    release(new Response("truncated", { status: 202 }));
+    await settle();
+    expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
+    statuses = ["held"];
+    reporter.reportVisit({ event: "new", properties: {} });
+    expect(sent.slice(1)).toEqual([
+      { route: ROUTE, event: { event: "old", properties: {} }, options: { keepalive: true } },
+    ]);
+    release(202);
+    await settle();
+    expect(reasons).toEqual(["checking", "enabled"]);
+    expect(sent.slice(1).map(({ event }) => event.event)).toEqual(["old", "new"]);
+  });
+
   test("a new visit after rollover waits behind older visits for today's enabled receipt", async () => {
     statuses = ["held", "held"];
     const reporter = start();

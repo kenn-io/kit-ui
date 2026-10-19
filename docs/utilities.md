@@ -400,7 +400,11 @@ first, and drops new ones once full or when the payload can't be copied with
 `structuredClone`. Held visits are sent in order once the current UTC day's
 check returns `queued` or `skipped`. They survive midnight: a receipt for an
 earlier day can't release them, so they wait for the new day's check. A
-disabled receipt, `disable()`, or `stop()` discards them.
+disabled receipt, `disable()`, or `stop()` discards them. Held visits live only
+in that reporter's memory; a new reporter checks again without inheriting them.
+If no app-open or screen check remains to send, a later visit uses the oldest
+held visit as the permission check. The remaining visits wait for its enabled
+receipt.
 
 ### Failures
 
