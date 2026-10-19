@@ -37,9 +37,11 @@ interface Props {
     /** The page address without its fragment. A change closes any open flyout. */
     page: string;
     /**
-     * localStorage key that remembers whether the sidebar is pinned open at
-     * rail widths. Until someone chooses, touch screens start pinned open, so
-     * views stay reachable without hover, and other devices start as the rail.
+     * localStorage key that remembers whether someone collapsed the sidebar to
+     * the rail or expanded it. The choice applies at every width above the
+     * narrow drawer. Until someone chooses, the window width decides: the rail
+     * below 1440px, except on touch screens, where views must stay reachable
+     * without hover, and the full sidebar from 1440px.
      */
     storageKey: string;
     /** Brand area at the top of the panel. `rail` is true in the icon-only rail. */
@@ -50,9 +52,8 @@ interface Props {
     narrowBar: Snippet;
     /**
      * Footer content. `rail` is true in the rail; `drawer` is true inside the
-     * narrow drawer. The component adds its own pin button at rail widths.
-     * Optional: without it, the footer region renders only at rail widths, to
-     * hold the pin button.
+     * narrow drawer. The component adds its own collapse button outside the
+     * drawer. Optional: without it, the footer region holds only that button.
      */
     footer?: Snippet<[{
         rail: boolean;
@@ -64,9 +65,9 @@ interface Props {
     menuLabel?: string;
     /** Accessible name of the narrow drawer dialog. Default "Navigation". */
     drawerLabel?: string;
-    /** Accessible name of the rail's pin button while collapsed. Default "Expand sidebar". */
+    /** Accessible name of the collapse button while collapsed. Default "Expand sidebar". */
     expandLabel?: string;
-    /** Accessible name of the rail's pin button while pinned open. Default "Collapse sidebar". */
+    /** Accessible name of the collapse button while expanded. Default "Collapse sidebar". */
     collapseLabel?: string;
 }
 declare const AppSidebar: Component<Props, {}, "">;

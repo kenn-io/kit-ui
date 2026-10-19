@@ -473,6 +473,60 @@ test("the pin keeps the rail expanded across reloads", async ({ page }) => {
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe("collapsed");
 });
 
+test("the full sidebar collapses to the rail, and the choice holds at every width", async ({
+  page,
+}) => {
+  await open(page, "reports/overview", 1440);
+  expect(await sidebarWidth(page)).toBe(240);
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe("collapsed");
+  // The rail still marks the current section and names every link.
+  await expect(sectionLink(page, "Reports")).toHaveAttribute("aria-current", "true");
+
+  await page.reload();
+  await page.locator(".frame__main").waitFor();
+  expect(await sidebarWidth(page)).toBe(56);
+
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await page.getByRole("button", { name: "Expand sidebar" }).click();
+  await expect.poll(() => sidebarWidth(page)).toBe(240);
+  await page.setViewportSize({ width: 1600, height: 800 });
+  expect(await sidebarWidth(page)).toBe(240);
+});
+
+test("Mod+B toggles the sidebar outside text fields and the drawer", async ({ page }) => {
+  await open(page, "home", 1440);
+  await expect(page.getByRole("button", { name: "Collapse sidebar" })).toHaveAttribute(
+    "aria-keyshortcuts",
+    /^(Meta|Control)\+B$/,
+  );
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect.poll(() => sidebarWidth(page)).toBe(240);
+
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.ariaLabel = "Notes";
+    document.querySelector(".frame__main")?.append(input);
+  });
+  await page.getByRole("textbox", { name: "Notes" }).press("ControlOrMeta+b");
+  expect(await sidebarWidth(page)).toBe(240);
+
+  await page.setViewportSize({ width: 760, height: 800 });
+  await page.locator("body").press("ControlOrMeta+b");
+  await expect(page.getByRole("dialog", { name: "Navigation" })).toBeHidden();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe("expanded");
+});
+
+test("collapsing from a current view's link moves focus to its section", async ({ page }) => {
+  await open(page, "reports/overview", 1440);
+  await nav(page).getByRole("link", { name: "Overview" }).focus();
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect(sectionLink(page, "Reports")).toBeFocused();
+});
+
 test("the pin still works when storage throws", async ({ page }) => {
   const errors: Error[] = [];
   page.on("pageerror", (error) => errors.push(error));
@@ -640,19 +694,17 @@ test("a press on the backdrop that ends in the drawer leaves the drawer open", a
   await expect(drawer).toBeHidden();
 });
 
-test("without a footer, the footer region appears only to hold the rail's pin", async ({
-  page,
-}) => {
+test("without a footer, the footer region holds only the collapse button", async ({ page }) => {
   const footer = page.locator(".kit-app-sidebar__footer");
   await open(page, "home", 1440);
   await expect(footer.getByRole("button", { name: /^Change theme/ })).toBeVisible();
 
   await open(page, "home&app-sidebar-footer=none", 1440);
   await expect(nav(page)).toBeVisible();
-  await expect(footer).toHaveCount(0);
+  await expect(footer.getByRole("button")).toHaveAccessibleName("Collapse sidebar");
 
   await page.setViewportSize({ width: 1024, height: 800 });
-  await expect(footer.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
+  await expect(footer.getByRole("button")).toHaveAccessibleName("Expand sidebar");
 
   await page.setViewportSize({ width: 760, height: 800 });
   await page.getByRole("button", { name: "Open navigation" }).click();
