@@ -123,6 +123,23 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test("repeated terminal daily actions do not scan localStorage", async () => {
+    let scans = 0;
+    g.localStorage = new Proxy(storage(), {
+      ownKeys: (target) => {
+        scans++;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const reporter = start();
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    const before = scans;
+    for (let i = 0; i < 10; i++) reporter.reportDaily("message", VISIT);
+    expect(scans).toBe(before);
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+  });
+
   test("daily actions discard non-cloneable properties without throwing into the caller", async () => {
     const reporter = start();
     await settle();

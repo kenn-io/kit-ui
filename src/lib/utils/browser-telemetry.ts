@@ -125,7 +125,7 @@ export function startBrowserTelemetry({
   const prefix = `${storageKey}.browser.v1.`,
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
-    daily = new Map<string, VisitEvent>(),
+    daily = new Map<string, VisitEvent | undefined>(),
     listeners = new Set<(quiet: boolean) => void>();
   const pending = new Map<string, object>();
   let day = today(),
@@ -232,7 +232,7 @@ export function startBrowserTelemetry({
       [sending, day, today()].some((date) => claims.has(`${prefix}quiet`, date));
     if (!failed && key !== undefined && !optedOut) {
       claims.add(key, sending);
-      if (owner === generation) daily.delete(key);
+      if (owner === generation && daily.has(key)) daily.set(key, undefined);
     }
     if (claim === "quiet") forgetDaily();
     if (stopped) return release();
@@ -283,9 +283,9 @@ export function startBrowserTelemetry({
       (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
     );
     const open = !claims.has(storageKey, day);
-    const action = [...daily].find(([key]) => {
-      if (!claims.has(key, day)) return true;
-      daily.delete(key);
+    const action = [...daily].find(([key, event]) => {
+      if (event && !claims.has(key, day)) return true;
+      daily.set(key, undefined);
       return false;
     });
     if (!open && screen === undefined && action === undefined) return;
@@ -303,7 +303,7 @@ export function startBrowserTelemetry({
         { event: "screen_viewed", properties: { surface, screen } },
         `${prefix}screen.${encodeURIComponent(screen)}`,
       );
-    else if (action !== undefined) void send(action[1], action[0]);
+    else if (action?.[1]) void send(action[1], action[0]);
   };
   const report = () => pump(undefined, undefined, true);
   pump();
