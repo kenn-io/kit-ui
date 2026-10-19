@@ -45,6 +45,32 @@ const read = (page: Page) =>
     return { posts: w.posts, quiet: w.quiet };
   });
 
+test("a daily action stays claimed after reloading the same page", async ({ page }) => {
+  await page.clock.setFixedTime(BEFORE);
+  await page.route("/blank", (route) => route.fulfill({ contentType: "text/html", body: "" }));
+  await page.goto("/blank");
+  for (const phase of ["initial", "reload"]) {
+    if (phase === "reload") await page.reload();
+    const posts = await page.evaluate(async () => {
+      const { startBrowserTelemetry } = await import("/src/lib/utils/browser-telemetry.ts");
+      const posts: string[] = [];
+      const reporter = startBrowserTelemetry({
+        route: "/api/v1/telemetry/events",
+        surface: "web",
+        storageKey: "kit-ui.app-opened.example.web",
+        post: async (_route, event) => {
+          posts.push(event.event);
+          return { status: 202, data: { status: "queued" } };
+        },
+      });
+      reporter.reportDaily("message", { event: "message_opened", properties: { surface: "web" } });
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+      return posts;
+    });
+    expect(posts).toEqual(phase === "initial" ? ["app_opened", "message_opened"] : []);
+  }
+});
+
 for (const status of ["queued", "disabled"]) {
   test(`concurrent ${status} replies across midnight preserve claims on reload and rollback`, async ({
     context,

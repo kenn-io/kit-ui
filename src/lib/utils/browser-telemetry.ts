@@ -324,7 +324,8 @@ export function startBrowserTelemetry({
       if (stopped) return;
       rollover();
       const claim = `${prefix}daily.${encodeURIComponent(key)}`;
-      if (!daily.has(claim)) daily.set(claim, event);
+      if (daily.has(claim)) return;
+      daily.set(claim, event);
       pump();
     },
     reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),
