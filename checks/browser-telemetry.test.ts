@@ -189,6 +189,30 @@ describe("startBrowserTelemetry", () => {
     expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-04");
   });
 
+  test("rollover drops an old-day action behind a held report and requeues the current screen", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const previousDay = release;
+    reporter.reportDaily("message", VISIT);
+    reporter.reportScreen("settings");
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    await settle();
+    previousDay(202);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      { event: "app_opened", properties: { surface: "web" } },
+      { event: "screen_viewed", properties: { surface: "web", screen: "settings" } },
+    ]);
+    expect(claims()[`${PREFIX}screen.settings`]).toBe("2026-10-04");
+    expect(claims()[`${PREFIX}daily.message`]).toBeUndefined();
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(sent.slice(3).map(({ event }) => event)).toEqual([VISIT]);
+    expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-04");
+  });
+
   test.each(["working", "blocked"])(
     "daily claims with %s storage expire after 35 dates",
     async (mode) => {
@@ -247,7 +271,9 @@ describe("startBrowserTelemetry", () => {
     await settle();
     reporter.reportDaily("search", VISIT);
     reporter.stop();
+    reporter.reportDaily("after-stop", VISIT);
     await advance(1000);
+    jest.setSystemTime(DAY_TWO);
     reporter.reportDaily("later", VISIT);
     focus();
     expect(sent).toHaveLength(2);

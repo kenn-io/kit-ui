@@ -321,6 +321,7 @@ export function startBrowserTelemetry({
       pump();
     },
     reportDaily(key: string, event: VisitEvent) {
+      if (stopped) return;
       rollover();
       const claim = `${prefix}daily.${encodeURIComponent(key)}`;
       if (!daily.has(claim)) daily.set(claim, event);

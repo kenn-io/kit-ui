@@ -347,8 +347,10 @@ When storage is blocked, page memory holds them until reload. Upgrading from
 sharing the screen queue, receipts, retries, and stored claims. Repeated calls
 while queued keep the first event. Accepted or dropped reports claim the key;
 transport and HTTP 5xx failures retry. Use a stable, finite set of keys without
-record IDs or search text. Queued actions clear on UTC day rollover, so the
-next day's action needs a new call. Screen names and daily keys have separate
+record IDs or search text. UTC day rollover drops queued old-day actions,
+including actions waiting behind an in-flight report. Call `reportDaily`
+again only when the action actually occurs on a later day. The current screen
+can still report after rollover. Screen names and daily keys have separate
 namespaces.
 
 ### Receipts and opt-out
