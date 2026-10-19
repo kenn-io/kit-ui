@@ -20,6 +20,9 @@ interface Props {
     ariaHaspopup?: "menu" | "listbox" | "dialog" | "grid" | "tree" | boolean;
     /** id of the element this button controls (pairs with ariaExpanded). */
     ariaControls?: string;
+    /** The keyboard shortcut that also runs this action, in `aria-keyshortcuts`
+     * form such as `Meta+B`. */
+    ariaKeyshortcuts?: string;
     /** For toggle buttons — `true` renders the pressed (inset) look. */
     ariaPressed?: boolean;
     type?: "button" | "submit" | "reset";
