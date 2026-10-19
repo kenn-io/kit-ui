@@ -318,9 +318,9 @@ const telemetry = startBrowserTelemetry({
 });
 
 telemetry.reportScreen("settings");
-const unsubscribe = telemetry.onQuietChange((quiet) => {
-  if (quiet) stopVisitTimers();
-  else startVisitTimers();
+const unsubscribe = telemetry.onQuietChange((quiet, reason) => {
+  if (reason === "checking" || reason === "enabled") startVisitTimers();
+  else stopVisitTimers();
 });
 // When a visit session ends:
 telemetry.reportVisit(
@@ -360,9 +360,9 @@ const post = async (route, event) => {
 ```
 
 Only an HTTP 202 receipt decides permission. `queued` and `skipped` enable
-reports; `disabled` makes the reporter quiet. Any other reply, including a
-missing or unreadable body, leaves permission unknown, so trackers stay
-paused; a later screen or visit checks again. A disabled receipt keeps reports
+reports; `disabled` makes the reporter quiet. Any other reply except HTTP 401,
+including a missing or unreadable body, leaves permission unknown; a later
+screen or visit checks again. A disabled receipt keeps reports
 quiet across reloads until a load or focus on a later UTC day checks again.
 It also deletes the stored screen names, the only browsing history the helper
 keeps. Tabs can't check and write storage in one step, so a tab racing the
@@ -375,25 +375,53 @@ it had received a disabled receipt. Opting back in takes effect on the next
 UTC day's check.
 
 `onQuietChange` immediately supplies the current state and returns an
-unsubscribe function. Unknown, disabled, exhausted, and stopped reporters are
-quiet. Start visit timers on `false` and stop them on `true`.
+unsubscribe function. It calls the listener again whenever the reason changes,
+even when `quiet` stays the same. The reporter is quiet unless the reason is
+`enabled`:
+
+- `checking`: today's permission is unknown or a check is pending.
+- `enabled`: today's check returned `queued` or `skipped`.
+- `disabled`: a disabled receipt or `disable()`.
+- `unavailable`: six failures in a row, or an HTTP 401.
+- `stopped`: `stop()` was called.
+
+Visit timers can run through `checking`, since visits reported then are held
+for the enabled receipt, and should stop on the other quiet reasons.
 
 `stop()` signals quiet, cancels retries, and removes the focus listener. Call
 it before unsubscribing so the callback stops visit timers.
 
 ### Visits
 
-Visits are one-shot: never queued or retried. While permission is unknown, a
-visit makes the check itself when no other check is in flight, and is
-dropped otherwise.
+Visits are never retried. While permission is unknown, a visit makes the check
+itself when no check is in flight or waiting to retry. Otherwise the reporter
+holds a copy of the visit and its options. It holds up to 64 visits, oldest
+first, and drops new ones once full or when the payload can't be copied with
+`structuredClone`. Held visits are sent in order once the current UTC day's
+check returns `queued` or `skipped`. They survive midnight: a receipt for an
+earlier day can't release them, so they wait for the new day's check. A
+disabled receipt, `disable()`, or `stop()` discards them.
 
 ### Failures
 
 Transport failures and HTTP 5xx back off for 1, 2, 4, 8, and 16 seconds.
-App-open and screen reports retry after the delay; visits during it are
-dropped. While enabled, `{ keepalive: true }` visits skip the delay so a
-closing page can still send. Six failures in a row stop reporting until
-reload or the next UTC day.
+App-open and screen reports retry after the delay. Visits during the delay
+are held while permission is unknown and an app-open or screen retry is
+waiting, and dropped otherwise.
+While enabled, `{ keepalive: true }` visits skip the delay so a closing page
+can still send. Six failures in a row stop reporting until reload or the next
+UTC day.
+
+Other replies don't retry. An app-open or screen report answered with any
+other status, such as HTTP 400, stays claimed for the day, and the next
+report goes ahead. A visit that checks permission and gets no `queued`,
+`skipped`, or `disabled` receipt counts as a failure and starts the same
+backoff.
+
+HTTP 401 means the request wasn't authorized, so the reporter claims nothing
+for that report and stops as if it had reached the six-failure cap. Held
+visits are kept. After the app restores authentication, a new reporter
+checks again; otherwise the next UTC day's load or focus does.
 
 ### Storage keys
 

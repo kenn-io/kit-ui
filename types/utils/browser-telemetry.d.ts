@@ -20,6 +20,8 @@ export type BrowserTelemetryEvent = AppOpenedEvent | ScreenViewedEvent | VisitEv
 export interface VisitOptions {
     keepalive?: boolean;
 }
+/** Why the reporter is quiet, or `enabled` when it is not. */
+export type BrowserTelemetryQuietReason = "checking" | "enabled" | "disabled" | "unavailable" | "stopped";
 /** A daemon reply with its body: a `Response` with an unread body, or the parsed `data`. */
 export type TelemetryReceipt = {
     status: number;
@@ -45,9 +47,10 @@ export interface BrowserTelemetryReporter {
     disable(): void;
     /** Use a stable, finite set of screen names, such as route names without IDs. */
     reportScreen(screen: string): void;
+    /** Holds up to 64 copied visits while a permission check is pending; a full queue drops new ones. */
     reportVisit(event: VisitEvent, options?: VisitOptions): void;
-    /** Immediately receives the current state; returns an unsubscribe function. */
-    onQuietChange(listener: (quiet: boolean) => void): () => void;
+    /** Immediately receives the current state, then each reason change; returns an unsubscribe function. */
+    onQuietChange(listener: (quiet: boolean, reason: BrowserTelemetryQuietReason) => void): () => void;
 }
 /** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. */
 export declare function startBrowserTelemetry({ route, surface, storageKey, post, }: BrowserTelemetryOptions): BrowserTelemetryReporter;

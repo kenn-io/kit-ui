@@ -103,7 +103,7 @@ export { offsetOfIndex, virtualSlice, visibleWindow, type VerticalBounds, type V
 export { BREAKPOINTS, MEDIA, type BreakpointName } from "./breakpoints.js";
 export { dismissFlash, getFlash, getFlashes, getFlashMessage, showFlash, type FlashOptions, type FlashState, type FlashTone, } from "./stores/flash.svelte.js";
 export { cleanupTheme, getHighContrast, getThemeMode, getThemeName, initTheme, isDark, KIT_THEMES, setHighContrast, setThemeMode, setThemeName, type KitThemeInfo, type ThemeMode, type ThemeOptions, } from "./stores/theme.svelte.js";
-export { startBrowserTelemetry, type AppOpenedEvent, type BrowserTelemetryEvent, type BrowserTelemetryOptions, type BrowserTelemetryReporter, type ScreenViewedEvent, type TelemetryReceipt, type VisitEvent, type VisitOptions, } from "./utils/browser-telemetry.js";
+export { startBrowserTelemetry, type AppOpenedEvent, type BrowserTelemetryEvent, type BrowserTelemetryOptions, type BrowserTelemetryQuietReason, type BrowserTelemetryReporter, type ScreenViewedEvent, type TelemetryReceipt, type VisitEvent, type VisitOptions, } from "./utils/browser-telemetry.js";
 export { copyToClipboard } from "./utils/clipboard.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";

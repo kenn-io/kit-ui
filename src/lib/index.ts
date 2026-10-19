@@ -208,6 +208,7 @@ export {
   type AppOpenedEvent,
   type BrowserTelemetryEvent,
   type BrowserTelemetryOptions,
+  type BrowserTelemetryQuietReason,
   type BrowserTelemetryReporter,
   type ScreenViewedEvent,
   type TelemetryReceipt,
