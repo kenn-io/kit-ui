@@ -1393,8 +1393,18 @@ describe("startBrowserTelemetry", () => {
         expect(sent).toHaveLength(2);
         await advance(2);
       }
+      if (reset === "rollover") statuses = ["held"];
       reporter.reportVisit(VISIT);
-      expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
+      if (reset === "rollover") {
+        expect(sent[2]).toEqual({
+          route: ROUTE,
+          event: { event: "app_opened", properties: { surface: "web" } },
+        });
+        expect(sent).toHaveLength(3);
+        release(202);
+        await settle();
+        expect(sent[3]).toEqual({ route: ROUTE, event: VISIT });
+      } else expect(sent[2]).toEqual({ route: ROUTE, event: VISIT });
       await settle();
       expect(jest.getTimerCount()).toBe(0);
     },
