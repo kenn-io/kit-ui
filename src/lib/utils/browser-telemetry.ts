@@ -131,12 +131,13 @@ export function startBrowserTelemetry({
   const screens = new Set<string>(),
     listeners = new Set<(quiet: boolean, reason: BrowserTelemetryQuietReason) => void>(),
     outcomes: { event: VisitEvent; options?: VisitOptions }[] = [];
-  const pending = new Map<string, object>();
+  const pending = new Map<string, { queued: boolean }>();
   let day = today(),
     generation = {},
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     failures = 0,
+    queueFailures = 0,
     ordinaryEligibleAt = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
@@ -193,6 +194,7 @@ export function startBrowserTelemetry({
     generation = {};
     gate = "unknown";
     failures = 0;
+    queueFailures = 0;
     ordinaryEligibleAt = 0;
     cancelRetry();
     screens.clear();
@@ -203,14 +205,16 @@ export function startBrowserTelemetry({
     event: VisitEvent,
     key?: string,
     options?: VisitOptions,
+    queued = false,
     checking = key !== undefined || gate === "unknown",
   ) => {
     const sending = day;
     const owner = generation;
-    const record = {};
-    if (checking) pending.set(sending, record);
+    const permissionUnknown = gate === "unknown";
+    const record = { queued };
+    if (checking || queued) pending.set(sending, record);
     const release = () => {
-      if (checking && pending.get(sending) === record) pending.delete(sending);
+      if ((checking || queued) && pending.get(sending) === record) pending.delete(sending);
     };
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
@@ -226,13 +230,13 @@ export function startBrowserTelemetry({
       response = undefined;
       /* Receipt checks retry transport failures. */
     }
-    // An unknown visit check that earns no claim fails like an outage; other daily replies
-    // stay claimed. A 401 claims nothing and stops reporting until a restart or the next day.
+    // Failed permission checks leave daily claims free; ordinary enabled 4xx replies stay terminal.
     const claim = response && receiptClaim(response.status, data);
     const unauthorized = response?.status === 401;
     const failed =
       !response ||
       (response.status >= 500 && response.status < 600) ||
+      (permissionUnknown && (response.status < 200 || response.status >= 300)) ||
       (checking && key === undefined && !claim);
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
@@ -267,6 +271,13 @@ export function startBrowserTelemetry({
       release();
       return;
     }
+    if (queued) {
+      queueFailures = failed ? Math.min(queueFailures + 1, 5) : 0;
+      ordinaryEligibleAt = failed ? performance.now() + 1000 * 2 ** (queueFailures - 1) : 0;
+      release();
+      pump();
+      return;
+    }
     if (failed) {
       const delay = 1000 * 2 ** failures++;
       if (retry === undefined) ordinaryEligibleAt = performance.now() + delay;
@@ -286,27 +297,18 @@ export function startBrowserTelemetry({
   const pump = (visit?: VisitEvent, options?: VisitOptions, wake = false) => {
     rollover(wake);
     if (stopped || disabled() || failures >= 6) return;
-    // Only the current day's enabled gate releases held visits, oldest first.
-    if (gate === "enabled")
-      for (const outcome of outcomes.splice(0))
-        void send(outcome.event, undefined, outcome.options);
     if (visit) {
-      if (gate === "unknown" && (outcomes.length > 0 || pending.has(day) || retry)) {
+      if (
+        outcomes.length > 0 ||
+        pending.get(day)?.queued ||
+        (gate === "unknown" && (pending.has(day) || retry))
+      ) {
         try {
           if (outcomes.length < 64) outcomes.push(structuredClone({ event: visit, options }));
         } catch {
           /* A payload that can't be copied is dropped rather than interrupting the caller. */
         }
         pump();
-        if (
-          reason() === "checking" &&
-          !pending.has(day) &&
-          !retry &&
-          performance.now() >= ordinaryEligibleAt
-        ) {
-          const oldest = outcomes.shift();
-          if (oldest) void send(oldest.event, undefined, oldest.options);
-        }
         return;
       }
       if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)
@@ -319,7 +321,8 @@ export function startBrowserTelemetry({
       (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
     );
     const open = !claims.has(storageKey, day);
-    if (!open && screen === undefined) return;
+    const held = gate === "enabled" && outcomes.length > 0;
+    if (!held && !open && screen === undefined) return;
     const delay = ordinaryEligibleAt - performance.now();
     if (delay > 0) {
       retry = setTimeout(() => {
@@ -328,7 +331,10 @@ export function startBrowserTelemetry({
       }, delay);
       return;
     }
-    if (open) void send({ event: "app_opened", properties: { surface } }, storageKey);
+    if (held) {
+      const outcome = outcomes.shift()!;
+      void send(outcome.event, undefined, outcome.options, true);
+    } else if (open) void send({ event: "app_opened", properties: { surface } }, storageKey);
     else if (screen !== undefined)
       void send(
         { event: "screen_viewed", properties: { surface, screen } },

@@ -365,8 +365,8 @@ const post = async (route, event) => {
 
 Only an HTTP 202 receipt decides permission. `queued` and `skipped` enable
 reports; `disabled` makes the reporter quiet. Any other reply except HTTP 401,
-including a missing or unreadable body, leaves permission unknown; a later
-screen or visit checks again. A disabled receipt keeps reports
+including a missing or unreadable body, leaves permission unknown. Held visits
+wait for a later screen check or the next UTC day's check. A disabled receipt keeps reports
 quiet across reloads until a load or focus on a later UTC day checks again.
 It also deletes the stored screen names, the only browsing history the helper
 keeps. Tabs can't check and write storage in one step, so a tab racing the
@@ -405,12 +405,14 @@ first, and drops new ones once full or when the payload can't be copied with
 check returns `queued` or `skipped`. They survive midnight: a receipt for an
 earlier day can't release them, so they wait for the new day's check. A
 disabled receipt, `disable()`, or `stop()` discards them. Held visits live only
-in that reporter's memory; a new reporter checks again without inheriting them.
-If no app-open or screen check remains to send, a later visit uses the oldest
-held visit as the permission check. The remaining visits wait for its enabled
-receipt. That check is the held visit's one send; if it gets no recognized
-receipt, the visit is dropped. Remaining visits can wait for another visit
-after backoff or the next UTC day's check.
+in that reporter's memory and disappear on teardown or page unload. A new
+reporter checks again without inheriting them. Held visits send one at a time,
+including visits added while the queue drains. A failed send drops that visit;
+later visits wait for backoff. Queue failures use a separate cooldown of 1, 2,
+4, 8, then at most 16 seconds, which resets after a successful queued send.
+They leave the permission check's failure budget intact. After a 2xx reply
+without a recognized receipt, held visits wait for a later unclaimed screen
+check or the next UTC day's enabled receipt.
 
 ### Failures
 
@@ -422,9 +424,12 @@ While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
 UTC day.
 
-Other replies don't retry. An app-open or screen report answered with any
-other status, such as HTTP 400, stays claimed for the day, and the next
-report goes ahead. A visit that checks permission and gets no `queued`,
+While permission is unknown, any non-2xx HTTP check leaves the daily report
+unclaimed and retries with the same capped backoff, except HTTP 401 below.
+A 2xx reply with an unreadable or unknown body claims the daily event but
+leaves permission unknown. After permission is enabled, other non-401 4xx
+replies, such as HTTP 400, claim the daily report and let the next report
+proceed. A visit that checks permission and gets no `queued`,
 `skipped`, or `disabled` receipt counts as a failure and starts the same
 backoff.
 
