@@ -163,6 +163,35 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
+  test("exhausted unknown checks become unavailable until a new screen checks permission", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const reasons: [boolean, string][] = [];
+    reporter.onQuietChange((quiet, reason) => reasons.push([quiet, reason]));
+    reporter.reportScreen("initial");
+    statuses = [new Response("truncated", { status: 202 })];
+    release(new Response("truncated", { status: 202 }));
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
+    expect(reasons).toEqual([
+      [true, "checking"],
+      [true, "unavailable"],
+    ]);
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(2);
+    statuses = ["held"];
+    reporter.reportScreen("A");
+    expect(reasons.at(-1)).toEqual([true, "checking"]);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(3);
+    expect(sent.at(-1)?.event.properties.screen).toBe("A");
+    release(202);
+    await settle();
+    expect(reasons.at(-1)).toEqual([false, "enabled"]);
+    expect(sent.slice(3).map(({ event }) => event)).toEqual([VISIT]);
+  });
+
   test.each([401, "unknown screen", "enabled visit"] as const)(
     "HTTP 401 leaves daily claims free and stops reporting: %p",
     async (outcome) => {
