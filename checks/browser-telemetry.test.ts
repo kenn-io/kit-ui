@@ -123,6 +123,137 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test("daily keys share the screen queue, keep the first event, and leave visits per call", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportDaily("message/web", VISIT);
+    reporter.reportDaily("message/web", { event: "changed", properties: {} });
+    reporter.reportScreen("settings");
+    expect(sent).toHaveLength(1);
+    release(202);
+    await settle();
+    reporter.reportDaily("message/web", VISIT);
+    reporter.reportVisit(VISIT);
+    reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      { event: "screen_viewed", properties: { surface: "web", screen: "settings" } },
+      VISIT,
+      VISIT,
+      VISIT,
+    ]);
+    expect(claims()[`${PREFIX}daily.message%2Fweb`]).toBe("2026-10-03");
+  });
+
+  test.each([
+    { status: 202, data: { status: "queued" } },
+    { status: 202, data: { status: "skipped" } },
+    { status: 202, data: {} },
+    { status: 400, data: {} },
+  ])("daily terminal receipt %p survives reloads and other tabs", async (receipt) => {
+    const reporter = start();
+    await settle();
+    statuses = [receipt];
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    const other = start();
+    other.reportDaily("message", VISIT);
+    await settle();
+    reporter.stop();
+    other.stop();
+    start().reportDaily("message", VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      VISIT,
+    ]);
+  });
+
+  test("daily failures use bounded backoff and restart after rollover", async () => {
+    const reporter = start();
+    await settle();
+    statuses = ["offline", ...Array(5).fill(503)];
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
+    reporter.reportDaily("message", VISIT);
+    await advance(60000);
+    expect(sent.filter(({ event }) => event.event === "session_ended")).toHaveLength(6);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(claims()[`${PREFIX}daily.message`]).toBeUndefined();
+    jest.setSystemTime(DAY_TWO);
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(sent.slice(-2).map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-04");
+  });
+
+  test.each(["working", "blocked"])(
+    "daily claims with %s storage expire after 35 dates",
+    async (mode) => {
+      if (mode === "blocked") blockStorage();
+      const reporter = start();
+      reporter.reportDaily("message", VISIT);
+      await settle();
+      reporter.reportDaily("message", VISIT);
+      expect(sent).toHaveLength(2);
+      for (let date = 4; date <= 38; date++) {
+        jest.setSystemTime(new Date(Date.UTC(2026, 9, date, 12)));
+        reporter.reportDaily("message", VISIT);
+        await settle();
+      }
+      jest.setSystemTime(DAY_ONE);
+      reporter.reportDaily("message", VISIT);
+      await settle();
+      expect(sent.filter(({ event }) => event.event === "session_ended")).toHaveLength(37);
+    },
+  );
+
+  test.each(["receipt", "local", "other-tab"])(
+    "daily opt-out via %s drops queued actions and stored caller keys",
+    async (source) => {
+      const reporter = start();
+      await settle();
+      reporter.reportDaily("already-sent", VISIT);
+      await settle();
+      statuses = ["held"];
+      reporter.reportDaily("held", VISIT);
+      reporter.reportDaily("pending", VISIT);
+      if (source === "local") reporter.disable();
+      if (source === "other-tab") {
+        const other = start();
+        other.disable();
+        other.stop();
+      }
+      release(source === "receipt" ? { status: 202, data: { status: "disabled" } } : 202);
+      await settle();
+      reporter.reportDaily("after-opt-out", VISIT);
+      await advance(60000);
+      expect(sent).toHaveLength(3);
+      expect(Object.keys(claims()).filter((key) => key.startsWith(`${PREFIX}daily.`))).toEqual([]);
+      jest.setSystemTime(DAY_TWO);
+      focus();
+      await settle();
+      expect(sent.slice(3).map(({ event }) => event.event)).toEqual(["app_opened"]);
+    },
+  );
+
+  test("stop cancels daily retries and clears queued actions", async () => {
+    const reporter = start();
+    await settle();
+    statuses = [503];
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    reporter.reportDaily("search", VISIT);
+    reporter.stop();
+    await advance(1000);
+    reporter.reportDaily("later", VISIT);
+    focus();
+    expect(sent).toHaveLength(2);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   test("unknown permission drops keepalive visits until the cooldown expires", async () => {
     statuses = [400];
     const previous = start();
