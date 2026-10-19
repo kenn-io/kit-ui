@@ -5,17 +5,40 @@
   import SettingsSection from "../../lib/components/SettingsSection.svelte";
   import { Button, SearchInput, SegmentedControl, showFlash, Toggle } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
+  import Bell from "@lucide/svelte/icons/bell";
+  import Palette from "@lucide/svelte/icons/palette";
+  import RefreshCw from "@lucide/svelte/icons/refresh-cw";
+  import UserRound from "@lucide/svelte/icons/user-round";
 
   const categories: SettingsCategory[] = [
-    { id: "general", label: "General", group: "Account", summary: "Profile and identity" },
+    {
+      id: "general",
+      label: "General",
+      group: "Account",
+      summary: "Profile and identity",
+      icon: UserRound,
+    },
     {
       id: "notifications",
       label: "Notifications",
       group: "Account",
       summary: "Desktop alert behavior",
+      icon: Bell,
     },
-    { id: "appearance", label: "Appearance", group: "Workspace", summary: "Theme and density" },
-    { id: "sync", label: "Sync", group: "Workspace", summary: "Background refresh" },
+    {
+      id: "appearance",
+      label: "Appearance",
+      group: "Workspace",
+      summary: "Theme and density",
+      icon: Palette,
+    },
+    {
+      id: "sync",
+      label: "Sync",
+      group: "Workspace",
+      summary: "Background refresh",
+      icon: RefreshCw,
+    },
   ];
 
   let active = $state("general");
@@ -34,9 +57,9 @@
 
 <DemoSection
   title="Categorized settings panel"
-  description="Sidebar of categories on the left, scrollable SettingsSections on the right, optional pinned footer. Categories can carry a group (heading rendered between runs) and a summary line; the sidebarHeader snippet hosts app chrome like a settings search. bind:active tracks the selected category; the panel snippet receives its id. Below 760px the sidebar collapses to a top strip (labels only)."
+  description="Sidebar of categories on the left, scrollable SettingsSections on the right, optional pinned footer. Categories can carry a group (heading rendered between runs), an icon, and a summary line; the sidebarHeader snippet hosts app chrome like a settings search. bind:active tracks the selected category; the panel snippet receives its id. Below 760px the sidebar collapses to a top strip (labels only)."
   code={`const categories: SettingsCategory[] = [
-  { id: "general", label: "General", group: "Account", summary: "Profile and identity" },
+  { id: "general", label: "General", group: "Account", summary: "Profile and identity", icon: UserRound },
   { id: "appearance", label: "Appearance", group: "Workspace", summary: "Theme and density" },
 ];
 
