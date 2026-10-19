@@ -40,7 +40,10 @@ export interface BrowserTelemetryReporter {
   disable(): void;
   /** Use a stable, finite set of screen names, such as route names without IDs. */
   reportScreen(screen: string): void;
-  /** Reports once per UTC day for each stable caller key. Use a finite set without record IDs. */
+  /**
+   * Reports once per UTC day for each stable caller key. Use a finite set without record IDs.
+   * Drops unsent queued actions at UTC rollover; report again only when the action occurs that day.
+   */
   reportDaily(key: string, event: VisitEvent): void;
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
   /** Immediately receives the current state; returns an unsubscribe function. */
@@ -337,7 +340,7 @@ export function startBrowserTelemetry({
       rollover();
       const claim = `${prefix}daily.${encodeURIComponent(key)}`;
       if (daily.has(claim) || completedDaily.has(claim)) return;
-      daily.set(claim, event);
+      daily.set(claim, structuredClone(event));
       pump();
     },
     reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),

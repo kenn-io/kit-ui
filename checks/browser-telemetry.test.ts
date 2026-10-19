@@ -123,6 +123,23 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test("daily actions snapshot the caller's event and properties while queued", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const properties = { surface: "web", filter: { kind: "semantic" } };
+    const event = { event: "search_executed", properties };
+    reporter.reportDaily("search", event);
+    event.event = "message_opened";
+    properties.surface = "tui";
+    properties.filter.kind = "keyword";
+    event.properties = { surface: "other", filter: { kind: "different" } };
+    release(202);
+    await settle();
+    expect(sent.slice(1).map(({ event }) => event)).toEqual([
+      { event: "search_executed", properties: { surface: "web", filter: { kind: "semantic" } } },
+    ]);
+  });
+
   test.each(["this-page", "other-tab"])(
     "completed daily actions from %s add no storage scans on focus or repeat calls",
     async (source) => {
