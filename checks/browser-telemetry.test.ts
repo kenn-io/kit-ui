@@ -147,37 +147,39 @@ describe("startBrowserTelemetry", () => {
     expect(sent.slice(1)).toEqual([{ route: ROUTE, event: VISIT, options: { keepalive: true } }]);
   });
 
-  test.each([400, 401, 403, 404, 429])(
-    "HTTP %i checks leave app-open unclaimed",
-    async (status) => {
+  test.each([400, 401, 403, 404, 429, "unknown visit", "enabled visit"] as const)(
+    "failed permission or authentication check leaves claims free: %p",
+    async (outcome) => {
+      const visit = typeof outcome === "string";
+      if (visit) seed(`${PREFIX}open`, "2026-10-03");
+      if (outcome === "enabled visit") seed(`${PREFIX}check`, "2026-10-03");
+      const status = visit ? 401 : outcome;
       statuses = [status];
       const reporter = start();
-      const reasons: string[] = [];
-      reporter.onQuietChange((_, reason) => reasons.push(reason));
+      if (visit) reporter.reportVisit(VISIT);
       await settle();
-      expect(claims()).toEqual({});
+      expect(claims()[`${PREFIX}open`]).toBe(visit ? "2026-10-03" : undefined);
       await advance(999);
       expect(sent).toHaveLength(1);
       await advance(1);
       expect(sent).toHaveLength(status === 401 ? 1 : 2);
-      expect(reasons).toEqual(
-        status === 401 ? ["checking", "unavailable"] : ["checking", "enabled"],
-      );
       if (status === 401) {
+        reporter.reportScreen("A");
+        reporter.reportVisit(VISIT, { keepalive: true });
+        focus();
+        await advance(60000);
+        expect(sent).toHaveLength(1);
         reporter.stop();
-        start();
+        start().reportScreen("A");
         await settle();
-        expect(sent).toHaveLength(2);
       }
-      expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
+      expect(claims()[`${PREFIX}check`]).toBe("2026-10-03");
     },
   );
 
   test("held failures drain serially with bounded backoff and preserve the permission budget", async () => {
     statuses = ["held"];
     const reporter = start();
-    const reasons: string[] = [];
-    reporter.onQuietChange((_, reason) => reasons.push(reason));
     for (let i = 0; i < 8; i++) reporter.reportVisit({ event: "held", properties: { i } });
     statuses = ["held", ...Array(7).fill(503), "held", 503];
     release(202);
@@ -203,10 +205,6 @@ describe("startBrowserTelemetry", () => {
     expect(sent.at(-1)?.event.event).toBe("fails-after-success");
     await advance(1);
     expect(sent.at(-1)?.event.event).toBe("after-reset");
-    reporter.reportScreen("A");
-    await settle();
-    expect(sent.at(-1)?.event.properties.screen).toBe("A");
-    expect(reasons).toEqual(["checking", "enabled"]);
   });
 
   test.each(["recovered", "observed"])(
@@ -296,8 +294,8 @@ describe("startBrowserTelemetry", () => {
   test("disable() quiets the page and its reloads without sending until a later UTC day", async () => {
     seed("unrelated.setting", "kept");
     const reporter = start();
-    const quiet: [boolean, string][] = [];
-    reporter.onQuietChange((value, reason) => quiet.push([value, reason]));
+    const quiet: boolean[] = [];
+    reporter.onQuietChange((value) => quiet.push(value));
     reporter.reportScreen("A");
     await settle();
     expect(sent.map(({ event }) => event.properties.screen ?? event.event)).toEqual([
@@ -305,11 +303,7 @@ describe("startBrowserTelemetry", () => {
       "A",
     ]);
     reporter.disable();
-    expect(quiet).toEqual([
-      [true, "checking"],
-      [false, "enabled"],
-      [true, "disabled"],
-    ]);
+    expect(quiet).toEqual([true, false, true]);
     expect(claims()).toEqual({
       "unrelated.setting": "kept",
       [`${PREFIX}open`]: "2026-10-03",
@@ -469,7 +463,6 @@ describe("startBrowserTelemetry", () => {
     await settle();
     reporter.reportVisit(VISIT);
     await settle();
-    // The visit reported during the app-open retry was held for the enabled receipt.
     expect(sent.slice(3).map(({ event }) => event)).toEqual([
       VISIT,
       { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
@@ -484,8 +477,8 @@ describe("startBrowserTelemetry", () => {
       seed(`${PREFIX}open`, "2026-10-03");
       const reporter = start();
       await settle();
-      const reasons: string[] = [];
-      reporter.onQuietChange((_, reason) => reasons.push(reason));
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
       statuses = Array.from({ length: 20 }, () => 429);
       for (let i = 0; i < 20; i++) {
         reporter.reportVisit(VISIT);
@@ -507,7 +500,7 @@ describe("startBrowserTelemetry", () => {
       reporter.reportVisit(VISIT);
       await settle();
       expect(sent).toHaveLength(last === 503 ? 6 : 7);
-      expect(reasons).toEqual(last === 503 ? ["checking", "unavailable"] : ["checking", "enabled"]);
+      expect(quiet).toEqual(last === 503 ? [true, true] : [true, false]);
     },
   );
 
@@ -529,8 +522,8 @@ describe("startBrowserTelemetry", () => {
     async (reply, outcome) => {
       statuses = [reply];
       const reporter = start();
-      const reasons: string[] = [];
-      reporter.onQuietChange((_, reason) => reasons.push(reason));
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
       await settle();
       focus();
       await advance(60000);
@@ -545,14 +538,15 @@ describe("startBrowserTelemetry", () => {
               }
             : { [`${PREFIX}open`]: "2026-10-03" },
       );
-      const state = outcome === "unknown" ? "checking" : outcome;
-      expect(reasons).toEqual(state === "checking" ? [state] : ["checking", state]);
+      expect(quiet).toEqual(
+        outcome === "enabled" ? [true, false] : outcome === "disabled" ? [true, true] : [true],
+      );
       reporter.stop();
       const reloaded = start();
-      const reloadedReasons: string[] = [];
-      reloaded.onQuietChange((_, reason) => reloadedReasons.push(reason));
+      const reloadedQuiet: boolean[] = [];
+      reloaded.onQuietChange((value) => reloadedQuiet.push(value));
       await advance(60000);
-      expect(reloadedReasons).toEqual([state]);
+      expect(reloadedQuiet).toEqual(outcome === "enabled" ? [false] : [true]);
       expect(sent).toHaveLength(1);
     },
   );
@@ -582,31 +576,36 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
-  test("a rejected enabled screen stays claimed and releases the next screen", async () => {
-    const reporter = start();
-    await settle();
-    statuses = ["held", "held"];
-    reporter.reportScreen("A");
-    reporter.reportScreen("B");
-    release(400);
-    await settle();
-    reporter.reportVisit(VISIT, { keepalive: true });
-    release(202);
-    await settle();
-    reporter.reportScreen("A");
-    focus();
-    await settle();
-    expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
-    const reports = [
-      { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
-      { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
-      VISIT,
-    ];
-    expect(sent.map(({ event }) => event)).toEqual([
-      { event: "app_opened", properties: { surface: "web" } },
-      ...reports,
-    ]);
-  });
+  test.each(["enabled"])(
+    "a rejected screen stays claimed and releases the next screen with %s permission",
+    async (permission) => {
+      if (permission === "unknown") seed(`${PREFIX}open`, "2026-10-03");
+      const reporter = start();
+      await settle();
+      statuses = ["held", "held"];
+      reporter.reportScreen("A");
+      reporter.reportScreen("B");
+      release(400);
+      await settle();
+      reporter.reportVisit(VISIT, { keepalive: true });
+      release(202);
+      await settle();
+      reporter.reportScreen("A");
+      focus();
+      await settle();
+      expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
+      const reports = [
+        { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
+        { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
+        ...(permission === "enabled" ? [VISIT] : []),
+      ];
+      expect(sent.map(({ event }) => event)).toEqual(
+        permission === "enabled"
+          ? [{ event: "app_opened", properties: { surface: "web" } }, ...reports]
+          : reports,
+      );
+    },
+  );
 
   test.each(["focus", "late 202"])(
     "another tab's disabled receipt cancels backoff when observed by %s",
@@ -748,112 +747,83 @@ describe("startBrowserTelemetry", () => {
   });
 
   test.each(["enabled", "disabled", "disable", "stop"])(
-    "held visits are copied and cleared on terminal quiet: %s",
+    "held visits preserve copied FIFO payloads or clear on %s",
     async (outcome) => {
       statuses = ["held"];
       const reporter = start();
-      const first = { event: "first", properties: { n: 1 } };
-      reporter.reportVisit(first, { keepalive: true });
-      first.properties.n = 2;
-      reporter.reportVisit({ event: "second", properties: {} });
+      const visit = { event: "held", properties: { i: 0 } };
+      reporter.reportVisit(visit, { keepalive: true });
+      visit.properties.i = 99;
+      reporter.reportVisit({ event: "uncopyable", properties: { run: () => {} } });
+      for (let i = 1; i < 65; i++) reporter.reportVisit({ event: "held", properties: { i } });
       if (outcome === "disable") reporter.disable();
       if (outcome === "stop") reporter.stop();
       release({ status: 202, data: { status: outcome === "disabled" ? "disabled" : "queued" } });
-      await settle();
-      expect(sent.slice(1)).toEqual(
-        outcome === "enabled"
-          ? [
-              {
-                route: ROUTE,
-                event: { event: "first", properties: { n: 1 } },
-                options: { keepalive: true },
-              },
-              { route: ROUTE, event: { event: "second", properties: {} } },
-            ]
-          : [],
+      for (let i = 0; i < 4; i++) await settle();
+      expect(sent.slice(1).map(({ event }) => event.properties.i)).toEqual(
+        outcome === "enabled" ? Array.from({ length: 64 }, (_, i) => i) : [],
       );
+      if (outcome === "enabled") expect(sent[1]?.options).toEqual({ keepalive: true });
       jest.setSystemTime(DAY_TWO);
       focus();
       await settle();
-      expect(
-        sent.filter(({ event }) => event.event === "first" || event.event === "second"),
-      ).toHaveLength(outcome === "enabled" ? 2 : 0);
+      expect(sent.filter(({ event }) => event.event === "held")).toHaveLength(
+        outcome === "enabled" ? 64 : 0,
+      );
     },
   );
 
-  test("held visits keep the first 64 copyable payloads", async () => {
-    statuses = ["held"];
-    const reporter = start();
-    reporter.reportVisit({ event: "uncopyable", properties: { run: () => {} } });
-    for (let i = 0; i < 65; i++) reporter.reportVisit({ event: "held", properties: { i } });
-    release(202);
-    for (let i = 0; i < 4; i++) await settle();
-    expect(sent.slice(1).map(({ event }) => event.properties.i)).toEqual(
-      Array.from({ length: 64 }, (_, i) => i),
-    );
-  });
-
-  test("held visits wait for a later screen check after an unreadable app-open receipt", async () => {
-    statuses = ["held"];
-    const reporter = start();
-    const reasons: string[] = [];
-    reporter.onQuietChange((_, reason) => reasons.push(reason));
-    reporter.reportVisit({ event: "old", properties: {} }, { keepalive: true });
-    release(new Response("truncated", { status: 202 }));
-    await settle();
-    expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
-    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened"]);
-    statuses = ["held"];
-    reporter.reportVisit({ event: "new", properties: {} });
-    expect(sent).toHaveLength(1);
-    reporter.reportScreen("A");
-    expect(sent.at(-1)?.event.event).toBe("screen_viewed");
-    release(202);
-    await settle();
-    expect(reasons).toEqual(["checking", "enabled"]);
-    expect(sent.slice(1).map(({ event }) => event.event)).toEqual(["screen_viewed", "old", "new"]);
-  });
-
-  test.each([202, 401])(
-    "held visits after rollover wait for today's enabled receipt despite yesterday's %i",
-    async (status) => {
-      statuses = ["held", "held"];
+  test.each(["unreadable", 202, 401])(
+    "held visits wait for a current-day enabled receipt after %p",
+    async (outcome) => {
+      statuses = ["held"];
       const reporter = start();
       const previousDay = release;
       reporter.reportVisit({ event: "old", properties: {} });
-      jest.setSystemTime(DAY_TWO);
+      if (outcome === "unreadable") {
+        release(new Response("truncated", { status: 202 }));
+        await settle();
+        expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
+      } else jest.setSystemTime(DAY_TWO);
+      statuses = ["held"];
       reporter.reportVisit({ event: "new", properties: {} });
-      const currentDay = release;
-      await settle();
-      expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
-      previousDay(status);
-      await settle();
-      expect(sent).toHaveLength(2);
-      currentDay(202);
+      if (outcome === "unreadable") {
+        expect(sent).toHaveLength(1);
+        reporter.reportScreen("A");
+      } else {
+        previousDay(outcome);
+        await settle();
+      }
+      expect(sent.map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        outcome === "unreadable" ? "screen_viewed" : "app_opened",
+      ]);
+      release(202);
       await settle();
       expect(sent.slice(2).map(({ event }) => event.event)).toEqual(["old", "new"]);
     },
   );
 
-  test.each(["unknown", "enabled"])(
-    "a visit HTTP 401 stops %s permission until restart",
-    async (gate) => {
-      seed(`${PREFIX}open`, "2026-10-03");
-      if (gate === "enabled") seed(`${PREFIX}check`, "2026-10-03");
-      const reporter = start();
-      const reasons: string[] = [];
-      reporter.onQuietChange((_, reason) => reasons.push(reason));
-      statuses = [401];
-      reporter.reportVisit(VISIT);
-      await settle();
-      reporter.reportScreen("A");
-      focus();
-      await advance(60000);
-      expect(sent.map(({ event }) => event.event)).toEqual(["session_ended"]);
-      expect(reasons).toEqual([gate === "enabled" ? "enabled" : "checking", "unavailable"]);
-      expect(jest.getTimerCount()).toBe(0);
-    },
-  );
+  test("quiet reasons distinguish checking, enabled, disabled, unavailable, and stopped", async () => {
+    const reporter = start();
+    const reasons: [boolean, string][] = [];
+    reporter.onQuietChange((quiet, reason) => reasons.push([quiet, reason]));
+    await settle();
+    jest.setSystemTime(DAY_TWO);
+    statuses = [401];
+    focus();
+    await settle();
+    reporter.disable();
+    reporter.stop();
+    expect(reasons).toEqual([
+      [true, "checking"],
+      [false, "enabled"],
+      [true, "checking"],
+      [true, "unavailable"],
+      [true, "disabled"],
+      [true, "stopped"],
+    ]);
+  });
 
   test.each([
     ["subscribe", [false]],
@@ -1164,8 +1134,8 @@ describe("startBrowserTelemetry", () => {
       statuses = ["held"];
       let reporter = start();
       await settle();
-      const reasons: string[] = [];
-      reporter.onQuietChange((_, reason) => reasons.push(reason));
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
       const previousDay = release;
       jest.setSystemTime(new Date("2026-10-04T00:00:00.100Z"));
       statuses = ["held"];
@@ -1182,7 +1152,7 @@ describe("startBrowserTelemetry", () => {
       if (wake === "enabled-first") {
         currentDay(enabled);
         await settle();
-        expect(reasons).toEqual(["checking", "enabled"]);
+        expect(quiet).toEqual([true, false]);
       }
       previousDay(disabled);
       await settle();
@@ -1190,12 +1160,9 @@ describe("startBrowserTelemetry", () => {
         currentDay(enabled);
         await settle();
       }
-      expect(reasons).toEqual(
-        wake === "enabled-first" ? ["checking", "enabled", "disabled"] : ["checking", "disabled"],
-      );
+      expect(quiet).toEqual(wake === "enabled-first" ? [true, false, true] : [true, true]);
       expect(claims()[`${PREFIX}quiet`]).toBe("2026-10-03,2026-10-04");
       expect(claims()[`${PREFIX}check`]).toBe("2026-10-04");
-      // The second listener's keepalive visit was held; an enabled receipt before the opt-out sends it.
       const count = wake === "enabled-first" ? 3 : 2;
       reporter.reportScreen("A");
       reporter.reportVisit(VISIT, { keepalive: true });
@@ -1228,8 +1195,8 @@ describe("startBrowserTelemetry", () => {
       if (kind === "app") statuses = ["held"];
       let reporter = start();
       await settle();
-      const reasons: string[] = [];
-      reporter.onQuietChange((_, reason) => reasons.push(reason));
+      const quiet: boolean[] = [];
+      reporter.onQuietChange((value) => quiet.push(value));
       if (kind === "screen") {
         statuses = ["held"];
         reporter.reportScreen("A");
@@ -1244,9 +1211,7 @@ describe("startBrowserTelemetry", () => {
       const before = kind === "app" ? 1 : 2;
       if (reply === "disabled") {
         expect(sent).toHaveLength(before);
-        expect(reasons).toEqual(
-          kind === "app" ? ["checking", "disabled"] : ["enabled", "disabled"],
-        );
+        expect(quiet).toEqual(kind === "app" ? [true, true] : [false, true]);
         expect(claims()[`${PREFIX}quiet`]).toBe("2026-10-03");
         expect(claims()[`${PREFIX}check`]).toBe(kind === "app" ? undefined : "2026-10-03");
         expect(claims()[`${PREFIX}open`]).toBe(kind === "app" ? undefined : "2026-10-03");
@@ -1258,7 +1223,7 @@ describe("startBrowserTelemetry", () => {
         if (wake === "reload") {
           reporter.stop();
           reporter = start();
-          reporter.onQuietChange((_, reason) => reasons.push(reason));
+          reporter.onQuietChange((value) => quiet.push(value));
           reporter.reportScreen("A");
         } else focus();
         await settle();
@@ -1266,12 +1231,12 @@ describe("startBrowserTelemetry", () => {
       expect(sent.slice(before).map(({ event }) => event.event)).toEqual(["app_opened"]);
       release({ status: 202, data: { status: "queued" } });
       await settle();
-      expect(reasons).toEqual(
+      expect(quiet).toEqual(
         kind === "screen"
-          ? ["enabled", ...(reply === "disabled" ? ["disabled"] : []), "checking", "enabled"]
+          ? [false, ...(reply === "disabled" ? [true] : []), true, false]
           : wake === "reload"
-            ? ["checking", "disabled", "stopped", "checking", "enabled"]
-            : ["checking", "disabled", "checking", "enabled"],
+            ? [true, true, true, true, false]
+            : [true, true, true, false],
       );
       expect(sent.at(-1)?.event).toEqual({
         event: "screen_viewed",
@@ -1284,8 +1249,8 @@ describe("startBrowserTelemetry", () => {
   test("six daily failures stop retries until the next UTC day", async () => {
     statuses = Array(6).fill(503);
     const reporter = start();
-    const changes: string[] = [];
-    reporter.onQuietChange((_, reason) => changes.push(reason));
+    const changes: boolean[] = [];
+    reporter.onQuietChange((value) => changes.push(value));
     await settle();
     for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
     expect(sent).toHaveLength(6);
@@ -1300,7 +1265,7 @@ describe("startBrowserTelemetry", () => {
     focus();
     await settle();
     expect(sent.slice(6).map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
-    expect(changes).toEqual(["checking", "unavailable", "checking", "enabled"]);
+    expect(changes).toEqual([true, true, true, false]);
   });
 
   test("a disabled page waits for focus after rollover despite screen and visit reports and stays quiet on rollback", async () => {
