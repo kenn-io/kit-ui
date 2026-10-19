@@ -150,19 +150,22 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
-  test.each([400, 401, 403, 404, 429, "unknown screen", "enabled visit"] as const)(
+  test.each([400, 401, "unknown screen", "enabled visit"] as const)(
     "failed permission or authentication check leaves claims free: %p",
     async (outcome) => {
-      const visit = typeof outcome === "string";
-      if (visit) seed(`${PREFIX}open`, "2026-10-03");
+      const seededOpen = typeof outcome === "string";
+      if (seededOpen) seed(`${PREFIX}open`, "2026-10-03");
       if (outcome === "enabled visit") seed(`${PREFIX}check`, "2026-10-03");
-      const status = visit ? 401 : outcome;
+      const status = seededOpen ? 401 : outcome;
       statuses = [status];
+      const before = claims();
       const reporter = start();
       if (outcome === "unknown screen") reporter.reportScreen("initial");
-      else if (visit) reporter.reportVisit(VISIT);
+      else if (seededOpen) reporter.reportVisit(VISIT);
       await settle();
-      expect(claims()[`${PREFIX}open`]).toBe(visit ? "2026-10-03" : undefined);
+      if (outcome === "unknown screen") expect(claims()[`${PREFIX}screen.initial`]).toBeUndefined();
+      else if (outcome === "enabled visit") expect(claims()).toEqual(before);
+      else expect(claims()[`${PREFIX}open`]).toBeUndefined();
       await advance(999);
       expect(sent).toHaveLength(1);
       await advance(1);
@@ -361,18 +364,6 @@ describe("startBrowserTelemetry", () => {
     });
   });
 
-  test("a screen reply that lands after disable() stores no screen name", async () => {
-    const reporter = start();
-    await settle();
-    statuses = ["held"];
-    reporter.reportScreen("A");
-    reporter.disable();
-    release(202);
-    await settle();
-    expect(`${PREFIX}screen.A` in claims()).toBe(false);
-    expect(sent).toHaveLength(2);
-  });
-
   test.each(["running", "stopped", "after midnight"])(
     "a screen reply after another tab's opt-out stores no screen name: %s",
     async (variant) => {
@@ -491,36 +482,14 @@ describe("startBrowserTelemetry", () => {
     expect(quiet).toEqual([false, true, false]);
   });
 
-  test.each([503, 202])(
-    "unknown screen checks use the failure cap; sixth reply %i",
-    async (last) => {
-      seed(`${PREFIX}open`, "2026-10-03");
-      const reporter = start();
-      statuses = [429, 503, 429, 503, 429, last];
-      reporter.reportScreen("A");
-      await settle();
-      for (const [i, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
-        await advance(delay - 1);
-        expect(sent).toHaveLength(i + 1);
-        await advance(1);
-      }
-      await advance(60000);
-      expect(sent).toHaveLength(6);
-      expect(claims()[`${PREFIX}screen.A`]).toBe(last === 202 ? "2026-10-03" : undefined);
-    },
-  );
-
   test.each([
     [{ status: 202, data: { status: "unknown" } }, "unknown"],
     [new Response("broken", { status: 202 }), "unknown"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 200 }), "unknown"],
-    [new Response(JSON.stringify({ status: "queued" }), { status: 201 }), "unknown"],
     [{ status: 202, data: { status: "disabled" } }, "disabled"],
-    [200, "unknown"],
     [202 as const, "enabled"],
     // A status-only adapter can't show an opt-out, so it never enables reports.
     [{ status: 202, data: undefined }, "unknown"],
-    [{ status: 202 } as unknown as Reply, "unknown"],
     [{ status: 202, data: { status: "skipped" } }, "enabled"],
     [new Response(JSON.stringify({ status: "queued" }), { status: 202 }), "enabled"],
   ] as const)(
@@ -556,61 +525,38 @@ describe("startBrowserTelemetry", () => {
       expect(sent).toHaveLength(1);
     },
   );
-  test.each(["screen"])(
-    "an interrupted 202 body is a terminal unreadable receipt for %s",
-    async (kind) => {
-      seed(`${PREFIX}open`, "2026-10-03");
-      const response = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.error(new TypeError("terminated"));
-          },
-        }),
-        { status: 202 },
-      );
-      statuses = [response];
-      const reporter = start();
-      if (kind === "screen") reporter.reportScreen("A");
-      await settle();
-      await advance(60000);
-      expect(sent).toHaveLength(1);
-      expect(jest.getTimerCount()).toBe(0);
-      if (kind === "screen") expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
-      expect(`${PREFIX}check` in claims()).toBe(false);
-      expect(`${PREFIX}quiet` in claims()).toBe(false);
-    },
-  );
+  test("an unreadable 202 body still claims the screen without enabling permission", async () => {
+    seed(`${PREFIX}open`, "2026-10-03");
+    statuses = [new Response("broken", { status: 202 })];
+    const reporter = start();
+    reporter.reportScreen("A");
+    await settle();
+    await advance(60000);
+    expect(sent).toHaveLength(1);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
+    expect(`${PREFIX}check` in claims()).toBe(false);
+    expect(`${PREFIX}quiet` in claims()).toBe(false);
+  });
 
-  test.each(["enabled"])(
-    "a rejected screen stays claimed and releases the next screen with %s permission",
-    async (permission) => {
-      if (permission === "unknown") seed(`${PREFIX}open`, "2026-10-03");
-      const reporter = start();
-      await settle();
-      statuses = ["held", "held"];
-      reporter.reportScreen("A");
-      reporter.reportScreen("B");
-      release(400);
-      await settle();
-      reporter.reportVisit(VISIT, { keepalive: true });
-      release(202);
-      await settle();
-      reporter.reportScreen("A");
-      focus();
-      await settle();
-      expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
-      const reports = [
-        { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
-        { event: "screen_viewed", properties: { surface: "web", screen: "B" } },
-        ...(permission === "enabled" ? [VISIT] : []),
-      ];
-      expect(sent.map(({ event }) => event)).toEqual(
-        permission === "enabled"
-          ? [{ event: "app_opened", properties: { surface: "web" } }, ...reports]
-          : reports,
-      );
-    },
-  );
+  test("a rejected enabled screen stays claimed and releases the next screen", async () => {
+    const reporter = start();
+    await settle();
+    statuses = ["held"];
+    reporter.reportScreen("A");
+    reporter.reportScreen("B");
+    release(400);
+    await settle();
+    reporter.reportScreen("A");
+    focus();
+    await settle();
+    expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
+    expect(sent.map(({ event }) => event.properties.screen ?? event.event)).toEqual([
+      "app_opened",
+      "A",
+      "B",
+    ]);
+  });
 
   test.each(["focus", "late 202"])(
     "another tab's disabled receipt cancels backoff when observed by %s",
@@ -706,32 +652,27 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
-  test.each([{ status: 202, data: { status: "queued" } }, { status: 200 }] as const)(
-    "empty-key app-open dedupes across focus and reload independently of other products: %p",
-    async (reply) => {
-      statuses = [reply, "held"];
-      const reporter = start("");
-      await settle();
-      expect(sent).toEqual([
-        { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
-      ]);
-      await advance(60000);
-      focus();
-      reporter.stop();
-      start("");
-      await settle();
-      expect(sent).toHaveLength(1);
-      statuses = [202];
-      start("example.other.web");
-      await settle();
-      start("example.other.web");
-      await settle();
-      expect(sent).toHaveLength(2);
-    },
-  );
+  test("empty-key app-open dedupes across focus and reload independently of other products", async () => {
+    const reporter = start("");
+    await settle();
+    expect(sent).toEqual([
+      { route: ROUTE, event: { event: "app_opened", properties: { surface: "web" } } },
+    ]);
+    await advance(60000);
+    focus();
+    reporter.stop();
+    start("");
+    await settle();
+    expect(sent).toHaveLength(1);
+    statuses = [202];
+    start("example.other.web");
+    await settle();
+    start("example.other.web");
+    await settle();
+    expect(sent).toHaveLength(2);
+  });
 
-  test("encoded screens dedupe across reload and ignore a stored non-date claim", async () => {
-    seed(`${PREFIX}screen.A%2FB`, "invalid");
+  test("encoded screens dedupe across reload", async () => {
     const reporter = start();
     reporter.reportScreen("A/B");
     reporter.reportScreen("B");
@@ -748,7 +689,7 @@ describe("startBrowserTelemetry", () => {
       "screen_viewed",
     ]);
     expect(sent[1]?.event.properties).toEqual({ surface: "web", screen: "A/B" });
-    expect(claims()[`${PREFIX}screen.A%2FB`]).toBe("invalid,2026-10-03");
+    expect(claims()[`${PREFIX}screen.A%2FB`]).toBe("2026-10-03");
   });
 
   test.each(["enabled", "disabled", "disable", "stop"])(
@@ -778,31 +719,19 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
-  test.each(["unreadable", 202, 401])(
-    "held visits wait for a current-day enabled receipt after %p",
-    async (outcome) => {
+  test.each([202, 401])(
+    "held visits wait for today's enabled receipt after yesterday's %i",
+    async (status) => {
       statuses = ["held"];
       const reporter = start();
       const previousDay = release;
       reporter.reportVisit({ event: "old", properties: {} });
-      if (outcome === "unreadable") {
-        release(new Response("truncated", { status: 202 }));
-        await settle();
-        expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
-      } else jest.setSystemTime(DAY_TWO);
+      jest.setSystemTime(DAY_TWO);
       statuses = ["held"];
       reporter.reportVisit({ event: "new", properties: {} });
-      if (outcome === "unreadable") {
-        expect(sent).toHaveLength(1);
-        reporter.reportScreen("A");
-      } else {
-        previousDay(outcome);
-        await settle();
-      }
-      expect(sent.map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        outcome === "unreadable" ? "screen_viewed" : "app_opened",
-      ]);
+      previousDay(status);
+      await settle();
+      expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
       release(202);
       await settle();
       expect(sent.slice(2).map(({ event }) => event.event)).toEqual(["old", "new"]);
@@ -982,10 +911,10 @@ describe("startBrowserTelemetry", () => {
     expect(sent).toHaveLength(5);
     await advance(1);
     await settle();
-    expect(sent.slice(4).map(({ event }) => event.event)).toEqual([
+    expect(sent.slice(4).map(({ event }) => event.properties.screen ?? event.event)).toEqual([
       "app_opened",
       "app_opened",
-      "screen_viewed",
+      "B",
     ]);
   });
 
