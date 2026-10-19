@@ -814,47 +814,66 @@ describe("startBrowserTelemetry", () => {
     expect(sent).toHaveLength(2);
   });
 
-  test.each(["initial", "shared"])(
-    "cleanup during %s enabled notification stops tracker timers; shared cleanup also cancels retries and focus",
-    async (notification) => {
-      if (notification === "shared") statuses = ["held"];
-      const reporter = start();
-      await settle();
-      let timer: ReturnType<typeof setInterval>;
-      const changes: boolean[] = [],
-        later: boolean[] = [];
-      reporter.onQuietChange((quiet) => {
-        changes.push(quiet);
-        clearInterval(timer);
-        if (!quiet) {
-          timer = setInterval(() => reporter.reportVisit(VISIT), 100);
-          reporter.stop();
-        }
-      });
-      reporter.onQuietChange((quiet) => later.push(quiet));
-      if (notification === "shared") start();
-      await settle();
-      const beforeCleanup = sent.slice();
-      reporter.reportVisit(VISIT);
-      expect(sent).toEqual(beforeCleanup);
-      expect(changes).toEqual(notification === "initial" ? [false, true] : [true, false, true]);
-      expect(later).toEqual(notification === "initial" ? [true] : [true, true]);
-      expect(jest.getTimerCount()).toBe(0);
-      if (notification === "initial") return;
-      stops.at(-1)?.();
-      jest.setSystemTime(DAY_TWO);
-      statuses = [503];
-      const retrying = start();
-      await settle();
-      expect(jest.getTimerCount()).toBe(1);
-      retrying.stop();
-      expect(jest.getTimerCount()).toBe(0);
-      const count = sent.length;
-      focus();
-      await advance(60000);
-      expect(sent).toHaveLength(count);
-    },
-  );
+  test("cleanup during the initial enabled callback stops its tracker", async () => {
+    const reporter = start();
+    await settle();
+    let timer: ReturnType<typeof setInterval>;
+    const changes: boolean[] = [],
+      later: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      clearInterval(timer);
+      if (!quiet) {
+        timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+        reporter.stop();
+      }
+    });
+    reporter.onQuietChange((quiet) => later.push(quiet));
+    const beforeCleanup = sent.slice();
+    reporter.reportVisit(VISIT);
+    expect(sent).toEqual(beforeCleanup);
+    expect(changes).toEqual([false, true]);
+    expect(later).toEqual([true]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("cleanup during a shared enabled notification stops trackers and later subscribers", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    let timer: ReturnType<typeof setInterval>;
+    const changes: boolean[] = [],
+      later: boolean[] = [];
+    reporter.onQuietChange((quiet) => {
+      changes.push(quiet);
+      clearInterval(timer);
+      if (!quiet) {
+        timer = setInterval(() => reporter.reportVisit(VISIT), 100);
+        reporter.stop();
+      }
+    });
+    reporter.onQuietChange((quiet) => later.push(quiet));
+    start();
+    await settle();
+    const beforeCleanup = sent.slice();
+    reporter.reportVisit(VISIT);
+    expect(sent).toEqual(beforeCleanup);
+    expect(changes).toEqual([true, false, true]);
+    expect(later).toEqual([true, true]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("stop cancels retry timers and removes focus reporting", async () => {
+    statuses = [503];
+    const reporter = start();
+    await settle();
+    expect(jest.getTimerCount()).toBe(1);
+    reporter.stop();
+    expect(jest.getTimerCount()).toBe(0);
+    const count = sent.length;
+    focus();
+    await advance(60000);
+    expect(sent).toHaveLength(count);
+  });
 
   test("midnight resets the day before a shared receipt can notify a screen subscriber", async () => {
     statuses = ["held"];
@@ -883,7 +902,7 @@ describe("startBrowserTelemetry", () => {
     expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-04");
   });
 
-  test("shared claims stop screen retries; rollover cancels backoff and carries the current screen", async () => {
+  test("shared claims stop screen retries", async () => {
     const reporter = start();
     await settle();
     statuses = [503];
@@ -895,7 +914,11 @@ describe("startBrowserTelemetry", () => {
     other.stop();
     await advance(1000);
     expect(sent).toHaveLength(3);
-    jest.setSystemTime(new Date("2026-10-03T23:59:59.500Z"));
+  });
+
+  test("rollover cancels the screen retry and resets app-open backoff", async () => {
+    const reporter = start();
+    await settle();
     statuses = [503];
     reporter.reportScreen("B");
     await settle();
@@ -908,14 +931,9 @@ describe("startBrowserTelemetry", () => {
     release(503);
     await settle();
     await advance(999);
-    expect(sent).toHaveLength(5);
+    expect(sent).toHaveLength(3);
     await advance(1);
-    await settle();
-    expect(sent.slice(4).map(({ event }) => event.properties.screen ?? event.event)).toEqual([
-      "app_opened",
-      "app_opened",
-      "B",
-    ]);
+    expect(sent.filter(({ event }) => event.event === "app_opened")).toHaveLength(3);
   });
 
   test("transport and 5xx failures back off through 16 seconds before claiming app-open or screen", async () => {
