@@ -70,6 +70,14 @@
      * without hover, and the full sidebar from 1440px.
      */
     storageKey: string;
+    /**
+     * A saved collapse choice from the host, for a host whose localStorage
+     * does not last, such as a throwaway browser session. It wins over
+     * `storageKey`. `null` or absent means the host has none.
+     */
+    collapsed?: boolean | null;
+    /** Called with the new state when someone collapses or expands the sidebar. */
+    oncollapsedchange?: (collapsed: boolean) => void;
     /** Brand area at the top of the panel. `rail` is true in the icon-only rail. */
     brand: Snippet<[{ rail: boolean }]>;
     /** Everything after the menu button in the narrow top bar. */
@@ -97,6 +105,8 @@
     location,
     page,
     storageKey,
+    collapsed: hostChoice = null,
+    oncollapsedchange,
     brand,
     narrowBar,
     footer,
@@ -141,7 +151,7 @@
 
   // Someone's choice to collapse (true) or expand (false); null until they
   // make one, so the width decides.
-  let collapsedChoice = $derived(readChoice(storageKey));
+  let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
   const collapsed = $derived(collapsedChoice ?? (railWidths.current && !touch.current));
   const rail = $derived(!narrow.current && collapsed);
 
@@ -160,6 +170,7 @@
     } catch {
       // Storage blocked: the choice lasts until the page reloads.
     }
+    oncollapsedchange?.(collapsedChoice);
     if (section) {
       await tick();
       if (!active?.isConnected) section.focus();
