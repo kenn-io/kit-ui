@@ -47,6 +47,12 @@ export interface BrowserTelemetryReporter {
   disable(): void;
   /** Use a stable, finite set of screen names, such as route names without IDs. */
   reportScreen(screen: string): void;
+  /**
+   * Reports once per UTC day for each stable caller key. Use a finite set without record IDs.
+   * Drops unsent queued actions at UTC rollover; report again only when the action occurs that day.
+   * Discards actions while disabled until a later day's load or focus check enables reporting.
+   */
+  reportDaily(key: string, event: VisitEvent): void;
   /** Holds up to 64 copied visits while a permission check is pending; a full queue drops new ones. */
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
   /** Immediately receives the current state, then each reason change; returns an unsubscribe function. */
@@ -98,12 +104,13 @@ function claimHistory(storageKey: string) {
       pageOnly = true;
     }
   };
-  /** Drops every claim whose key starts with `keys`, from page memory and storage. */
-  const forget = (keys: string) => {
-    for (const key of memory.keys()) if (key.startsWith(keys)) memory.delete(key);
+  /** Drops every claim whose key starts with one of `prefixes`, from page memory and storage. */
+  const forget = (...prefixes: string[]) => {
+    const matches = (key: string) => prefixes.some((start) => key.startsWith(start));
+    for (const key of memory.keys()) if (matches(key)) memory.delete(key);
     try {
       for (const item of Object.keys(localStorage))
-        if (item.startsWith(keys)) localStorage.removeItem(item);
+        if (matches(item)) localStorage.removeItem(item);
     } catch {
       /* Blocked storage holds no claims to drop. */
     }
@@ -137,7 +144,7 @@ const nextCheck = (
   return undefined;
 };
 
-/** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. */
+/** Reports daily app-open, screens, and keyed events; gates visits until an enabled receipt. */
 export function startBrowserTelemetry({
   route,
   surface,
@@ -147,6 +154,7 @@ export function startBrowserTelemetry({
   const prefix = `${storageKey}.browser.v1.`,
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
+    daily = new Map<string, VisitEvent | undefined>(),
     listeners = new Set<(quiet: boolean, reason: BrowserTelemetryQuietReason) => void>(),
     outcomes: { event: VisitEvent; options?: VisitOptions }[] = [];
   const pending = new Map<string, { queued: boolean }>();
@@ -160,8 +168,16 @@ export function startBrowserTelemetry({
     retry: ReturnType<typeof setTimeout> | undefined,
     lastReason: BrowserTelemetryQuietReason = "checking";
   const due = () => nextCheck(claims, storageKey, surface, screens, day);
-  // Today's open and every reported screen checked, none pending, and permission still unknown.
-  const exhausted = () => gate === "unknown" && !pending.has(day) && !retry && !due();
+  const nextDaily = (): [VisitEvent, string] | undefined => {
+    for (const [key, event] of daily) {
+      if (event && !claims.has(key, day)) return [event, key];
+      daily.set(key, undefined);
+    }
+    return undefined;
+  };
+  // No open, screen, or daily action remains to check, and permission is unknown.
+  const exhausted = () =>
+    gate === "unknown" && !pending.has(day) && !retry && !due() && !nextDaily();
   const reason = (): BrowserTelemetryQuietReason =>
     stopped
       ? "stopped"
@@ -194,8 +210,11 @@ export function startBrowserTelemetry({
         : claims.has(`${prefix}check`, day)
           ? "enabled"
           : "unknown";
-  // Opting out also drops the stored screen names, the only browsing history kept here.
-  const forgetScreens = () => claims.forget(`${prefix}screen.`);
+  // Opting out also drops stored screen names and caller keys.
+  const forgetHistory = () => {
+    claims.forget(`${prefix}screen.`, `${prefix}daily.`);
+    daily.clear();
+  };
   const disabled = (): boolean => {
     gate = readGate();
     if (gate === "disabled") {
@@ -203,7 +222,7 @@ export function startBrowserTelemetry({
       cancelRetry();
       // Storage can't check and write atomically across tabs, so a racing tab's late
       // screen claim can outlive the opt-out; every page that sees the opt-out drops it.
-      forgetScreens();
+      forgetHistory();
     }
     notify();
     return stopped || gate === "disabled";
@@ -217,6 +236,7 @@ export function startBrowserTelemetry({
     ordinaryEligibleAt = 0;
     cancelRetry();
     screens.clear();
+    daily.clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
   };
@@ -259,8 +279,11 @@ export function startBrowserTelemetry({
       claim === "quiet" ||
       gate === "disabled" ||
       [sending, day, today()].some((date) => claims.has(`${prefix}quiet`, date));
-    if (!failed && !unauthorized && key !== undefined && !optedOut) claims.add(key, sending);
-    if (claim === "quiet") forgetScreens();
+    if (!failed && !unauthorized && key !== undefined && !optedOut) {
+      claims.add(key, sending);
+      if (owner === generation && daily.has(key)) daily.set(key, undefined);
+    }
+    if (claim === "quiet") forgetHistory();
     if (stopped) return release();
     // A disabled receipt stops the current page. One that lands after this page began a
     // later day also claims that day, so a reload stays as quiet as this page.
@@ -321,7 +344,7 @@ export function startBrowserTelemetry({
       return;
     }
     if (retry || pending.has(day)) return;
-    const check = due();
+    const check = due() ?? nextDaily();
     const held = gate === "enabled" && outcomes.length > 0;
     if (!held && !check) return;
     const delay = ordinaryEligibleAt - performance.now();
@@ -346,6 +369,7 @@ export function startBrowserTelemetry({
       ordinaryEligibleAt = 0;
       cancelRetry();
       screens.clear();
+      daily.clear();
       outcomes.length = 0;
       notify();
       listeners.clear();
@@ -355,13 +379,26 @@ export function startBrowserTelemetry({
       for (const date of new Set([day, today()])) claims.add(`${prefix}quiet`, date);
       gate = "disabled";
       outcomes.length = 0;
-      forgetScreens();
+      forgetHistory();
       cancelRetry();
       notify();
     },
     reportScreen(screen: string) {
       currentScreen = screen;
       screens.add(screen);
+      pump();
+    },
+    reportDaily(key: string, event: VisitEvent) {
+      if (stopped || gate === "disabled") return;
+      rollover();
+      const claim = `${prefix}daily.${encodeURIComponent(key)}`;
+      if (daily.has(claim)) return;
+      try {
+        daily.set(claim, structuredClone(event));
+      } catch {
+        // Optional reporting must not interrupt the action when its payload can't be copied.
+        return;
+      }
       pump();
     },
     reportVisit: (event: VisitEvent, options?: VisitOptions) => pump(event, options),

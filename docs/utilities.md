@@ -318,9 +318,13 @@ const telemetry = startBrowserTelemetry({
 });
 
 telemetry.reportScreen("settings");
+telemetry.reportDaily("message_opened", {
+  event: "message_opened",
+  properties: { surface: "web" },
+});
 let visitTimersRunning = false;
 const unsubscribe = telemetry.onQuietChange((quiet, reason) => {
-  const shouldRun = reason === "checking" || reason === "enabled";
+  const shouldRun = !quiet || reason === "checking";
   if (shouldRun === visitTimersRunning) return;
   visitTimersRunning = shouldRun;
   if (shouldRun) startVisitTimers();
@@ -342,6 +346,14 @@ midnight. Sent days are kept in localStorage, so reloads and other tabs send
 nothing more that day; tabs that open at the same moment may each send one.
 When storage is blocked, page memory holds them until reload. Upgrading from
 `startAppOpenedReporting` can send one extra `app_opened` that day.
+
+Call `reportDaily(key, event)` to report one event per stable key per UTC day.
+It shares the screen queue and stored claims. The first event wins while a
+request is pending. The reporter retries transport and HTTP 5xx failures, and
+drops queued old-day actions at midnight. Use a finite set of keys without
+record IDs or search text. Event properties must be structured-cloneable.
+Actions reported while the gate is disabled are discarded. A later UTC day's
+load or focus check must enable reporting before new actions can send.
 
 ### Receipts and opt-out
 
@@ -368,8 +380,8 @@ reports; `disabled` makes the reporter quiet. Any other reply except HTTP 401,
 including a missing or unreadable body, leaves permission unknown. Held visits
 wait for a later screen check or the next UTC day's check. A disabled receipt keeps reports
 quiet across reloads until a load or focus on a later UTC day checks again.
-It also deletes the stored screen names, the only browsing history the helper
-keeps. Tabs can't check and write storage in one step, so a tab racing the
+It also clears queued daily actions and deletes stored screen names and caller
+keys. Tabs can't check and write storage in one step, so a tab racing the
 opt-out can write one name back; the next page or report that sees the opt-out
 deletes it again.
 
@@ -426,9 +438,9 @@ check or the next UTC day's enabled receipt.
 ### Failures
 
 Transport failures and HTTP 5xx back off for 1, 2, 4, 8, and 16 seconds.
-App-open and screen reports retry after the delay. Visits during the delay
-are held while permission is unknown or another queued visit remains, and
-dropped otherwise.
+App-open, screen, and daily reports retry after the delay. Visits during the
+delay are held while permission is unknown or another queued visit remains,
+and dropped otherwise.
 While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
 UTC day.
@@ -441,6 +453,7 @@ day does not retry the claimed app-open report.
 HTTP 401 means the request wasn't authorized, so the reporter claims nothing
 for that report and stops as if it had reached the six-failure cap. Held
 visits remain only in the current reporter until `stop()` discards them.
+Queued `reportDaily` actions also stay in that reporter's memory.
 After the app restores authentication, a new reporter checks again without
 inheriting those visits; otherwise the next UTC day's load or focus does.
 
@@ -450,7 +463,8 @@ Choose a `storageKey` unique to the product or installation and surface.
 Claims live under `${storageKey}.browser.v1.`, one item per key and date, and
 each key keeps its 35 most recent dates. Every screen name gets its own key, so
 use a stable, finite set, such as route names without record IDs, query
-strings, or timestamps.
+strings, or timestamps. Daily caller keys use a separate namespace and should
+also stay stable and finite.
 
 ## Color hashing
 
