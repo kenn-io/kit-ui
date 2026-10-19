@@ -318,8 +318,12 @@ const telemetry = startBrowserTelemetry({
 });
 
 telemetry.reportScreen("settings");
+let visitTimersRunning = false;
 const unsubscribe = telemetry.onQuietChange((quiet, reason) => {
-  if (reason === "checking" || reason === "enabled") startVisitTimers();
+  const shouldRun = reason === "checking" || reason === "enabled";
+  if (shouldRun === visitTimersRunning) return;
+  visitTimersRunning = shouldRun;
+  if (shouldRun) startVisitTimers();
   else stopVisitTimers();
 });
 // When a visit session ends:
@@ -404,7 +408,9 @@ disabled receipt, `disable()`, or `stop()` discards them. Held visits live only
 in that reporter's memory; a new reporter checks again without inheriting them.
 If no app-open or screen check remains to send, a later visit uses the oldest
 held visit as the permission check. The remaining visits wait for its enabled
-receipt.
+receipt. That check is the held visit's one send; if it gets no recognized
+receipt, the visit is dropped. Remaining visits can wait for another visit
+after backoff or the next UTC day's check.
 
 ### Failures
 

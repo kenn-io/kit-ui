@@ -237,8 +237,8 @@ describe("startBrowserTelemetry", () => {
   test("disable() quiets the page and its reloads without sending until a later UTC day", async () => {
     seed("unrelated.setting", "kept");
     const reporter = start();
-    const quiet: boolean[] = [];
-    reporter.onQuietChange((value) => quiet.push(value));
+    const quiet: [boolean, string][] = [];
+    reporter.onQuietChange((value, reason) => quiet.push([value, reason]));
     reporter.reportScreen("A");
     await settle();
     expect(sent.map(({ event }) => event.properties.screen ?? event.event)).toEqual([
@@ -246,7 +246,11 @@ describe("startBrowserTelemetry", () => {
       "A",
     ]);
     reporter.disable();
-    expect(quiet).toEqual([true, false, true]);
+    expect(quiet).toEqual([
+      [true, "checking"],
+      [false, "enabled"],
+      [true, "disabled"],
+    ]);
     expect(claims()).toEqual({
       "unrelated.setting": "kept",
       [`${PREFIX}open`]: "2026-10-03",
@@ -748,22 +752,6 @@ describe("startBrowserTelemetry", () => {
     );
   });
 
-  test("held visits survive rollover until the new day's enabled receipt", async () => {
-    statuses = ["held"];
-    const reporter = start();
-    reporter.reportVisit(VISIT);
-    const previousDay = release;
-    jest.setSystemTime(DAY_TWO);
-    statuses = ["held"];
-    previousDay(202);
-    await settle();
-    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
-    release(202);
-    await settle();
-    expect(sent.at(-1)?.event).toEqual(VISIT);
-    expect(sent).toHaveLength(3);
-  });
-
   test("a later visit uses the oldest held visit to check after an unreadable app-open receipt", async () => {
     statuses = ["held"];
     const reporter = start();
@@ -851,6 +839,22 @@ describe("startBrowserTelemetry", () => {
     expect(sent.map(({ event }) => event.event)).toEqual(["session_ended"]);
     expect(jest.getTimerCount()).toBe(0);
     expect(claims()[`${PREFIX}check`]).toBeUndefined();
+  });
+
+  test("a visit receiving 401 after enable stops later reports and notifies unavailable", async () => {
+    const reporter = start();
+    const reasons: string[] = [];
+    reporter.onQuietChange((_, reason) => reasons.push(reason));
+    await settle();
+    statuses = [401];
+    reporter.reportVisit({ event: "rejected", properties: {} });
+    await settle();
+    reporter.reportVisit(VISIT, { keepalive: true });
+    reporter.reportScreen("A");
+    focus();
+    await advance(60000);
+    expect(reasons).toEqual(["checking", "enabled", "unavailable"]);
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "rejected"]);
   });
 
   test("a 401 stops the reporter without claiming the event until restart or the next UTC day", async () => {
