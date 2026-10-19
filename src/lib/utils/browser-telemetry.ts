@@ -252,16 +252,16 @@ export function startBrowserTelemetry({
     }
     rollover();
     const isDisabled = disabled();
+    if (owner !== generation) {
+      release();
+      pump();
+      return;
+    }
     if (unauthorized && !isDisabled) {
       failures = 6;
       cancelRetry();
       notify();
       return release();
-    }
-    if (owner !== generation) {
-      release();
-      pump();
-      return;
     }
     if (isDisabled) {
       release();
@@ -291,12 +291,13 @@ export function startBrowserTelemetry({
       for (const outcome of outcomes.splice(0))
         void send(outcome.event, undefined, outcome.options);
     if (visit) {
-      if (gate === "unknown" && (pending.has(day) || retry)) {
+      if (gate === "unknown" && (outcomes.length > 0 || pending.has(day) || retry)) {
         try {
           if (outcomes.length < 64) outcomes.push(structuredClone({ event: visit, options }));
         } catch {
           /* A payload that can't be copied is dropped rather than interrupting the caller. */
         }
+        pump();
         return;
       }
       if ((!options?.keepalive || gate !== "enabled") && performance.now() < ordinaryEligibleAt)

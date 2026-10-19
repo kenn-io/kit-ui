@@ -724,6 +724,15 @@ describe("startBrowserTelemetry", () => {
             : [],
       );
       expect(jest.getTimerCount()).toBe(0);
+      if (outcome === "disabled") {
+        jest.setSystemTime(DAY_TWO);
+        focus();
+        await settle();
+        expect(claims()[`${PREFIX}check`]).toBe("2026-10-04");
+        expect(
+          sent.filter(({ event }) => event.event === "first" || event.event === "second"),
+        ).toEqual([]);
+      }
     },
   );
 
@@ -753,6 +762,74 @@ describe("startBrowserTelemetry", () => {
     await settle();
     expect(sent.at(-1)?.event).toEqual(VISIT);
     expect(sent).toHaveLength(3);
+  });
+
+  test("a new visit after rollover waits behind older visits for today's enabled receipt", async () => {
+    statuses = ["held", "held"];
+    const reporter = start();
+    const previousDay = release;
+    reporter.reportVisit({ event: "old", properties: {} });
+    jest.setSystemTime(DAY_TWO);
+    reporter.reportVisit({ event: "new", properties: {} });
+    const currentDay = release;
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
+    previousDay(202);
+    await settle();
+    expect(sent).toHaveLength(2);
+    currentDay(202);
+    await settle();
+    expect(sent.slice(2).map(({ event }) => event.event)).toEqual(["old", "new"]);
+  });
+
+  test.each(["before", "after"])(
+    "yesterday's 401 arriving %s today's enabled receipt leaves today's gate enabled",
+    async (order) => {
+      statuses = ["held", "held"];
+      const reporter = start();
+      const previousDay = release;
+      const reasons: string[] = [];
+      reporter.onQuietChange((_, reason) => reasons.push(reason));
+      jest.setSystemTime(DAY_TWO);
+      focus();
+      const currentDay = release;
+      if (order === "before") {
+        previousDay(401);
+        await settle();
+      }
+      currentDay(202);
+      await settle();
+      if (order === "after") {
+        previousDay(401);
+        await settle();
+      }
+      reporter.reportVisit(VISIT);
+      await settle();
+      expect(reasons).toEqual(["checking", "enabled"]);
+      expect(sent.map(({ event }) => event.event)).toEqual([
+        "app_opened",
+        "app_opened",
+        "session_ended",
+      ]);
+      expect(claims()[`${PREFIX}open`]).toBe("2026-10-04");
+    },
+  );
+
+  test("a visit permission check receiving 401 stops without retrying", async () => {
+    seed(`${PREFIX}open`, "2026-10-03");
+    const reporter = start();
+    const reasons: string[] = [];
+    reporter.onQuietChange((_, reason) => reasons.push(reason));
+    statuses = [401];
+    reporter.reportVisit(VISIT);
+    await settle();
+    focus();
+    reporter.reportScreen("A");
+    await advance(60000);
+    expect(reasons).toEqual(["checking", "unavailable"]);
+    expect(sent.map(({ event }) => event.event)).toEqual(["session_ended"]);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(claims()[`${PREFIX}check`]).toBeUndefined();
   });
 
   test("a 401 stops the reporter without claiming the event until restart or the next UTC day", async () => {
