@@ -495,6 +495,19 @@ test("the full sidebar collapses to the rail, and the choice holds at every widt
   expect(await sidebarWidth(page)).toBe(240);
 });
 
+test("a host-saved choice wins over storage and hears every change", async ({ page }) => {
+  await page.addInitScript((key) => localStorage.setItem(key, "expanded"), STORAGE_KEY);
+  await open(page, "home&app-sidebar-host=collapsed", 1440);
+  expect(await sidebarWidth(page)).toBe(56);
+  await page.getByRole("button", { name: "Expand sidebar" }).click();
+  await expect.poll(() => sidebarWidth(page)).toBe(240);
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  expect(
+    await page.evaluate(() => (window as unknown as { sidebarChanges: boolean[] }).sidebarChanges),
+  ).toEqual([false, true]);
+});
+
 test("Mod+B toggles the sidebar outside text fields and the drawer", async ({ page }) => {
   await open(page, "home", 1440);
   await expect(page.getByRole("button", { name: "Collapse sidebar" })).toHaveAttribute(

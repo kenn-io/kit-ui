@@ -44,6 +44,14 @@ interface Props {
      * without hover, and the full sidebar from 1440px.
      */
     storageKey: string;
+    /**
+     * A saved collapse choice from the host, for a host whose localStorage
+     * does not last, such as a throwaway browser session. It wins over
+     * `storageKey`. `null` or absent means the host has none.
+     */
+    collapsed?: boolean | null;
+    /** Called with the new state when someone collapses or expands the sidebar. */
+    oncollapsedchange?: (collapsed: boolean) => void;
     /** Brand area at the top of the panel. `rail` is true in the icon-only rail. */
     brand: Snippet<[{
         rail: boolean;

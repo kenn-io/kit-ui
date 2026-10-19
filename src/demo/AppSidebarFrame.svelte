@@ -3,7 +3,9 @@
   // ?app-sidebar-frame=<section>[/<view>] picks the current location,
   // ?app-sidebar-footer=none renders the sidebar without a footer,
   // ?app-sidebar-groups=end-only renders only the end group, and
-  // ?app-sidebar-labels=es names every control in Spanish.
+  // ?app-sidebar-labels=es names every control in Spanish, and
+  // ?app-sidebar-host=collapsed or =expanded passes a host-saved choice and
+  // records each change in window.sidebarChanges.
   import FileTextIcon from "@lucide/svelte/icons/file-text";
   import HouseIcon from "@lucide/svelte/icons/house";
   import SettingsIcon from "@lucide/svelte/icons/settings";
@@ -15,6 +17,10 @@
   const link = (route: string) => `${location.pathname}?${PARAM}=${route}`;
   const params = new URLSearchParams(location.search);
   const withFooter = params.get("app-sidebar-footer") !== "none";
+  const hostParam = params.get("app-sidebar-host");
+  const hostChoice = hostParam === null ? null : hostParam === "collapsed";
+  const sidebarChanges: boolean[] = [];
+  Object.assign(window, { sidebarChanges });
   const labels: Partial<ComponentProps<typeof AppSidebar>> =
     params.get("app-sidebar-labels") === "es"
       ? {
@@ -116,6 +122,8 @@
     location={where}
     {page}
     storageKey="kit-ui-demo-app-sidebar"
+    collapsed={hostChoice}
+    oncollapsedchange={(collapsed) => sidebarChanges.push(collapsed)}
     footer={withFooter ? themeFooter : undefined}
   >
     {#snippet brand({ rail })}
