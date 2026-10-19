@@ -94,12 +94,13 @@ function claimHistory(storageKey: string) {
       pageOnly = true;
     }
   };
-  /** Drops every claim whose key starts with `keys`, from page memory and storage. */
-  const forget = (keys: string) => {
-    for (const key of memory.keys()) if (key.startsWith(keys)) memory.delete(key);
+  /** Drops every claim whose key starts with one of `prefixes`, from page memory and storage. */
+  const forget = (...prefixes: string[]) => {
+    const matches = (key: string) => prefixes.some((start) => key.startsWith(start));
+    for (const key of memory.keys()) if (matches(key)) memory.delete(key);
     try {
       for (const item of Object.keys(localStorage))
-        if (item.startsWith(keys)) localStorage.removeItem(item);
+        if (matches(item)) localStorage.removeItem(item);
     } catch {
       /* Blocked storage holds no claims to drop. */
     }
@@ -161,9 +162,8 @@ export function startBrowserTelemetry({
           ? "enabled"
           : "unknown";
   // Opting out also drops the stored screen names and caller keys.
-  const forgetDaily = () => {
-    claims.forget(`${prefix}screen.`);
-    claims.forget(`${prefix}daily.`);
+  const forgetHistory = () => {
+    claims.forget(`${prefix}screen.`, `${prefix}daily.`);
     daily.clear();
   };
   const disabled = (): boolean => {
@@ -171,8 +171,8 @@ export function startBrowserTelemetry({
     if (gate === "disabled") {
       cancelRetry();
       // Storage can't check and write atomically across tabs, so a racing tab's late
-      // screen claim can outlive the opt-out; every page that sees the opt-out drops it.
-      forgetDaily();
+      // screen or daily claim can outlive the opt-out; every page that sees the opt-out drops it.
+      forgetHistory();
     }
     notify();
     return stopped || gate === "disabled";
@@ -234,7 +234,7 @@ export function startBrowserTelemetry({
       claims.add(key, sending);
       if (owner === generation && daily.has(key)) daily.set(key, undefined);
     }
-    if (claim === "quiet") forgetDaily();
+    if (claim === "quiet") forgetHistory();
     if (stopped) return release();
     // A disabled receipt stops the current page. One that lands after this page began a
     // later day also claims that day, so a reload stays as quiet as this page.
@@ -322,7 +322,7 @@ export function startBrowserTelemetry({
     disable() {
       for (const date of new Set([day, today()])) claims.add(`${prefix}quiet`, date);
       gate = "disabled";
-      forgetDaily();
+      forgetHistory();
       cancelRetry();
       notify();
     },
