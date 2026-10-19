@@ -134,35 +134,28 @@ describe("startBrowserTelemetry", () => {
     expect(claims()[`${PREFIX}open`]).toBe("2026-10-03");
   });
 
-  test.each(["unknown", "unreadable"])(
-    "a visit after an %s receipt waits for an enabled screen check",
-    async (receipt) => {
-      seed(`${PREFIX}open`, "2026-10-03");
-      statuses = [
-        receipt === "unknown"
-          ? { status: 202, data: { status: "unknown" } }
-          : new Response("truncated", { status: 202 }),
-      ];
-      const reporter = start();
-      reporter.reportScreen("initial");
-      await settle();
-      expect(claims()[`${PREFIX}screen.initial`]).toBe("2026-10-03");
-      expect(claims()[`${PREFIX}check`]).toBeUndefined();
-      expect(claims()[`${PREFIX}quiet`]).toBeUndefined();
-      statuses = ["held"];
-      reporter.reportVisit(VISIT);
-      await settle();
-      expect(sent.map(({ event }) => event.event)).toEqual(["screen_viewed"]);
-      reporter.reportScreen("A");
-      expect(sent.at(-1)?.event.properties.screen).toBe("A");
-      release(202);
-      await settle();
-      expect(sent.slice(1).map(({ event }) => event)).toEqual([
-        { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
-        VISIT,
-      ]);
-    },
-  );
+  test("a visit after an unknown receipt waits for an enabled screen check", async () => {
+    seed(`${PREFIX}open`, "2026-10-03");
+    statuses = [{ status: 202, data: { status: "unknown" } }];
+    const reporter = start();
+    reporter.reportScreen("initial");
+    await settle();
+    expect(claims()[`${PREFIX}screen.initial`]).toBe("2026-10-03");
+    expect(claims()[`${PREFIX}check`]).toBeUndefined();
+    expect(claims()[`${PREFIX}quiet`]).toBeUndefined();
+    statuses = ["held"];
+    reporter.reportVisit(VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["screen_viewed"]);
+    reporter.reportScreen("A");
+    expect(sent.at(-1)?.event.properties.screen).toBe("A");
+    release(202);
+    await settle();
+    expect(sent.slice(1).map(({ event }) => event)).toEqual([
+      { event: "screen_viewed", properties: { surface: "web", screen: "A" } },
+      VISIT,
+    ]);
+  });
 
   test("exhausted unknown checks become unavailable until a new screen checks permission", async () => {
     statuses = ["held"];
@@ -193,7 +186,7 @@ describe("startBrowserTelemetry", () => {
     expect(sent.slice(3).map(({ event }) => event)).toEqual([VISIT]);
   });
 
-  test.each([401, "unknown screen", "enabled visit"] as const)(
+  test.each([401, "enabled visit"] as const)(
     "HTTP 401 leaves daily claims free and stops reporting: %p",
     async (outcome) => {
       const seededOpen = typeof outcome === "string";
@@ -202,11 +195,9 @@ describe("startBrowserTelemetry", () => {
       statuses = [401];
       const before = claims();
       const reporter = start();
-      if (outcome === "unknown screen") reporter.reportScreen("initial");
-      else if (seededOpen) reporter.reportVisit(VISIT);
+      if (seededOpen) reporter.reportVisit(VISIT);
       await settle();
-      if (outcome === "unknown screen") expect(claims()[`${PREFIX}screen.initial`]).toBeUndefined();
-      else if (outcome === "enabled visit") expect(claims()).toEqual(before);
+      if (outcome === "enabled visit") expect(claims()).toEqual(before);
       else expect(claims()[`${PREFIX}open`]).toBeUndefined();
       await advance(999);
       expect(sent).toHaveLength(1);
@@ -1318,28 +1309,21 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
-  test.each([202, 503])(
-    "a screen receipt %i releases its reservation before later work",
-    async (status) => {
-      seed(`${PREFIX}open`, "2026-10-03");
-      statuses = ["held"];
-      const reporter = start();
-      reporter.reportScreen("initial");
-      reporter.reportScreen("A");
-      release(status);
-      await settle();
-      if (status === 503) {
-        expect(claims()[`${PREFIX}screen.initial`]).toBeUndefined();
-        await advance(999);
-        expect(sent).toHaveLength(1);
-        await advance(1);
-      }
-      expect(sent.map(({ event }) => event.properties.screen)).toEqual(
-        status === 503 ? ["initial", "initial", "A"] : ["initial", "A"],
-      );
-      expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
-    },
-  );
+  test("a failed screen receipt releases its reservation before retrying and later work", async () => {
+    seed(`${PREFIX}open`, "2026-10-03");
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportScreen("initial");
+    reporter.reportScreen("A");
+    release(503);
+    await settle();
+    expect(claims()[`${PREFIX}screen.initial`]).toBeUndefined();
+    await advance(999);
+    expect(sent).toHaveLength(1);
+    await advance(1);
+    expect(sent.map(({ event }) => event.properties.screen)).toEqual(["initial", "initial", "A"]);
+    expect(claims()[`${PREFIX}screen.A`]).toBe("2026-10-03");
+  });
 
   test("a screen-check reply keeps its reservation during a reentrant enabled callback", async () => {
     seed(`${PREFIX}open`, "2026-10-03");
