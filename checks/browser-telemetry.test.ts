@@ -123,6 +123,211 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test("repeated terminal daily actions do not scan localStorage", async () => {
+    let scans = 0;
+    g.localStorage = new Proxy(storage(), {
+      ownKeys: (target) => {
+        scans++;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const reporter = start();
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    const before = scans;
+    for (let i = 0; i < 10; i++) reporter.reportDaily("message", VISIT);
+    expect(scans).toBe(before);
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+  });
+
+  test("daily actions discard non-cloneable properties without throwing into the caller", async () => {
+    const reporter = start();
+    await settle();
+    expect(() =>
+      reporter.reportDaily("message", {
+        event: "message_opened",
+        properties: { callback: () => {} },
+      }),
+    ).not.toThrow();
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      VISIT,
+    ]);
+  });
+
+  test("daily actions snapshot the caller's event and properties while queued", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const properties = { surface: "web", filter: { kind: "semantic" } };
+    const event = { event: "search_executed", properties };
+    reporter.reportDaily("search", event);
+    event.event = "message_opened";
+    properties.surface = "tui";
+    properties.filter.kind = "keyword";
+    event.properties = { surface: "other", filter: { kind: "different" } };
+    release(202);
+    await settle();
+    expect(sent.slice(1).map(({ event }) => event)).toEqual([
+      { event: "search_executed", properties: { surface: "web", filter: { kind: "semantic" } } },
+    ]);
+  });
+
+  test("a late old-day action receipt leaves the same key pending on the new day", async () => {
+    const reporter = start();
+    await settle();
+    statuses = ["held"];
+    reporter.reportDaily("message", VISIT);
+    const previousDay = release;
+    jest.setSystemTime(DAY_TWO);
+    statuses = ["held"];
+    reporter.reportDaily("message", VISIT);
+    const currentDay = release;
+    previousDay(202);
+    await settle();
+    currentDay(202);
+    await settle();
+    reporter.reportDaily("message", { event: "today", properties: {} });
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "session_ended",
+      "app_opened",
+      "session_ended",
+    ]);
+    expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-03,2026-10-04");
+  });
+
+  test("daily keys share the screen queue and keep first events in caller order", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportDaily("message/web", VISIT);
+    reporter.reportDaily("message/web", { event: "changed", properties: {} });
+    reporter.reportDaily("search", {
+      event: "search_run",
+      properties: { surface: "web", type: "text" },
+    });
+    reporter.reportScreen("settings");
+    expect(sent).toHaveLength(1);
+    release(202);
+    await settle();
+    reporter.reportDaily("message/web", VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      { event: "screen_viewed", properties: { surface: "web", screen: "settings" } },
+      VISIT,
+      { event: "search_run", properties: { surface: "web", type: "text" } },
+    ]);
+    expect(claims()[`${PREFIX}daily.message%2Fweb`]).toBe("2026-10-03");
+  });
+
+  test.each([
+    { status: 202, data: { status: "queued" } },
+    { status: 202, data: {} },
+    { status: 400, data: {} },
+  ])("daily terminal receipt %p survives reloads and other tabs", async (receipt) => {
+    const reporter = start();
+    await settle();
+    statuses = [receipt];
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    const other = start();
+    other.reportDaily("message", VISIT);
+    await settle();
+    reporter.stop();
+    other.stop();
+    start().reportDaily("message", VISIT);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      VISIT,
+    ]);
+  });
+
+  test("failed daily actions stay unclaimed for retry and can report after rollover", async () => {
+    const reporter = start();
+    await settle();
+    statuses = ["offline", 503];
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(claims()[`${PREFIX}daily.message`]).toBeUndefined();
+    await advance(1000);
+    expect(sent.slice(1).map(({ event }) => event)).toEqual([VISIT, VISIT]);
+    expect(claims()[`${PREFIX}daily.message`]).toBeUndefined();
+    jest.setSystemTime(DAY_TWO);
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(sent.slice(-2).map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-04");
+  });
+
+  test("rollover drops an old-day action behind a held report", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const previousDay = release;
+    reporter.reportDaily("message", VISIT);
+    jest.setSystemTime(DAY_TWO);
+    focus();
+    await settle();
+    previousDay(202);
+    await settle();
+    expect(sent.map(({ event }) => event)).toEqual([
+      { event: "app_opened", properties: { surface: "web" } },
+      { event: "app_opened", properties: { surface: "web" } },
+    ]);
+    expect(claims()[`${PREFIX}daily.message`]).toBeUndefined();
+    reporter.reportDaily("message", VISIT);
+    await settle();
+    expect(sent.slice(2).map(({ event }) => event)).toEqual([VISIT]);
+    expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-04");
+  });
+
+  test.each(["receipt", "local", "other-tab"])(
+    "daily opt-out via %s clears stored caller keys and stops storage scans",
+    async (source) => {
+      let scans = 0;
+      g.localStorage = new Proxy(storage(), {
+        ownKeys: (target) => {
+          scans++;
+          return Reflect.ownKeys(target);
+        },
+      });
+      const reporter = start();
+      await settle();
+      reporter.reportDaily("already-sent", VISIT);
+      await settle();
+      statuses = ["held"];
+      reporter.reportDaily("held", VISIT);
+      reporter.reportDaily("pending", VISIT);
+      if (source === "local") reporter.disable();
+      if (source === "other-tab") {
+        const other = start();
+        other.disable();
+        other.stop();
+      }
+      release(source === "receipt" ? { status: 202, data: { status: "disabled" } } : 202);
+      await settle();
+      const before = scans;
+      reporter.reportDaily("after-opt-out", VISIT);
+      reporter.reportDaily("another", VISIT);
+      expect(scans).toBe(before);
+      await advance(60000);
+      expect(sent).toHaveLength(3);
+      expect(Object.keys(claims()).filter((key) => key.startsWith(`${PREFIX}daily.`))).toEqual([]);
+      jest.setSystemTime(DAY_TWO);
+      reporter.reportDaily("after-opt-out", VISIT);
+      expect(scans).toBe(before);
+      focus();
+      await settle();
+      expect(sent.slice(3).map(({ event }) => event.event)).toEqual(["app_opened"]);
+      reporter.reportDaily("after-opt-out", VISIT);
+      await settle();
+      expect(sent.slice(4).map(({ event }) => event)).toEqual([VISIT]);
+    },
+  );
+
   test("unknown permission drops keepalive visits until the cooldown expires", async () => {
     statuses = [400];
     const previous = start();
