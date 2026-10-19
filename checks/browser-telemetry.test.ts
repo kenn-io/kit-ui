@@ -158,19 +158,18 @@ describe("startBrowserTelemetry", () => {
   });
 
   test("exhausted unknown checks become unavailable until a new screen checks permission", async () => {
-    statuses = ["held"];
+    statuses = [new Response("truncated", { status: 202 })];
     const reporter = start();
     const reasons: [boolean, string][] = [];
     reporter.onQuietChange((quiet, reason) => reasons.push([quiet, reason]));
-    reporter.reportScreen("initial");
+    await settle();
+    expect(reasons.map(([, reason]) => reason)).toEqual(["checking", "unavailable"]);
     statuses = [new Response("truncated", { status: 202 })];
-    release(new Response("truncated", { status: 202 }));
+    reporter.reportScreen("initial");
+    expect(reasons.at(-1)).toEqual([true, "checking"]);
     await settle();
     expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "screen_viewed"]);
-    expect(reasons).toEqual([
-      [true, "checking"],
-      [true, "unavailable"],
-    ]);
+    expect(reasons.at(-1)).toEqual([true, "unavailable"]);
     focus();
     await advance(60000);
     expect(sent).toHaveLength(2);
@@ -528,8 +527,8 @@ describe("startBrowserTelemetry", () => {
     async (reply, outcome) => {
       statuses = [reply];
       const reporter = start();
-      const quiet: boolean[] = [];
-      reporter.onQuietChange((value) => quiet.push(value));
+      const reasons: string[] = [];
+      reporter.onQuietChange((_, reason) => reasons.push(reason));
       await settle();
       focus();
       await advance(60000);
@@ -544,15 +543,14 @@ describe("startBrowserTelemetry", () => {
               }
             : { [`${PREFIX}open`]: "2026-10-03" },
       );
-      expect(quiet).toEqual(
-        outcome === "enabled" ? [true, false] : outcome === "disabled" ? [true, true] : [true],
-      );
+      const final = outcome === "unknown" ? "unavailable" : outcome;
+      expect(reasons).toEqual(["checking", final]);
       reporter.stop();
       const reloaded = start();
-      const reloadedQuiet: boolean[] = [];
-      reloaded.onQuietChange((value) => reloadedQuiet.push(value));
+      const reloadedReasons: string[] = [];
+      reloaded.onQuietChange((_, reason) => reloadedReasons.push(reason));
       await advance(60000);
-      expect(reloadedQuiet).toEqual(outcome === "enabled" ? [false] : [true]);
+      expect(reloadedReasons).toEqual([final]);
       expect(sent).toHaveLength(1);
     },
   );

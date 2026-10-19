@@ -119,6 +119,24 @@ const receiptClaim = (status: number, data: unknown) => {
   return reply === "queued" || reply === "skipped" ? "check" : undefined;
 };
 
+/** Today's next unsent check as `send` arguments: the app open, then the first unclaimed screen. */
+const nextCheck = (
+  claims: ReturnType<typeof claimHistory>,
+  storageKey: string,
+  surface: string,
+  screens: Set<string>,
+  day: string,
+): [VisitEvent, string] | undefined => {
+  if (!claims.has(storageKey, day))
+    return [{ event: "app_opened", properties: { surface } }, storageKey];
+  for (const screen of screens) {
+    const key = `${storageKey}.browser.v1.screen.${encodeURIComponent(screen)}`;
+    if (!claims.has(key, day))
+      return [{ event: "screen_viewed", properties: { surface, screen } }, key];
+  }
+  return undefined;
+};
+
 /** Reports daily app-open and screens, gates visits, and pauses trackers until an enabled receipt. */
 export function startBrowserTelemetry({
   route,
@@ -141,12 +159,15 @@ export function startBrowserTelemetry({
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
     lastReason: BrowserTelemetryQuietReason = "checking";
+  const due = () => nextCheck(claims, storageKey, surface, screens, day);
+  // Today's open and every reported screen checked, none pending, and permission still unknown.
+  const exhausted = () => gate === "unknown" && !pending.has(day) && !retry && !due();
   const reason = (): BrowserTelemetryQuietReason =>
     stopped
       ? "stopped"
       : gate === "disabled"
         ? "disabled"
-        : failures >= 6
+        : failures >= 6 || exhausted()
           ? "unavailable"
           : gate === "enabled"
             ? "enabled"
@@ -300,12 +321,9 @@ export function startBrowserTelemetry({
       return;
     }
     if (retry || pending.has(day)) return;
-    const screen = [...screens].find(
-      (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
-    );
-    const open = !claims.has(storageKey, day);
+    const check = due();
     const held = gate === "enabled" && outcomes.length > 0;
-    if (!held && !open && screen === undefined) return;
+    if (!held && !check) return;
     const delay = ordinaryEligibleAt - performance.now();
     if (delay > 0) {
       retry = setTimeout(() => {
@@ -317,12 +335,7 @@ export function startBrowserTelemetry({
     if (held) {
       const outcome = outcomes.shift()!;
       void send(outcome.event, undefined, outcome.options, true);
-    } else if (open) void send({ event: "app_opened", properties: { surface } }, storageKey);
-    else if (screen !== undefined)
-      void send(
-        { event: "screen_viewed", properties: { surface, screen } },
-        `${prefix}screen.${encodeURIComponent(screen)}`,
-      );
+    } else if (check) void send(...check);
   };
   const report = () => pump(undefined, undefined, true);
   pump();

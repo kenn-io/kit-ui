@@ -383,14 +383,22 @@ unsubscribe function. It calls the listener again whenever the reason changes,
 even when `quiet` stays the same. The reporter is quiet unless the reason is
 `enabled`:
 
-- `checking`: today's permission is unknown or a check is pending.
+- `checking`: today's permission is unknown and a check is pending or still
+  to send.
 - `enabled`: today's check returned `queued` or `skipped`.
 - `disabled`: a disabled receipt or `disable()`.
-- `unavailable`: six failures in a row, or an HTTP 401.
+- `unavailable`: six failures in a row, an HTTP 401, or today's permission is
+  still unknown after the app open and every reported screen, if any, checked
+  it.
 - `stopped`: `stop()` was called.
 
 Visit timers can run through `checking`, since visits reported then are held
-for the enabled receipt, and should stop on the other quiet reasons.
+for the enabled receipt, and should stop on the other quiet reasons. A
+reporter that reports only visits also becomes `unavailable` when an app-open
+reply leaves permission unknown, since no check can run. When replies that
+leave permission unknown use up today's checks, reporting a new screen checks
+again and returns the reason to `checking`; if that check is enabled, it also
+sends visits held during it.
 
 `stop()` signals quiet, cancels retries, and removes the focus listener. Call
 it before unsubscribing so the callback stops visit timers.
