@@ -122,6 +122,7 @@ export function startBrowserTelemetry({
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
     daily = new Map<string, VisitEvent>(),
+    completedDaily = new Set<string>(),
     listeners = new Set<(quiet: boolean) => void>();
   const pending = new Map<string, object>();
   let day = today(),
@@ -161,6 +162,7 @@ export function startBrowserTelemetry({
     claims.forget(`${prefix}screen.`);
     claims.forget(`${prefix}daily.`);
     daily.clear();
+    completedDaily.clear();
   };
   const disabled = (): boolean => {
     gate = readGate();
@@ -183,6 +185,7 @@ export function startBrowserTelemetry({
     cancelRetry();
     screens.clear();
     daily.clear();
+    completedDaily.clear();
     if (currentScreen !== undefined) screens.add(currentScreen);
     notify();
   };
@@ -226,7 +229,10 @@ export function startBrowserTelemetry({
       claim === "quiet" ||
       gate === "disabled" ||
       [sending, day, today()].some((date) => claims.has(`${prefix}quiet`, date));
-    if (!failed && key !== undefined && !optedOut) claims.add(key, sending);
+    if (!failed && key !== undefined && !optedOut) {
+      claims.add(key, sending);
+      if (owner === generation && daily.delete(key)) completedDaily.add(key);
+    }
     if (claim === "quiet") forgetDaily();
     if (stopped) return release();
     // A disabled receipt stops the current page. One that lands after this page began a
@@ -276,7 +282,12 @@ export function startBrowserTelemetry({
       (name) => !claims.has(`${prefix}screen.${encodeURIComponent(name)}`, day),
     );
     const open = !claims.has(storageKey, day);
-    const action = [...daily].find(([key]) => !claims.has(key, day));
+    const action = [...daily].find(([key]) => {
+      if (!claims.has(key, day)) return true;
+      daily.delete(key);
+      completedDaily.add(key);
+      return false;
+    });
     if (!open && screen === undefined && action === undefined) return;
     const delay = ordinaryEligibleAt - performance.now();
     if (delay > 0) {
@@ -304,6 +315,7 @@ export function startBrowserTelemetry({
       cancelRetry();
       screens.clear();
       daily.clear();
+      completedDaily.clear();
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
@@ -324,7 +336,7 @@ export function startBrowserTelemetry({
       if (stopped) return;
       rollover();
       const claim = `${prefix}daily.${encodeURIComponent(key)}`;
-      if (daily.has(claim)) return;
+      if (daily.has(claim) || completedDaily.has(claim)) return;
       daily.set(claim, event);
       pump();
     },

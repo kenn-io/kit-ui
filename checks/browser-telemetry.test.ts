@@ -123,6 +123,63 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test.each(["this-page", "other-tab"])(
+    "completed daily actions from %s add no storage scans on focus or repeat calls",
+    async (source) => {
+      let scans = 0;
+      g.localStorage = new Proxy(storage(), {
+        ownKeys: (target) => {
+          scans++;
+          return Reflect.ownKeys(target);
+        },
+      });
+      const reporter = start();
+      await settle();
+      let before = scans;
+      focus();
+      const idleScans = scans - before;
+      const sender = source === "other-tab" ? start() : reporter;
+      for (const key of ["message", "search", "export"]) {
+        sender.reportDaily(key, VISIT);
+        await settle();
+        if (sender !== reporter) reporter.reportDaily(key, VISIT);
+      }
+      if (sender !== reporter) sender.stop();
+      before = scans;
+      focus();
+      expect(scans - before).toBe(idleScans);
+      before = scans;
+      for (const key of ["message", "search", "export"]) reporter.reportDaily(key, VISIT);
+      expect(scans).toBe(before);
+      expect(sent.filter(({ event }) => event.event === "session_ended")).toHaveLength(3);
+    },
+  );
+
+  test("a late old-day action receipt leaves the same key pending on the new day", async () => {
+    const reporter = start();
+    await settle();
+    statuses = ["held"];
+    reporter.reportDaily("message", VISIT);
+    const previousDay = release;
+    jest.setSystemTime(DAY_TWO);
+    statuses = ["held"];
+    reporter.reportDaily("message", VISIT);
+    const currentDay = release;
+    previousDay(202);
+    await settle();
+    currentDay(202);
+    await settle();
+    reporter.reportDaily("message", { event: "today", properties: {} });
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "session_ended",
+      "app_opened",
+      "session_ended",
+    ]);
+    expect(claims()[`${PREFIX}daily.message`]).toBe("2026-10-03,2026-10-04");
+  });
+
   test("daily keys share the screen queue, keep the first event, and leave visits per call", async () => {
     statuses = ["held"];
     const reporter = start();
