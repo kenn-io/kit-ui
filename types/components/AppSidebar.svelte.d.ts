@@ -39,7 +39,7 @@ interface Props {
     /**
      * localStorage key that remembers whether someone collapsed the sidebar to
      * the rail or expanded it. The choice applies at every width above the
-     * narrow drawer. Until someone chooses, the window width decides: the rail
+     * narrow drawer. Until someone chooses, the sidebar's width decides: the rail
      * below 1440px, except on touch screens, where views must stay reachable
      * without hover, and the full sidebar from 1440px.
      */
@@ -52,9 +52,13 @@ interface Props {
     collapsed?: boolean | null;
     /** Called with the new state when someone collapses or expands the sidebar. */
     oncollapsedchange?: (collapsed: boolean) => void;
-    /** Brand area at the top of the panel. `rail` is true in the icon-only rail. */
+    /**
+     * Brand area at the top of the panel. `rail` is true in the icon-only
+     * rail; `drawer` is true inside the narrow drawer.
+     */
     brand: Snippet<[{
         rail: boolean;
+        drawer: boolean;
     }]>;
     /** Everything after the menu button in the narrow top bar. */
     narrowBar: Snippet;

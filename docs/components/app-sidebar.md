@@ -1,8 +1,8 @@
 # AppSidebar
 
-A responsive application sidebar. `CollapsibleSidebar` is a layout for any sidebar content, and its parent owns the collapse state and the persisted width. `AppSidebar` instead renders its own navigation from `groups` and collapses itself to a rail or a drawer as the window narrows. People can also collapse it to the rail, or expand it, with a button at the foot of the sidebar or with Mod+B. Until they do, the window width picks the layout:
+A responsive application sidebar. `CollapsibleSidebar` is a layout for any sidebar content, and its parent owns the collapse state and the persisted width. `AppSidebar` instead renders its own navigation from `groups` and collapses itself to a rail or a drawer as its parent element narrows. People can also collapse it to the rail, or expand it, with a button at the foot of the sidebar or with Mod+B. Until they do, the parent's width picks the layout:
 
-| Window width       | Layout                                                                                              |
+| Parent width       | Layout                                                                                              |
 | ------------------ | --------------------------------------------------------------------------------------------------- |
 | 900px and narrower | A top bar with a menu button. The button opens the sidebar in a native modal `<dialog>` drawer.     |
 | 901–1439px         | A 3.5rem icon rail. Hovering or focusing an icon opens a flyout with the section's title and views. |
@@ -87,7 +87,7 @@ Sections and views are plain links. The component does not route: update `locati
 | `storageKey`        | `string`                                        | required             | localStorage key that remembers whether someone collapsed or expanded the sidebar                                                                                                                                     |
 | `collapsed`         | `boolean \| null`                               | `null`               | A saved collapse choice from the host, for a host whose localStorage does not last, such as a throwaway browser session. It wins over `storageKey`; `null` means none                                                 |
 | `oncollapsedchange` | `(collapsed: boolean) => void`                  | —                    | Called with the new state when someone collapses or expands the sidebar, so the host can save it                                                                                                                      |
-| `brand`             | `Snippet<[{ rail: boolean }]>`                  | required             | Brand area at the top of the panel; `rail` is true in the icon-only rail                                                                                                                                              |
+| `brand`             | `Snippet<[{ rail: boolean; drawer: boolean }]>` | required             | Brand area at the top of the panel; `rail` is true in the icon-only rail, and `drawer` is true inside the narrow drawer                                                                                               |
 | `narrowBar`         | `Snippet`                                       | required             | Everything after the menu button in the narrow top bar                                                                                                                                                                |
 | `footer`            | `Snippet<[{ rail: boolean; drawer: boolean }]>` | —                    | Optional. Without it, the footer region holds only the collapse button, and the drawer has no footer region. `drawer` is true inside the narrow drawer. The component adds its own collapse button outside the drawer |
 | `label`             | `string`                                        | `"Main navigation"`  | Accessible name of the navigation landmark                                                                                                                                                                            |
@@ -123,6 +123,8 @@ Sections and views are plain links. The component does not route: update `locati
 ## Layout
 
 The full sidebar and the rail are `position: sticky` and `100dvh` tall, so give their parent a flex row and let the main column take the remaining width (`min-width: 0`). When the sidebar sits below other window chrome, such as a tab strip, set `--kit-app-sidebar-height` to the height it has, for example `100%` inside a parent of fixed height. At 900px and narrower the component renders a sticky top bar instead, so stack the bar above the main column (`flex-direction: column`), as in the example.
+
+The widths in the table are the width of the sidebar's parent element, so a parent that shares the window, such as a page beside a chat panel, gets the layout its own width calls for. The window width stands in until the first measurement, which arrives before the first paint. Give the parent a box of its own: a `display: contents` parent has no width. When the parent is narrower than the window, a media query cannot tell when to stack the bar, so select the parent with `:has(> .kit-app-sidebar__bar)` instead.
 
 The brand row at the top of the panel is `--header-height` tall and centers the brand, so the brand lines up with a `TopBar` at the top of the main column. A brand taller than the row makes the row taller.
 

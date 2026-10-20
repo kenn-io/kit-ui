@@ -134,6 +134,25 @@ test("each width band shows its own sidebar", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Expand sidebar" })).toHaveCount(0);
 });
 
+// A host beside other window content, such as a chat panel, is narrower
+// than the window; the sidebar takes the layout the host's width calls for.
+test("the width of the sidebar's parent picks its layout", async ({ page }) => {
+  await open(page, "home", 1600);
+  expect(await sidebarWidth(page)).toBe(240);
+  const holdAt = (width: string) =>
+    page.locator(".frame").evaluate((frame, w) => {
+      (frame as HTMLElement).style.width = w;
+    }, width);
+
+  await holdAt("1200px");
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  await holdAt("780px");
+  await expect(sidebar(page)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  await holdAt("");
+  await expect.poll(() => sidebarWidth(page)).toBe(240);
+});
+
 test("an overlay layer covers the sidebar and the narrow bar", async ({ page }) => {
   await open(page, "home", 1024);
   expect(await layersAt(page, 28, 120)).toEqual(["sidebar", "overlay"]);

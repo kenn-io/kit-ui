@@ -65,7 +65,7 @@
     /**
      * localStorage key that remembers whether someone collapsed the sidebar to
      * the rail or expanded it. The choice applies at every width above the
-     * narrow drawer. Until someone chooses, the window width decides: the rail
+     * narrow drawer. Until someone chooses, the sidebar's width decides: the rail
      * below 1440px, except on touch screens, where views must stay reachable
      * without hover, and the full sidebar from 1440px.
      */
@@ -78,8 +78,11 @@
     collapsed?: boolean | null;
     /** Called with the new state when someone collapses or expands the sidebar. */
     oncollapsedchange?: (collapsed: boolean) => void;
-    /** Brand area at the top of the panel. `rail` is true in the icon-only rail. */
-    brand: Snippet<[{ rail: boolean }]>;
+    /**
+     * Brand area at the top of the panel. `rail` is true in the icon-only
+     * rail; `drawer` is true inside the narrow drawer.
+     */
+    brand: Snippet<[{ rail: boolean; drawer: boolean }]>;
     /** Everything after the menu button in the narrow top bar. */
     narrowBar: Snippet;
     /**
@@ -127,7 +130,8 @@
   // kit-ui's CSS breakpoints stop at 900px, so the 1440px edge lives only
   // here, in script. Range syntax starts the rail exactly where MEDIA.wide
   // ends, so no fractional width (at some zoom levels) falls between them.
-  const RAIL_WIDTHS = `(${BREAKPOINTS.wide}px < width < 1440px)`;
+  const RAIL_BELOW = 1440;
+  const RAIL_WIDTHS = `(${BREAKPOINTS.wide}px < width < ${RAIL_BELOW}px)`;
   const FLYOUT_MARGIN = 8;
   const TOGGLE_SHORTCUT = parseShortcut("mod+b");
   const isMac = isMacPlatform();
@@ -135,8 +139,8 @@
   const toggleAriaKeys = isMac ? "Meta+B" : "Control+B";
 
   const uid = $props.id();
-  const narrow = new MediaQuery(MEDIA.wide);
-  const railWidths = new MediaQuery(RAIL_WIDTHS);
+  const narrowWindow = new MediaQuery(MEDIA.wide);
+  const railWindow = new MediaQuery(RAIL_WIDTHS);
   const touch = new MediaQuery(MEDIA.touch);
 
   function readChoice(key: string): boolean | null {
@@ -149,11 +153,26 @@
     }
   }
 
+  // The width of the element that holds the sidebar picks its layout, so a
+  // host that shares the window, such as a page beside a chat panel, gets the
+  // layout its own width calls for. The window width stands in until the
+  // first measurement, which arrives before the first paint.
+  let holderWidth = $state<number | null>(null);
+  let inline = $state<HTMLElement | null>(null);
+  const narrow = $derived(
+    holderWidth === null ? narrowWindow.current : holderWidth <= BREAKPOINTS.wide,
+  );
+  const railWidth = $derived(
+    holderWidth === null
+      ? railWindow.current
+      : holderWidth > BREAKPOINTS.wide && holderWidth < RAIL_BELOW,
+  );
+
   // Someone's choice to collapse (true) or expand (false); null until they
   // make one, so the width decides.
   let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
-  const collapsed = $derived(collapsedChoice ?? (railWidths.current && !touch.current));
-  const rail = $derived(!narrow.current && collapsed);
+  const collapsed = $derived(collapsedChoice ?? (railWidth && !touch.current));
+  const rail = $derived(!narrow && collapsed);
 
   async function toggleCollapsed(): Promise<void> {
     // A current view's link leaves the panel when it collapses, so focus on
@@ -185,7 +204,7 @@
   }
 
   function keyPressed(event: KeyboardEvent): void {
-    if (narrow.current || event.defaultPrevented || event.repeat) return;
+    if (narrow || event.defaultPrevented || event.repeat) return;
     if (!shortcutMatches(TOGGLE_SHORTCUT, event, isMac) || isEditable(event.target)) return;
     event.preventDefault();
     void toggleCollapsed();
@@ -193,8 +212,17 @@
 
   let drawer = $state<HTMLDialogElement | null>(null);
   let bar = $state<HTMLElement | null>(null);
+  $effect(() => {
+    const holder = (bar ?? inline)?.parentElement;
+    if (!holder) return;
+    const observer = new ResizeObserver(([entry]) => {
+      holderWidth = entry?.borderBoxSize[0]?.inlineSize ?? null;
+    });
+    observer.observe(holder);
+    return () => observer.disconnect();
+  });
   let drawerOpen = $derived.by(() => {
-    void narrow.current; // a width change unmounts or remounts the dialog
+    void narrow; // a width change unmounts or remounts the dialog
     return false;
   });
 
@@ -400,7 +428,7 @@
     aria-label={label}
     bind:this={panel}
   >
-    <div class="kit-app-sidebar__brand">{@render brand({ rail })}</div>
+    <div class="kit-app-sidebar__brand">{@render brand({ rail, drawer: inDrawer })}</div>
     <div class="kit-app-sidebar__nav">
       {#each groups as group, index (index)}
         <div class={["kit-app-sidebar__group", group.end && "kit-app-sidebar__group--end"]}>
@@ -479,7 +507,7 @@
 
 <svelte:window onkeydown={keyPressed} />
 
-{#if narrow.current}
+{#if narrow}
   <header class="kit-app-sidebar__bar" bind:this={bar}>
     <IconButton
       class="kit-app-sidebar__menu"
@@ -507,7 +535,7 @@
     {/if}
   </dialog>
 {:else}
-  <div class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]}>
+  <div class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]} bind:this={inline}>
     {@render panelContent(false)}
   </div>
 {/if}
