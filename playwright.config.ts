@@ -38,5 +38,8 @@ export default defineConfig({
     command: `vp run dev --port ${port} --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
+    // A cold CI runner can spend over a minute pre-bundling dependencies
+    // before Vite answers; a healthy start returns as soon as it is up.
+    timeout: 180_000,
   },
 });
