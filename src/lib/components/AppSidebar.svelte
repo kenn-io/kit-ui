@@ -522,7 +522,7 @@
     box-sizing: border-box;
     flex: none;
     width: 15rem;
-    height: 100dvh;
+    height: var(--kit-app-sidebar-height, 100dvh);
     overflow-y: auto;
     border-right: 1px solid var(--border-default);
     background: var(--bg-surface);

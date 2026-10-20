@@ -122,7 +122,7 @@ Sections and views are plain links. The component does not route: update `locati
 
 ## Layout
 
-The full sidebar and the rail are `position: sticky` and `100dvh` tall, so give their parent a flex row and let the main column take the remaining width (`min-width: 0`). At 900px and narrower the component renders a sticky top bar instead, so stack the bar above the main column (`flex-direction: column`), as in the example.
+The full sidebar and the rail are `position: sticky` and `100dvh` tall, so give their parent a flex row and let the main column take the remaining width (`min-width: 0`). When the sidebar sits below other window chrome, such as a tab strip, set `--kit-app-sidebar-height` to the height it has, for example `100%` inside a parent of fixed height. At 900px and narrower the component renders a sticky top bar instead, so stack the bar above the main column (`flex-direction: column`), as in the example.
 
 The brand row at the top of the panel is `--header-height` tall and centers the brand, so the brand lines up with a `TopBar` at the top of the main column. A brand taller than the row makes the row taller.
 
@@ -132,10 +132,11 @@ The sidebar and the narrow bar sit just below kit-ui's overlay layer (`--z-overl
 
 ## Theming
 
-| Property                     | Default                     | Use                              |
-| ---------------------------- | --------------------------- | -------------------------------- |
-| `--kit-sidebar-accent`       | `var(--accent-blue)`        | The current view's indicator     |
-| `--kit-sidebar-current-icon` | `var(--kit-sidebar-accent)` | The current section's icon color |
+| Property                     | Default                     | Use                                      |
+| ---------------------------- | --------------------------- | ---------------------------------------- |
+| `--kit-sidebar-accent`       | `var(--accent-blue)`        | The current view's indicator             |
+| `--kit-sidebar-current-icon` | `var(--kit-sidebar-accent)` | The current section's icon color         |
+| `--kit-app-sidebar-height`   | `100dvh`                    | The full sidebar's and the rail's height |
 
 Set them on an ancestor of the sidebar, such as the app wrapper or `:root`.
 
