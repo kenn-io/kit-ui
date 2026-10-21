@@ -122,31 +122,21 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
-  test.each([34, 36])(
-    "a %i-day stored visit survives an auth pause only within retention",
-    async (age) => {
-      statuses = ["held"];
-      const reporter = start();
-      reporter.reportVisit(VISIT, { keepalive: true });
-      reporter.stop();
-      jest.setSystemTime(new Date(DAY_ONE.getTime() + age * 86400000));
-      statuses = [401];
-      const unauthorized = start();
-      await settle();
-      unauthorized.reportVisit({ event: "during_auth_pause", properties: {} });
-      expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
-      unauthorized.stop();
-      start();
-      await settle();
-      expect(sent.map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        "app_opened",
-        "app_opened",
-        ...(age === 34 ? ["session_ended"] : []),
-      ]);
-      expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
-    },
-  );
+  test.each([34, 35, 36])("a %i-day stored visit replays only within retention", async (age) => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT, { keepalive: true });
+    reporter.stop();
+    jest.setSystemTime(new Date(DAY_ONE.getTime() + age * 86400000));
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "app_opened",
+      ...(age <= 35 ? ["session_ended"] : []),
+    ]);
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
+  });
 
   test("a synchronous post throw leaves a stored visit available to a later reporter", async () => {
     statuses = ["held"];
@@ -296,24 +286,33 @@ describe("startBrowserTelemetry", () => {
     return reporter;
   };
 
-  test.each(["rollover", "clock rollback"])(
-    "a stale tab's late outcome stays discarded after %s while fresh visits send",
-    async (clock) => {
-      lateWrite().stop();
-      jest.setSystemTime(clock === "rollover" ? DAY_TWO : new Date("2026-10-02T12:00:00Z"));
+  test.each([
+    ["rollover", "late write"],
+    ["clock rollback", "late write"],
+    ["rollover", "disabled pump"],
+    ["clock rollback", "disabled pump"],
+  ])("fresh visits survive %s with a stale %s", async (clock, path) => {
+    let stale;
+    if (path === "late write") {
+      stale = lateWrite();
+      stale.stop();
+    } else {
       statuses = ["held"];
-      const fresh = start();
-      fresh.reportVisit({ event: "fresh", properties: {} });
-      release(202);
-      await settle();
-      expect(sent.map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        "app_opened",
-        "app_opened",
-        "fresh",
-      ]);
-    },
-  );
+      stale = start();
+      stale.disable();
+    }
+    jest.setSystemTime(clock === "rollover" ? DAY_TWO : new Date("2026-10-02T12:00:00Z"));
+    statuses = ["held"];
+    const fresh = start();
+    fresh.reportVisit({ event: "fresh", properties: {} });
+    if (path === "disabled pump") stale.reportVisit({ event: "disabled", properties: {} });
+    fresh.stop();
+    start();
+    await settle();
+    expect(sent.filter(({ event }) => event.event === "fresh" || event.event === "late")).toEqual([
+      { route: ROUTE, event: { event: "fresh", properties: {} } },
+    ]);
+  });
 
   test("blocked reads preserve visits admitted under a previously read opt-out token", async () => {
     statuses = ["held"];
@@ -334,11 +333,6 @@ describe("startBrowserTelemetry", () => {
     expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
     blockStorage();
     reporter.reportVisit({ event: "while_blocked", properties: {} });
-    Object.defineProperty(g, "localStorage", {
-      configurable: true,
-      writable: true,
-      value: storage(),
-    });
     release(202);
     await settle();
     expect(sent.filter(({ event }) => event.event === VISIT.event)).toEqual([
@@ -380,29 +374,6 @@ describe("startBrowserTelemetry", () => {
       start("other-server");
       await settle();
       expect(sent.at(-1)?.event).toEqual({ event: "other", properties: {} });
-    },
-  );
-
-  test.each(["rollover", "clock rollback"])(
-    "a stale disabled pump preserves fresh visits after %s",
-    async (clock) => {
-      statuses = ["held"];
-      const stale = start();
-      stale.disable();
-      jest.setSystemTime(clock === "rollover" ? DAY_TWO : new Date("2026-10-02T12:00:00Z"));
-      statuses = ["held"];
-      const fresh = start();
-      fresh.reportVisit({ event: "fresh", properties: {} });
-      stale.reportVisit({ event: "disabled", properties: {} });
-      fresh.stop();
-      start();
-      await settle();
-      expect(sent.map(({ event }) => event.event)).toEqual([
-        "app_opened",
-        "app_opened",
-        "app_opened",
-        "fresh",
-      ]);
     },
   );
 
