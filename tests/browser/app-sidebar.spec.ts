@@ -134,6 +134,25 @@ test("each width band shows its own sidebar", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Expand sidebar" })).toHaveCount(0);
 });
 
+// A host beside other window content, such as a chat panel, is narrower
+// than the window; the sidebar takes the layout the host's width calls for.
+test("the width of the sidebar's parent picks its layout", async ({ page }) => {
+  await open(page, "home", 1600);
+  expect(await sidebarWidth(page)).toBe(240);
+  const holdAt = (width: string) =>
+    page.locator(".frame").evaluate((frame, w) => {
+      (frame as HTMLElement).style.width = w;
+    }, width);
+
+  await holdAt("1200px");
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  await holdAt("780px");
+  await expect(sidebar(page)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  await holdAt("");
+  await expect.poll(() => sidebarWidth(page)).toBe(240);
+});
+
 test("an overlay layer covers the sidebar and the narrow bar", async ({ page }) => {
   await open(page, "home", 1024);
   expect(await layersAt(page, 28, 120)).toEqual(["sidebar", "overlay"]);
@@ -758,6 +777,21 @@ test("hosts recolor the current marks through custom properties", async ({ page 
   );
   await expect(reportsIcon).toHaveCSS("color", "rgb(0, 120, 0)");
   await expect(overview).toHaveCSS("box-shadow", "rgb(200, 0, 0) 2px 0px 0px 0px inset");
+});
+
+test("a host below other window chrome sets the sidebar's height", async ({ page }) => {
+  for (const width of [1440, 1024]) {
+    await open(page, "home", width, 800);
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty("--kit-app-sidebar-height", "calc(100dvh - 40px)"),
+    );
+    const footer = await page.locator(".kit-app-sidebar__footer").boundingBox();
+    expect(await sidebar(page).evaluate((element) => element.getBoundingClientRect().height)).toBe(
+      760,
+    );
+    if (!footer) throw new Error("sidebar footer not laid out");
+    expect(footer.y + footer.height, `footer at ${width}px`).toBeLessThanOrEqual(760);
+  }
 });
 
 test("forced colors mark the current rows with the system selection colors", async ({ page }) => {
