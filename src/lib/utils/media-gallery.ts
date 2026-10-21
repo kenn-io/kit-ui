@@ -34,7 +34,35 @@ export type MediaViewerItem =
       class?: string;
       /** Panel background (any CSS color) behind this item. */
       background?: string;
-    };
+    }
+  | MediaViewerVideoItem;
+
+/** Where a video was when it left the viewer. */
+export interface MediaViewerVideoState {
+  /** Playback position in seconds. */
+  currentTime: number;
+  /** True only when the viewer closed while the video played, so the
+   * inline player should continue. Paging away pauses it: false. */
+  playing: boolean;
+}
+
+/** A video played in a fresh `<video controls>` element, so playback
+ * hands over from the inline player through `currentTime` and `playing`,
+ * and comes back through `onleave`. */
+export interface MediaViewerVideoItem {
+  kind: "video";
+  /** The video URL; for a player with `<source>` children, its `currentSrc`. */
+  src: string;
+  /** Accessible name for the expanded view. */
+  label: string;
+  /** Start position in seconds (the inline player's `currentTime`). */
+  currentTime?: number;
+  /** Start playing on display (the inline player was playing). */
+  playing?: boolean;
+  /** Called each time the video leaves the viewer: paging away, or the
+   * viewer closing or unmounting. */
+  onleave?: (state: MediaViewerVideoState) => void;
+}
 
 /** User-facing strings of the viewer, all with English defaults. */
 export interface MediaViewerLabels {

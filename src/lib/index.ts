@@ -265,6 +265,8 @@ export {
   unregisterMediaViewerItem,
   type MediaViewerItem,
   type MediaViewerLabels,
+  type MediaViewerVideoItem,
+  type MediaViewerVideoState,
   type OpenMediaViewerOptions,
 } from "./utils/media-gallery.js";
 export {

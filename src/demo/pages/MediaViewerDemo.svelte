@@ -13,6 +13,7 @@
     initMarkdownMermaidRendering,
     mermaidCodeFence,
   } from "../../lib/utils/markdown-mermaid.js";
+  import demoVideo from "../assets/media-viewer-demo.webm";
   import DemoSection from "../DemoSection.svelte";
 
   function swatch(label: string, fill: string, width = 480, height = 280): string {
@@ -35,6 +36,32 @@
   ];
   let directOpen = $state(false);
   let directIndex = $state(0);
+
+  // The inline player hands its position and play state to the viewer,
+  // and takes them back when the video leaves it.
+  let inlineVideo: HTMLVideoElement | undefined = $state();
+  let videoItems: MediaViewerItem[] = $state([]);
+  let videoIndex = $state(0);
+  function expandVideo(): void {
+    const video = inlineVideo!;
+    const playing = !video.paused && !video.ended;
+    video.pause();
+    videoIndex = 0;
+    videoItems = [
+      {
+        kind: "video",
+        src: video.currentSrc,
+        label: "Test pattern video",
+        currentTime: video.currentTime,
+        playing,
+        onleave: (state) => {
+          video.currentTime = state.currentTime;
+          if (state.playing) void video.play();
+        },
+      },
+      direct[0]!,
+    ];
+  }
 
   const renderer = createMarkdownRenderer({ codeFence: mermaidCodeFence });
   const markdownSource = `Markdown images get an expand button on hover:
@@ -77,6 +104,30 @@ graph LR
   {/if}
 </DemoSection>
 
+<DemoSection
+  title="Video"
+  description="A video item plays in a fresh player, so it starts where the inline player was and hands its position back when it leaves the viewer. Videos have no pan or zoom, the arrow keys seek a focused video instead of paging, and paging away or closing pauses the viewer's player."
+  code={`<MediaViewer
+  items={[{ kind: "video", src, label, currentTime, playing, onleave: (state) => resume(state) }]}
+  onclose={close}
+/>`}
+>
+  <div class="media-demo-video">
+    <!-- svelte-ignore a11y_media_has_caption -->
+    <video
+      bind:this={inlineVideo}
+      src={demoVideo}
+      controls
+      preload="metadata"
+      aria-label="Inline test pattern video"
+    ></video>
+    <Button onclick={expandVideo}>Expand video</Button>
+  </div>
+  {#if videoItems.length > 0}
+    <MediaViewer items={videoItems} bind:index={videoIndex} onclose={() => (videoItems = [])} />
+  {/if}
+</DemoSection>
+
 <div class="media-demo-page" {@attach markdownMedia}>
   <DemoSection
     title="Page gallery"
@@ -107,6 +158,18 @@ const controller = initMarkdownImageViewer(document); // once at startup`}
 </div>
 
 <style>
+  .media-demo-video {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .media-demo-video video {
+    width: 320px;
+    max-width: 100%;
+  }
+
   .media-demo-tab {
     margin-top: var(--space-6);
   }

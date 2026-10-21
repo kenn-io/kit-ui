@@ -1,11 +1,11 @@
 # MediaViewer
 
-The expanded view for images, Mermaid diagrams, and other static
+The expanded view for images, videos, Mermaid diagrams, and other static
 content. It opens as a full-viewport modal: the panel is 90% of the
 viewport width and height, with no pixel cap. The content can be dragged
 to pan, zoomed from 0.4× to 8× with the wheel or a trackpad pinch
 (anchored at the cursor) or a two-finger touch pinch (anchored between
-the fingers), and reset.
+the fingers), and reset. Videos have no pan or zoom; see [Videos](#videos).
 
 A double tap (or a mouse double-click) zooms in 2.5× on that point, and
 a second one resets. iOS Safari reports a double tap's second tap only
@@ -48,6 +48,14 @@ type MediaViewerItem =
       label: string; // accessible name
       class?: string; // extra class on the content wrapper
       background?: string; // panel background behind this item
+    }
+  | {
+      kind: "video";
+      src: string; // the inline player's currentSrc
+      label: string; // accessible name
+      currentTime?: number; // start position in seconds
+      playing?: boolean; // start playing on display
+      onleave?: (state: { currentTime: number; playing: boolean }) => void;
     };
 ```
 
@@ -66,6 +74,63 @@ An element item is deep-cloned each time it is shown, so it suits static
 markup such as an SVG diagram. The clone has no event listeners, canvas
 pixels, shadow roots, or live form and media state, and it repeats the
 original's `id`s while both are in the document.
+
+## Videos
+
+A video item plays in a new `<video controls>` element rather than a
+clone, because a cloned player loses its loaded data and position. Use
+it in place of the browser's full screen: the video gets the 90%
+panel while the page stays visible around it.
+
+Playback hands over in both directions:
+
+1. When opening, pause the inline player and pass its `currentSrc`,
+   `currentTime`, and whether it was playing. The viewer seeks to
+   `currentTime` once the video's metadata loads and starts playing if
+   `playing` is true.
+2. Each time the video leaves the viewer, the viewer pauses it and calls
+   `onleave` with its position. Seek the inline player to
+   `state.currentTime`, and play it if `state.playing` is true.
+
+`state.playing` is true only when the user closed the viewer (Escape,
+the backdrop, or the close button) while the video played. Paging away
+pauses it and reports `false`, so the inline player does not start
+behind the viewer. Paging back resumes, paused, from where it left. A
+close from outside the viewer, such as `closeMediaViewerGallery()`,
+also reports `false`.
+
+```ts
+const playing = !video.paused && !video.ended;
+video.pause();
+const item: MediaViewerItem = {
+  kind: "video",
+  src: video.currentSrc,
+  label: "Screen recording",
+  currentTime: video.currentTime,
+  playing,
+  onleave: (state) => {
+    video.currentTime = state.currentTime;
+    if (state.playing) void video.play();
+  },
+};
+```
+
+The video's own controls take its input:
+
+- Videos are sized like images: natural size when it fits, shrunk to fit
+  otherwise, never upscaled.
+- There is no pan, zoom, double-tap zoom, or swipe paging on a video, and
+  no reset button. Clicks and drags on the video work its controls and
+  never close the viewer.
+- When the video has focus (after the user clicks it or tabs to it), the
+  Left and Right arrow keys go to the video, which seeks in browsers that
+  support it, and do not page. The previous and next buttons still page.
+  Escape still closes.
+- The native full-screen button stays. Nothing about the viewer conflicts
+  with it, and a user who wants the whole screen can still have it.
+
+A video item has no caption, like an element item, and no caption
+track.
 
 An empty `items` list renders nothing. An `index` outside the list wraps
 into range (`-1` is the last item), so the item, counter, and accessible
