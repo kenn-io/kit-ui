@@ -40,8 +40,8 @@ const post: BrowserTelemetryOptions["post"] = (route, event, options) => {
     ? Promise.reject(new TypeError("Failed to fetch"))
     : Promise.resolve(reply(next));
 };
-const start = (storageKey = STORAGE_KEY) => {
-  const reporter = startBrowserTelemetry({ route: ROUTE, surface: "web", storageKey, post });
+const start = (storageKey = STORAGE_KEY, send = post) => {
+  const reporter = startBrowserTelemetry({ route: ROUTE, surface: "web", storageKey, post: send });
   stops.push(reporter.stop);
   return reporter;
 };
@@ -78,6 +78,7 @@ const storage = (overrides: Partial<Storage> = {}) =>
 const claims = () => {
   const lists: Record<string, string> = {};
   for (const [item] of [...stored].sort(([, a], [, b]) => Number(a) - Number(b))) {
+    if (!item.includes(":")) continue; // The opt-out token isn't a dated claim.
     const key = item.slice(0, item.lastIndexOf(":"));
     const date = item.slice(key.length + 1);
     lists[key] = lists[key] ? `${lists[key]},${date}` : date;
@@ -121,6 +122,372 @@ afterEach(() => {
 });
 
 describe("startBrowserTelemetry", () => {
+  test.each([34, 35, 36])("a %i-day stored visit replays only within retention", async (age) => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT, { keepalive: true });
+    reporter.stop();
+    jest.setSystemTime(new Date(DAY_ONE.getTime() + age * 86400000));
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "app_opened",
+      ...(age <= 35 ? ["session_ended"] : []),
+    ]);
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
+  });
+
+  test("a synchronous post throw leaves a stored visit available to a later reporter", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    reporter.stop();
+    let throws = 0;
+    const failing = start(STORAGE_KEY, (route, event, options) => {
+      if (event.event === VISIT.event) {
+        throws++;
+        throw new Error("post could not start");
+      }
+      return post(route, event, options);
+    });
+    await settle();
+    expect(throws).toBe(1);
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.v1.`))).toHaveLength(
+      1,
+    );
+    failing.stop();
+    start();
+    await settle();
+    expect(sent.filter(({ event }) => event.event === VISIT.event)).toEqual([
+      { route: ROUTE, event: VISIT },
+    ]);
+  });
+
+  test("a stored enabled claim consumes a visit once even when its POST returns 503", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    reporter.stop();
+    seed(`${PREFIX}open`, "2026-10-03");
+    seed(`${PREFIX}check`, "2026-10-03");
+    statuses = [503];
+    start();
+    await settle();
+    await advance(1000);
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+  });
+
+  test("pending storage caps visits across reporters at 64", async () => {
+    statuses = ["held", "held"];
+    const first = start();
+    const second = start();
+    for (let i = 0; i < 65; i++) {
+      (i % 2 ? first : second).reportVisit({ event: "held", properties: { i } });
+      await advance(1);
+    }
+    first.stop();
+    second.stop();
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toHaveLength(
+      64,
+    );
+    start();
+    for (let i = 0; i < 4; i++) await settle();
+    expect(
+      sent.filter(({ event }) => event.event === "held").map(({ event }) => event.properties.i),
+    ).toEqual(Array.from({ length: 64 }, (_, i) => i));
+  });
+
+  test("malformed records are removed without blocking valid neighbors", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    const prefix = `${PREFIX}outcome.v1.`;
+    for (const [id, raw] of Object.entries({
+      syntax: "{",
+      null: "null",
+      rank: '{"day":"2026-10-03","token":"","rank":0,"event":{"event":"bad","properties":{}}}',
+      event: '{"day":"2026-10-03","token":"","rank":1,"event":{"event":42,"properties":{}}}',
+      options:
+        '{"day":"2026-10-03","token":"","rank":1,"event":{"event":"bad","properties":{}},"options":{"keepalive":"yes"}}',
+    }))
+      stored.set(prefix + id, raw);
+    release(202);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    expect([...stored.keys()].filter((key) => key.startsWith(prefix))).toEqual([]);
+  });
+
+  test("enqueue ranks preserve order with equal clocks, rollback, and reversed storage keys", async () => {
+    g.localStorage = new Proxy(storage(), { ownKeys: () => [...stored.keys()].reverse() });
+    statuses = ["held", "held"];
+    const first = start();
+    first.reportVisit({ event: "first", properties: {} });
+    const second = start();
+    second.reportVisit({ event: "second", properties: {} });
+    jest.setSystemTime(new Date("2026-10-03T11:00:00Z"));
+    first.reportVisit({ event: "third", properties: {} });
+    first.stop();
+    second.stop();
+    start();
+    await settle();
+    expect(sent.slice(2).map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "first",
+      "second",
+      "third",
+    ]);
+  });
+
+  test("equal stored ranks use record IDs to order visits", async () => {
+    stored.set(
+      `${PREFIX}outcome.v1.b`,
+      '{"day":"2026-10-03","rank":1,"token":"","event":{"event":"second","properties":{}}}',
+    );
+    stored.set(
+      `${PREFIX}outcome.v1.a`,
+      '{"day":"2026-10-03","rank":1,"token":"","event":{"event":"first","properties":{}}}',
+    );
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "first", "second"]);
+  });
+
+  /** Starts a reporter, then a stale reporter whose visit write lands after the other's opt-out. */
+  const lateWrite = () => {
+    statuses = ["held", "held"];
+    const reporter = start();
+    const stale = start();
+    let raced = false;
+    g.localStorage = new Proxy(
+      storage({
+        setItem: (key, value) => {
+          stored.set(key, value);
+          if (key.startsWith(`${PREFIX}outcome.`)) stale.stop();
+        },
+      }),
+      {
+        ownKeys: () => {
+          // Another tab opts out after this tab snapshots permission, before it writes.
+          const snapshot = [...stored.keys()];
+          if (!raced) {
+            raced = true;
+            reporter.disable();
+          }
+          return snapshot;
+        },
+      },
+    );
+    stale.reportVisit({ event: "late", properties: {} });
+    g.localStorage = storage();
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toHaveLength(1);
+    return reporter;
+  };
+
+  test.each([
+    ["rollover", "late write"],
+    ["clock rollback", "late write"],
+    ["rollover", "disabled pump"],
+    ["clock rollback", "disabled pump"],
+  ])("fresh visits survive %s with a stale %s", async (clock, path) => {
+    let stale;
+    if (path === "late write") {
+      stale = lateWrite();
+      stale.stop();
+    } else {
+      statuses = ["held"];
+      stale = start();
+      stale.disable();
+    }
+    jest.setSystemTime(clock === "rollover" ? DAY_TWO : new Date("2026-10-02T12:00:00Z"));
+    statuses = ["held"];
+    const fresh = start();
+    fresh.reportVisit({ event: "fresh", properties: {} });
+    if (path === "disabled pump") stale.reportVisit({ event: "disabled", properties: {} });
+    fresh.stop();
+    start();
+    await settle();
+    expect(sent.filter(({ event }) => event.event === "fresh" || event.event === "late")).toEqual([
+      { route: ROUTE, event: { event: "fresh", properties: {} } },
+    ]);
+  });
+
+  test("blocked reads preserve visits admitted under a previously read opt-out token", async () => {
+    statuses = ["held"];
+    const optedOut = start();
+    optedOut.disable();
+    optedOut.stop();
+    jest.setSystemTime(DAY_TWO);
+    statuses = ["held"];
+    const reporter = start();
+    g.localStorage = storage({
+      setItem: (key, value) => {
+        if (key.startsWith(`${PREFIX}outcome.`))
+          throw new DOMException("full", "QuotaExceededError");
+        stored.set(key, value);
+      },
+    });
+    reporter.reportVisit(VISIT);
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
+    blockStorage();
+    reporter.reportVisit({ event: "while_blocked", properties: {} });
+    release(202);
+    await settle();
+    expect(sent.filter(({ event }) => event.event === VISIT.event)).toEqual([
+      { route: ROUTE, event: VISIT },
+    ]);
+  });
+
+  test("reads leave unknown outcome versions in place", async () => {
+    const future = '{"day":"2026-10-03","rank":1,"event":{"event":"future","properties":{}}}';
+    stored.set(`${PREFIX}outcome.v2.future`, future);
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    release(202);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    expect(stored.get(`${PREFIX}outcome.v2.future`)).toBe(future);
+  });
+
+  test.each(["local", "receipt"])(
+    "%s opt-out clears stored visits without touching another server",
+    async (kind) => {
+      statuses = ["held", "held"];
+      const other = start("other-server");
+      other.reportVisit({ event: "other", properties: {} });
+      const reporter = start();
+      reporter.reportVisit(VISIT);
+      stored.set(`${PREFIX}outcome.v2.future`, "{}");
+      if (kind === "local") reporter.disable();
+      else release({ status: 202, data: { status: "disabled" } });
+      await settle();
+      expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
+      reporter.stop();
+      other.stop();
+      jest.setSystemTime(DAY_TWO);
+      start();
+      await settle();
+      expect(sent.filter(({ event }) => event.event === "session_ended")).toEqual([]);
+      start("other-server");
+      await settle();
+      expect(sent.at(-1)?.event).toEqual({ event: "other", properties: {} });
+    },
+  );
+
+  test("opt-out on full storage clears another reporter's visit and keeps its quiet claim", async () => {
+    statuses = ["held"];
+    start().reportVisit(VISIT);
+    const size = () =>
+      [...stored].reduce((total, [key, value]) => total + key.length + value.length, 0);
+    const capacity = size();
+    const tokenWrites: { value: string; remaining: string[] }[] = [];
+    g.localStorage = storage({
+      setItem: (key, value) => {
+        if (
+          key.startsWith(PREFIX) &&
+          !key.startsWith(`${PREFIX}outcome.`) &&
+          !/:\d{4}-\d{2}-\d{2}$/.test(key)
+        ) {
+          tokenWrites.push({
+            value,
+            remaining: [...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`)),
+          });
+        }
+        if (size() - (stored.get(key)?.length ?? 0) + key.length + value.length > capacity)
+          throw new DOMException("full", "QuotaExceededError");
+        stored.set(key, value);
+      },
+    });
+    statuses = ["held"];
+    start().disable();
+    expect(tokenWrites.map(({ remaining }) => remaining)).toEqual([[]]);
+    expect(tokenWrites[0]!.value.length).toBeGreaterThan(0);
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
+    jest.setSystemTime(DAY_TWO);
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "app_opened",
+      "app_opened",
+    ]);
+  });
+
+  test("a disabled receipt after stop clears held visits", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    reporter.stop();
+    release({ status: 202, data: { status: "disabled" } });
+    await settle();
+    jest.setSystemTime(DAY_TWO);
+    start();
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "app_opened"]);
+  });
+
+  test("blocked storage reads retain page visits until stop", async () => {
+    blockStorage();
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    release(202);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual(["app_opened", "session_ended"]);
+    jest.setSystemTime(DAY_TWO);
+    statuses = ["held"];
+    focus();
+    reporter.reportVisit({ event: "lost", properties: {} });
+    reporter.stop();
+    start();
+    await settle();
+    expect(sent.filter(({ event }) => event.event === "lost")).toEqual([]);
+  });
+
+  test("blocked outcome writes retain page visits and consume stored ones", async () => {
+    const key = `${PREFIX}outcome.v1.persisted`;
+    stored.set(
+      key,
+      JSON.stringify({
+        event: { event: "persisted", properties: {} },
+        rank: 1,
+        day: "2026-10-03",
+        token: "",
+      }),
+    );
+    g.localStorage = storage({
+      setItem: (key, value) => {
+        if (value.includes("session_ended")) throw new Error("quota");
+        stored.set(key, value);
+      },
+    });
+    statuses = ["held"];
+    const reporter = start();
+    reporter.reportVisit(VISIT);
+    reporter.reportVisit({ event: "small", properties: {} });
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.v1.`))).toHaveLength(
+      2,
+    );
+    release(202);
+    await settle();
+    expect(sent.map(({ event }) => event.event)).toEqual([
+      "app_opened",
+      "persisted",
+      "session_ended",
+      "small",
+    ]);
+    expect(stored.has(key)).toBe(false);
+    reporter.stop();
+    start();
+    await settle();
+    expect(sent.filter(({ event }) => event.event === "persisted")).toHaveLength(1);
+  });
+
   test("repeated terminal daily actions do not scan localStorage", async () => {
     let scans = 0;
     g.localStorage = new Proxy(storage(), {
@@ -926,30 +1293,19 @@ describe("startBrowserTelemetry", () => {
     expect(claims()[`${PREFIX}screen.A%2FB`]).toBe("2026-10-03");
   });
 
-  test.each(["enabled", "disabled"])(
-    "held visits preserve copied FIFO payloads or clear on %s",
-    async (outcome) => {
-      statuses = ["held"];
-      const reporter = start();
-      const visit = { event: "held", properties: { i: 0 } };
-      reporter.reportVisit(visit, { keepalive: true });
-      visit.properties.i = 99;
-      reporter.reportVisit({ event: "uncopyable", properties: { run: () => {} } });
-      for (let i = 1; i < 65; i++) reporter.reportVisit({ event: "held", properties: { i } });
-      release({ status: 202, data: { status: outcome === "disabled" ? "disabled" : "queued" } });
-      for (let i = 0; i < 4; i++) await settle();
-      expect(sent.slice(1).map(({ event }) => event.properties.i)).toEqual(
-        outcome === "enabled" ? Array.from({ length: 64 }, (_, i) => i) : [],
-      );
-      if (outcome === "enabled") expect(sent[1]?.options).toEqual({ keepalive: true });
-      jest.setSystemTime(DAY_TWO);
-      focus();
-      await settle();
-      expect(sent.filter(({ event }) => event.event === "held")).toHaveLength(
-        outcome === "enabled" ? 64 : 0,
-      );
-    },
-  );
+  test("held visits preserve copied FIFO payloads and keepalive options", async () => {
+    statuses = ["held"];
+    const reporter = start();
+    const visit = { event: "held", properties: { i: 0 } };
+    reporter.reportVisit(visit, { keepalive: true });
+    visit.properties.i = 99;
+    reporter.reportVisit({ event: "uncopyable", properties: { run: () => {} } });
+    reporter.reportVisit({ event: "held", properties: { i: 1 } });
+    release(202);
+    await settle();
+    expect(sent.slice(1).map(({ event }) => event.properties.i)).toEqual([0, 1]);
+    expect(sent[1]?.options).toEqual({ keepalive: true });
+  });
 
   test.each([202, 401])(
     "held visits wait for today's enabled receipt after yesterday's %i",

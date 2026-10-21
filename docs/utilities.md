@@ -332,7 +332,10 @@ const unsubscribe = telemetry.onQuietChange((quiet, reason) => {
 });
 // When a visit session ends:
 telemetry.reportVisit(
-  { event: "session_ended", properties: { surface: "web", duration_bucket: "under_1m" } },
+  {
+    event: "session_ended",
+    properties: { surface: "web", duration_bucket: "under_1m" },
+  },
   { keepalive: true },
 );
 // On teardown:
@@ -417,23 +420,64 @@ it before unsubscribing so the callback stops visit timers.
 
 ### Visits
 
-Visits are never retried. While permission is unknown, the reporter holds a
-copy of each visit and its options. App-open and screen reports check
-permission. The reporter holds up to 64 visits, oldest
-first, and drops new ones once full or when the payload can't be copied with
-`structuredClone`. Held visits are sent in order once the current UTC day's
-check returns `queued` or `skipped`. They survive midnight: a receipt for an
-earlier day can't release them, so they wait for the new day's check. A
-disabled receipt, `disable()`, or `stop()` discards them. Held visits live only
-in that reporter's memory and disappear on teardown or page unload. A new
-reporter checks again without inheriting them. Held visits send one at a time,
-including ordinary visits added while the queue drains. Once permission is
-enabled, keepalive visits send immediately, even while a queued request is in
-flight or waiting for backoff. A failed queued send drops that visit; later
-visits wait for backoff and share the six-failure limit. A successful queued
-send resets the failure count and cooldown. After a 2xx reply
-without a recognized receipt, held visits wait for a later unclaimed screen
-check or the next UTC day's enabled receipt.
+A visit whose request started is never retried. While permission is unknown,
+the reporter holds a copy of each visit and its options. App-open and screen
+reports check permission. Held visits are sent in order once the current UTC
+day's check returns `queued` or `skipped`. They survive midnight: a receipt for
+an earlier day can't release them, so they wait for the new day's check. A
+disabled receipt or `disable()` discards them.
+
+Each held visit is written synchronously to its own localStorage item under
+`${storageKey}.browser.v1.outcome.v1.`, so held visits are per server and
+survive `stop()`, page unload, and UTC rollover. A record holds the event, its
+options, an enqueue rank, the admitted UTC date, and the opt-out token. A later
+reporter for the same `storageKey` sends them after an enabled receipt or a
+stored enabled claim for today, using its own `post` callback and credentials.
+Reporters sharing a `storageKey` hold up to 64 visits, oldest first, and drop
+new ones once full or when the payload can't be copied with `structuredClone`.
+Visits admitted more than 35 days ago are discarded rather than sent. Ranks
+increase from the highest visible record, so equal clocks and clock rollback
+preserve enqueue order; equal ranks fall back to the record key. Malformed
+`v1` records are removed individually while valid neighbors remain queued.
+Reads leave other record versions in place.
+
+Opting out is marked by a random token at `${storageKey}.browser.v1.optout`.
+No token exists until the first opt-out, and its absence counts as an empty
+token. A visit takes the current token from storage when admitted, and queue
+reads discard every record whose token differs from the current one.
+`disable()` and a disabled receipt first remove every outcome record version
+for the server, which also frees space on full storage, then write a fresh
+token and the quiet claim. Storage can't check and write atomically across
+tabs, so a stale tab can write a visit just after another tab opts out; that
+record carries the old token and never sends. Because tokens are compared for
+equality rather than by date, visits admitted after an opt-out still send
+after an enabled receipt, even when the clock has moved back. A page that only
+reads another tab's opt-out clears its own memory and leaves stored records
+alone.
+
+Held visits send one at a time, including ordinary visits added while the
+queue drains. The reporter starts each request, then removes the record before
+awaiting the reply, so a rejected request drops that visit. If `post` throws
+synchronously, no request started and the record stays stored, so the same
+reporter can try it again after the normal backoff. Each started request is
+the only one that reporter makes for the record, but duplicates can happen: two
+tabs draining at the same time can each send a record before either removes it,
+and a tab that closes or crashes after starting a request but before removing
+the record leaves it for a later reporter to send again. No Web Locks,
+IndexedDB, or secure context is required, including on plain HTTP LAN origins.
+
+Once permission is enabled, keepalive visits send immediately, even while a
+queued request is in flight or waiting for backoff. A queued request that fails
+after it starts drops that visit; later visits wait for backoff and share the
+six-failure limit. A successful queued send resets the failure count and
+cooldown.
+
+When a write fails, that visit stays in page memory and later visits still try
+storage. When reads are blocked, the page uses its memory mirror and token.
+The limit is 64 across readable storage and that page's unsaved visits, or 64
+per page when reads are blocked. `stop()` and page unload discard page-only
+visits. After a 2xx reply without a recognized receipt, held visits wait for a
+later unclaimed screen check or the next UTC day's enabled receipt.
 
 ### Failures
 
@@ -443,7 +487,8 @@ delay are held while permission is unknown or another queued visit remains,
 and dropped otherwise.
 While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
-UTC day.
+UTC day. Visits reported then are dropped; visits already stored stay for a
+later reporter.
 
 A 2xx reply with an unreadable or unknown body claims the daily event but
 leaves permission unknown. Other non-401 4xx replies, such as HTTP 400 or 404,
@@ -451,11 +496,12 @@ also claim the daily report and let the next report proceed. Reloading that
 day does not retry the claimed app-open report.
 
 HTTP 401 means the request wasn't authorized, so the reporter claims nothing
-for that report and stops as if it had reached the six-failure cap. Held
-visits remain only in the current reporter until `stop()` discards them.
-Queued `reportDaily` actions also stay in that reporter's memory.
-After the app restores authentication, a new reporter checks again without
-inheriting those visits; otherwise the next UTC day's load or focus does.
+for that report and stops as if it had reached the six-failure cap. Visits
+reported afterward are dropped. Stored visits stay for a later reporter, and
+queued `reportDaily` actions stay in that reporter's memory.
+After the app restores authentication, a new reporter checks again and sends
+the stored visits once enabled; otherwise the next UTC day's load or focus
+does.
 
 ### Storage keys
 
