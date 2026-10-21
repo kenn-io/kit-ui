@@ -150,7 +150,9 @@ function pendingOutcomes(prefix: string) {
   /** The opt-out token, read fresh from storage; absent until the first opt-out. */
   const token = () => {
     try {
-      return localStorage.getItem(tokenKey) ?? "";
+      const stored = localStorage.getItem(tokenKey) ?? "";
+      if (stored) pageToken = stored;
+      return stored;
     } catch {
       return pageToken;
     }

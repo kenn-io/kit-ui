@@ -315,6 +315,37 @@ describe("startBrowserTelemetry", () => {
     },
   );
 
+  test("blocked reads preserve visits admitted under a previously read opt-out token", async () => {
+    statuses = ["held"];
+    const optedOut = start();
+    optedOut.disable();
+    optedOut.stop();
+    jest.setSystemTime(DAY_TWO);
+    statuses = ["held"];
+    const reporter = start();
+    g.localStorage = storage({
+      setItem: (key, value) => {
+        if (key.startsWith(`${PREFIX}outcome.`))
+          throw new DOMException("full", "QuotaExceededError");
+        stored.set(key, value);
+      },
+    });
+    reporter.reportVisit(VISIT);
+    expect([...stored.keys()].filter((key) => key.startsWith(`${PREFIX}outcome.`))).toEqual([]);
+    blockStorage();
+    reporter.reportVisit({ event: "while_blocked", properties: {} });
+    Object.defineProperty(g, "localStorage", {
+      configurable: true,
+      writable: true,
+      value: storage(),
+    });
+    release(202);
+    await settle();
+    expect(sent.filter(({ event }) => event.event === VISIT.event)).toEqual([
+      { route: ROUTE, event: VISIT },
+    ]);
+  });
+
   test("reads leave unknown outcome versions in place", async () => {
     const future = '{"day":"2026-10-03","rank":1,"event":{"event":"future","properties":{}}}';
     stored.set(`${PREFIX}outcome.v2.future`, future);
