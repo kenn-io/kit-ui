@@ -76,6 +76,14 @@
   const SPACER_ROW = "border: 0; background: none;";
   const SPACER_CELL = "padding: 0; border: 0;";
 
+  // Rows and widths are refreshed after every scroll, resize, and row
+  // resize, and most refreshes change nothing. Rewriting an unchanged value
+  // is still a DOM change: observers see it, and the browser styles and
+  // paints another frame, so only changed values are written.
+  function setAttribute(el: Element, name: string, value: string): void {
+    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
   let body: HTMLTableSectionElement | undefined;
   let scroller: HTMLElement | undefined;
   let scrollTop = $state(0);
@@ -257,7 +265,7 @@
     });
     table.style.tableLayout = "fixed";
     table.style.width = `${shown.reduce((sum, width) => sum + width, 0)}px`;
-    table.classList.add(PINNED);
+    if (!table.classList.contains(PINNED)) table.classList.add(PINNED);
     sizingVersion += 1;
   }
 
@@ -334,7 +342,7 @@
   function measureRows(): void {
     if (!body) return;
     const table = body.parentElement as HTMLTableElement;
-    table.setAttribute("aria-rowcount", String(items.length + 1));
+    setAttribute(table, "aria-rowcount", String(items.length + 1));
     // An empty table shows only the `empty` row, which neither measures a
     // data row nor should decide the column widths.
     if (items.length === 0) return watchRows([]);
@@ -349,7 +357,7 @@
     let changed = false;
     rows.forEach((tr, i) => {
       const index = slice.start + i;
-      tr.setAttribute("aria-rowindex", String(index + 2));
+      setAttribute(tr, "aria-rowindex", String(index + 2));
       const next = tops[i + 1];
       const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
       if (h > 0 && measured.get(index) !== h) {

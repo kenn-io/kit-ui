@@ -602,6 +602,34 @@ test("no sampled rows remain once the columns are pinned", async ({ page }) => {
   await expect(table).toHaveClass(/kit-virtual-table--pinned/);
 });
 
+// A refresh follows every scroll, resize, and row resize. One that finds
+// nothing changed leaves the table alone; rewriting the same values would
+// make the browser style and paint another frame for nothing.
+test("a refresh that changes nothing does not touch the table", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await expect(table).toHaveClass(/kit-virtual-table--pinned/);
+  const changes = await table.evaluate(async (el) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+    // Let the refresh that follows mounting run first.
+    await frame();
+    await frame();
+    const seen: string[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const r of records) seen.push(`${r.type} ${r.attributeName ?? ""}`);
+    });
+    observer.observe(el, { subtree: true, attributes: true, childList: true, characterData: true });
+    // The window's resize event refreshes the widths and rows at once.
+    window.dispatchEvent(new Event("resize"));
+    await frame();
+    await frame();
+    observer.disconnect();
+    return seen;
+  });
+  expect(changes).toEqual([]);
+});
+
 test("new items keep the columns' widths", async ({ page }) => {
   await gotoPage(page, "virtual-table");
   const table = bounded(page);
