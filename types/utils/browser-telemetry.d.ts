@@ -53,7 +53,12 @@ export interface BrowserTelemetryReporter {
      * Discards actions while disabled until a later day's load or focus check enables reporting.
      */
     reportDaily(key: string, event: VisitEvent): void;
-    /** Holds up to 64 copied visits while a permission check is pending; a full queue drops new ones. */
+    /**
+     * Holds up to 64 copied visits per `storageKey` in localStorage while a permission check is
+     * pending; they survive page close and UTC rollover for 35 days and send after an enabled
+     * receipt. A full queue drops new ones. Opt-out discards held visits, even late writes from
+     * other tabs. Racing tabs or a crash after a send starts can send a visit twice.
+     */
     reportVisit(event: VisitEvent, options?: VisitOptions): void;
     /** Immediately receives the current state, then each reason change; returns an unsubscribe function. */
     onQuietChange(listener: (quiet: boolean, reason: BrowserTelemetryQuietReason) => void): () => void;

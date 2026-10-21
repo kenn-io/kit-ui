@@ -53,7 +53,12 @@ export interface BrowserTelemetryReporter {
    * Discards actions while disabled until a later day's load or focus check enables reporting.
    */
   reportDaily(key: string, event: VisitEvent): void;
-  /** Holds up to 64 copied visits while a permission check is pending; a full queue drops new ones. */
+  /**
+   * Holds up to 64 copied visits per `storageKey` in localStorage while a permission check is
+   * pending; they survive page close and UTC rollover for 35 days and send after an enabled
+   * receipt. A full queue drops new ones. Opt-out discards held visits, even late writes from
+   * other tabs. Racing tabs or a crash after a send starts can send a visit twice.
+   */
   reportVisit(event: VisitEvent, options?: VisitOptions): void;
   /** Immediately receives the current state, then each reason change; returns an unsubscribe function. */
   onQuietChange(
@@ -118,6 +123,148 @@ function claimHistory(storageKey: string) {
   return { has, add, forget };
 }
 
+/**
+ * Keeps one synchronous localStorage record per visit, so held visits survive page close
+ * without tabs overwriting each other. Each record carries the opt-out token current at
+ * its admission; reads discard records whose token no longer matches, so a stale tab's
+ * write that lands after an opt-out never sends, whatever the clocks say.
+ */
+function pendingOutcomes(prefix: string) {
+  type Outcome = {
+    event: VisitEvent;
+    options?: VisitOptions;
+    rank: number;
+    day: string;
+    token: string;
+  };
+  const records = `${prefix}outcome.v1.`,
+    tokenKey = `${prefix}optout`;
+  const page = new Map<string, Outcome>();
+  let memory = new Map<string, Outcome>();
+  let pageOnly = false,
+    pageToken = "";
+  const forget = () => {
+    page.clear();
+    memory.clear();
+  };
+  /** The opt-out token, read fresh from storage; absent until the first opt-out. */
+  const token = () => {
+    try {
+      return localStorage.getItem(tokenKey) ?? "";
+    } catch {
+      return pageToken;
+    }
+  };
+  const object = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+  const valid = (value: unknown): value is Outcome =>
+    object(value) &&
+    typeof value["day"] === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value["day"]) &&
+    typeof value["token"] === "string" &&
+    Number.isSafeInteger(value["rank"]) &&
+    Number(value["rank"]) > 0 &&
+    object(value["event"]) &&
+    typeof value["event"]["event"] === "string" &&
+    object(value["event"]["properties"]) &&
+    (value["options"] === undefined ||
+      (object(value["options"]) &&
+        (value["options"]["keepalive"] === undefined ||
+          typeof value["options"]["keepalive"] === "boolean")));
+  const remove = (key: string) => {
+    memory.delete(key);
+    page.delete(key);
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // The page still consumes its copy when storage is blocked.
+    }
+  };
+  const read = () => {
+    const current = token();
+    try {
+      if (!pageOnly) {
+        const shared = new Map<string, Outcome>();
+        for (const key of Object.keys(localStorage).filter((key) => key.startsWith(records))) {
+          const raw = localStorage.getItem(key);
+          if (raw === null) continue; // Another tab may have consumed it after enumeration.
+          let value: unknown;
+          try {
+            value = JSON.parse(raw);
+          } catch {
+            /* Remove malformed records independently. */
+          }
+          if (valid(value)) shared.set(key, value);
+          else remove(key);
+        }
+        memory = new Map([...shared, ...page]);
+      }
+    } catch {
+      // Unreadable storage leaves this page's mirror authoritative.
+      pageOnly = true;
+    }
+    // Like claim history, visits older than 35 days are discarded rather than replayed.
+    const oldest = Date.parse(today()) - 35 * 86_400_000;
+    for (const [key, outcome] of memory)
+      if (outcome.token !== current || !(Date.parse(outcome.day) >= oldest)) remove(key);
+    memory = new Map([...memory].sort(([a, x], [b, y]) => x.rank - y.rank || a.localeCompare(b)));
+    return memory;
+  };
+  return {
+    token,
+    /** Holds a visit admitted on `day` under the opt-out `admitted` token. */
+    add(event: VisitEvent, options: VisitOptions | undefined, day: string, admitted: string) {
+      if (read().size >= 64) return;
+      try {
+        const rank = Math.max(0, ...[...memory.values()].map((item) => item.rank)) + 1;
+        const outcome = structuredClone({
+          event,
+          options,
+          rank,
+          day,
+          token: admitted,
+        });
+        const key = records + crypto.getRandomValues(new Uint32Array(4)).join("-");
+        memory.set(key, outcome);
+        try {
+          if (pageOnly) page.set(key, outcome);
+          else localStorage.setItem(key, JSON.stringify(outcome));
+        } catch {
+          // One failed write keeps only this visit on the page; later writes still try storage.
+          page.set(key, outcome);
+        }
+      } catch {
+        // Optional reporting must not interrupt callers with an uncopyable payload.
+      }
+    },
+    size: () => read().size,
+    /** The oldest held visit and its record key, left stored until its send starts. */
+    first: () => read().entries().next().value,
+    remove,
+    /** Drops this page's copies; stored records stay for other reporters. */
+    forget,
+    /**
+     * Removes every stored outcome version, freeing space first, then publishes a fresh
+     * random token so visits admitted under any earlier token, including late writes, are discarded.
+     */
+    optOut() {
+      forget();
+      try {
+        for (const item of Object.keys(localStorage))
+          if (item.startsWith(`${prefix}outcome.`)) localStorage.removeItem(item);
+      } catch {
+        /* Blocked storage holds no records to drop. */
+      }
+      pageToken = crypto.getRandomValues(new Uint32Array(4)).join("-");
+      try {
+        localStorage.setItem(tokenKey, pageToken);
+      } catch {
+        /* Page memory keeps the token when storage is blocked. */
+      }
+    },
+  };
+}
+
 /** Names the gate claim a 202 receipt earns: `check` when enabled, `quiet` when disabled. */
 const receiptClaim = (status: number, data: unknown) => {
   const reply = data && typeof data === "object" && "status" in data ? data.status : undefined;
@@ -155,8 +302,8 @@ export function startBrowserTelemetry({
     claims = claimHistory(storageKey);
   const screens = new Set<string>(),
     daily = new Map<string, VisitEvent | undefined>(),
-    listeners = new Set<(quiet: boolean, reason: BrowserTelemetryQuietReason) => void>(),
-    outcomes: { event: VisitEvent; options?: VisitOptions }[] = [];
+    listeners = new Set<(quiet: boolean, reason: BrowserTelemetryQuietReason) => void>();
+  const outcomes = pendingOutcomes(prefix);
   const pending = new Map<string, { queued: boolean }>();
   let day = today(),
     generation = {},
@@ -218,8 +365,10 @@ export function startBrowserTelemetry({
   const disabled = (): boolean => {
     gate = readGate();
     if (gate === "disabled") {
-      outcomes.length = 0;
       cancelRetry();
+      // A page that only reads the opt-out leaves stored visits alone: other tabs may have
+      // admitted them under a newer token after a clock change.
+      outcomes.forget();
       // Storage can't check and write atomically across tabs, so a racing tab's late
       // screen claim can outlive the opt-out; every page that sees the opt-out drops it.
       forgetHistory();
@@ -246,6 +395,7 @@ export function startBrowserTelemetry({
     options?: VisitOptions,
     queued = false,
     checking = key !== undefined,
+    started?: () => void,
   ) => {
     const sending = day;
     const owner = generation;
@@ -256,7 +406,9 @@ export function startBrowserTelemetry({
     };
     let response: TelemetryReceipt | undefined, data: unknown;
     try {
-      response = await post(route, event, options);
+      const request = post(route, event, options);
+      started?.();
+      response = await request;
       if (response.status === 202) {
         try {
           data = "data" in response ? response.data : await response.json();
@@ -272,6 +424,8 @@ export function startBrowserTelemetry({
     const claim = response && receiptClaim(response.status, data);
     const unauthorized = response?.status === 401;
     const failed = !response || (response.status >= 500 && response.status < 600);
+    // Opting out drops held visits before the quiet claim is written, freeing space for it.
+    if (claim === "quiet") outcomes.optOut();
     // Claims keep the sending date, even after cleanup, so a restarted page doesn't resend them.
     if (claim) claims.add(`${prefix}${claim}`, sending);
     // Another tab's opt-out may have deleted screen history this page's stale gate can't see.
@@ -327,15 +481,14 @@ export function startBrowserTelemetry({
   };
   const pump = (visit?: VisitEvent, options?: VisitOptions, wake = false) => {
     rollover(wake);
+    // A visit takes the opt-out token before the gate check, so an opt-out that lands
+    // between the check and its write still discards it.
+    const token = visit && outcomes.token();
     if (stopped || disabled() || failures >= 6) return;
     if (visit) {
       if (gate === "enabled" && options?.keepalive) return void send(visit, undefined, options);
-      if (gate === "unknown" || outcomes.length > 0 || pending.get(day)?.queued) {
-        try {
-          if (outcomes.length < 64) outcomes.push(structuredClone({ event: visit, options }));
-        } catch {
-          /* A payload that can't be copied is dropped rather than interrupting the caller. */
-        }
+      if (gate === "unknown" || outcomes.size() > 0 || pending.get(day)?.queued) {
+        outcomes.add(visit, options, day, token!);
         pump();
         return;
       }
@@ -345,7 +498,7 @@ export function startBrowserTelemetry({
     }
     if (retry || pending.has(day)) return;
     const check = due() ?? nextDaily();
-    const held = gate === "enabled" && outcomes.length > 0;
+    const held = gate === "enabled" ? outcomes.first() : undefined;
     if (!held && !check) return;
     const delay = ordinaryEligibleAt - performance.now();
     if (delay > 0) {
@@ -356,8 +509,9 @@ export function startBrowserTelemetry({
       return;
     }
     if (held) {
-      const outcome = outcomes.shift()!;
-      void send(outcome.event, undefined, outcome.options, true);
+      const [id, outcome] = held;
+      // Removed once its request starts; a crash before the reply may resend it after restart.
+      void send(outcome.event, undefined, outcome.options, true, false, () => outcomes.remove(id));
     } else if (check) void send(...check);
   };
   const report = () => pump(undefined, undefined, true);
@@ -370,15 +524,15 @@ export function startBrowserTelemetry({
       cancelRetry();
       screens.clear();
       daily.clear();
-      outcomes.length = 0;
+      outcomes.forget();
       notify();
       listeners.clear();
       window.removeEventListener("focus", report);
     },
     disable() {
+      outcomes.optOut();
       for (const date of new Set([day, today()])) claims.add(`${prefix}quiet`, date);
       gate = "disabled";
-      outcomes.length = 0;
       forgetHistory();
       cancelRetry();
       notify();
