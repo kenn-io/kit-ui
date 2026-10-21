@@ -87,6 +87,15 @@ the token palette is part of the contract — are locked with `secure` so
 diagram init directives (`%%{init: …}%%`) can't loosen them (regression
 test in `tests/browser/mermaid.spec.ts`).
 
+Diagrams also render in a page whose policy lacks `'unsafe-inline'` in
+`style-src`. Such a policy ignores the stylesheet and `style` attributes
+Mermaid writes into each SVG, which leaves every shape black. After each
+render, kit-ui re-applies exactly those styles through CSSOM: the
+stylesheet, already scoped to the diagram's ID, as a constructed sheet
+adopted by the diagram's document or shadow root, and each `style`
+attribute through the element's style object. It releases a diagram's
+sheet once the diagram leaves the page (`tests/browser/strict-csp.spec.ts`).
+
 Failure handling distinguishes two cases. A diagram that fails to
 _render_ keeps its escaped source visible and is held (not retried)
 until its source changes. An _infrastructure_ failure — the mermaid

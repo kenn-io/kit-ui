@@ -26,6 +26,14 @@
  * Budgets (diagram count, source bytes) bound the work a hostile
  * document can queue; they are scoped per observed root, so initialize
  * one controller per markdown document (see docs/components/mermaid.md).
+ *
+ * Mermaid writes each diagram's stylesheet and node styles into the SVG
+ * markup, which a Content Security Policy without 'unsafe-inline' in
+ * style-src ignores, leaving every shape black. After each render the
+ * module re-applies exactly those styles through CSSOM, which such a policy
+ * allows: the stylesheet as a constructed sheet, already scoped to the
+ * diagram's own ID, and each style attribute through the element's style
+ * object.
  */
 
 import { copyToClipboard } from "./clipboard.js";
@@ -264,13 +272,45 @@ export async function renderMarkdownMermaidDiagrams(
     if (attachMermaidViewer(node, diagramSources.get(node) ?? "", options)) {
       failedDiagramSources.delete(node);
       node.dataset["mermaidRendered"] = "true";
+      applyMermaidStyles(node.querySelector("svg"));
       renderedCount += 1;
     } else {
       restoreMermaidSource(node);
       markMermaidRenderFailed(node);
     }
   }
+  pruneMermaidStyles();
   return renderedCount;
+}
+
+// Constructed sheets for rendered diagrams, by diagram, with the document or
+// shadow root that adopted each one.
+const mermaidStyleSheets = new Map<SVGSVGElement, [CSSStyleSheet, Document | ShadowRoot]>();
+
+function applyMermaidStyles(svg: SVGSVGElement | null): void {
+  if (!svg || mermaidStyleSheets.has(svg)) return;
+  const root = svg.getRootNode();
+  if (!(root instanceof Document || root instanceof ShadowRoot)) return;
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(
+    Array.from(svg.querySelectorAll("style"), (style) => style.textContent ?? "").join("\n"),
+  );
+  root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+  mermaidStyleSheets.set(svg, [sheet, root]);
+  for (const element of [svg, ...svg.querySelectorAll<SVGElement>("[style]")]) {
+    const declarations = element.getAttribute("style");
+    if (declarations) element.style.cssText = declarations;
+  }
+}
+
+// A re-render replaces each diagram's SVG, and a document can drop its
+// diagrams at any time; release the sheets of diagrams no longer shown.
+function pruneMermaidStyles(): void {
+  for (const [svg, [sheet, root]] of mermaidStyleSheets) {
+    if (svg.isConnected) continue;
+    root.adoptedStyleSheets = root.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+    mermaidStyleSheets.delete(svg);
+  }
 }
 
 function collectRenderableMermaidNodes(
@@ -720,6 +760,7 @@ export function initMarkdownMermaidRendering(
       } finally {
         observer?.disconnect();
         themeObserver?.disconnect();
+        pruneMermaidStyles();
       }
     },
   };

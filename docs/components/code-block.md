@@ -74,6 +74,7 @@ import {
   renderMarkdownSync, // sync: highlights only already-loaded grammars
   createMarkdownRenderer,
   highlightCode, // one block → shiki HTML | null (CodeBlock uses this)
+  applyShikiStyles, // after inserting highlighted HTML yourself (see below)
 } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/markdown"
 ```
 
@@ -133,6 +134,22 @@ by DOMPurify regardless).
 - `highlightCode` output is shiki-generated from a plain string (shiki
   escapes the code text), so CodeBlock renders it without a DOMPurify
   pass.
+
+### Strict Content Security Policy
+
+Highlighting works in a page whose policy lacks `'unsafe-inline'` in
+`style-src` and `'wasm-unsafe-eval'` in `script-src`:
+
+- Shiki runs its JavaScript regex engine, so no WebAssembly compiles. Its
+  forgiving mode skips the rare grammar pattern the engine cannot
+  translate rather than failing the language.
+- Such a policy ignores the token colors' `style` attributes in inserted
+  markup. `Markdown` and `CodeBlock` re-apply them through CSSOM, which
+  the policy allows. If you insert `renderMarkdown` or `highlightCode`
+  output yourself, call `applyShikiStyles(container)` afterwards. It
+  applies only the `--shiki-*: #hex` declarations sanitization accepts.
+
+`tests/browser/strict-csp.spec.ts` serves a page under such a policy.
 
 ### Failure behavior
 
