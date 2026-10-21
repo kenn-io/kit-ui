@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { tick } from "svelte";
+  import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
+  import { floatingPopoverPosition } from "./floatingPosition.js";
 
   interface Props {
     /** Simple text tooltip; for rich content use the `content` snippet. */
@@ -14,7 +15,10 @@
      * keyboard-reachable. Leave false when the child is already focusable
      * (button, link, input). */
     focusable?: boolean;
-    align?: "start" | "end";
+    /** Horizontal placement against the trigger. `center` (default) puts
+     * the bubble straight under or over it. The arrow always points at the
+     * trigger's center, even when the viewport edge pushes the bubble aside. */
+    align?: "start" | "center" | "end";
     openDelayMs?: number;
     closeDelayMs?: number;
     /** Extra classes on the popover panel. */
@@ -26,13 +30,14 @@
     content = undefined,
     children,
     focusable = false,
-    align = "start",
+    align = "center",
     openDelayMs = 250,
     closeDelayMs = 100,
     class: className = "",
   }: Props = $props();
 
   const tooltipID = $props.id();
+  const ARROW_INSET = 12;
 
   let open = $state(false);
   let side = $state<"top" | "bottom">("bottom");
@@ -52,16 +57,22 @@
     await tick();
     if (!triggerEl || !popoverEl) return;
     const trigger = triggerEl.getBoundingClientRect();
-    popoverStyle = floatingPopoverStyle({
+    const width = popoverEl.offsetWidth;
+    const { left, top } = floatingPopoverPosition({
       trigger,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
-      popoverWidth: popoverEl.offsetWidth,
+      popoverWidth: width,
       popoverHeight: popoverEl.offsetHeight,
       align,
       triggerGap: 8,
     });
-    const top = Number.parseFloat(/top: (-?[0-9.]+)px/.exec(popoverStyle)?.[1] ?? "0");
+    // Keep the arrow clear of the bubble's rounded corners.
+    const arrowX = Math.min(
+      Math.max((trigger.left + trigger.right) / 2 - left, ARROW_INSET),
+      width - ARROW_INSET,
+    );
+    popoverStyle = `left: ${left}px; top: ${top}px; --kit-tooltip-arrow-x: ${arrowX}px`;
     side = top < trigger.top ? "top" : "bottom";
   }
 
@@ -90,6 +101,23 @@
       open = false;
     }, closeDelayMs);
   }
+
+  // The description belongs on the element that takes focus: the wrapped
+  // control, or the wrapper itself when `focusable` makes it the stop.
+  $effect(() => {
+    if (!open || !triggerEl) return;
+    const target =
+      (focusable ? null : triggerEl.querySelector<HTMLElement>(TABBABLE_SELECTOR)) ?? triggerEl;
+    const ids = (target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean);
+    target.setAttribute("aria-describedby", [...ids, tooltipID].join(" "));
+    return () => {
+      const rest = (target.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter((id) => id !== "" && id !== tooltipID);
+      if (rest.length > 0) target.setAttribute("aria-describedby", rest.join(" "));
+      else target.removeAttribute("aria-describedby");
+    };
+  });
 
   $effect(() => {
     if (!open) return;
@@ -123,7 +151,6 @@
   class="kit-tooltip-trigger"
   bind:this={triggerEl}
   tabindex={focusable ? 0 : undefined}
-  aria-describedby={open ? tooltipID : undefined}
   onmouseenter={() => show()}
   onmouseleave={() => hide()}
   onfocusin={() => show(true)}
@@ -138,7 +165,6 @@
     class={["kit-tooltip", "kit-popover-card", className]}
     role="tooltip"
     data-side={side}
-    data-align={align}
     style={popoverStyle}
     bind:this={popoverEl}
     onmouseenter={() => show(true)}
@@ -176,22 +202,16 @@
     line-height: 1.45;
   }
 
-  /* Arrow — mirrors the DiffSummaryChip precedent; flips with data-side. */
+  /* Arrow — mirrors the DiffSummaryChip precedent; flips with data-side
+     and points at the trigger's center (--kit-tooltip-arrow-x). */
   .kit-tooltip::before {
     content: "";
     position: absolute;
+    left: calc(var(--kit-tooltip-arrow-x, 50%) - 4px);
     width: 8px;
     height: 8px;
     transform: rotate(45deg);
     background: var(--bg-surface);
-  }
-
-  .kit-tooltip[data-align="start"]::before {
-    left: 18px;
-  }
-
-  .kit-tooltip[data-align="end"]::before {
-    right: 18px;
   }
 
   .kit-tooltip[data-side="bottom"]::before {

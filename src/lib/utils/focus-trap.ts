@@ -14,7 +14,7 @@
  *   is focused the trigger is the control last pressed with a pointer.
  */
 
-const TABBABLE_SELECTOR = [
+export const TABBABLE_SELECTOR = [
   "a[href]",
   "button:not([disabled])",
   "input:not([disabled])",

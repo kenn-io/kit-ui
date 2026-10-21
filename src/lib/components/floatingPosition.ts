@@ -1,4 +1,4 @@
-type FloatingAlign = "start" | "end";
+type FloatingAlign = "start" | "center" | "end";
 type FloatingPlacement = "auto" | "below" | "above";
 
 export interface FloatingPopoverInput {
@@ -17,7 +17,16 @@ export interface FloatingPopoverInput {
   placement?: FloatingPlacement;
 }
 
-export function floatingPopoverStyle({
+export interface FloatingPopoverPosition {
+  left: number;
+  top: number;
+  /** Set only with `constrainWidth`. */
+  width: number | undefined;
+}
+
+/** Viewport coordinates for a fixed popover; `floatingPopoverStyle` formats
+ * them as inline style. */
+export function floatingPopoverPosition({
   trigger,
   viewportWidth,
   viewportHeight,
@@ -29,13 +38,13 @@ export function floatingPopoverStyle({
   maxWidth,
   constrainWidth = false,
   placement = "auto",
-}: FloatingPopoverInput): string {
+}: FloatingPopoverInput): FloatingPopoverPosition {
   const availableWidth = Math.max(0, viewportWidth - edgeGap * 2);
   const width = constrainWidth
     ? Math.min(maxWidth ?? availableWidth, availableWidth)
     : (popoverWidth ?? 0);
   const left = clamp(
-    align === "end" ? trigger.right - width : trigger.left,
+    alignedLeft(trigger, width, align),
     edgeGap,
     Math.max(edgeGap, viewportWidth - width - edgeGap),
   );
@@ -47,12 +56,26 @@ export function floatingPopoverStyle({
     triggerGap,
     placement,
   });
+  return { left, top: Math.round(top), width: constrainWidth ? Math.round(width) : undefined };
+}
 
-  const style = [`left: ${formatPx(left)}px`, `top: ${Math.round(top)}px`];
-  if (constrainWidth) {
-    style.push(`width: ${Math.round(width)}px`);
+export function floatingPopoverStyle(input: FloatingPopoverInput): string {
+  const { left, top, width } = floatingPopoverPosition(input);
+  const style = [`left: ${formatPx(left)}px`, `top: ${top}px`];
+  if (width !== undefined) {
+    style.push(`width: ${width}px`);
   }
   return style.join("; ");
+}
+
+function alignedLeft(
+  trigger: Pick<DOMRect, "left" | "right">,
+  width: number,
+  align: FloatingAlign,
+): number {
+  if (align === "end") return trigger.right - width;
+  if (align === "center") return (trigger.left + trigger.right - width) / 2;
+  return trigger.left;
 }
 
 interface FloatingTopInput {

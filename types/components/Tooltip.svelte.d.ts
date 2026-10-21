@@ -9,7 +9,10 @@ interface Props {
      * keyboard-reachable. Leave false when the child is already focusable
      * (button, link, input). */
     focusable?: boolean;
-    align?: "start" | "end";
+    /** Horizontal placement against the trigger. `center` (default) puts
+     * the bubble straight under or over it. The arrow always points at the
+     * trigger's center, even when the viewport edge pushes the bubble aside. */
+    align?: "start" | "center" | "end";
     openDelayMs?: number;
     closeDelayMs?: number;
     /** Extra classes on the popover panel. */

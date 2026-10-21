@@ -276,4 +276,9 @@ export {
   type PanZoomView,
 } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
-export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";
+export {
+  floatingPopoverPosition,
+  floatingPopoverStyle,
+  type FloatingPopoverInput,
+  type FloatingPopoverPosition,
+} from "./components/floatingPosition.js";

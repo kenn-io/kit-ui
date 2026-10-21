@@ -118,4 +118,4 @@ export { initMarkdownImageViewer, type MarkdownImageViewerController, type Markd
 export { closeMediaViewerGallery, collectMediaViewerGallery, openMediaViewerGallery, registerMediaViewerItem, unregisterMediaViewerItem, type MediaViewerItem, type MediaViewerLabels, type OpenMediaViewerOptions, } from "./utils/media-gallery.js";
 export { actualPixelSize, attachPanZoom, type PanZoom, type PanZoomLimits, type PanZoomOptions, type PanZoomView, } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
-export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";
+export { floatingPopoverPosition, floatingPopoverStyle, type FloatingPopoverInput, type FloatingPopoverPosition, } from "./components/floatingPosition.js";
