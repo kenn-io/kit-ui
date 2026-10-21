@@ -6,8 +6,11 @@ a small gap, flips above when there's no room below, and shifts sideways to
 stay on screen; its arrow always points at the trigger's center. Open/close
 delays give hover intent, Escape dismisses, and the panel has
 `role="tooltip"`. While open, its id is added to the `aria-describedby` of
-the wrapped focusable control (or of the wrapper itself with `focusable`), so
-assistive technology reads it as that control's description. On touch
+the wrapped control that has keyboard focus, or of the first wrapped control
+when the pointer opened it (the wrapper itself with `focusable`), so
+assistive technology reads it as that control's description. The id stays
+when the control changes its own `aria-describedby` while the tooltip is
+open. On touch
 devices (no hover) it still opens on focus.
 
 ## Text tooltip

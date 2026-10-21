@@ -44,6 +44,8 @@
   let popoverStyle = $state("");
   let triggerEl = $state<HTMLSpanElement>();
   let popoverEl = $state<HTMLDivElement>();
+  // The element that took keyboard focus inside the trigger, if any.
+  let focusTarget = $state<HTMLElement | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   function clearTimer(): void {
@@ -102,20 +104,56 @@
     }, closeDelayMs);
   }
 
-  // The description belongs on the element that takes focus: the wrapped
-  // control, or the wrapper itself when `focusable` makes it the stop.
+  function describedIDs(target: HTMLElement): string[] {
+    return (target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean);
+  }
+
+  function addDescription(target: HTMLElement): void {
+    const ids = describedIDs(target);
+    if (!ids.includes(tooltipID)) {
+      target.setAttribute("aria-describedby", [...ids, tooltipID].join(" "));
+    }
+  }
+
+  function removeDescription(target: HTMLElement): void {
+    const rest = describedIDs(target).filter((id) => id !== tooltipID);
+    if (rest.length > 0) target.setAttribute("aria-describedby", rest.join(" "));
+    else target.removeAttribute("aria-describedby");
+  }
+
+  function handleFocusIn(event: FocusEvent): void {
+    const target = focusable ? triggerEl : event.target;
+    if (target instanceof HTMLElement) {
+      focusTarget = target;
+      // Before assistive technology hears about the focus, not after the
+      // next render.
+      addDescription(target);
+    }
+    show(true);
+  }
+
+  function handleFocusOut(): void {
+    focusTarget = null;
+    hide(true);
+  }
+
+  // The description belongs on the element that has focus. A hover-opened
+  // tooltip describes the first control it wraps, or the wrapper itself when
+  // `focusable` makes it the tab stop.
   $effect(() => {
     if (!open || !triggerEl) return;
     const target =
-      (focusable ? null : triggerEl.querySelector<HTMLElement>(TABBABLE_SELECTOR)) ?? triggerEl;
-    const ids = (target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean);
-    target.setAttribute("aria-describedby", [...ids, tooltipID].join(" "));
+      focusTarget ??
+      (focusable ? null : triggerEl.querySelector<HTMLElement>(TABBABLE_SELECTOR)) ??
+      triggerEl;
+    addDescription(target);
+    // A wrapped control that rewrites its own aria-describedby, such as a
+    // field showing a validation message, would otherwise drop the id.
+    const observer = new MutationObserver(() => addDescription(target));
+    observer.observe(target, { attributes: true, attributeFilter: ["aria-describedby"] });
     return () => {
-      const rest = (target.getAttribute("aria-describedby") ?? "")
-        .split(/\s+/)
-        .filter((id) => id !== "" && id !== tooltipID);
-      if (rest.length > 0) target.setAttribute("aria-describedby", rest.join(" "));
-      else target.removeAttribute("aria-describedby");
+      observer.disconnect();
+      removeDescription(target);
     };
   });
 
@@ -153,8 +191,8 @@
   tabindex={focusable ? 0 : undefined}
   onmouseenter={() => show()}
   onmouseleave={() => hide()}
-  onfocusin={() => show(true)}
-  onfocusout={() => hide(true)}
+  onfocusin={handleFocusIn}
+  onfocusout={handleFocusOut}
 >
   {@render children()}
 </span>

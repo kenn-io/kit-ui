@@ -1,4 +1,6 @@
 <script lang="ts">
+  import AlignLeft from "@lucide/svelte/icons/text-align-start";
+  import AlignRight from "@lucide/svelte/icons/text-align-end";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import Button from "../../lib/components/Button.svelte";
   import Chip from "../../lib/components/Chip.svelte";
@@ -29,6 +31,16 @@
     <Tooltip text="Reset to default">
       <IconButton ariaLabel="Reset" title="" size="sm">
         <RotateCcw size={14} aria-hidden="true" />
+      </IconButton>
+    </Tooltip>
+  </span>
+  <span data-testid="group-tooltip">
+    <Tooltip text="Aligns the selected text">
+      <IconButton ariaLabel="Align left" title="" size="sm">
+        <AlignLeft size={14} aria-hidden="true" />
+      </IconButton>
+      <IconButton ariaLabel="Align right" title="" size="sm">
+        <AlignRight size={14} aria-hidden="true" />
       </IconButton>
     </Tooltip>
   </span>
