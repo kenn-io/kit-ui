@@ -33,7 +33,12 @@
  * module re-applies exactly those styles through CSSOM, which such a policy
  * allows: the stylesheet as a constructed sheet, already scoped to the
  * diagram's own ID, and each style attribute through the element's style
- * object.
+ * object. Those styles include the diagram's own `classDef` and `style`
+ * directives, so diagram styling is trusted author styling, as it is when
+ * Mermaid runs on a page without such a policy. Its rules apply only
+ * within the diagram, but they can name outside resources such as
+ * `url(...)` backgrounds; a host that must stop documents from loading
+ * outside resources restricts img-src and the other fetch directives.
  */
 
 import { copyToClipboard } from "./clipboard.js";
@@ -243,6 +248,8 @@ export async function renderMarkdownMermaidDiagrams(
   const retryHeldFailures =
     (options as InternalMarkdownMermaidOptions).retryHeldInfrastructureFailures ?? true;
   const nodes = collectRenderableMermaidNodes(root, retryHeldFailures);
+  // A document update can remove every diagram and add none.
+  pruneMermaidStyles();
   if (nodes.length === 0) return 0;
 
   for (const node of nodes) {
@@ -255,6 +262,15 @@ export async function renderMarkdownMermaidDiagrams(
     [mermaid] = await Promise.all([(options.load ?? loadMermaid)(), loadControlIcons()]);
     assertSupportedMermaidVersion(mermaid);
     initializeMermaidForCurrentTheme(mermaid);
+    // Mermaid sizes each shape by measuring its label as rendered inside
+    // the node. A strict policy blocks the diagram's own font rules during
+    // that measurement, so labels would inherit the host's <pre> font and
+    // overflow once the theme font applies. Set the theme font first.
+    const { fontFamily, fontSize } = mermaidThemeFont(getComputedStyle(document.documentElement));
+    for (const node of nodes) {
+      node.style.fontFamily = fontFamily;
+      node.style.fontSize = fontSize;
+    }
   } catch (error: unknown) {
     restoreMermaidSourcesAndClearRenderState(nodes);
     throw error;
@@ -287,6 +303,10 @@ export async function renderMarkdownMermaidDiagrams(
 // shadow root that adopted each one.
 const mermaidStyleSheets = new Map<SVGSVGElement, [CSSStyleSheet, Document | ShadowRoot]>();
 
+// Re-applies the diagram's stylesheet and style attributes, which include
+// the author's classDef and style directives. They are trusted author
+// styling, as on a page without a strict policy: scoped to the diagram's
+// #mermaid-<id>, but free to name outside resources (see the module comment).
 function applyMermaidStyles(svg: SVGSVGElement | null): void {
   if (!svg || mermaidStyleSheets.has(svg)) return;
   const root = svg.getRootNode();
@@ -305,9 +325,11 @@ function applyMermaidStyles(svg: SVGSVGElement | null): void {
 
 // A re-render replaces each diagram's SVG, and a document can drop its
 // diagrams at any time; release the sheets of diagrams no longer shown.
-function pruneMermaidStyles(): void {
+// With `within`, also release those of diagrams still inside it, for a
+// controller disconnecting before its host removes the content.
+function pruneMermaidStyles(within?: Node): void {
   for (const [svg, [sheet, root]] of mermaidStyleSheets) {
-    if (svg.isConnected) continue;
+    if (svg.isConnected && !within?.contains(svg)) continue;
     root.adoptedStyleSheets = root.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
     mermaidStyleSheets.delete(svg);
   }
@@ -491,6 +513,14 @@ function restoreMermaidSource(node: HTMLElement): void {
   if (source !== undefined) {
     node.textContent = source;
   }
+  clearMermaidMeasurementFont(node);
+}
+
+// The restored source shows in the host's own <pre> font again.
+function clearMermaidMeasurementFont(node: HTMLElement): void {
+  node.style.removeProperty("font-family");
+  node.style.removeProperty("font-size");
+  if (node.style.length === 0) node.removeAttribute("style");
 }
 
 function initializeMermaidForCurrentTheme(mermaid: MarkdownMermaidAPI): void {
@@ -528,7 +558,7 @@ function mermaidThemeVariables(theme: MermaidThemeName): MermaidThemeVariables {
   const styles = getComputedStyle(document.documentElement);
   const variables: MermaidThemeVariables = {
     darkMode: theme === "dark",
-    fontSize: cssThemeToken(styles, "--font-size-md"),
+    fontSize: mermaidThemeFont(styles).fontSize,
   };
 
   for (const [mermaidName, cssName] of Object.entries(MERMAID_THEME_TOKENS)) {
@@ -536,6 +566,15 @@ function mermaidThemeVariables(theme: MermaidThemeName): MermaidThemeVariables {
   }
 
   return variables;
+}
+
+// The font Mermaid's theme gives diagram text: `fontFamily` and `fontSize`
+// in the theme variables, which the config's own font keys copy.
+function mermaidThemeFont(styles: CSSStyleDeclaration): { fontFamily: string; fontSize: string } {
+  return {
+    fontFamily: cssThemeToken(styles, MERMAID_THEME_TOKENS.fontFamily),
+    fontSize: cssThemeToken(styles, "--font-size-md"),
+  };
 }
 
 function cssThemeToken(styles: CSSStyleDeclaration, name: string): string {
@@ -560,6 +599,7 @@ function resetRenderedMermaidViewers(root: ParentNode): void {
 
     unregisterMediaViewerItem(node);
     node.textContent = source;
+    clearMermaidMeasurementFont(node);
     node.classList.remove("kit-mermaid-viewer");
     delete node.dataset["mermaidViewer"];
     clearMermaidRenderState(node);
@@ -760,7 +800,7 @@ export function initMarkdownMermaidRendering(
       } finally {
         observer?.disconnect();
         themeObserver?.disconnect();
-        pruneMermaidStyles();
+        pruneMermaidStyles(observedRoot);
       }
     },
   };

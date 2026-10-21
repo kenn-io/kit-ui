@@ -33,7 +33,12 @@
  * module re-applies exactly those styles through CSSOM, which such a policy
  * allows: the stylesheet as a constructed sheet, already scoped to the
  * diagram's own ID, and each style attribute through the element's style
- * object.
+ * object. Those styles include the diagram's own `classDef` and `style`
+ * directives, so diagram styling is trusted author styling, as it is when
+ * Mermaid runs on a page without such a policy. Its rules apply only
+ * within the diagram, but they can name outside resources such as
+ * `url(...)` backgrounds; a host that must stop documents from loading
+ * outside resources restricts img-src and the other fetch directives.
  */
 import { type MediaViewerLabels } from "./media-gallery.js";
 export interface MarkdownMermaidAPI {

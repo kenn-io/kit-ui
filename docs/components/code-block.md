@@ -150,6 +150,8 @@ Highlighting works in a page whose policy lacks `'unsafe-inline'` in
   applies only the `--shiki-*: #hex` declarations sanitization accepts.
 
 `tests/browser/strict-csp.spec.ts` serves a page under such a policy.
+Mermaid diagrams under such a policy, including how their styling is
+trusted, are covered in [mermaid.md](mermaid.md#strict-content-security-policy).
 
 ### Failure behavior
 

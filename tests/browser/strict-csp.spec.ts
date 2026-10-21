@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { setTheme } from "./helpers.js";
 
 // Apps often serve a Content Security Policy without 'unsafe-inline' in
@@ -54,4 +54,121 @@ test("a theme change restyles diagrams and releases the old styles", async ({ pa
   await expect.poll(fill).not.toBe(light);
   expect(await fill()).not.toBe("rgb(0, 0, 0)");
   expect(await page.evaluate(() => document.adoptedStyleSheets.length)).toBe(sheets);
+});
+
+type ControllerWindow = typeof window & {
+  mermaidControllers?: Record<string, { disconnect: () => void }>;
+};
+
+// Renders `source` in its own host under <main>, with its own controller.
+async function mountDiagram(page: Page, id: string, source: string): Promise<Locator> {
+  await page.evaluate(
+    async ({ id, source }) => {
+      const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
+      const host = document.createElement("div");
+      host.id = id;
+      const pre = document.createElement("pre");
+      pre.className = "mermaid";
+      pre.textContent = source;
+      host.append(pre);
+      document.querySelector("main")!.append(host);
+      const controllers = ((window as ControllerWindow).mermaidControllers ??= {});
+      controllers[id] = initMarkdownMermaidRendering(host);
+    },
+    { id, source },
+  );
+  const host = page.locator(`#${id}`);
+  await expect(host.locator(".kit-mermaid-viewer__pan > svg")).toBeVisible({ timeout: 15_000 });
+  return host;
+}
+
+// The adopted-sheet count once the fixture's own diagram has rendered.
+async function settledSheetCount(page: Page): Promise<number> {
+  await expect(page.getByTestId("markdown").locator(".kit-mermaid-viewer__pan > svg")).toBeVisible({
+    timeout: 15_000,
+  });
+  return page.evaluate(() => document.adoptedStyleSheets.length);
+}
+
+const sheetCount = (page: Page) => page.evaluate(() => document.adoptedStyleSheets.length);
+
+test("replacing every diagram with text releases its styles", async ({ page }) => {
+  const before = await settledSheetCount(page);
+  await mountDiagram(page, "replaced", "graph LR\n  A --> B");
+  expect(await sheetCount(page)).toBe(before + 1);
+
+  await page.evaluate(() => {
+    document.querySelector("#replaced")!.textContent = "Plain text";
+  });
+  await expect.poll(() => sheetCount(page)).toBe(before);
+});
+
+test("disconnecting a controller releases its diagrams' styles", async ({ page }) => {
+  const before = await settledSheetCount(page);
+  await mountDiagram(page, "disconnected", "graph LR\n  A --> B");
+  expect(await sheetCount(page)).toBe(before + 1);
+
+  // Disconnect first, then remove the content, as a host tearing down might.
+  await page.evaluate(() => {
+    (window as ControllerWindow).mermaidControllers!["disconnected"]!.disconnect();
+    document.querySelector("#disconnected")!.remove();
+  });
+  expect(await sheetCount(page)).toBe(before);
+});
+
+test("labels fit their shapes when the host styles pre with another font", async ({ page }) => {
+  await page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "/tests/browser/fixtures/narrow-pre.css";
+        link.onload = resolve;
+        link.onerror = reject;
+        document.head.append(link);
+      }),
+  );
+  const host = await mountDiagram(
+    page,
+    "labels",
+    [
+      "graph TD",
+      "  A[Reconcile settlement nightly] --> B[Collect pending invoices]",
+      "  B --> C[Notify finance reviewers]",
+      "  C --> D[Archive closed statements]",
+    ].join("\n"),
+  );
+
+  const nodes = await host
+    .locator(".kit-mermaid-viewer__pan > svg g.node")
+    .evaluateAll((elements) =>
+      elements.map((node) => {
+        const text = node.querySelector<SVGTextElement>("text")!;
+        const shape = node.querySelector<SVGGraphicsElement>(".label-container")!;
+        return {
+          label: text.textContent,
+          text: text.getBBox().width,
+          shape: shape.getBBox().width,
+        };
+      }),
+    );
+  expect(nodes).toHaveLength(4);
+  for (const node of nodes) {
+    expect(node.text, node.label ?? "").toBeLessThanOrEqual(node.shape + 1);
+  }
+});
+
+test("a diagram that fails to render shows its source in the host's pre font", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { initMarkdownMermaidRendering } = await import("/src/lib/utils/markdown-mermaid.ts");
+    const host = document.createElement("div");
+    host.id = "failed";
+    host.innerHTML = '<pre class="mermaid">not mermaid</pre><pre class="plain">plain</pre>';
+    document.querySelector("main")!.append(host);
+    initMarkdownMermaidRendering(host);
+  });
+  const failed = page.locator('#failed pre[data-mermaid-rendered="failed"]');
+  await expect(failed).toHaveCount(1, { timeout: 15_000 });
+  const font = (locator: Locator) => locator.evaluate((element) => getComputedStyle(element).font);
+  expect(await font(failed)).toBe(await font(page.locator("#failed pre.plain")));
 });
