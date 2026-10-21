@@ -113,7 +113,7 @@ export { backdropCloses, escapeCloses } from "./utils/overlay.js";
 export { formatCost, formatDuration, formatNumber, formatTokenCount } from "./utils/format.js";
 export { createRefreshScheduler, DEFAULT_REFRESH_INTERVAL_MS, formatRefreshAge, type RefreshScheduler, } from "./utils/refresh.js";
 export { appShortcuts, createShortcutManager, formatShortcutKeys, initShortcuts, isMacPlatform, parseShortcut, ROOT_SCOPE, shortcutMatches, type ParsedShortcut, type RegisteredShortcut, type ShortcutManager, type ShortcutOptions, } from "./utils/shortcuts.js";
-export { codeFenceLanguage, createMarkdownRenderer, escapeHtml, highlightCode, renderMarkdown, renderMarkdownSync, type MarkdownRenderer, type MarkdownRendererOptions, } from "./utils/markdown.js";
+export { applyShikiStyles, codeFenceLanguage, createMarkdownRenderer, escapeHtml, highlightCode, renderMarkdown, renderMarkdownSync, type MarkdownRenderer, type MarkdownRendererOptions, } from "./utils/markdown.js";
 export { initMarkdownImageViewer, type MarkdownImageViewerController, type MarkdownImageViewerOptions, } from "./utils/markdown-images.js";
 export { closeMediaViewerGallery, collectMediaViewerGallery, openMediaViewerGallery, registerMediaViewerItem, unregisterMediaViewerItem, type MediaViewerItem, type MediaViewerLabels, type OpenMediaViewerOptions, } from "./utils/media-gallery.js";
 export { actualPixelSize, attachPanZoom, type PanZoom, type PanZoomLimits, type PanZoomOptions, type PanZoomView, } from "./utils/pan-zoom.js";
