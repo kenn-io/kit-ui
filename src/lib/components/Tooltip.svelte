@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { tick } from "svelte";
+  import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
+  import { floatingPopoverPosition } from "./floatingPosition.js";
 
   interface Props {
     /** Simple text tooltip; for rich content use the `content` snippet. */
@@ -14,7 +15,10 @@
      * keyboard-reachable. Leave false when the child is already focusable
      * (button, link, input). */
     focusable?: boolean;
-    align?: "start" | "end";
+    /** Horizontal placement against the trigger. `center` (default) puts
+     * the bubble straight under or over it. The arrow always points at the
+     * trigger's center, even when the viewport edge pushes the bubble aside. */
+    align?: "start" | "center" | "end";
     openDelayMs?: number;
     closeDelayMs?: number;
     /** Extra classes on the popover panel. */
@@ -26,19 +30,22 @@
     content = undefined,
     children,
     focusable = false,
-    align = "start",
+    align = "center",
     openDelayMs = 250,
     closeDelayMs = 100,
     class: className = "",
   }: Props = $props();
 
   const tooltipID = $props.id();
+  const ARROW_INSET = 12;
 
   let open = $state(false);
   let side = $state<"top" | "bottom">("bottom");
   let popoverStyle = $state("");
   let triggerEl = $state<HTMLSpanElement>();
   let popoverEl = $state<HTMLDivElement>();
+  // The element that took keyboard focus inside the trigger, if any.
+  let focusTarget = $state<HTMLElement | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   function clearTimer(): void {
@@ -52,16 +59,22 @@
     await tick();
     if (!triggerEl || !popoverEl) return;
     const trigger = triggerEl.getBoundingClientRect();
-    popoverStyle = floatingPopoverStyle({
+    const width = popoverEl.offsetWidth;
+    const { left, top } = floatingPopoverPosition({
       trigger,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
-      popoverWidth: popoverEl.offsetWidth,
+      popoverWidth: width,
       popoverHeight: popoverEl.offsetHeight,
       align,
       triggerGap: 8,
     });
-    const top = Number.parseFloat(/top: (-?[0-9.]+)px/.exec(popoverStyle)?.[1] ?? "0");
+    // Keep the arrow clear of the bubble's rounded corners.
+    const arrowX = Math.min(
+      Math.max((trigger.left + trigger.right) / 2 - left, ARROW_INSET),
+      width - ARROW_INSET,
+    );
+    popoverStyle = `left: ${left}px; top: ${top}px; --kit-tooltip-arrow-x: ${arrowX}px`;
     side = top < trigger.top ? "top" : "bottom";
   }
 
@@ -90,6 +103,59 @@
       open = false;
     }, closeDelayMs);
   }
+
+  function describedIDs(target: HTMLElement): string[] {
+    return (target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean);
+  }
+
+  function addDescription(target: HTMLElement): void {
+    const ids = describedIDs(target);
+    if (!ids.includes(tooltipID)) {
+      target.setAttribute("aria-describedby", [...ids, tooltipID].join(" "));
+    }
+  }
+
+  function removeDescription(target: HTMLElement): void {
+    const rest = describedIDs(target).filter((id) => id !== tooltipID);
+    if (rest.length > 0) target.setAttribute("aria-describedby", rest.join(" "));
+    else target.removeAttribute("aria-describedby");
+  }
+
+  function handleFocusIn(event: FocusEvent): void {
+    const target = focusable ? triggerEl : event.target;
+    if (target instanceof HTMLElement) {
+      focusTarget = target;
+      // Before assistive technology hears about the focus, not after the
+      // next render.
+      addDescription(target);
+    }
+    show(true);
+  }
+
+  function handleFocusOut(): void {
+    focusTarget = null;
+    hide(true);
+  }
+
+  // The description belongs on the element that has focus. A hover-opened
+  // tooltip describes the first control it wraps, or the wrapper itself when
+  // `focusable` makes it the tab stop.
+  $effect(() => {
+    if (!open || !triggerEl) return;
+    const target =
+      focusTarget ??
+      (focusable ? null : triggerEl.querySelector<HTMLElement>(TABBABLE_SELECTOR)) ??
+      triggerEl;
+    addDescription(target);
+    // A wrapped control that rewrites its own aria-describedby, such as a
+    // field showing a validation message, would otherwise drop the id.
+    const observer = new MutationObserver(() => addDescription(target));
+    observer.observe(target, { attributes: true, attributeFilter: ["aria-describedby"] });
+    return () => {
+      observer.disconnect();
+      removeDescription(target);
+    };
+  });
 
   $effect(() => {
     if (!open) return;
@@ -123,11 +189,10 @@
   class="kit-tooltip-trigger"
   bind:this={triggerEl}
   tabindex={focusable ? 0 : undefined}
-  aria-describedby={open ? tooltipID : undefined}
   onmouseenter={() => show()}
   onmouseleave={() => hide()}
-  onfocusin={() => show(true)}
-  onfocusout={() => hide(true)}
+  onfocusin={handleFocusIn}
+  onfocusout={handleFocusOut}
 >
   {@render children()}
 </span>
@@ -138,7 +203,6 @@
     class={["kit-tooltip", "kit-popover-card", className]}
     role="tooltip"
     data-side={side}
-    data-align={align}
     style={popoverStyle}
     bind:this={popoverEl}
     onmouseenter={() => show(true)}
@@ -176,22 +240,16 @@
     line-height: 1.45;
   }
 
-  /* Arrow — mirrors the DiffSummaryChip precedent; flips with data-side. */
+  /* Arrow — mirrors the DiffSummaryChip precedent; flips with data-side
+     and points at the trigger's center (--kit-tooltip-arrow-x). */
   .kit-tooltip::before {
     content: "";
     position: absolute;
+    left: calc(var(--kit-tooltip-arrow-x, 50%) - 4px);
     width: 8px;
     height: 8px;
     transform: rotate(45deg);
     background: var(--bg-surface);
-  }
-
-  .kit-tooltip[data-align="start"]::before {
-    left: 18px;
-  }
-
-  .kit-tooltip[data-align="end"]::before {
-    right: 18px;
   }
 
   .kit-tooltip[data-side="bottom"]::before {
