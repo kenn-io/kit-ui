@@ -434,6 +434,27 @@ test("a visible row growing deep in the table does not move the rows above it", 
   expect(Math.abs((await topIndex()) - before)).toBeLessThanOrEqual(1);
 });
 
+// Switching scroll modes gives the table a new scroller and a new row
+// observer, while the rows on screen in both modes stay in the DOM. Those rows
+// must be watched again, or a later change in their height goes unnoticed.
+test("rows kept across a change of scroll mode are measured again", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = inFlow(page);
+  await table.evaluate((el) => {
+    const scroller = document.querySelector(".content__body")!;
+    scroller.scrollTop += el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+  });
+  const rows = dataRows(table);
+  await expect(rows.first()).toContainText("#0");
+  const first = await rows.first().elementHandle();
+  await page.getByRole("checkbox", { name: "Scroll inside a box instead" }).check();
+  await expect.poll(() => rows.first().evaluate((tr, kept) => tr === kept, first)).toBe(true);
+  // Row #0 alone now fills the 420px box, so only it and the 8 overscan rows
+  // below it belong in the window.
+  await rows.first().evaluate((tr: HTMLElement) => (tr.style.height = "2000px"));
+  await expect.poll(() => rows.count()).toBe(9);
+});
+
 // One row grows while another shrinks by the same amount, so the body keeps
 // its size and only per-row observation measures the trade. With stale
 // heights the grown first row counts as short, and scrolling inside it

@@ -345,7 +345,9 @@
     const next = new Set<Element>(rows);
     for (const el of watched) if (!next.has(el)) rowObserver.unobserve(el);
     rows.forEach((tr, i) => {
-      if (measuredAt.get(tr) === start + i) return;
+      // A row this observer watches at the index it was measured at needs
+      // nothing. A new observer, after the scroller changes, watches none.
+      if (watched.has(tr) && measuredAt.get(tr) === start + i) return;
       // observe() ignores a row that is already observed.
       if (watched.has(tr)) rowObserver!.unobserve(tr);
       rowObserver!.observe(tr);
