@@ -66,11 +66,20 @@
     );
     const wasDisabled = node.disabled;
     const hadControlStates = node.classList.contains("kit-control-states");
+    // IconButton's ariaDisabled guards only its own onclick, not these
+    // listeners.
+    const unavailable = () => node.getAttribute("aria-disabled") === "true";
+    const click = () => {
+      if (!unavailable()) toggle();
+    };
+    const keydown = (event: KeyboardEvent) => {
+      if (!unavailable()) handleKeydown(event);
+    };
 
     node.classList.add("kit-control-states");
     menu.setTriggerElement(node);
-    node.addEventListener("click", toggle);
-    node.addEventListener("keydown", handleKeydown);
+    node.addEventListener("click", click);
+    node.addEventListener("keydown", keydown);
 
     $effect(() => {
       node.type = "button";
@@ -87,8 +96,8 @@
     });
 
     return () => {
-      node.removeEventListener("click", toggle);
-      node.removeEventListener("keydown", handleKeydown);
+      node.removeEventListener("click", click);
+      node.removeEventListener("keydown", keydown);
       menu.setTriggerElement(undefined);
       node.disabled = wasDisabled;
       if (!hadControlStates) node.classList.remove("kit-control-states");

@@ -1,6 +1,7 @@
 export type IconButtonSize = "sm" | "md";
 export type IconButtonTone = "neutral" | "success" | "danger" | "info" | "workflow";
 import type { Snippet } from "svelte";
+import type { Attachment } from "svelte/attachments";
 interface Props {
     /** Accessible name — required, an icon carries no text of its own. */
     ariaLabel: string;
@@ -30,6 +31,9 @@ interface Props {
     /** The icon (size 14 works well at both button sizes). */
     children: Snippet;
     class?: string;
+    /** `{@attach}` on IconButton reaches its button, so a MenuTrigger or
+     * Typeahead `attachment` can wire it as a popup trigger. */
+    [attachment: symbol]: Attachment<HTMLButtonElement>;
 }
 declare const IconButton: import("svelte").Component<Props, {}, "">;
 type IconButton = ReturnType<typeof IconButton>;

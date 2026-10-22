@@ -5,6 +5,7 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import type { Attachment } from "svelte/attachments";
 
   interface Props {
     /** Accessible name — required, an icon carries no text of its own. */
@@ -35,6 +36,9 @@
     /** The icon (size 14 works well at both button sizes). */
     children: Snippet;
     class?: string;
+    /** `{@attach}` on IconButton reaches its button, so a MenuTrigger or
+     * Typeahead `attachment` can wire it as a popup trigger. */
+    [attachment: symbol]: Attachment<HTMLButtonElement>;
   }
 
   let {
@@ -53,10 +57,12 @@
     onclick = undefined,
     children,
     class: className = "",
+    ...attachments
   }: Props = $props();
 </script>
 
 <button
+  {...attachments}
   {type}
   class={[
     "kit-icon-button",
