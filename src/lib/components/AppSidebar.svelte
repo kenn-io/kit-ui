@@ -162,7 +162,7 @@
   const MIN_WIDTH = 192;
   const MAX_WIDTH = 384;
   // An edge dragged left of this, halfway between the rail and the narrowest
-  // full sidebar, collapses to the rail; dragged right of it, it expands.
+  // full sidebar, collapses to the rail.
   const SNAP_WIDTH = (RAIL_WIDTH + MIN_WIDTH) / 2;
 
   const uid = $props.id();
@@ -270,14 +270,17 @@
 
   // The full sidebar's width a resize calls for, or null for the rail. An
   // arrow key at the narrowest width collapses, and one from the rail opens
-  // the narrowest full sidebar; a pointer snaps at SNAP_WIDTH.
+  // the narrowest full sidebar. A pointer collapses the sidebar left of
+  // SNAP_WIDTH, but opens the rail only at MIN_WIDTH, so the full sidebar's
+  // edge appears under the pointer instead of jumping ahead of it.
   function resizedTo(event: SplitResizeEvent): number | null {
     if (event.event instanceof KeyboardEvent) {
       if (startRail) return event.delta > 0 ? MIN_WIDTH : null;
       return event.delta < 0 && startWidth <= MIN_WIDTH ? null : fit(startWidth + event.delta);
     }
     const edge = startWidth + event.delta;
-    return edge < SNAP_WIDTH ? null : fit(edge);
+    if (edge < SNAP_WIDTH || (edge < MIN_WIDTH && (dragRail ?? startRail))) return null;
+    return fit(edge);
   }
 
   function resized(event: SplitResizeEvent): void {

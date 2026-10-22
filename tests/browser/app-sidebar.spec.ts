@@ -599,9 +599,12 @@ test("dragging past the snap point collapses to the rail, and dragging out expan
   await page.mouse.move(700, 400);
   await expect(edge(page)).not.toHaveCSS("background-color", accent);
 
-  // Back right of the snap point, the full sidebar opens at the narrowest
-  // width and follows the pointer from there.
-  await dragEdgeTo(page, 130);
+  // Out of the rail, the full sidebar opens only when the pointer reaches its
+  // narrowest width, so its edge appears under the pointer, and follows the
+  // pointer from there.
+  await dragEdgeTo(page, 180);
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  await page.mouse.move(190, 400, { steps: 4 });
   await expect.poll(() => sidebarWidth(page)).toBe(192);
   await page.mouse.move(258, 400, { steps: 4 });
   await expect.poll(() => sidebarWidth(page)).toBe(260);
