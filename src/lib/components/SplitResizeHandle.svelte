@@ -232,7 +232,7 @@
   }
 
   /* A drag keeps the line lit even when the pointer leaves it. */
-  .kit-split-resize-handle:hover,
+  .kit-split-resize-handle:hover:not(:disabled),
   .kit-split-resize-handle:focus-visible,
   .kit-split-resize-handle--dragging {
     background: var(--accent-blue);

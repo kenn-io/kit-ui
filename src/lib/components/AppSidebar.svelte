@@ -44,7 +44,7 @@
   import PanelLeftClose from "@lucide/svelte/icons/panel-left-close";
   import PanelLeftOpen from "@lucide/svelte/icons/panel-left-open";
   import { MediaQuery } from "svelte/reactivity";
-  import { flushSync, tick } from "svelte";
+  import { tick } from "svelte";
   import { innerHeight } from "svelte/reactivity/window";
   import { BREAKPOINTS, MEDIA } from "../breakpoints.js";
   import { trapFocus } from "../utils/focus-trap.js";
@@ -213,10 +213,7 @@
   // and the edge's position; null between drags.
   let dragRail = $state<boolean | null>(null);
   let dragWidth = $state<number | null>(null);
-  // True for the moment a drag from the rail lays out the full sidebar to
-  // measure it.
-  let measuring = $state(false);
-  const rail = $derived(!narrow && !measuring && (dragRail ?? collapsed));
+  const rail = $derived(!narrow && (dragRail ?? collapsed));
 
   // The narrowest full sidebar in which its longest word fits; null until
   // the full sidebar has been laid out.
@@ -232,13 +229,16 @@
 
   async function chooseCollapsed(choice: boolean): Promise<void> {
     // A current view's link leaves the panel when it collapses, so focus on
-    // it would fall to the page; send it to the section link instead.
+    // it would fall to the page; send it to the section link instead. The
+    // edge is disabled in the rail, so focus on it goes to the expand button.
     const active = document.activeElement;
-    const section = active?.closest(".kit-app-sidebar__views")
+    const next = active?.closest(".kit-app-sidebar__views")
       ? active
           .closest("li:has(> .kit-app-sidebar__section)")
           ?.querySelector<HTMLElement>(".kit-app-sidebar__section")
-      : null;
+      : choice && active?.matches(".kit-app-sidebar > .kit-split-resize-handle")
+        ? active.parentElement?.querySelector<HTMLElement>(".kit-app-sidebar__pin")
+        : null;
     collapsedChoice = choice;
     try {
       localStorage.setItem(storageKey, choice ? "collapsed" : "expanded");
@@ -246,9 +246,9 @@
       // Storage blocked: the choice lasts until the page reloads.
     }
     oncollapsedchange?.(choice);
-    if (section) {
+    if (next) {
       await tick();
-      if (!active?.isConnected) section.focus();
+      if (!active?.isConnected || active.matches(":disabled")) next.focus();
     }
   }
 
@@ -297,34 +297,23 @@
     };
   });
 
-  // The rail and width the sidebar had when a resize started, and the width
-  // below which it shows the rail.
-  let startRail = false;
+  // The width the sidebar had when a resize started, and the width below
+  // which it shows the rail. The edge is disabled in the rail, so a resize
+  // always starts from the full sidebar.
   let startWidth = DEFAULT_WIDTH;
   let railBelow = DEFAULT_WIDTH;
 
   function resizeStarted(): void {
-    startRail = rail;
     startWidth = Math.round(inline?.getBoundingClientRect().width ?? DEFAULT_WIDTH);
-    // The rail shows only icons, so lay the full sidebar out for a moment,
-    // before the browser paints, to measure its words.
-    if (startRail) flushSync(() => (measuring = true));
     fitWidth = measureFit();
-    if (startRail) flushSync(() => (measuring = false));
     railBelow = fitWidth ?? DEFAULT_WIDTH;
   }
 
   // Whether a resize calls for the rail, and the edge's position. A pointer
   // moves the edge anywhere from the rail's width to MAX_WIDTH, and the
   // sidebar shows the rail wherever its longest word would not fit. An arrow
-  // key that would squeeze a word collapses, and one from the rail opens the
-  // narrowest full sidebar.
+  // key that would squeeze a word collapses.
   function resizedTo(event: SplitResizeEvent): { rail: boolean; width: number } {
-    if (event.event instanceof KeyboardEvent && startRail) {
-      return event.delta > 0
-        ? { rail: false, width: railBelow }
-        : { rail: true, width: RAIL_WIDTH };
-    }
     const width = fit(startWidth + event.delta);
     if (width >= railBelow) return { rail: false, width };
     const keyboard = event.event instanceof KeyboardEvent;
@@ -343,11 +332,10 @@
     dragWidth = null;
     // Let go over the rail, the sidebar settles to the rail's own width.
     if (next.rail) {
-      if (!startRail) void chooseCollapsed(true);
+      void chooseCollapsed(true);
       return;
     }
-    if (startRail || next.width !== startWidth) chooseWidth(next.width);
-    if (startRail) void chooseCollapsed(false);
+    if (next.width !== startWidth) chooseWidth(next.width);
   }
 
   function isEditable(target: EventTarget | null): boolean {
@@ -705,6 +693,7 @@
       ariaValueMax={MAX_WIDTH}
       ariaValueNow={rail ? RAIL_WIDTH : (dragWidth ?? fullWidth ?? DEFAULT_WIDTH)}
       ariaValueText={rail ? collapsedValueText : undefined}
+      disabled={rail && dragRail === null}
       onActivate={() => void toggleCollapsed()}
       onResizeStart={resizeStarted}
       onResize={resized}
