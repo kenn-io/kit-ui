@@ -56,6 +56,8 @@
     shortcutMatches,
   } from "../utils/shortcuts.js";
   import IconButton from "./IconButton.svelte";
+  import SplitResizeHandle from "./SplitResizeHandle.svelte";
+  import type { SplitResizeEvent } from "./split-resize.js";
 
   interface Props {
     groups: SidebarGroup[];
@@ -79,6 +81,14 @@
     /** Called with the new state when someone collapses or expands the sidebar. */
     oncollapsedchange?: (collapsed: boolean) => void;
     /**
+     * A saved width in pixels from the host, for a host whose localStorage
+     * does not last. It wins over the width stored under `storageKey`.
+     * `null` or absent means the host has none.
+     */
+    width?: number | null;
+    /** Called with the new width in pixels when someone finishes resizing the sidebar. */
+    onwidthchange?: (width: number) => void;
+    /**
      * Brand area at the top of the panel. `rail` is true in the icon-only
      * rail; `drawer` is true inside the narrow drawer.
      */
@@ -101,6 +111,10 @@
     expandLabel?: string;
     /** Accessible name of the collapse button while expanded. Default "Collapse sidebar". */
     collapseLabel?: string;
+    /** Accessible name of the sidebar's resizable edge. Default "Resize sidebar". */
+    resizeLabel?: string;
+    /** What the resizable edge reads as its value in the rail. Default "Collapsed". */
+    collapsedValueText?: string;
   }
 
   let {
@@ -110,6 +124,8 @@
     storageKey,
     collapsed: hostChoice = null,
     oncollapsedchange,
+    width: hostWidth = null,
+    onwidthchange,
     brand,
     narrowBar,
     footer,
@@ -118,6 +134,8 @@
     drawerLabel = "Navigation",
     expandLabel = "Expand sidebar",
     collapseLabel = "Collapse sidebar",
+    resizeLabel = "Resize sidebar",
+    collapsedValueText = "Collapsed",
   }: Props = $props();
 
   type SizedIcon = Component<{ size?: number; "aria-hidden"?: "true" }>;
@@ -137,6 +155,15 @@
   const isMac = isMacPlatform();
   const toggleKeys = formatShortcutKeys("mod+b", isMac).join(isMac ? "" : "+");
   const toggleAriaKeys = isMac ? "Meta+B" : "Control+B";
+  // Widths in pixels. The rail and the default width are 3.5rem and 15rem in
+  // CSS, which are these at the default font size.
+  const RAIL_WIDTH = 56;
+  const DEFAULT_WIDTH = 240;
+  const MIN_WIDTH = 192;
+  const MAX_WIDTH = 384;
+  // An edge dragged left of this, halfway between the rail and the narrowest
+  // full sidebar, collapses to the rail; dragged right of it, it expands.
+  const SNAP_WIDTH = (RAIL_WIDTH + MIN_WIDTH) / 2;
 
   const uid = $props.id();
   const narrowWindow = new MediaQuery(MEDIA.wide);
@@ -149,6 +176,20 @@
       return stored === null ? null : stored !== "expanded";
     } catch {
       // Storage blocked or absent: the width decides.
+      return null;
+    }
+  }
+
+  function fit(width: number): number {
+    return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(width)));
+  }
+
+  function readWidth(key: string): number | null {
+    try {
+      const stored = Number(localStorage.getItem(`${key}-width`) ?? Number.NaN);
+      return Number.isFinite(stored) ? fit(stored) : null;
+    } catch {
+      // Storage blocked or absent: the default width stands.
       return null;
     }
   }
@@ -172,9 +213,17 @@
   // make one, so the width decides.
   let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
   const collapsed = $derived(collapsedChoice ?? (railWidth && !touch.current));
-  const rail = $derived(!narrow && collapsed);
+  // While someone drags the edge, the rail or full sidebar the edge's
+  // position calls for, and the full sidebar's width; null between drags.
+  let dragRail = $state<boolean | null>(null);
+  let dragWidth = $state<number | null>(null);
+  const rail = $derived(!narrow && (dragRail ?? collapsed));
 
-  async function toggleCollapsed(): Promise<void> {
+  // Someone's chosen width; null until they resize, so CSS's 15rem applies.
+  let widthChoice = $derived(hostWidth === null ? readWidth(storageKey) : fit(hostWidth));
+  const fullWidth = $derived(dragWidth ?? widthChoice);
+
+  async function chooseCollapsed(choice: boolean): Promise<void> {
     // A current view's link leaves the panel when it collapses, so focus on
     // it would fall to the page; send it to the section link instead.
     const active = document.activeElement;
@@ -183,17 +232,70 @@
           .closest("li:has(> .kit-app-sidebar__section)")
           ?.querySelector<HTMLElement>(".kit-app-sidebar__section")
       : null;
-    collapsedChoice = !collapsed;
+    collapsedChoice = choice;
     try {
-      localStorage.setItem(storageKey, collapsedChoice ? "collapsed" : "expanded");
+      localStorage.setItem(storageKey, choice ? "collapsed" : "expanded");
     } catch {
       // Storage blocked: the choice lasts until the page reloads.
     }
-    oncollapsedchange?.(collapsedChoice);
+    oncollapsedchange?.(choice);
     if (section) {
       await tick();
       if (!active?.isConnected) section.focus();
     }
+  }
+
+  function toggleCollapsed(): Promise<void> {
+    return chooseCollapsed(!collapsed);
+  }
+
+  function chooseWidth(width: number): void {
+    widthChoice = width;
+    try {
+      localStorage.setItem(`${storageKey}-width`, String(width));
+    } catch {
+      // Storage blocked: the width lasts until the page reloads.
+    }
+    onwidthchange?.(width);
+  }
+
+  // The rail and width the sidebar had when a resize started.
+  let startRail = false;
+  let startWidth = DEFAULT_WIDTH;
+
+  function resizeStarted(): void {
+    startRail = rail;
+    startWidth = Math.round(inline?.getBoundingClientRect().width ?? DEFAULT_WIDTH);
+  }
+
+  // The full sidebar's width a resize calls for, or null for the rail. An
+  // arrow key at the narrowest width collapses, and one from the rail opens
+  // the narrowest full sidebar; a pointer snaps at SNAP_WIDTH.
+  function resizedTo(event: SplitResizeEvent): number | null {
+    if (event.event instanceof KeyboardEvent) {
+      if (startRail) return event.delta > 0 ? MIN_WIDTH : null;
+      return event.delta < 0 && startWidth <= MIN_WIDTH ? null : fit(startWidth + event.delta);
+    }
+    const edge = startWidth + event.delta;
+    return edge < SNAP_WIDTH ? null : fit(edge);
+  }
+
+  function resized(event: SplitResizeEvent): void {
+    const width = resizedTo(event);
+    dragRail = width === null;
+    dragWidth = width;
+  }
+
+  function resizeEnded(event: SplitResizeEvent): void {
+    const width = resizedTo(event);
+    dragRail = null;
+    dragWidth = null;
+    if (width === null) {
+      if (!startRail) void chooseCollapsed(true);
+      return;
+    }
+    if (startRail || width !== startWidth) chooseWidth(width);
+    if (startRail) void chooseCollapsed(false);
   }
 
   function isEditable(target: EventTarget | null): boolean {
@@ -535,26 +637,50 @@
     {/if}
   </dialog>
 {:else}
-  <div class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]} bind:this={inline}>
-    {@render panelContent(false)}
+  <div
+    class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]}
+    style:width={rail || fullWidth === null ? undefined : `${fullWidth}px`}
+    bind:this={inline}
+  >
+    <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
+    <SplitResizeHandle
+      ariaLabel={resizeLabel}
+      ariaValueMin={RAIL_WIDTH}
+      ariaValueMax={MAX_WIDTH}
+      ariaValueNow={rail ? RAIL_WIDTH : (fullWidth ?? DEFAULT_WIDTH)}
+      ariaValueText={rail ? collapsedValueText : undefined}
+      onActivate={() => void toggleCollapsed()}
+      onResizeStart={resizeStarted}
+      onResize={resized}
+      onResizeEnd={resizeEnded}
+    />
   </div>
 {/if}
 
 <style>
   /* One below --z-overlay: in-place overlays such as Modal cover the sidebar
    * wherever they sit in the document, and flyouts still cover the page. */
+  /* The resize handle is the sidebar's right edge, so the sidebar draws no
+   * border there. No transition: the width follows the pointer. */
   .kit-app-sidebar {
     position: sticky;
     top: 0;
     z-index: calc(var(--z-overlay) - 1);
     box-sizing: border-box;
+    display: flex;
     flex: none;
     width: 15rem;
     height: var(--kit-app-sidebar-height, 100dvh);
-    overflow-y: auto;
-    border-right: 1px solid var(--border-default);
     background: var(--bg-surface);
     box-shadow: var(--shadow-raised, none);
+  }
+
+  .kit-app-sidebar__scroll {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
   }
 
   .kit-app-sidebar--rail {
@@ -604,7 +730,6 @@
     flex: 1 0 auto;
     flex-direction: column;
     gap: var(--space-5);
-    min-height: 100%;
     padding: 0 var(--space-4) var(--space-5);
   }
 

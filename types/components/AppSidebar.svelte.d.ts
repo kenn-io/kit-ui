@@ -53,6 +53,14 @@ interface Props {
     /** Called with the new state when someone collapses or expands the sidebar. */
     oncollapsedchange?: (collapsed: boolean) => void;
     /**
+     * A saved width in pixels from the host, for a host whose localStorage
+     * does not last. It wins over the width stored under `storageKey`.
+     * `null` or absent means the host has none.
+     */
+    width?: number | null;
+    /** Called with the new width in pixels when someone finishes resizing the sidebar. */
+    onwidthchange?: (width: number) => void;
+    /**
      * Brand area at the top of the panel. `rail` is true in the icon-only
      * rail; `drawer` is true inside the narrow drawer.
      */
@@ -81,6 +89,10 @@ interface Props {
     expandLabel?: string;
     /** Accessible name of the collapse button while expanded. Default "Collapse sidebar". */
     collapseLabel?: string;
+    /** Accessible name of the sidebar's resizable edge. Default "Resize sidebar". */
+    resizeLabel?: string;
+    /** What the resizable edge reads as its value in the rail. Default "Collapsed". */
+    collapsedValueText?: string;
 }
 declare const AppSidebar: Component<Props, {}, "">;
 type AppSidebar = ReturnType<typeof AppSidebar>;

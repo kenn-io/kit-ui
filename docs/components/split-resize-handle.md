@@ -72,6 +72,8 @@ it is easy to grab without looking thicker.
 | `ariaValueMin`  | `number`                            | required       | Separator minimum value                                                                                                            |
 | `ariaValueMax`  | `number`                            | required       | Separator maximum value                                                                                                            |
 | `ariaValueNow`  | `number`                            | required       | Current separator value                                                                                                            |
+| `ariaValueText` | `string`                            | —              | Read aloud in place of `ariaValueNow`, such as "Collapsed"                                                                         |
+| `onActivate`    | `(event) => void`                   | —              | Enter on the focused handle or a double-click, for example to collapse or restore a pane                                           |
 | `onResizeStart` | `(event) => void`                   | —              | Snapshot the starting dimension here                                                                                               |
 | `onResize`      | `(event: SplitResizeEvent) => void` | —              | Fires on every pointer move or keyboard step                                                                                       |
 | `onResizeEnd`   | `(event: SplitResizeEvent) => void` | —              | Commit and persist the final dimension                                                                                             |
@@ -85,4 +87,4 @@ before the first move, `onResizeEnd` receives the zero-delta sample derived from
 the original `pointerdown`; after a move it receives the same sample and raw
 `pointermove` event last sent to `onResize`. Axis-specific `touch-action`
 preserves perpendicular page scrolling while keeping the resize axis under
-pointer control. Keyboard presses fire start/resize/end as one atomic step.
+pointer control. Keyboard presses fire start/resize/end as one atomic step. While a pointer drags it, the handle stays lit, even after the pointer leaves it.

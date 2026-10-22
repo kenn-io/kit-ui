@@ -5,7 +5,9 @@
   // ?app-sidebar-groups=end-only renders only the end group, and
   // ?app-sidebar-labels=es names every control in Spanish, and
   // ?app-sidebar-host=collapsed or =expanded passes a host-saved choice and
-  // records each change in window.sidebarChanges.
+  // records each change in window.sidebarChanges, and
+  // ?app-sidebar-host-width=<px> passes a host-saved width and records each
+  // change in window.sidebarWidths.
   import FileTextIcon from "@lucide/svelte/icons/file-text";
   import HouseIcon from "@lucide/svelte/icons/house";
   import SettingsIcon from "@lucide/svelte/icons/settings";
@@ -19,8 +21,11 @@
   const withFooter = params.get("app-sidebar-footer") !== "none";
   const hostParam = params.get("app-sidebar-host");
   const hostChoice = hostParam === null ? null : hostParam === "collapsed";
+  const hostWidthParam = params.get("app-sidebar-host-width");
+  const hostWidth = hostWidthParam === null ? null : Number(hostWidthParam);
   const sidebarChanges: boolean[] = [];
-  Object.assign(window, { sidebarChanges });
+  const sidebarWidths: number[] = [];
+  Object.assign(window, { sidebarChanges, sidebarWidths });
   const labels: Partial<ComponentProps<typeof AppSidebar>> =
     params.get("app-sidebar-labels") === "es"
       ? {
@@ -124,6 +129,8 @@
     storageKey="kit-ui-demo-app-sidebar"
     collapsed={hostChoice}
     oncollapsedchange={(collapsed) => sidebarChanges.push(collapsed)}
+    width={hostWidth}
+    onwidthchange={(width) => sidebarWidths.push(width)}
     footer={withFooter ? themeFooter : undefined}
   >
     {#snippet brand({ rail })}

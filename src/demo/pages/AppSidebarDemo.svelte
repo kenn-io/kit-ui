@@ -8,7 +8,7 @@
 
 <DemoSection
   title="Three width bands"
-  description="At 900px and narrower a top bar's menu button opens the sidebar in a modal drawer. From 901 to 1439px the sidebar is an icon rail: hover or focus an icon for its flyout, and the pin button expands the rail and remembers the choice. Touch screens start with the rail pinned open. At 1440px and wider the full sidebar shows the current section's views."
+  description="At 900px and narrower a top bar's menu button opens the sidebar in a modal drawer. From 901 to 1439px the sidebar is an icon rail: hover or focus an icon for its flyout, and the pin button expands the rail and remembers the choice. Drag the sidebar's right edge to resize it, or past the snap point to collapse it; double-click the edge or press Enter on it to toggle the rail. Touch screens start with the rail pinned open. At 1440px and wider the full sidebar shows the current section's views."
   code={`<AppSidebar {groups} location={{ section: "reports", view: "overview" }} {page} storageKey="acme-sidebar">
   {#snippet brand({ rail })}<a href="/">{rail ? "A" : "Acme"}</a>{/snippet}
   {#snippet narrowBar()}<span>Reports</span>{/snippet}

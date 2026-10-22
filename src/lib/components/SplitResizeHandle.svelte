@@ -15,6 +15,11 @@
     ariaValueMin: number;
     ariaValueMax: number;
     ariaValueNow: number;
+    /** Reads the value aloud in place of `ariaValueNow`, such as "Collapsed". */
+    ariaValueText?: string;
+    /** Called when someone presses Enter on the focused handle or
+     * double-clicks it, for example to collapse or restore a pane. */
+    onActivate?: (event: KeyboardEvent | MouseEvent) => void;
     onResizeStart?: (event: KeyboardEvent | PointerEvent) => void;
     onResize?: (event: SplitResizeEvent) => void;
     onResizeEnd?: (event: SplitResizeEvent) => void;
@@ -29,12 +34,15 @@
     ariaValueMin,
     ariaValueMax,
     ariaValueNow,
+    ariaValueText,
+    onActivate,
     onResizeStart,
     onResize,
     onResizeEnd,
   }: Props = $props();
 
   let cleanup: (() => void) | null = null;
+  let dragging = $state(false);
 
   function position(event: PointerEvent, resizeOrientation: SplitResizeOrientation): number {
     return resizeOrientation === "horizontal" ? event.clientX : event.clientY;
@@ -58,6 +66,7 @@
   function stopResize(): void {
     cleanup?.();
     cleanup = null;
+    dragging = false;
   }
 
   function startResize(event: PointerEvent): void {
@@ -69,6 +78,7 @@
     const pointerId = event.pointerId;
     let lastResizeEvent = resizeEventFromPointer(event, start, resizeOrientation);
     handle.setPointerCapture(pointerId);
+    dragging = true;
 
     onResizeStart?.(event);
 
@@ -127,6 +137,12 @@
 
   function handleKeydown(event: KeyboardEvent): void {
     if (disabled) return;
+    if (event.key === "Enter" && onActivate) {
+      // A button turns Enter into a click; the handle has no click action.
+      event.preventDefault();
+      onActivate(event);
+      return;
+    }
     const delta = keyboardDelta(event);
     if (delta === null) return;
     event.preventDefault();
@@ -152,6 +168,7 @@
 <button
   class="kit-split-resize-handle kit-control-states kit-split-resize-handle--{orientation}"
   class:kit-split-resize-handle--column={variant === "column"}
+  class:kit-split-resize-handle--dragging={dragging}
   type="button"
   role="separator"
   aria-label={ariaLabel}
@@ -159,9 +176,11 @@
   aria-valuemin={ariaValueMin}
   aria-valuemax={ariaValueMax}
   aria-valuenow={ariaValueNow}
+  aria-valuetext={ariaValueText}
   {disabled}
   onkeydown={handleKeydown}
   onpointerdown={startResize}
+  ondblclick={onActivate}
 ></button>
 
 <style>
@@ -212,8 +231,10 @@
     inset: -2px 0;
   }
 
+  /* A drag keeps the line lit even when the pointer leaves it. */
   .kit-split-resize-handle:hover,
-  .kit-split-resize-handle:focus-visible {
+  .kit-split-resize-handle:focus-visible,
+  .kit-split-resize-handle--dragging {
     background: var(--accent-blue);
   }
 
