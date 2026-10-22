@@ -881,7 +881,12 @@ test("measuring rows leaves no resize report undelivered", async ({ page }) => {
 // The browser lays out the page once per frame. Reading row positions while
 // Svelte updates the table, before that layout, makes it lay out the whole
 // page early, and again for the frame once anything else changes.
-test("an update reads no layout while it renders the table", async ({ page, browser }) => {
+test("an update reads no layout while it renders the table", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "tracing needs the Chrome DevTools Protocol");
   await gotoPage(page, "virtual-table");
   const table = bounded(page);
   await expect(dataRows(table).first()).toContainText("#0");
