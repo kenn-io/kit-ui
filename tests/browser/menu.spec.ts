@@ -44,6 +44,18 @@ test("action menu manages focus, disabled items, selection, and dismissal", asyn
   await expect(page.locator("summary").first()).toBeFocused();
 });
 
+test("an aria-disabled child trigger does not open its menu", async ({ page }) => {
+  await gotoPage(page, "menu");
+  const trigger = page.getByRole("button", { name: "Task actions" });
+  await trigger.evaluate((el) => el.setAttribute("aria-disabled", "true"));
+  await trigger.click({ force: true });
+  await trigger.focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("menuitem", { name: "Move issue" })).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+});
+
 test("radio menu exposes and updates a single checked item", async ({ page }) => {
   await gotoPage(page, "menu");
 

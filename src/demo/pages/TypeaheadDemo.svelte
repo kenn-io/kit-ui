@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { HarnessIcon, Typeahead, type TypeaheadOption } from "../../lib/index.js";
+  import GlobeIcon from "@lucide/svelte/icons/globe";
+  import {
+    HarnessIcon,
+    IconButton,
+    Tooltip,
+    Typeahead,
+    type TypeaheadOption,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let agent = $state("claude");
@@ -81,6 +88,8 @@
 
   let owner = $state("");
   let zone = $state("");
+  let iconZone = $state("");
+  const iconZoneLabel = $derived(`Time zone: ${iconZone || "Server time"}`);
   const zones: TypeaheadOption[] = [
     { name: "UTC", label: "UTC", meta: "GMT+0" },
     {
@@ -209,6 +218,51 @@
     />
   </div>
   <span>value: <code data-demo="zone-value">{zone || "(server time)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Open from a button the app renders"
+  description="The trigger snippet hands an attachment to a button you render, such as an IconButton. The button stays put while the list is open, the search field moves into the popover, and Escape or a choice returns focus to the button."
+  code={`<Typeahead
+  options={zones}
+  value={zone}
+  fallbackLabel="Server time"
+  placeholder="Time zone"
+  allowClear
+  clearLabel="Server time"
+  onselect={(v) => {
+    zone = v;
+  }}
+>
+  {#snippet trigger({ attachment })}
+    <Tooltip text={label}>
+      <IconButton ariaLabel={label} title="" {@attach attachment}>
+        <GlobeIcon size={14} aria-hidden="true" />
+      </IconButton>
+    </Tooltip>
+  {/snippet}
+</Typeahead>`}
+>
+  <Typeahead
+    options={zones}
+    value={iconZone}
+    fallbackLabel="Server time"
+    placeholder="Time zone"
+    allowClear
+    clearLabel="Server time"
+    onselect={(v) => {
+      iconZone = v;
+    }}
+  >
+    {#snippet trigger({ attachment })}
+      <Tooltip text={iconZoneLabel}>
+        <IconButton ariaLabel={iconZoneLabel} title="" {@attach attachment}>
+          <GlobeIcon size={14} aria-hidden="true" />
+        </IconButton>
+      </Tooltip>
+    {/snippet}
+  </Typeahead>
+  <span>value: <code data-demo="icon-zone-value">{iconZone || "(server time)"}</code></span>
 </DemoSection>
 
 <DemoSection

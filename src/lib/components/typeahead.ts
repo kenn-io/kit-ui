@@ -1,3 +1,4 @@
+import type { Attachment } from "svelte/attachments";
 import type { HTMLInputAttributes } from "svelte/elements";
 
 type TypeaheadOwnedInputAttribute =
@@ -34,4 +35,10 @@ export interface TypeaheadOption {
   children?: TypeaheadOption[];
   /** Initial expansion for a group row (default true). */
   expanded?: boolean;
+}
+
+/** Passed to a Typeahead `trigger` snippet. Attach it to the caller's button
+ * with `{@attach attachment}`. */
+export interface TypeaheadTriggerProps {
+  attachment: Attachment<HTMLButtonElement>;
 }

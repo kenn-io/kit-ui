@@ -1,5 +1,5 @@
 import { type Snippet } from "svelte";
-import type { TypeaheadInputAttributes, TypeaheadOption } from "./typeahead.js";
+import type { TypeaheadInputAttributes, TypeaheadOption, TypeaheadTriggerProps } from "./typeahead.js";
 interface Props {
     options: TypeaheadOption[];
     value: string;
@@ -41,6 +41,11 @@ interface Props {
     header?: Snippet;
     /** Decorative icon before each option and the selected trigger label. */
     icon?: Snippet<[TypeaheadOption]>;
+    /** Replaces the built-in trigger with a button the caller renders, such as an
+     * IconButton. Attach `attachment` to it. The button stays in place while
+     * the list is open and the search field moves into the popover. The
+     * caller names the button. */
+    trigger?: Snippet<[TypeaheadTriggerProps]>;
     /** Return `false` (or a promise of `false`), or throw, to keep the list
      * open — e.g. to veto a value or surface `error`. */
     onselect: (value: string) => void | boolean | Promise<void | boolean>;
