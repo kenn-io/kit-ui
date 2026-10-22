@@ -44,7 +44,7 @@
   import PanelLeftClose from "@lucide/svelte/icons/panel-left-close";
   import PanelLeftOpen from "@lucide/svelte/icons/panel-left-open";
   import { MediaQuery } from "svelte/reactivity";
-  import { tick } from "svelte";
+  import { flushSync, tick } from "svelte";
   import { innerHeight } from "svelte/reactivity/window";
   import { BREAKPOINTS, MEDIA } from "../breakpoints.js";
   import { trapFocus } from "../utils/focus-trap.js";
@@ -159,11 +159,7 @@
   // CSS, which are these at the default font size.
   const RAIL_WIDTH = 56;
   const DEFAULT_WIDTH = 240;
-  const MIN_WIDTH = 192;
   const MAX_WIDTH = 384;
-  // An edge dragged left of this, halfway between the rail and the narrowest
-  // full sidebar, collapses to the rail.
-  const SNAP_WIDTH = (RAIL_WIDTH + MIN_WIDTH) / 2;
 
   const uid = $props.id();
   const narrowWindow = new MediaQuery(MEDIA.wide);
@@ -181,7 +177,7 @@
   }
 
   function fit(width: number): number {
-    return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(width)));
+    return Math.min(MAX_WIDTH, Math.max(RAIL_WIDTH, Math.round(width)));
   }
 
   function readWidth(key: string): number | null {
@@ -213,15 +209,26 @@
   // make one, so the width decides.
   let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
   const collapsed = $derived(collapsedChoice ?? (railWidth && !touch.current));
-  // While someone drags the edge, the rail or full sidebar the edge's
-  // position calls for, and the full sidebar's width; null between drags.
+  // While someone drags the edge, whether its position calls for the rail,
+  // and the edge's position; null between drags.
   let dragRail = $state<boolean | null>(null);
   let dragWidth = $state<number | null>(null);
-  const rail = $derived(!narrow && (dragRail ?? collapsed));
+  // True for the moment a drag from the rail lays out the full sidebar to
+  // measure it.
+  let measuring = $state(false);
+  const rail = $derived(!narrow && !measuring && (dragRail ?? collapsed));
 
-  // Someone's chosen width; null until they resize, so CSS's 15rem applies.
+  // The narrowest full sidebar in which its longest word fits; null until
+  // the full sidebar has been laid out.
+  let fitWidth = $state<number | null>(null);
+  // Someone's chosen width; null until they resize.
   let widthChoice = $derived(hostWidth === null ? readWidth(storageKey) : fit(hostWidth));
-  const fullWidth = $derived(dragWidth ?? widthChoice);
+  // The full sidebar's width, never narrower than its longest word; null
+  // while CSS's 15rem is enough.
+  const fullWidth = $derived.by(() => {
+    const width = Math.max(widthChoice ?? DEFAULT_WIDTH, fitWidth ?? 0);
+    return widthChoice === null && width === DEFAULT_WIDTH ? null : width;
+  });
 
   async function chooseCollapsed(choice: boolean): Promise<void> {
     // A current view's link leaves the panel when it collapses, so focus on
@@ -259,45 +266,73 @@
     onwidthchange?.(width);
   }
 
-  // The rail and width the sidebar had when a resize started.
+  // Labels wrap between words, so the panel's min-content width is the
+  // width its longest word needs; the sidebar adds the edge and any
+  // scrollbar around the panel.
+  function measureFit(): number | null {
+    if (!panel || !inline) return null;
+    const around = inline.getBoundingClientRect().width - panel.getBoundingClientRect().width;
+    const width = panel.style.width;
+    panel.style.width = "min-content";
+    const content = panel.getBoundingClientRect().width;
+    panel.style.width = width;
+    return Math.min(MAX_WIDTH, Math.ceil(content + around));
+  }
+
+  $effect(() => {
+    if (!rail) fitWidth = measureFit();
+  });
+
+  // The rail and width the sidebar had when a resize started, and the width
+  // below which it shows the rail.
   let startRail = false;
   let startWidth = DEFAULT_WIDTH;
+  let railBelow = DEFAULT_WIDTH;
 
   function resizeStarted(): void {
     startRail = rail;
     startWidth = Math.round(inline?.getBoundingClientRect().width ?? DEFAULT_WIDTH);
+    // The rail shows only icons, so lay the full sidebar out for a moment,
+    // before the browser paints, to measure its words.
+    if (startRail) flushSync(() => (measuring = true));
+    fitWidth = measureFit();
+    if (startRail) flushSync(() => (measuring = false));
+    railBelow = fitWidth ?? DEFAULT_WIDTH;
   }
 
-  // The full sidebar's width a resize calls for, or null for the rail. An
-  // arrow key at the narrowest width collapses, and one from the rail opens
-  // the narrowest full sidebar. A pointer collapses the sidebar left of
-  // SNAP_WIDTH, but opens the rail only at MIN_WIDTH, so the full sidebar's
-  // edge appears under the pointer instead of jumping ahead of it.
-  function resizedTo(event: SplitResizeEvent): number | null {
-    if (event.event instanceof KeyboardEvent) {
-      if (startRail) return event.delta > 0 ? MIN_WIDTH : null;
-      return event.delta < 0 && startWidth <= MIN_WIDTH ? null : fit(startWidth + event.delta);
+  // Whether a resize calls for the rail, and the edge's position. A pointer
+  // moves the edge anywhere from the rail's width to MAX_WIDTH, and the
+  // sidebar shows the rail wherever its longest word would not fit. An arrow
+  // key that would squeeze a word collapses, and one from the rail opens the
+  // narrowest full sidebar.
+  function resizedTo(event: SplitResizeEvent): { rail: boolean; width: number } {
+    if (event.event instanceof KeyboardEvent && startRail) {
+      return event.delta > 0
+        ? { rail: false, width: railBelow }
+        : { rail: true, width: RAIL_WIDTH };
     }
-    const edge = startWidth + event.delta;
-    if (edge < SNAP_WIDTH || (edge < MIN_WIDTH && (dragRail ?? startRail))) return null;
-    return fit(edge);
+    const width = fit(startWidth + event.delta);
+    if (width >= railBelow) return { rail: false, width };
+    const keyboard = event.event instanceof KeyboardEvent;
+    return { rail: true, width: keyboard ? RAIL_WIDTH : width };
   }
 
   function resized(event: SplitResizeEvent): void {
-    const width = resizedTo(event);
-    dragRail = width === null;
-    dragWidth = width;
+    const next = resizedTo(event);
+    dragRail = next.rail;
+    dragWidth = next.width;
   }
 
   function resizeEnded(event: SplitResizeEvent): void {
-    const width = resizedTo(event);
+    const next = resizedTo(event);
     dragRail = null;
     dragWidth = null;
-    if (width === null) {
+    // Let go over the rail, the sidebar settles to the rail's own width.
+    if (next.rail) {
       if (!startRail) void chooseCollapsed(true);
       return;
     }
-    if (startRail || width !== startWidth) chooseWidth(width);
+    if (startRail || next.width !== startWidth) chooseWidth(next.width);
     if (startRail) void chooseCollapsed(false);
   }
 
@@ -642,7 +677,11 @@
 {:else}
   <div
     class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]}
-    style:width={rail || fullWidth === null ? undefined : `${fullWidth}px`}
+    style:width={dragWidth !== null
+      ? `${dragWidth}px`
+      : rail || fullWidth === null
+        ? undefined
+        : `${fullWidth}px`}
     bind:this={inline}
   >
     <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
@@ -650,7 +689,7 @@
       ariaLabel={resizeLabel}
       ariaValueMin={RAIL_WIDTH}
       ariaValueMax={MAX_WIDTH}
-      ariaValueNow={rail ? RAIL_WIDTH : (fullWidth ?? DEFAULT_WIDTH)}
+      ariaValueNow={rail ? RAIL_WIDTH : (dragWidth ?? fullWidth ?? DEFAULT_WIDTH)}
       ariaValueText={rail ? collapsedValueText : undefined}
       onActivate={() => void toggleCollapsed()}
       onResizeStart={resizeStarted}
@@ -855,7 +894,10 @@
     border-top: 1px solid var(--border-muted);
   }
 
+  /* A drag can make the rail wider than its icons; they stay put at the
+   * rail's own width. */
   .kit-app-sidebar__panel--rail {
+    width: 3.5rem;
     padding-inline: 0;
   }
 
