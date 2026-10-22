@@ -802,3 +802,107 @@ test("a column added while the table is hidden is sized when it appears", async 
     )
     .toBeLessThan(95);
 });
+
+// A new array that keeps the same rows on screen re-renders none of them, so
+// none changes size, yet the old measurements no longer apply. Each kept
+// row is measured again, or the rows above the view count at the estimate
+// once they scroll out of it, and the rows in view jump.
+test("rows a new array keeps on screen are measured again", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Every ID contains "#", so this filter hands the table a new array of the
+  // same rows in the same order.
+  await page.getByRole("searchbox", { name: "Filter reviews" }).fill("#");
+  await page.waitForTimeout(200);
+  const row = table.locator('tbody > tr[aria-rowindex="17"]');
+  const top = () => row.evaluate((tr) => tr.getBoundingClientRect().top);
+  await table.evaluate((el) => (el.parentElement!.style.overflowAnchor = "none"));
+  const before = await top();
+  // Far enough that the tall first row leaves the rendered window.
+  await table.evaluate((el) => (el.parentElement!.scrollTop = 500));
+  await expect(dataRows(table).first()).not.toHaveAttribute("aria-rowindex", "2");
+  expect(Math.abs((await top()) - (before - 500))).toBeLessThan(1);
+});
+
+// Rows are measured in a ResizeObserver callback. Anything there that resized
+// an observed box would leave its report undelivered, which the browser
+// reports as an error on the page.
+test("measuring rows leaves no resize report undelivered", async ({ page }) => {
+  await page.addInitScript(() => {
+    const errors: string[] = [];
+    Object.assign(window, { pageErrors: errors });
+    addEventListener("error", (event) => errors.push(event.message));
+  });
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  await scrollWrapper(table, "middle");
+  await page.waitForTimeout(100);
+  await table.getByRole("button", { name: "ID" }).click();
+  await expect(dataRows(table).first()).toContainText("#");
+  await page.getByRole("searchbox", { name: "Filter reviews" }).fill("#999");
+  await expect(dataRows(table)).toHaveCount(11);
+  await page.getByRole("searchbox", { name: "Filter reviews" }).fill("");
+  await page.getByRole("checkbox", { name: "Show the Branch column" }).uncheck();
+  await table.evaluate((el) => {
+    el.querySelector<HTMLElement>("tbody > tr:not(.kit-virtual-table__spacer)")!.style.height =
+      "300px";
+  });
+  await inFlow(page).scrollIntoViewIfNeeded();
+  await inFlow(page).getByRole("button", { name: "Project" }).click();
+  await page.waitForTimeout(300);
+  expect(
+    await page.evaluate(() => (window as unknown as { pageErrors: string[] }).pageErrors),
+  ).toEqual([]);
+});
+
+// The browser lays out the page once per frame. Reading row positions while
+// Svelte updates the table, before that layout, makes it lay out the whole
+// page early, and again for the frame once anything else changes.
+test("an update reads no layout while it renders the table", async ({ page, browser }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const pageTable = inFlow(page);
+  // The page-scrolled table's top on screen, so the page scrolls nowhere as
+  // its rows change.
+  await pageTable.evaluate((el) => {
+    const scroller = document.querySelector(".content__body")!;
+    scroller.scrollTop +=
+      el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 100;
+  });
+  await page.waitForTimeout(300);
+  const search = page.getByRole("searchbox", { name: "Filter reviews" });
+  const settle = () =>
+    page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+  await browser.startTracing(page, {
+    categories: ["devtools.timeline", "disabled-by-default-devtools.timeline.stack"],
+  });
+  // Every keystroke hands the table a new array; sorting does too.
+  await search.evaluate((input: HTMLInputElement) => {
+    input.value = "#999";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await settle();
+  await pageTable
+    .getByRole("button", { name: "Project" })
+    .evaluate((button: HTMLElement) => button.click());
+  await settle();
+  const trace = JSON.parse((await browser.stopTracing()).toString()) as {
+    traceEvents: {
+      name: string;
+      args?: { beginData?: { stackTrace?: { url: string; functionName: string }[] } };
+    }[];
+  };
+  await expect(dataRows(table)).toHaveCount(11);
+  // A layout started from script carries the script's stack.
+  const forced = trace.traceEvents
+    .filter((event) => event.name === "Layout" || event.name === "UpdateLayoutTree")
+    .flatMap((event) => event.args?.beginData?.stackTrace ?? [])
+    .filter((frame) => frame.url.includes("VirtualTable.svelte"))
+    .map((frame) => frame.functionName);
+  expect(forced).toEqual([]);
+});
