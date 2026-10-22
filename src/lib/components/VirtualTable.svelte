@@ -28,9 +28,12 @@
      * the nearest scrolling ancestor, or the document. */
     scrollElement?: () => HTMLElement | null;
     /** Height in px of rows not yet rendered. Set it near the real row
-     * height: it sizes the scrollbar and places unmeasured rows. */
+     * height: it sizes the scrollbar and places unmeasured rows. The window
+     * follows measured heights one frame later, so an estimate far above the
+     * real height, with little overscan, can show a gap for that frame. */
     estimateRowHeight?: number;
-    /** Rows rendered beyond each edge of the visible area. */
+    /** Rows rendered beyond each edge of the visible area. They also cover
+     * the frame before the window follows newly measured heights. */
     overscan?: number;
     /** Keep the header visible while the body scrolls. */
     stickyHeader?: boolean;
@@ -98,25 +101,33 @@
   const measured = new Map<number, number>();
   let measureVersion = $state(0);
   let measuredFor: T[] | undefined;
+  // The index each row element was last measured at, for the current
+  // `items`. A row not yet measured at its index is observed afresh, which
+  // makes the observer report it once more after the next layout.
+  let measuredAt = new WeakMap<Element, number>();
 
   const heightOf = (index: number): number => {
     const h = measured.get(index) ?? estimateRowHeight;
     return h > 0 ? h : 1;
   };
 
-  const slice = $derived.by(() => {
-    void measureVersion;
-    if (measuredFor !== items) {
-      measured.clear();
-      measuredFor = items;
-    }
-    return virtualSlice({
+  const windowOf = () =>
+    virtualSlice({
       scrollTop,
       viewport,
       count: items.length,
       overscan: Math.max(0, Math.floor(overscan)),
       heightOf,
     });
+
+  const slice = $derived.by(() => {
+    void measureVersion;
+    if (measuredFor !== items) {
+      measured.clear();
+      measuredAt = new WeakMap();
+      measuredFor = items;
+    }
+    return windowOf();
   });
 
   // Height of the rows after the rendered window.
@@ -325,39 +336,77 @@
 
   // Each rendered row is observed, so any row changing height, even when
   // another changes by the opposite amount and the body keeps its size,
-  // measures the rows again.
+  // measures the rows again. Rows are measured in the observer's callback,
+  // which the browser runs after it lays out a frame, so reading their
+  // positions there costs no layout of its own. Reading them as soon as they
+  // render would make the browser lay out the whole page early, and again
+  // for the frame.
   let rowObserver: ResizeObserver | undefined;
   let watched = new Set<Element>();
-  function watchRows(rows: Element[]): void {
+  function watchRows(rows: HTMLTableRowElement[], start: number): void {
     if (!rowObserver) return;
-    const next = new Set(rows);
+    const next = new Set<Element>(rows);
     for (const el of watched) if (!next.has(el)) rowObserver.unobserve(el);
-    for (const el of next) if (!watched.has(el)) rowObserver.observe(el);
+    rows.forEach((tr, i) => {
+      // A row this observer watches at the index it was measured at needs
+      // nothing. A new observer, after the scroller changes, watches none.
+      if (watched.has(tr) && measuredAt.get(tr) === start + i) return;
+      // observe() ignores a row that is already observed.
+      if (watched.has(tr)) rowObserver!.unobserve(tr);
+      rowObserver!.observe(tr);
+    });
     watched = next;
   }
 
-  // Read rendered row heights, from the gap between consecutive row tops so
-  // collapsed borders are counted once, and number the rows for assistive
-  // technology, which only sees the rendered ones.
-  function measureRows(): void {
+  // New heights of rendered rows change nothing on screen until they move
+  // which rows the window holds, since the spacers stand in only for rows
+  // outside it. Moving the window resizes the table and the boxes observed
+  // around it, and doing that inside an observer's callback would leave
+  // their reports undelivered (a "ResizeObserver loop" error), so the move
+  // waits for the next frame, before its layout. Rows on screen already show
+  // at their real heights; only the overscan rows change a frame later.
+  let applyFrame = 0;
+  function applyHeights(): void {
+    cancelAnimationFrame(applyFrame);
+    applyFrame = 0;
+    measureVersion += 1;
+  }
+
+  const dataRows = (): HTMLTableRowElement[] =>
+    Array.from(body?.rows ?? []).filter((tr) => !tr.classList.contains(SPACER));
+
+  // Number the rendered rows for assistive technology, which only sees
+  // those, and watch them for measuring. It reads no layout, except to size
+  // columns that have no width yet.
+  function syncRows(): void {
     if (!body) return;
     const table = body.parentElement as HTMLTableElement;
     setAttribute(table, "aria-rowcount", String(items.length + 1));
     // An empty table shows only the `empty` row, which neither measures a
     // data row nor should decide the column widths.
-    if (items.length === 0) return watchRows([]);
-    const rows = Array.from(body.rows).filter((tr) => !tr.classList.contains(SPACER));
-    watchRows(rows);
+    if (items.length === 0) return watchRows([], 0);
+    const rows = dataRows();
+    const start = slice.start;
+    rows.forEach((tr, i) => setAttribute(tr, "aria-rowindex", String(start + i + 2)));
+    watchRows(rows, start);
     // Size any column still without a width, until it has one: a column
     // added while the list was empty or the table hidden is sized once rows
     // render or the table appears.
     if (headerCells().some((cell) => !widths.has(keyOf(cell)))) requestSizing();
-    if (rows.length === 0) return;
+  }
+
+  // Read rendered row heights, from the gap between consecutive row tops so
+  // collapsed borders are counted once. Returns whether any height changed.
+  function measureRows(): boolean {
+    if (!body || items.length === 0) return false;
+    const rows = dataRows();
+    if (rows.length === 0) return false;
+    const start = slice.start;
     const tops = rows.map((tr) => tr.getBoundingClientRect().top);
     let changed = false;
     rows.forEach((tr, i) => {
-      const index = slice.start + i;
-      setAttribute(tr, "aria-rowindex", String(index + 2));
+      const index = start + i;
+      measuredAt.set(tr, index);
       const next = tops[i + 1];
       const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
       if (h > 0 && measured.get(index) !== h) {
@@ -365,19 +414,20 @@
         changed = true;
       }
     });
-    if (changed) measureVersion += 1;
+    return changed;
   }
 
   $effect(() => {
     void slice;
-    untrack(measureRows);
+    untrack(syncRows);
   });
 
   /** Measure the rows and recompute which are visible. Call it after a
    * layout change that neither scrolls nor resizes the scroller, such as
    * content above the table collapsing. */
   export function refresh(): void {
-    measureRows();
+    syncRows();
+    if (measureRows()) applyHeights();
     updateWindow();
   }
 
@@ -413,18 +463,25 @@
     const sizes = new ResizeObserver(schedule);
     if (element !== document.scrollingElement) sizes.observe(element);
     sizes.observe(wrapper);
-    rowObserver = new ResizeObserver(schedule);
+    rowObserver = new ResizeObserver(() => {
+      if (!measureRows() || applyFrame !== 0) return;
+      const next = windowOf();
+      if (next.start !== slice.start || next.end !== slice.end)
+        applyFrame = requestAnimationFrame(applyHeights);
+    });
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
     const columnsChanged = new MutationObserver(() => {
       columns = Math.max(1, headerRow?.cells.length ?? 1);
       if (headerCells().every((cell) => widths.has(keyOf(cell)))) applyWidths();
-      measureRows();
+      syncRows();
     });
     if (headerRow) columnsChanged.observe(headerRow, { childList: true });
     return () => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(applyFrame);
+      applyFrame = 0;
       target.removeEventListener("scroll", updateWindow);
       window.removeEventListener("resize", resized);
       sizes.disconnect();

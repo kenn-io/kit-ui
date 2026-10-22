@@ -107,6 +107,7 @@
   const fitNoteColumn = (column: number) => (column === 0 ? 40 : undefined);
   let showBranch = $state(true);
   let pageTable = $state<ReturnType<typeof VirtualTable<Review>>>();
+  let boxed = $state(false);
   const pageSorter = new TableSort<Review>(
     { id: (r) => r.id, project: (r) => r.project, branch: (r) => r.branch },
     { key: "id" },
@@ -256,10 +257,11 @@
 table.refresh();`}
 >
   <Button label="Refresh the table" size="sm" onclick={() => pageTable?.refresh()} />
-  <div class="flow">
+  <Checkbox bind:checked={boxed} label="Scroll inside a box instead" />
+  <div class={boxed ? "host" : "flow"}>
     <VirtualTable
       bind:this={pageTable}
-      scroll="page"
+      scroll={boxed ? "self" : "page"}
       items={pageRows}
       rowKey={(r) => r.id}
       ariaLabel="Reviews on the page"
