@@ -146,6 +146,30 @@ test("mute and volume carry into the viewer and back", async ({ page }) => {
   ).toEqual({ muted: false, volume: 0.7 });
 });
 
+test("mute and volume changed in the viewer survive paging away and back", async ({ page }) => {
+  const video = await expandAt(page, 0, false);
+  await expanded(page).evaluate((node) => {
+    const media = node as HTMLVideoElement;
+    media.muted = true;
+    media.volume = 0.4;
+  });
+
+  await page.getByRole("button", { name: "Next item" }).click();
+  await expect(viewer(page)).toHaveAccessibleName("Screenshot A (2 of 6)");
+  await page.getByRole("button", { name: "Previous item" }).click();
+  await expect(expanded(page)).toBeVisible();
+
+  const audio = (media: Locator) =>
+    media.evaluate((node) => {
+      const element = node as HTMLVideoElement;
+      return { muted: element.muted, volume: element.volume };
+    });
+  expect(await audio(expanded(page))).toEqual({ muted: true, volume: 0.4 });
+  await page.keyboard.press("Escape");
+  await expect(viewer(page)).toHaveCount(0);
+  expect(await audio(video)).toEqual({ muted: true, volume: 0.4 });
+});
+
 test("a chosen speed carries to every player, the viewer, and the next visit", async ({ page }) => {
   const speed = inlinePlayer(page).getByRole("button", { name: /^Playback rate/ });
   await expect(speed).toHaveAttribute("data-rate", "1");
@@ -306,6 +330,43 @@ test("a player with several sources plays the first the browser supports, expand
   expect(await expanded(page).evaluate((node) => (node as HTMLVideoElement).currentSrc)).toMatch(
     /media-viewer-demo\.webm/,
   );
+});
+
+test("a player as narrow as a portrait video on a landscape phone keeps every control on it", async ({
+  browser,
+}) => {
+  // A 9:16 video in an 844x390 viewer is about 160px wide, and a touch
+  // screen makes each button 44px.
+  const context = await browser.newContext({
+    hasTouch: true,
+    viewport: { width: 844, height: 390 },
+  });
+  const page = await context.newPage();
+  await gotoPage(page, "media-viewer");
+  await page.evaluate(async () => {
+    const { mountVideoPlayer, clip } =
+      await import("/tests/browser/fixtures/mount-video-player.ts");
+    const host = mountVideoPlayer({ label: "Narrow video", src: clip });
+    host.style.width = "160px";
+    // Shaped like the viewer shapes a portrait video's player.
+    host.querySelector<HTMLElement>(".kit-video-player")!.style.aspectRatio = "9 / 16";
+  });
+  const player = page.locator(".kit-video-player").filter({ has: page.getByLabel("Narrow video") });
+  const bar = player.getByRole("group", { name: "Video controls" });
+  // Video.js labels its buttons once they connect.
+  await expect(bar.getByRole("button", { name: "Enter fullscreen" })).toBeVisible();
+
+  const box = (await player.boundingBox())!;
+  const buttons = await bar.getByRole("button").all();
+  expect(buttons.length).toBe(5);
+  for (const button of buttons) {
+    const control = (await button.boundingBox())!;
+    expect(control.x).toBeGreaterThanOrEqual(box.x);
+    expect(control.x + control.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
+    expect(control.y).toBeGreaterThanOrEqual(box.y);
+    expect(control.y + control.height).toBeLessThanOrEqual(box.y + box.height + 0.5);
+  }
+  await context.close();
 });
 
 test("a video item with no chosen source plays the first its sources the browser supports", async ({

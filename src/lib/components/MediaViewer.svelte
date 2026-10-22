@@ -93,9 +93,12 @@
       // Set by the viewer's own close controls, so a video leaving because
       // the viewer closed reports whether it was playing.
       closing: false,
-      // Where each video was when it left, so paging back resumes there
-      // (paused) instead of at the position handed over on open.
-      leftAt: new WeakMap<MediaViewerVideoItem, number>(),
+      // Where each video was when it left, and its sound, so paging back
+      // resumes there (paused) instead of with what was handed over on open.
+      leftAt: new WeakMap<
+        MediaViewerVideoItem,
+        { currentTime: number; muted: boolean; volume: number }
+      >(),
     };
   }
   let session = newSession();
@@ -149,14 +152,17 @@
     return (video: HTMLVideoElement) => {
       // This open's state, kept for the cleanup even after it ends.
       const own = untrack(() => session);
+      const left = untrack(() => own.leftAt.get(item));
       const start = untrack(() => ({
-        currentTime: own.leftAt.get(item) ?? item.currentTime ?? 0,
-        playing: !own.leftAt.has(item) && (item.playing ?? false),
+        currentTime: left?.currentTime ?? item.currentTime ?? 0,
+        playing: !left && (item.playing ?? false),
       }));
       // Muted and volume carry over before anything plays, so an inline
       // player the user muted does not turn audible here.
-      if (item.muted !== undefined) video.muted = item.muted;
-      if (item.volume !== undefined) video.volume = item.volume;
+      const muted = left?.muted ?? untrack(() => item.muted);
+      const volume = left?.volume ?? untrack(() => item.volume);
+      if (muted !== undefined) video.muted = muted;
+      if (volume !== undefined) video.volume = volume;
       // Seeking needs metadata; until then the video still reports 0.
       let ready = false;
       const begin = () => {
@@ -183,7 +189,11 @@
           ? { currentTime: video.currentTime, playing: !video.paused && !video.ended }
           : start;
         video.pause();
-        own.leftAt.set(item, state.currentTime);
+        own.leftAt.set(item, {
+          currentTime: state.currentTime,
+          muted: video.muted,
+          volume: video.volume,
+        });
         untrack(() => item.onleave)?.({
           currentTime: state.currentTime,
           playing: own.closing && state.playing,

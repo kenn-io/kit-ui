@@ -69,6 +69,9 @@ gallery. MediaViewer's own player is one.
   - The Left and Right arrow keys seek five seconds.
 - A narrow player (360px or less) or a touch screen hides the volume
   slider. The mute button stays, and touch screens get 44px buttons.
+- A player 240px wide or less hides the time; the seek bar still shows
+  the position. If the buttons still do not fit on one row, they wrap
+  onto a second row instead of being cut off.
 
 The controls sit on the picture, so they are light on a dark scrim in
 every theme. To change them, set `--video-control-color`,

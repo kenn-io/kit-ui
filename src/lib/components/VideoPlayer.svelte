@@ -367,9 +367,13 @@
     opacity: 0;
   }
 
+  /* The row wraps rather than clip a control, which a narrow player
+   * such as a portrait video on a landscape phone would otherwise do. */
   .kit-video-player__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: var(--space-1);
     min-width: 0;
   }
@@ -522,6 +526,14 @@
   /* No room for the volume slider on a narrow player; mute stays. */
   @container (max-width: 360px) {
     .kit-video-player__volume {
+      display: none;
+    }
+  }
+
+  /* Narrower still, the time would take a row of its own; the seek bar
+   * still shows the position. */
+  @container (max-width: 240px) {
+    .kit-video-player__time {
       display: none;
     }
   }

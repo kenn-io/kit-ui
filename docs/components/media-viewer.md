@@ -111,7 +111,8 @@ Playback hands over in both directions:
 `state.playing` is true only when the user closed the viewer (Escape,
 the backdrop, or the close button) while the video played. Paging away
 pauses it and reports `false`, so the inline player does not start
-behind the viewer. Paging back resumes, paused, from where it left. A
+behind the viewer. Paging back resumes, paused, from where it left,
+with the sound the user set there. A
 close from outside the viewer, such as `closeMediaViewerGallery()`,
 also reports `false`. Each open starts fresh, including when a host
 keeps the viewer mounted and closes it by emptying `items`: the next
