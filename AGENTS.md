@@ -34,6 +34,7 @@ Breaking API changes are 100% acceptable.
   explicitly asks.
 - Pull requests must have a user-facing benefit or improve the developer
   experience, and the body must say which one.
+- Write issues and pull requests in English.
 - Do not merge a pull request without explicit user authorization.
 - Do not poll or watch CI or pull request checks after pushing unless the
   user explicitly asks. A one-time status lookup is allowed when diagnosing
