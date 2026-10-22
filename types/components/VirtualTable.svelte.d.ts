@@ -18,9 +18,12 @@ declare function $$render<T>(): {
          * the nearest scrolling ancestor, or the document. */
         scrollElement?: () => HTMLElement | null;
         /** Height in px of rows not yet rendered. Set it near the real row
-         * height: it sizes the scrollbar and places unmeasured rows. */
+         * height: it sizes the scrollbar and places unmeasured rows. The window
+         * follows measured heights one frame later, so an estimate far above the
+         * real height, with little overscan, can show a gap for that frame. */
         estimateRowHeight?: number;
-        /** Rows rendered beyond each edge of the visible area. */
+        /** Rows rendered beyond each edge of the visible area. They also cover
+         * the frame before the window follows newly measured heights. */
         overscan?: number;
         /** Keep the header visible while the body scrolls. */
         stickyHeader?: boolean;
