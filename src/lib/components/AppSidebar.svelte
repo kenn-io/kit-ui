@@ -56,6 +56,8 @@
     shortcutMatches,
   } from "../utils/shortcuts.js";
   import IconButton from "./IconButton.svelte";
+  import SplitResizeHandle from "./SplitResizeHandle.svelte";
+  import type { SplitResizeEvent } from "./split-resize.js";
 
   interface Props {
     groups: SidebarGroup[];
@@ -79,6 +81,14 @@
     /** Called with the new state when someone collapses or expands the sidebar. */
     oncollapsedchange?: (collapsed: boolean) => void;
     /**
+     * A saved width in pixels from the host, for a host whose localStorage
+     * does not last. It wins over the width stored under `storageKey`.
+     * `null` or absent means the host has none.
+     */
+    width?: number | null;
+    /** Called with the new width in pixels when someone finishes resizing the sidebar. */
+    onwidthchange?: (width: number) => void;
+    /**
      * Brand area at the top of the panel. `rail` is true in the icon-only
      * rail; `drawer` is true inside the narrow drawer.
      */
@@ -101,6 +111,10 @@
     expandLabel?: string;
     /** Accessible name of the collapse button while expanded. Default "Collapse sidebar". */
     collapseLabel?: string;
+    /** Accessible name of the sidebar's resizable edge. Default "Resize sidebar". */
+    resizeLabel?: string;
+    /** What the resizable edge reads as its value in the rail. Default "Collapsed". */
+    collapsedValueText?: string;
   }
 
   let {
@@ -110,6 +124,8 @@
     storageKey,
     collapsed: hostChoice = null,
     oncollapsedchange,
+    width: hostWidth = null,
+    onwidthchange,
     brand,
     narrowBar,
     footer,
@@ -118,6 +134,8 @@
     drawerLabel = "Navigation",
     expandLabel = "Expand sidebar",
     collapseLabel = "Collapse sidebar",
+    resizeLabel = "Resize sidebar",
+    collapsedValueText = "Collapsed",
   }: Props = $props();
 
   type SizedIcon = Component<{ size?: number; "aria-hidden"?: "true" }>;
@@ -137,6 +155,11 @@
   const isMac = isMacPlatform();
   const toggleKeys = formatShortcutKeys("mod+b", isMac).join(isMac ? "" : "+");
   const toggleAriaKeys = isMac ? "Meta+B" : "Control+B";
+  // Widths in pixels. The rail and the default width are 3.5rem and 15rem in
+  // CSS, which are these at the default font size.
+  const RAIL_WIDTH = 56;
+  const DEFAULT_WIDTH = 240;
+  const MAX_WIDTH = 384;
 
   const uid = $props.id();
   const narrowWindow = new MediaQuery(MEDIA.wide);
@@ -149,6 +172,20 @@
       return stored === null ? null : stored !== "expanded";
     } catch {
       // Storage blocked or absent: the width decides.
+      return null;
+    }
+  }
+
+  function fit(width: number): number {
+    return Math.min(MAX_WIDTH, Math.max(RAIL_WIDTH, Math.round(width)));
+  }
+
+  function readWidth(key: string): number | null {
+    try {
+      const stored = Number(localStorage.getItem(`${key}-width`) ?? Number.NaN);
+      return Number.isFinite(stored) ? fit(stored) : null;
+    } catch {
+      // Storage blocked or absent: the default width stands.
       return null;
     }
   }
@@ -172,28 +209,118 @@
   // make one, so the width decides.
   let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
   const collapsed = $derived(collapsedChoice ?? (railWidth && !touch.current));
+  // The edge's position while someone drags it; null between drags.
+  let dragWidth = $state<number | null>(null);
   const rail = $derived(!narrow && collapsed);
 
-  async function toggleCollapsed(): Promise<void> {
+  // The narrowest full sidebar in which its longest word fits; null until
+  // the full sidebar has been laid out.
+  let fitWidth = $state<number | null>(null);
+  // Someone's chosen width; null until they resize.
+  let widthChoice = $derived(hostWidth === null ? readWidth(storageKey) : fit(hostWidth));
+  // The full sidebar's width, never narrower than its longest word; null
+  // while CSS's 15rem is enough.
+  const fullWidth = $derived.by(() => {
+    const width = Math.max(widthChoice ?? DEFAULT_WIDTH, fitWidth ?? 0);
+    return widthChoice === null && width === DEFAULT_WIDTH ? null : width;
+  });
+
+  async function chooseCollapsed(choice: boolean): Promise<void> {
     // A current view's link leaves the panel when it collapses, so focus on
-    // it would fall to the page; send it to the section link instead.
+    // it would fall to the page; send it to the section link instead. The
+    // edge is disabled in the rail, so focus on it goes to the expand button.
     const active = document.activeElement;
-    const section = active?.closest(".kit-app-sidebar__views")
+    const next = active?.closest(".kit-app-sidebar__views")
       ? active
           .closest("li:has(> .kit-app-sidebar__section)")
           ?.querySelector<HTMLElement>(".kit-app-sidebar__section")
-      : null;
-    collapsedChoice = !collapsed;
+      : choice && active?.matches(".kit-app-sidebar > .kit-split-resize-handle")
+        ? active.parentElement?.querySelector<HTMLElement>(".kit-app-sidebar__pin")
+        : null;
+    collapsedChoice = choice;
     try {
-      localStorage.setItem(storageKey, collapsedChoice ? "collapsed" : "expanded");
+      localStorage.setItem(storageKey, choice ? "collapsed" : "expanded");
     } catch {
       // Storage blocked: the choice lasts until the page reloads.
     }
-    oncollapsedchange?.(collapsedChoice);
-    if (section) {
+    oncollapsedchange?.(choice);
+    if (next) {
       await tick();
-      if (!active?.isConnected) section.focus();
+      if (!active?.isConnected || active.matches(":disabled")) next.focus();
     }
+  }
+
+  function toggleCollapsed(): Promise<void> {
+    return chooseCollapsed(!collapsed);
+  }
+
+  function chooseWidth(width: number): void {
+    widthChoice = width;
+    try {
+      localStorage.setItem(`${storageKey}-width`, String(width));
+    } catch {
+      // Storage blocked: the width lasts until the page reloads.
+    }
+    onwidthchange?.(width);
+  }
+
+  // Labels wrap between words, so the panel's min-content width is the
+  // width its longest word needs; the sidebar adds the edge and any
+  // scrollbar around the panel.
+  function measureFit(): number | null {
+    if (!panel || !inline) return null;
+    const around = inline.getBoundingClientRect().width - panel.getBoundingClientRect().width;
+    const width = panel.style.width;
+    panel.style.width = "min-content";
+    const content = panel.getBoundingClientRect().width;
+    panel.style.width = width;
+    return Math.min(MAX_WIDTH, Math.ceil(content + around));
+  }
+
+  // Measure again whenever the panel's text changes, such as a name that
+  // arrives after sign-in, or once the web fonts have loaded.
+  $effect(() => {
+    if (rail || !panel) return;
+    fitWidth = measureFit();
+    const remeasure = () => (fitWidth = measureFit());
+    const observer = new MutationObserver(remeasure);
+    observer.observe(panel, { childList: true, subtree: true, characterData: true });
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) remeasure();
+    });
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
+  });
+
+  // The width the sidebar had when a resize started, and the narrowest width
+  // in which every word still fits. The edge is disabled in the rail, so a
+  // resize always starts from the full sidebar.
+  let startWidth = DEFAULT_WIDTH;
+  let minWidth = DEFAULT_WIDTH;
+
+  function resizeStarted(): void {
+    startWidth = Math.round(inline?.getBoundingClientRect().width ?? DEFAULT_WIDTH);
+    fitWidth = measureFit();
+    minWidth = fitWidth ?? DEFAULT_WIDTH;
+  }
+
+  // The edge follows the pointer, and stops at the narrowest width that
+  // shows all the text and at MAX_WIDTH.
+  function resizedTo(event: SplitResizeEvent): number {
+    return Math.max(minWidth, fit(startWidth + event.delta));
+  }
+
+  function resized(event: SplitResizeEvent): void {
+    dragWidth = resizedTo(event);
+  }
+
+  function resizeEnded(event: SplitResizeEvent): void {
+    const width = resizedTo(event);
+    dragWidth = null;
+    if (width !== startWidth) chooseWidth(width);
   }
 
   function isEditable(target: EventTarget | null): boolean {
@@ -535,26 +662,55 @@
     {/if}
   </dialog>
 {:else}
-  <div class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]} bind:this={inline}>
-    {@render panelContent(false)}
+  <div
+    class={["kit-app-sidebar", rail && "kit-app-sidebar--rail"]}
+    style:width={dragWidth !== null
+      ? `${dragWidth}px`
+      : rail || fullWidth === null
+        ? undefined
+        : `${fullWidth}px`}
+    bind:this={inline}
+  >
+    <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
+    <SplitResizeHandle
+      ariaLabel={resizeLabel}
+      ariaValueMin={rail ? RAIL_WIDTH : (fitWidth ?? RAIL_WIDTH)}
+      ariaValueMax={MAX_WIDTH}
+      ariaValueNow={rail ? RAIL_WIDTH : (dragWidth ?? fullWidth ?? DEFAULT_WIDTH)}
+      ariaValueText={rail ? collapsedValueText : undefined}
+      disabled={rail}
+      onActivate={() => void toggleCollapsed()}
+      onResizeStart={resizeStarted}
+      onResize={resized}
+      onResizeEnd={resizeEnded}
+    />
   </div>
 {/if}
 
 <style>
   /* One below --z-overlay: in-place overlays such as Modal cover the sidebar
    * wherever they sit in the document, and flyouts still cover the page. */
+  /* The resize handle is the sidebar's right edge, so the sidebar draws no
+   * border there. No transition: the width follows the pointer. */
   .kit-app-sidebar {
     position: sticky;
     top: 0;
     z-index: calc(var(--z-overlay) - 1);
     box-sizing: border-box;
+    display: flex;
     flex: none;
     width: 15rem;
     height: var(--kit-app-sidebar-height, 100dvh);
-    overflow-y: auto;
-    border-right: 1px solid var(--border-default);
     background: var(--bg-surface);
     box-shadow: var(--shadow-raised, none);
+  }
+
+  .kit-app-sidebar__scroll {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
   }
 
   .kit-app-sidebar--rail {
@@ -604,7 +760,6 @@
     flex: 1 0 auto;
     flex-direction: column;
     gap: var(--space-5);
-    min-height: 100%;
     padding: 0 var(--space-4) var(--space-5);
   }
 

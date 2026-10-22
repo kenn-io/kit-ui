@@ -12,6 +12,11 @@ interface Props {
     ariaValueMin: number;
     ariaValueMax: number;
     ariaValueNow: number;
+    /** Reads the value aloud in place of `ariaValueNow`, such as "Collapsed". */
+    ariaValueText?: string;
+    /** Called when someone presses Enter on the focused handle or
+     * double-clicks it, for example to collapse or restore a pane. */
+    onActivate?: (event: KeyboardEvent | MouseEvent) => void;
     onResizeStart?: (event: KeyboardEvent | PointerEvent) => void;
     onResize?: (event: SplitResizeEvent) => void;
     onResizeEnd?: (event: SplitResizeEvent) => void;
