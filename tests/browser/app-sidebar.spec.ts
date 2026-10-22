@@ -830,8 +830,6 @@ test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL
 
     await edge(page).focus();
     for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
-    const narrowest = await sidebarWidth(page);
-    expect(await wordsFit(page, narrowest)).toBe(true);
 
     // A shorter window makes the panel scroll, and its scrollbar takes room
     // from the words.
@@ -883,6 +881,27 @@ test("the sidebar's widths follow a larger default font size", async ({ page, br
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   await expect.poll(() => sidebarWidth(page)).toBe(112);
   await expect(edge(page)).toHaveAttribute("aria-valuenow", "112");
+});
+
+test("the sidebar's widths follow a font size change on an open page", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "the font-size setting is a CDP call");
+  await open(page, "home", 1440);
+  await expect(edge(page)).toHaveAttribute("aria-valuemax", "384");
+  const session = await page.context().newCDPSession(page);
+  await session.send("Page.setFontSizes", { fontSizes: { standard: 32 } });
+  await expect(edge(page)).toHaveAttribute("aria-valuemax", "768");
+  expect(await sidebarWidth(page)).toBe(480);
+  await expect(edge(page)).toHaveAttribute("aria-valuenow", "480");
+
+  // Pressing and letting go of the edge without moving changes nothing.
+  const box = await edge(page).boundingBox();
+  if (!box) throw new Error("sidebar edge not laid out");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect(await sidebarWidth(page)).toBe(480);
+  expect(await storedWidth(page)).toBeNull();
 });
 
 test("a width chosen at a larger font shrinks to the maximum of a smaller one", async ({

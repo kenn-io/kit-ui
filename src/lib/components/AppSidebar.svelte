@@ -182,7 +182,7 @@
   }
 
   // The root font size in pixels, read again when the root's classes,
-  // style, or theme change.
+  // style, or theme change, or the browser's font size setting does.
   let rem = $state(rootFontSize());
   const collapsedWidth = $derived(Math.round(RAIL_REM * rem));
   const defaultWidth = $derived(Math.round(DEFAULT_REM * rem));
@@ -302,43 +302,46 @@
   }
 
   // Bumped whenever the root's typography may have changed: a theme, class,
-  // or style change on <html>, or a web font that finished loading.
+  // or style change on <html>, a change to the browser's font size, or a web
+  // font that finished loading.
   let typeset = $state(0);
+
+  function typographyChanged(): void {
+    rem = rootFontSize();
+    typeset += 1;
+  }
+
   $effect(() => {
-    const changed = () => {
-      rem = rootFontSize();
-      typeset += 1;
-    };
-    const observer = new MutationObserver(changed);
+    const observer = new MutationObserver(typographyChanged);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class", "style", "data-kit-theme"],
     });
-    document.fonts?.addEventListener("loadingdone", changed);
+    document.fonts?.addEventListener("loadingdone", typographyChanged);
     return () => {
       observer.disconnect();
-      document.fonts?.removeEventListener("loadingdone", changed);
+      document.fonts?.removeEventListener("loadingdone", typographyChanged);
     };
   });
 
+  // The browser's font size setting changes rem without touching <html>, so
+  // a 1rem-wide element reports it.
+  function remResized(probe: HTMLElement): () => void {
+    const observer = new ResizeObserver(typographyChanged);
+    observer.observe(probe);
+    return () => observer.disconnect();
+  }
+
   // Measure again whenever the panel's text or the root's typography
-  // changes, such as a name that arrives after sign-in or a theme with a
-  // wider font, or once the web fonts have loaded.
+  // changes, such as a name that arrives after sign-in, a theme with a wider
+  // font, or a web font that finished loading.
   $effect(() => {
     void typeset;
     if (rail || !panel) return;
     fitWidth = measureFit();
-    const remeasure = () => (fitWidth = measureFit());
-    const observer = new MutationObserver(remeasure);
+    const observer = new MutationObserver(() => (fitWidth = measureFit()));
     observer.observe(panel, { childList: true, subtree: true, characterData: true });
-    let live = true;
-    void document.fonts?.ready.then(() => {
-      if (live) remeasure();
-    });
-    return () => {
-      live = false;
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   });
 
   // The width the sidebar had when a resize started, and the narrowest width
@@ -718,6 +721,7 @@
     bind:this={inline}
   >
     <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
+    <div class="kit-app-sidebar__rem" aria-hidden="true" {@attach remResized}></div>
     <SplitResizeHandle
       ariaLabel={resizeLabel}
       ariaValueMin={rail ? collapsedWidth : (fitWidth ?? collapsedWidth)}
@@ -749,6 +753,14 @@
     height: var(--kit-app-sidebar-height, 100dvh);
     background: var(--bg-surface);
     box-shadow: var(--shadow-raised, none);
+  }
+
+  .kit-app-sidebar__rem {
+    position: absolute;
+    width: 1rem;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .kit-app-sidebar__scroll {
