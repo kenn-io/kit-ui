@@ -210,6 +210,36 @@ test("the inline player's keyboard shortcuts play and mute", async ({ page }) =>
   await expect.poll(async () => (await playback(video)).playing).toBe(false);
 });
 
+test("a player with several sources plays the first the browser supports, expanded too", async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const { mountVideoPlayer, clip } =
+      await import("/tests/browser/fixtures/mount-video-player.ts");
+    mountVideoPlayer({
+      label: "Two-format video",
+      preload: "metadata",
+      sources: [
+        { src: "/missing.mp4", type: "video/x-unsupported" },
+        { src: clip, type: "video/webm" },
+      ],
+    });
+  });
+  const player = page
+    .locator(".kit-video-player")
+    .filter({ has: page.getByLabel("Two-format video") });
+  const video = player.locator("video");
+  await expect
+    .poll(() => video.evaluate((node) => (node as HTMLVideoElement).currentSrc))
+    .toMatch(/media-viewer-demo\.webm/);
+
+  await player.getByRole("button", { name: "Open video in expanded view" }).click();
+  await expect(viewer(page)).toHaveAccessibleName(/^Two-format video/);
+  expect(await expanded(page).evaluate((node) => (node as HTMLVideoElement).currentSrc)).toMatch(
+    /media-viewer-demo\.webm/,
+  );
+});
+
 for (const viewport of [
   { name: "wide", width: 1280, height: 800 },
   { name: "short", width: 1400, height: 500 },

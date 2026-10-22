@@ -69,20 +69,21 @@ every theme. To change them, set `--video-control-color`,
 
 ## Props
 
-| Prop              | Type                             | Default                         | Notes                                                  |
-| ----------------- | -------------------------------- | ------------------------------- | ------------------------------------------------------ |
-| `src`             | `string`                         | —                               | The video URL                                          |
-| `label`           | `string`                         | —                               | Accessible name of the video, and of the expanded view |
-| `poster`          | `string`                         | —                               | Image shown before playback                            |
-| `preload`         | `"none" \| "metadata" \| "auto"` | `"metadata"`                    | The `<video>` preload hint                             |
-| `expandable`      | `boolean`                        | `true`                          | Show the expand control and join the page gallery      |
-| `expandLabel`     | `string`                         | `"Open video in expanded view"` | Accessible name of the expand control                  |
-| `controlsLabel`   | `string`                         | `"Video controls"`              | Accessible name of the control bar                     |
-| `onViewerOpen`    | `() => () => void`               | —                               | Suspend app keyboard handling while the viewer is open |
-| `viewerLabels`    | `MediaViewerLabels`              | —                               | Expanded-view strings ([MediaViewer](media-viewer.md)) |
-| `video`           | `HTMLVideoElement` (bindable)    | —                               | The `<video>` element, for hosts that drive playback   |
-| `videoAttachment` | `Attachment<HTMLVideoElement>`   | —                               | Attached to the `<video>` element                      |
-| `class`           | `string`                         | —                               | Extra class on the player's root                       |
+| Prop              | Type                               | Default                         | Notes                                                                |
+| ----------------- | ---------------------------------- | ------------------------------- | -------------------------------------------------------------------- |
+| `src`             | `string`                           | —                               | The video URL; or give `sources`                                     |
+| `sources`         | `{ src: string; type?: string }[]` | `[]`                            | Sources in preference order; the browser plays the first it supports |
+| `label`           | `string`                           | —                               | Accessible name of the video, and of the expanded view               |
+| `poster`          | `string`                           | —                               | Image shown before playback                                          |
+| `preload`         | `"none" \| "metadata" \| "auto"`   | `"metadata"`                    | The `<video>` preload hint                                           |
+| `expandable`      | `boolean`                          | `true`                          | Show the expand control and join the page gallery                    |
+| `expandLabel`     | `string`                           | `"Open video in expanded view"` | Accessible name of the expand control                                |
+| `controlsLabel`   | `string`                           | `"Video controls"`              | Accessible name of the control bar                                   |
+| `onViewerOpen`    | `() => () => void`                 | —                               | Suspend app keyboard handling while the viewer is open               |
+| `viewerLabels`    | `MediaViewerLabels`                | —                               | Expanded-view strings ([MediaViewer](media-viewer.md))               |
+| `video`           | `HTMLVideoElement` (bindable)      | —                               | The `<video>` element, for hosts that drive playback                 |
+| `videoAttachment` | `Attachment<HTMLVideoElement>`     | —                               | Attached to the `<video>` element                                    |
+| `class`           | `string`                           | —                               | Extra class on the player's root                                     |
 
 Video.js labels its own buttons ("Play", "Mute", "Enter fullscreen") in
 English. kit-ui does not localize them yet.

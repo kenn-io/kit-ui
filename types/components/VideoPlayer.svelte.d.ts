@@ -21,7 +21,14 @@ import "@videojs/html/ui/gesture";
 import type { Attachment } from "svelte/attachments";
 import { type MediaViewerLabels } from "../utils/media-gallery.js";
 interface Props {
-    src: string;
+    /** The video URL. Give `sources` instead for several formats. */
+    src?: string;
+    /** Sources in preference order, rendered as `<source>` elements; the
+     * browser plays the first it supports. */
+    sources?: {
+        src: string;
+        type?: string;
+    }[];
     /** Accessible name of the video. */
     label: string;
     poster?: string;

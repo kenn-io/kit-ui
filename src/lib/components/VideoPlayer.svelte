@@ -42,7 +42,11 @@
   } from "../utils/media-gallery.js";
 
   interface Props {
-    src: string;
+    /** The video URL. Give `sources` instead for several formats. */
+    src?: string;
+    /** Sources in preference order, rendered as `<source>` elements; the
+     * browser plays the first it supports. */
+    sources?: { src: string; type?: string }[];
     /** Accessible name of the video. */
     label: string;
     poster?: string;
@@ -67,7 +71,8 @@
   }
 
   let {
-    src,
+    src = undefined,
+    sources = [],
     label,
     poster = undefined,
     preload = "metadata",
@@ -104,7 +109,8 @@
     player.pause();
     return {
       kind: "video",
-      src: player.currentSrc || src,
+      // An idle player (preload="none") may not have picked a source yet.
+      src: player.currentSrc || src || sources[0]?.src || "",
       label,
       currentTime: player.currentTime,
       playing,
@@ -143,7 +149,11 @@
         aria-label={label}
         playsinline
         {@attach videoAttachment}
-      ></video>
+      >
+        {#each sources as source (source.src)}
+          <source src={source.src} type={source.type} />
+        {/each}
+      </video>
 
       <media-controls class="kit-video-player__controls">
         <media-controls-backdrop class="kit-video-player__backdrop"></media-controls-backdrop>
