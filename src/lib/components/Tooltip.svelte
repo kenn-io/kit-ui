@@ -49,7 +49,7 @@
   let timer: ReturnType<typeof setTimeout> | undefined;
   // A press on the trigger means the control is in use, often opening
   // a menu or list the bubble would cover. Keep the tooltip shut until the
-  // pointer leaves or focus moves on.
+  // pointer leaves, focus leaves, or keyboard focus arrives.
   let pressed = false;
 
   function clearTimer(): void {
@@ -129,15 +129,16 @@
 
   function handleFocusIn(event: FocusEvent): void {
     const target = focusable ? triggerEl : event.target;
-    if (pressed) {
-      if (target instanceof HTMLElement) focusTarget = target;
-      return;
+    // Keyboard focus ends a press, so Tab after a click still describes the
+    // control. Browsers treat focus in a text field as visible too.
+    if (event.target instanceof Element && event.target.matches(":focus-visible")) {
+      pressed = false;
     }
     if (target instanceof HTMLElement) {
       focusTarget = target;
       // Before assistive technology hears about the focus, not after the
       // next render.
-      addDescription(target);
+      if (!pressed) addDescription(target);
     }
     show(true);
   }
@@ -151,6 +152,24 @@
   }
 
   function handlePointerDown(): void {
+    pressed = true;
+    hide(true);
+  }
+
+  // Enter or Space activates a control the way a click does. A list it
+  // opens may keep focus on the control, as SelectDropdown does.
+  function handleKeydown(event: KeyboardEvent): void {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const el = event.target;
+    // Typing in a wrapped text field keeps its description.
+    if (
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLTextAreaElement ||
+      el instanceof HTMLSelectElement ||
+      (el instanceof HTMLElement && el.isContentEditable)
+    ) {
+      return;
+    }
     pressed = true;
     hide(true);
   }
@@ -215,6 +234,7 @@
   onmouseenter={() => show()}
   onmouseleave={handleMouseLeave}
   onpointerdown={handlePointerDown}
+  onkeydown={handleKeydown}
   onfocusin={handleFocusIn}
   onfocusout={handleFocusOut}
 >

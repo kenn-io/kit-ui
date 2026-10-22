@@ -184,6 +184,29 @@ test("clicking from one wrapped control to another keeps the tooltip hidden", as
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 });
 
+test("tabbing to the next control after a click shows its tooltip", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const group = page.getByTestId("group-tooltip");
+  await group.getByRole("button", { name: "Align left" }).click();
+  await page.keyboard.press("Tab");
+  const right = group.getByRole("button", { name: "Align right" });
+  await expect(right).toBeFocused();
+  await expect(page.getByRole("tooltip")).toBeVisible();
+  await expect(right).toHaveAccessibleDescription("Aligns the selected text");
+});
+
+test("pressing Enter on a focused control hides its tooltip", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const button = resetButton(page);
+  await button.focus();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+
+  await page.keyboard.press("Enter");
+  await expect(button).toBeFocused();
+  await expect(tooltip).toHaveCount(0);
+});
+
 test("a touch tap does not open the tooltip", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ baseURL, hasTouch: true });
   const page = await context.newPage();
