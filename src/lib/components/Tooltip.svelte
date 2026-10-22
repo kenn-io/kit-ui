@@ -140,9 +140,11 @@
     show(true);
   }
 
-  function handleFocusOut(): void {
+  function handleFocusOut(event: FocusEvent): void {
     focusTarget = null;
-    pressed = false;
+    // Clicking from one wrapped control to another keeps the press's hide.
+    const next = event.relatedTarget;
+    if (!(next instanceof Node && triggerEl?.contains(next))) pressed = false;
     hide(true);
   }
 

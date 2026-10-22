@@ -173,3 +173,13 @@ test("pressing a control hides its tooltip until the pointer leaves", async ({ p
   await button.hover();
   await expect(tooltip).toBeVisible();
 });
+
+test("clicking from one wrapped control to another keeps the tooltip hidden", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const group = page.getByTestId("group-tooltip");
+  await group.getByRole("button", { name: "Align left" }).click();
+  const right = group.getByRole("button", { name: "Align right" });
+  await right.click();
+  await expect(right).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
