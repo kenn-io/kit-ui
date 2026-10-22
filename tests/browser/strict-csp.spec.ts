@@ -74,6 +74,10 @@ test("a video player lays out its controls under a strict policy", async ({ page
   const player = page.getByTestId("video").locator(".kit-video-player");
   const play = player.getByRole("button", { name: "Play", exact: true });
   await expect(play).toBeVisible();
+  // The picture takes its size from the clip's metadata.
+  await expect
+    .poll(() => player.locator("video").evaluate((node) => (node as HTMLVideoElement).readyState))
+    .toBeGreaterThan(0);
   const bar = (await player.locator(".kit-video-player__bar").boundingBox())!;
   const picture = (await player.locator("video").boundingBox())!;
   // On the picture, at its bottom edge, not in the flow below it.

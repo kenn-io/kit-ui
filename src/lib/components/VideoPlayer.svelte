@@ -365,11 +365,14 @@
   }
 
   /* The bar sits in flow at the bottom of the controls, so the controls,
-   * which cover the picture, place the corner group on a narrow player. */
+   * which cover the picture, place the corner group on a narrow player.
+   * They take their size from the picture, so they can answer height
+   * queries; the root's height comes from its content. */
   .kit-video-player__controls {
     position: absolute;
     inset: 0;
     z-index: 0;
+    container: kit-video-player-controls / size;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -613,6 +616,17 @@
     }
     .kit-video-player__volume {
       display: none;
+    }
+  }
+
+  /* A short player, such as a narrow ultrawide video, has no room for the
+   * bottom row and the corner group at full size; 24px buttons, the
+   * smallest WCAG target, fit both down to a 60px-tall picture. */
+  @container kit-video-player-controls (height < 5.5rem) {
+    .kit-video-player__button {
+      width: 24px;
+      min-width: 24px;
+      height: 24px;
     }
   }
 

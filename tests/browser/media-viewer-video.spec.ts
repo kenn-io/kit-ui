@@ -336,10 +336,11 @@ test("a player with several sources plays the first the browser supports, expand
 });
 
 // A 160px player is a small inline embed, or a 9:16 video in an 844x390
-// landscape phone viewer.
+// landscape phone viewer. A 21:9 one is only 69px tall.
 for (const shape of [
   { name: "16:9", ratio: null },
   { name: "portrait", ratio: "9 / 16" },
+  { name: "21:9", ratio: "21 / 9" },
 ]) {
   test(`a 160px ${shape.name} player on a touch screen keeps every control on it, apart`, async ({
     browser,
@@ -359,7 +360,7 @@ for (const shape of [
         preload: "metadata",
       });
       host.style.width = "160px";
-      // Shaped as the viewer shapes a portrait video's player.
+      // Shaped as the viewer shapes the player of a video of that shape.
       if (ratio) host.querySelector<HTMLElement>(".kit-video-player")!.style.aspectRatio = ratio;
     }, shape.ratio);
     const player = page

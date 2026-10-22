@@ -81,6 +81,9 @@ gallery. MediaViewer's own player is one.
   bar still shows the position.
 - A touch screen hides the volume slider and makes the buttons 36px, the
   size Video.js's skin uses.
+- A player shorter than 5.5rem (88px), such as an ultrawide video in a
+  narrow column, makes the buttons 24px so the bottom row and the corner
+  group both fit. Below a 60px-tall picture they overlap.
 
 The controls sit on the picture, so they are light on a dark scrim in
 every theme. To change them, set `--video-control-color`,
