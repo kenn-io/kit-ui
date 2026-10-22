@@ -34,7 +34,48 @@ export type MediaViewerItem =
       class?: string;
       /** Panel background (any CSS color) behind this item. */
       background?: string;
-    };
+    }
+  | MediaViewerVideoItem;
+
+/** Where a video was when it left the viewer. */
+export interface MediaViewerVideoState {
+  /** Playback position in seconds. */
+  currentTime: number;
+  /** True only when the viewer closed while the video played, so the
+   * inline player should continue. Paging away pauses it: false. */
+  playing: boolean;
+  /** Whether the viewer's player was muted. */
+  muted: boolean;
+  /** The viewer's player volume, 0 to 1. */
+  volume: number;
+}
+
+/** A video played in a fresh VideoPlayer, so playback hands over from the
+ * inline player through `currentTime`, `playing`, `muted`, and `volume`,
+ * and comes back through `onleave`. */
+export interface MediaViewerVideoItem {
+  kind: "video";
+  /** The video URL; for a player with `<source>` children, its
+   * `currentSrc`. Empty when the player has not picked a source yet
+   * (`preload="none"`); the viewer then uses `sources`. */
+  src: string;
+  /** Sources in preference order, used when `src` is empty, so the
+   * viewer's browser picks one it supports. */
+  sources?: { src: string; type?: string }[];
+  /** Accessible name for the expanded view. */
+  label: string;
+  /** Start position in seconds (the inline player's `currentTime`). */
+  currentTime?: number;
+  /** Start playing on display (the inline player was playing). */
+  playing?: boolean;
+  /** Start muted (the inline player was muted). */
+  muted?: boolean;
+  /** Start volume, 0 to 1 (the inline player's volume). */
+  volume?: number;
+  /** Called each time the video leaves the viewer: paging away, or the
+   * viewer closing or unmounting. */
+  onleave?: (state: MediaViewerVideoState) => void;
+}
 
 /** User-facing strings of the viewer, all with English defaults. */
 export interface MediaViewerLabels {

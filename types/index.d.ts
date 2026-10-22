@@ -97,6 +97,7 @@ export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab, TopBarTabIndicator, TopBarTabIndicatorTone, } from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadInputAttributes, TypeaheadOption, TypeaheadTriggerProps, } from "./components/typeahead.js";
+export { default as VideoPlayer } from "./components/VideoPlayer.svelte";
 export { default as VirtualList } from "./components/VirtualList.svelte";
 export { default as VirtualTable } from "./components/VirtualTable.svelte";
 export { offsetOfIndex, virtualSlice, visibleWindow, type VerticalBounds, type VirtualSlice, type VirtualSliceInput, } from "./components/virtual.js";
@@ -115,7 +116,7 @@ export { createRefreshScheduler, DEFAULT_REFRESH_INTERVAL_MS, formatRefreshAge, 
 export { appShortcuts, createShortcutManager, formatShortcutKeys, initShortcuts, isMacPlatform, parseShortcut, ROOT_SCOPE, shortcutMatches, type ParsedShortcut, type RegisteredShortcut, type ShortcutManager, type ShortcutOptions, } from "./utils/shortcuts.js";
 export { applyShikiStyles, codeFenceLanguage, createMarkdownRenderer, escapeHtml, highlightCode, renderMarkdown, renderMarkdownSync, type MarkdownRenderer, type MarkdownRendererOptions, } from "./utils/markdown.js";
 export { initMarkdownImageViewer, type MarkdownImageViewerController, type MarkdownImageViewerOptions, } from "./utils/markdown-images.js";
-export { closeMediaViewerGallery, collectMediaViewerGallery, openMediaViewerGallery, registerMediaViewerItem, unregisterMediaViewerItem, type MediaViewerItem, type MediaViewerLabels, type OpenMediaViewerOptions, } from "./utils/media-gallery.js";
+export { closeMediaViewerGallery, collectMediaViewerGallery, openMediaViewerGallery, registerMediaViewerItem, unregisterMediaViewerItem, type MediaViewerItem, type MediaViewerLabels, type MediaViewerVideoItem, type MediaViewerVideoState, type OpenMediaViewerOptions, } from "./utils/media-gallery.js";
 export { actualPixelSize, attachPanZoom, type PanZoom, type PanZoomLimits, type PanZoomOptions, type PanZoomView, } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";

@@ -165,6 +165,7 @@ export type {
   TypeaheadOption,
   TypeaheadTriggerProps,
 } from "./components/typeahead.js";
+export { default as VideoPlayer } from "./components/VideoPlayer.svelte";
 export { default as VirtualList } from "./components/VirtualList.svelte";
 export { default as VirtualTable } from "./components/VirtualTable.svelte";
 export {
@@ -270,6 +271,8 @@ export {
   unregisterMediaViewerItem,
   type MediaViewerItem,
   type MediaViewerLabels,
+  type MediaViewerVideoItem,
+  type MediaViewerVideoState,
   type OpenMediaViewerOptions,
 } from "./utils/media-gallery.js";
 export {

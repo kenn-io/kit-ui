@@ -4,11 +4,12 @@
   import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import XIcon from "@lucide/svelte/icons/x";
   import { untrack } from "svelte";
-  import type { MediaViewerItem } from "../utils/media-gallery.js";
+  import type { MediaViewerItem, MediaViewerVideoItem } from "../utils/media-gallery.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
   import { attachPanZoom, type PanZoom } from "../utils/pan-zoom.js";
   import { appShortcuts } from "../utils/shortcuts.js";
+  import VideoPlayer from "./VideoPlayer.svelte";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -84,18 +85,50 @@
     index = (position + delta + items.length) % items.length;
   }
 
+  // One open of the viewer, from items arriving to items emptying (or
+  // unmount). A host may keep the viewer mounted and clear `items` to close
+  // it, so this state must not carry into the next open. Not reactive.
+  function newSession() {
+    return {
+      // Set by the viewer's own close controls, so a video leaving because
+      // the viewer closed reports whether it was playing.
+      closing: false,
+      // Where each video was when it left, and its sound, so paging back
+      // resumes there (paused) instead of with what was handed over on open.
+      leftAt: new WeakMap<
+        MediaViewerVideoItem,
+        { currentTime: number; muted: boolean; volume: number }
+      >(),
+    };
+  }
+  let session = newSession();
+  const open = $derived(items.length > 0);
+  // Runs before the new open's content mounts; a video that leaves keeps
+  // the session it started in.
+  $effect.pre(() => {
+    if (open) session = newSession();
+  });
+
+  function close(): void {
+    session.closing = true;
+    onclose();
+  }
+
   function onkeydown(event: KeyboardEvent): void {
     // Keys stay inside the viewer: app-level listeners on window must not
     // also act on them.
     event.stopPropagation();
     if (event.defaultPrevented) return;
+    // A focused video player takes the arrow keys itself (to seek).
+    const pages =
+      paged && !(event.target instanceof Element && event.target.closest(".kit-video-player"));
     if (event.key === "Escape") {
       event.preventDefault();
-      onclose();
-    } else if (paged && event.key === "ArrowLeft") {
+      close();
+    } else if (pages && event.key === "ArrowLeft") {
       event.preventDefault();
       step(-1);
-    } else if (paged && event.key === "ArrowRight") {
+    } else if (pages && event.key === "ArrowRight") {
       event.preventDefault();
       step(1);
     }
@@ -115,6 +148,73 @@
     };
   }
 
+  function playVideo(item: MediaViewerVideoItem) {
+    return (video: HTMLVideoElement) => {
+      // This open's state, kept for the cleanup even after it ends.
+      const own = untrack(() => session);
+      const left = untrack(() => own.leftAt.get(item));
+      const start = untrack(() => ({
+        currentTime: left?.currentTime ?? item.currentTime ?? 0,
+        playing: !left && (item.playing ?? false),
+      }));
+      // Muted and volume carry over before anything plays, so an inline
+      // player the user muted does not turn audible here.
+      const muted = left?.muted ?? untrack(() => item.muted);
+      const volume = left?.volume ?? untrack(() => item.volume);
+      if (muted !== undefined) video.muted = muted;
+      if (volume !== undefined) video.volume = volume;
+      // Seeking needs metadata; until then the video still reports 0.
+      let ready = false;
+      // Play or pause pressed before then replaces the opening state.
+      let playing = start.playing;
+      const choose = () => {
+        playing = !video.paused;
+      };
+      video.addEventListener("play", choose);
+      video.addEventListener("pause", choose);
+      const begin = () => {
+        video.removeEventListener("play", choose);
+        video.removeEventListener("pause", choose);
+        ready = true;
+        // The CSS sizes the video's box from this ratio, so the box is
+        // the picture and the controls sit on it.
+        if (video.videoWidth > 0 && video.videoHeight > 0)
+          video
+            .closest<HTMLElement>(".kit-video-player")
+            ?.style.setProperty(
+              "--kit-media-viewer-video-ratio",
+              String(video.videoWidth / video.videoHeight),
+            );
+        if (start.currentTime > 0) video.currentTime = start.currentTime;
+        // Rejected when the browser blocks autoplay or the video leaves
+        // first; the controls still work.
+        if (playing && video.paused) video.play().catch(() => {});
+      };
+      if (video.readyState >= HTMLMediaElement.HAVE_METADATA) begin();
+      else video.addEventListener("loadedmetadata", begin, { once: true });
+      return () => {
+        video.removeEventListener("loadedmetadata", begin);
+        video.removeEventListener("play", choose);
+        video.removeEventListener("pause", choose);
+        const state = ready
+          ? { currentTime: video.currentTime, playing: !video.paused && !video.ended }
+          : { currentTime: start.currentTime, playing };
+        video.pause();
+        own.leftAt.set(item, {
+          currentTime: state.currentTime,
+          muted: video.muted,
+          volume: video.volume,
+        });
+        untrack(() => item.onleave)?.({
+          currentTime: state.currentTime,
+          playing: own.closing && state.playing,
+          muted: video.muted,
+          volume: video.volume,
+        });
+      };
+    };
+  }
+
   function cloneInto(element: Element) {
     return (host: HTMLElement) => {
       host.append(element.cloneNode(true));
@@ -127,7 +227,7 @@
   <div
     class="kit-media-viewer"
     role="presentation"
-    {@attach backdropCloses(onclose)}
+    {@attach backdropCloses(close)}
     {@attach suspendShortcuts}
   >
     <div
@@ -146,16 +246,34 @@
         different item takes the current index. -->
       {#key position}
         {#key current}
-          <div class="kit-media-viewer__viewport" {@attach panZoomViewport}>
+          <!-- A video's own controls take its pointer input, so it gets
+            no pan, zoom, double-tap zoom, or swipe paging. -->
+          <div
+            class={[
+              "kit-media-viewer__viewport",
+              current?.kind === "video" && "kit-media-viewer__viewport--video",
+            ]}
+            {@attach current?.kind !== "video" && panZoomViewport}
+          >
             <div
               class={[
                 "kit-media-viewer__pan",
                 current?.kind === "element" && "kit-media-viewer__pan--element",
+                current?.kind === "video" && "kit-media-viewer__pan--video",
                 current?.kind === "element" && current.class,
               ]}
             >
               {#if current?.kind === "image"}
                 <img class="kit-media-viewer__img" src={current.src} alt={current.alt} />
+              {:else if current?.kind === "video"}
+                <VideoPlayer
+                  class="kit-media-viewer__video"
+                  src={current.src || undefined}
+                  sources={current.src ? [] : (current.sources ?? [])}
+                  label={current.label}
+                  expandable={false}
+                  videoAttachment={playVideo(current)}
+                />
               {:else if current?.kind === "element"}
                 <div class="kit-media-viewer__element" {@attach cloneInto(current.element)}></div>
               {/if}
@@ -177,7 +295,7 @@
         </p>
       {/if}
 
-      <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={onclose}>
+      <IconButton class="kit-media-viewer__close" ariaLabel={closeLabel} onclick={close}>
         <XIcon size="16" strokeWidth="2" aria-hidden="true" />
       </IconButton>
 
@@ -201,13 +319,15 @@
         </p>
       {/if}
 
-      <IconButton
-        class="kit-media-viewer__reset"
-        ariaLabel={resetLabel}
-        onclick={() => panZoom?.reset()}
-      >
-        <RotateCcwIcon size="16" strokeWidth="2" aria-hidden="true" />
-      </IconButton>
+      {#if current.kind !== "video"}
+        <IconButton
+          class="kit-media-viewer__reset"
+          ariaLabel={resetLabel}
+          onclick={() => panZoom?.reset()}
+        >
+          <RotateCcwIcon size="16" strokeWidth="2" aria-hidden="true" />
+        </IconButton>
+      {/if}
     </div>
   </div>
 {/if}
@@ -296,8 +416,30 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+  }
+
+  .kit-media-viewer__pan--video {
+    container-type: size;
+  }
+
+  /* A video grows or shrinks to the largest box that fits, keeping the
+   * picture's aspect ratio. The box is the picture, not a letterboxed
+   * area around it, so the controls sit on the picture. The ratio comes
+   * from the video's metadata; 16:9 holds its place until then. */
+  .kit-media-viewer__pan--video :global(.kit-media-viewer__video) {
+    --kit-media-viewer-video-ratio: 1.7778;
+    width: min(100cqw, 100cqh * var(--kit-media-viewer-video-ratio));
+    aspect-ratio: var(--kit-media-viewer-video-ratio);
+  }
+
+  .kit-media-viewer__img {
     user-select: none;
     -webkit-user-drag: none;
+  }
+
+  .kit-media-viewer__viewport--video {
+    cursor: auto;
+    touch-action: auto;
   }
 
   .kit-media-viewer__element {

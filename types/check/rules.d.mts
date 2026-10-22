@@ -150,6 +150,11 @@ export function checkHandRolledImagePreview(source: any): {
     line: number;
     message: string;
 }[];
+export function checkHandRolledVideoPlayer(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 export function checkHandRolledLightbox(source: any, filename?: string): {
     rule: string;
     line: number;
@@ -388,6 +393,7 @@ export const ALL_RULES: {
     "hand-rolled-icon-button": typeof checkHandRolledIconButton;
     "hand-rolled-image-preview": typeof checkHandRolledImagePreview;
     "hand-rolled-lightbox": typeof checkHandRolledLightbox;
+    "hand-rolled-video-player": typeof checkHandRolledVideoPlayer;
     "hand-rolled-top-bar": typeof checkHandRolledTopBar;
     "hand-rolled-search-input": typeof checkHandRolledSearchInput;
     "hand-rolled-date-input": typeof checkHandRolledDateInput;

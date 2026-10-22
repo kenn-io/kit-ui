@@ -7,12 +7,14 @@
     Markdown,
     MediaViewer,
     SegmentedControl,
+    VideoPlayer,
     type MediaViewerItem,
   } from "../../lib/index.js";
   import {
     initMarkdownMermaidRendering,
     mermaidCodeFence,
   } from "../../lib/utils/markdown-mermaid.js";
+  import demoVideo from "../assets/media-viewer-demo.webm";
   import DemoSection from "../DemoSection.svelte";
 
   function swatch(label: string, fill: string, width = 480, height = 280): string {
@@ -77,16 +79,29 @@ graph LR
   {/if}
 </DemoSection>
 
+<DemoSection
+  title="Video"
+  description="VideoPlayer's expand control, beside full screen, opens the page gallery on the video. The viewer plays it from where the inline player was, and the player takes the position back when the video leaves the viewer. Paging moves to the page's other images, diagrams, and videos. Space or K plays and pauses, M mutes, F toggles full screen, and the arrow keys seek. The speed button's choice is remembered for every player."
+  code={`<VideoPlayer {src} label="Test pattern video" />`}
+>
+  <div class="media-demo-video">
+    <VideoPlayer src={demoVideo} label="Test pattern video" />
+  </div>
+</DemoSection>
+
 <div class="media-demo-page" {@attach markdownMedia}>
   <DemoSection
     title="Page gallery"
-    description="Markdown images (initMarkdownImageViewer), Mermaid diagrams, and ImagePreview all register with one page gallery. Expanding any of them pages through every item currently displayed, in page order. The image in the inactive tab is skipped until its tab is shown."
+    description="Markdown images (initMarkdownImageViewer), Mermaid diagrams, VideoPlayer, and ImagePreview all register with one page gallery. Expanding any of them pages through every item currently displayed, in page order. The image in the inactive tab is skipped until its tab is shown."
     code={`import "@kenn-io/kit-ui/markdown-images.css";
 import { initMarkdownImageViewer } from "@kenn-io/kit-ui";
 
 const controller = initMarkdownImageViewer(document); // once at startup`}
   >
     <Markdown {renderer} source={markdownSource} />
+    <div class="media-demo-video">
+      <VideoPlayer src={demoVideo} label="Second test pattern video" />
+    </div>
     <ImagePreview src={swatch("ImagePreview", "#14b8a6")} alt="ImagePreview swatch" />
     <SegmentedControl
       ariaLabel="Demo tabs"
@@ -107,6 +122,12 @@ const controller = initMarkdownImageViewer(document); // once at startup`}
 </div>
 
 <style>
+  .media-demo-video {
+    width: 480px;
+    max-width: 100%;
+    margin-block: var(--space-4);
+  }
+
   .media-demo-tab {
     margin-top: var(--space-6);
   }

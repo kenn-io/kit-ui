@@ -1,11 +1,11 @@
 # MediaViewer
 
-The expanded view for images, Mermaid diagrams, and other static
+The expanded view for images, videos, Mermaid diagrams, and other static
 content. It opens as a full-viewport modal: the panel is 90% of the
 viewport width and height, with no pixel cap. The content can be dragged
 to pan, zoomed from 0.4× to 8× with the wheel or a trackpad pinch
 (anchored at the cursor) or a two-finger touch pinch (anchored between
-the fingers), and reset.
+the fingers), and reset. Videos have no pan or zoom; see [Videos](#videos).
 
 A double tap (or a mouse double-click) zooms in 2.5× on that point, and
 a second one resets. iOS Safari reports a double tap's second tap only
@@ -48,6 +48,22 @@ type MediaViewerItem =
       label: string; // accessible name
       class?: string; // extra class on the content wrapper
       background?: string; // panel background behind this item
+    }
+  | {
+      kind: "video";
+      src: string; // the inline player's currentSrc; "" when it has none yet
+      sources?: { src: string; type?: string }[]; // used when src is ""
+      label: string; // accessible name
+      currentTime?: number; // start position in seconds
+      playing?: boolean; // start playing on display
+      muted?: boolean; // start muted
+      volume?: number; // start volume, 0 to 1
+      onleave?: (state: {
+        currentTime: number;
+        playing: boolean;
+        muted: boolean;
+        volume: number;
+      }) => void;
     };
 ```
 
@@ -59,13 +75,87 @@ diagram" are usually generic. The caption is hidden from assistive tech
 because the dialog's name and the image's alt already carry the text.
 
 Images keep their natural size when it fits and shrink to fit otherwise;
-they never upscale. Element content that is an `svg` fills the available
+they never upscale. Videos fill the viewer instead (see [Videos](#videos)).
+Element content that is an `svg` fills the available
 space, keeping its aspect ratio through its `viewBox`.
 
 An element item is deep-cloned each time it is shown, so it suits static
 markup such as an SVG diagram. The clone has no event listeners, canvas
 pixels, shadow roots, or live form and media state, and it repeats the
 original's `id`s while both are in the document.
+
+## Videos
+
+A video item plays in a [VideoPlayer](video-player.md) rather than a
+clone, because a cloned player loses its loaded data and position. Use
+it in place of the browser's full screen: the video gets the 90%
+panel while the page stays visible around it.
+
+A VideoPlayer on the page already joins the page gallery and does the
+handover below, so its expand control is all an app needs. Build video
+items yourself only for another player, such as a plain `<video>`.
+
+Playback hands over in both directions:
+
+1. When opening, pause the inline player and pass its `currentSrc`,
+   `currentTime`, `muted`, `volume`, and whether it was playing. An idle
+   player (`preload="none"`) may have no `currentSrc` yet; pass `""` and
+   its `sources`, and the viewer's browser picks one it supports. The
+   viewer applies `muted` and `volume` at once, seeks to `currentTime`
+   once the video's metadata loads, and starts playing if `playing` is
+   true. Play or Pause pressed before the metadata loads replaces
+   `playing`.
+2. Each time the video leaves the viewer, the viewer pauses it and calls
+   `onleave` with its position, `muted`, and `volume`. Apply them to the
+   inline player, and play it if `state.playing` is true.
+
+`state.playing` is true only when the user closed the viewer (Escape,
+the backdrop, or the close button) while the video played. Paging away
+pauses it and reports `false`, so the inline player does not start
+behind the viewer. Paging back resumes, paused, from where it left,
+with the sound the user set there. A
+close from outside the viewer, such as `closeMediaViewerGallery()`,
+also reports `false`. Each open starts fresh, including when a host
+keeps the viewer mounted and closes it by emptying `items`: the next
+open uses the items' own `currentTime` and `playing`.
+
+```ts
+const playing = !video.paused && !video.ended;
+video.pause();
+const item: MediaViewerItem = {
+  kind: "video",
+  src: video.currentSrc,
+  label: "Screen recording",
+  currentTime: video.currentTime,
+  playing,
+  muted: video.muted,
+  volume: video.volume,
+  onleave: (state) => {
+    video.muted = state.muted;
+    video.volume = state.volume;
+    video.currentTime = state.currentTime;
+    if (state.playing) void video.play();
+  },
+};
+```
+
+The player takes the video's input:
+
+- A video grows or shrinks to the largest size that fits the viewer and
+  keeps its shape, so a small clip fills the panel in one direction. The
+  player is exactly the size of the picture, so the controls sit on it.
+- There is no pan, zoom, double-tap zoom, or swipe paging on a video, and
+  no reset button. A click on the picture plays or pauses it, drags work
+  the player's sliders, and neither closes the viewer.
+- While focus is in the player, the Left and Right arrow keys seek five
+  seconds and do not page. The previous and next buttons still page.
+  Escape still closes.
+- The player's full-screen button stays, for a user who wants the whole
+  screen. Its expand control is hidden, since the viewer is already the
+  expanded view.
+
+A video item has no caption, like an element item, and no caption
+track.
 
 An empty `items` list renders nothing. An `index` outside the list wraps
 into range (`-1` is the last item), so the item, counter, and accessible
@@ -98,7 +188,7 @@ the same strings as `viewerLabels: MediaViewerLabels`
 ## Page gallery
 
 Everything in kit-ui that expands uses one page-wide gallery
-(`utils/media-gallery`): `ImagePreview`, markdown images
+(`utils/media-gallery`): `ImagePreview`, `VideoPlayer`, markdown images
 (`initMarkdownImageViewer`), and Mermaid diagrams
 (`initMarkdownMermaidRendering`). Expanding any of them opens MediaViewer
 on it, with every other eligible item on the page in document order.

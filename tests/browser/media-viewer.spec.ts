@@ -99,19 +99,21 @@ test("a markdown image pages through every displayed item on the page", async ({
   await page.getByRole("img", { name: "Screenshot A" }).hover();
   await page.getByRole("button", { name: "Open image in expanded view: Screenshot A" }).click();
 
-  // Screenshot A, the diagram, Screenshot B, the ImagePreview — not the
-  // image in the inactive tab.
-  await expect(viewer(page)).toHaveAccessibleName("Screenshot A (1 of 4)");
+  // The video above, Screenshot A, the diagram, Screenshot B, the second
+  // video, the ImagePreview — not the image in the inactive tab.
+  await expect(viewer(page)).toHaveAccessibleName("Screenshot A (2 of 6)");
   await expect(caption(page)).toHaveText("Screenshot A");
   await page.keyboard.press("ArrowRight");
-  await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (2 of 4)");
+  await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (3 of 6)");
   await expect(viewer(page).locator(".kit-mermaid-content svg")).toBeVisible();
   // A diagram's label is generic, so it gets no caption.
   await expect(caption(page)).toHaveCount(0);
   await page.keyboard.press("ArrowRight");
-  await expect(viewer(page)).toHaveAccessibleName("Screenshot B (3 of 4)");
+  await expect(viewer(page)).toHaveAccessibleName("Screenshot B (4 of 6)");
   await page.keyboard.press("ArrowRight");
-  await expect(viewer(page)).toHaveAccessibleName("ImagePreview swatch (4 of 4)");
+  await expect(viewer(page)).toHaveAccessibleName("Second test pattern video (5 of 6)");
+  await page.getByRole("button", { name: "Next item" }).click();
+  await expect(viewer(page)).toHaveAccessibleName("ImagePreview swatch (6 of 6)");
   await page.keyboard.press("Escape");
 
   // Showing the other tab makes its image eligible.
@@ -119,9 +121,9 @@ test("a markdown image pages through every displayed item on the page", async ({
   await page
     .getByRole("button", { name: "Open image in expanded view: ImagePreview swatch" })
     .click();
-  await expect(viewer(page)).toHaveAccessibleName("ImagePreview swatch (4 of 5)");
+  await expect(viewer(page)).toHaveAccessibleName("ImagePreview swatch (6 of 7)");
   await page.keyboard.press("ArrowRight");
-  await expect(viewer(page)).toHaveAccessibleName("Hidden tab image (5 of 5)");
+  await expect(viewer(page)).toHaveAccessibleName("Hidden tab image (7 of 7)");
 });
 
 test("an item inside a modal pages only within that modal", async ({ page }) => {
@@ -224,10 +226,10 @@ test("an onViewerOpen hook that updates app state leaves the viewer working", as
   const depth = () =>
     page.evaluate(() => (window as unknown as { __depth: () => number }).__depth());
 
-  await expect(viewer(page)).toHaveAccessibleName("Screenshot A (1 of 4)");
+  await expect(viewer(page)).toHaveAccessibleName("Screenshot A (2 of 6)");
   expect(await depth()).toBe(1);
   await page.keyboard.press("ArrowRight");
-  await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (2 of 4)");
+  await expect(viewer(page)).toHaveAccessibleName("Mermaid diagram (3 of 6)");
   await page.keyboard.press("Escape");
   await expect(viewer(page)).toHaveCount(0);
   expect(await depth()).toBe(0);
