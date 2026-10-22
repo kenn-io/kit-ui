@@ -195,7 +195,7 @@
   function readWidth(key: string): number | null {
     try {
       const stored = Number(localStorage.getItem(`${key}-width`) ?? Number.NaN);
-      return Number.isFinite(stored) ? fit(stored) : null;
+      return Number.isFinite(stored) ? stored : null;
     } catch {
       // Storage blocked or absent: the default width stands.
       return null;
@@ -233,12 +233,13 @@
   // The narrowest full sidebar in which its longest word fits; null until
   // the full sidebar has been laid out.
   let fitWidth = $state<number | null>(null);
-  // Someone's chosen width; null until they resize.
-  let widthChoice = $derived(hostWidth === null ? readWidth(storageKey) : fit(hostWidth));
+  // Someone's chosen width; null until they resize. It stays as chosen and
+  // is fitted to the limits on use, since the limits move with the font size.
+  let widthChoice = $derived(hostWidth ?? readWidth(storageKey));
   // The full sidebar's width, never narrower than its longest word; null
   // while CSS's 15rem is enough.
   const fullWidth = $derived.by(() => {
-    const width = Math.max(widthChoice ?? defaultWidth, fitWidth ?? 0);
+    const width = Math.max(widthChoice === null ? defaultWidth : fit(widthChoice), fitWidth ?? 0);
     return widthChoice === null && width === defaultWidth ? null : width;
   });
 

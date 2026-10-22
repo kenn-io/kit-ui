@@ -856,7 +856,8 @@ test("the narrowest width grows with a theme's wider font", async ({ page }) => 
   expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
 });
 
-test("the sidebar's widths follow a larger default font size", async ({ page }) => {
+test("the sidebar's widths follow a larger default font size", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "the font-size setting is a CDP call");
   // The browser's font-size setting, here 32px against the usual 16px.
   const session = await page.context().newCDPSession(page);
   await session.send("Page.setFontSizes", { fontSizes: { standard: 32 } });
@@ -882,6 +883,24 @@ test("the sidebar's widths follow a larger default font size", async ({ page }) 
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   await expect.poll(() => sidebarWidth(page)).toBe(112);
   await expect(edge(page)).toHaveAttribute("aria-valuenow", "112");
+});
+
+test("a width chosen at a larger font shrinks to the maximum of a smaller one", async ({
+  page,
+}) => {
+  const fontSize = (size: string) =>
+    page.evaluate((size) => (document.documentElement.style.fontSize = size), size);
+  await open(page, "home", 1440);
+  await fontSize("32px");
+  await expect(edge(page)).toHaveAttribute("aria-valuemax", "768");
+  await dropEdgeAt(page, 700);
+  expect(await sidebarWidth(page)).toBe(700);
+
+  await fontSize("");
+  await expect(edge(page)).toHaveAttribute("aria-valuemax", "384");
+  await expect.poll(() => sidebarWidth(page)).toBe(384);
+  await expect(edge(page)).toHaveAttribute("aria-valuenow", "384");
+  expect(await storedWidth(page)).toBe("700");
 });
 
 test("Mod+B toggles the sidebar outside text fields and the drawer", async ({ page }) => {
