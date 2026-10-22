@@ -141,10 +141,12 @@
     const viewportWidth = window.innerWidth / zoom;
     // CSS vw ignores ancestor zoom, so the stylesheet's width cap reads this
     // instead. Set it before measuring so min-width resolves against it.
-    const widthLimit = `${Math.max(0, viewportWidth - 16)}px`;
+    const maxWidth = Math.max(0, viewportWidth - 16);
+    const widthLimit = `${maxWidth}px`;
     panelEl.style.setProperty("--kit-typeahead-width-limit", widthLimit);
     const minWidth = parseFloat(getComputedStyle(panelEl).minWidth) || 0;
-    const width = Math.max(anchor.width, minWidth);
+    // A trigger wider than the window must not drag the list off screen.
+    const width = Math.min(Math.max(anchor.width, minWidth), maxWidth);
     panelStyle = `${floatingPopoverStyle({
       trigger: anchor,
       viewportWidth,

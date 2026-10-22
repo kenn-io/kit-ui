@@ -41,8 +41,9 @@ calling component needs to keep ownership of an existing button for scoped CSS,
 ```
 
 The attachment adds the menu ARIA attributes, click and arrow-key handling,
-disabled state, and `kit-control-states` to that button. Style open state with
-`[aria-expanded="true"]`. Attachments require Svelte 5.29 or newer, which
+disabled state, and `kit-control-states` to that button. A button with
+`aria-disabled="true"`, such as an `ariaDisabled` IconButton, does not open the
+menu. Style open state with `[aria-expanded="true"]`. Attachments require Svelte 5.29 or newer, which
 matches kit-ui's peer dependency.
 
 Disabled items use `aria-disabled="true"`. They remain in keyboard navigation

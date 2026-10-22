@@ -869,4 +869,20 @@ test.describe("trigger button the app renders", () => {
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(360);
   });
+
+  test("a trigger wider than the window keeps the list on screen", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 480 });
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await page.locator(".kit-typeahead--custom-trigger").evaluate((el) => {
+      (el as HTMLElement).style.cssText = "position: fixed; left: 0; top: 4px;";
+    });
+    await button.evaluate((el) => {
+      el.style.width = "500px";
+    });
+    await button.click({ position: { x: 20, y: 10 } });
+    const box = (await page.locator(".kit-typeahead__panel").boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+  });
 });
