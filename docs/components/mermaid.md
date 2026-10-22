@@ -109,6 +109,38 @@ budgets are scoped **per observed root**: each
 so initialize one controller per markdown document — several controllers
 over the same untrusted document would multiply the budget.
 
+### Strict Content Security Policy
+
+Diagrams also render in a page whose policy lacks `'unsafe-inline'` in
+`style-src`. Such a policy ignores the stylesheet and `style` attributes
+Mermaid writes into each SVG, which leaves every shape black. kit-ui
+works around this through CSSOM, which the policy allows
+(`tests/browser/strict-csp.spec.ts`):
+
+- Before rendering, it sets the theme font (`--font-sans` at
+  `--font-size-md`, the same values Mermaid's theme gets) on each diagram
+  block. Mermaid sizes shapes by measuring their labels, and without this
+  the labels would be measured in the host's `<pre>` font and overflow
+  their shapes. A diagram that fails to render goes back to the host's
+  `<pre>` font.
+- After each render, it re-applies Mermaid's styles: the stylesheet,
+  already scoped to the diagram's ID, as a constructed sheet adopted by
+  the diagram's document or shadow root, and each `style` attribute
+  through the element's style object.
+- It releases a diagram's sheet on the next render pass after the
+  diagram leaves the page, including a pass that finds no diagrams left.
+  `disconnect()` also releases the sheets of every diagram inside that
+  controller's root, so a host may disconnect before or after removing
+  the content.
+
+Those styles include the diagram's own `classDef` and `style`
+directives. kit-ui treats diagram styling as trusted author styling, the
+same as Mermaid on a page without such a policy. Its rules apply only
+within the diagram, but they can name outside resources, such as a
+`url(...)` background image. A host that must stop documents from
+loading outside resources should restrict `img-src` and the other fetch
+directives in its policy.
+
 ## Theming
 
 Diagram colors come from the `--mermaid-*` tokens defined in

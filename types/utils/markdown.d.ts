@@ -17,6 +17,11 @@
  * `--shiki-*` custom-property declarations with hex-color values — a
  * crafted markdown document can't smuggle arbitrary CSS through the
  * highlighter's style channel.
+ *
+ * Strict Content Security Policies work too. Shiki uses its JavaScript
+ * regex engine, so no WebAssembly compiles, and `applyShikiStyles`
+ * re-applies the token colors through CSSOM after the markup is inserted,
+ * because such a policy ignores `style` attributes parsed from markup.
  */
 import { Marked, type Tokens, type TokenizerAndRendererExtension } from "marked";
 export declare const SHIKI_MAX_HIGHLIGHTED_FENCES = 20;
@@ -31,6 +36,13 @@ export declare function escapeHtml(value: string): string;
 /** True when a style attribute contains only `--shiki-*: #hex`
  * declarations — the only inline styles sanitization lets through. */
 export declare function shikiStyleIsAllowed(value: string): boolean;
+/** Re-apply Shiki's token colors under `root` through CSSOM. A Content
+ * Security Policy without 'unsafe-inline' in style-src ignores `style`
+ * attributes parsed from markup but allows styles set through CSSOM. Only
+ * attributes that `shikiStyleIsAllowed` accepts are applied, so this cannot
+ * widen what sanitization let through. Call it after inserting highlighted
+ * markup; `Markdown` and `CodeBlock` do. */
+export declare function applyShikiStyles(root: ParentNode): void;
 interface CodeHighlightPlan {
     tokens: WeakSet<Tokens.Code>;
     languages: string[];

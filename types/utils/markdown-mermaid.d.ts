@@ -26,6 +26,19 @@
  * Budgets (diagram count, source bytes) bound the work a hostile
  * document can queue; they are scoped per observed root, so initialize
  * one controller per markdown document (see docs/components/mermaid.md).
+ *
+ * Mermaid writes each diagram's stylesheet and node styles into the SVG
+ * markup, which a Content Security Policy without 'unsafe-inline' in
+ * style-src ignores, leaving every shape black. After each render the
+ * module re-applies exactly those styles through CSSOM, which such a policy
+ * allows: the stylesheet as a constructed sheet, already scoped to the
+ * diagram's own ID, and each style attribute through the element's style
+ * object. Those styles include the diagram's own `classDef` and `style`
+ * directives, so diagram styling is trusted author styling, as it is when
+ * Mermaid runs on a page without such a policy. Its rules apply only
+ * within the diagram, but they can name outside resources such as
+ * `url(...)` backgrounds; a host that must stop documents from loading
+ * outside resources restricts img-src and the other fetch directives.
  */
 import { type MediaViewerLabels } from "./media-gallery.js";
 export interface MarkdownMermaidAPI {

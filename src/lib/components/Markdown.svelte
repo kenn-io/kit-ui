@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { renderMarkdown, type MarkdownRenderer } from "../utils/markdown.js";
+  import { applyShikiStyles, renderMarkdown, type MarkdownRenderer } from "../utils/markdown.js";
 
   interface Props {
     /** Markdown source. */
@@ -13,6 +13,12 @@
   let { source, renderer = undefined, class: className = "" }: Props = $props();
 
   let html = $state("");
+  let root = $state<HTMLDivElement>();
+
+  $effect(() => {
+    void html;
+    if (root) applyShikiStyles(root);
+  });
 
   // Async render: fences highlight once their grammar chunk loads. The
   // previous document stays visible during a re-render (no flash), and a
@@ -38,7 +44,7 @@
   });
 </script>
 
-<div class={["kit-markdown", className]}>
+<div bind:this={root} class={["kit-markdown", className]}>
   {@html html}
 </div>
 
