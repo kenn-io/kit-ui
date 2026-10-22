@@ -67,6 +67,22 @@ test("a theme change restyles diagrams and releases the old styles", async ({ pa
   expect(await page.evaluate(() => document.adoptedStyleSheets.length)).toBe(sheets);
 });
 
+// VideoPlayer's look comes from its stylesheet, not from styles on its
+// elements, so the policy blocks none of it and the bar lays out on the
+// picture.
+test("a video player lays out its controls under a strict policy", async ({ page }) => {
+  const player = page.getByTestId("video").locator(".kit-video-player");
+  const play = player.getByRole("button", { name: "Play" });
+  await expect(play).toBeVisible();
+  const bar = (await player.locator(".kit-video-player__bar").boundingBox())!;
+  const picture = (await player.locator("video").boundingBox())!;
+  // On the picture, at its bottom edge, not in the flow below it.
+  expect(bar.y).toBeGreaterThan(picture.y);
+  expect(Math.abs(bar.y + bar.height - (picture.y + picture.height))).toBeLessThanOrEqual(1);
+  expect(await play.boundingBox()).toMatchObject({ width: 32, height: 32 });
+  await expect(player.getByRole("button", { name: "Open video in expanded view" })).toBeVisible();
+});
+
 type ControllerWindow = typeof window & {
   mermaidControllers?: Record<string, { disconnect: () => void }>;
 };
