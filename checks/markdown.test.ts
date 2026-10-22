@@ -3,8 +3,8 @@ import { Marked, type Tokens } from "marked";
 import {
   codeFenceLanguage,
   codeHighlightPlan,
+  allowedShikiStyle,
   escapeHtml,
-  shikiStyleIsAllowed,
   SHIKI_MAX_DISTINCT_LANGUAGES,
   SHIKI_MAX_HIGHLIGHTED_FENCES,
 } from "../src/lib/utils/markdown.js";
@@ -35,17 +35,27 @@ describe("escapeHtml", () => {
   });
 });
 
-describe("shikiStyleIsAllowed", () => {
-  test("accepts shiki custom properties with hex colors", () => {
-    expect(shikiStyleIsAllowed("--shiki-light:#24292e;--shiki-dark:#e1e4e8")).toBe(true);
-    expect(shikiStyleIsAllowed("--shiki-light-bg:#fff")).toBe(true);
+describe("allowedShikiStyle", () => {
+  test("keeps shiki custom properties with hex colors", () => {
+    expect(allowedShikiStyle("--shiki-light:#24292e;--shiki-dark:#e1e4e8")).toBe(
+      "--shiki-light:#24292e;--shiki-dark:#e1e4e8",
+    );
+    expect(allowedShikiStyle("--shiki-light-bg:#fff")).toBe("--shiki-light-bg:#fff");
   });
 
-  test("rejects anything else in the style channel", () => {
-    expect(shikiStyleIsAllowed("color:#fff")).toBe(false);
-    expect(shikiStyleIsAllowed("--shiki-light:url(evil)")).toBe(false);
-    expect(shikiStyleIsAllowed("--shiki-light:#fff;position:fixed")).toBe(false);
-    expect(shikiStyleIsAllowed("")).toBe(false);
+  test("keeps a bold token's colors and drops its font hints", () => {
+    expect(
+      allowedShikiStyle(
+        "--shiki-light:#0550AE;--shiki-light-font-weight:bold;--shiki-dark:#79C0FF;--shiki-dark-font-weight:bold",
+      ),
+    ).toBe("--shiki-light:#0550AE;--shiki-dark:#79C0FF");
+  });
+
+  test("drops anything else in the style channel", () => {
+    expect(allowedShikiStyle("color:#fff")).toBe("");
+    expect(allowedShikiStyle("--shiki-light:url(evil)")).toBe("");
+    expect(allowedShikiStyle("--shiki-light:#fff;position:fixed")).toBe("--shiki-light:#fff");
+    expect(allowedShikiStyle("")).toBe("");
   });
 });
 

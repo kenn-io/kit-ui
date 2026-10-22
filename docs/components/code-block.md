@@ -125,8 +125,10 @@ by DOMPurify regardless).
 - `<style>` elements are forbidden (`FORBID_TAGS`) — DOMPurify's defaults
   would let untrusted markdown inject document-wide CSS.
 - Inline `style` attributes are stripped everywhere **except** on
-  shiki-generated nodes: those are tagged with a per-render nonce and may
-  only carry `--shiki-*: #hex` declarations. A crafted document that
+  shiki-generated nodes: those are tagged with a per-render nonce and keep
+  only their `--shiki-*: #hex` declarations. Shiki's font hints, such as
+  `--shiki-light-font-weight: bold`, are dropped and the colors stay. A
+  crafted document that
   fakes `<pre class="shiki">` markup can't smuggle CSS — it lacks the
   nonce.
 - Any `<a>` that keeps a `target` attribute gets
