@@ -183,3 +183,14 @@ test("clicking from one wrapped control to another keeps the tooltip hidden", as
   await expect(right).toBeFocused();
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 });
+
+test("a touch tap does not open the tooltip", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, hasTouch: true });
+  const page = await context.newPage();
+  await gotoPage(page, "tooltip");
+  await page.getByRole("button", { name: "Update branch" }).tap();
+  // Past the open delay the emulated mouseenter would have used.
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await context.close();
+});

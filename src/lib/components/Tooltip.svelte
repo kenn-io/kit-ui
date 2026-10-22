@@ -84,7 +84,9 @@
 
   function show(immediate = false): void {
     clearTimer();
-    if (open) return;
+    // A touch tap fires an emulated mouseenter after the press; it must not
+    // bring the bubble back over what the tap opened.
+    if (open || pressed) return;
     if (immediate || openDelayMs <= 0) {
       open = true;
       void position();
