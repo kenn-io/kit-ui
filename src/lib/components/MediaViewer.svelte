@@ -139,6 +139,13 @@
       let ready = false;
       const begin = () => {
         ready = true;
+        // The CSS sizes the video's box from this ratio, so the box is
+        // the picture and the controls sit on it.
+        if (video.videoWidth > 0 && video.videoHeight > 0)
+          video.style.setProperty(
+            "--kit-media-viewer-video-ratio",
+            String(video.videoWidth / video.videoHeight),
+          );
         if (start.currentTime > 0) video.currentTime = start.currentTime;
         // Rejected when the browser blocks autoplay or the video leaves
         // first; the controls still work.
@@ -205,6 +212,7 @@
               class={[
                 "kit-media-viewer__pan",
                 current?.kind === "element" && "kit-media-viewer__pan--element",
+                current?.kind === "video" && "kit-media-viewer__pan--video",
                 current?.kind === "element" && current.class,
               ]}
             >
@@ -359,14 +367,27 @@
      * content and blur it when zoomed. */
   }
 
-  /* Images and videos keep their natural size when it fits; they never
-   * upscale. A video's box keeps the picture's aspect ratio, so its
-   * controls sit on the picture. */
-  .kit-media-viewer__img,
-  .kit-media-viewer__video {
+  /* Images keep their natural size when it fits; they never upscale. */
+  .kit-media-viewer__img {
     display: block;
     max-width: 100%;
     max-height: 100%;
+    object-fit: contain;
+  }
+
+  .kit-media-viewer__pan--video {
+    container-type: size;
+  }
+
+  /* A video grows or shrinks to the largest box that fits, keeping the
+   * picture's aspect ratio. The box is the picture, not a letterboxed
+   * area around it, so the controls sit on the picture. The ratio comes
+   * from the video's metadata; 16:9 holds its place until then. */
+  .kit-media-viewer__video {
+    --kit-media-viewer-video-ratio: 1.7778;
+    display: block;
+    width: min(100cqw, 100cqh * var(--kit-media-viewer-video-ratio));
+    aspect-ratio: var(--kit-media-viewer-video-ratio);
     object-fit: contain;
   }
 

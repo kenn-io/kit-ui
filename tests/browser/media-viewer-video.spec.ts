@@ -149,8 +149,34 @@ test("arrow keys seek a focused video instead of paging", async ({ page }) => {
   await expect(counter).toHaveText("2 / 2");
 });
 
-test("a video keeps its natural size when it fits", async ({ page }) => {
-  await expandAt(page, 0, false);
-  const box = (await expanded(page).boundingBox())!;
-  expect({ width: box.width, height: box.height }).toEqual({ width: 320, height: 180 });
-});
+for (const viewport of [
+  { name: "wide", width: 1280, height: 800 },
+  { name: "short", width: 1400, height: 500 },
+]) {
+  test(`a small video grows to fill a ${viewport.name} viewer, keeping its shape`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await expandAt(page, 0, false);
+    const video = expanded(page);
+    // The demo clip is 320x180, far smaller than the viewer.
+    expect(
+      await video.evaluate((node) => {
+        const media = node as HTMLVideoElement;
+        return { width: media.videoWidth, height: media.videoHeight };
+      }),
+    ).toEqual({ width: 320, height: 180 });
+
+    const area = (await page.locator(".kit-media-viewer__pan").boundingBox())!;
+    const box = (await video.boundingBox())!;
+    // The box fits the viewer and fills it in one direction.
+    expect(box.width).toBeLessThanOrEqual(area.width + 0.5);
+    expect(box.height).toBeLessThanOrEqual(area.height + 0.5);
+    const fillsWidth = Math.abs(box.width - area.width) <= 1;
+    const fillsHeight = Math.abs(box.height - area.height) <= 1;
+    expect(fillsWidth || fillsHeight).toBe(true);
+    expect(box.width).toBeGreaterThan(320);
+    // The box keeps the picture's 16:9 shape, so no bars sit inside it.
+    expect(box.width / box.height).toBeCloseTo(320 / 180, 2);
+  });
+}

@@ -67,7 +67,8 @@ diagram" are usually generic. The caption is hidden from assistive tech
 because the dialog's name and the image's alt already carry the text.
 
 Images keep their natural size when it fits and shrink to fit otherwise;
-they never upscale. Element content that is an `svg` fills the available
+they never upscale. Videos fill the viewer instead (see [Videos](#videos)).
+Element content that is an `svg` fills the available
 space, keeping its aspect ratio through its `viewBox`.
 
 An element item is deep-cloned each time it is shown, so it suits static
@@ -117,8 +118,9 @@ const item: MediaViewerItem = {
 
 The video's own controls take its input:
 
-- Videos are sized like images: natural size when it fits, shrunk to fit
-  otherwise, never upscaled.
+- A video grows or shrinks to the largest size that fits the viewer and
+  keeps its shape, so a small clip fills the panel in one direction. The
+  player is exactly the size of the picture, so the controls sit on it.
 - There is no pan, zoom, double-tap zoom, or swipe paging on a video, and
   no reset button. Clicks and drags on the video work its controls and
   never close the viewer.
