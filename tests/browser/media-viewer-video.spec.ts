@@ -193,7 +193,10 @@ test("a chosen speed carries to every player, the viewer, and the next visit", a
     .getByRole("button", { name: /^Playback rate/ })
     .click();
   await expect(expanded(page)).toHaveJSProperty("playbackRate", 1.5);
-  expect(await page.evaluate(() => localStorage.getItem("kit-ui:video-playback-rate"))).toBe("1.5");
+  // The player saves on ratechange, which the browser fires as its own task.
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("kit-ui:video-playback-rate")))
+    .toBe("1.5");
 });
 
 test("the gallery pages through the page's videos, images, and diagrams in order", async ({
@@ -422,9 +425,11 @@ async function mountSwappable(page: Page) {
     swap.swap = (sources) => update({ sources });
     swap.second = `${clip}?second`;
   });
+  // The viewer's player carries the same label; the inline one comes first.
   const player = page
     .locator(".kit-video-player")
-    .filter({ has: page.getByLabel("Swapped video") });
+    .filter({ has: page.getByLabel("Swapped video") })
+    .first();
   const video = player.locator("video");
   await expect
     .poll(() => video.evaluate((node) => (node as HTMLVideoElement).currentSrc))
@@ -450,6 +455,52 @@ test("replacing a player's sources loads the new clip, expanded too", async ({ p
   );
 });
 
+test("a full-screen player hides its expand control, whose viewer would open out of sight", async ({
+  page,
+}) => {
+  const player = inlinePlayer(page);
+  const expand = player.getByRole("button", { name: "Open video in expanded view" });
+  await expect(expand).toBeVisible();
+
+  await player.getByRole("button", { name: "Enter fullscreen" }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true);
+
+  await expect(expand).toBeHidden();
+  await player.getByRole("button", { name: "Exit fullscreen" }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
+  await expect(expand).toBeVisible();
+});
+
+test("replacing the sources while expanded leaves the new clip alone on close", async ({
+  page,
+}) => {
+  const { player, video } = await mountSwappable(page);
+  await seekTo(video, 1, false);
+  await player.getByRole("button", { name: "Open video in expanded view" }).click();
+  await expect(viewer(page)).toHaveAccessibleName(/^Swapped video/);
+  // Playing when the viewer closes, so the handover would resume playback.
+  await expanded(page).evaluate(async (node) => {
+    const media = node as HTMLVideoElement;
+    media.muted = true;
+    if (media.readyState < HTMLMediaElement.HAVE_METADATA)
+      await new Promise((resolve) => media.addEventListener("loadedmetadata", resolve));
+    await media.play();
+  });
+
+  await page.evaluate(() => {
+    const swap = window as SwapWindow;
+    swap.swap([{ src: swap.second, type: "video/webm" }]);
+  });
+  await expect
+    .poll(() => video.evaluate((node) => (node as HTMLVideoElement).currentSrc))
+    .toMatch(/\?second$/);
+  await page.keyboard.press("Escape");
+  await expect(viewer(page)).toHaveCount(0);
+
+  // The old clip's position and playback do not carry into the new one.
+  expect(await playback(video)).toEqual({ time: 0, playing: false });
+});
+
 test("a chosen speed survives the player loading again", async ({ page }) => {
   const { player, video } = await mountSwappable(page);
   await player.getByRole("button", { name: /^Playback rate/ }).click();
@@ -470,7 +521,10 @@ test("a chosen speed survives the player loading again", async ({ page }) => {
     .toMatch(/\?second$/);
 
   await expect(video).toHaveJSProperty("playbackRate", 1.2);
-  expect(await page.evaluate(() => localStorage.getItem("kit-ui:video-playback-rate"))).toBe("1.2");
+  // The player saves on ratechange, which the browser fires as its own task.
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("kit-ui:video-playback-rate")))
+    .toBe("1.2");
 });
 
 test("a video item with no chosen source plays the first its sources the browser supports", async ({

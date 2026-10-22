@@ -45,6 +45,11 @@ its expand control, beside full screen, opens MediaViewer on it.
   played. Paging away pauses the video.
 - Opening the viewer from any item pauses every expandable player on the
   page, because each one hands its playback to the viewer.
+- If `src` or `sources` change while the viewer is open, the inline
+  player keeps the new video at its start when the viewer closes. Only
+  mute and volume carry back.
+- The expand control hides while the player is in full screen. The viewer
+  opens on the page, which full screen covers.
 
 Set `expandable={false}` for a player that should not expand or join the
 gallery. MediaViewer's own player is one.

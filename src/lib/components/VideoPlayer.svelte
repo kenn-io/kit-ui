@@ -131,10 +131,18 @@
 
   // The browser picks among <source> children only when the video first
   // loads; a new list needs load() to take effect. A new src loads itself.
+  // Counting the changes lets a handover from the expanded view tell that
+  // the player now shows another clip.
   let loadedSources: string | null = null;
+  let sourceChanges = 0;
   $effect(() => {
-    const list = sources.map((source) => `${source.src} ${source.type ?? ""}`).join("\n");
-    if (loadedSources !== null && list !== loadedSources) untrack(() => video)?.load();
+    const list = [src ?? "", ...sources.map((source) => `${source.src} ${source.type ?? ""}`)].join(
+      "\n",
+    );
+    if (loadedSources !== null && list !== loadedSources) {
+      sourceChanges += 1;
+      if (!src) untrack(() => video)?.load();
+    }
     loadedSources = list;
   });
 
@@ -158,6 +166,7 @@
   // it was, and takes the position back when the video leaves the viewer.
   function expandedItem(player: HTMLVideoElement): MediaViewerVideoItem {
     const playing = !player.paused && !player.ended;
+    const changesAtOpen = sourceChanges;
     player.pause();
     return {
       kind: "video",
@@ -174,6 +183,9 @@
         if (!player.isConnected) return;
         player.muted = state.muted;
         player.volume = state.volume;
+        // The position and playback belong to the clip that was expanded,
+        // not to one the host has put in its place since.
+        if (sourceChanges !== changesAtOpen) return;
         player.currentTime = state.currentTime;
         if (state.playing) player.play().catch(() => {});
       },
@@ -277,7 +289,7 @@
               {#if expandable}
                 <button
                   type="button"
-                  class="kit-video-player__button"
+                  class="kit-video-player__button kit-video-player__expand"
                   aria-label={expandLabel}
                   title={expandLabel}
                   onclick={() => {
@@ -459,6 +471,12 @@
     :global(.kit-video-player__icon--enter),
   .kit-video-player__fullscreen:global([data-fullscreen]) :global(.kit-video-player__icon--exit) {
     display: block;
+  }
+
+  /* The expanded view opens on the page, which a full-screen element
+   * covers, so the control would open it out of sight. */
+  :global(:fullscreen) .kit-video-player__expand {
+    display: none;
   }
 
   .kit-video-player__mute:global([data-hidden]),
