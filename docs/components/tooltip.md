@@ -13,8 +13,9 @@ when the control changes its own `aria-describedby` while the tooltip is
 open. Pressing the trigger hides the tooltip, so it does not cover a menu or
 list the press opens. A press is a click, a touch tap, or Enter or Space on a
 wrapped control other than a text field. The tooltip shows again the next time
-the pointer enters the trigger or keyboard focus lands on it. On touch devices
-it therefore opens on keyboard focus, not on a tap.
+the pointer enters the trigger or keyboard focus lands on it. On touch screens a
+tooltip on a control opens through keyboard focus. A `focusable` trigger has no
+action to cover, so a tap or click on it opens the tooltip.
 
 ## Text tooltip
 

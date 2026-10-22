@@ -151,7 +151,10 @@
     hide(true);
   }
 
+  // A `focusable` trigger does nothing when pressed, and a tap is the only
+  // way a touch user can open its tooltip.
   function handlePointerDown(): void {
+    if (focusable) return;
     pressed = true;
     hide(true);
   }
@@ -159,6 +162,7 @@
   // Enter or Space activates a control the way a click does. A list it
   // opens may keep focus on the control, as SelectDropdown does.
   function handleKeydown(event: KeyboardEvent): void {
+    if (focusable) return;
     if (event.key !== "Enter" && event.key !== " ") return;
     const el = event.target;
     // Typing in a wrapped text field keeps its description.

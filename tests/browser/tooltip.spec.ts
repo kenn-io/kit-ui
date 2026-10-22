@@ -217,3 +217,14 @@ test("a touch tap does not open the tooltip", async ({ browser, baseURL }) => {
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await context.close();
 });
+
+test("a touch tap opens the tooltip of a focusable trigger", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, hasTouch: true });
+  const page = await context.newPage();
+  await gotoPage(page, "tooltip");
+  await page.getByText("focusable text").tap();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "Uses tabindex so plain text is keyboard-reachable",
+  );
+  await context.close();
+});
