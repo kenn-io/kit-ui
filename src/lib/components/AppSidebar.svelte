@@ -155,11 +155,11 @@
   const isMac = isMacPlatform();
   const toggleKeys = formatShortcutKeys("mod+b", isMac).join(isMac ? "" : "+");
   const toggleAriaKeys = isMac ? "Meta+B" : "Control+B";
-  // Widths in pixels. The rail and the default width are 3.5rem and 15rem in
-  // CSS, which are these at the default font size.
-  const RAIL_WIDTH = 56;
-  const DEFAULT_WIDTH = 240;
-  const MAX_WIDTH = 384;
+  // Widths in rem, so they grow with the browser's font size as the text
+  // does. The rail and the default width match the CSS.
+  const RAIL_REM = 3.5;
+  const DEFAULT_REM = 15;
+  const MAX_REM = 24;
 
   const uid = $props.id();
   const narrowWindow = new MediaQuery(MEDIA.wide);
@@ -176,14 +176,26 @@
     }
   }
 
+  function rootFontSize(): number {
+    if (typeof document === "undefined") return 16;
+    return Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  }
+
+  // The root font size in pixels, read again when the root's classes,
+  // style, or theme change, or the browser's font size setting does.
+  let rem = $state(rootFontSize());
+  const collapsedWidth = $derived(Math.round(RAIL_REM * rem));
+  const defaultWidth = $derived(Math.round(DEFAULT_REM * rem));
+  const maxWidth = $derived(Math.round(MAX_REM * rem));
+
   function fit(width: number): number {
-    return Math.min(MAX_WIDTH, Math.max(RAIL_WIDTH, Math.round(width)));
+    return Math.min(maxWidth, Math.max(collapsedWidth, Math.round(width)));
   }
 
   function readWidth(key: string): number | null {
     try {
       const stored = Number(localStorage.getItem(`${key}-width`) ?? Number.NaN);
-      return Number.isFinite(stored) ? fit(stored) : null;
+      return Number.isFinite(stored) ? stored : null;
     } catch {
       // Storage blocked or absent: the default width stands.
       return null;
@@ -209,20 +221,26 @@
   // make one, so the width decides.
   let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
   const collapsed = $derived(collapsedChoice ?? (railWidth && !touch.current));
-  // The edge's position while someone drags it; null between drags.
-  let dragWidth = $state<number | null>(null);
+  // The edge's position while someone drags it; null between drags. The
+  // narrow layout removes the edge mid-drag without ending the drag, so it
+  // drops the position too.
+  let dragWidth = $derived.by((): number | null => {
+    void narrow;
+    return null;
+  });
   const rail = $derived(!narrow && collapsed);
 
   // The narrowest full sidebar in which its longest word fits; null until
   // the full sidebar has been laid out.
   let fitWidth = $state<number | null>(null);
-  // Someone's chosen width; null until they resize.
-  let widthChoice = $derived(hostWidth === null ? readWidth(storageKey) : fit(hostWidth));
+  // Someone's chosen width; null until they resize. It stays as chosen and
+  // is fitted to the limits on use, since the limits move with the font size.
+  let widthChoice = $derived(hostWidth ?? readWidth(storageKey));
   // The full sidebar's width, never narrower than its longest word; null
   // while CSS's 15rem is enough.
   const fullWidth = $derived.by(() => {
-    const width = Math.max(widthChoice ?? DEFAULT_WIDTH, fitWidth ?? 0);
-    return widthChoice === null && width === DEFAULT_WIDTH ? null : width;
+    const width = Math.max(widthChoice === null ? defaultWidth : fit(widthChoice), fitWidth ?? 0);
+    return widthChoice === null && width === defaultWidth ? null : width;
   });
 
   async function chooseCollapsed(choice: boolean): Promise<void> {
@@ -265,50 +283,81 @@
   }
 
   // Labels wrap between words, so the panel's min-content width is the
-  // width its longest word needs; the sidebar adds the edge and any
-  // scrollbar around the panel.
+  // width its longest word needs; the sidebar adds the edge and a scrollbar
+  // around the panel. A classic scrollbar can appear at any time, when the
+  // sidebar narrows and its labels wrap or when the window gets shorter, so
+  // the measurement leaves room for one whether or not it shows now.
   function measureFit(): number | null {
-    if (!panel || !inline) return null;
+    const scroller = panel?.parentElement;
+    if (!panel || !scroller || !inline) return null;
+    const { overflowY } = scroller.style;
+    const { width } = panel.style;
+    scroller.style.overflowY = "scroll";
     const around = inline.getBoundingClientRect().width - panel.getBoundingClientRect().width;
-    const width = panel.style.width;
     panel.style.width = "min-content";
     const content = panel.getBoundingClientRect().width;
     panel.style.width = width;
-    return Math.min(MAX_WIDTH, Math.ceil(content + around));
+    scroller.style.overflowY = overflowY;
+    return Math.min(maxWidth, Math.ceil(content + around));
   }
 
-  // Measure again whenever the panel's text changes, such as a name that
-  // arrives after sign-in, or once the web fonts have loaded.
+  // Bumped whenever the root's typography may have changed: a theme, class,
+  // or style change on <html>, a change to the browser's font size, or a web
+  // font that finished loading.
+  let typeset = $state(0);
+
+  function typographyChanged(): void {
+    rem = rootFontSize();
+    typeset += 1;
+  }
+
   $effect(() => {
+    const observer = new MutationObserver(typographyChanged);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style", "data-kit-theme"],
+    });
+    document.fonts?.addEventListener("loadingdone", typographyChanged);
+    return () => {
+      observer.disconnect();
+      document.fonts?.removeEventListener("loadingdone", typographyChanged);
+    };
+  });
+
+  // The browser's font size setting changes rem without touching <html>, so
+  // a 1rem-wide element reports it.
+  function remResized(probe: HTMLElement): () => void {
+    const observer = new ResizeObserver(typographyChanged);
+    observer.observe(probe);
+    return () => observer.disconnect();
+  }
+
+  // Measure again whenever the panel's text or the root's typography
+  // changes, such as a name that arrives after sign-in, a theme with a wider
+  // font, or a web font that finished loading.
+  $effect(() => {
+    void typeset;
     if (rail || !panel) return;
     fitWidth = measureFit();
-    const remeasure = () => (fitWidth = measureFit());
-    const observer = new MutationObserver(remeasure);
+    const observer = new MutationObserver(() => (fitWidth = measureFit()));
     observer.observe(panel, { childList: true, subtree: true, characterData: true });
-    let live = true;
-    void document.fonts?.ready.then(() => {
-      if (live) remeasure();
-    });
-    return () => {
-      live = false;
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   });
 
   // The width the sidebar had when a resize started, and the narrowest width
   // in which every word still fits. The edge is disabled in the rail, so a
   // resize always starts from the full sidebar.
-  let startWidth = DEFAULT_WIDTH;
-  let minWidth = DEFAULT_WIDTH;
+  let startWidth = 0;
+  let minWidth = 0;
 
   function resizeStarted(): void {
-    startWidth = Math.round(inline?.getBoundingClientRect().width ?? DEFAULT_WIDTH);
+    startWidth = Math.round(inline?.getBoundingClientRect().width ?? defaultWidth);
     fitWidth = measureFit();
-    minWidth = fitWidth ?? DEFAULT_WIDTH;
+    minWidth = fitWidth ?? defaultWidth;
   }
 
   // The edge follows the pointer, and stops at the narrowest width that
-  // shows all the text and at MAX_WIDTH.
+  // shows all the text and at maxWidth.
   function resizedTo(event: SplitResizeEvent): number {
     return Math.max(minWidth, fit(startWidth + event.delta));
   }
@@ -672,11 +721,12 @@
     bind:this={inline}
   >
     <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
+    <div class="kit-app-sidebar__rem" aria-hidden="true" {@attach remResized}></div>
     <SplitResizeHandle
       ariaLabel={resizeLabel}
-      ariaValueMin={rail ? RAIL_WIDTH : (fitWidth ?? RAIL_WIDTH)}
-      ariaValueMax={MAX_WIDTH}
-      ariaValueNow={rail ? RAIL_WIDTH : (dragWidth ?? fullWidth ?? DEFAULT_WIDTH)}
+      ariaValueMin={rail ? collapsedWidth : (fitWidth ?? collapsedWidth)}
+      ariaValueMax={maxWidth}
+      ariaValueNow={rail ? collapsedWidth : (dragWidth ?? fullWidth ?? defaultWidth)}
       ariaValueText={rail ? collapsedValueText : undefined}
       disabled={rail}
       onActivate={() => void toggleCollapsed()}
@@ -703,6 +753,14 @@
     height: var(--kit-app-sidebar-height, 100dvh);
     background: var(--bg-surface);
     box-shadow: var(--shadow-raised, none);
+  }
+
+  .kit-app-sidebar__rem {
+    position: absolute;
+    width: 1rem;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .kit-app-sidebar__scroll {
