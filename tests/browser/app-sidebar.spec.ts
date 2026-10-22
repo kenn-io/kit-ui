@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { chromium, expect, test, type Locator, type Page } from "@playwright/test";
 import { resolvedStyle, setTheme, useTheme } from "./helpers.js";
 
 // AppSidebar inside the gallery's sample app (?app-sidebar-frame=…): the
@@ -794,6 +794,94 @@ test("the narrow drawer and the rail band keep their own widths", async ({ page 
   await expect.poll(() => sidebarWidth(page)).toBe(56);
   await page.getByRole("button", { name: "Expand sidebar" }).click();
   await expect.poll(() => sidebarWidth(page)).toBe(340);
+});
+
+test("a drag cut short by the narrow layout leaves no width behind", async ({ page }) => {
+  await open(page, "home", 1600);
+  const holdAt = (width: string) =>
+    page.locator(".frame").evaluate((frame, w) => {
+      (frame as HTMLElement).style.width = w;
+    }, width);
+  await dragEdgeTo(page, 300);
+  await expect.poll(() => sidebarWidth(page)).toBe(300);
+
+  // The edge leaves with the wide layout, so its drag never ends.
+  await holdAt("780px");
+  await expect(edge(page)).toHaveCount(0);
+  await page.mouse.up();
+
+  await holdAt("1200px");
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  await holdAt("");
+  await expect.poll(() => sidebarWidth(page)).toBe(240);
+  expect(await storedWidth(page)).toBeNull();
+});
+
+test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL }) => {
+  // Playwright hides Chromium's scrollbars; without that flag Chromium draws
+  // a classic scrollbar that takes room, as Windows and Linux desktops do.
+  const browser = await chromium.launch({ ignoreDefaultArgs: ["--hide-scrollbars"] });
+  try {
+    const page = await browser.newPage({ baseURL });
+    await open(page, "reports/overview", 1440);
+    const gutter = () =>
+      scroller(page).evaluate((element) => element.offsetWidth - element.clientWidth);
+    expect(await gutter()).toBe(0);
+
+    await edge(page).focus();
+    for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
+    const narrowest = await sidebarWidth(page);
+    expect(await wordsFit(page, narrowest)).toBe(true);
+
+    // A shorter window makes the panel scroll, and its scrollbar takes room
+    // from the words.
+    await page.setViewportSize({ width: 1440, height: 300 });
+    await expect.poll(gutter).toBeGreaterThan(0);
+    expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("the narrowest width grows with a theme's wider font", async ({ page }) => {
+  await open(page, "reports/overview", 1440);
+  await edge(page).focus();
+  for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
+  const narrowest = await sidebarWidth(page);
+
+  // The terminal theme sets a monospace font, wider than the default's.
+  await useTheme(page, "terminal");
+  await page.evaluate(() => document.fonts.ready);
+  await expect.poll(() => sidebarWidth(page)).toBeGreaterThan(narrowest);
+  expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
+});
+
+test("the sidebar's widths follow a larger default font size", async ({ page }) => {
+  // The browser's font-size setting, here 32px against the usual 16px.
+  const session = await page.context().newCDPSession(page);
+  await session.send("Page.setFontSizes", { fontSizes: { standard: 32 } });
+  await open(page, "home", 1440);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
+    "32px",
+  );
+  expect(await sidebarWidth(page)).toBe(480);
+  await expect(edge(page)).toHaveAttribute("aria-valuenow", "480");
+  await expect(edge(page)).toHaveAttribute("aria-valuemax", "768");
+
+  // Pressing and letting go of the edge without moving changes nothing.
+  const box = await edge(page).boundingBox();
+  if (!box) throw new Error("sidebar edge not laid out");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect(await sidebarWidth(page)).toBe(480);
+  expect(await storedWidth(page)).toBeNull();
+
+  await dropEdgeAt(page, 700);
+  expect(await sidebarWidth(page)).toBe(700);
+  expect(await storedWidth(page)).toBe("700");
+
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect.poll(() => sidebarWidth(page)).toBe(112);
+  await expect(edge(page)).toHaveAttribute("aria-valuenow", "112");
 });
 
 test("Mod+B toggles the sidebar outside text fields and the drawer", async ({ page }) => {
