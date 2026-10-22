@@ -47,6 +47,7 @@
 </script>
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import Maximize from "@lucide/svelte/icons/maximize";
   import Maximize2 from "@lucide/svelte/icons/maximize-2";
@@ -110,17 +111,32 @@
   }: Props = $props();
 
   // Starts at the remembered speed and remembers changes. Loading a source
-  // resets the speed to defaultPlaybackRate, so both are set.
+  // resets the speed to defaultPlaybackRate, so a change sets that too;
+  // otherwise a reload would drop back to the old speed and save it.
   function rememberPlaybackRate(player: HTMLVideoElement) {
     const saved = savedPlaybackRate();
     if (saved !== null) {
       player.defaultPlaybackRate = saved;
       player.playbackRate = saved;
     }
-    const save = () => savePlaybackRate(player.playbackRate);
+    const save = () => {
+      // Setting the default fires another ratechange, which finds them equal.
+      if (player.defaultPlaybackRate !== player.playbackRate)
+        player.defaultPlaybackRate = player.playbackRate;
+      savePlaybackRate(player.playbackRate);
+    };
     player.addEventListener("ratechange", save);
     return () => player.removeEventListener("ratechange", save);
   }
+
+  // The browser picks among <source> children only when the video first
+  // loads; a new list needs load() to take effect. A new src loads itself.
+  let loadedSources: string | null = null;
+  $effect(() => {
+    const list = sources.map((source) => `${source.src} ${source.type ?? ""}`).join("\n");
+    if (loadedSources !== null && list !== loadedSources) untrack(() => video)?.load();
+    loadedSources = list;
+  });
 
   // Close function of a viewer this player opened; the viewer lives on
   // document.body, so it must not outlive the player.

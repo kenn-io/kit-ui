@@ -307,7 +307,7 @@ test("a player with several sources plays the first the browser supports, expand
 }) => {
   await page.evaluate(async () => {
     const { mountVideoPlayer, clip } =
-      await import("/tests/browser/fixtures/mount-video-player.ts");
+      await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
     mountVideoPlayer({
       label: "Two-format video",
       preload: "metadata",
@@ -349,8 +349,12 @@ for (const shape of [
     await gotoPage(page, "media-viewer");
     await page.evaluate(async (ratio) => {
       const { mountVideoPlayer, clip } =
-        await import("/tests/browser/fixtures/mount-video-player.ts");
-      const host = mountVideoPlayer({ label: "Narrow video", src: clip, preload: "metadata" });
+        await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+      const { host } = mountVideoPlayer({
+        label: "Narrow video",
+        src: clip,
+        preload: "metadata",
+      });
       host.style.width = "160px";
       // Shaped as the viewer shapes a portrait video's player.
       if (ratio) host.querySelector<HTMLElement>(".kit-video-player")!.style.aspectRatio = ratio;
@@ -398,6 +402,77 @@ for (const shape of [
   });
 }
 
+type SwapWindow = typeof window & {
+  swap: (sources: { src: string; type?: string }[]) => void;
+  second: string;
+};
+
+/** Mount a player on `clip` whose sources a test can replace; `second`
+ * is the same clip at another URL. */
+async function mountSwappable(page: Page) {
+  await page.evaluate(async () => {
+    const { mountVideoPlayer, clip } =
+      await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+    const { update } = mountVideoPlayer({
+      label: "Swapped video",
+      preload: "metadata",
+      sources: [{ src: clip, type: "video/webm" }],
+    });
+    const swap = window as SwapWindow;
+    swap.swap = (sources) => update({ sources });
+    swap.second = `${clip}?second`;
+  });
+  const player = page
+    .locator(".kit-video-player")
+    .filter({ has: page.getByLabel("Swapped video") });
+  const video = player.locator("video");
+  await expect
+    .poll(() => video.evaluate((node) => (node as HTMLVideoElement).currentSrc))
+    .toMatch(/media-viewer-demo\.webm$/);
+  return { player, video };
+}
+
+test("replacing a player's sources loads the new clip, expanded too", async ({ page }) => {
+  const { player, video } = await mountSwappable(page);
+
+  await page.evaluate(() => {
+    const swap = window as SwapWindow;
+    swap.swap([{ src: swap.second, type: "video/webm" }]);
+  });
+
+  await expect
+    .poll(() => video.evaluate((node) => (node as HTMLVideoElement).currentSrc))
+    .toMatch(/\?second$/);
+  await player.getByRole("button", { name: "Open video in expanded view" }).click();
+  await expect(viewer(page)).toHaveAccessibleName(/^Swapped video/);
+  expect(await expanded(page).evaluate((node) => (node as HTMLVideoElement).currentSrc)).toMatch(
+    /\?second$/,
+  );
+});
+
+test("a chosen speed survives the player loading again", async ({ page }) => {
+  const { player, video } = await mountSwappable(page);
+  await player.getByRole("button", { name: /^Playback rate/ }).click();
+  await expect(video).toHaveJSProperty("playbackRate", 1.2);
+
+  // A host reloading the video, then new sources.
+  await video.evaluate((node) => (node as HTMLVideoElement).load());
+  await expect
+    .poll(() => video.evaluate((node) => (node as HTMLVideoElement).readyState))
+    .toBeGreaterThan(0);
+  await expect(video).toHaveJSProperty("playbackRate", 1.2);
+  await page.evaluate(() => {
+    const swap = window as SwapWindow;
+    swap.swap([{ src: swap.second, type: "video/webm" }]);
+  });
+  await expect
+    .poll(() => video.evaluate((node) => (node as HTMLVideoElement).currentSrc))
+    .toMatch(/\?second$/);
+
+  await expect(video).toHaveJSProperty("playbackRate", 1.2);
+  expect(await page.evaluate(() => localStorage.getItem("kit-ui:video-playback-rate"))).toBe("1.2");
+});
+
 test("a video item with no chosen source plays the first its sources the browser supports", async ({
   page,
 }) => {
@@ -405,7 +480,7 @@ test("a video item with no chosen source plays the first its sources the browser
   await page.evaluate(async () => {
     const { mountMediaViewer } =
       await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
-    const { clip } = await import("/tests/browser/fixtures/mount-video-player.ts");
+    const { clip } = await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
     mountMediaViewer(
       [
         {
@@ -431,7 +506,7 @@ test("a viewer reopened by refilling its items starts the video afresh", async (
   await page.evaluate(async () => {
     const { mountMediaViewer } =
       await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
-    const { clip } = await import("/tests/browser/fixtures/mount-video-player.ts");
+    const { clip } = await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
     const left: { currentTime: number; playing: boolean }[] = [];
     const video = {
       kind: "video" as const,

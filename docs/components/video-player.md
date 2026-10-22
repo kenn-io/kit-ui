@@ -100,5 +100,7 @@ every theme. To change them, set `--video-control-color`,
 | `videoAttachment` | `Attachment<HTMLVideoElement>`     | —                               | Attached to the `<video>` element                                    |
 | `class`           | `string`                           | —                               | Extra class on the player's root                                     |
 
+Changing `src` or `sources` loads the new video, from the start.
+
 Video.js labels its own buttons ("Play", "Mute", "Enter fullscreen") in
 English. kit-ui does not localize them yet.
