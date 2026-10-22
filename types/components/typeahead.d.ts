@@ -1,3 +1,4 @@
+import type { Attachment } from "svelte/attachments";
 import type { HTMLInputAttributes } from "svelte/elements";
 type TypeaheadOwnedInputAttribute = "aria-activedescendant" | "aria-autocomplete" | "aria-controls" | "aria-expanded" | "aria-haspopup" | "aria-label" | "autocomplete" | "class" | "disabled" | "oninput" | "onkeydown" | "placeholder" | "role" | "type" | "value";
 export type TypeaheadInputAttributes = Omit<HTMLInputAttributes, TypeaheadOwnedInputAttribute>;
@@ -16,5 +17,10 @@ export interface TypeaheadOption {
     children?: TypeaheadOption[];
     /** Initial expansion for a group row (default true). */
     expanded?: boolean;
+}
+/** Passed to a Typeahead `trigger` snippet. Attach it to the caller's button
+ * with `{@attach attachment}`. */
+export interface TypeaheadTriggerProps {
+    attachment: Attachment<HTMLButtonElement>;
 }
 export {};

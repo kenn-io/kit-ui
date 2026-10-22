@@ -2,10 +2,15 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick, type Snippet } from "svelte";
+  import type { Attachment } from "svelte/attachments";
   import { SvelteMap } from "svelte/reactivity";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { TypeaheadInputAttributes, TypeaheadOption } from "./typeahead.js";
+  import type {
+    TypeaheadInputAttributes,
+    TypeaheadOption,
+    TypeaheadTriggerProps,
+  } from "./typeahead.js";
 
   interface Props {
     options: TypeaheadOption[];
@@ -48,6 +53,11 @@
     header?: Snippet;
     /** Decorative icon before each option and the selected trigger label. */
     icon?: Snippet<[TypeaheadOption]>;
+    /** Replaces the built-in trigger with a button the caller renders, such as an
+     * IconButton. Attach `attachment` to it. The button stays in place while
+     * the list is open and the search field moves into the popover. The
+     * caller names the button. */
+    trigger?: Snippet<[TypeaheadTriggerProps]>;
     /** Return `false` (or a promise of `false`), or throw, to keep the list
      * open — e.g. to veto a value or surface `error`. */
     onselect: (value: string) => void | boolean | Promise<void | boolean>;
@@ -75,6 +85,7 @@
     error = "",
     header,
     icon,
+    trigger,
     onselect,
   }: Props = $props();
 
@@ -82,6 +93,7 @@
   let open = $state(false);
   let highlightIndex = $state(0);
   let inputEl = $state<HTMLInputElement>();
+  // The built-in trigger, or the caller's button when `trigger` is set.
   let triggerEl = $state<HTMLButtonElement>();
   let containerEl = $state<HTMLDivElement>();
   let panelEl = $state<HTMLDivElement>();
@@ -123,22 +135,18 @@
     // pre-zoom-aware maths; dividing by undefined would NaN the whole style
     // and leave the panel unpositioned and unsized.
     const zoom = panelEl.currentCSSZoom ?? 1;
-    const rect = containerEl.getBoundingClientRect();
-    const trigger = new DOMRect(
-      rect.x / zoom,
-      rect.y / zoom,
-      rect.width / zoom,
-      rect.height / zoom,
-    );
+    // A caller's button stays visible while open, so the list hangs off it.
+    const rect = (trigger && triggerEl ? triggerEl : containerEl).getBoundingClientRect();
+    const anchor = new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom);
     const minWidth = parseFloat(getComputedStyle(panelEl).minWidth) || 0;
-    const width = Math.max(trigger.width, minWidth);
+    const width = Math.max(anchor.width, minWidth);
     panelStyle = `${floatingPopoverStyle({
-      trigger,
+      trigger: anchor,
       viewportWidth: window.innerWidth / zoom,
       viewportHeight: window.innerHeight / zoom,
       popoverWidth: width,
       popoverHeight: panelEl.offsetHeight,
-      triggerGap: 2,
+      triggerGap: trigger ? 4 : 2,
       placement: placement === "top" ? "above" : placement === "bottom" ? "below" : "auto",
     })}; width: ${Math.round(width)}px`;
   }
@@ -291,6 +299,73 @@
     }
   }
 
+  function handleTriggerKeydown(event: KeyboardEvent): void {
+    if (
+      event.key.length !== 1 ||
+      event.key === " " ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.isComposing
+    )
+      return;
+    event.preventDefault();
+    event.stopPropagation();
+    void openDropdown(event.key);
+  }
+
+  // Wires a caller's button the way MenuTrigger's `child` attachment does: it
+  // adds the popup ARIA state, click and type-to-search handling, and
+  // `kit-control-states`, and restores the button's own values on detach.
+  const triggerAttachment: Attachment<HTMLButtonElement> = (node) => {
+    const attributes = ["type", "aria-haspopup", "aria-expanded", "aria-controls"];
+    const previousAttributes = new Map(
+      attributes.map((name) => [name, node.getAttribute(name)] as const),
+    );
+    const wasDisabled = node.disabled;
+    const hadControlStates = node.classList.contains("kit-control-states");
+    // Opening moves focus into the popover's input; the button keeps it
+    // while the menu closes, so a click while open only closes.
+    const toggle = () => {
+      if (open) void closeDropdown();
+      else void openDropdown();
+    };
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        void openDropdown();
+        return;
+      }
+      handleTriggerKeydown(event);
+    };
+
+    triggerEl = node;
+    node.classList.add("kit-control-states");
+    node.addEventListener("click", toggle);
+    node.addEventListener("keydown", keydown);
+
+    $effect(() => {
+      node.type = "button";
+      node.setAttribute("aria-haspopup", grouped ? "tree" : "listbox");
+      node.setAttribute("aria-expanded", String(open));
+      if (open) node.setAttribute("aria-controls", listId);
+      else node.removeAttribute("aria-controls");
+      node.disabled = disabled;
+    });
+
+    return () => {
+      node.removeEventListener("click", toggle);
+      node.removeEventListener("keydown", keydown);
+      if (triggerEl === node) triggerEl = undefined;
+      node.disabled = wasDisabled;
+      if (!hadControlStates) node.classList.remove("kit-control-states");
+      for (const [name, value] of previousAttributes) {
+        if (value === null) node.removeAttribute(name);
+        else node.setAttribute(name, value);
+      }
+    };
+  };
+
   // Orders concurrent async onselect calls: only the latest attempt may close
   // the list, so a slow earlier selection resolving after a later veto/error
   // can't hide the caller's error state, and none may outlive the open
@@ -433,7 +508,11 @@
     closeDropdown();
   }
 
+  // Keeps focus in the input while the pointer uses the list. A press on the
+  // input itself, which sits in the popover under a caller's trigger, still
+  // places the caret.
   function preventBlur(e: MouseEvent) {
+    if (e.target === inputEl) return;
     e.preventDefault();
   }
 </script>
@@ -444,40 +523,50 @@
   {/each}
 {/snippet}
 
-<div class="kit-typeahead" bind:this={containerEl} onfocusout={handleFocusOut}>
+{#snippet searchInput()}
+  <input
+    {...inputAttributes}
+    bind:this={inputEl}
+    class="kit-typeahead__input"
+    type="text"
+    role="combobox"
+    value={query}
+    oninput={(event) => {
+      updateQuery(event.currentTarget.value);
+      highlightIndex = remote
+        ? clearOffset
+        : customValue !== ""
+          ? customOffset
+          : rows.length > 0
+            ? clearOffset
+            : 0;
+    }}
+    onkeydown={handleKeydown}
+    {placeholder}
+    {disabled}
+    aria-label={placeholder}
+    aria-expanded="true"
+    aria-controls={listId}
+    aria-haspopup={grouped ? "tree" : "listbox"}
+    aria-autocomplete="list"
+    aria-activedescendant={!loading && rowCount > 0 ? `${listId}-row-${activeIndex}` : undefined}
+    autocomplete="off"
+    data-1p-ignore="true"
+    data-bwignore="true"
+    data-lpignore="true"
+    data-form-type="other"
+  />
+{/snippet}
+
+<div
+  class="kit-typeahead"
+  class:kit-typeahead--custom-trigger={trigger !== undefined}
+  bind:this={containerEl}
+  onfocusout={handleFocusOut}
+>
+  {#if trigger}{@render trigger({ attachment: triggerAttachment })}{/if}
   {#if open}
-    <input
-      {...inputAttributes}
-      bind:this={inputEl}
-      class="kit-typeahead__input"
-      type="text"
-      role="combobox"
-      value={query}
-      oninput={(event) => {
-        updateQuery(event.currentTarget.value);
-        highlightIndex = remote
-          ? clearOffset
-          : customValue !== ""
-            ? customOffset
-            : rows.length > 0
-              ? clearOffset
-              : 0;
-      }}
-      onkeydown={handleKeydown}
-      {placeholder}
-      {disabled}
-      aria-label={placeholder}
-      aria-expanded="true"
-      aria-controls={listId}
-      aria-haspopup={grouped ? "tree" : "listbox"}
-      aria-autocomplete="list"
-      aria-activedescendant={!loading && rowCount > 0 ? `${listId}-row-${activeIndex}` : undefined}
-      autocomplete="off"
-      data-1p-ignore="true"
-      data-bwignore="true"
-      data-lpignore="true"
-      data-form-type="other"
-    />
+    {#if !trigger}{@render searchInput()}{/if}
     <div
       class="kit-typeahead__panel kit-popover-card"
       style={panelStyle}
@@ -486,6 +575,9 @@
       onkeydown={(e) => void handleEscape(e)}
       role="presentation"
     >
+      {#if trigger}
+        <div class="kit-typeahead__search">{@render searchInput()}</div>
+      {/if}
       {#if header}
         <div class="kit-typeahead__header">{@render header()}</div>
       {/if}
@@ -595,26 +687,13 @@
         {/if}
       </ul>
     </div>
-  {:else}
+  {:else if !trigger}
     <button
       bind:this={triggerEl}
       class="kit-typeahead__trigger kit-control-states"
       type="button"
       onclick={() => void openDropdown()}
-      onkeydown={(event) => {
-        if (
-          event.key.length !== 1 ||
-          event.key === " " ||
-          event.ctrlKey ||
-          event.metaKey ||
-          event.altKey ||
-          event.isComposing
-        )
-          return;
-        event.preventDefault();
-        event.stopPropagation();
-        void openDropdown(event.key);
-      }}
+      onkeydown={handleTriggerKeydown}
       {title}
       {disabled}
       aria-label={triggerName}
@@ -749,6 +828,24 @@
     max-height: 50vh;
     z-index: var(--z-popover);
     padding: 2px;
+  }
+
+  /* A caller's button sizes the component, and the list needs its own width. */
+  .kit-typeahead--custom-trigger {
+    display: inline-flex;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .kit-typeahead--custom-trigger .kit-typeahead__panel {
+    min-width: min(var(--typeahead-panel-min-width, 240px), calc(100vw - 16px));
+  }
+
+  .kit-typeahead__search {
+    flex-shrink: 0;
+    padding: 2px;
+    border-bottom: 1px solid var(--border-muted);
+    margin-bottom: 2px;
   }
 
   .kit-typeahead__header {

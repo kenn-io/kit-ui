@@ -719,3 +719,87 @@ test("optional icons follow options and the selected value through search", asyn
       .locator(".kit-harness-icon--openai"),
   ).toBeVisible();
 });
+
+// The "Open from a button the app renders" demo hands the attachment to an IconButton.
+test.describe("trigger button the app renders", () => {
+  // The compact-trigger demo's built-in button shares this name.
+  const appTrigger = (page: Page, name = "Time zone: Server time") =>
+    page.locator(".kit-typeahead--custom-trigger").getByRole("button", { name, exact: true });
+
+  test("opens the search in a popover beside the button and selects", async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await expect(button).toHaveAttribute("aria-haspopup", "listbox");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await button.click();
+
+    await expect(button).toBeVisible();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    const input = page.getByRole("combobox", { name: "Time zone" });
+    await expect(input).toBeFocused();
+    await expect(page.locator(".kit-typeahead__panel .kit-typeahead__input")).toHaveCount(1);
+    await expect(button).toHaveAttribute(
+      "aria-controls",
+      (await input.getAttribute("aria-controls"))!,
+    );
+
+    await input.fill("tok");
+    await page.keyboard.press("Enter");
+    await expect(page.locator('[data-demo="icon-zone-value"]')).toHaveText("Asia/Tokyo");
+    const chosen = appTrigger(page, "Time zone: Asia/Tokyo");
+    await expect(chosen).toBeFocused();
+    await expect(chosen).toHaveAttribute("aria-expanded", "false");
+    await expect(chosen).not.toHaveAttribute("aria-controls");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+  });
+
+  test("Escape closes the list and returns focus to the button", async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await button.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("combobox", { name: "Time zone" })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(button).toBeFocused();
+    await expect(page.locator('[data-demo="icon-zone-value"]')).toHaveText("(server time)");
+  });
+
+  test("typing on the focused button opens search with that character", async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    await appTrigger(page).focus();
+    await page.keyboard.press("b");
+    const input = page.getByRole("combobox", { name: "Time zone" });
+    await expect(input).toHaveValue("b");
+    await expect(page.getByRole("option", { name: /Europe\/Berlin/ })).toBeVisible();
+  });
+
+  test("clicking the button again closes the list", async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await button.click();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await button.click();
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("the popover stays inside the window from a corner button", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 480 });
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await page.locator(".kit-typeahead--custom-trigger").evaluate((el) => {
+      (el as HTMLElement).style.cssText = "position: fixed; right: 4px; bottom: 4px;";
+    });
+    await button.click();
+    const panel = page.locator(".kit-typeahead__panel");
+    await expect(panel).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    const trigger = (await button.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+    expect(box.y + box.height).toBeLessThanOrEqual(trigger.y);
+  });
+});

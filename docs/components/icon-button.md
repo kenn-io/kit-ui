@@ -45,6 +45,8 @@ kept hand-rolling (`.icon-btn`). Transparent at rest, surface tint on hover,
 - Use `ariaDisabled` instead of `disabled` when keyboard users still need to
   encounter the unavailable action in the tab order. The component prevents
   its `onclick` callback from running.
+- `{@attach}` reaches the button, so a `MenuTrigger` `child` or Typeahead
+  `trigger` attachment can make an IconButton a popup trigger.
 - Focus is a 2px `--accent-blue` outline on `:focus-visible` only.
 - For a labelled action that degrades to icon-only under pressure, prefer
   [FitStages](fit-stages.md) with a `Button` stage and an `IconButton`
