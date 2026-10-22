@@ -279,8 +279,22 @@
     return Math.min(MAX_WIDTH, Math.ceil(content + around));
   }
 
+  // Measure again whenever the panel's text changes, such as a name that
+  // arrives after sign-in, or once the web fonts have loaded.
   $effect(() => {
-    if (!rail) fitWidth = measureFit();
+    if (rail || !panel) return;
+    fitWidth = measureFit();
+    const remeasure = () => (fitWidth = measureFit());
+    const observer = new MutationObserver(remeasure);
+    observer.observe(panel, { childList: true, subtree: true, characterData: true });
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) remeasure();
+    });
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
   });
 
   // The rail and width the sidebar had when a resize started, and the width

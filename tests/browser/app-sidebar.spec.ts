@@ -665,6 +665,18 @@ test("the edge follows the pointer down to the rail, which shows once a word wou
   await expect(edge(page)).not.toHaveAttribute("aria-valuetext");
 });
 
+test("the sidebar widens when a label grows a longer word", async ({ page }) => {
+  await open(page, "home", 1440);
+  expect(await sidebarWidth(page)).toBe(240);
+  await page.getByRole("link", { name: "Reports" }).evaluate((link) => {
+    const label = [...link.querySelectorAll("span")].find((span) => span.textContent === "Reports");
+    if (!label) throw new Error("no Reports label");
+    label.textContent = "Reportingdashboardsandexports";
+  });
+  await expect.poll(() => sidebarWidth(page)).toBeGreaterThan(240);
+  expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
+});
+
 test("the collapse button and the edge share one state", async ({ page }) => {
   await open(page, "home", 1440);
   await dropEdgeAt(page, 330);
