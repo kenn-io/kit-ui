@@ -504,8 +504,12 @@ test("replacing the sources while expanded leaves the new clip alone on close", 
 
 test("a chosen speed survives the player loading again", async ({ page }) => {
   const { player, video } = await mountSwappable(page);
-  await player.getByRole("button", { name: /^Playback rate/ }).click();
+  const speed = player.getByRole("button", { name: /^Playback rate/ });
+  await speed.click();
   await expect(video).toHaveJSProperty("playbackRate", 1.2);
+  // Let the control show the choice before the host reloads the source.
+  // The native property changes before the browser delivers ratechange.
+  await expect(speed).toHaveAccessibleName("Playback rate 1.2");
 
   // A host reloading the video, then new sources.
   await video.evaluate((node) => (node as HTMLVideoElement).load());
@@ -650,45 +654,60 @@ for (const viewport of [
   });
 }
 
-test("play pressed before the metadata loads still plays inline after closing", async ({
-  page,
-}) => {
-  // The clip's request never answers, so the viewer never gets metadata.
-  await page.route(/\?stalled$/, () => {});
-  await page.evaluate(async () => {
-    const { mountMediaViewer } =
-      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
-    const { clip } = await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
-    const left: { currentTime: number; playing: boolean }[] = [];
-    const video = {
-      kind: "video" as const,
-      src: `${clip}?stalled`,
-      label: "Session video",
-      currentTime: 2,
-      playing: false,
-      onleave: (state: { currentTime: number; playing: boolean }) => left.push(state),
-    };
-    const host = mountMediaViewer([video], 0);
-    Object.assign(window, { __stalled: { host, left } });
-  });
+for (const scenario of [
+  {
+    name: "play pressed before the metadata loads still plays inline after closing",
+    action: "Play",
+    openingPlaying: false,
+    expectedPlaying: true,
+  },
+  {
+    name: "pause pressed before the metadata loads stays paused after closing",
+    action: "Pause",
+    openingPlaying: true,
+    expectedPlaying: false,
+  },
+]) {
+  test(scenario.name, async ({ page }) => {
+    // The clip's request never answers, so the viewer never gets metadata.
+    await page.route(/\?stalled$/, () => {});
+    await page.evaluate(async (openingPlaying) => {
+      const { mountMediaViewer } =
+        await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+      const { clip } = await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+      const left: { currentTime: number; playing: boolean }[] = [];
+      const video = {
+        kind: "video" as const,
+        src: `${clip}?stalled`,
+        label: "Session video",
+        currentTime: 2,
+        playing: openingPlaying,
+        onleave: (state: { currentTime: number; playing: boolean }) => left.push(state),
+      };
+      const host = mountMediaViewer([video], 0);
+      Object.assign(window, { __stalled: { host, left } });
+    }, scenario.openingPlaying);
 
-  await viewer(page).getByRole("button", { name: "Play", exact: true }).click();
-  await expect.poll(async () => (await playback(expanded(page))).playing).toBe(true);
-  type Stalled = {
-    host: { replaceItems: (items: unknown[]) => void };
-    left: { currentTime: number; playing: boolean }[];
-  };
-  // Close, then empty the items as the host does.
-  await page.keyboard.press("Escape");
-  await page.evaluate(() =>
-    (window as unknown as { __stalled: Stalled }).__stalled.host.replaceItems([]),
-  );
-  await expect(viewer(page)).toHaveCount(0);
-  expect(
+    await viewer(page).getByRole("button", { name: scenario.action, exact: true }).click();
+    await expect
+      .poll(async () => (await playback(expanded(page))).playing)
+      .toBe(scenario.expectedPlaying);
+    type Stalled = {
+      host: { replaceItems: (items: unknown[]) => void };
+      left: { currentTime: number; playing: boolean }[];
+    };
+    // Close, then empty the items as the host does.
+    await page.keyboard.press("Escape");
     await page.evaluate(() =>
-      (window as unknown as { __stalled: Stalled }).__stalled.left.map(
-        ({ currentTime, playing }) => ({ currentTime, playing }),
+      (window as unknown as { __stalled: Stalled }).__stalled.host.replaceItems([]),
+    );
+    await expect(viewer(page)).toHaveCount(0);
+    expect(
+      await page.evaluate(() =>
+        (window as unknown as { __stalled: Stalled }).__stalled.left.map(
+          ({ currentTime, playing }) => ({ currentTime, playing }),
+        ),
       ),
-    ),
-  ).toEqual([{ currentTime: 2, playing: true }]);
-});
+    ).toEqual([{ currentTime: 2, playing: scenario.expectedPlaying }]);
+  });
+}

@@ -128,7 +128,7 @@
   },
   "devDependencies": {
     "@lucide/svelte": "1.21.0",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.64.1",
     "@sveltejs/mcp": "0.1.24",
     "@sveltejs/vite-plugin-svelte": "7.1.2",
     "@tsconfig/svelte": "5.0.8",

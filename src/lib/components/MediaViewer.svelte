@@ -165,16 +165,7 @@
       if (volume !== undefined) video.volume = volume;
       // Seeking needs metadata; until then the video still reports 0.
       let ready = false;
-      // Play or pause pressed before then replaces the opening state.
-      let playing = start.playing;
-      const choose = () => {
-        playing = !video.paused;
-      };
-      video.addEventListener("play", choose);
-      video.addEventListener("pause", choose);
       const begin = () => {
-        video.removeEventListener("play", choose);
-        video.removeEventListener("pause", choose);
         ready = true;
         // The CSS sizes the video's box from this ratio, so the box is
         // the picture and the controls sit on it.
@@ -186,19 +177,19 @@
               String(video.videoWidth / video.videoHeight),
             );
         if (start.currentTime > 0) video.currentTime = start.currentTime;
-        // Rejected when the browser blocks autoplay or the video leaves
-        // first; the controls still work.
-        if (playing && video.paused) video.play().catch(() => {});
       };
       if (video.readyState >= HTMLMediaElement.HAVE_METADATA) begin();
       else video.addEventListener("loadedmetadata", begin, { once: true });
+      // Request playback now so the native paused state includes choices
+      // made before metadata loads, even before play/pause events arrive.
+      // Autoplay rejection leaves the controls available.
+      if (start.playing && video.paused) video.play().catch(() => {});
       return () => {
         video.removeEventListener("loadedmetadata", begin);
-        video.removeEventListener("play", choose);
-        video.removeEventListener("pause", choose);
-        const state = ready
-          ? { currentTime: video.currentTime, playing: !video.paused && !video.ended }
-          : { currentTime: start.currentTime, playing };
+        const state = {
+          currentTime: ready ? video.currentTime : start.currentTime,
+          playing: !video.paused && !video.ended,
+        };
         video.pause();
         own.leftAt.set(item, {
           currentTime: state.currentTime,
