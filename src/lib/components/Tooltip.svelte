@@ -79,7 +79,12 @@
     await tick();
     if (!triggerEl || !popoverEl) return;
     const trigger = triggerEl.getBoundingClientRect();
-    if (side === "right") {
+    const width = popoverEl.offsetWidth;
+    // Without room on the right, the bubble takes the default placement.
+    if (
+      side === "right" &&
+      trigger.right + TRIGGER_GAP + width <= window.innerWidth - VIEWPORT_GAP
+    ) {
       const height = popoverEl.offsetHeight;
       const middle = (trigger.top + trigger.bottom) / 2;
       const top = Math.max(
@@ -91,7 +96,6 @@
       placedSide = "right";
       return;
     }
-    const width = popoverEl.offsetWidth;
     const { left, top } = floatingPopoverPosition({
       trigger,
       viewportWidth: window.innerWidth,
@@ -148,6 +152,7 @@
 
   // A tooltip removed while open must not keep the next one from opening.
   $effect(() => () => {
+    clearTimer();
     if (current === close) current = null;
   });
 

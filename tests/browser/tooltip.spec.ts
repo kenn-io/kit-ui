@@ -117,6 +117,46 @@ test("side right puts the tooltip beside its control, clear of the icon below", 
   expect(Math.abs(arrow.middle - (control.top + control.bottom) / 2)).toBeLessThanOrEqual(1);
 });
 
+test("side right without room on the right falls back below and stays on screen", async ({
+  page,
+}) => {
+  await gotoPage(page, "tooltip");
+  const column = page.getByTestId("icon-column");
+  await column.evaluate((el) => {
+    Object.assign(el.style, { position: "fixed", right: "16px", top: "200px", zIndex: "1" });
+  });
+  const inbox = column.getByRole("button", { name: "Inbox" });
+  await inbox.focus();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toHaveText("Inbox");
+
+  const viewport = page.viewportSize();
+  if (viewport === null) throw new Error("the test needs a fixed viewport");
+  const control = await boxOf(inbox);
+  const bubble = await boxOf(tooltip);
+  expect(bubble.right).toBeLessThanOrEqual(viewport.width - 8 + 0.5);
+  expect(bubble.top).toBeGreaterThan(control.bottom);
+  expect(Math.abs((await arrowCenterOf(tooltip)) - centerOf(control))).toBeLessThanOrEqual(1);
+});
+
+test("a tooltip removed during its hover delay leaves the open tooltip alone", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-01-15T08:00:00") });
+  await gotoPage(page, "tooltip");
+  await page.clock.pauseAt(new Date("2026-01-15T09:00:00"));
+  const column = page.getByTestId("icon-column");
+  const tooltip = page.getByRole("tooltip");
+  // The pointer rests on Notifications while its open delay runs.
+  await column.getByRole("button", { name: "Notifications" }).hover();
+  // The keyboard removes it, so the pointer never leaves it.
+  await page.getByRole("button", { name: "Remove Notifications" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(column.getByRole("button", { name: "Notifications" })).toHaveCount(0);
+  await column.getByRole("button", { name: "Inbox" }).focus();
+  await expect(tooltip).toHaveText("Inbox");
+  await page.clock.runFor(1000);
+  await expect(tooltip).toHaveText("Inbox");
+});
+
 test("the first hover waits, then the next trigger's tooltip replaces it at once", async ({
   page,
 }) => {

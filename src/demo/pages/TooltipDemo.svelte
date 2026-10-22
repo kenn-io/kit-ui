@@ -11,6 +11,8 @@
   import Tooltip from "../../lib/components/Tooltip.svelte";
   import DemoSection from "../DemoSection.svelte";
 
+  let notificationsShown = $state(true);
+
   const breakdown = [
     { label: "Plans/docs", additions: 210, deletions: 12 },
     { label: "Code", additions: 1480, deletions: 322 },
@@ -103,12 +105,19 @@
         <Inbox size={16} aria-hidden="true" />
       </IconButton>
     </Tooltip>
-    <Tooltip text="Notifications" side="right">
-      <IconButton ariaLabel="Notifications" title="">
-        <Bell size={16} aria-hidden="true" />
-      </IconButton>
-    </Tooltip>
+    {#if notificationsShown}
+      <Tooltip text="Notifications" side="right">
+        <IconButton ariaLabel="Notifications" title="">
+          <Bell size={16} aria-hidden="true" />
+        </IconButton>
+      </Tooltip>
+    {/if}
   </div>
+  <Button
+    size="sm"
+    label={notificationsShown ? "Remove Notifications" : "Restore Notifications"}
+    onclick={() => (notificationsShown = !notificationsShown)}
+  />
 </DemoSection>
 
 <DemoSection

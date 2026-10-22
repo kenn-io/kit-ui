@@ -6,6 +6,7 @@ a small gap, flips above when there's no room below, and shifts sideways to
 stay on screen; its arrow always points at the trigger's center. With
 `side="right"` the bubble sits beside the trigger instead, centered on it, as
 for an icon in a narrow column where a bubble below would cover the next icon.
+When the bubble does not fit on the right, it takes the default placement.
 Open/close delays give hover intent, Escape dismisses, and the panel has
 `role="tooltip"`. One tooltip shows at a time: while one is open, the pointer
 reaching another trigger closes it and opens the next at once, without the
