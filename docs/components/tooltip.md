@@ -10,8 +10,13 @@ the wrapped control that has keyboard focus, or of the first wrapped control
 when the pointer opened it (the wrapper itself with `focusable`), so
 assistive technology reads it as that control's description. The id stays
 when the control changes its own `aria-describedby` while the tooltip is
-open. On touch
-devices (no hover) it still opens on focus.
+open. Pressing the trigger hides the tooltip, so it does not cover a menu or
+list the press opens. A press is a click, a touch tap, or Enter or Space on a
+wrapped control other than a text field, select, or editable region. The
+tooltip shows again the next time the pointer enters the trigger or keyboard
+focus lands on it. On touch screens the tooltip on a control opens when the
+control gains keyboard focus. A `focusable` trigger has no action, so pressing
+it does not hide the tooltip, and a tap opens it.
 
 ## Text tooltip
 

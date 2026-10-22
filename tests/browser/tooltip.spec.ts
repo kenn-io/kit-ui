@@ -155,3 +155,76 @@ test("the description survives the control rewriting its own aria-describedby wh
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await expect(button).toHaveAttribute("aria-describedby", "extra-hint");
 });
+
+test("pressing a control hides its tooltip until the pointer leaves", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const button = page.getByRole("button", { name: "Update branch" });
+  const tooltip = page.getByRole("tooltip");
+  await button.hover();
+  await expect(tooltip).toBeVisible();
+
+  // The click also focuses the button, which would otherwise show it again.
+  await button.click();
+  await expect(button).toBeFocused();
+  await expect(tooltip).toHaveCount(0);
+  await expect(button).not.toHaveAttribute("aria-describedby");
+
+  await page.mouse.move(0, 0);
+  await button.hover();
+  await expect(tooltip).toBeVisible();
+});
+
+test("clicking from one wrapped control to another keeps the tooltip hidden", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const group = page.getByTestId("group-tooltip");
+  await group.getByRole("button", { name: "Align left" }).click();
+  const right = group.getByRole("button", { name: "Align right" });
+  await right.click();
+  await expect(right).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("tabbing to the next control after a click shows its tooltip", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const group = page.getByTestId("group-tooltip");
+  await group.getByRole("button", { name: "Align left" }).click();
+  await page.keyboard.press("Tab");
+  const right = group.getByRole("button", { name: "Align right" });
+  await expect(right).toBeFocused();
+  await expect(page.getByRole("tooltip")).toBeVisible();
+  await expect(right).toHaveAccessibleDescription("Aligns the selected text");
+});
+
+test("pressing Enter on a focused control hides its tooltip", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const button = resetButton(page);
+  await button.focus();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+
+  await page.keyboard.press("Enter");
+  await expect(button).toBeFocused();
+  await expect(tooltip).toHaveCount(0);
+});
+
+test("a touch tap does not open the tooltip", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, hasTouch: true });
+  const page = await context.newPage();
+  await gotoPage(page, "tooltip");
+  await page.getByRole("button", { name: "Update branch" }).tap();
+  // Past the open delay the emulated mouseenter would have used.
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await context.close();
+});
+
+test("a touch tap opens the tooltip of a focusable trigger", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, hasTouch: true });
+  const page = await context.newPage();
+  await gotoPage(page, "tooltip");
+  await page.getByText("focusable text").tap();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "Uses tabindex so plain text is keyboard-reachable",
+  );
+  await context.close();
+});

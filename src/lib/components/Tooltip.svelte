@@ -47,6 +47,10 @@
   // The element that took keyboard focus inside the trigger, if any.
   let focusTarget = $state<HTMLElement | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // A press on the trigger means the control is in use, often opening
+  // a menu or list the bubble would cover. Keep the tooltip shut until the
+  // pointer leaves, focus leaves, or keyboard focus arrives.
+  let pressed = false;
 
   function clearTimer(): void {
     if (timer !== undefined) {
@@ -80,7 +84,9 @@
 
   function show(immediate = false): void {
     clearTimer();
-    if (open) return;
+    // A touch tap fires an emulated mouseenter after the press; it must not
+    // bring the bubble back over what the tap opened.
+    if (open || pressed) return;
     if (immediate || openDelayMs <= 0) {
       open = true;
       void position();
@@ -123,18 +129,58 @@
 
   function handleFocusIn(event: FocusEvent): void {
     const target = focusable ? triggerEl : event.target;
+    // Keyboard focus ends a press, so Tab after a click still describes the
+    // control. Browsers treat focus in a text field as visible too.
+    if (event.target instanceof Element && event.target.matches(":focus-visible")) {
+      pressed = false;
+    }
     if (target instanceof HTMLElement) {
       focusTarget = target;
       // Before assistive technology hears about the focus, not after the
       // next render.
-      addDescription(target);
+      if (!pressed) addDescription(target);
     }
     show(true);
   }
 
-  function handleFocusOut(): void {
+  function handleFocusOut(event: FocusEvent): void {
     focusTarget = null;
+    // Clicking from one wrapped control to another keeps the press's hide.
+    const next = event.relatedTarget;
+    if (!(next instanceof Node && triggerEl?.contains(next))) pressed = false;
     hide(true);
+  }
+
+  // A `focusable` trigger does nothing when pressed, and a tap is the only
+  // way a touch user can open its tooltip.
+  function handlePointerDown(): void {
+    if (focusable) return;
+    pressed = true;
+    hide(true);
+  }
+
+  // Enter or Space activates a control the way a click does. A list it
+  // opens may keep focus on the control, as SelectDropdown does.
+  function handleKeydown(event: KeyboardEvent): void {
+    if (focusable) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const el = event.target;
+    // Typing in a wrapped text field keeps its description.
+    if (
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLTextAreaElement ||
+      el instanceof HTMLSelectElement ||
+      (el instanceof HTMLElement && el.isContentEditable)
+    ) {
+      return;
+    }
+    pressed = true;
+    hide(true);
+  }
+
+  function handleMouseLeave(): void {
+    pressed = false;
+    hide();
   }
 
   // The description belongs on the element that has focus. A hover-opened
@@ -190,7 +236,9 @@
   bind:this={triggerEl}
   tabindex={focusable ? 0 : undefined}
   onmouseenter={() => show()}
-  onmouseleave={() => hide()}
+  onmouseleave={handleMouseLeave}
+  onpointerdown={handlePointerDown}
+  onkeydown={handleKeydown}
   onfocusin={handleFocusIn}
   onfocusout={handleFocusOut}
 >
