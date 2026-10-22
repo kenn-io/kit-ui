@@ -649,3 +649,46 @@ for (const viewport of [
     expect(box.width / box.height).toBeCloseTo(320 / 180, 2);
   });
 }
+
+test("play pressed before the metadata loads still plays inline after closing", async ({
+  page,
+}) => {
+  // The clip's request never answers, so the viewer never gets metadata.
+  await page.route(/\?stalled$/, () => {});
+  await page.evaluate(async () => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    const { clip } = await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+    const left: { currentTime: number; playing: boolean }[] = [];
+    const video = {
+      kind: "video" as const,
+      src: `${clip}?stalled`,
+      label: "Session video",
+      currentTime: 2,
+      playing: false,
+      onleave: (state: { currentTime: number; playing: boolean }) => left.push(state),
+    };
+    const host = mountMediaViewer([video], 0);
+    Object.assign(window, { __stalled: { host, left } });
+  });
+
+  await viewer(page).getByRole("button", { name: "Play", exact: true }).click();
+  await expect.poll(async () => (await playback(expanded(page))).playing).toBe(true);
+  type Stalled = {
+    host: { replaceItems: (items: unknown[]) => void };
+    left: { currentTime: number; playing: boolean }[];
+  };
+  // Close, then empty the items as the host does.
+  await page.keyboard.press("Escape");
+  await page.evaluate(() =>
+    (window as unknown as { __stalled: Stalled }).__stalled.host.replaceItems([]),
+  );
+  await expect(viewer(page)).toHaveCount(0);
+  expect(
+    await page.evaluate(() =>
+      (window as unknown as { __stalled: Stalled }).__stalled.left.map(
+        ({ currentTime, playing }) => ({ currentTime, playing }),
+      ),
+    ),
+  ).toEqual([{ currentTime: 2, playing: true }]);
+});

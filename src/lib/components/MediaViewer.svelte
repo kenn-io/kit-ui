@@ -165,7 +165,16 @@
       if (volume !== undefined) video.volume = volume;
       // Seeking needs metadata; until then the video still reports 0.
       let ready = false;
+      // Play or pause pressed before then replaces the opening state.
+      let playing = start.playing;
+      const choose = () => {
+        playing = !video.paused;
+      };
+      video.addEventListener("play", choose);
+      video.addEventListener("pause", choose);
       const begin = () => {
+        video.removeEventListener("play", choose);
+        video.removeEventListener("pause", choose);
         ready = true;
         // The CSS sizes the video's box from this ratio, so the box is
         // the picture and the controls sit on it.
@@ -179,15 +188,17 @@
         if (start.currentTime > 0) video.currentTime = start.currentTime;
         // Rejected when the browser blocks autoplay or the video leaves
         // first; the controls still work.
-        if (start.playing) video.play().catch(() => {});
+        if (playing && video.paused) video.play().catch(() => {});
       };
       if (video.readyState >= HTMLMediaElement.HAVE_METADATA) begin();
       else video.addEventListener("loadedmetadata", begin, { once: true });
       return () => {
         video.removeEventListener("loadedmetadata", begin);
+        video.removeEventListener("play", choose);
+        video.removeEventListener("pause", choose);
         const state = ready
           ? { currentTime: video.currentTime, playing: !video.paused && !video.ended }
-          : start;
+          : { currentTime: start.currentTime, playing };
         video.pause();
         own.leftAt.set(item, {
           currentTime: state.currentTime,

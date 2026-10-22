@@ -103,7 +103,8 @@ Playback hands over in both directions:
    its `sources`, and the viewer's browser picks one it supports. The
    viewer applies `muted` and `volume` at once, seeks to `currentTime`
    once the video's metadata loads, and starts playing if `playing` is
-   true.
+   true. Play or Pause pressed before the metadata loads replaces
+   `playing`.
 2. Each time the video leaves the viewer, the viewer pauses it and calls
    `onleave` with its position, `muted`, and `volume`. Apply them to the
    inline player, and play it if `state.playing` is true.
