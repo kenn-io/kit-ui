@@ -556,6 +556,11 @@ async function dropEdgeAt(page: Page, x: number): Promise<void> {
  * around it. */
 async function wordsFit(page: Page, width: number): Promise<boolean> {
   return page.evaluate((width) => {
+    // Chromium measures in exact 1/64px steps, so any overflow means a word
+    // does not fit; the slack only absorbs floating-point noise. A looser
+    // slack hides a sidebar one pixel too wide when its text's width ends in
+    // a small fraction, as it does with Linux fonts.
+    const NOISE = 0.001;
     const sidebar = document.querySelector(".kit-app-sidebar");
     const panel = document.querySelector<HTMLElement>(".kit-app-sidebar__panel");
     if (!sidebar || !panel) throw new Error("sidebar not laid out");
@@ -575,7 +580,10 @@ async function wordsFit(page: Page, width: number): Promise<boolean> {
       for (let box = node.parentElement; box && panel.contains(box); box = box.parentElement) {
         const style = getComputedStyle(box);
         if (style.display.startsWith("inline")) continue;
-        if (end > box.getBoundingClientRect().right - Number.parseFloat(style.paddingRight) + 0.5) {
+        if (
+          end >
+          box.getBoundingClientRect().right - Number.parseFloat(style.paddingRight) + NOISE
+        ) {
           fits = false;
         }
       }
