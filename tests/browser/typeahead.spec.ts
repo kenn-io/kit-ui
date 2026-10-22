@@ -802,4 +802,71 @@ test.describe("trigger button the app renders", () => {
     expect(box.x + box.width).toBeLessThanOrEqual(360);
     expect(box.y + box.height).toBeLessThanOrEqual(trigger.y);
   });
+
+  test("Escape on the button after Shift+Tab closes only the list", async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await button.click();
+    await page.keyboard.press("Shift+Tab");
+    await expect(button).toBeFocused();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    // Stands in for an enclosing dialog that closes on Escape.
+    await page.evaluate(() => {
+      (window as Window & { escapes?: number }).escapes = 0;
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") (window as Window & { escapes?: number }).escapes! += 1;
+      });
+    });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(button).toBeFocused();
+    expect(await page.evaluate(() => (window as Window & { escapes?: number }).escapes)).toBe(0);
+  });
+
+  test("a button marked aria-disabled does not open the list", async ({ page }) => {
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await button.evaluate((el) => el.setAttribute("aria-disabled", "true"));
+    await button.click({ force: true });
+    await button.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("b");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("a click closes the list in browsers that do not focus a pressed button", async ({
+    page,
+  }) => {
+    await gotoPage(page, "typeahead");
+    const button = appTrigger(page);
+    await button.click();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    // Safari and Firefox on macOS leave focus on nothing when a button is
+    // pressed. Reproduce that default action unless the page prevented it.
+    await page.evaluate(() => {
+      window.addEventListener("mousedown", (event) => {
+        if (event.defaultPrevented) return;
+        event.preventDefault();
+        (document.activeElement as HTMLElement | null)?.blur();
+      });
+    });
+    await button.click();
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(button).toBeFocused();
+  });
+
+  test("the list fits a narrow window inside a CSS-zoomed area", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 480 });
+    await gotoPage(page, "typeahead");
+    const picker = page.locator(".kit-typeahead--custom-trigger");
+    await picker.evaluate((el) => {
+      (el as HTMLElement).style.cssText = "position: fixed; left: 4px; top: 4px; zoom: 2;";
+    });
+    await appTrigger(page).click();
+    const box = (await page.locator(".kit-typeahead__panel").boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(360);
+  });
 });

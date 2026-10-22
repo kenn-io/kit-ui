@@ -138,17 +138,22 @@
     // A caller's button stays visible while open, so the list hangs off it.
     const rect = (trigger && triggerEl ? triggerEl : containerEl).getBoundingClientRect();
     const anchor = new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom);
+    const viewportWidth = window.innerWidth / zoom;
+    // CSS vw ignores ancestor zoom, so the stylesheet's width cap reads this
+    // instead. Set it before measuring so min-width resolves against it.
+    const widthLimit = `${Math.max(0, viewportWidth - 16)}px`;
+    panelEl.style.setProperty("--kit-typeahead-width-limit", widthLimit);
     const minWidth = parseFloat(getComputedStyle(panelEl).minWidth) || 0;
     const width = Math.max(anchor.width, minWidth);
     panelStyle = `${floatingPopoverStyle({
       trigger: anchor,
-      viewportWidth: window.innerWidth / zoom,
+      viewportWidth,
       viewportHeight: window.innerHeight / zoom,
       popoverWidth: width,
       popoverHeight: panelEl.offsetHeight,
       triggerGap: trigger ? 4 : 2,
       placement: placement === "top" ? "above" : placement === "bottom" ? "below" : "auto",
-    })}; width: ${Math.round(width)}px`;
+    })}; width: ${Math.round(width)}px; --kit-typeahead-width-limit: ${widthLimit}`;
   }
 
   // Filtering/expansion changes the panel's height — keep the flip/clamp
@@ -324,13 +329,23 @@
     );
     const wasDisabled = node.disabled;
     const hadControlStates = node.classList.contains("kit-control-states");
-    // Opening moves focus into the popover's input; the button keeps it
-    // while the menu closes, so a click while open only closes.
+    // IconButton's ariaDisabled guards only its own onclick, not these
+    // listeners.
+    const unavailable = () => node.getAttribute("aria-disabled") === "true";
+    // Safari and Firefox on macOS do not focus a pressed button, so the
+    // input's blur would close the list before the click reopened it. Keep
+    // focus in the input until the click closes the list.
+    const mousedown = (event: MouseEvent) => {
+      if (open) event.preventDefault();
+    };
     const toggle = () => {
-      if (open) void closeDropdown();
-      else void openDropdown();
+      if (open) void closeDropdown(true);
+      else if (!unavailable()) void openDropdown();
     };
     const keydown = (event: KeyboardEvent) => {
+      // Shift+Tab from the input lands here with the list still open.
+      if (open && handleEscape(event)) return;
+      if (unavailable()) return;
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         void openDropdown();
@@ -341,6 +356,7 @@
 
     triggerEl = node;
     node.classList.add("kit-control-states");
+    node.addEventListener("mousedown", mousedown);
     node.addEventListener("click", toggle);
     node.addEventListener("keydown", keydown);
 
@@ -354,6 +370,7 @@
     });
 
     return () => {
+      node.removeEventListener("mousedown", mousedown);
       node.removeEventListener("click", toggle);
       node.removeEventListener("keydown", keydown);
       if (triggerEl === node) triggerEl = undefined;
@@ -821,8 +838,12 @@
     position: fixed;
     box-sizing: border-box;
     /* Never wider than the viewport minus the popover edge gaps, so the
-       positioning clamp can always keep the list on screen. */
-    min-width: min(var(--typeahead-panel-min-width, 0px), calc(100vw - 16px));
+       positioning clamp can always keep the list on screen. positionPanel
+       sets the limit in zoom-corrected pixels; 100vw covers first paint. */
+    min-width: min(
+      var(--typeahead-panel-min-width, 0px),
+      var(--kit-typeahead-width-limit, calc(100vw - 16px))
+    );
     display: flex;
     flex-direction: column;
     max-height: 50vh;
@@ -838,7 +859,10 @@
   }
 
   .kit-typeahead--custom-trigger .kit-typeahead__panel {
-    min-width: min(var(--typeahead-panel-min-width, 240px), calc(100vw - 16px));
+    min-width: min(
+      var(--typeahead-panel-min-width, 240px),
+      var(--kit-typeahead-width-limit, calc(100vw - 16px))
+    );
   }
 
   .kit-typeahead__search {

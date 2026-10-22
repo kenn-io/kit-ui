@@ -157,8 +157,10 @@ open, `aria-controls` on the button, and adds `kit-control-states`. Click,
 Arrow Up, and Arrow Down open the list, and typing a character opens it with
 that character as the query. The button stays in place while the list is
 open, so the search field moves into the popover above the options. Escape or
-a choice closes the list and returns focus to the button; clicking the button
-again closes it.
+a choice closes the list and returns focus to the button, including Escape
+pressed on the button itself after Shift+Tab. Clicking the button again closes
+it. A button with `aria-disabled="true"`, such as an `ariaDisabled`
+IconButton, does not open the list.
 
 You name the button. Put the current value in its accessible name, as the
 built-in trigger does. The popover is at least 240px wide, or
@@ -183,4 +185,5 @@ long labels truncate instead of widening the menu. A compact trigger over
 long labels (a time zone picker) can set `--typeahead-panel-min-width` on the
 component; the list then opens at least that wide, positioned with its real
 width so it slides left to stay inside the viewport rather than hanging past
-the right edge. The list is never wider than the viewport minus the edge gaps.
+the right edge. The list is never wider than the viewport minus the edge gaps,
+including inside an ancestor with CSS `zoom`.
