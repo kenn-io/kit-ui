@@ -37,6 +37,17 @@ for (const testid of ["markdown", "code-block"]) {
   });
 }
 
+// Shiki marks a diff hunk header bold, which adds font hints beside its
+// colors. The colors must survive both sanitization and the CSSOM pass.
+test("a bold token keeps its color under a strict policy", async ({ page }) => {
+  const section = page.getByTestId("markdown");
+  const hunk = section.locator("pre.shiki span:not(.line)").filter({ hasText: /^@@ -1 \+1 @@$/ });
+  await expect(hunk).toBeVisible({ timeout: 15_000 });
+  // The line around it has the block's plain text color.
+  const line = hunk.locator("xpath=parent::span");
+  expect(await color(hunk)).not.toBe(await color(line));
+});
+
 test("Mermaid diagrams keep their theme under a strict policy", async ({ page }) => {
   const node = page.locator(".kit-mermaid-viewer svg .node rect").first();
   await expect(node).toBeVisible({ timeout: 15_000 });
