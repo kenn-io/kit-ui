@@ -561,6 +561,17 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-image-preview"])).toHaveLength(0);
   });
 
+  test("video player: a <video> with native controls, on one line or several", () => {
+    const src = `<video src={url} controls></video>\n<video\n  src={url}\n  controls={true}\n  preload="metadata"\n></video>`;
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-video-player"]);
+    expect(findings.map((finding) => finding.line)).toEqual([1, 2]);
+  });
+
+  test("video player: does not match a <video> without native controls", () => {
+    const src = `<video src={url} controls={false}></video>\n<video src={url} muted></video>\n<p>video controls</p>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-video-player"])).toHaveLength(0);
+  });
+
   test("lightbox: class attribute, className assignment, and CSS selector", () => {
     const src = svelte(
       `.markdown-image-lightbox { position: fixed; }`,

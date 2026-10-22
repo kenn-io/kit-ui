@@ -7,6 +7,7 @@
     Markdown,
     MediaViewer,
     SegmentedControl,
+    VideoPlayer,
     type MediaViewerItem,
   } from "../../lib/index.js";
   import {
@@ -36,32 +37,6 @@
   ];
   let directOpen = $state(false);
   let directIndex = $state(0);
-
-  // The inline player hands its position and play state to the viewer,
-  // and takes them back when the video leaves it.
-  let inlineVideo: HTMLVideoElement | undefined = $state();
-  let videoItems: MediaViewerItem[] = $state([]);
-  let videoIndex = $state(0);
-  function expandVideo(): void {
-    const video = inlineVideo!;
-    const playing = !video.paused && !video.ended;
-    video.pause();
-    videoIndex = 0;
-    videoItems = [
-      {
-        kind: "video",
-        src: video.currentSrc,
-        label: "Test pattern video",
-        currentTime: video.currentTime,
-        playing,
-        onleave: (state) => {
-          video.currentTime = state.currentTime;
-          if (state.playing) void video.play();
-        },
-      },
-      direct[0]!,
-    ];
-  }
 
   const renderer = createMarkdownRenderer({ codeFence: mermaidCodeFence });
   const markdownSource = `Markdown images get an expand button on hover:
@@ -106,38 +81,27 @@ graph LR
 
 <DemoSection
   title="Video"
-  description="A video item plays in a fresh player, so it starts where the inline player was and hands its position back when it leaves the viewer. Videos have no pan or zoom, the arrow keys seek a focused video instead of paging, and paging away or closing pauses the viewer's player."
-  code={`<MediaViewer
-  items={[{ kind: "video", src, label, currentTime, playing, onleave: (state) => resume(state) }]}
-  onclose={close}
-/>`}
+  description="VideoPlayer's expand control, beside full screen, opens the page gallery on the video. The viewer plays it from where the inline player was, and the player takes the position back when the video leaves the viewer. Paging moves to the page's other images, diagrams, and videos. Space or K plays and pauses, M mutes, F toggles full screen, and the arrow keys seek."
+  code={`<VideoPlayer {src} label="Test pattern video" />`}
 >
   <div class="media-demo-video">
-    <!-- svelte-ignore a11y_media_has_caption -->
-    <video
-      bind:this={inlineVideo}
-      src={demoVideo}
-      controls
-      preload="metadata"
-      aria-label="Inline test pattern video"
-    ></video>
-    <Button onclick={expandVideo}>Expand video</Button>
+    <VideoPlayer src={demoVideo} label="Test pattern video" />
   </div>
-  {#if videoItems.length > 0}
-    <MediaViewer items={videoItems} bind:index={videoIndex} onclose={() => (videoItems = [])} />
-  {/if}
 </DemoSection>
 
 <div class="media-demo-page" {@attach markdownMedia}>
   <DemoSection
     title="Page gallery"
-    description="Markdown images (initMarkdownImageViewer), Mermaid diagrams, and ImagePreview all register with one page gallery. Expanding any of them pages through every item currently displayed, in page order. The image in the inactive tab is skipped until its tab is shown."
+    description="Markdown images (initMarkdownImageViewer), Mermaid diagrams, VideoPlayer, and ImagePreview all register with one page gallery. Expanding any of them pages through every item currently displayed, in page order. The image in the inactive tab is skipped until its tab is shown."
     code={`import "@kenn-io/kit-ui/markdown-images.css";
 import { initMarkdownImageViewer } from "@kenn-io/kit-ui";
 
 const controller = initMarkdownImageViewer(document); // once at startup`}
   >
     <Markdown {renderer} source={markdownSource} />
+    <div class="media-demo-video">
+      <VideoPlayer src={demoVideo} label="Second test pattern video" />
+    </div>
     <ImagePreview src={swatch("ImagePreview", "#14b8a6")} alt="ImagePreview swatch" />
     <SegmentedControl
       ariaLabel="Demo tabs"
@@ -159,15 +123,9 @@ const controller = initMarkdownImageViewer(document); // once at startup`}
 
 <style>
   .media-demo-video {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-4);
-  }
-
-  .media-demo-video video {
-    width: 320px;
+    width: 480px;
     max-width: 100%;
+    margin-block: var(--space-4);
   }
 
   .media-demo-tab {

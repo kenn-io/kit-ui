@@ -548,6 +548,24 @@ export function checkHandRolledImagePreview(source) {
   return findings;
 }
 
+/** Native `<video controls>` players duplicate VideoPlayer, whose control
+ * bar adds expanding into MediaViewer; the browser's controls can't take
+ * that button. Matches a `<video>` tag with a `controls` attribute, unless
+ * it is `controls={false}`. */
+const NATIVE_VIDEO_CONTROLS = /<video\b[^>]*\scontrols(?!\s*=\s*\{\s*false\s*\})\b/gi;
+
+export function checkHandRolledVideoPlayer(source) {
+  const findings = [];
+  for (const match of source.matchAll(NATIVE_VIDEO_CONTROLS)) {
+    findings.push({
+      rule: "hand-rolled-video-player",
+      line: lineOfIndex(source, match.index),
+      message: "native video controls — use VideoPlayer from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled lightboxes (expanded image/diagram overlays) duplicate
  * MediaViewer, which adds pan/zoom and paging through the page's other
  * media. Matches a `lightbox` class token (whole, or a hyphenated segment
@@ -1643,6 +1661,7 @@ export const ALL_RULES = {
   "hand-rolled-icon-button": checkHandRolledIconButton,
   "hand-rolled-image-preview": checkHandRolledImagePreview,
   "hand-rolled-lightbox": checkHandRolledLightbox,
+  "hand-rolled-video-player": checkHandRolledVideoPlayer,
   "hand-rolled-top-bar": checkHandRolledTopBar,
   "hand-rolled-search-input": checkHandRolledSearchInput,
   "hand-rolled-date-input": checkHandRolledDateInput,

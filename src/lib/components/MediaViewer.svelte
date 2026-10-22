@@ -9,6 +9,7 @@
   import { backdropCloses } from "../utils/overlay.js";
   import { attachPanZoom, type PanZoom } from "../utils/pan-zoom.js";
   import { appShortcuts } from "../utils/shortcuts.js";
+  import VideoPlayer from "./VideoPlayer.svelte";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -97,8 +98,9 @@
     // also act on them.
     event.stopPropagation();
     if (event.defaultPrevented) return;
-    // A focused video takes the arrow keys itself (to seek).
-    const pages = paged && !(event.target instanceof HTMLMediaElement);
+    // A focused video player takes the arrow keys itself (to seek).
+    const pages =
+      paged && !(event.target instanceof Element && event.target.closest(".kit-video-player"));
     if (event.key === "Escape") {
       event.preventDefault();
       close();
@@ -142,10 +144,12 @@
         // The CSS sizes the video's box from this ratio, so the box is
         // the picture and the controls sit on it.
         if (video.videoWidth > 0 && video.videoHeight > 0)
-          video.style.setProperty(
-            "--kit-media-viewer-video-ratio",
-            String(video.videoWidth / video.videoHeight),
-          );
+          video
+            .closest<HTMLElement>(".kit-video-player")
+            ?.style.setProperty(
+              "--kit-media-viewer-video-ratio",
+              String(video.videoWidth / video.videoHeight),
+            );
         if (start.currentTime > 0) video.currentTime = start.currentTime;
         // Rejected when the browser blocks autoplay or the video leaves
         // first; the controls still work.
@@ -219,18 +223,13 @@
               {#if current?.kind === "image"}
                 <img class="kit-media-viewer__img" src={current.src} alt={current.alt} />
               {:else if current?.kind === "video"}
-                <!-- A video item is a bare URL with no caption track to
-                  pass on. -->
-                <!-- svelte-ignore a11y_media_has_caption -->
-                <video
+                <VideoPlayer
                   class="kit-media-viewer__video"
                   src={current.src}
-                  aria-label={current.label}
-                  controls
-                  playsinline
-                  preload="metadata"
-                  {@attach playVideo(current)}
-                ></video>
+                  label={current.label}
+                  expandable={false}
+                  videoAttachment={playVideo(current)}
+                />
               {:else if current?.kind === "element"}
                 <div class="kit-media-viewer__element" {@attach cloneInto(current.element)}></div>
               {/if}
@@ -383,12 +382,10 @@
    * picture's aspect ratio. The box is the picture, not a letterboxed
    * area around it, so the controls sit on the picture. The ratio comes
    * from the video's metadata; 16:9 holds its place until then. */
-  .kit-media-viewer__video {
+  .kit-media-viewer__pan--video :global(.kit-media-viewer__video) {
     --kit-media-viewer-video-ratio: 1.7778;
-    display: block;
     width: min(100cqw, 100cqh * var(--kit-media-viewer-video-ratio));
     aspect-ratio: var(--kit-media-viewer-video-ratio);
-    object-fit: contain;
   }
 
   .kit-media-viewer__img {

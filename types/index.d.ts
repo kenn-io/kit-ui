@@ -97,6 +97,7 @@ export { default as TopBar } from "./components/TopBar.svelte";
 export type { TopBarTab, TopBarTabIndicator, TopBarTabIndicatorTone, } from "./components/TopBar.svelte";
 export { default as Typeahead } from "./components/Typeahead.svelte";
 export type { TypeaheadInputAttributes, TypeaheadOption } from "./components/typeahead.js";
+export { default as VideoPlayer } from "./components/VideoPlayer.svelte";
 export { default as VirtualList } from "./components/VirtualList.svelte";
 export { default as VirtualTable } from "./components/VirtualTable.svelte";
 export { offsetOfIndex, virtualSlice, visibleWindow, type VerticalBounds, type VirtualSlice, type VirtualSliceInput, } from "./components/virtual.js";

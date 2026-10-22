@@ -78,10 +78,14 @@ original's `id`s while both are in the document.
 
 ## Videos
 
-A video item plays in a new `<video controls>` element rather than a
+A video item plays in a [VideoPlayer](video-player.md) rather than a
 clone, because a cloned player loses its loaded data and position. Use
 it in place of the browser's full screen: the video gets the 90%
 panel while the page stays visible around it.
+
+A VideoPlayer on the page already joins the page gallery and does the
+handover below, so its expand control is all an app needs. Build video
+items yourself only for another player, such as a plain `<video>`.
 
 Playback hands over in both directions:
 
@@ -116,20 +120,20 @@ const item: MediaViewerItem = {
 };
 ```
 
-The video's own controls take its input:
+The player takes the video's input:
 
 - A video grows or shrinks to the largest size that fits the viewer and
   keeps its shape, so a small clip fills the panel in one direction. The
   player is exactly the size of the picture, so the controls sit on it.
 - There is no pan, zoom, double-tap zoom, or swipe paging on a video, and
-  no reset button. Clicks and drags on the video work its controls and
-  never close the viewer.
-- When the video has focus (after the user clicks it or tabs to it), the
-  Left and Right arrow keys go to the video, which seeks in browsers that
-  support it, and do not page. The previous and next buttons still page.
+  no reset button. A click on the picture plays or pauses it, drags work
+  the player's sliders, and neither closes the viewer.
+- While focus is in the player, the Left and Right arrow keys seek five
+  seconds and do not page. The previous and next buttons still page.
   Escape still closes.
-- The native full-screen button stays. Nothing about the viewer conflicts
-  with it, and a user who wants the whole screen can still have it.
+- The player's full-screen button stays, for a user who wants the whole
+  screen. Its expand control is hidden, since the viewer is already the
+  expanded view.
 
 A video item has no caption, like an element item, and no caption
 track.
@@ -165,7 +169,7 @@ the same strings as `viewerLabels: MediaViewerLabels`
 ## Page gallery
 
 Everything in kit-ui that expands uses one page-wide gallery
-(`utils/media-gallery`): `ImagePreview`, markdown images
+(`utils/media-gallery`): `ImagePreview`, `VideoPlayer`, markdown images
 (`initMarkdownImageViewer`), and Mermaid diagrams
 (`initMarkdownMermaidRendering`). Expanding any of them opens MediaViewer
 on it, with every other eligible item on the page in document order.
