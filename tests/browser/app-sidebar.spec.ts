@@ -231,6 +231,17 @@ test("resting on another rail icon switches the hover flyout after a delay", asy
   await expect(flyout(page)).toHaveText("Settings");
 });
 
+test("a flyout without views gives way to the next icon's at once", async ({ page }) => {
+  await openPaused(page, "home", 1024);
+  await sectionLink(page, "Settings").hover();
+  await expect(flyout(page)).toHaveText("Settings");
+  // No clock time passes: the switch needs no timer.
+  await sectionLink(page, "Preferences").hover();
+  await expect(flyout(page)).toHaveText("Preferences");
+  await page.mouse.move(700, 400);
+  await expect(flyout(page)).toHaveCount(0);
+});
+
 test("a hover flyout closes after a delay once the pointer leaves the rail", async ({ page }) => {
   await openPaused(page, "home", 1024);
   await sectionLink(page, "Reports").hover();

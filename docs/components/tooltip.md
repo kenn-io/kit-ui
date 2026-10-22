@@ -3,9 +3,15 @@
 Hover/focus tooltip with rich-content support, generalized from Forge's
 diff-summary popover on the PR page. The bubble centers on its trigger with
 a small gap, flips above when there's no room below, and shifts sideways to
-stay on screen; its arrow always points at the trigger's center. Open/close
-delays give hover intent, Escape dismisses, and the panel has
-`role="tooltip"`. While open, its id is added to the `aria-describedby` of
+stay on screen; its arrow always points at the trigger's center. With
+`side="right"` the bubble sits beside the trigger instead, centered on it, as
+for an icon in a narrow column where a bubble below would cover the next icon.
+When the bubble does not fit on the right, it takes the default placement.
+Open/close delays give hover intent, Escape dismisses, and the panel has
+`role="tooltip"`. One tooltip shows at a time: while one is open, the pointer
+reaching another trigger closes it and opens the next at once, without the
+open delay, so a pointer moving along a row or column of icons sees each name
+on the next frame. While open, its id is added to the `aria-describedby` of
 the wrapped control that has keyboard focus, or of the first wrapped control
 when the pointer opened it (the wrapper itself with `focusable`), so
 assistive technology reads it as that control's description. The id stays
@@ -48,7 +54,8 @@ no action, so pressing it does not hide the tooltip, and a tap opens it.
 | `content`      | `Snippet`                      | —          | Rich tooltip body (wins over `text`)                                                          |
 | `focusable`    | `boolean`                      | `false`    | Adds `tabindex="0"` to the trigger wrapper — set when the child isn't focusable itself        |
 | `align`        | `"start" \| "center" \| "end"` | `"center"` | Horizontal placement against the trigger; the arrow points at the trigger's center either way |
-| `openDelayMs`  | `number`                       | `250`      | Hover intent; focus opens immediately                                                         |
+| `side`         | `"bottom" \| "right"`          | `"bottom"` | `bottom` flips above when there's no room below; `right` puts the bubble beside the trigger   |
+| `openDelayMs`  | `number`                       | `250`      | Hover intent; focus, or another tooltip already open, opens immediately                       |
 | `closeDelayMs` | `number`                       | `100`      | Lets the pointer cross into the tooltip (rich content stays open while hovered)               |
 | `class`        | `string`                       | `""`       | Extra classes on the panel                                                                    |
 

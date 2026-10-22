@@ -475,10 +475,10 @@
   }
 
   // A pointer on its way to a flyout's lower views can leave its row, or
-  // cross the next one, before it reaches the flyout. So leaving the open
-  // section starts a grace period instead of closing it: coming back to the
-  // section's row or flyout keeps it open, and a row the pointer still rests
-  // on when the period ends opens instead.
+  // cross the next one, before it reaches the flyout. So leaving an open
+  // section that has views starts a grace period instead of closing it:
+  // coming back to the section's row or flyout keeps it open, and a row the
+  // pointer still rests on when the period ends opens instead.
   const HOVER_GRACE_MS = 250;
   let graceTimer: ReturnType<typeof setTimeout> | undefined;
   let nextRow: { section: SidebarSection; item: HTMLElement } | null = null;
@@ -519,6 +519,12 @@
   function pointerLeft(section: SidebarSection, item: HTMLElement): void {
     if (nextRow?.item === item) nextRow = null;
     if (openSection !== section.id || hasKeyboardFocus(item)) return;
+    // A flyout without views only names the section; the pointer has nowhere
+    // to go in it, so the next icon's flyout replaces it on the same frame.
+    if (section.viewRuns.length === 0) {
+      closeFlyout();
+      return;
+    }
     clearTimeout(graceTimer);
     graceTimer = setTimeout(graceEnded, HOVER_GRACE_MS);
   }

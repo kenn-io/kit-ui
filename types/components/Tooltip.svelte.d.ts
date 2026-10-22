@@ -13,6 +13,12 @@ interface Props {
      * the bubble straight under or over it. The arrow always points at the
      * trigger's center, even when the viewport edge pushes the bubble aside. */
     align?: "start" | "center" | "end";
+    /** `bottom` (default) puts the bubble under the trigger, or over it when
+     * there is no room below. `right` puts it beside the trigger, as for an
+     * icon in a narrow column, where a bubble below covers the next icon. */
+    side?: "bottom" | "right";
+    /** Hover intent before the first tooltip opens. While another tooltip is
+     * open, this one opens at once. */
     openDelayMs?: number;
     closeDelayMs?: number;
     /** Extra classes on the popover panel. */

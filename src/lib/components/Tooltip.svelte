@@ -1,3 +1,10 @@
+<script lang="ts" module>
+  // One tooltip shows at a time. While one is open, the pointer reaching
+  // another trigger swaps them at once: the open one closes and the next opens
+  // without its hover delay. This holds the open tooltip's close.
+  let current: (() => void) | null = null;
+</script>
+
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { tick } from "svelte";
@@ -19,6 +26,12 @@
      * the bubble straight under or over it. The arrow always points at the
      * trigger's center, even when the viewport edge pushes the bubble aside. */
     align?: "start" | "center" | "end";
+    /** `bottom` (default) puts the bubble under the trigger, or over it when
+     * there is no room below. `right` puts it beside the trigger, as for an
+     * icon in a narrow column, where a bubble below covers the next icon. */
+    side?: "bottom" | "right";
+    /** Hover intent before the first tooltip opens. While another tooltip is
+     * open, this one opens at once. */
     openDelayMs?: number;
     closeDelayMs?: number;
     /** Extra classes on the popover panel. */
@@ -31,6 +44,7 @@
     children,
     focusable = false,
     align = "center",
+    side = "bottom",
     openDelayMs = 250,
     closeDelayMs = 100,
     class: className = "",
@@ -38,9 +52,11 @@
 
   const tooltipID = $props.id();
   const ARROW_INSET = 12;
+  const TRIGGER_GAP = 8;
+  const VIEWPORT_GAP = 8;
 
   let open = $state(false);
-  let side = $state<"top" | "bottom">("bottom");
+  let placedSide = $state<"top" | "bottom" | "right">("bottom");
   let popoverStyle = $state("");
   let triggerEl = $state<HTMLSpanElement>();
   let popoverEl = $state<HTMLDivElement>();
@@ -64,6 +80,22 @@
     if (!triggerEl || !popoverEl) return;
     const trigger = triggerEl.getBoundingClientRect();
     const width = popoverEl.offsetWidth;
+    // Without room on the right, the bubble takes the default placement.
+    if (
+      side === "right" &&
+      trigger.right + TRIGGER_GAP + width <= window.innerWidth - VIEWPORT_GAP
+    ) {
+      const height = popoverEl.offsetHeight;
+      const middle = (trigger.top + trigger.bottom) / 2;
+      const top = Math.max(
+        VIEWPORT_GAP,
+        Math.min(middle - height / 2, window.innerHeight - height - VIEWPORT_GAP),
+      );
+      const arrowY = Math.min(Math.max(middle - top, ARROW_INSET), height - ARROW_INSET);
+      popoverStyle = `left: ${trigger.right + TRIGGER_GAP}px; top: ${top}px; --kit-tooltip-arrow-y: ${arrowY}px`;
+      placedSide = "right";
+      return;
+    }
     const { left, top } = floatingPopoverPosition({
       trigger,
       viewportWidth: window.innerWidth,
@@ -71,7 +103,7 @@
       popoverWidth: width,
       popoverHeight: popoverEl.offsetHeight,
       align,
-      triggerGap: 8,
+      triggerGap: TRIGGER_GAP,
     });
     // Keep the arrow clear of the bubble's rounded corners.
     const arrowX = Math.min(
@@ -79,7 +111,21 @@
       width - ARROW_INSET,
     );
     popoverStyle = `left: ${left}px; top: ${top}px; --kit-tooltip-arrow-x: ${arrowX}px`;
-    side = top < trigger.top ? "top" : "bottom";
+    placedSide = top < trigger.top ? "top" : "bottom";
+  }
+
+  function openNow(): void {
+    clearTimer();
+    if (current !== close) current?.();
+    current = close;
+    open = true;
+    void position();
+  }
+
+  function close(): void {
+    clearTimer();
+    open = false;
+    if (current === close) current = null;
   }
 
   function show(immediate = false): void {
@@ -87,28 +133,28 @@
     // A touch tap fires an emulated mouseenter after the press; it must not
     // bring the bubble back over what the tap opened.
     if (open || pressed) return;
-    if (immediate || openDelayMs <= 0) {
-      open = true;
-      void position();
+    if (immediate || openDelayMs <= 0 || current !== null) {
+      openNow();
       return;
     }
-    timer = setTimeout(() => {
-      open = true;
-      void position();
-    }, openDelayMs);
+    timer = setTimeout(openNow, openDelayMs);
   }
 
   function hide(immediate = false): void {
     clearTimer();
     if (!open) return;
     if (immediate || closeDelayMs <= 0) {
-      open = false;
+      close();
       return;
     }
-    timer = setTimeout(() => {
-      open = false;
-    }, closeDelayMs);
+    timer = setTimeout(close, closeDelayMs);
   }
+
+  // A tooltip removed while open must not keep the next one from opening.
+  $effect(() => () => {
+    clearTimer();
+    if (current === close) current = null;
+  });
 
   function describedIDs(target: HTMLElement): string[] {
     return (target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean);
@@ -250,7 +296,7 @@
     id={tooltipID}
     class={["kit-tooltip", "kit-popover-card", className]}
     role="tooltip"
-    data-side={side}
+    data-side={placedSide}
     style={popoverStyle}
     bind:this={popoverEl}
     onmouseenter={() => show(true)}
@@ -289,7 +335,8 @@
   }
 
   /* Arrow — mirrors the DiffSummaryChip precedent; flips with data-side
-     and points at the trigger's center (--kit-tooltip-arrow-x). */
+     and points at the trigger's center (--kit-tooltip-arrow-x, or
+     --kit-tooltip-arrow-y beside the trigger). */
   .kit-tooltip::before {
     content: "";
     position: absolute;
@@ -309,6 +356,13 @@
   .kit-tooltip[data-side="top"]::before {
     bottom: -5px;
     border-right: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .kit-tooltip[data-side="right"]::before {
+    top: calc(var(--kit-tooltip-arrow-y, 50%) - 4px);
+    left: -5px;
+    border-left: 1px solid var(--border-default);
     border-bottom: 1px solid var(--border-default);
   }
 
