@@ -1,5 +1,7 @@
 <script lang="ts">
   import AlignLeft from "@lucide/svelte/icons/text-align-start";
+  import Bell from "@lucide/svelte/icons/bell";
+  import Inbox from "@lucide/svelte/icons/inbox";
   import AlignRight from "@lucide/svelte/icons/text-align-end";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import Button from "../../lib/components/Button.svelte";
@@ -89,6 +91,27 @@
 </DemoSection>
 
 <DemoSection
+  title="Beside a column of icons"
+  description="side=&quot;right&quot; puts the bubble beside the trigger, so it never covers the next icon down. Once one tooltip is open, moving to the next trigger swaps them at once, with no hover delay."
+  code={`<Tooltip text="Inbox" side="right">
+  <IconButton ariaLabel="Inbox" title=""><Inbox size={16} /></IconButton>
+</Tooltip>`}
+>
+  <div class="column" data-testid="icon-column">
+    <Tooltip text="Inbox" side="right">
+      <IconButton ariaLabel="Inbox" title="">
+        <Inbox size={16} aria-hidden="true" />
+      </IconButton>
+    </Tooltip>
+    <Tooltip text="Notifications" side="right">
+      <IconButton ariaLabel="Notifications" title="">
+        <Bell size={16} aria-hidden="true" />
+      </IconButton>
+    </Tooltip>
+  </div>
+</DemoSection>
+
+<DemoSection
   title="Alignment and delays"
   code={`<Tooltip text="…" align="end" openDelayMs={0} closeDelayMs={0}>…</Tooltip>`}
 >
@@ -98,6 +121,12 @@
 </DemoSection>
 
 <style>
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
   .rows {
     display: flex;
     flex-direction: column;

@@ -87,6 +87,63 @@ test("near the bottom-right corner the tooltip flips above, stays on screen, and
   expect(Math.abs((await arrowCenterOf(tooltip)) - centerOf(control))).toBeLessThanOrEqual(1);
 });
 
+test("side right puts the tooltip beside its control, clear of the icon below", async ({
+  page,
+}) => {
+  await gotoPage(page, "tooltip");
+  const column = page.getByTestId("icon-column");
+  const inbox = column.getByRole("button", { name: "Inbox" });
+  await inbox.focus();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toHaveText("Inbox");
+
+  const control = await boxOf(inbox);
+  const below = await boxOf(column.getByRole("button", { name: "Notifications" }));
+  const bubble = await boxOf(tooltip);
+  const gap = bubble.left - control.right;
+  expect(gap).toBeGreaterThanOrEqual(4);
+  expect(gap).toBeLessThanOrEqual(12);
+  expect(bubble.right <= below.left || bubble.left >= below.right).toBe(true);
+  // The arrow points left at the control's vertical center.
+  const arrow = await tooltip.evaluate((el) => {
+    const style = getComputedStyle(el, "::before");
+    const box = el.getBoundingClientRect();
+    return {
+      right: box.left + parseFloat(style.left) + parseFloat(style.width),
+      middle: box.top + parseFloat(style.top) + parseFloat(style.height) / 2,
+    };
+  });
+  expect(arrow.right).toBeLessThanOrEqual(bubble.left + 6);
+  expect(Math.abs(arrow.middle - (control.top + control.bottom) / 2)).toBeLessThanOrEqual(1);
+});
+
+test("the first hover waits, then the next trigger's tooltip replaces it at once", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-01-15T08:00:00") });
+  await gotoPage(page, "tooltip");
+  await page.clock.pauseAt(new Date("2026-01-15T09:00:00"));
+  const column = page.getByTestId("icon-column");
+  const tooltip = page.getByRole("tooltip");
+  await column.getByRole("button", { name: "Inbox" }).hover();
+  await page.clock.runFor(200);
+  await expect(tooltip).toHaveCount(0);
+  await page.clock.runFor(100);
+  await expect(tooltip).toHaveText("Inbox");
+
+  // No clock time passes: the swap needs no timer.
+  await column.getByRole("button", { name: "Notifications" }).hover();
+  await expect(tooltip).toHaveText("Notifications");
+
+  // Once none is open, the next hover waits again.
+  await page.mouse.move(0, 0);
+  await page.clock.runFor(200);
+  await expect(tooltip).toHaveCount(0);
+  await column.getByRole("button", { name: "Inbox" }).hover();
+  await page.clock.runFor(200);
+  await expect(tooltip).toHaveCount(0);
+});
+
 test("the open tooltip is the control's accessible description", async ({ page }) => {
   await gotoPage(page, "tooltip");
   const button = resetButton(page);
