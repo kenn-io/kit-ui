@@ -16,6 +16,7 @@ import "@videojs/html/ui/time";
 import "@videojs/html/ui/time-group";
 import "@videojs/html/ui/time-separator";
 import "@videojs/html/ui/fullscreen-button";
+import "@videojs/html/ui/playback-rate-button";
 import "@videojs/html/ui/hotkey";
 import "@videojs/html/ui/gesture";
 import type { Attachment } from "svelte/attachments";

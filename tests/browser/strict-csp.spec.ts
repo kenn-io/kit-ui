@@ -72,7 +72,7 @@ test("a theme change restyles diagrams and releases the old styles", async ({ pa
 // picture.
 test("a video player lays out its controls under a strict policy", async ({ page }) => {
   const player = page.getByTestId("video").locator(".kit-video-player");
-  const play = player.getByRole("button", { name: "Play" });
+  const play = player.getByRole("button", { name: "Play", exact: true });
   await expect(play).toBeVisible();
   const bar = (await player.locator(".kit-video-player__bar").boundingBox())!;
   const picture = (await player.locator("video").boundingBox())!;

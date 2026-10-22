@@ -81,7 +81,7 @@ graph LR
 
 <DemoSection
   title="Video"
-  description="VideoPlayer's expand control, beside full screen, opens the page gallery on the video. The viewer plays it from where the inline player was, and the player takes the position back when the video leaves the viewer. Paging moves to the page's other images, diagrams, and videos. Space or K plays and pauses, M mutes, F toggles full screen, and the arrow keys seek."
+  description="VideoPlayer's expand control, beside full screen, opens the page gallery on the video. The viewer plays it from where the inline player was, and the player takes the position back when the video leaves the viewer. Paging moves to the page's other images, diagrams, and videos. Space or K plays and pauses, M mutes, F toggles full screen, and the arrow keys seek. The speed button's choice is remembered for every player."
   code={`<VideoPlayer {src} label="Test pattern video" />`}
 >
   <div class="media-demo-video">

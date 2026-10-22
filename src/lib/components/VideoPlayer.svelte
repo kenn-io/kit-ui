@@ -19,8 +19,31 @@
   import "@videojs/html/ui/time-group";
   import "@videojs/html/ui/time-separator";
   import "@videojs/html/ui/fullscreen-button";
+  import "@videojs/html/ui/playback-rate-button";
   import "@videojs/html/ui/hotkey";
   import "@videojs/html/ui/gesture";
+
+  // The playback speed a reader last picked, shared by every player on the
+  // site, so a reader who watches at 1.2× gets 1.2× everywhere.
+  const PLAYBACK_RATE_KEY = "kit-ui:video-playback-rate";
+
+  function savedPlaybackRate(): number | null {
+    try {
+      const rate = Number(localStorage.getItem(PLAYBACK_RATE_KEY));
+      return Number.isFinite(rate) && rate > 0 && rate <= 16 ? rate : null;
+    } catch {
+      // Storage blocked (private modes, sandboxed frames): play at 1×.
+      return null;
+    }
+  }
+
+  function savePlaybackRate(rate: number): void {
+    try {
+      localStorage.setItem(PLAYBACK_RATE_KEY, String(rate));
+    } catch {
+      // Storage blocked; the speed lasts only for this player.
+    }
+  }
 </script>
 
 <script lang="ts">
@@ -85,6 +108,19 @@
     videoAttachment = undefined,
     class: className = "",
   }: Props = $props();
+
+  // Starts at the remembered speed and remembers changes. Loading a source
+  // resets the speed to defaultPlaybackRate, so both are set.
+  function rememberPlaybackRate(player: HTMLVideoElement) {
+    const saved = savedPlaybackRate();
+    if (saved !== null) {
+      player.defaultPlaybackRate = saved;
+      player.playbackRate = saved;
+    }
+    const save = () => savePlaybackRate(player.playbackRate);
+    player.addEventListener("ratechange", save);
+    return () => player.removeEventListener("ratechange", save);
+  }
 
   // Close function of a viewer this player opened; the viewer lives on
   // document.body, so it must not outlive the player.
@@ -154,6 +190,7 @@
         {preload}
         aria-label={label}
         playsinline
+        {@attach rememberPlaybackRate}
         {@attach videoAttachment}
       >
         {#each sources as source (source.src)}
@@ -215,6 +252,10 @@
             </media-time-group>
 
             <span class="kit-video-player__spacer"></span>
+
+            <!-- Cycles through Video.js's speeds; the label is the speed. -->
+            <media-playback-rate-button class="kit-video-player__button kit-video-player__rate"
+            ></media-playback-rate-button>
 
             {#if expandable}
               <button
@@ -351,6 +392,19 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: background var(--transition-fast) var(--transition-ease, ease);
+  }
+
+  .kit-video-player__rate {
+    width: auto;
+    min-width: 32px;
+    padding: 0 var(--space-1);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kit-video-player__rate::after {
+    content: attr(data-rate) "×";
   }
 
   .kit-video-player__button:hover {

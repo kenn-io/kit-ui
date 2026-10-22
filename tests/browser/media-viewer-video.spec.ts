@@ -146,6 +146,32 @@ test("mute and volume carry into the viewer and back", async ({ page }) => {
   ).toEqual({ muted: false, volume: 0.7 });
 });
 
+test("a chosen speed carries to every player, the viewer, and the next visit", async ({ page }) => {
+  const speed = inlinePlayer(page).getByRole("button", { name: /^Playback rate/ });
+  await expect(speed).toHaveAttribute("data-rate", "1");
+
+  await speed.click();
+
+  await expect(speed).toHaveAttribute("data-rate", "1.2");
+  await expect(inlinePlayer(page).locator("video")).toHaveJSProperty("playbackRate", 1.2);
+
+  // A new visit: both players on the page start at the chosen speed.
+  await page.reload();
+  await page.locator(".content__heading").waitFor();
+  const videos = page.locator(".kit-video-player video");
+  await expect(videos).toHaveCount(2);
+  for (const video of await videos.all()) await expect(video).toHaveJSProperty("playbackRate", 1.2);
+
+  // The viewer's player, too, and a change there is remembered.
+  await expandAt(page, 0, false);
+  await expect(expanded(page)).toHaveJSProperty("playbackRate", 1.2);
+  await viewer(page)
+    .getByRole("button", { name: /^Playback rate/ })
+    .click();
+  await expect(expanded(page)).toHaveJSProperty("playbackRate", 1.5);
+  expect(await page.evaluate(() => localStorage.getItem("kit-ui:video-playback-rate"))).toBe("1.5");
+});
+
 test("the gallery pages through the page's videos, images, and diagrams in order", async ({
   page,
 }) => {
@@ -226,7 +252,7 @@ test("arrow keys seek a focused player by five seconds instead of paging", async
   await expandAt(page, 0.5, false);
   const counter = page.locator(".kit-media-viewer__counter");
 
-  await viewer(page).getByRole("button", { name: "Play" }).focus();
+  await viewer(page).getByRole("button", { name: "Play", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
   await expect.poll(async () => (await playback(expanded(page))).time).toBeCloseTo(5.5, 1);
   await page.keyboard.press("ArrowLeft");

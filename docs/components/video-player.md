@@ -1,7 +1,7 @@
 # VideoPlayer
 
 A video player with its own control bar: play, mute, volume, the time, a
-seek bar, an expand control, and full screen. The expand control opens
+seek bar, playback speed, an expand control, and full screen. The expand control opens
 the video in [MediaViewer](media-viewer.md), which pages through the
 page's other images, diagrams, and videos. The browser's built-in
 controls can't take an extra button, which is why kit-ui has its own
@@ -51,6 +51,13 @@ gallery. MediaViewer's own player is one.
 
 ## Controls
 
+- The speed button steps through Video.js's speeds (0.2×, 0.5×, 0.7×, 1×,
+  1.2×, 1.5×, 1.7×, 2×) and shows the current one.
+- The browser remembers the last speed picked, in local storage under
+  `kit-ui:video-playback-rate`. Every player on the site, including the
+  expanded view, starts at that speed. Players already on the page keep
+  their speed until they are shown again. Where storage is blocked, players
+  start at 1×.
 - A click on the picture plays or pauses. On a touch screen, a tap shows
   or hides the controls instead.
 - The controls fade out during playback when the pointer is idle, and
