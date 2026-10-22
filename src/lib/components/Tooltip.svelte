@@ -47,6 +47,10 @@
   // The element that took keyboard focus inside the trigger, if any.
   let focusTarget = $state<HTMLElement | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // A press on the trigger means the control is in use, often opening
+  // a menu or list the bubble would cover. Keep the tooltip shut until the
+  // pointer leaves or focus moves on.
+  let pressed = false;
 
   function clearTimer(): void {
     if (timer !== undefined) {
@@ -123,6 +127,10 @@
 
   function handleFocusIn(event: FocusEvent): void {
     const target = focusable ? triggerEl : event.target;
+    if (pressed) {
+      if (target instanceof HTMLElement) focusTarget = target;
+      return;
+    }
     if (target instanceof HTMLElement) {
       focusTarget = target;
       // Before assistive technology hears about the focus, not after the
@@ -134,7 +142,18 @@
 
   function handleFocusOut(): void {
     focusTarget = null;
+    pressed = false;
     hide(true);
+  }
+
+  function handlePointerDown(): void {
+    pressed = true;
+    hide(true);
+  }
+
+  function handleMouseLeave(): void {
+    pressed = false;
+    hide();
   }
 
   // The description belongs on the element that has focus. A hover-opened
@@ -190,7 +209,8 @@
   bind:this={triggerEl}
   tabindex={focusable ? 0 : undefined}
   onmouseenter={() => show()}
-  onmouseleave={() => hide()}
+  onmouseleave={handleMouseLeave}
+  onpointerdown={handlePointerDown}
   onfocusin={handleFocusIn}
   onfocusout={handleFocusOut}
 >

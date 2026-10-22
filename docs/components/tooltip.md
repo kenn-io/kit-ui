@@ -11,7 +11,9 @@ when the pointer opened it (the wrapper itself with `focusable`), so
 assistive technology reads it as that control's description. The id stays
 when the control changes its own `aria-describedby` while the tooltip is
 open. On touch
-devices (no hover) it still opens on focus.
+devices (no hover) it still opens on focus. Pressing the trigger hides the
+tooltip until the pointer leaves it or focus moves away, so it does not cover
+a menu or list the press opens.
 
 ## Text tooltip
 

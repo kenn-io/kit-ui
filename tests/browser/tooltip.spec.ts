@@ -155,3 +155,21 @@ test("the description survives the control rewriting its own aria-describedby wh
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await expect(button).toHaveAttribute("aria-describedby", "extra-hint");
 });
+
+test("pressing a control hides its tooltip until the pointer leaves", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  const button = page.getByRole("button", { name: "Update branch" });
+  const tooltip = page.getByRole("tooltip");
+  await button.hover();
+  await expect(tooltip).toBeVisible();
+
+  // The click also focuses the button, which would otherwise show it again.
+  await button.click();
+  await expect(button).toBeFocused();
+  await expect(tooltip).toHaveCount(0);
+  await expect(button).not.toHaveAttribute("aria-describedby");
+
+  await page.mouse.move(0, 0);
+  await button.hover();
+  await expect(tooltip).toBeVisible();
+});
