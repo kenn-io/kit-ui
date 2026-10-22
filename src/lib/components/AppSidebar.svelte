@@ -209,11 +209,9 @@
   // make one, so the width decides.
   let collapsedChoice = $derived(hostChoice ?? readChoice(storageKey));
   const collapsed = $derived(collapsedChoice ?? (railWidth && !touch.current));
-  // While someone drags the edge, whether its position calls for the rail,
-  // and the edge's position; null between drags.
-  let dragRail = $state<boolean | null>(null);
+  // The edge's position while someone drags it; null between drags.
   let dragWidth = $state<number | null>(null);
-  const rail = $derived(!narrow && (dragRail ?? collapsed));
+  const rail = $derived(!narrow && collapsed);
 
   // The narrowest full sidebar in which its longest word fits; null until
   // the full sidebar has been laid out.
@@ -297,45 +295,32 @@
     };
   });
 
-  // The width the sidebar had when a resize started, and the width below
-  // which it shows the rail. The edge is disabled in the rail, so a resize
-  // always starts from the full sidebar.
+  // The width the sidebar had when a resize started, and the narrowest width
+  // in which every word still fits. The edge is disabled in the rail, so a
+  // resize always starts from the full sidebar.
   let startWidth = DEFAULT_WIDTH;
-  let railBelow = DEFAULT_WIDTH;
+  let minWidth = DEFAULT_WIDTH;
 
   function resizeStarted(): void {
     startWidth = Math.round(inline?.getBoundingClientRect().width ?? DEFAULT_WIDTH);
     fitWidth = measureFit();
-    railBelow = fitWidth ?? DEFAULT_WIDTH;
+    minWidth = fitWidth ?? DEFAULT_WIDTH;
   }
 
-  // Whether a resize calls for the rail, and the edge's position. A pointer
-  // moves the edge anywhere from the rail's width to MAX_WIDTH, and the
-  // sidebar shows the rail wherever its longest word would not fit. An arrow
-  // key that would squeeze a word collapses.
-  function resizedTo(event: SplitResizeEvent): { rail: boolean; width: number } {
-    const width = fit(startWidth + event.delta);
-    if (width >= railBelow) return { rail: false, width };
-    const keyboard = event.event instanceof KeyboardEvent;
-    return { rail: true, width: keyboard ? RAIL_WIDTH : width };
+  // The edge follows the pointer, and stops at the narrowest width that
+  // shows all the text and at MAX_WIDTH.
+  function resizedTo(event: SplitResizeEvent): number {
+    return Math.max(minWidth, fit(startWidth + event.delta));
   }
 
   function resized(event: SplitResizeEvent): void {
-    const next = resizedTo(event);
-    dragRail = next.rail;
-    dragWidth = next.width;
+    dragWidth = resizedTo(event);
   }
 
   function resizeEnded(event: SplitResizeEvent): void {
-    const next = resizedTo(event);
-    dragRail = null;
+    const width = resizedTo(event);
     dragWidth = null;
-    // Let go over the rail, the sidebar settles to the rail's own width.
-    if (next.rail) {
-      void chooseCollapsed(true);
-      return;
-    }
-    if (next.width !== startWidth) chooseWidth(next.width);
+    if (width !== startWidth) chooseWidth(width);
   }
 
   function isEditable(target: EventTarget | null): boolean {
@@ -689,11 +674,11 @@
     <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
     <SplitResizeHandle
       ariaLabel={resizeLabel}
-      ariaValueMin={RAIL_WIDTH}
+      ariaValueMin={rail ? RAIL_WIDTH : (fitWidth ?? RAIL_WIDTH)}
       ariaValueMax={MAX_WIDTH}
       ariaValueNow={rail ? RAIL_WIDTH : (dragWidth ?? fullWidth ?? DEFAULT_WIDTH)}
       ariaValueText={rail ? collapsedValueText : undefined}
-      disabled={rail && dragRail === null}
+      disabled={rail}
       onActivate={() => void toggleCollapsed()}
       onResizeStart={resizeStarted}
       onResize={resized}
@@ -897,10 +882,7 @@
     border-top: 1px solid var(--border-muted);
   }
 
-  /* A drag can make the rail wider than its icons; they stay put at the
-   * rail's own width. */
   .kit-app-sidebar__panel--rail {
-    width: 3.5rem;
     padding-inline: 0;
   }
 

@@ -615,41 +615,41 @@ test("dragging the edge resizes the sidebar between its limits and remembers the
   expect(await sidebarWidth(page)).toBe(320);
 });
 
-test("the edge follows the pointer down to the rail, which shows once a word would not fit", async ({
-  page,
-}) => {
+test("the edge stops at the narrowest width that shows all the text", async ({ page }) => {
   await open(page, "reports/overview", 1440);
   await dropEdgeAt(page, 280);
 
-  // Step the edge left a pixel at a time; it stays under the pointer, and
-  // the rail replaces the full sidebar at the first width a word would not
-  // fit in.
+  // Step the pointer left a pixel at a time. The edge stays under it until
+  // a word would no longer fit, then stays put however far the pointer goes.
   await dragEdgeTo(page, 240);
   let fullAt = 240;
-  for (let x = 239; x > 56 && !(await railShows(page)); x -= 1) {
-    fullAt = x + 1;
+  for (let x = 239; x > 56; x -= 1) {
     await page.mouse.move(x - 2, 400);
-    expect(await sidebarWidth(page)).toBe(x);
+    const width = await sidebarWidth(page);
+    if (width !== x) break;
+    fullAt = x;
   }
-  expect(await railShows(page)).toBe(true);
-  // The edge stays lit though the sidebar under it changed.
-  const accent = await resolvedStyle(page, "background-color", "var(--accent-blue)");
-  await expect(edge(page)).toHaveCSS("background-color", accent);
-  await page.mouse.move(98, 400, { steps: 4 });
-  expect(await sidebarWidth(page)).toBe(100);
-  expect(await storedChoice(page)).toBeNull();
+  await page.mouse.move(60, 400, { steps: 4 });
+  expect(await sidebarWidth(page)).toBe(fullAt);
+  expect(await railShows(page)).toBe(false);
+  expect(await wordsFit(page, fullAt)).toBe(true);
+  expect(await wordsFit(page, fullAt - 1)).toBe(false);
 
-  // Let go over the rail, the sidebar settles to the rail's own width.
+  // Letting go keeps that width and chooses no collapse.
   await page.mouse.up();
-  await expect.poll(() => sidebarWidth(page)).toBe(56);
-  expect(await storedChoice(page)).toBe("collapsed");
-  await expect(edge(page)).toHaveAttribute("aria-valuetext", "Collapsed");
-  await page.mouse.move(700, 400);
-  await expect(edge(page)).not.toHaveCSS("background-color", accent);
+  expect(await sidebarWidth(page)).toBe(fullAt);
+  expect(await storedWidth(page)).toBe(String(fullAt));
+  expect(await storedChoice(page)).toBeNull();
+  await expect(edge(page)).toHaveAttribute("aria-valuemin", String(fullAt));
+  await expect(edge(page)).toBeEnabled();
 
-  // The rail's edge is disabled: hovering does not light it, and a drag
-  // moves nothing.
+  // Collapsed with the button, the rail's edge is disabled: hovering does
+  // not light it, and a drag moves nothing.
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
   await expect(edge(page)).toBeDisabled();
+  await expect(edge(page)).toHaveAttribute("aria-valuetext", "Collapsed");
+  const accent = await resolvedStyle(page, "background-color", "var(--accent-blue)");
   const box = await edge(page).boundingBox();
   if (!box) throw new Error("edge not laid out");
   await page.mouse.move(box.x + box.width / 2, 400);
@@ -658,14 +658,9 @@ test("the edge follows the pointer down to the rail, which shows once a word wou
   await page.mouse.move(260, 400, { steps: 6 });
   await page.mouse.up();
   expect(await sidebarWidth(page)).toBe(56);
-  expect(await storedChoice(page)).toBe("collapsed");
 
-  // The collapse button expands it, and the full sidebar showed at exactly
-  // the narrowest width every word fits in.
   await page.getByRole("button", { name: "Expand sidebar" }).click();
-  await expect.poll(() => railShows(page)).toBe(false);
-  expect(await wordsFit(page, fullAt)).toBe(true);
-  expect(await wordsFit(page, fullAt - 1)).toBe(false);
+  await expect.poll(() => sidebarWidth(page)).toBe(fullAt);
   await expect(edge(page)).toBeEnabled();
   await expect(edge(page)).not.toHaveAttribute("aria-valuetext");
 });
@@ -718,11 +713,10 @@ test("double-clicking the edge or pressing Enter on it collapses the sidebar", a
   expect(await storedChoice(page)).toBe("expanded");
 });
 
-test("arrow keys resize the sidebar and collapse it before a word would not fit", async ({
+test("arrow keys resize the sidebar and stop at the narrowest width that shows all the text", async ({
   page,
 }) => {
   await open(page, "home", 1440);
-  await expect(edge(page)).toHaveAttribute("aria-valuemin", "56");
   await expect(edge(page)).toHaveAttribute("aria-valuemax", "384");
   await tabTo(page, edge(page), 20);
 
@@ -730,24 +724,22 @@ test("arrow keys resize the sidebar and collapse it before a word would not fit"
   await expect(edge(page)).toHaveAttribute("aria-valuenow", "216");
   expect(await sidebarWidth(page)).toBe(216);
 
-  // Left keeps narrowing in 24px steps while every word still fits, then
-  // collapses.
-  let narrowest = 216;
-  while (await wordsFit(page, narrowest - 24)) {
-    await page.keyboard.press("ArrowLeft");
-    narrowest -= 24;
-    await expect(edge(page)).toHaveAttribute("aria-valuenow", String(narrowest));
-  }
-  await page.keyboard.press("ArrowLeft");
-  await expect.poll(() => sidebarWidth(page)).toBe(56);
-  await expect(edge(page)).toHaveAttribute("aria-valuetext", "Collapsed");
-  expect(await storedChoice(page)).toBe("collapsed");
-  // The last width that fit stays saved for when the sidebar expands.
+  // Left keeps narrowing until the next step would squeeze a word, then
+  // stops at the narrowest width every word fits in.
+  for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
+  const narrowest = await sidebarWidth(page);
+  expect(narrowest).toBeGreaterThan(56);
+  expect(await wordsFit(page, narrowest)).toBe(true);
+  expect(await wordsFit(page, narrowest - 1)).toBe(false);
+  await expect(edge(page)).toHaveAttribute("aria-valuenow", String(narrowest));
+  await expect(edge(page)).toHaveAttribute("aria-valuemin", String(narrowest));
+  expect(await railShows(page)).toBe(false);
+  expect(await storedChoice(page)).toBeNull();
   expect(await storedWidth(page)).toBe(String(narrowest));
-  await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeFocused();
-  // Right from the expand button does nothing to the rail.
+  await expect(edge(page)).toBeFocused();
+
   await page.keyboard.press("ArrowRight");
-  expect(await sidebarWidth(page)).toBe(56);
+  await expect(edge(page)).toHaveAttribute("aria-valuenow", String(narrowest + 24));
 });
 
 test("a host-saved width wins over storage and hears every change", async ({ page }) => {
