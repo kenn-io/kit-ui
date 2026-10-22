@@ -332,42 +332,71 @@ test("a player with several sources plays the first the browser supports, expand
   );
 });
 
-test("a player as narrow as a portrait video on a landscape phone keeps every control on it", async ({
-  browser,
-}) => {
-  // A 9:16 video in an 844x390 viewer is about 160px wide, and a touch
-  // screen makes each button 44px.
-  const context = await browser.newContext({
-    hasTouch: true,
-    viewport: { width: 844, height: 390 },
-  });
-  const page = await context.newPage();
-  await gotoPage(page, "media-viewer");
-  await page.evaluate(async () => {
-    const { mountVideoPlayer, clip } =
-      await import("/tests/browser/fixtures/mount-video-player.ts");
-    const host = mountVideoPlayer({ label: "Narrow video", src: clip });
-    host.style.width = "160px";
-    // Shaped like the viewer shapes a portrait video's player.
-    host.querySelector<HTMLElement>(".kit-video-player")!.style.aspectRatio = "9 / 16";
-  });
-  const player = page.locator(".kit-video-player").filter({ has: page.getByLabel("Narrow video") });
-  const bar = player.getByRole("group", { name: "Video controls" });
-  // Video.js labels its buttons once they connect.
-  await expect(bar.getByRole("button", { name: "Enter fullscreen" })).toBeVisible();
+// A 160px player is a small inline embed, or a 9:16 video in an 844x390
+// landscape phone viewer.
+for (const shape of [
+  { name: "16:9", ratio: null },
+  { name: "portrait", ratio: "9 / 16" },
+]) {
+  test(`a 160px ${shape.name} player on a touch screen keeps every control on it, apart`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 844, height: 390 },
+    });
+    const page = await context.newPage();
+    await gotoPage(page, "media-viewer");
+    await page.evaluate(async (ratio) => {
+      const { mountVideoPlayer, clip } =
+        await import("/tests/browser/fixtures/mount-video-player.ts");
+      const host = mountVideoPlayer({ label: "Narrow video", src: clip, preload: "metadata" });
+      host.style.width = "160px";
+      // Shaped as the viewer shapes a portrait video's player.
+      if (ratio) host.querySelector<HTMLElement>(".kit-video-player")!.style.aspectRatio = ratio;
+    }, shape.ratio);
+    const player = page
+      .locator(".kit-video-player")
+      .filter({ has: page.getByLabel("Narrow video") });
+    const bar = player.getByRole("group", { name: "Video controls" });
+    // Video.js labels its buttons once they connect.
+    await expect(bar.getByRole("button", { name: "Enter fullscreen" })).toBeVisible();
+    // The 16:9 player takes its height from the clip.
+    await expect
+      .poll(() => player.locator("video").evaluate((node) => (node as HTMLVideoElement).videoWidth))
+      .toBeGreaterThan(0);
 
-  const box = (await player.boundingBox())!;
-  const buttons = await bar.getByRole("button").all();
-  expect(buttons.length).toBe(5);
-  for (const button of buttons) {
-    const control = (await button.boundingBox())!;
-    expect(control.x).toBeGreaterThanOrEqual(box.x);
-    expect(control.x + control.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
-    expect(control.y).toBeGreaterThanOrEqual(box.y);
-    expect(control.y + control.height).toBeLessThanOrEqual(box.y + box.height + 0.5);
-  }
-  await context.close();
-});
+    const box = (await player.boundingBox())!;
+    if (!shape.ratio) expect(box.height).toBeCloseTo(90, 0);
+    // The seek bar's slider role is on its thumb, which shows only while
+    // in use, so measure the bar itself.
+    const controls = [
+      ...(await bar.getByRole("button").all()),
+      player.locator(".kit-video-player__seek"),
+    ];
+    expect(controls.length).toBe(6);
+    const boxes = [];
+    for (const control of controls) {
+      const rect = (await control.boundingBox())!;
+      expect(rect.x).toBeGreaterThanOrEqual(box.x);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
+      expect(rect.y).toBeGreaterThanOrEqual(box.y);
+      expect(rect.y + rect.height).toBeLessThanOrEqual(box.y + box.height + 0.5);
+      boxes.push(rect);
+    }
+    // No control covers another, and the seek bar is long enough to drag.
+    for (const [i, a] of boxes.entries())
+      for (const b of boxes.slice(i + 1))
+        expect(
+          a.x + a.width <= b.x + 0.5 ||
+            b.x + b.width <= a.x + 0.5 ||
+            a.y + a.height <= b.y + 0.5 ||
+            b.y + b.height <= a.y + 0.5,
+        ).toBe(true);
+    expect(boxes.at(-1)!.width).toBeGreaterThanOrEqual(40);
+    await context.close();
+  });
+}
 
 test("a video item with no chosen source plays the first its sources the browser supports", async ({
   page,

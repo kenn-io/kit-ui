@@ -201,14 +201,8 @@
       <media-controls class="kit-video-player__controls">
         <media-controls-backdrop class="kit-video-player__backdrop"></media-controls-backdrop>
         <media-controls-content class="kit-video-player__bar">
-          <media-time-slider class="kit-video-player__seek">
-            <media-slider-track class="kit-video-player__track">
-              <media-slider-buffer class="kit-video-player__buffer"></media-slider-buffer>
-              <media-slider-fill class="kit-video-player__fill"></media-slider-fill>
-            </media-slider-track>
-            <media-slider-thumb class="kit-video-player__thumb"></media-slider-thumb>
-          </media-time-slider>
-
+          <!-- A wide player shows the seek bar above the buttons; a narrow
+            one puts it between them, as Video.js's own skin does. -->
           <media-controls-group class="kit-video-player__row" aria-label={controlsLabel}>
             <media-play-button class="kit-video-player__button kit-video-player__play">
               <Play
@@ -245,6 +239,13 @@
               </media-slider-track>
               <media-slider-thumb class="kit-video-player__thumb"></media-slider-thumb>
             </media-volume-slider>
+            <media-time-slider class="kit-video-player__seek">
+              <media-slider-track class="kit-video-player__track">
+                <media-slider-buffer class="kit-video-player__buffer"></media-slider-buffer>
+                <media-slider-fill class="kit-video-player__fill"></media-slider-fill>
+              </media-slider-track>
+              <media-slider-thumb class="kit-video-player__thumb"></media-slider-thumb>
+            </media-time-slider>
             <media-time-group class="kit-video-player__time">
               <media-time type="current"></media-time>
               <media-time-separator></media-time-separator>
@@ -253,35 +254,38 @@
 
             <span class="kit-video-player__spacer"></span>
 
-            <!-- Cycles through Video.js's speeds; the label is the speed. -->
-            <media-playback-rate-button class="kit-video-player__button kit-video-player__rate"
-            ></media-playback-rate-button>
-
-            {#if expandable}
-              <button
-                type="button"
-                class="kit-video-player__button"
-                aria-label={expandLabel}
-                title={expandLabel}
-                onclick={() => {
-                  if (root) void openViewer(root);
-                }}
+            <div class="kit-video-player__corner">
+              <!-- Cycles through Video.js's speeds; the label is the speed. -->
+              <media-playback-rate-button class="kit-video-player__button kit-video-player__rate"
+              ></media-playback-rate-button>
+              {#if expandable}
+                <button
+                  type="button"
+                  class="kit-video-player__button"
+                  aria-label={expandLabel}
+                  title={expandLabel}
+                  onclick={() => {
+                    if (root) void openViewer(root);
+                  }}
+                >
+                  <Maximize2 size={18} aria-hidden="true" />
+                </button>
+              {/if}
+              <media-fullscreen-button
+                class="kit-video-player__button kit-video-player__fullscreen"
               >
-                <Maximize2 size={18} aria-hidden="true" />
-              </button>
-            {/if}
-            <media-fullscreen-button class="kit-video-player__button kit-video-player__fullscreen">
-              <Maximize
-                class="kit-video-player__icon kit-video-player__icon--enter"
-                size={18}
-                aria-hidden="true"
-              />
-              <Minimize
-                class="kit-video-player__icon kit-video-player__icon--exit"
-                size={18}
-                aria-hidden="true"
-              />
-            </media-fullscreen-button>
+                <Maximize
+                  class="kit-video-player__icon kit-video-player__icon--enter"
+                  size={18}
+                  aria-hidden="true"
+                />
+                <Minimize
+                  class="kit-video-player__icon kit-video-player__icon--exit"
+                  size={18}
+                  aria-hidden="true"
+                />
+              </media-fullscreen-button>
+            </div>
           </media-controls-group>
         </media-controls-content>
       </media-controls>
@@ -332,28 +336,28 @@
     object-fit: contain;
   }
 
+  /* The bar sits in flow at the bottom of the controls, so the controls,
+   * which cover the picture, place the corner group on a narrow player. */
   .kit-video-player__controls {
     position: absolute;
     inset: 0;
-    display: block;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     pointer-events: none;
   }
 
   .kit-video-player__backdrop {
     position: absolute;
     inset: 0;
+    z-index: -1;
     background: linear-gradient(to top, var(--kit-video-player-scrim), transparent 45%);
     transition: opacity var(--transition-fast) var(--transition-ease, ease);
   }
 
   .kit-video-player__bar {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    display: block;
     padding: var(--space-2) var(--space-3);
     color: var(--kit-video-player-control);
     pointer-events: auto;
@@ -367,15 +371,20 @@
     opacity: 0;
   }
 
-  /* The row wraps rather than clip a control, which a narrow player
-   * such as a portrait video on a landscape phone would otherwise do. */
+  /* The seek bar takes a line of its own above the buttons. */
   .kit-video-player__row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
     gap: var(--space-1);
     min-width: 0;
+  }
+
+  .kit-video-player__corner {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
   }
 
   .kit-video-player__spacer {
@@ -452,7 +461,8 @@
   }
 
   .kit-video-player__seek {
-    width: 100%;
+    flex: 0 0 100%;
+    order: -1;
   }
 
   .kit-video-player__volume {
@@ -523,25 +533,49 @@
     white-space: nowrap;
   }
 
-  /* No room for the volume slider on a narrow player; mute stays. */
-  @container (max-width: 360px) {
-    .kit-video-player__volume {
+  /* A narrow player keeps every control on one row, as Video.js's own
+   * skin does below 32rem: the seek bar moves between the buttons, and
+   * speed, expand, and full screen move to the top corner. Stacked rows would
+   * not fit the height of a small 16:9 player. Mute stays without its
+   * slider. */
+  @container (width < 32rem) {
+    .kit-video-player__bar {
+      padding: var(--space-1) var(--space-2);
+    }
+    .kit-video-player__row {
+      flex-wrap: nowrap;
+    }
+    .kit-video-player__seek {
+      flex: 1 1 0;
+      order: 0;
+      min-width: 0;
+    }
+    .kit-video-player__volume,
+    .kit-video-player__spacer {
       display: none;
+    }
+    .kit-video-player__corner {
+      position: absolute;
+      top: var(--space-1);
+      right: var(--space-1);
+      background: var(--kit-video-player-scrim);
+      border-radius: var(--radius-md);
     }
   }
 
-  /* Narrower still, the time would take a row of its own; the seek bar
-   * still shows the position. */
-  @container (max-width: 240px) {
+  /* The seek bar still shows the position. */
+  @container (width < 22.5rem) {
     .kit-video-player__time {
       display: none;
     }
   }
 
+  /* Video.js's skin size for every pointer; at 44px a small player could
+   * not fit its controls. */
   @media (hover: none), (pointer: coarse) {
     .kit-video-player__button {
-      width: 44px;
-      height: 44px;
+      width: 36px;
+      height: 36px;
     }
     .kit-video-player__volume {
       display: none;

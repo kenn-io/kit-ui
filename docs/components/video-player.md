@@ -67,11 +67,15 @@ gallery. MediaViewer's own player is one.
   - M mutes.
   - F toggles full screen.
   - The Left and Right arrow keys seek five seconds.
-- A narrow player (360px or less) or a touch screen hides the volume
-  slider. The mute button stays, and touch screens get 44px buttons.
-- A player 240px wide or less hides the time; the seek bar still shows
-  the position. If the buttons still do not fit on one row, they wrap
-  onto a second row instead of being cut off.
+- A player narrower than 32rem (512px) uses the narrow layout of
+  Video.js's own skin, so every control fits even a small 16:9 player:
+  - Play, mute, the seek bar, and the time share one row at the bottom.
+  - Speed, expand, and full screen move to the top-right corner.
+  - The volume slider hides; the mute button stays.
+- A player narrower than 22.5rem (360px) also hides the time. The seek
+  bar still shows the position.
+- A touch screen hides the volume slider and makes the buttons 36px, the
+  size Video.js's skin uses.
 
 The controls sit on the picture, so they are light on a dark scrim in
 every theme. To change them, set `--video-control-color`,
