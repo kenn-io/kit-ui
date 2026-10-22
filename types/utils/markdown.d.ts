@@ -17,6 +17,11 @@
  * `--shiki-*` custom-property declarations with hex-color values — a
  * crafted markdown document can't smuggle arbitrary CSS through the
  * highlighter's style channel.
+ *
+ * Strict Content Security Policies work too. Shiki uses its JavaScript
+ * regex engine, so no WebAssembly compiles, and `applyShikiStyles`
+ * re-applies the token colors through CSSOM after the markup is inserted,
+ * because such a policy ignores `style` attributes parsed from markup.
  */
 import { Marked, type Tokens, type TokenizerAndRendererExtension } from "marked";
 export declare const SHIKI_MAX_HIGHLIGHTED_FENCES = 20;
@@ -28,9 +33,19 @@ export declare function codeFenceLanguage(lang: string | undefined): string;
  * and (double- or single-quoted) attribute values, so `codeFence`
  * interceptors can use it anywhere they place fence text. */
 export declare function escapeHtml(value: string): string;
-/** True when a style attribute contains only `--shiki-*: #hex`
- * declarations — the only inline styles sanitization lets through. */
-export declare function shikiStyleIsAllowed(value: string): boolean;
+/** The `--shiki-*: #hex` declarations in a style attribute, which are the
+ * only inline styles sanitization lets through. Shiki also emits font hints
+ * such as `--shiki-light-font-weight:bold` beside a token's colors; those
+ * and anything else are dropped, so the colors survive. Empty when nothing
+ * is allowed. */
+export declare function allowedShikiStyle(value: string): string;
+/** Re-apply Shiki's token colors under `root` through CSSOM. A Content
+ * Security Policy without 'unsafe-inline' in style-src ignores `style`
+ * attributes parsed from markup but allows styles set through CSSOM. Only
+ * declarations that `allowedShikiStyle` keeps are applied, so this cannot
+ * widen what sanitization let through. Call it after inserting highlighted
+ * markup; `Markdown` and `CodeBlock` do. */
+export declare function applyShikiStyles(root: ParentNode): void;
 interface CodeHighlightPlan {
     tokens: WeakSet<Tokens.Code>;
     languages: string[];

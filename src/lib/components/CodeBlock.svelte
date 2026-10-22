@@ -1,6 +1,6 @@
 <script lang="ts">
   import WrapTextIcon from "@lucide/svelte/icons/wrap-text";
-  import { escapeHtml, highlightCode } from "../utils/markdown.js";
+  import { applyShikiStyles, escapeHtml, highlightCode } from "../utils/markdown.js";
   import CopyButton from "./CopyButton.svelte";
   import IconButton from "./IconButton.svelte";
 
@@ -40,6 +40,12 @@
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
+  let body = $state<HTMLDivElement>();
+
+  $effect(() => {
+    void highlighted;
+    if (body) applyShikiStyles(body);
+  });
 
   // Highlight asynchronously (grammar chunks load on demand); the plain
   // escaped fallback renders immediately and on unknown/over-budget code.
@@ -96,7 +102,7 @@
       </div>
     </div>
   {/if}
-  <div class="kit-code-block__body" style:max-height={maxHeight}>
+  <div bind:this={body} class="kit-code-block__body" style:max-height={maxHeight}>
     {@html highlighted ?? plainHtml}
   </div>
 </div>

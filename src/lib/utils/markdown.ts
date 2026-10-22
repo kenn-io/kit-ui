@@ -17,6 +17,11 @@
  * `--shiki-*` custom-property declarations with hex-color values — a
  * crafted markdown document can't smuggle arbitrary CSS through the
  * highlighter's style channel.
+ *
+ * Strict Content Security Policies work too. Shiki uses its JavaScript
+ * regex engine, so no WebAssembly compiles, and `applyShikiStyles`
+ * re-applies the token colors through CSSOM after the markup is inserted,
+ * because such a policy ignores `style` attributes parsed from markup.
  */
 
 import DOMPurify from "dompurify";
@@ -27,7 +32,12 @@ import {
   type Tokens,
   type TokenizerAndRendererExtension,
 } from "marked";
-import { getSingletonHighlighter, type BundledLanguage, type Highlighter } from "shiki";
+import {
+  createJavaScriptRegexEngine,
+  getSingletonHighlighter,
+  type BundledLanguage,
+  type Highlighter,
+} from "shiki";
 
 const SHIKI_LIGHT_THEME = "github-light-default";
 const SHIKI_DARK_THEME = "github-dark-default";
@@ -50,6 +60,10 @@ function getShikiHighlighter(): Promise<Highlighter> {
   shikiHighlighterPromise ??= getSingletonHighlighter({
     themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
     langs: [],
+    // WebAssembly needs 'wasm-unsafe-eval' in a page's script-src. The
+    // JavaScript engine needs nothing; `forgiving` skips the few grammar
+    // patterns it cannot translate instead of failing the language.
+    engine: createJavaScriptRegexEngine({ forgiving: true }),
   }).then(
     (highlighter) => {
       shikiHighlighter = highlighter;
@@ -100,21 +114,36 @@ function shikiNonce(): string {
 const SHIKI_STYLE_PROPERTY = /^--shiki-(?:light|dark)(?:-bg)?$/;
 const SHIKI_STYLE_VALUE = /^#[0-9a-fA-F]{3,8}$/;
 
-/** True when a style attribute contains only `--shiki-*: #hex`
- * declarations — the only inline styles sanitization lets through. */
-export function shikiStyleIsAllowed(value: string): boolean {
-  const declarations = value
+/** The `--shiki-*: #hex` declarations in a style attribute, which are the
+ * only inline styles sanitization lets through. Shiki also emits font hints
+ * such as `--shiki-light-font-weight:bold` beside a token's colors; those
+ * and anything else are dropped, so the colors survive. Empty when nothing
+ * is allowed. */
+export function allowedShikiStyle(value: string): string {
+  return value
     .split(";")
     .map((declaration) => declaration.trim())
-    .filter(Boolean);
-  if (declarations.length === 0) return false;
-  return declarations.every((declaration) => {
-    const separator = declaration.indexOf(":");
-    if (separator <= 0) return false;
-    const property = declaration.slice(0, separator).trim();
-    const styleValue = declaration.slice(separator + 1).trim();
-    return SHIKI_STYLE_PROPERTY.test(property) && SHIKI_STYLE_VALUE.test(styleValue);
-  });
+    .filter((declaration) => {
+      const separator = declaration.indexOf(":");
+      if (separator <= 0) return false;
+      const property = declaration.slice(0, separator).trim();
+      const styleValue = declaration.slice(separator + 1).trim();
+      return SHIKI_STYLE_PROPERTY.test(property) && SHIKI_STYLE_VALUE.test(styleValue);
+    })
+    .join(";");
+}
+
+/** Re-apply Shiki's token colors under `root` through CSSOM. A Content
+ * Security Policy without 'unsafe-inline' in style-src ignores `style`
+ * attributes parsed from markup but allows styles set through CSSOM. Only
+ * declarations that `allowedShikiStyle` keeps are applied, so this cannot
+ * widen what sanitization let through. Call it after inserting highlighted
+ * markup; `Markdown` and `CodeBlock` do. */
+export function applyShikiStyles(root: ParentNode): void {
+  for (const element of root.querySelectorAll<HTMLElement>("pre.shiki[style], pre.shiki [style]")) {
+    const value = allowedShikiStyle(element.getAttribute("style") ?? "");
+    if (value) element.style.cssText = value;
+  }
 }
 
 function utf8ByteLength(value: string): number {
@@ -307,9 +336,9 @@ const shikiStyleSanitizer: UponSanitizeAttributeHook = (node, data) => {
     trustedShikiNode &&
     ((tagName === "pre" && node.classList.contains("shiki")) ||
       (tagName === "span" && node.closest("pre.shiki")));
-  if (!isStyledShikiNode || !shikiStyleIsAllowed(data.attrValue)) {
-    data.keepAttr = false;
-  }
+  const allowed = isStyledShikiNode ? allowedShikiStyle(data.attrValue) : "";
+  if (allowed) data.attrValue = allowed;
+  else data.keepAttr = false;
 };
 
 // Any element that keeps a target (e.g. target="_blank" emitted by an

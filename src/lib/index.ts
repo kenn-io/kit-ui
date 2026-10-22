@@ -244,6 +244,7 @@ export {
   type ShortcutOptions,
 } from "./utils/shortcuts.js";
 export {
+  applyShikiStyles,
   codeFenceLanguage,
   createMarkdownRenderer,
   escapeHtml,

@@ -1,0 +1,6 @@
+/* A host stylesheet with a small code font. Mermaid measures labels while
+   its own styles are blocked, so they inherit this unless kit-ui sets the
+   theme font first (strict-csp.spec.ts). */
+pre {
+  font: 8px sans-serif;
+}
