@@ -45,6 +45,18 @@ async function expandAt(page: Page, time: number, play: boolean) {
   await seekTo(video, time, play);
   await inlinePlayer(page).getByRole("button", { name: "Open video in expanded view" }).click();
   await expect(expanded(page)).toBeVisible();
+  // The viewer seeks once the video's metadata loads; a test that seeks or
+  // measures before then races it.
+  await expect
+    .poll(() =>
+      expanded(page).evaluate((node, time) => {
+        const media = node as HTMLVideoElement;
+        return (
+          media.readyState >= HTMLMediaElement.HAVE_METADATA && media.currentTime >= time - 0.05
+        );
+      }, time),
+    )
+    .toBe(true);
   return video;
 }
 
@@ -102,6 +114,36 @@ test("a paused video stays paused at its new position after closing", async ({ p
   await page.getByRole("button", { name: "Close expanded view" }).click();
   await expect(viewer(page)).toHaveCount(0);
   expect(await playback(video)).toEqual({ time: 4, playing: false });
+});
+
+test("mute and volume carry into the viewer and back", async ({ page }) => {
+  const video = inlinePlayer(page).locator("video");
+  await video.evaluate((node) => {
+    const media = node as HTMLVideoElement;
+    media.muted = true;
+    media.volume = 0.3;
+  });
+  await expandAt(page, 0, false);
+  expect(
+    await expanded(page).evaluate((node) => {
+      const media = node as HTMLVideoElement;
+      return { muted: media.muted, volume: media.volume };
+    }),
+  ).toEqual({ muted: true, volume: 0.3 });
+
+  await expanded(page).evaluate((node) => {
+    const media = node as HTMLVideoElement;
+    media.muted = false;
+    media.volume = 0.7;
+  });
+  await page.keyboard.press("Escape");
+  await expect(viewer(page)).toHaveCount(0);
+  expect(
+    await video.evaluate((node) => {
+      const media = node as HTMLVideoElement;
+      return { muted: media.muted, volume: media.volume };
+    }),
+  ).toEqual({ muted: false, volume: 0.7 });
 });
 
 test("the gallery pages through the page's videos, images, and diagrams in order", async ({
@@ -238,6 +280,96 @@ test("a player with several sources plays the first the browser supports, expand
   expect(await expanded(page).evaluate((node) => (node as HTMLVideoElement).currentSrc)).toMatch(
     /media-viewer-demo\.webm/,
   );
+});
+
+test("a video item with no chosen source plays the first its sources the browser supports", async ({
+  page,
+}) => {
+  // An idle inline player can be expanded before it has picked a source.
+  await page.evaluate(async () => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    const { clip } = await import("/tests/browser/fixtures/mount-video-player.ts");
+    mountMediaViewer(
+      [
+        {
+          kind: "video",
+          src: "",
+          sources: [
+            { src: "/missing.mp4", type: "video/x-unsupported" },
+            { src: clip, type: "video/webm" },
+          ],
+          label: "Unpicked video",
+        },
+      ],
+      0,
+    );
+  });
+  await expect
+    .poll(() => expanded(page).evaluate((node) => (node as HTMLVideoElement).currentSrc))
+    .toMatch(/media-viewer-demo\.webm/);
+});
+
+test("a viewer reopened by refilling its items starts the video afresh", async ({ page }) => {
+  // A host may close the viewer by emptying `items` and keep it mounted.
+  await page.evaluate(async () => {
+    const { mountMediaViewer } =
+      await import("/tests/browser/fixtures/media-viewer-host.svelte.ts");
+    const { clip } = await import("/tests/browser/fixtures/mount-video-player.ts");
+    const left: { currentTime: number; playing: boolean }[] = [];
+    const video = {
+      kind: "video" as const,
+      src: clip,
+      label: "Session video",
+      currentTime: 1,
+      playing: true,
+      onleave: (state: { currentTime: number; playing: boolean }) => left.push(state),
+    };
+    const image = {
+      kind: "image" as const,
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'/%3E",
+      alt: "Swatch",
+    };
+    const host = mountMediaViewer([video, image], 0);
+    Object.assign(window, { __session: { host, video, image, left } });
+  });
+  type Session = {
+    host: { replaceItems: (items: unknown[]) => void };
+    video: { currentTime: number };
+    image: unknown;
+    left: { currentTime: number; playing: boolean }[];
+  };
+  await expect.poll(async () => (await playback(expanded(page))).playing).toBe(true);
+
+  // Close with the video showing, then empty the items.
+  await page.keyboard.press("Escape");
+  await page.evaluate(() =>
+    (window as unknown as { __session: Session }).__session.host.replaceItems([]),
+  );
+  await expect(viewer(page)).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __session: Session }).__session.left.at(-1)?.playing,
+    ),
+  ).toBe(true);
+
+  // Reopen the same item from a new position.
+  await page.evaluate(() => {
+    const { host, video, image } = (window as unknown as { __session: Session }).__session;
+    video.currentTime = 3;
+    host.replaceItems([video, image]);
+  });
+  await expect.poll(async () => (await playback(expanded(page))).playing).toBe(true);
+  expect((await playback(expanded(page))).time).toBeGreaterThanOrEqual(3);
+
+  // Paging away in the new open pauses; it does not report the old close.
+  await page.getByRole("button", { name: "Next item" }).click();
+  await expect(expanded(page)).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __session: Session }).__session.left.at(-1)?.playing,
+    ),
+  ).toBe(false);
 });
 
 for (const viewport of [

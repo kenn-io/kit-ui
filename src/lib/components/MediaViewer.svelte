@@ -85,11 +85,29 @@
     index = (position + delta + items.length) % items.length;
   }
 
-  // Set by the viewer's own close controls, so a video leaving because
-  // the viewer closed reports whether it was playing. Not reactive.
-  let closing = false;
+  // One open of the viewer, from items arriving to items emptying (or
+  // unmount). A host may keep the viewer mounted and clear `items` to close
+  // it, so this state must not carry into the next open. Not reactive.
+  function newSession() {
+    return {
+      // Set by the viewer's own close controls, so a video leaving because
+      // the viewer closed reports whether it was playing.
+      closing: false,
+      // Where each video was when it left, so paging back resumes there
+      // (paused) instead of at the position handed over on open.
+      leftAt: new WeakMap<MediaViewerVideoItem, number>(),
+    };
+  }
+  let session = newSession();
+  const open = $derived(items.length > 0);
+  // Runs before the new open's content mounts; a video that leaves keeps
+  // the session it started in.
+  $effect.pre(() => {
+    if (open) session = newSession();
+  });
+
   function close(): void {
-    closing = true;
+    session.closing = true;
     onclose();
   }
 
@@ -127,16 +145,18 @@
     };
   }
 
-  // Where each video was when it left, so paging back resumes there
-  // (paused) instead of at the position handed over on open.
-  const leftAt = new WeakMap<MediaViewerVideoItem, number>();
-
   function playVideo(item: MediaViewerVideoItem) {
     return (video: HTMLVideoElement) => {
+      // This open's state, kept for the cleanup even after it ends.
+      const own = untrack(() => session);
       const start = untrack(() => ({
-        currentTime: leftAt.get(item) ?? item.currentTime ?? 0,
-        playing: !leftAt.has(item) && (item.playing ?? false),
+        currentTime: own.leftAt.get(item) ?? item.currentTime ?? 0,
+        playing: !own.leftAt.has(item) && (item.playing ?? false),
       }));
+      // Muted and volume carry over before anything plays, so an inline
+      // player the user muted does not turn audible here.
+      if (item.muted !== undefined) video.muted = item.muted;
+      if (item.volume !== undefined) video.volume = item.volume;
       // Seeking needs metadata; until then the video still reports 0.
       let ready = false;
       const begin = () => {
@@ -163,10 +183,12 @@
           ? { currentTime: video.currentTime, playing: !video.paused && !video.ended }
           : start;
         video.pause();
-        leftAt.set(item, state.currentTime);
+        own.leftAt.set(item, state.currentTime);
         untrack(() => item.onleave)?.({
           currentTime: state.currentTime,
-          playing: closing && state.playing,
+          playing: own.closing && state.playing,
+          muted: video.muted,
+          volume: video.volume,
         });
       };
     };
@@ -225,7 +247,8 @@
               {:else if current?.kind === "video"}
                 <VideoPlayer
                   class="kit-media-viewer__video"
-                  src={current.src}
+                  src={current.src || undefined}
+                  sources={current.src ? [] : (current.sources ?? [])}
                   label={current.label}
                   expandable={false}
                   videoAttachment={playVideo(current)}

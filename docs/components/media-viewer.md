@@ -51,11 +51,19 @@ type MediaViewerItem =
     }
   | {
       kind: "video";
-      src: string; // the inline player's currentSrc
+      src: string; // the inline player's currentSrc; "" when it has none yet
+      sources?: { src: string; type?: string }[]; // used when src is ""
       label: string; // accessible name
       currentTime?: number; // start position in seconds
       playing?: boolean; // start playing on display
-      onleave?: (state: { currentTime: number; playing: boolean }) => void;
+      muted?: boolean; // start muted
+      volume?: number; // start volume, 0 to 1
+      onleave?: (state: {
+        currentTime: number;
+        playing: boolean;
+        muted: boolean;
+        volume: number;
+      }) => void;
     };
 ```
 
@@ -90,19 +98,24 @@ items yourself only for another player, such as a plain `<video>`.
 Playback hands over in both directions:
 
 1. When opening, pause the inline player and pass its `currentSrc`,
-   `currentTime`, and whether it was playing. The viewer seeks to
-   `currentTime` once the video's metadata loads and starts playing if
-   `playing` is true.
+   `currentTime`, `muted`, `volume`, and whether it was playing. An idle
+   player (`preload="none"`) may have no `currentSrc` yet; pass `""` and
+   its `sources`, and the viewer's browser picks one it supports. The
+   viewer applies `muted` and `volume` at once, seeks to `currentTime`
+   once the video's metadata loads, and starts playing if `playing` is
+   true.
 2. Each time the video leaves the viewer, the viewer pauses it and calls
-   `onleave` with its position. Seek the inline player to
-   `state.currentTime`, and play it if `state.playing` is true.
+   `onleave` with its position, `muted`, and `volume`. Apply them to the
+   inline player, and play it if `state.playing` is true.
 
 `state.playing` is true only when the user closed the viewer (Escape,
 the backdrop, or the close button) while the video played. Paging away
 pauses it and reports `false`, so the inline player does not start
 behind the viewer. Paging back resumes, paused, from where it left. A
 close from outside the viewer, such as `closeMediaViewerGallery()`,
-also reports `false`.
+also reports `false`. Each open starts fresh, including when a host
+keeps the viewer mounted and closes it by emptying `items`: the next
+open uses the items' own `currentTime` and `playing`.
 
 ```ts
 const playing = !video.paused && !video.ended;
@@ -113,7 +126,11 @@ const item: MediaViewerItem = {
   label: "Screen recording",
   currentTime: video.currentTime,
   playing,
+  muted: video.muted,
+  volume: video.volume,
   onleave: (state) => {
+    video.muted = state.muted;
+    video.volume = state.volume;
     video.currentTime = state.currentTime;
     if (state.playing) void video.play();
   },

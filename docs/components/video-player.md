@@ -38,7 +38,8 @@ When `expandable` (the default), the player joins the page gallery and
 its expand control, beside full screen, opens MediaViewer on it.
 
 - The viewer plays the video from where the inline player was, and plays
-  it if the inline player was playing. The inline player pauses.
+  it if the inline player was playing. Mute and volume carry over both
+  ways. The inline player pauses.
 - When the video leaves the viewer, the inline player takes back its
   position. It resumes only if the user closed the viewer while the video
   played. Paging away pauses the video.

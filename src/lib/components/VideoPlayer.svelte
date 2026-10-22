@@ -109,13 +109,19 @@
     player.pause();
     return {
       kind: "video",
-      // An idle player (preload="none") may not have picked a source yet.
-      src: player.currentSrc || src || sources[0]?.src || "",
+      // An idle player (preload="none") may not have picked a source yet;
+      // the viewer then picks from the same list.
+      src: player.currentSrc,
+      sources: src ? [{ src }, ...sources] : sources,
       label,
       currentTime: player.currentTime,
       playing,
+      muted: player.muted,
+      volume: player.volume,
       onleave: (state) => {
         if (!player.isConnected) return;
+        player.muted = state.muted;
+        player.volume = state.volume;
         player.currentTime = state.currentTime;
         if (state.playing) player.play().catch(() => {});
       },
