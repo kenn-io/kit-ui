@@ -12,11 +12,11 @@ assistive technology reads it as that control's description. The id stays
 when the control changes its own `aria-describedby` while the tooltip is
 open. Pressing the trigger hides the tooltip, so it does not cover a menu or
 list the press opens. A press is a click, a touch tap, or Enter or Space on a
-wrapped control other than a text field, select, or editable region. The
-tooltip shows again the next time the pointer enters the trigger or keyboard
-focus lands on it. On touch screens the tooltip on a control opens when the
-control gains keyboard focus. A `focusable` trigger has no action, so pressing
-it does not hide the tooltip, and a tap opens it.
+wrapped control other than a form field (an input, text area, or select)
+or an editable region. The tooltip shows again the next time the pointer enters
+the trigger or keyboard focus lands on it. On touch screens the tooltip on a
+control opens when the control gains keyboard focus. A `focusable` trigger has
+no action, so pressing it does not hide the tooltip, and a tap opens it.
 
 ## Text tooltip
 
