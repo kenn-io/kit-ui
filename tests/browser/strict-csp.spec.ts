@@ -78,8 +78,16 @@ test("a video player lays out its controls under a strict policy", async ({ page
   await expect
     .poll(() => player.locator("video").evaluate((node) => (node as HTMLVideoElement).readyState))
     .toBeGreaterThan(0);
-  const bar = (await player.locator(".kit-video-player__bar").boundingBox())!;
-  const picture = (await player.locator("video").boundingBox())!;
+  // The asynchronously rendered content above the player can move it.
+  // Measure both boxes in one layout snapshot.
+  const { bar, picture } = await player.evaluate((root) => {
+    const bar = root.querySelector(".kit-video-player__bar")!.getBoundingClientRect();
+    const picture = root.querySelector("video")!.getBoundingClientRect();
+    return {
+      bar: { y: bar.y, height: bar.height },
+      picture: { y: picture.y, height: picture.height },
+    };
+  });
   // On the picture, at its bottom edge, not in the flow below it.
   expect(bar.y).toBeGreaterThan(picture.y);
   expect(Math.abs(bar.y + bar.height - (picture.y + picture.height))).toBeLessThanOrEqual(1);
