@@ -45,7 +45,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
   function pops it (out-of-order pops are safe). Modal-like components
   should push a scope while open — CommandPalette does.
 - **Display**: `formatShortcutKeys("mod+k")` → `["⌘", "K"]` / `["Ctrl",
-"K"]` for [KbdBadge](kbd-badge.md).
+  "K"]` for [KbdBadge](kbd-badge.md).
 - `createShortcutManager()` builds an isolated manager (embedded surfaces,
   tests); `appShortcuts` is the app-level singleton `initShortcuts()`
   wires to `window`. `initShortcuts()` is idempotent — repeat calls while
