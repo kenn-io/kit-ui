@@ -56,7 +56,7 @@ bun run fmt:check && bun run lint   # CI-enforced format + lint (vite-plus)
 bun run build    # builds the demo gallery
 bun test         # unit tests (checks/*.test.ts — rules, windowing, shortcuts, markdown)
 bun run test:browser       # Playwright suite against the demo gallery (docs/testing.md)
-bun run check:usage        # dogfood kit-ui-check against src/demo (must be clean)
+bun run check:usage        # dogfood kit-ui-check against src/demo, and side-stripe against src/lib (must be clean)
 bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
 ```
 

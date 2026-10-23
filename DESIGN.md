@@ -236,7 +236,7 @@ Session-state at a glance: a colored dot plus a distinct "waiting for user" bubb
 ### Don't:
 
 - **Don't** touch the default light/dark palettes when adding themes; alternate identities live in `themes.css` under `data-kit-theme`.
-- **Don't** use side-stripe `border-left` accents, gradient text, glassmorphism, hero-metric layouts, or identical icon-card grids.
+- **Don't** use side-stripe accents (a thick side border or sideways inset shadow; `kit-ui-check`'s `side-stripe` rule fails them), gradient text, glassmorphism, hero-metric layouts, or identical icon-card grids.
 - **Don't** write type media queries in components or pin the root font size in apps.
 - **Don't** draw keyboard focus with `box-shadow`; it must be a real `outline` so high-contrast can widen it.
 - **Don't** hard-code z-indexes; use `--z-popover`, `--z-overlay`, `--z-tooltip`.

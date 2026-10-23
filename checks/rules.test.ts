@@ -1364,3 +1364,44 @@ describe("split-handle-override", () => {
     expect(checkSource(src, "app.css", rule)).toHaveLength(1);
   });
 });
+
+describe("side-stripe", () => {
+  const rule = ["side-stripe"];
+
+  test.each([
+    "border-left: 3px solid var(--accent-amber);",
+    "border-inline-start: 0.25rem solid var(--accent-red);",
+    "border-right-width: thick;",
+    "box-shadow: inset 3px 0 0 var(--accent-blue);",
+    "box-shadow: var(--shadow-sm), inset -2px 0 0 var(--accent-blue);",
+  ])("flags %s", (declaration) => {
+    const src = svelte(`.notice {\n  border-radius: var(--radius-md);\n  ${declaration}\n}`);
+    const findings = checkSource(src, "A.svelte", rule);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.line).toBe(6);
+    expect(findings[0]!.message).toContain("Notice");
+  });
+
+  test("flags a stripe inside nested and media rules", () => {
+    const src = `.card { &.failed { border-left: 3px solid var(--accent-red); } }
+@media (max-width: 640px) { .row { border-left-width: 4px; } }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1, 2]);
+  });
+
+  test("allows dividers, focus rings, and quotations", () => {
+    const src = svelte(
+      `.pane { border-left: 1px solid var(--border-default); }
+      .split { border-inline-start: var(--border-width) solid var(--border-muted); }
+      .row { border-left: 0; }
+      .chip { box-shadow: inset 0 0 0 1px var(--accent-blue); }
+      .md :global(blockquote) { border-left: 3px solid var(--border-default); }`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("an ignore marker does not suppress it", () => {
+    const src = `/* kit-ui-check-ignore */\n.notice { border-left: 3px solid var(--accent-amber); }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+  });
+});

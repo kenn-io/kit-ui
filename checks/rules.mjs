@@ -1634,9 +1634,54 @@ export function checkSplitHandleOverride(source, filename) {
   return findings;
 }
 
+/** A colored bar on one edge of a box, drawn as a thick side border or a
+ * sideways inset shadow. On a rounded box it bends around the corners, and
+ * apps keep reaching for it as a status accent. Quotations keep their side
+ * border. */
+export function checkSideStripe(source, filename) {
+  const findings = [];
+  const fix =
+    "use Notice for a status message; for an edge marker, draw a straight ::before bar on a square edge";
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    for (const rule of cssRulesWithNesting(blankComments(css))) {
+      if (/\bblockquote\b/.test(rule.selector ?? "")) continue;
+      const declarationRe =
+        /(?:^|;)\s*(border-(?:left|right|inline-start|inline-end)(?:-width)?|box-shadow)\s*:\s*([^;]*)/g;
+      let declaration;
+      while ((declaration = declarationRe.exec(rule.body)) !== null) {
+        const property = declaration[1].toLowerCase();
+        const value = declaration[2];
+        const stripe =
+          property === "box-shadow"
+            ? [...value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0\b/g)].some(
+                ([, x]) => Math.abs(Number(x)) >= 2,
+              )
+            : /\b(?:medium|thick)\b/.test(value) ||
+              [...value.matchAll(/(?<![\w-])([\d.]+)(px|rem|em)\b/g)].some(
+                ([, size, unit]) => Number(size) * (unit === "px" ? 1 : 16) >= 2,
+              );
+        if (!stripe) continue;
+        findings.push({
+          rule: "side-stripe",
+          line: lineOfIndex(
+            source,
+            offset + rule.bodyStart + declaration.index + declaration[0].indexOf(declaration[1]),
+          ),
+          message: `\`${property}: ${value.trim()}\` draws a side stripe — ${fix}`,
+        });
+      }
+    }
+  }
+  return findings;
+}
+
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
 // unsorted-table-header has its own, explicit exception: <Table unsorted>.
-export const UNSUPPRESSIBLE_RULES = new Set(["split-handle-override", "unsorted-table-header"]);
+export const UNSUPPRESSIBLE_RULES = new Set([
+  "side-stripe",
+  "split-handle-override",
+  "unsorted-table-header",
+]);
 
 export const ALL_RULES = {
   "nonstandard-breakpoint": checkBreakpoints,
@@ -1687,6 +1732,7 @@ export const ALL_RULES = {
   "legacy-svelte": checkLegacySvelte,
   "chip-label-override": checkChipLabelOverride,
   "split-handle-override": checkSplitHandleOverride,
+  "side-stripe": checkSideStripe,
 };
 
 /** Run all (or the selected) rules on one file's source. */

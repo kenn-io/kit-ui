@@ -354,6 +354,15 @@ export function checkSplitHandleOverride(source: any, filename: any): {
     line: number;
     message: string;
 }[];
+/** A colored bar on one edge of a box, drawn as a thick side border or a
+ * sideways inset shadow. On a rounded box it bends around the corners, and
+ * apps keep reaching for it as a status accent. Quotations keep their side
+ * border. */
+export function checkSideStripe(source: any, filename: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Run all (or the selected) rules on one file's source. */
 export function checkSource(source: any, filename: any, ruleNames?: string[]): any[];
 /**
@@ -419,4 +428,5 @@ export const ALL_RULES: {
     "legacy-svelte": typeof checkLegacySvelte;
     "chip-label-override": typeof checkChipLabelOverride;
     "split-handle-override": typeof checkSplitHandleOverride;
+    "side-stripe": typeof checkSideStripe;
 };
