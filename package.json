@@ -118,7 +118,7 @@
     "generate:brand": "node scripts/generate-brand.mjs",
     "generate:visual-guide": "node scripts/generate-visual-styling-guide.mjs",
     "generate:types": "node scripts/declarations.mjs generate",
-    "check:usage": "node bin/kit-ui-check.mjs src/demo && node bin/kit-ui-check.mjs src/lib --rules side-stripe",
+    "check:usage": "node bin/kit-ui-check.mjs src/demo && node bin/kit-ui-check.mjs src/lib --rules rounded-side-stripe",
     "fmt": "vp fmt -c .oxfmtrc.json . '!dist/**' '!types/**' '!test-results/**' --no-error-on-unmatched-pattern",
     "fmt:check": "vp fmt --check -c .oxfmtrc.json . '!dist/**' '!types/**' '!test-results/**' --no-error-on-unmatched-pattern",
     "lint": "vp lint . --no-error-on-unmatched-pattern",

@@ -1634,40 +1634,98 @@ export function checkSplitHandleOverride(source, filename) {
   return findings;
 }
 
-/** A colored bar on one edge of a box, drawn as a thick side border or a
- * sideways inset shadow. On a rounded box it bends around the corners, and
- * apps keep reaching for it as a status accent. Quotations keep their side
- * border. */
-export function checkSideStripe(source, filename) {
+// Corner indexes in border-radius order: top-left, top-right, bottom-right, bottom-left.
+const STRIPE_CORNERS = { left: [0, 3], right: [1, 2] };
+const RADIUS_LONGHANDS = {
+  "border-top-left-radius": 0,
+  "border-start-start-radius": 0,
+  "border-top-right-radius": 1,
+  "border-start-end-radius": 1,
+  "border-bottom-right-radius": 2,
+  "border-end-end-radius": 2,
+  "border-bottom-left-radius": 3,
+  "border-end-start-radius": 3,
+};
+
+/**
+ * Record, in declaration order, which corners one rule squares. A corner whose
+ * radius the rule leaves unset keeps its earlier state.
+ */
+function applyCornerRadii(body, square) {
+  const isZero = (value) => /^0(?:px|rem|em|%)?$/.test(value);
+  const declarationRe = /(?:^|;)\s*(border(?:-[a-z]+)*-radius)\s*:\s*([^;]*)/g;
+  let declaration;
+  while ((declaration = declarationRe.exec(body)) !== null) {
+    const property = declaration[1].toLowerCase();
+    const value = declaration[2].trim();
+    if (property in RADIUS_LONGHANDS) {
+      square[RADIUS_LONGHANDS[property]] = isZero(value.split(/\s+/)[0] ?? "");
+    } else if (property === "border-radius") {
+      const [a, b = a, c = a, d = b] = value.split("/")[0].trim().split(/\s+/);
+      [a, b, c, d].forEach((radius, corner) => (square[corner] = isZero(radius)));
+    }
+  }
+  return square;
+}
+
+/**
+ * A side stripe is a colored bar on one edge of a box: a side border of 2px
+ * or more, or an inset box-shadow offset only sideways by 2px or more. On a
+ * square edge it is fine. On a rounded edge it bends around the corners, so
+ * the rule requires both corners on the stripe's side to be squared by a rule
+ * with the same selector in this file, such as the base rule a media query
+ * overrides. A radius set elsewhere, by a component or a shared class, cannot
+ * be seen here, so it does not count.
+ * Quotations keep their side border.
+ */
+export function checkRoundedSideStripe(source, filename) {
   const findings = [];
-  const fix =
-    "use Notice for a status message; for an edge marker, draw a straight ::before bar on a square edge";
-  for (const { css, offset } of styleBlocks(source, filename)) {
-    for (const rule of cssRulesWithNesting(blankComments(css))) {
+  const blocks = styleBlocks(source, filename).map(({ css, offset }) => ({
+    offset,
+    rules: cssRulesWithNesting(blankComments(css)),
+  }));
+  const selectorKey = (rule) => (rule.selector ?? "").replace(/\s+/g, " ").trim();
+  const squared = new Map();
+  for (const rule of blocks.flatMap((block) => block.rules)) {
+    const key = selectorKey(rule);
+    squared.set(key, applyCornerRadii(rule.body, squared.get(key) ?? [false, false, false, false]));
+  }
+  for (const { rules, offset } of blocks) {
+    for (const rule of rules) {
       if (/\bblockquote\b/.test(rule.selector ?? "")) continue;
+      const square = squared.get(selectorKey(rule));
       const declarationRe =
-        /(?:^|;)\s*(border-(?:left|right|inline-start|inline-end)(?:-width)?|box-shadow)\s*:\s*([^;]*)/g;
+        /(?:^|;)\s*(border-(left|right|inline-start|inline-end)(?:-width)?|box-shadow)\s*:\s*([^;]*)/g;
       let declaration;
       while ((declaration = declarationRe.exec(rule.body)) !== null) {
         const property = declaration[1].toLowerCase();
-        const value = declaration[2];
-        const stripe =
-          property === "box-shadow"
-            ? [...value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0\b/g)].some(
-                ([, x]) => Math.abs(Number(x)) >= 2,
-              )
-            : /\b(?:medium|thick)\b/.test(value) ||
-              [...value.matchAll(/(?<![\w-])([\d.]+)(px|rem|em)\b/g)].some(
-                ([, size, unit]) => Number(size) * (unit === "px" ? 1 : 16) >= 2,
-              );
-        if (!stripe) continue;
+        const value = declaration[3];
+        const sides = [];
+        if (property === "box-shadow") {
+          for (const [, x] of value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0\b/g)) {
+            if (Math.abs(Number(x)) >= 2) sides.push(Number(x) > 0 ? "left" : "right");
+          }
+        } else if (
+          /\b(?:medium|thick)\b/.test(value) ||
+          [...value.matchAll(/(?<![\w-])([\d.]+)(px|rem|em)\b/g)].some(
+            ([, size, unit]) => Number(size) * (unit === "px" ? 1 : 16) >= 2,
+          )
+        ) {
+          sides.push(
+            /^(?:left|inline-start)$/.test(declaration[2].toLowerCase()) ? "left" : "right",
+          );
+        }
+        const side = sides.find((s) => !STRIPE_CORNERS[s].every((corner) => square[corner]));
+        if (!side) continue;
+        const [first, second] =
+          side === "left" ? ["start-start", "end-start"] : ["start-end", "end-end"];
         findings.push({
-          rule: "side-stripe",
+          rule: "rounded-side-stripe",
           line: lineOfIndex(
             source,
             offset + rule.bodyStart + declaration.index + declaration[0].indexOf(declaration[1]),
           ),
-          message: `\`${property}: ${value.trim()}\` draws a side stripe — ${fix}`,
+          message: `\`${property}: ${value.trim()}\` draws a side stripe whose corners may be rounded, so it bends around them — square that edge for this selector (\`border-${first}-radius: 0; border-${second}-radius: 0\`) or drop the stripe`,
         });
       }
     }
@@ -1678,7 +1736,7 @@ export function checkSideStripe(source, filename) {
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
 // unsorted-table-header has its own, explicit exception: <Table unsorted>.
 export const UNSUPPRESSIBLE_RULES = new Set([
-  "side-stripe",
+  "rounded-side-stripe",
   "split-handle-override",
   "unsorted-table-header",
 ]);
@@ -1732,7 +1790,7 @@ export const ALL_RULES = {
   "legacy-svelte": checkLegacySvelte,
   "chip-label-override": checkChipLabelOverride,
   "split-handle-override": checkSplitHandleOverride,
-  "side-stripe": checkSideStripe,
+  "rounded-side-stripe": checkRoundedSideStripe,
 };
 
 /** Run all (or the selected) rules on one file's source. */

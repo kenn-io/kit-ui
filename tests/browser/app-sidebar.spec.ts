@@ -1171,23 +1171,18 @@ test("hosts recolor the current marks through custom properties", async ({ page 
   await open(page, "reports/overview", 1440);
   const overview = sectionLink(page, "Overview");
   const reportsIcon = sectionLink(page, "Reports").locator("svg");
-  const indicator = () =>
-    overview.evaluate((element) => {
-      const bar = getComputedStyle(element, "::before");
-      return `${bar.width} ${bar.backgroundColor}`;
-    });
 
   await page.evaluate(() =>
     document.documentElement.style.setProperty("--kit-sidebar-accent", "rgb(200, 0, 0)"),
   );
-  await expect.poll(indicator).toBe("2px rgb(200, 0, 0)");
+  await expect(overview).toHaveCSS("box-shadow", "rgb(200, 0, 0) 2px 0px 0px 0px inset");
   await expect(reportsIcon).toHaveCSS("color", "rgb(200, 0, 0)");
 
   await page.evaluate(() =>
     document.documentElement.style.setProperty("--kit-sidebar-current-icon", "rgb(0, 120, 0)"),
   );
   await expect(reportsIcon).toHaveCSS("color", "rgb(0, 120, 0)");
-  await expect.poll(indicator).toBe("2px rgb(200, 0, 0)");
+  await expect(overview).toHaveCSS("box-shadow", "rgb(200, 0, 0) 2px 0px 0px 0px inset");
 });
 
 test("a host below other window chrome sets the sidebar's height", async ({ page }) => {
@@ -1227,12 +1222,10 @@ test("forced colors mark the current rows with the system selection colors", asy
   expect(await sectionLink(page, "History").evaluate(colors)).not.toEqual(selection);
   const icon = sectionLink(page, "Reports").locator("svg");
   expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe(selection[1]);
-  expect(
-    await sectionLink(page, "Overview").evaluate((element) => {
-      const bar = getComputedStyle(element, "::before");
-      return [bar.width, bar.backgroundColor];
-    }),
-  ).toEqual(["2px", selection[1]]);
+  await expect(sectionLink(page, "Overview")).toHaveCSS(
+    "box-shadow",
+    `${selection[1]} 2px 0px 0px 0px inset`,
+  );
 });
 
 test("the sidebar stands raised only under a theme with depth tokens", async ({ page }) => {

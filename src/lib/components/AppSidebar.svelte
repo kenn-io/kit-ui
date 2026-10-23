@@ -924,21 +924,12 @@
     padding-left: calc(16px + var(--space-4));
   }
 
-  /* The indicator is a straight bar on a squared leading edge, never an
-   * edge that follows the row's rounding. */
+  /* Square the leading corners so the indicator draws as a straight bar
+   * rather than following the row's rounding. */
   .kit-app-sidebar__view[aria-current="page"] {
-    position: relative;
     border-start-start-radius: 0;
     border-end-start-radius: 0;
-  }
-
-  .kit-app-sidebar__view[aria-current="page"]::before {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-    width: 2px;
-    background: var(--kit-sidebar-accent, var(--accent-blue));
+    box-shadow: inset 2px 0 0 var(--kit-sidebar-accent, var(--accent-blue));
   }
 
   .kit-app-sidebar__run-heading {
@@ -1032,9 +1023,8 @@
       color: SelectedItemText;
     }
 
-    .kit-app-sidebar__view[aria-current="page"]::before {
-      forced-color-adjust: none;
-      background: SelectedItemText;
+    .kit-app-sidebar__view[aria-current="page"] {
+      box-shadow: inset 2px 0 0 SelectedItemText;
     }
   }
 </style>

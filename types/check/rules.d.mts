@@ -354,11 +354,17 @@ export function checkSplitHandleOverride(source: any, filename: any): {
     line: number;
     message: string;
 }[];
-/** A colored bar on one edge of a box, drawn as a thick side border or a
- * sideways inset shadow. On a rounded box it bends around the corners, and
- * apps keep reaching for it as a status accent. Quotations keep their side
- * border. */
-export function checkSideStripe(source: any, filename: any): {
+/**
+ * A side stripe is a colored bar on one edge of a box: a side border of 2px
+ * or more, or an inset box-shadow offset only sideways by 2px or more. On a
+ * square edge it is fine. On a rounded edge it bends around the corners, so
+ * the rule requires both corners on the stripe's side to be squared by a rule
+ * with the same selector in this file, such as the base rule a media query
+ * overrides. A radius set elsewhere, by a component or a shared class, cannot
+ * be seen here, so it does not count.
+ * Quotations keep their side border.
+ */
+export function checkRoundedSideStripe(source: any, filename: any): {
     rule: string;
     line: number;
     message: string;
@@ -428,5 +434,5 @@ export const ALL_RULES: {
     "legacy-svelte": typeof checkLegacySvelte;
     "chip-label-override": typeof checkChipLabelOverride;
     "split-handle-override": typeof checkSplitHandleOverride;
-    "side-stripe": typeof checkSideStripe;
+    "rounded-side-stripe": typeof checkRoundedSideStripe;
 };

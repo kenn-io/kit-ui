@@ -1365,8 +1365,8 @@ describe("split-handle-override", () => {
   });
 });
 
-describe("side-stripe", () => {
-  const rule = ["side-stripe"];
+describe("rounded-side-stripe", () => {
+  const rule = ["rounded-side-stripe"];
 
   test.each([
     "border-left: 3px solid var(--accent-amber);",
@@ -1374,19 +1374,45 @@ describe("side-stripe", () => {
     "border-right-width: thick;",
     "box-shadow: inset 3px 0 0 var(--accent-blue);",
     "box-shadow: var(--shadow-sm), inset -2px 0 0 var(--accent-blue);",
-  ])("flags %s", (declaration) => {
+  ])("flags %s on a rounded box", (declaration) => {
     const src = svelte(`.notice {\n  border-radius: var(--radius-md);\n  ${declaration}\n}`);
     const findings = checkSource(src, "A.svelte", rule);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.line).toBe(6);
-    expect(findings[0]!.message).toContain("Notice");
+    expect(findings[0]!.message).toContain("radius: 0");
   });
 
-  test("flags a stripe inside nested and media rules", () => {
+  test("flags a stripe whose corners another rule may round", () => {
     const src = `.card { &.failed { border-left: 3px solid var(--accent-red); } }
 @media (max-width: 640px) { .row { border-left-width: 4px; } }
 `;
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1, 2]);
+  });
+
+  test("flags a stripe that squares only the opposite edge", () => {
+    const src = `.a { border-radius: 0 6px 6px 0; border-right: 3px solid var(--accent-red); }
+.b { border-start-start-radius: 0; border-left: 3px solid var(--accent-red); }
+.c { border-radius: 0; border-top-left-radius: 4px; border-left: 3px solid var(--accent-red); }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1, 2, 3]);
+  });
+
+  test("allows a stripe on a square edge", () => {
+    const src = svelte(
+      `.a { border-radius: 0; border-left: 3px solid var(--accent-amber); }
+      .b { border-radius: 0 6px 6px 0; border-left: 3px solid var(--accent-amber); }
+      .c { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
+      .d { border-top-right-radius: 0; border-bottom-right-radius: 0; border-inline-end: 3px solid var(--accent-red); }`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("allows an override of a stripe whose base rule squares the edge", () => {
+    const src = `.view.current { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
+@media (forced-colors: active) { .view.current { box-shadow: inset 2px 0 0 SelectedItemText; } }
+.other { box-shadow: inset 2px 0 0 SelectedItemText; }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
   });
 
   test("allows dividers, focus rings, and quotations", () => {
