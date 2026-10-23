@@ -77,7 +77,7 @@ Two presentations, chosen by `variant`:
 
 - **`floating`** — an IDE-find-style shadowed card the component insets
   at the container's top-right (`position: absolute; top/right:
---space-4; z-index: 10`). The container must be `position: relative`.
+  --space-4; z-index: 10`). The container must be `position: relative`.
   Content does not shift; the card overlays it (reserve top padding in
   the container only if covering the first lines is unacceptable — see
   the demo). Placement is themeable via custom properties on the

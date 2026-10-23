@@ -719,7 +719,7 @@ function literal(value) {
  * expression stays inside its tag. */
 function visibleText(content) {
   let text = "";
-  for (let i = 0; i < content.length; ) {
+  for (let i = 0; i < content.length;) {
     if (content[i] === "<" && /[A-Za-z/!]/.test(content[i + 1] ?? "")) {
       const end = tagEnd(content, i + 1);
       const tag = content.slice(i, end);

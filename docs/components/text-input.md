@@ -84,4 +84,4 @@ is bindable for app shortcut handlers that focus the field.
 - `DateRangePicker`'s custom tab uses native `type="date"` inputs (native
   pickers beat styled text fields for dates).
 - `FilterDropdown`'s search box uses `SearchInput` internally (`size="sm"
-block`).
+  block`).

@@ -139,8 +139,8 @@
     "svelte-check": "4.6.0",
     "svelte2tsx": "0.7.61",
     "typescript": "^5.9.0",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4",
-    "vite-plus": "0.2.4"
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+    "vite-plus": "1.4.0"
   },
   "peerDependencies": {
     "@lucide/svelte": ">=1.0.0",
@@ -158,6 +158,6 @@
   },
   "packageManager": "bun@1.4.4",
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4"
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
   }
 }

@@ -51,7 +51,7 @@ for a popover opening out of the status bar (e.g. a rate-limit budget panel):
    no ancestor between the bar and the viewport clips either.
 2. Anchor the popover in a `position: relative` wrapper inside the snippet and
    grow it upward: `position: absolute; bottom: calc(100% + 4px); right: 0;
-z-index: var(--z-popover)`. This works best when the bar has room to the right
+   z-index: var(--z-popover)`. This works best when the bar has room to the right
    of the trigger; if the panel needs viewport-aware clamping, switch to
    `floatingPopoverStyle` instead.
 3. Dress it with the shared `kit-popover-card` class and wire dismissal with
