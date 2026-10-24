@@ -1537,7 +1537,7 @@ function resolveNestedSelector(selector, parent) {
  * blanked out, offsets kept). Input must already have comments blanked. */
 function cssRulesWithNesting(css) {
   const rules = [];
-  const stack = [{ selector: null, bodyStart: 0, children: [], isRoot: true }];
+  const stack = [{ selector: null, bodyStart: 0, children: [], conditions: [], isRoot: true }];
   let segmentStart = 0;
   let parens = 0;
   for (let i = 0; i < css.length; i += 1) {
@@ -1559,7 +1559,10 @@ function cssRulesWithNesting(css) {
       const selector = prelude.startsWith("@")
         ? parent.selector
         : resolveNestedSelector(prelude, parent.selector);
-      stack.push({ selector, bodyStart: i + 1, children: [], start: segmentStart });
+      const conditions = prelude.startsWith("@")
+        ? [...parent.conditions, prelude.replace(/\s+/g, " ")]
+        : parent.conditions;
+      stack.push({ selector, bodyStart: i + 1, children: [], conditions, start: segmentStart });
       segmentStart = i + 1;
     } else if (ch === "}") {
       const frame = stack.pop();
@@ -1577,6 +1580,7 @@ function cssRulesWithNesting(css) {
             selector: frame.selector,
             body: chars.join(""),
             bodyStart: frame.bodyStart,
+            conditions: frame.conditions,
           });
         }
       }
@@ -1653,15 +1657,21 @@ const RADIUS_LONGHANDS = {
  */
 function applyCornerRadii(body, square) {
   const isZero = (value) => /^0(?:px|rem|em|%)?$/.test(value);
+  // Split on spaces outside var() and calc(), after dropping !important.
+  const radii = (value) =>
+    value
+      .replace(/\s*!important\s*$/i, "")
+      .trim()
+      .match(/(?:[^\s(]+|\([^)]*\))+/g) ?? [];
   const declarationRe = /(?:^|;)\s*(border(?:-[a-z]+)*-radius)\s*:\s*([^;]*)/g;
   let declaration;
   while ((declaration = declarationRe.exec(body)) !== null) {
     const property = declaration[1].toLowerCase();
     const value = declaration[2].trim();
     if (property in RADIUS_LONGHANDS) {
-      square[RADIUS_LONGHANDS[property]] = isZero(value.split(/\s+/)[0] ?? "");
+      square[RADIUS_LONGHANDS[property]] = isZero(radii(value)[0] ?? "");
     } else if (property === "border-radius") {
-      const [a, b = a, c = a, d = b] = value.split("/")[0].trim().split(/\s+/);
+      const [a, b = a, c = a, d = b] = radii(value.split("/")[0]);
       [a, b, c, d].forEach((radius, corner) => (square[corner] = isZero(radius)));
     }
   }
@@ -1673,8 +1683,9 @@ function applyCornerRadii(body, square) {
  * or more, or an inset box-shadow offset only sideways by 2px or more. On a
  * square edge it is fine. On a rounded edge it bends around the corners, so
  * the rule requires both corners on the stripe's side to be squared by a rule
- * with the same selector in this file, such as the base rule a media query
- * overrides. A radius set elsewhere, by a component or a shared class, cannot
+ * with the same selector in this file that applies wherever the stripe does:
+ * the base rule a media query overrides counts, a reset inside a media query
+ * does not count for the stripe outside it. A radius set elsewhere, by a component or a shared class, cannot
  * be seen here, so it does not count.
  * Quotations keep their side border.
  */
@@ -1685,15 +1696,23 @@ export function checkRoundedSideStripe(source, filename) {
     rules: cssRulesWithNesting(blankComments(css)),
   }));
   const selectorKey = (rule) => (rule.selector ?? "").replace(/\s+/g, " ").trim();
-  const squared = new Map();
-  for (const rule of blocks.flatMap((block) => block.rules)) {
-    const key = selectorKey(rule);
-    squared.set(key, applyCornerRadii(rule.body, squared.get(key) ?? [false, false, false, false]));
-  }
+  const ordered = blocks
+    .flatMap((block) => block.rules.map((rule) => ({ rule, at: block.offset + rule.bodyStart })))
+    .sort((a, b) => a.at - b.at)
+    .map(({ rule }) => rule);
+  // A rule applies wherever its conditions are a prefix of the stripe's.
+  const appliesWith = (rule, stripe) =>
+    rule.conditions.length <= stripe.conditions.length &&
+    rule.conditions.every((condition, index) => condition === stripe.conditions[index]);
   for (const { rules, offset } of blocks) {
     for (const rule of rules) {
       if (/\bblockquote\b/.test(rule.selector ?? "")) continue;
-      const square = squared.get(selectorKey(rule));
+      const square = [false, false, false, false];
+      for (const other of ordered) {
+        if (selectorKey(other) === selectorKey(rule) && appliesWith(other, rule)) {
+          applyCornerRadii(other.body, square);
+        }
+      }
       const declarationRe =
         /(?:^|;)\s*(border-(left|right|inline-start|inline-end)(?:-width)?|box-shadow)\s*:\s*([^;]*)/g;
       let declaration;
@@ -1702,7 +1721,7 @@ export function checkRoundedSideStripe(source, filename) {
         const value = declaration[3];
         const sides = [];
         if (property === "box-shadow") {
-          for (const [, x] of value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0\b/g)) {
+          for (const [, x] of value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0(?:px)?\b/g)) {
             if (Math.abs(Number(x)) >= 2) sides.push(Number(x) > 0 ? "left" : "right");
           }
         } else if (

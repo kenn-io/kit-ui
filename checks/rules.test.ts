@@ -1415,6 +1415,26 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
   });
 
+  test("does not count a reset inside a media query for the stripe outside it", () => {
+    const src = `.card { border-radius: var(--radius-md); border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .card { border-radius: 0; } }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
+  });
+
+  test("reads !important and var() fallbacks as single radii", () => {
+    const src = `.a { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
+.b { border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0; border-left: 3px solid var(--accent-red); }
+.c { border-radius: var(--radius, 0 0) 0; border-left: 3px solid var(--accent-red); }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
+  });
+
+  test("flags an inset shadow whose zero blur has a unit", () => {
+    const src = `.a { border-radius: var(--radius-md); box-shadow: inset 3px 0 0px var(--accent-blue); }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+  });
+
   test("allows dividers, focus rings, and quotations", () => {
     const src = svelte(
       `.pane { border-left: 1px solid var(--border-default); }

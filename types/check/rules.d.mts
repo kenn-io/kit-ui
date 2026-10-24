@@ -359,8 +359,9 @@ export function checkSplitHandleOverride(source: any, filename: any): {
  * or more, or an inset box-shadow offset only sideways by 2px or more. On a
  * square edge it is fine. On a rounded edge it bends around the corners, so
  * the rule requires both corners on the stripe's side to be squared by a rule
- * with the same selector in this file, such as the base rule a media query
- * overrides. A radius set elsewhere, by a component or a shared class, cannot
+ * with the same selector in this file that applies wherever the stripe does:
+ * the base rule a media query overrides counts, a reset inside a media query
+ * does not count for the stripe outside it. A radius set elsewhere, by a component or a shared class, cannot
  * be seen here, so it does not count.
  * Quotations keep their side border.
  */
