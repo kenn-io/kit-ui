@@ -359,11 +359,10 @@ export function checkSplitHandleOverride(source: any, filename: any): {
  * or more, or an inset box-shadow offset only sideways by 2px or more. On a
  * square edge it is fine. On a rounded edge it bends around the corners.
  *
- * For each selector, the rule replays the selector's rules in this file in
- * source order, honoring !important, at each viewport width around their
- * breakpoints and with each combination of their media features and other
- * conditions, and fails a stripe that renders with either corner on its side
- * not squared. A radius set elsewhere, by another selector or a component,
+ * A stripe passes when, for each selector in its rule's selector list, rules
+ * in this file for that selector square both corners on the stripe's side.
+ * Media queries and other conditions are not modeled: a square corner in any
+ * of them counts. A radius set elsewhere, by another selector or a component,
  * cannot be seen here, so it counts as rounded. Quotations keep their side
  * border.
  */

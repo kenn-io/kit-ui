@@ -1367,13 +1367,14 @@ describe("split-handle-override", () => {
 
 describe("rounded-side-stripe", () => {
   const rule = ["rounded-side-stripe"];
+  const lines = (src: string) => checkSource(src, "app.css", rule).map((f) => f.line);
 
   test.each([
     "border-left: 3px solid var(--accent-amber);",
     "border-inline-start: 0.25rem solid var(--accent-red);",
     "border-right-width: thick;",
     "box-shadow: inset 3px 0 0 var(--accent-blue);",
-    "box-shadow: var(--shadow-sm), inset -2px 0 0 var(--accent-blue);",
+    "box-shadow: var(--shadow-sm), inset -2px 0 0px var(--accent-blue);",
   ])("flags %s on a rounded box", (declaration) => {
     const src = svelte(`.notice {\n  border-radius: var(--radius-md);\n  ${declaration}\n}`);
     const findings = checkSource(src, "A.svelte", rule);
@@ -1382,11 +1383,13 @@ describe("rounded-side-stripe", () => {
     expect(findings[0]!.message).toContain("radius: 0");
   });
 
-  test("flags a stripe whose corners another rule may round", () => {
+  test("flags a stripe whose corners no rule for its selector squares", () => {
     const src = `.card { &.failed { border-left: 3px solid var(--accent-red); } }
 @media (max-width: 640px) { .row { border-left-width: 4px; } }
+.other { border-radius: 0; }
+.item { border-left: 3px solid var(--accent-red); }
 `;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1, 2]);
+    expect(lines(src)).toEqual([1, 2, 4]);
   });
 
   test("flags a stripe that squares only the opposite edge", () => {
@@ -1394,76 +1397,55 @@ describe("rounded-side-stripe", () => {
 .b { border-start-start-radius: 0; border-left: 3px solid var(--accent-red); }
 .c { border-radius: 0; border-top-left-radius: 4px; border-left: 3px solid var(--accent-red); }
 `;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1, 2, 3]);
+    expect(lines(src)).toEqual([1, 2, 3]);
   });
 
   test("allows a stripe on a square edge", () => {
-    const src = svelte(
-      `.a { border-radius: 0; border-left: 3px solid var(--accent-amber); }
-      .b { border-radius: 0 6px 6px 0; border-left: 3px solid var(--accent-amber); }
-      .c { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
-      .d { border-top-right-radius: 0; border-bottom-right-radius: 0; border-inline-end: 3px solid var(--accent-red); }`,
-    );
-    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+    const src = `.a { border-radius: 0; border-left: 3px solid var(--accent-amber); }
+.b { border-radius: 0 6px 6px 0; border-left: 3px solid var(--accent-amber); }
+.c { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
+.d { border-top-right-radius: 0; border-bottom-right-radius: 0; border-inline-end: 3px solid var(--accent-red); }
+.e { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
+.f { border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0; border-left: 3px solid var(--accent-red); }
+`;
+    expect(lines(src)).toEqual([]);
   });
 
-  test("allows an override of a stripe whose base rule squares the edge", () => {
+  test("counts square corners from any rule for the same selector", () => {
     const src = `.view.current { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
 @media (forced-colors: active) { .view.current { box-shadow: inset 2px 0 0 SelectedItemText; } }
-.other { box-shadow: inset 2px 0 0 SelectedItemText; }
+.a, .b { border-radius: 0; }
+.a { border-left: 3px solid var(--accent-red); }
 `;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
+    expect(lines(src)).toEqual([]);
   });
 
-  test("does not count a reset inside a media query for the stripe outside it", () => {
-    const src = `.card { border-radius: var(--radius-md); border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .card { border-radius: 0; } }
+  test("flags a selector list when any of its selectors has rounded corners", () => {
+    const src = `.a { border-radius: 0; }
+.a, .b { border-left: 3px solid var(--accent-red); }
 `;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
+    expect(lines(src)).toEqual([2]);
   });
 
-  test("flags a squared stripe that a media query rounds again", () => {
-    const src = `.card { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .card { border-radius: var(--radius-md); } }
-.ok { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .ok { padding: 0; } }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
+  test("reads a var() fallback as one radius", () => {
+    const src = `.c { border-radius: var(--radius, 0 0) 0; border-left: 3px solid var(--accent-red); }\n`;
+    expect(lines(src)).toEqual([1]);
   });
 
-  test("flags a stripe that an overlapping breakpoint rounds again", () => {
-    const src = `.card { border-radius: var(--radius-md); }
-@media (max-width: 900px) { .card { border-radius: 0; border-left: 3px solid var(--accent-red); } }
-@media (max-width: 640px) { .card { border-radius: var(--radius-md); } }
-.wide { border-radius: var(--radius-md); }
-@media (min-width: 900px) { .wide { border-radius: 0; border-left: 3px solid var(--accent-red); } }
-@media (max-width: 640px) { .wide { border-radius: var(--radius-md); } }
+  test("allows a thick frame and flags a thicker side", () => {
+    const src = `.frame { border-radius: 24px; border: 6px solid var(--text-primary); }
+.frame2 { border-radius: 24px; border-width: 4px; }
+.side { border-radius: 24px; border-width: 1px 1px 1px 3px; }
 `;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([2]);
+    expect(lines(src)).toEqual([3]);
   });
 
-  test("allows rounded corners where a breakpoint removes the stripe", () => {
-    const src = `.a { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .a { border-left: 0; border-radius: var(--radius-md); } }
-.b { border-radius: 0; box-shadow: inset 3px 0 0 var(--accent-red); }
-@media (max-width: 640px) { .b { box-shadow: none; border-radius: var(--radius-md); } }
-.c { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .c { border: 1px solid var(--border-default); border-radius: var(--radius-md); } }
+  test("counts a transparent stripe but not a border with no style", () => {
+    const src = `.a { border-radius: var(--radius-md); border-left: 3px solid transparent; }
+.b { border-radius: var(--radius-md); border-left: 3px none var(--accent-red); }
+.c { border-radius: var(--radius-md); border-left: 3px hidden; }
 `;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
-  });
-
-  test("reads !important and var() fallbacks as single radii", () => {
-    const src = `.a { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
-.b { border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0; border-left: 3px solid var(--accent-red); }
-.c { border-radius: var(--radius, 0 0) 0; border-left: 3px solid var(--accent-red); }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
-  });
-
-  test("flags an inset shadow whose zero blur has a unit", () => {
-    const src = `.a { border-radius: var(--radius-md); box-shadow: inset 3px 0 0px var(--accent-blue); }\n`;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+    expect(lines(src)).toEqual([1]);
   });
 
   test("allows dividers, focus rings, and quotations", () => {
@@ -1475,88 +1457,6 @@ describe("rounded-side-stripe", () => {
       .md :global(blockquote) { border-left: 3px solid var(--border-default); }`,
     );
     expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
-  });
-
-  test("allows a thick frame and flags a thicker side", () => {
-    const src = `.frame { border-radius: 24px; border: 6px solid var(--text-primary); }
-.frame2 { border-radius: 24px; border-width: 4px; }
-.side { border-radius: 24px; border-width: 1px 1px 1px 3px; }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
-  });
-
-  test("a narrower breakpoint inherits a broader one's square corners", () => {
-    const src = `.card { border-radius: var(--radius-md); }
-@media (max-width: 900px) { .card { border-radius: 0; } }
-@media (max-width: 640px) { .card { border-left: 3px solid var(--accent-red); } }
-`;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
-  });
-
-  test("a normal declaration does not override an !important one", () => {
-    const src = `.a { border-radius: var(--radius-md) !important; border-radius: 0; border-left: 3px solid var(--accent-red); }
-.b { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
-.b { border-radius: var(--radius-md); }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
-  });
-
-  test("counts a transparent stripe but not a border with no style", () => {
-    const src = `.a { border-radius: var(--radius-md); border-left: 3px solid transparent; }
-.b { border-radius: var(--radius-md); border-left: 3px none var(--accent-red); }
-.c { border-radius: var(--radius-md); border-left: 3px hidden; }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
-  });
-
-  test("a compound query keeps its width limit", () => {
-    const src = `.card { border-radius: var(--radius-md); }
-@media (max-width: 900px) { .card { border-radius: 0; } }
-@media (max-width: 640px) and (prefers-color-scheme: dark) { .card { border-left: 3px solid var(--accent-red); } }
-`;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
-  });
-
-  test("a style reset removes the stripe", () => {
-    const src = `.a { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .a { border-left-style: none; border-radius: var(--radius-md); } }
-.b { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .b { border-style: none; border-radius: var(--radius-md); } }
-.c { border-radius: 0; border-left: 3px solid var(--accent-red); }
-@media (max-width: 640px) { .c { border-left-style: dashed; border-radius: var(--radius-md); } }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([5]);
-  });
-
-  test("never combines two values of one media feature", () => {
-    const src = `.card { border-radius: var(--radius-md); }
-@media (hover: hover) { .card { border-radius: 0; border-left: 3px solid var(--accent-red); } }
-@media (hover: none) { .card { border-radius: var(--radius-md); } }
-`;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
-  });
-
-  test("a compound query inherits a simpler query's square corners", () => {
-    const src = `.card { border-radius: var(--radius-md); }
-@media (prefers-color-scheme: dark) { .card { border-radius: 0; } }
-@media (prefers-color-scheme: dark) and (hover: hover) { .card { border-left: 3px solid var(--accent-red); } }
-`;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
-  });
-
-  test("different @supports tests can hold together", () => {
-    const src = `.card { border-radius: var(--radius-md); }
-@supports (display: grid) { .card { border-radius: 0; border-left: 3px solid var(--accent-red); } }
-@supports (display: flex) { .card { border-radius: var(--radius-md); } }
-`;
-    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([2]);
-  });
-
-  test("a layer always applies", () => {
-    const src = `@layer base { .card { border-radius: 0; } }
-.card { border-left: 3px solid var(--accent-red); }
-`;
-    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
   });
 
   test("an ignore marker does not suppress it", () => {

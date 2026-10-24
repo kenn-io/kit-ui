@@ -1537,7 +1537,7 @@ function resolveNestedSelector(selector, parent) {
  * blanked out, offsets kept). Input must already have comments blanked. */
 function cssRulesWithNesting(css) {
   const rules = [];
-  const stack = [{ selector: null, bodyStart: 0, children: [], conditions: [], isRoot: true }];
+  const stack = [{ selector: null, bodyStart: 0, children: [], isRoot: true }];
   let segmentStart = 0;
   let parens = 0;
   for (let i = 0; i < css.length; i += 1) {
@@ -1559,10 +1559,7 @@ function cssRulesWithNesting(css) {
       const selector = prelude.startsWith("@")
         ? parent.selector
         : resolveNestedSelector(prelude, parent.selector);
-      const conditions = prelude.startsWith("@")
-        ? [...parent.conditions, prelude.replace(/\s+/g, " ")]
-        : parent.conditions;
-      stack.push({ selector, bodyStart: i + 1, children: [], conditions, start: segmentStart });
+      stack.push({ selector, bodyStart: i + 1, children: [], start: segmentStart });
       segmentStart = i + 1;
     } else if (ch === "}") {
       const frame = stack.pop();
@@ -1580,7 +1577,6 @@ function cssRulesWithNesting(css) {
             selector: frame.selector,
             body: chars.join(""),
             bodyStart: frame.bodyStart,
-            conditions: frame.conditions,
           });
         }
       }
@@ -1651,38 +1647,26 @@ const RADIUS_LONGHANDS = {
   "border-end-start-radius": 3,
 };
 
-/**
- * Set one replayed property unless an earlier !important declaration holds
- * it, the way the cascade does within one selector.
- */
-function assign(holder, key, value, important) {
-  if (holder[key]?.important && !important) return;
-  holder[key] = { value, important };
-}
-
-/** Split a declaration value into its text and whether it is !important. */
-function priority(value) {
-  const important = /!\s*important\s*$/i.test(value);
-  return [value.replace(/\s*!\s*important\s*$/i, "").trim(), important];
-}
-
-/** Record which corners one rule squares, in declaration order. */
-function applyCornerRadii(body, corners) {
+/** Which corners one rule leaves squared, after its declarations in order. */
+function squaredCorners(body) {
+  const square = [false, false, false, false];
   const isZero = (value) => /^0(?:px|rem|em|%)?$/.test(value);
-  // Split on spaces outside var() and calc().
-  const radii = (value) => value.match(/(?:[^\s(]+|\([^)]*\))+/g) ?? [];
+  // Split on spaces outside var() and calc(), after dropping !important.
+  const radii = (value) =>
+    value.replace(/\s*!\s*important\s*$/i, "").match(/(?:[^\s(]+|\([^)]*\))+/g) ?? [];
   const declarationRe = /(?:^|;)\s*(border(?:-[a-z]+)*-radius)\s*:\s*([^;]*)/g;
   let declaration;
   while ((declaration = declarationRe.exec(body)) !== null) {
     const property = declaration[1].toLowerCase();
-    const [value, important] = priority(declaration[2]);
+    const value = declaration[2].trim();
     if (property in RADIUS_LONGHANDS) {
-      assign(corners, RADIUS_LONGHANDS[property], isZero(radii(value)[0] ?? ""), important);
+      square[RADIUS_LONGHANDS[property]] = isZero(radii(value)[0] ?? "");
     } else if (property === "border-radius") {
       const [a, b = a, c = a, d = b] = radii(value.split("/")[0]);
-      [a, b, c, d].forEach((radius, corner) => assign(corners, corner, isZero(radius), important));
+      [a, b, c, d].forEach((radius, corner) => (square[corner] = isZero(radius)));
     }
   }
+  return square;
 }
 
 /** Whether a border width draws a stripe: 2px or more, or medium or thick. */
@@ -1696,139 +1680,26 @@ function isStripeWidth(value) {
 }
 
 /**
- * Record, in declaration order, which side stripes one rule draws. A border
- * entry holds the declaration that draws it, or null once a later one removes
- * it; a style entry is false once the side's style is none or hidden. A
- * transparent stripe still counts: a state rule elsewhere usually colors it.
+ * The sides one declaration draws a stripe on. A uniform border is a frame,
+ * not a stripe. A transparent stripe counts: a state rule elsewhere usually
+ * colors it.
  */
-function applyStripes(body, bodyIndex, stripes) {
-  const declarationRe =
-    /(?:^|;)\s*(border(?:-(left|right|inline-start|inline-end))?(-width|-style)?|box-shadow)\s*:\s*([^;]*)/g;
-  const painted = (style) => !/\b(?:none|hidden)\b/.test(style);
-  let declaration;
-  while ((declaration = declarationRe.exec(body)) !== null) {
-    const property = declaration[1].toLowerCase();
-    const [value, important] = priority(declaration[4]);
-    const part = declaration[3]?.toLowerCase();
-    const drawn = {
-      property,
-      value: declaration[4].trim(),
-      index: bodyIndex + declaration.index + declaration[0].indexOf(declaration[1]),
-    };
-    if (property === "box-shadow") {
-      const sides = new Set();
-      for (const [, x] of value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0(?:px)?\b/g)) {
-        if (Math.abs(Number(x)) >= 2) sides.add(Number(x) > 0 ? "left" : "right");
-      }
-      assign(stripes, "shadow-left", sides.has("left") ? drawn : null, important);
-      assign(stripes, "shadow-right", sides.has("right") ? drawn : null, important);
-    } else if (declaration[2]) {
-      const side = /^(?:left|inline-start)$/i.test(declaration[2]) ? "left" : "right";
-      if (part !== "-width") assign(stripes, `style-${side}`, painted(value), important);
-      if (part !== "-style") {
-        assign(stripes, `border-${side}`, isStripeWidth(value) ? drawn : null, important);
-      }
-    } else if (part === "-style") {
-      // border-style: top right bottom left.
-      const [top = "", right = top, , left = right] = value.split(/\s+/);
-      assign(stripes, "style-left", painted(left), important);
-      assign(stripes, "style-right", painted(right), important);
-    } else if (part === "-width") {
-      // A side as wide as the top is a frame, not a stripe.
-      const [top = "", right = top, , left = right] = value.split(/\s+/);
-      assign(stripes, "border-left", left !== top && isStripeWidth(left) ? drawn : null, important);
-      assign(
-        stripes,
-        "border-right",
-        right !== top && isStripeWidth(right) ? drawn : null,
-        important,
-      );
-    } else {
-      // The border shorthand draws the same width on every side: a frame.
-      assign(stripes, "border-left", null, important);
-      assign(stripes, "border-right", null, important);
-      assign(stripes, "style-left", painted(value), important);
-      assign(stripes, "style-right", painted(value), important);
-    }
+function stripeSides(property, side, value) {
+  if (property === "box-shadow") {
+    return [...value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0(?:px)?\b/g)]
+      .filter(([, x]) => Math.abs(Number(x)) >= 2)
+      .map(([, x]) => (Number(x) > 0 ? "left" : "right"));
   }
-}
-
-/**
- * Read a condition as the viewport widths it requires and the other tests it
- * makes, each a [key, value] pair that must hold. A media feature such as
- * (hover: none) is keyed by the feature, so it holds one value at a time.
- * Any other condition this cannot read, such as @supports, @container, or a
- * media query list, is one opaque test. @layer always applies.
- */
-function readCondition(condition) {
-  const read = { min: 0, max: Infinity, tests: [] };
-  if (/^@layer\b/.test(condition)) return read;
-  if (!condition.startsWith("@media") || /,|\bnot\b/.test(condition)) {
-    read.tests.push([condition, true]);
-    return read;
+  if (side) {
+    const drawn = isStripeWidth(value) && !/\b(?:none|hidden)\b/.test(value);
+    return drawn ? [/^(?:left|inline-start)$/i.test(side) ? "left" : "right"] : [];
   }
-  const rest = condition
-    .slice("@media".length)
-    .replace(/\((min|max)-width\s*:\s*([\d.]+)(px|rem|em)\)/g, (_, bound, size, unit) => {
-      const px = Number(size) * (unit === "px" ? 1 : 16);
-      if (bound === "min") read.min = Math.max(read.min, px);
-      else read.max = Math.min(read.max, px);
-      return "";
-    })
-    .replace(/\(\s*([a-z-]+)\s*(?::\s*([^)]+?))?\s*\)/g, (_, feature, value = "") => {
-      read.tests.push([`media:${feature}`, value.replace(/\s+/g, " ")]);
-      return "";
-    })
-    .replace(/\b(?:and|only|screen|all)\b/g, "")
-    .trim();
-  for (const type of rest.split(/\s+/).filter(Boolean)) read.tests.push(["media-type", type]);
-  return read;
-}
-
-/**
- * The states a selector's conditions can be in together, as functions that
- * say whether a condition holds: each viewport width on either side of every
- * width breakpoint, with each test key at one of its values or none of them,
- * at most three keys set at once.
- */
-function conditionStates(conditions) {
-  const reads = new Map(conditions.map((condition) => [condition, readCondition(condition)]));
-  const domains = new Map();
-  for (const { tests } of reads.values()) {
-    for (const [key, value] of tests) domains.set(key, (domains.get(key) ?? new Set()).add(value));
-  }
-  const keys = [...domains.keys()];
-  const assignments = [];
-  const assign = (index, state, set) => {
-    if (index === keys.length) {
-      assignments.push(new Map(state));
-      return;
-    }
-    assign(index + 1, state, set);
-    if (set === 3) return;
-    for (const value of domains.get(keys[index])) {
-      state.set(keys[index], value);
-      assign(index + 1, state, set + 1);
-      state.delete(keys[index]);
-    }
-  };
-  assign(0, new Map(), 0);
-  const bounds = [...reads.values()].flatMap(({ min, max }) => [min, max]);
-  const widths = [
-    ...new Set([
-      0,
-      100000,
-      ...bounds.filter(Number.isFinite).flatMap((b) => [b - 0.5, b, b + 0.5]),
-    ]),
-  ].filter((width) => width >= 0);
-  return widths.flatMap((width) =>
-    assignments.map((state) => (condition) => {
-      const { min, max, tests } = reads.get(condition);
-      return (
-        width >= min && width <= max && tests.every(([key, value]) => state.get(key) === value)
-      );
-    }),
-  );
+  // border-width: top right bottom left; a side wider than the top.
+  const [top = "", right = top, , left = right] = value.trim().split(/\s+/);
+  return [
+    ...(left !== top && isStripeWidth(left) ? ["left"] : []),
+    ...(right !== top && isStripeWidth(right) ? ["right"] : []),
+  ];
 }
 
 /**
@@ -1836,55 +1707,62 @@ function conditionStates(conditions) {
  * or more, or an inset box-shadow offset only sideways by 2px or more. On a
  * square edge it is fine. On a rounded edge it bends around the corners.
  *
- * For each selector, the rule replays the selector's rules in this file in
- * source order, honoring !important, at each viewport width around their
- * breakpoints and with each combination of their media features and other
- * conditions, and fails a stripe that renders with either corner on its side
- * not squared. A radius set elsewhere, by another selector or a component,
+ * A stripe passes when, for each selector in its rule's selector list, rules
+ * in this file for that selector square both corners on the stripe's side.
+ * Media queries and other conditions are not modeled: a square corner in any
+ * of them counts. A radius set elsewhere, by another selector or a component,
  * cannot be seen here, so it counts as rounded. Quotations keep their side
  * border.
  */
 export function checkRoundedSideStripe(source, filename) {
-  const bySelector = new Map();
-  for (const { css, offset } of styleBlocks(source, filename)) {
-    for (const rule of cssRulesWithNesting(blankComments(css))) {
-      const key = (rule.selector ?? "").replace(/\s+/g, " ").trim();
-      if (/\bblockquote\b/.test(key)) continue;
-      const rules = bySelector.get(key) ?? [];
-      rules.push({ ...rule, at: offset + rule.bodyStart });
-      bySelector.set(key, rules);
+  const findings = [];
+  const blocks = styleBlocks(source, filename).map(({ css, offset }) => ({
+    offset,
+    rules: cssRulesWithNesting(blankComments(css)),
+  }));
+  const selectors = (rule) =>
+    topLevelParts(rule.selector ?? "", /,/).map((part) => part.replace(/\s+/g, " ").trim());
+  const squared = new Map();
+  for (const rule of blocks.flatMap((block) => block.rules)) {
+    const square = squaredCorners(rule.body);
+    for (const selector of selectors(rule)) {
+      const corners = squared.get(selector) ?? [false, false, false, false];
+      squared.set(
+        selector,
+        corners.map((corner, index) => corner || square[index]),
+      );
     }
   }
-  const failed = new Map();
-  for (const rules of bySelector.values()) {
-    rules.sort((a, b) => a.at - b.at);
-    const conditions = [...new Set(rules.flatMap((rule) => rule.conditions))];
-    for (const holds of conditionStates(conditions)) {
-      const corners = {};
-      const stripes = {};
-      for (const rule of rules) {
-        if (!rule.conditions.every(holds)) continue;
-        applyCornerRadii(rule.body, corners);
-        applyStripes(rule.body, rule.at, stripes);
-      }
-      for (const side of ["left", "right"]) {
-        if (STRIPE_CORNERS[side].every((corner) => corners[corner]?.value)) continue;
-        const border = stripes[`style-${side}`]?.value === false ? null : stripes[`border-${side}`];
-        for (const drawn of [border?.value, stripes[`shadow-${side}`]?.value]) {
-          if (drawn) failed.set(drawn.index, { ...drawn, side });
-        }
+  for (const { rules, offset } of blocks) {
+    for (const rule of rules) {
+      if (/\bblockquote\b/.test(rule.selector ?? "")) continue;
+      const declarationRe =
+        /(?:^|;)\s*(border-(left|right|inline-start|inline-end)(?:-width)?|border-width|box-shadow)\s*:\s*([^;]*)/g;
+      let declaration;
+      while ((declaration = declarationRe.exec(rule.body)) !== null) {
+        const property = declaration[1].toLowerCase();
+        const value = declaration[3];
+        const side = stripeSides(property, declaration[2], value).find((stripe) =>
+          selectors(rule).some(
+            (selector) =>
+              !STRIPE_CORNERS[stripe].every((corner) => squared.get(selector)?.[corner]),
+          ),
+        );
+        if (!side) continue;
+        const [first, second] =
+          side === "left" ? ["start-start", "end-start"] : ["start-end", "end-end"];
+        findings.push({
+          rule: "rounded-side-stripe",
+          line: lineOfIndex(
+            source,
+            offset + rule.bodyStart + declaration.index + declaration[0].indexOf(declaration[1]),
+          ),
+          message: `\`${property}: ${value.trim()}\` draws a side stripe whose corners may be rounded, so it bends around them — square that edge for this selector (\`border-${first}-radius: 0; border-${second}-radius: 0\`) or drop the stripe`,
+        });
       }
     }
   }
-  return [...failed.values()].map(({ property, value, index, side }) => {
-    const [first, second] =
-      side === "left" ? ["start-start", "end-start"] : ["start-end", "end-end"];
-    return {
-      rule: "rounded-side-stripe",
-      line: lineOfIndex(source, index),
-      message: `\`${property}: ${value}\` draws a side stripe whose corners may be rounded, so it bends around them — square that edge for this selector (\`border-${first}-radius: 0; border-${second}-radius: 0\`) or drop the stripe`,
-    };
-  });
+  return findings;
 }
 
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
