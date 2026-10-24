@@ -1754,72 +1754,79 @@ function applyStripes(body, bodyIndex, stripes) {
 }
 
 /**
- * Split a media condition into the viewport widths it requires and whatever
- * else it tests (color scheme, forced colors, hover, and so on), or null when
- * it tests only widths. A condition this cannot read keeps every width.
+ * Read a condition as the viewport widths it requires and the other tests it
+ * makes, each a [key, value] pair that must hold. A media feature such as
+ * (hover: none) is keyed by the feature, so it holds one value at a time.
+ * Any other condition this cannot read, such as @supports, @container, or a
+ * media query list, is one opaque test. @layer always applies.
  */
-function splitCondition(condition) {
+function readCondition(condition) {
+  const read = { min: 0, max: Infinity, tests: [] };
+  if (/^@layer\b/.test(condition)) return read;
   if (!condition.startsWith("@media") || /,|\bnot\b/.test(condition)) {
-    return { min: 0, max: Infinity, other: condition };
+    read.tests.push([condition, true]);
+    return read;
   }
-  let min = 0;
-  let max = Infinity;
   const rest = condition
     .slice("@media".length)
     .replace(/\((min|max)-width\s*:\s*([\d.]+)(px|rem|em)\)/g, (_, bound, size, unit) => {
       const px = Number(size) * (unit === "px" ? 1 : 16);
-      if (bound === "min") min = Math.max(min, px);
-      else max = Math.min(max, px);
+      if (bound === "min") read.min = Math.max(read.min, px);
+      else read.max = Math.min(read.max, px);
+      return "";
+    })
+    .replace(/\(\s*([a-z-]+)\s*(?::\s*([^)]+?))?\s*\)/g, (_, feature, value = "") => {
+      read.tests.push([`media:${feature}`, value.replace(/\s+/g, " ")]);
       return "";
     })
     .replace(/\b(?:and|only|screen|all)\b/g, "")
-    .replace(/\s+/g, " ")
     .trim();
-  return { min, max, other: rest || null };
+  for (const type of rest.split(/\s+/).filter(Boolean)) read.tests.push(["media-type", type]);
+  return read;
 }
 
 /**
- * The states a selector's conditions can be in together: each viewport width
- * on either side of every width breakpoint, with every consistent combination
- * of up to three of the conditions' other tests holding.
+ * The states a selector's conditions can be in together, as functions that
+ * say whether a condition holds: each viewport width on either side of every
+ * width breakpoint, with each test key at one of its values or none of them,
+ * at most three keys set at once.
  */
 function conditionStates(conditions) {
-  const parts = new Map(conditions.map((condition) => [condition, splitCondition(condition)]));
-  const others = [...new Set([...parts.values()].map(({ other }) => other).filter(Boolean))];
-  const bounds = [...parts.values()].flatMap(({ min, max }) => [min, max]);
+  const reads = new Map(conditions.map((condition) => [condition, readCondition(condition)]));
+  const domains = new Map();
+  for (const { tests } of reads.values()) {
+    for (const [key, value] of tests) domains.set(key, (domains.get(key) ?? new Set()).add(value));
+  }
+  const keys = [...domains.keys()];
+  const assignments = [];
+  const assign = (index, state, set) => {
+    if (index === keys.length) {
+      assignments.push(new Map(state));
+      return;
+    }
+    assign(index + 1, state, set);
+    if (set === 3) return;
+    for (const value of domains.get(keys[index])) {
+      state.set(keys[index], value);
+      assign(index + 1, state, set + 1);
+      state.delete(keys[index]);
+    }
+  };
+  assign(0, new Map(), 0);
+  const bounds = [...reads.values()].flatMap(({ min, max }) => [min, max]);
   const widths = [
     ...new Set([
       0,
       100000,
       ...bounds.filter(Number.isFinite).flatMap((b) => [b - 0.5, b, b + 0.5]),
     ]),
-  ];
-  const otherSets = [[]];
-  for (let a = 0; a < others.length; a += 1) {
-    otherSets.push([others[a]]);
-    for (let b = a + 1; b < others.length; b += 1) {
-      otherSets.push([others[a], others[b]]);
-      for (let c = b + 1; c < others.length; c += 1) {
-        otherSets.push([others[a], others[b], others[c]]);
-      }
-    }
-  }
-  // One media feature has one value at a time: (hover: hover) and
-  // (hover: none) never hold together.
-  const consistent = (holding) => {
-    const values = new Map();
-    for (const [, feature, value] of holding
-      .join(" ")
-      .matchAll(/\(([a-z-]+)\s*:\s*([^)]+?)\s*\)/g)) {
-      if ((values.get(feature) ?? value) !== value) return false;
-      values.set(feature, value);
-    }
-    return true;
-  };
+  ].filter((width) => width >= 0);
   return widths.flatMap((width) =>
-    otherSets.filter(consistent).map((holding) => (condition) => {
-      const { min, max, other } = parts.get(condition);
-      return width >= min && width <= max && (!other || holding.includes(other));
+    assignments.map((state) => (condition) => {
+      const { min, max, tests } = reads.get(condition);
+      return (
+        width >= min && width <= max && tests.every(([key, value]) => state.get(key) === value)
+      );
     }),
   );
 }
@@ -1831,10 +1838,11 @@ function conditionStates(conditions) {
  *
  * For each selector, the rule replays the selector's rules in this file in
  * source order, honoring !important, at each viewport width around their
- * breakpoints and with each combination of their other conditions, and fails
- * a stripe that renders with either corner on its side not squared. A radius
- * set elsewhere, by another selector or a component, cannot be seen here, so
- * it counts as rounded. Quotations keep their side border.
+ * breakpoints and with each combination of their media features and other
+ * conditions, and fails a stripe that renders with either corner on its side
+ * not squared. A radius set elsewhere, by another selector or a component,
+ * cannot be seen here, so it counts as rounded. Quotations keep their side
+ * border.
  */
 export function checkRoundedSideStripe(source, filename) {
   const bySelector = new Map();

@@ -1536,6 +1536,29 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule)).toHaveLength(0);
   });
 
+  test("a compound query inherits a simpler query's square corners", () => {
+    const src = `.card { border-radius: var(--radius-md); }
+@media (prefers-color-scheme: dark) { .card { border-radius: 0; } }
+@media (prefers-color-scheme: dark) and (hover: hover) { .card { border-left: 3px solid var(--accent-red); } }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("different @supports tests can hold together", () => {
+    const src = `.card { border-radius: var(--radius-md); }
+@supports (display: grid) { .card { border-radius: 0; border-left: 3px solid var(--accent-red); } }
+@supports (display: flex) { .card { border-radius: var(--radius-md); } }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([2]);
+  });
+
+  test("a layer always applies", () => {
+    const src = `@layer base { .card { border-radius: 0; } }
+.card { border-left: 3px solid var(--accent-red); }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
   test("an ignore marker does not suppress it", () => {
     const src = `/* kit-ui-check-ignore */\n.notice { border-left: 3px solid var(--accent-amber); }\n`;
     expect(checkSource(src, "app.css", rule)).toHaveLength(1);
