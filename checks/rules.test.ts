@@ -1509,6 +1509,25 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
   });
 
+  test("a compound query keeps its width limit", () => {
+    const src = `.card { border-radius: var(--radius-md); }
+@media (max-width: 900px) { .card { border-radius: 0; } }
+@media (max-width: 640px) and (prefers-color-scheme: dark) { .card { border-left: 3px solid var(--accent-red); } }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("a style reset removes the stripe", () => {
+    const src = `.a { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .a { border-left-style: none; border-radius: var(--radius-md); } }
+.b { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .b { border-style: none; border-radius: var(--radius-md); } }
+.c { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .c { border-left-style: dashed; border-radius: var(--radius-md); } }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([5]);
+  });
+
   test("an ignore marker does not suppress it", () => {
     const src = `/* kit-ui-check-ignore */\n.notice { border-left: 3px solid var(--accent-amber); }\n`;
     expect(checkSource(src, "app.css", rule)).toHaveLength(1);

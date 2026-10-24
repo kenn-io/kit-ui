@@ -1696,17 +1696,20 @@ function isStripeWidth(value) {
 }
 
 /**
- * Record, in declaration order, which side stripes one rule draws. Each entry
- * holds the declaration that draws it, or null once a later one removes it.
- * A transparent stripe still counts: a state rule elsewhere usually colors it.
+ * Record, in declaration order, which side stripes one rule draws. A border
+ * entry holds the declaration that draws it, or null once a later one removes
+ * it; a style entry is false once the side's style is none or hidden. A
+ * transparent stripe still counts: a state rule elsewhere usually colors it.
  */
 function applyStripes(body, bodyIndex, stripes) {
   const declarationRe =
-    /(?:^|;)\s*(border(?:-(left|right|inline-start|inline-end))?(-width)?|box-shadow)\s*:\s*([^;]*)/g;
+    /(?:^|;)\s*(border(?:-(left|right|inline-start|inline-end))?(-width|-style)?|box-shadow)\s*:\s*([^;]*)/g;
+  const painted = (style) => !/\b(?:none|hidden)\b/.test(style);
   let declaration;
   while ((declaration = declarationRe.exec(body)) !== null) {
     const property = declaration[1].toLowerCase();
     const [value, important] = priority(declaration[4]);
+    const part = declaration[3]?.toLowerCase();
     const drawn = {
       property,
       value: declaration[4].trim(),
@@ -1721,11 +1724,17 @@ function applyStripes(body, bodyIndex, stripes) {
       assign(stripes, "shadow-right", sides.has("right") ? drawn : null, important);
     } else if (declaration[2]) {
       const side = /^(?:left|inline-start)$/i.test(declaration[2]) ? "left" : "right";
-      const painted = declaration[3] || !/\b(?:none|hidden)\b/.test(value);
-      assign(stripes, `border-${side}`, painted && isStripeWidth(value) ? drawn : null, important);
-    } else if (declaration[3]) {
-      // border-width: top right bottom left. A side as wide as the top is a
-      // frame, not a stripe.
+      if (part !== "-width") assign(stripes, `style-${side}`, painted(value), important);
+      if (part !== "-style") {
+        assign(stripes, `border-${side}`, isStripeWidth(value) ? drawn : null, important);
+      }
+    } else if (part === "-style") {
+      // border-style: top right bottom left.
+      const [top = "", right = top, , left = right] = value.split(/\s+/);
+      assign(stripes, "style-left", painted(left), important);
+      assign(stripes, "style-right", painted(right), important);
+    } else if (part === "-width") {
+      // A side as wide as the top is a frame, not a stripe.
       const [top = "", right = top, , left = right] = value.split(/\s+/);
       assign(stripes, "border-left", left !== top && isStripeWidth(left) ? drawn : null, important);
       assign(
@@ -1738,16 +1747,21 @@ function applyStripes(body, bodyIndex, stripes) {
       // The border shorthand draws the same width on every side: a frame.
       assign(stripes, "border-left", null, important);
       assign(stripes, "border-right", null, important);
+      assign(stripes, "style-left", painted(value), important);
+      assign(stripes, "style-right", painted(value), important);
     }
   }
 }
 
 /**
- * The viewport widths a media condition requires, or null when it tests
- * something else as well (color scheme, forced colors, hover, and so on).
+ * Split a media condition into the viewport widths it requires and whatever
+ * else it tests (color scheme, forced colors, hover, and so on), or null when
+ * it tests only widths. A condition this cannot read keeps every width.
  */
-function widthRange(condition) {
-  if (!condition.startsWith("@media") || /,|\bnot\b/.test(condition)) return null;
+function splitCondition(condition) {
+  if (!condition.startsWith("@media") || /,|\bnot\b/.test(condition)) {
+    return { min: 0, max: Infinity, other: condition };
+  }
   let min = 0;
   let max = Infinity;
   const rest = condition
@@ -1757,19 +1771,22 @@ function widthRange(condition) {
       if (bound === "min") min = Math.max(min, px);
       else max = Math.min(max, px);
       return "";
-    });
-  return /^(?:\s|\band\b|\bonly\b|\bscreen\b|\ball\b)*$/.test(rest) ? { min, max } : null;
+    })
+    .replace(/\b(?:and|only|screen|all)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return { min, max, other: rest || null };
 }
 
 /**
  * The states a selector's conditions can be in together: each viewport width
  * on either side of every width breakpoint, with every combination of up to
- * three other conditions holding.
+ * three of the conditions' other tests holding.
  */
 function conditionStates(conditions) {
-  const ranges = new Map(conditions.map((condition) => [condition, widthRange(condition)]));
-  const others = conditions.filter((condition) => !ranges.get(condition));
-  const bounds = [...ranges.values()].filter(Boolean).flatMap(({ min, max }) => [min, max]);
+  const parts = new Map(conditions.map((condition) => [condition, splitCondition(condition)]));
+  const others = [...new Set([...parts.values()].map(({ other }) => other).filter(Boolean))];
+  const bounds = [...parts.values()].flatMap(({ min, max }) => [min, max]);
   const widths = [
     ...new Set([
       0,
@@ -1789,8 +1806,8 @@ function conditionStates(conditions) {
   }
   return widths.flatMap((width) =>
     otherSets.map((holding) => (condition) => {
-      const range = ranges.get(condition);
-      return range ? width >= range.min && width <= range.max : holding.includes(condition);
+      const { min, max, other } = parts.get(condition);
+      return width >= min && width <= max && (!other || holding.includes(other));
     }),
   );
 }
@@ -1832,7 +1849,8 @@ export function checkRoundedSideStripe(source, filename) {
       }
       for (const side of ["left", "right"]) {
         if (STRIPE_CORNERS[side].every((corner) => corners[corner]?.value)) continue;
-        for (const drawn of [stripes[`border-${side}`]?.value, stripes[`shadow-${side}`]?.value]) {
+        const border = stripes[`style-${side}`]?.value === false ? null : stripes[`border-${side}`];
+        for (const drawn of [border?.value, stripes[`shadow-${side}`]?.value]) {
           if (drawn) failed.set(drawn.index, { ...drawn, side });
         }
       }
