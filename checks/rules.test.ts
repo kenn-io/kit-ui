@@ -1485,6 +1485,30 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
   });
 
+  test("a narrower breakpoint inherits a broader one's square corners", () => {
+    const src = `.card { border-radius: var(--radius-md); }
+@media (max-width: 900px) { .card { border-radius: 0; } }
+@media (max-width: 640px) { .card { border-left: 3px solid var(--accent-red); } }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
+  test("a normal declaration does not override an !important one", () => {
+    const src = `.a { border-radius: var(--radius-md) !important; border-radius: 0; border-left: 3px solid var(--accent-red); }
+.b { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
+.b { border-radius: var(--radius-md); }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
+  });
+
+  test("counts a transparent stripe but not a border with no style", () => {
+    const src = `.a { border-radius: var(--radius-md); border-left: 3px solid transparent; }
+.b { border-radius: var(--radius-md); border-left: 3px none var(--accent-red); }
+.c { border-radius: var(--radius-md); border-left: 3px hidden; }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
+  });
+
   test("an ignore marker does not suppress it", () => {
     const src = `/* kit-ui-check-ignore */\n.notice { border-left: 3px solid var(--accent-amber); }\n`;
     expect(checkSource(src, "app.css", rule)).toHaveLength(1);

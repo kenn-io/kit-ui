@@ -360,11 +360,11 @@ export function checkSplitHandleOverride(source: any, filename: any): {
  * square edge it is fine. On a rounded edge it bends around the corners.
  *
  * For each selector, the rule replays the selector's rules in this file in
- * source order, under each combination of their media and other conditions
- * that can hold at once, and fails a stripe that renders with either corner
- * on its side not squared. A radius set elsewhere, by another selector or a
- * component, cannot be seen here, so it counts as rounded. Quotations keep
- * their side border.
+ * source order, honoring !important, at each viewport width around their
+ * breakpoints and with each combination of their other conditions, and fails
+ * a stripe that renders with either corner on its side not squared. A radius
+ * set elsewhere, by another selector or a component, cannot be seen here, so
+ * it counts as rounded. Quotations keep their side border.
  */
 export function checkRoundedSideStripe(source: any, filename: any): {
     rule: string;
