@@ -1431,6 +1431,28 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
   });
 
+  test("flags a stripe that an overlapping breakpoint rounds again", () => {
+    const src = `.card { border-radius: var(--radius-md); }
+@media (max-width: 900px) { .card { border-radius: 0; border-left: 3px solid var(--accent-red); } }
+@media (max-width: 640px) { .card { border-radius: var(--radius-md); } }
+.wide { border-radius: var(--radius-md); }
+@media (min-width: 900px) { .wide { border-radius: 0; border-left: 3px solid var(--accent-red); } }
+@media (max-width: 640px) { .wide { border-radius: var(--radius-md); } }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([2]);
+  });
+
+  test("allows rounded corners where a breakpoint removes the stripe", () => {
+    const src = `.a { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .a { border-left: 0; border-radius: var(--radius-md); } }
+.b { border-radius: 0; box-shadow: inset 3px 0 0 var(--accent-red); }
+@media (max-width: 640px) { .b { box-shadow: none; border-radius: var(--radius-md); } }
+.c { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .c { border: 1px solid var(--border-default); border-radius: var(--radius-md); } }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
   test("reads !important and var() fallbacks as single radii", () => {
     const src = `.a { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
 .b { border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0; border-left: 3px solid var(--accent-red); }
@@ -1453,6 +1475,14 @@ describe("rounded-side-stripe", () => {
       .md :global(blockquote) { border-left: 3px solid var(--border-default); }`,
     );
     expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("allows a thick frame and flags a thicker side", () => {
+    const src = `.frame { border-radius: 24px; border: 6px solid var(--text-primary); }
+.frame2 { border-radius: 24px; border-width: 4px; }
+.side { border-radius: 24px; border-width: 1px 1px 1px 3px; }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([3]);
   });
 
   test("an ignore marker does not suppress it", () => {

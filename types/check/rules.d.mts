@@ -357,14 +357,14 @@ export function checkSplitHandleOverride(source: any, filename: any): {
 /**
  * A side stripe is a colored bar on one edge of a box: a side border of 2px
  * or more, or an inset box-shadow offset only sideways by 2px or more. On a
- * square edge it is fine. On a rounded edge it bends around the corners, so
- * the rule requires both corners on the stripe's side to be squared by a rule
- * with the same selector in this file that applies wherever the stripe does:
- * the base rule a media query overrides counts, a reset inside a media query
- * does not count for the stripe outside it, and a media query that rounds the
- * corners again fails the stripe. A radius set elsewhere, by a component or a shared class, cannot
- * be seen here, so it does not count.
- * Quotations keep their side border.
+ * square edge it is fine. On a rounded edge it bends around the corners.
+ *
+ * For each selector, the rule replays the selector's rules in this file in
+ * source order, under each combination of their media and other conditions
+ * that can hold at once, and fails a stripe that renders with either corner
+ * on its side not squared. A radius set elsewhere, by another selector or a
+ * component, cannot be seen here, so it counts as rounded. Quotations keep
+ * their side border.
  */
 export function checkRoundedSideStripe(source: any, filename: any): {
     rule: string;

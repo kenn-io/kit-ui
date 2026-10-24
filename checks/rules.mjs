@@ -1678,86 +1678,139 @@ function applyCornerRadii(body, square) {
   return square;
 }
 
+/** Whether a border width draws a stripe: 2px or more, or medium or thick. */
+function isStripeWidth(value) {
+  return (
+    /\b(?:medium|thick)\b/.test(value) ||
+    [...value.matchAll(/(?<![\w-])([\d.]+)(px|rem|em)\b/g)].some(
+      ([, size, unit]) => Number(size) * (unit === "px" ? 1 : 16) >= 2,
+    )
+  );
+}
+
 /**
- * A side stripe is a colored bar on one edge of a box: a side border of 2px
- * or more, or an inset box-shadow offset only sideways by 2px or more. On a
- * square edge it is fine. On a rounded edge it bends around the corners, so
- * the rule requires both corners on the stripe's side to be squared by a rule
- * with the same selector in this file that applies wherever the stripe does:
- * the base rule a media query overrides counts, a reset inside a media query
- * does not count for the stripe outside it, and a media query that rounds the
- * corners again fails the stripe. A radius set elsewhere, by a component or a shared class, cannot
- * be seen here, so it does not count.
- * Quotations keep their side border.
+ * Record, in declaration order, which side stripes one rule draws. Each entry
+ * holds the declaration that draws it, or null once a later one removes it.
  */
-export function checkRoundedSideStripe(source, filename) {
-  const findings = [];
-  const blocks = styleBlocks(source, filename).map(({ css, offset }) => ({
-    offset,
-    rules: cssRulesWithNesting(blankComments(css)),
-  }));
-  const selectorKey = (rule) => (rule.selector ?? "").replace(/\s+/g, " ").trim();
-  const ordered = blocks
-    .flatMap((block) => block.rules.map((rule) => ({ rule, at: block.offset + rule.bodyStart })))
-    .sort((a, b) => a.at - b.at)
-    .map(({ rule }) => rule);
-  // A rule applies wherever its conditions are a prefix of the stripe's.
-  const appliesWith = (rule, stripe) =>
-    rule.conditions.length <= stripe.conditions.length &&
-    rule.conditions.every((condition, index) => condition === stripe.conditions[index]);
-  for (const { rules, offset } of blocks) {
-    for (const rule of rules) {
-      if (/\bblockquote\b/.test(rule.selector ?? "")) continue;
-      // The stripe applies in its own context and in every narrower context
-      // where a same-selector rule may round its corners again.
-      const sameSelector = ordered.filter((other) => selectorKey(other) === selectorKey(rule));
-      const contexts = [rule, ...sameSelector.filter((other) => appliesWith(rule, other))];
-      const squares = contexts.map((context) => {
-        const square = [false, false, false, false];
-        for (const other of sameSelector) {
-          if (appliesWith(other, context)) applyCornerRadii(other.body, square);
-        }
-        return square;
-      });
-      const declarationRe =
-        /(?:^|;)\s*(border-(left|right|inline-start|inline-end)(?:-width)?|box-shadow)\s*:\s*([^;]*)/g;
-      let declaration;
-      while ((declaration = declarationRe.exec(rule.body)) !== null) {
-        const property = declaration[1].toLowerCase();
-        const value = declaration[3];
-        const sides = [];
-        if (property === "box-shadow") {
-          for (const [, x] of value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0(?:px)?\b/g)) {
-            if (Math.abs(Number(x)) >= 2) sides.push(Number(x) > 0 ? "left" : "right");
-          }
-        } else if (
-          /\b(?:medium|thick)\b/.test(value) ||
-          [...value.matchAll(/(?<![\w-])([\d.]+)(px|rem|em)\b/g)].some(
-            ([, size, unit]) => Number(size) * (unit === "px" ? 1 : 16) >= 2,
-          )
-        ) {
-          sides.push(
-            /^(?:left|inline-start)$/.test(declaration[2].toLowerCase()) ? "left" : "right",
-          );
-        }
-        const side = sides.find((s) =>
-          squares.some((square) => !STRIPE_CORNERS[s].every((corner) => square[corner])),
-        );
-        if (!side) continue;
-        const [first, second] =
-          side === "left" ? ["start-start", "end-start"] : ["start-end", "end-end"];
-        findings.push({
-          rule: "rounded-side-stripe",
-          line: lineOfIndex(
-            source,
-            offset + rule.bodyStart + declaration.index + declaration[0].indexOf(declaration[1]),
-          ),
-          message: `\`${property}: ${value.trim()}\` draws a side stripe whose corners may be rounded, so it bends around them — square that edge for this selector (\`border-${first}-radius: 0; border-${second}-radius: 0\`) or drop the stripe`,
-        });
+function applyStripes(body, bodyIndex, stripes) {
+  const declarationRe =
+    /(?:^|;)\s*(border(?:-(left|right|inline-start|inline-end))?(-width)?|box-shadow)\s*:\s*([^;]*)/g;
+  let declaration;
+  while ((declaration = declarationRe.exec(body)) !== null) {
+    const property = declaration[1].toLowerCase();
+    const value = declaration[4];
+    const drawn = {
+      property,
+      value: value.trim(),
+      index: bodyIndex + declaration.index + declaration[0].indexOf(declaration[1]),
+    };
+    if (property === "box-shadow") {
+      const sides = new Set();
+      for (const [, x] of value.matchAll(/\binset\s+(-?[\d.]+)px\s+0(?:px)?\s+0(?:px)?\b/g)) {
+        if (Math.abs(Number(x)) >= 2) sides.add(Number(x) > 0 ? "left" : "right");
+      }
+      stripes.shadow.left = sides.has("left") ? drawn : null;
+      stripes.shadow.right = sides.has("right") ? drawn : null;
+    } else if (declaration[2]) {
+      const side = /^(?:left|inline-start)$/i.test(declaration[2]) ? "left" : "right";
+      stripes.border[side] = isStripeWidth(value) ? drawn : null;
+    } else if (declaration[3]) {
+      // border-width: top right bottom left. A side as wide as the top is a
+      // frame, not a stripe.
+      const [top = "", right = top, , left = right] = value.trim().split(/\s+/);
+      stripes.border.left = left !== top && isStripeWidth(left) ? drawn : null;
+      stripes.border.right = right !== top && isStripeWidth(right) ? drawn : null;
+    } else {
+      // The border shorthand draws the same width on every side: a frame.
+      stripes.border.left = stripes.border.right = null;
+    }
+  }
+}
+
+/** Whether a set of media conditions can hold at once, judging viewport widths only. */
+function canOverlap(conditions) {
+  let min = 0;
+  let max = Infinity;
+  for (const condition of conditions) {
+    if (!condition.startsWith("@media") || /,|\bnot\b/.test(condition)) continue;
+    for (const [, bound, size, unit] of condition.matchAll(
+      /\((min|max)-width\s*:\s*([\d.]+)(px|rem|em)\)/g,
+    )) {
+      const px = Number(size) * (unit === "px" ? 1 : 16);
+      if (bound === "min") min = Math.max(min, px);
+      else max = Math.min(max, px);
+    }
+  }
+  return min <= max;
+}
+
+/** Every combination of up to three conditions, starting with none. */
+function conditionSets(conditions) {
+  const sets = [[]];
+  for (let a = 0; a < conditions.length; a += 1) {
+    sets.push([conditions[a]]);
+    for (let b = a + 1; b < conditions.length; b += 1) {
+      sets.push([conditions[a], conditions[b]]);
+      for (let c = b + 1; c < conditions.length; c += 1) {
+        sets.push([conditions[a], conditions[b], conditions[c]]);
       }
     }
   }
-  return findings;
+  return sets.filter(canOverlap);
+}
+
+/**
+ * A side stripe is a colored bar on one edge of a box: a side border of 2px
+ * or more, or an inset box-shadow offset only sideways by 2px or more. On a
+ * square edge it is fine. On a rounded edge it bends around the corners.
+ *
+ * For each selector, the rule replays the selector's rules in this file in
+ * source order, under each combination of their media and other conditions
+ * that can hold at once, and fails a stripe that renders with either corner
+ * on its side not squared. A radius set elsewhere, by another selector or a
+ * component, cannot be seen here, so it counts as rounded. Quotations keep
+ * their side border.
+ */
+export function checkRoundedSideStripe(source, filename) {
+  const bySelector = new Map();
+  for (const { css, offset } of styleBlocks(source, filename)) {
+    for (const rule of cssRulesWithNesting(blankComments(css))) {
+      const key = (rule.selector ?? "").replace(/\s+/g, " ").trim();
+      if (/\bblockquote\b/.test(key)) continue;
+      const rules = bySelector.get(key) ?? [];
+      rules.push({ ...rule, at: offset + rule.bodyStart });
+      bySelector.set(key, rules);
+    }
+  }
+  const failed = new Map();
+  for (const rules of bySelector.values()) {
+    rules.sort((a, b) => a.at - b.at);
+    const conditions = [...new Set(rules.flatMap((rule) => rule.conditions))];
+    for (const holding of conditionSets(conditions)) {
+      const square = [false, false, false, false];
+      const stripes = { border: { left: null, right: null }, shadow: { left: null, right: null } };
+      for (const rule of rules) {
+        if (!rule.conditions.every((condition) => holding.includes(condition))) continue;
+        applyCornerRadii(rule.body, square);
+        applyStripes(rule.body, rule.at, stripes);
+      }
+      for (const side of ["left", "right"]) {
+        if (STRIPE_CORNERS[side].every((corner) => square[corner])) continue;
+        for (const drawn of [stripes.border[side], stripes.shadow[side]]) {
+          if (drawn) failed.set(drawn.index, { ...drawn, side });
+        }
+      }
+    }
+  }
+  return [...failed.values()].map(({ property, value, index, side }) => {
+    const [first, second] =
+      side === "left" ? ["start-start", "end-start"] : ["start-end", "end-end"];
+    return {
+      rule: "rounded-side-stripe",
+      line: lineOfIndex(source, index),
+      message: `\`${property}: ${value}\` draws a side stripe whose corners may be rounded, so it bends around them — square that edge for this selector (\`border-${first}-radius: 0; border-${second}-radius: 0\`) or drop the stripe`,
+    };
+  });
 }
 
 /** Rules a kit-ui-check-ignore marker or --disable cannot turn off. */
