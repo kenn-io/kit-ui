@@ -1528,6 +1528,14 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([5]);
   });
 
+  test("never combines two values of one media feature", () => {
+    const src = `.card { border-radius: var(--radius-md); }
+@media (hover: hover) { .card { border-radius: 0; border-left: 3px solid var(--accent-red); } }
+@media (hover: none) { .card { border-radius: var(--radius-md); } }
+`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(0);
+  });
+
   test("an ignore marker does not suppress it", () => {
     const src = `/* kit-ui-check-ignore */\n.notice { border-left: 3px solid var(--accent-amber); }\n`;
     expect(checkSource(src, "app.css", rule)).toHaveLength(1);

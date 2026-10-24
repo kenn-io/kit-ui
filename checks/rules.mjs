@@ -1780,8 +1780,8 @@ function splitCondition(condition) {
 
 /**
  * The states a selector's conditions can be in together: each viewport width
- * on either side of every width breakpoint, with every combination of up to
- * three of the conditions' other tests holding.
+ * on either side of every width breakpoint, with every consistent combination
+ * of up to three of the conditions' other tests holding.
  */
 function conditionStates(conditions) {
   const parts = new Map(conditions.map((condition) => [condition, splitCondition(condition)]));
@@ -1804,8 +1804,20 @@ function conditionStates(conditions) {
       }
     }
   }
+  // One media feature has one value at a time: (hover: hover) and
+  // (hover: none) never hold together.
+  const consistent = (holding) => {
+    const values = new Map();
+    for (const [, feature, value] of holding
+      .join(" ")
+      .matchAll(/\(([a-z-]+)\s*:\s*([^)]+?)\s*\)/g)) {
+      if ((values.get(feature) ?? value) !== value) return false;
+      values.set(feature, value);
+    }
+    return true;
+  };
   return widths.flatMap((width) =>
-    otherSets.map((holding) => (condition) => {
+    otherSets.filter(consistent).map((holding) => (condition) => {
       const { min, max, other } = parts.get(condition);
       return width >= min && width <= max && (!other || holding.includes(other));
     }),
