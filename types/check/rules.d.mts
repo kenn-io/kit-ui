@@ -354,6 +354,23 @@ export function checkSplitHandleOverride(source: any, filename: any): {
     line: number;
     message: string;
 }[];
+/**
+ * A side stripe is a colored bar on one edge of a box: a side border of 2px
+ * or more, or an inset box-shadow offset only sideways by 2px or more. On a
+ * square edge it is fine. On a rounded edge it bends around the corners.
+ *
+ * A stripe passes when, for each selector in its rule's selector list, rules
+ * in this file for that selector square both corners on the stripe's side.
+ * Media queries and other conditions are not modeled: a square corner in any
+ * of them counts. A radius set elsewhere, by another selector or a component,
+ * cannot be seen here, so it counts as rounded. Quotations keep their side
+ * border.
+ */
+export function checkRoundedSideStripe(source: any, filename: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Run all (or the selected) rules on one file's source. */
 export function checkSource(source: any, filename: any, ruleNames?: string[]): any[];
 /**
@@ -419,4 +436,5 @@ export const ALL_RULES: {
     "legacy-svelte": typeof checkLegacySvelte;
     "chip-label-override": typeof checkChipLabelOverride;
     "split-handle-override": typeof checkSplitHandleOverride;
+    "rounded-side-stripe": typeof checkRoundedSideStripe;
 };

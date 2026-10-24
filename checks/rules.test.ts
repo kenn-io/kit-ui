@@ -1364,3 +1364,103 @@ describe("split-handle-override", () => {
     expect(checkSource(src, "app.css", rule)).toHaveLength(1);
   });
 });
+
+describe("rounded-side-stripe", () => {
+  const rule = ["rounded-side-stripe"];
+  const lines = (src: string) => checkSource(src, "app.css", rule).map((f) => f.line);
+
+  test.each([
+    "border-left: 3px solid var(--accent-amber);",
+    "border-inline-start: 0.25rem solid var(--accent-red);",
+    "border-right-width: thick;",
+    "box-shadow: inset 3px 0 0 var(--accent-blue);",
+    "box-shadow: var(--shadow-sm), inset -2px 0 0px var(--accent-blue);",
+  ])("flags %s on a rounded box", (declaration) => {
+    const src = svelte(`.notice {\n  border-radius: var(--radius-md);\n  ${declaration}\n}`);
+    const findings = checkSource(src, "A.svelte", rule);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.line).toBe(6);
+    expect(findings[0]!.message).toContain("radius: 0");
+  });
+
+  test("flags a stripe whose corners no rule for its selector squares", () => {
+    const src = `.card { &.failed { border-left: 3px solid var(--accent-red); } }
+@media (max-width: 640px) { .row { border-left-width: 4px; } }
+.other { border-radius: 0; }
+.item { border-left: 3px solid var(--accent-red); }
+`;
+    expect(lines(src)).toEqual([1, 2, 4]);
+  });
+
+  test("flags a stripe that squares only the opposite edge", () => {
+    const src = `.a { border-radius: 0 6px 6px 0; border-right: 3px solid var(--accent-red); }
+.b { border-start-start-radius: 0; border-left: 3px solid var(--accent-red); }
+.c { border-radius: 0; border-top-left-radius: 4px; border-left: 3px solid var(--accent-red); }
+`;
+    expect(lines(src)).toEqual([1, 2, 3]);
+  });
+
+  test("allows a stripe on a square edge", () => {
+    const src = `.a { border-radius: 0; border-left: 3px solid var(--accent-amber); }
+.b { border-radius: 0 6px 6px 0; border-left: 3px solid var(--accent-amber); }
+.c { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
+.d { border-top-right-radius: 0; border-bottom-right-radius: 0; border-inline-end: 3px solid var(--accent-red); }
+.e { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
+.f { border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0; border-left: 3px solid var(--accent-red); }
+`;
+    expect(lines(src)).toEqual([]);
+  });
+
+  test("counts square corners from any rule for the same selector", () => {
+    const src = `.view.current { border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 2px 0 0 var(--accent-blue); }
+@media (forced-colors: active) { .view.current { box-shadow: inset 2px 0 0 SelectedItemText; } }
+.a, .b { border-radius: 0; }
+.a { border-left: 3px solid var(--accent-red); }
+`;
+    expect(lines(src)).toEqual([]);
+  });
+
+  test("flags a selector list when any of its selectors has rounded corners", () => {
+    const src = `.a { border-radius: 0; }
+.a, .b { border-left: 3px solid var(--accent-red); }
+`;
+    expect(lines(src)).toEqual([2]);
+  });
+
+  test("reads a var() fallback as one radius", () => {
+    const src = `.c { border-radius: var(--radius, 0 0) 0; border-left: 3px solid var(--accent-red); }\n`;
+    expect(lines(src)).toEqual([1]);
+  });
+
+  test("allows a thick frame and flags a thicker side", () => {
+    const src = `.frame { border-radius: 24px; border: 6px solid var(--text-primary); }
+.frame2 { border-radius: 24px; border-width: 4px; }
+.side { border-radius: 24px; border-width: 1px 1px 1px 3px; }
+`;
+    expect(lines(src)).toEqual([3]);
+  });
+
+  test("counts a transparent stripe but not a border with no style", () => {
+    const src = `.a { border-radius: var(--radius-md); border-left: 3px solid transparent; }
+.b { border-radius: var(--radius-md); border-left: 3px none var(--accent-red); }
+.c { border-radius: var(--radius-md); border-left: 3px hidden; }
+`;
+    expect(lines(src)).toEqual([1]);
+  });
+
+  test("allows dividers, focus rings, and quotations", () => {
+    const src = svelte(
+      `.pane { border-left: 1px solid var(--border-default); }
+      .split { border-inline-start: var(--border-width) solid var(--border-muted); }
+      .row { border-left: 0; }
+      .chip { box-shadow: inset 0 0 0 1px var(--accent-blue); }
+      .md :global(blockquote) { border-left: 3px solid var(--border-default); }`,
+    );
+    expect(checkSource(src, "A.svelte", rule)).toHaveLength(0);
+  });
+
+  test("an ignore marker does not suppress it", () => {
+    const src = `/* kit-ui-check-ignore */\n.notice { border-left: 3px solid var(--accent-amber); }\n`;
+    expect(checkSource(src, "app.css", rule)).toHaveLength(1);
+  });
+});
