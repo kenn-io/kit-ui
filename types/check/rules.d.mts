@@ -361,7 +361,8 @@ export function checkSplitHandleOverride(source: any, filename: any): {
  * the rule requires both corners on the stripe's side to be squared by a rule
  * with the same selector in this file that applies wherever the stripe does:
  * the base rule a media query overrides counts, a reset inside a media query
- * does not count for the stripe outside it. A radius set elsewhere, by a component or a shared class, cannot
+ * does not count for the stripe outside it, and a media query that rounds the
+ * corners again fails the stripe. A radius set elsewhere, by a component or a shared class, cannot
  * be seen here, so it does not count.
  * Quotations keep their side border.
  */

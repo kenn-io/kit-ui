@@ -1422,6 +1422,15 @@ describe("rounded-side-stripe", () => {
     expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
   });
 
+  test("flags a squared stripe that a media query rounds again", () => {
+    const src = `.card { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .card { border-radius: var(--radius-md); } }
+.ok { border-radius: 0; border-left: 3px solid var(--accent-red); }
+@media (max-width: 640px) { .ok { padding: 0; } }
+`;
+    expect(checkSource(src, "app.css", rule).map((f) => f.line)).toEqual([1]);
+  });
+
   test("reads !important and var() fallbacks as single radii", () => {
     const src = `.a { border-radius: 0 !important; border-left: 3px solid var(--accent-red); }
 .b { border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0; border-left: 3px solid var(--accent-red); }

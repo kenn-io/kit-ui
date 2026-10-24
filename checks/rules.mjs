@@ -1685,7 +1685,8 @@ function applyCornerRadii(body, square) {
  * the rule requires both corners on the stripe's side to be squared by a rule
  * with the same selector in this file that applies wherever the stripe does:
  * the base rule a media query overrides counts, a reset inside a media query
- * does not count for the stripe outside it. A radius set elsewhere, by a component or a shared class, cannot
+ * does not count for the stripe outside it, and a media query that rounds the
+ * corners again fails the stripe. A radius set elsewhere, by a component or a shared class, cannot
  * be seen here, so it does not count.
  * Quotations keep their side border.
  */
@@ -1707,12 +1708,17 @@ export function checkRoundedSideStripe(source, filename) {
   for (const { rules, offset } of blocks) {
     for (const rule of rules) {
       if (/\bblockquote\b/.test(rule.selector ?? "")) continue;
-      const square = [false, false, false, false];
-      for (const other of ordered) {
-        if (selectorKey(other) === selectorKey(rule) && appliesWith(other, rule)) {
-          applyCornerRadii(other.body, square);
+      // The stripe applies in its own context and in every narrower context
+      // where a same-selector rule may round its corners again.
+      const sameSelector = ordered.filter((other) => selectorKey(other) === selectorKey(rule));
+      const contexts = [rule, ...sameSelector.filter((other) => appliesWith(rule, other))];
+      const squares = contexts.map((context) => {
+        const square = [false, false, false, false];
+        for (const other of sameSelector) {
+          if (appliesWith(other, context)) applyCornerRadii(other.body, square);
         }
-      }
+        return square;
+      });
       const declarationRe =
         /(?:^|;)\s*(border-(left|right|inline-start|inline-end)(?:-width)?|box-shadow)\s*:\s*([^;]*)/g;
       let declaration;
@@ -1734,7 +1740,9 @@ export function checkRoundedSideStripe(source, filename) {
             /^(?:left|inline-start)$/.test(declaration[2].toLowerCase()) ? "left" : "right",
           );
         }
-        const side = sides.find((s) => !STRIPE_CORNERS[s].every((corner) => square[corner]));
+        const side = sides.find((s) =>
+          squares.some((square) => !STRIPE_CORNERS[s].every((corner) => square[corner])),
+        );
         if (!side) continue;
         const [first, second] =
           side === "left" ? ["start-start", "end-start"] : ["start-end", "end-end"];
