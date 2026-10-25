@@ -22,3 +22,17 @@ test("stack caps at 5 concurrent flashes and dismisses individually", async ({ p
   await page.locator(".kit-flash-banner__dismiss").first().click();
   await expect(banners).toHaveCount(before - 1);
 });
+
+test("an action runs once and dismisses its banner", async ({ page }) => {
+  await gotoPage(page, "flash-banner");
+  const count = page.getByTestId("flash-archived");
+  const banner = page.locator(".kit-flash-banner", { hasText: "Archived" });
+
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(count).toHaveText("Archived: 1");
+  await expect(banner).toHaveCount(1);
+
+  await banner.getByRole("button", { name: "Undo" }).click();
+  await expect(count).toHaveText("Archived: 0");
+  await expect(banner).toHaveCount(0);
+});

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { Button, showFlash, type FlashTone } from "../../lib/index.js";
+
+  let archived = $state(0);
   import DemoSection from "../DemoSection.svelte";
 
   const tones: FlashTone[] = ["info", "success", "warning", "danger"];
@@ -55,4 +57,25 @@ showFlash("Deploy failed — rolling back", { tone: "danger", durationMs: 8000 }
   {#each tones as tone (tone)}
     <Button label={tone} onclick={() => showFlash(toneMessages[tone] ?? tone, { tone })} />
   {/each}
+</DemoSection>
+
+<DemoSection
+  title="Actions"
+  description="action adds one follow-up control, such as Undo, after the message. Running it dismisses the flash; showFlash returns the flash id for programmatic dismissal."
+  code={`showFlash("Archived", {
+  durationMs: 8000,
+  action: { label: "Undo", onclick: () => restore() },
+});`}
+>
+  <Button
+    label="Archive"
+    onclick={() => {
+      archived += 1;
+      showFlash("Archived", {
+        durationMs: 8000,
+        action: { label: "Undo", onclick: () => (archived -= 1) },
+      });
+    }}
+  />
+  <span data-testid="flash-archived">Archived: {archived}</span>
 </DemoSection>

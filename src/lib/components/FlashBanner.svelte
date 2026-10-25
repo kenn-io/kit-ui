@@ -1,6 +1,11 @@
 <script lang="ts">
   import XIcon from "@lucide/svelte/icons/x";
-  import { dismissFlash, getFlashes, type FlashTone } from "../stores/flash.svelte.js";
+  import {
+    dismissFlash,
+    getFlashes,
+    runFlashAction,
+    type FlashTone,
+  } from "../stores/flash.svelte.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -51,6 +56,13 @@
               >{toneLabel(tone)}:
             </span>{/if}{flash.message}</span
         >
+        {#if flash.action}
+          <button
+            type="button"
+            class="kit-flash-banner__action"
+            onclick={() => runFlashAction(flash.id)}>{flash.action.label}</button
+          >
+        {/if}
         <IconButton
           size="sm"
           class="kit-flash-banner__dismiss"
@@ -141,6 +153,29 @@
     /* Long messages wrap at the stack's max-width; unbroken tokens
      * (URLs, ids) break rather than overflowing the card. */
     overflow-wrap: anywhere;
+  }
+
+  /* The action is a text button in the banner's ink: the message stays
+   * the primary content and the action reads as its follow-up. */
+  .kit-flash-banner__action {
+    flex: none;
+    padding: var(--space-1) var(--space-3);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--kit-tone-ink, var(--accent-blue));
+    font: inherit;
+    font-weight: var(--font-weight-semibold, 600);
+    cursor: pointer;
+  }
+
+  .kit-flash-banner__action:hover {
+    background: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 12%, transparent);
+  }
+
+  .kit-flash-banner__action:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
   }
 
   /* The dismiss chrome is a stock IconButton; only its placement in the
