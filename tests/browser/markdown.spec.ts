@@ -14,13 +14,29 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
 }
 
 for (const method of ["render", "renderSync"] as const) {
-  test(`${method} uses tokenizer context and fallback to preserve a wrapped diff beside prose`, async ({
+  test(`${method} combines extensions and tokenizer overrides around a sanitized wrapped diff`, async ({
     page,
   }) => {
     await gotoPage(page, "markdown");
     const html = await page.evaluate(async (method) => {
       const { createMarkdownRenderer, escapeHtml } = await import("/src/lib/utils/markdown.ts");
       const renderer = createMarkdownRenderer({
+        extensions: [
+          {
+            name: "itemRef",
+            level: "inline",
+            start(src) {
+              return src.indexOf("@item");
+            },
+            tokenizer(src) {
+              if (!src.startsWith("@item")) return;
+              return { type: "itemRef", raw: "@item", text: "Item" };
+            },
+            renderer() {
+              return '<a href="https://example.com/items/1">Item</a>';
+            },
+          },
+        ],
         tokenizer: {
           paragraph(src) {
             const boundary = src.indexOf("\n<current_file_diff>");
@@ -40,17 +56,17 @@ for (const method of ["render", "renderSync"] as const) {
               type: "html",
               raw: match[0],
               block: true,
-              text: `<pre>${escapeHtml(match[0])}</pre>\n`,
+              text: `<pre onclick="alert(1)">${escapeHtml(match[0])}</pre>\n`,
             };
           },
         },
       });
       return renderer[method](
-        "Before **default**.\n<current_file_diff>\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n</current_file_diff>\nAfter **default**.",
+        "Before **default** @item.\n<current_file_diff>\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n</current_file_diff>\nAfter **default** @item.",
       );
     }, method);
     expect(html).toBe(
-      "<p>Before <strong>default</strong>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong>.</p>\n",
+      '<p>Before <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n',
     );
   });
 

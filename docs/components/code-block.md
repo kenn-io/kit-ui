@@ -89,7 +89,7 @@ const renderer = createMarkdownRenderer({
   // override a built-in tokenizer, with Marked's native `this` context
   tokenizer: {
     paragraph(src) {
-      const match = /^Note: ([^\n]+)(?:\n|$)/.exec(src);
+      const match = /^(Note: [^\n]+)(?:\n|$)/.exec(src);
       if (!match) return false;
       return {
         type: "paragraph",
@@ -203,8 +203,9 @@ grammar-fetch protection). Constants are exported
   per repo context; interactive task lists (checkbox indexes, drag
   handles) remain a Forge renderer concern layered on top. The block
   slicer (`renderMarkdownBlocks`) is Forge-specific and stays there.
-- **agentsview** can move its bash-wrapper extensions to `extensions`
-  and built-in paragraph/HTML overrides to `tokenizer`. Its custom XML
+- **agentsview** currently uses its own renderer fork with bash-wrapper
+  extensions and built-in paragraph/HTML overrides. A migration would
+  pass those through `extensions` and `tokenizer`, respectively. Its custom XML
   literal escaping and `asset://` URL resolution remain app-side until
   separately ported; per-message `CodeBlock` swaps to
   kit-ui's (search-mark integration hooks pending the browser test infra
