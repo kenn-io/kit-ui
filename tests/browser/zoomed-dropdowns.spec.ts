@@ -6,10 +6,15 @@ type Component = "SelectDropdown" | "Typeahead" | "Menu";
 // Mounts one control alone in a fixed, CSS-zoomed box at the bottom-right
 // of the viewport, where an unzoomed-coordinate bug pushes the menu off
 // screen.
-async function mountZoomed(page: Page, component: Component, zoom: number): Promise<void> {
+async function mountZoomed(
+  page: Page,
+  component: Component,
+  zoom: number,
+  extraModels = 0,
+): Promise<void> {
   await gotoPage(page, "typeahead");
   await page.evaluate(
-    async ({ component, zoom }) => {
+    async ({ component, zoom, extraModels }) => {
       const { mount } = await import("/node_modules/.vite/deps/svelte.js");
       const { default: Control } =
         component === "SelectDropdown"
@@ -29,7 +34,7 @@ async function mountZoomed(page: Page, component: Component, zoom: number): Prom
         target,
         props:
           component === "Menu"
-            ? { onchange: select }
+            ? { onchange: select, extraModels }
             : component === "SelectDropdown"
               ? {
                   title: "Model",
@@ -52,7 +57,7 @@ async function mountZoomed(page: Page, component: Component, zoom: number): Prom
                 },
       });
     },
-    { component, zoom },
+    { component, zoom, extraModels },
   );
 }
 
@@ -113,5 +118,22 @@ for (const component of ["SelectDropdown", "Typeahead", "Menu"] as const) {
     expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(triggerBounds.y + 1);
     await choice(page, component).click();
     await expect(page.locator("#zoomed-control")).toHaveAttribute("data-value", "deep");
+  });
+}
+
+for (const zoom of [0.75, 1.3]) {
+  test(`a long Menu stays inside the viewport at CSS zoom ${zoom}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await mountZoomed(page, "Menu", zoom, 40);
+    await trigger(page, "Menu").click();
+    const panel = menu(page, "Menu");
+    await expect(panel).toBeVisible();
+    const bounds = await panel.boundingBox();
+    if (!bounds) throw new Error("Menu did not render");
+    expect(bounds.y).toBeGreaterThanOrEqual(0);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(800);
+    expect(bounds.height).toBeLessThanOrEqual(800 * 0.8 + 1);
+    await panel.getByRole("menuitemradio", { name: "model-40" }).click();
+    await expect(page.locator("#zoomed-control")).toHaveAttribute("data-value", "model-40");
   });
 }

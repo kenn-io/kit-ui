@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, tick, type Snippet } from "svelte";
+  import { flushSync, getContext, tick, type Snippet } from "svelte";
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import { menuContextKey, type MenuContext } from "./menu.js";
@@ -15,6 +15,7 @@
   const menu = getContext<MenuContext>(menuContextKey);
   let element = $state<HTMLDivElement>();
   let position = $state("");
+  let maxHeight = $state<string>();
   let typeahead = "";
   let typeaheadTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -68,6 +69,13 @@
     // Engines without currentCSSZoom (WebKit's Linux ports) get the
     // pre-zoom-aware maths; dividing by undefined would NaN the whole style.
     const zoom = element.currentCSSZoom ?? 1;
+    // CSS zoom scales vh too, so 80vh can overflow a zoomed-in window. Cap
+    // in unzoomed units and apply it before measuring the menu's height.
+    const limit = `${Math.floor((window.innerHeight / zoom) * 0.8)}px`;
+    if (maxHeight !== limit) {
+      maxHeight = limit;
+      flushSync();
+    }
     const anchor = menu.anchor;
     if (anchor) {
       const point = {
@@ -159,6 +167,7 @@
     id={`${menu.id}-content`}
     class={["kit-menu__content", "kit-popover-card", className]}
     style={position}
+    style:max-height={maxHeight}
     role="menu"
     tabindex="-1"
     aria-label={ariaLabel}
