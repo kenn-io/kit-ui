@@ -36,3 +36,25 @@ test("an action runs once and dismisses its banner", async ({ page }) => {
   await expect(count).toHaveText("Archived: 0");
   await expect(banner).toHaveCount(0);
 });
+
+test("a long action label wraps and keeps dismiss reachable on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 700 });
+  await gotoPage(page, "flash-banner");
+  const banner = page.locator(".kit-flash-banner", { hasText: "Archived" });
+
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  // Stand in for a translated label: the demo's "Undo" is too short to
+  // crowd the banner.
+  await banner.getByRole("button", { name: "Undo" }).evaluate((el) => {
+    el.textContent = "Restore the archived conversation to your inbox";
+  });
+
+  const stack = (await page.locator(".kit-flash-stack").boundingBox())!;
+  const dismiss = (await banner.locator(".kit-flash-banner__dismiss").boundingBox())!;
+  expect(dismiss.x + dismiss.width).toBeLessThanOrEqual(stack.x + stack.width);
+  const text = (await banner.locator(".kit-flash-banner__text").boundingBox())!;
+  expect(text.width).toBeGreaterThan(40);
+
+  await banner.getByRole("button", { name: "Dismiss" }).click();
+  await expect(banner).toHaveCount(0);
+});

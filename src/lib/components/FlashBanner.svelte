@@ -156,9 +156,13 @@
   }
 
   /* The action is a text button in the banner's ink: the message stays
-   * the primary content and the action reads as its follow-up. */
+   * the primary content and the action reads as its follow-up. Long or
+   * translated labels wrap within half the banner so the message and the
+   * dismiss button keep their room on narrow screens. */
   .kit-flash-banner__action {
-    flex: none;
+    flex: 0 1 auto;
+    max-width: 50%;
+    overflow-wrap: anywhere;
     padding: var(--space-1) var(--space-3);
     border: 0;
     border-radius: var(--radius-sm);
