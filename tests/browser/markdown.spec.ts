@@ -14,6 +14,45 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
 }
 
 for (const method of ["render", "renderSync"] as const) {
+  test(`${method} supports built-in tokenizer overrides with native context and fallback`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "markdown");
+    const html = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      const renderer = createMarkdownRenderer({
+        tokenizer: {
+          paragraph(src) {
+            const match = /^Note: ([^\n]+)(?:\n|$)/.exec(src);
+            if (!match) return false;
+            return {
+              type: "paragraph",
+              raw: match[0],
+              text: match[1],
+              tokens: this.lexer.inline(match[1]),
+            };
+          },
+          html(src) {
+            const raw = "<wrapped>literal</wrapped>";
+            if (!src.startsWith(raw)) return false;
+            return {
+              type: "html",
+              raw,
+              block: true,
+              text: '<em onclick="alert(1)">literal</em>',
+            };
+          },
+        },
+      });
+      return renderer[method](
+        "Before **default**.\n\nNote: Custom *note*.\n\n<wrapped>literal</wrapped>\n\nAfter.",
+      );
+    }, method);
+    expect(html).toBe(
+      "<p>Before <strong>default</strong>.</p>\n<p>Custom <em>note</em>.</p>\n<em>literal</em><p>After.</p>\n",
+    );
+  });
+
   test(`${method} preserves source line breaks by default`, async ({ page }) => {
     await gotoPage(page, "markdown");
     const html = await page.evaluate(async (method) => {

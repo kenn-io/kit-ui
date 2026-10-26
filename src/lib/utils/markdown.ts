@@ -4,7 +4,7 @@
  * frontend/src/lib/api/docs/markdown.ts and agentsview's renderer; the app-specific
  * pieces those carried (issue/PR reference linking, bash-wrapper tags,
  * interactive task lists) stay app-side, injected through the
- * `extensions` / `codeFence` options instead of being baked in.
+ * `extensions`, `tokenizer`, and `codeFence` options.
  *
  * Highlighting is dual-theme: shiki emits `--shiki-light`/`--shiki-dark`
  * per-token CSS variables (no baked colors) and the component styles
@@ -31,6 +31,7 @@ import {
   type RendererObject,
   type Tokens,
   type TokenizerAndRendererExtension,
+  type TokenizerObject,
 } from "marked";
 import {
   createJavaScriptRegexEngine,
@@ -270,6 +271,10 @@ export interface MarkdownRendererOptions {
   /** Custom marked tokenizer/renderer extensions — the injection point
    * for app-specific syntax (issue references, wrapper tags). */
   extensions?: TokenizerAndRendererExtension[];
+  /** Built-in marked tokenizer overrides (paragraph, html, etc.). Use
+   * method syntax for Marked's native `this` context; return false to
+   * fall back to the built-in tokenizer. Output is still sanitized. */
+  tokenizer?: TokenizerObject;
   /** Intercept specific fences (mermaid diagrams, custom viewers):
    * return HTML for the block or undefined to fall through to
    * highlighting. Contract: the returned string is markup, so the
@@ -379,6 +384,9 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
   const marked = new Marked({ gfm: true, breaks: options.breaks ?? true });
   if (options.extensions?.length) {
     marked.use({ extensions: options.extensions });
+  }
+  if (options.tokenizer) {
+    marked.use({ tokenizer: options.tokenizer });
   }
   marked.use({ renderer: codeRenderer });
   // Enforce the documented constraint: only inert data-* attributes may

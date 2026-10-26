@@ -4,7 +4,7 @@
  * frontend/src/lib/api/docs/markdown.ts and agentsview's renderer; the app-specific
  * pieces those carried (issue/PR reference linking, bash-wrapper tags,
  * interactive task lists) stay app-side, injected through the
- * `extensions` / `codeFence` options instead of being baked in.
+ * `extensions`, `tokenizer`, and `codeFence` options.
  *
  * Highlighting is dual-theme: shiki emits `--shiki-light`/`--shiki-dark`
  * per-token CSS variables (no baked colors) and the component styles
@@ -23,7 +23,7 @@
  * re-applies the token colors through CSSOM after the markup is inserted,
  * because such a policy ignores `style` attributes parsed from markup.
  */
-import { Marked, type Tokens, type TokenizerAndRendererExtension } from "marked";
+import { Marked, type Tokens, type TokenizerAndRendererExtension, type TokenizerObject } from "marked";
 export declare const SHIKI_MAX_HIGHLIGHTED_FENCES = 20;
 export declare const SHIKI_MAX_DISTINCT_LANGUAGES = 8;
 export declare const SHIKI_MAX_HIGHLIGHTED_BYTES = 100000;
@@ -69,6 +69,10 @@ export interface MarkdownRendererOptions {
     /** Custom marked tokenizer/renderer extensions — the injection point
      * for app-specific syntax (issue references, wrapper tags). */
     extensions?: TokenizerAndRendererExtension[];
+    /** Built-in marked tokenizer overrides (paragraph, html, etc.). Use
+     * method syntax for Marked's native `this` context; return false to
+     * fall back to the built-in tokenizer. Output is still sanitized. */
+    tokenizer?: TokenizerObject;
     /** Intercept specific fences (mermaid diagrams, custom viewers):
      * return HTML for the block or undefined to fall through to
      * highlighting. Contract: the returned string is markup, so the
