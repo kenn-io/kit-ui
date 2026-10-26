@@ -1,9 +1,17 @@
 export type FlashTone = "neutral" | "info" | "success" | "warning" | "danger";
 
+/** A single follow-up control in a banner, such as Undo. Running it
+ * dismisses the flash. */
+export interface FlashAction {
+  label: string;
+  onclick: () => void;
+}
+
 export interface FlashOptions {
   durationMs?: number;
   /** Semantic accent for the banner (neutral default). */
   tone?: FlashTone;
+  action?: FlashAction;
 }
 
 export interface FlashState {
@@ -12,6 +20,7 @@ export interface FlashState {
   /** Optional on the public shape (external mocks/wrappers predate it);
    * consumers should read it as `tone ?? "neutral"`. */
   tone?: FlashTone;
+  action?: FlashAction;
   /** Increments per showFlash call; keys each banner and its countdown. */
   id: number;
 }
@@ -36,11 +45,14 @@ let nextId = 0;
 /** Show a flash. The second argument keeps the original duration-only
  * form (`showFlash("Saved", 10000)`) and also accepts an options object
  * (`showFlash("Merged", { tone: "success" })`). */
-export function showFlash(msg: string, durationMs?: number): void;
-export function showFlash(msg: string, options?: FlashOptions): void;
-export function showFlash(msg: string, opts: number | FlashOptions = {}): void {
-  let { durationMs = DEFAULT_DURATION_MS, tone = "neutral" }: FlashOptions =
-    typeof opts === "number" ? { durationMs: opts } : opts;
+export function showFlash(msg: string, durationMs?: number): number;
+export function showFlash(msg: string, options?: FlashOptions): number;
+export function showFlash(msg: string, opts: number | FlashOptions = {}): number {
+  let {
+    durationMs = DEFAULT_DURATION_MS,
+    tone = "neutral",
+    action,
+  }: FlashOptions = typeof opts === "number" ? { durationMs: opts } : opts;
   if (!Number.isFinite(durationMs) || durationMs <= 0) {
     durationMs = DEFAULT_DURATION_MS;
   }
@@ -53,11 +65,21 @@ export function showFlash(msg: string, opts: number | FlashOptions = {}): void {
   for (let i = 0; i < overflow; i += 1) {
     dismissFlash(flashes[0]!.id);
   }
-  flashes = [...flashes, { message: msg, durationMs, tone, id }];
+  flashes = [...flashes, { message: msg, durationMs, tone, action, id }];
   timers.set(
     id,
     setTimeout(() => dismissFlash(id), durationMs),
   );
+  return id;
+}
+
+/** Run a flash's action and dismiss it. A flash that has already been
+ * dismissed (timer, X, or the stack cap) does nothing. */
+export function runFlashAction(id: number): void {
+  const flash = flashes.find((candidate) => candidate.id === id);
+  if (!flash?.action) return;
+  dismissFlash(id);
+  flash.action.onclick();
 }
 
 /** All currently visible flashes, oldest first. */
