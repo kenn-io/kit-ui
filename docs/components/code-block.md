@@ -114,7 +114,8 @@ rules; built-in overrides let an app coordinate paragraph and HTML
 parsing, for example, around a wrapped diff. The option uses Marked's
 `TokenizerObject` type. Use method syntax to keep its native `this`
 context, and return `false` to use the built-in rule. Both `render` and
-`renderSync` apply the overrides and sanitize their output.
+`renderSync` apply the overrides and sanitize their output. Callback
+errors reject `render` or throw from `renderSync`.
 
 Mermaid diagram rendering (fence interceptor + pan/zoom viewer) ships as
 an opt-in module on top of this hook — see
@@ -202,9 +203,9 @@ grammar-fetch protection). Constants are exported
   per repo context; interactive task lists (checkbox indexes, drag
   handles) remain a Forge renderer concern layered on top. The block
   slicer (`renderMarkdownBlocks`) is Forge-specific and stays there.
-- **agentsview** `renderMarkdown(text)` → `createMarkdownRenderer` with
-  bash-wrapper extensions via `extensions` and built-in paragraph/HTML
-  overrides via `tokenizer`; `asset://` URL
-  resolution stays an app-side pre-pass; per-message `CodeBlock` swaps to
+- **agentsview** can move its bash-wrapper extensions to `extensions`
+  and built-in paragraph/HTML overrides to `tokenizer`. Its custom XML
+  literal escaping and `asset://` URL resolution remain app-side until
+  separately ported; per-message `CodeBlock` swaps to
   kit-ui's (search-mark integration hooks pending the browser test infra
   work).

@@ -53,6 +53,44 @@ for (const method of ["render", "renderSync"] as const) {
     );
   });
 
+  test(`${method} preserves a wrapped diff adjacent to prose`, async ({ page }) => {
+    await gotoPage(page, "markdown");
+    const html = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer, escapeHtml } = await import("/src/lib/utils/markdown.ts");
+      const renderer = createMarkdownRenderer({
+        tokenizer: {
+          paragraph(src) {
+            const boundary = src.indexOf("\n<current_file_diff>");
+            if (boundary < 0) return false;
+            const text = src.slice(0, boundary);
+            return {
+              type: "paragraph",
+              raw: `${text}\n`,
+              text,
+              tokens: this.lexer.inline(text),
+            };
+          },
+          html(src) {
+            const match = /^<current_file_diff>[\s\S]*?<\/current_file_diff>/.exec(src);
+            if (!match) return false;
+            return {
+              type: "html",
+              raw: match[0],
+              block: true,
+              text: `<pre>${escapeHtml(match[0])}</pre>\n`,
+            };
+          },
+        },
+      });
+      return renderer[method](
+        "Before **default**.\n<current_file_diff>\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n</current_file_diff>\nAfter **default**.",
+      );
+    }, method);
+    expect(html).toBe(
+      "<p>Before <strong>default</strong>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong>.</p>\n",
+    );
+  });
+
   test(`${method} preserves source line breaks by default`, async ({ page }) => {
     await gotoPage(page, "markdown");
     const html = await page.evaluate(async (method) => {

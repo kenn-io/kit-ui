@@ -273,7 +273,8 @@ export interface MarkdownRendererOptions {
   extensions?: TokenizerAndRendererExtension[];
   /** Built-in marked tokenizer overrides (paragraph, html, etc.). Use
    * method syntax for Marked's native `this` context; return false to
-   * fall back to the built-in tokenizer. Output is still sanitized. */
+   * fall back to the built-in tokenizer. Output is still sanitized.
+   * Callback errors reject `render` or throw from `renderSync`. */
   tokenizer?: TokenizerObject;
   /** Intercept specific fences (mermaid diagrams, custom viewers):
    * return HTML for the block or undefined to fall through to
@@ -385,10 +386,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
   if (options.extensions?.length) {
     marked.use({ extensions: options.extensions });
   }
-  if (options.tokenizer) {
-    marked.use({ tokenizer: options.tokenizer });
-  }
-  marked.use({ renderer: codeRenderer });
+  marked.use({ tokenizer: options.tokenizer, renderer: codeRenderer });
   // Enforce the documented constraint: only inert data-* attributes may
   // widen the sanitizer. URL-bearing or style attributes here would
   // reopen exactly the holes sanitization exists to close.
