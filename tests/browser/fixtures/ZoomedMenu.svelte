@@ -8,9 +8,12 @@
   // A model picker built from Menu parts, for the zoomed-dropdown specs.
   interface Props {
     onchange: (value: string) => void;
+    /** Extra models that make the menu taller than the viewport. */
+    extraModels?: number;
   }
 
-  let { onchange }: Props = $props();
+  let { onchange, extraModels = 0 }: Props = $props();
+  const extras = $derived(Array.from({ length: extraModels }, (_, i) => `model-${i + 1}`));
   let value = $state("balanced");
 </script>
 
@@ -27,6 +30,9 @@
     >
       <MenuRadioItem value="balanced" closeOnSelect>Balanced</MenuRadioItem>
       <MenuRadioItem value="deep" closeOnSelect>Deep</MenuRadioItem>
+      {#each extras as model (model)}
+        <MenuRadioItem value={model} closeOnSelect>{model}</MenuRadioItem>
+      {/each}
     </MenuRadioGroup>
   </MenuContent>
 </Menu>

@@ -28,6 +28,8 @@ and restores trigger focus, and Tab closes without trapping focus. Selecting an
 item also restores trigger focus before its `onselect` runs, so an action that
 opens a dialog or focuses a field keeps that focus.
 
+`MenuContent` grows to 80% of the viewport height, then scrolls.
+
 By default, `MenuTrigger` owns a native button. Use its `child` snippet when the
 calling component needs to keep ownership of an existing button for scoped CSS,
 `class:` directives, actions, or `bind:this`:

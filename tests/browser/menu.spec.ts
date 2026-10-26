@@ -221,6 +221,25 @@ test("context menu stays inside the viewport and closes when the page scrolls", 
   await expect(menu).toBeHidden();
 });
 
+test("a long menu grows to 80% of the viewport before it scrolls", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await gotoPage(page, "menu");
+  const menu = page.getByRole("menu", { name: "Workflows" });
+  const size = () => menu.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+
+  await page.getByRole("button", { name: "Run workflow" }).click();
+  const tall = await size();
+  expect(tall.client).toBeGreaterThan(360);
+  expect(tall.scroll).toBeLessThanOrEqual(tall.client);
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 1280, height: 400 });
+  await page.getByRole("button", { name: "Run workflow" }).click();
+  const short = await size();
+  expect(short.client).toBeLessThanOrEqual(400 * 0.8);
+  expect(short.scroll).toBeGreaterThan(short.client);
+});
+
 test("only the focused item is filled when the pointer rests on another", async ({ page }) => {
   await gotoPage(page, "menu");
   await page.getByRole("button", { name: "Task actions" }).click();

@@ -22,6 +22,7 @@
   let contextTarget = $state<HTMLElement>();
   let fileName = $state("notes.md");
   let fileNameInput = $state<HTMLInputElement>();
+  const workflows = Array.from({ length: 16 }, (_, i) => `Workflow ${i + 1}`);
 
   function startRename(): void {
     lastAction = "rename";
@@ -143,6 +144,32 @@
       </MenuContent>
     </Menu>
     <span data-testid="menu-daemon">selected: {daemon}</span>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Long menu"
+  description="Menus grow to 80% of the viewport height before they scroll, so a long action list stays visible on a tall window."
+  code={`<Menu>
+  <MenuTrigger ariaLabel="Run workflow">Workflows</MenuTrigger>
+  <MenuContent ariaLabel="Workflows">
+    {#each workflows as workflow (workflow)}
+      <MenuItem onselect={() => run(workflow)}>{workflow}</MenuItem>
+    {/each}
+  </MenuContent>
+</Menu>`}
+>
+  <div class="menu-demo-row">
+    <Menu>
+      <MenuTrigger ariaLabel="Run workflow">Workflows</MenuTrigger>
+      <MenuContent ariaLabel="Workflows">
+        {#each workflows as workflow (workflow)}
+          <MenuItem textValue={workflow} onselect={() => (lastAction = workflow)}>
+            {workflow}
+          </MenuItem>
+        {/each}
+      </MenuContent>
+    </Menu>
   </div>
 </DemoSection>
 
