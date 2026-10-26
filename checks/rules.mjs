@@ -828,6 +828,22 @@ export function checkHandRolledDateInput(source) {
   return findings;
 }
 
+/** Native color inputs render unthemed platform chrome and offer no hex
+ * entry or quick picks. */
+export function checkHandRolledColorInput(source) {
+  const findings = [];
+  const re = /type="color"/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-color-input",
+      line: lineOfIndex(source, match.index),
+      message: 'type="color" input — use ColorInput from @kenn-io/kit-ui',
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled toasts/snackbars duplicate FlashBanner + the flash store.
  * \b also matches inside compounds like undo-toast. */
 export function checkHandRolledToast(source) {
@@ -1800,6 +1816,7 @@ export const ALL_RULES = {
   "hand-rolled-top-bar": checkHandRolledTopBar,
   "hand-rolled-search-input": checkHandRolledSearchInput,
   "hand-rolled-date-input": checkHandRolledDateInput,
+  "hand-rolled-color-input": checkHandRolledColorInput,
   "hand-rolled-toast": checkHandRolledToast,
   "hand-rolled-drawer": checkHandRolledDrawer,
   "hand-rolled-find-bar": checkHandRolledFindBar,

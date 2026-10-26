@@ -42,6 +42,10 @@
       "types": "./types/utils/clipboard.d.ts",
       "default": "./src/lib/utils/clipboard.ts"
     },
+    "./utils/color-contrast": {
+      "types": "./types/utils/color-contrast.d.ts",
+      "default": "./src/lib/utils/color-contrast.ts"
+    },
     "./utils/color-hash": {
       "types": "./types/utils/color-hash.d.ts",
       "default": "./src/lib/utils/color-hash.ts"

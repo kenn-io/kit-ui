@@ -30,7 +30,8 @@ dark or white text by WCAG contrast ratio. Extracted from Forge's
 
 The background's WCAG relative luminance is compared against two candidate
 text colors (GitHub's dark label ink `#1f2328` and white); the one with the
-higher contrast ratio wins. These candidate hexes are computed label colors,
+higher contrast ratio wins. The math is the exported
+[`readableInk`](../utilities.md#color-contrast) helper. These candidate hexes are computed label colors,
 not theme tokens — they must stay theme-independent because the background is
 caller-supplied.
 
