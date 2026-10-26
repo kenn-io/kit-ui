@@ -14,34 +14,9 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
 }
 
 for (const method of ["render", "renderSync"] as const) {
-  test(`${method} supports built-in tokenizer overrides with native context and fallback`, async ({
+  test(`${method} uses tokenizer context and fallback to preserve a wrapped diff beside prose`, async ({
     page,
   }) => {
-    await gotoPage(page, "markdown");
-    const html = await page.evaluate(async (method) => {
-      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
-      const renderer = createMarkdownRenderer({
-        tokenizer: {
-          paragraph(src) {
-            const match = /^Note: ([^\n]+)(?:\n|$)/.exec(src);
-            if (!match) return false;
-            return {
-              type: "paragraph",
-              raw: match[0],
-              text: match[1],
-              tokens: this.lexer.inline(match[1]),
-            };
-          },
-        },
-      });
-      return renderer[method]("Before **default**.\n\nNote: Custom *note*.\n\nAfter.");
-    }, method);
-    expect(html).toBe(
-      "<p>Before <strong>default</strong>.</p>\n<p>Custom <em>note</em>.</p>\n<p>After.</p>\n",
-    );
-  });
-
-  test(`${method} preserves a wrapped diff adjacent to prose`, async ({ page }) => {
     await gotoPage(page, "markdown");
     const html = await page.evaluate(async (method) => {
       const { createMarkdownRenderer, escapeHtml } = await import("/src/lib/utils/markdown.ts");
@@ -65,7 +40,7 @@ for (const method of ["render", "renderSync"] as const) {
               type: "html",
               raw: match[0],
               block: true,
-              text: `<pre onclick="alert(1)">${escapeHtml(match[0])}</pre>\n`,
+              text: `<pre>${escapeHtml(match[0])}</pre>\n`,
             };
           },
         },
