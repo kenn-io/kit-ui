@@ -271,9 +271,12 @@ export function createPalette(
     return { color, fill: "solid", dash: "solid", marker: "circle" };
   }
 
-  // Slots per key; a slot past the sequence length means a later round.
+  const isFixed = (key: string) => Object.hasOwn(fixed, key);
+
+  // Slots per key, in assignment order; a slot past the sequence length
+  // means a later round.
   function slots(keys: readonly string[], order: PaletteOrder): Map<string, number> {
-    const active = [...new Set(keys)].filter((key) => key !== "" && !(key in fixed));
+    const active = [...new Set(keys)].filter((key) => key !== "" && !isFixed(key));
     const result = new Map<string, number>();
     if (order !== "hash") {
       if (order === "sorted") active.sort();
@@ -308,12 +311,13 @@ export function createPalette(
     const keySlots = slots(keys, order);
     const colors = order === "hash" ? longest : sequenceFor(keySlots.size);
     const styles = new Map<string, SeriesStyle>();
-    for (const key of keys) {
-      if (styles.has(key)) continue;
-      const slot = keySlots.get(key);
-      if (slot !== undefined) styles.set(key, styleFor(colors, slot));
-      else styles.set(key, solid(fixed[key] ?? fallback));
-    }
+    for (const [key, slot] of keySlots) styles.set(key, styleFor(colors, slot));
+    // Fixed and empty keys follow, sorted unless the caller's order counts,
+    // so sorted and hash maps list their entries the same way for any input
+    // order.
+    const rest = [...new Set(keys)].filter((key) => !keySlots.has(key));
+    if (order !== "given") rest.sort();
+    for (const key of rest) styles.set(key, solid(isFixed(key) ? fixed[key]! : fallback));
     return styles;
   }
 
@@ -322,7 +326,7 @@ export function createPalette(
     at: (index, count) => styleFor(sequenceFor(count), index).color,
     styleAt: (index, count) => styleFor(sequenceFor(count), index),
     forKey(key) {
-      if (key in fixed) return fixed[key]!;
+      if (isFixed(key)) return fixed[key]!;
       if (key === "" || longest.length === 0) return fallback;
       return longest[hashIndex(key, longest.length)]!;
     },

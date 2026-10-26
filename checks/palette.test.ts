@@ -111,6 +111,22 @@ describe("assign orders", () => {
     expect(palette.forKey("__other__")).toBe("var(--muted)");
   });
 
+  test("sorted and hash maps list entries the same way for any input order", () => {
+    const palette = createPalette("petroff", { fixed: { __other__: "var(--muted)" } });
+    const input = ["web", "__other__", "", "api"];
+    for (const order of ["sorted", "hash"] as const) {
+      const forward = [...palette.assign(input, { order })];
+      const backward = [...palette.assign([...input].reverse(), { order })];
+      expect(backward, order).toEqual(forward);
+    }
+  });
+
+  test("keys named like object properties are not mistaken for fixed keys", () => {
+    const colors = createPalette("petroff", { fixed: {} }).assign(["toString", "constructor"]);
+    expect(colors.get("toString")).toBe(PALETTES.petroff6[0]);
+    expect(colors.get("constructor")).toBe(PALETTES.petroff6[1]);
+  });
+
   test("an empty palette falls back for every key", () => {
     const palette = createPalette([]);
     expect(palette.assign(["a"]).get("a")).toBe("var(--text-muted)");
