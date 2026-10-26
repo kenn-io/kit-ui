@@ -561,3 +561,69 @@ such as the palettes in `@kenn-io/kit-ui/brand.json`.
 ColorLabel picks its text with `readableInk`, and
 [ColorInput](components/color-input.md) pairs with these helpers for
 contrast warnings.
+
+## Palettes
+
+```ts
+import { createPalette, PALETTES, seriesSwatchBackground } from "@kenn-io/kit-ui";
+
+const palette = createPalette("matplotlib", {
+  colorblind: userWantsColorBlindSafe, // use Petroff instead
+  overflow: "pattern", // past the last color, add hatching, dashes, markers
+  fixed: { __other__: "var(--text-muted)" },
+});
+
+palette.assign(["web", "api"], { order: "sorted" }); // Map<key, color>
+palette.assignStyles(keys); // Map<key, { color, fill, dash, marker }>
+palette.at(12); // index color, wraps past the end
+palette.forKey("api"); // stable color from the name hash
+```
+
+Categorical colors for charts and legends. `PALETTES` holds standard
+sequences verbatim: matplotlib's `tab10`, `tab20`, `tab20b`, and `tab20c`;
+Petroff's `petroff6`, `petroff8`, and `petroff10`; and Okabe-Ito without black,
+which disappears on dark themes. The module is plain TypeScript with no Svelte
+or DOM, also importable as `@kenn-io/kit-ui/utils/palette`.
+
+`createPalette` takes a family name or a custom color list:
+
+| Family         | Sequences, shortest first     | Color-blind safe |
+| -------------- | ----------------------------- | ---------------- |
+| `"matplotlib"` | tab10, tab20, tab20b + tab20c | no               |
+| `"petroff"`    | petroff6, petroff8, petroff10 | yes              |
+| `"okabe-ito"`  | Okabe-Ito (7 colors)          | yes              |
+
+`assign` and `assignStyles` use the shortest sequence that fits the number
+of keys. `order` decides who gets which color:
+
+- `"given"` (default): list order, for series ranked by size.
+- `"sorted"`: code-unit order, so a key keeps its color across charts that
+  show the same set.
+- `"hash"`: each key starts at its `hashColor` slot and steps past slots
+  already taken, so a key keeps its color across charts that show different
+  sets. Hash order always uses the longest sequence.
+
+Options:
+
+- `colorblind`: swap in the Petroff family unless the source is already
+  color-blind safe. Custom lists are replaced too, because kit-ui cannot vouch
+  for them.
+- `omit`: colors to drop from the source, such as grays an app reserves for
+  "other".
+- `overflow`: `"wrap"` (default) repeats colors after the longest sequence.
+  `"pattern"` repeats them with the next fill (hatch, cross-hatch, dots),
+  dash (dashed, dotted, dash-dot), and marker (square, triangle, diamond),
+  giving four times as many distinct styles.
+- `fixed`: keys with their own color; they take no palette slot.
+- `fallback`: color for empty keys and empty palettes, default
+  `var(--text-muted)`.
+
+Charts draw patterned fills from `seriesPattern(fill)`, which describes the
+repeating tile (size, line angles and widths, dot radius), and line styles from
+`seriesDashArray(dash, strokeWidth)`. Legends and tooltips use
+`seriesSwatchBackground(style, ink?)`, a CSS `background` value that knocks the
+same pattern out of the series color in `ink` (default `var(--bg-surface)`).
+
+The sequences are fixed hex colors designed for white backgrounds. Several
+Petroff colors fall below 3:1 contrast on white or on a dark surface, so check
+them against your own surfaces where contrast matters.

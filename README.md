@@ -100,7 +100,7 @@ shiki → DOMPurify; peers `marked@^18`/`shiki@^4`/`dompurify@^3`),
 [utilities](docs/utilities.md) (`copyToClipboard`,
 `formatRelativeTime`, `formatTimestamp`, `truncate`, `createRefreshScheduler`,
 `floatingPopoverStyle`, `formatDuration`/`formatTokenCount`/`formatCost`,
-`debounce`, `hashColor`, `contrastRatio`/`readableInk`), the [theme store](docs/theming.md#theme-store)
+`debounce`, `hashColor`, `contrastRatio`/`readableInk`, `createPalette`), the [theme store](docs/theming.md#theme-store)
 (`initTheme`/`setThemeMode`/`setHighContrast`), shared breakpoints
 (`BREAKPOINTS`/`MEDIA` — see the
 [theming guide](docs/theming.md#breakpoints)), and the design tokens
