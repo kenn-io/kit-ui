@@ -32,24 +32,12 @@ for (const method of ["render", "renderSync"] as const) {
               tokens: this.lexer.inline(match[1]),
             };
           },
-          html(src) {
-            const raw = "<wrapped>literal</wrapped>";
-            if (!src.startsWith(raw)) return false;
-            return {
-              type: "html",
-              raw,
-              block: true,
-              text: '<em onclick="alert(1)">literal</em>',
-            };
-          },
         },
       });
-      return renderer[method](
-        "Before **default**.\n\nNote: Custom *note*.\n\n<wrapped>literal</wrapped>\n\nAfter.",
-      );
+      return renderer[method]("Before **default**.\n\nNote: Custom *note*.\n\nAfter.");
     }, method);
     expect(html).toBe(
-      "<p>Before <strong>default</strong>.</p>\n<p>Custom <em>note</em>.</p>\n<em>literal</em><p>After.</p>\n",
+      "<p>Before <strong>default</strong>.</p>\n<p>Custom <em>note</em>.</p>\n<p>After.</p>\n",
     );
   });
 
@@ -77,7 +65,7 @@ for (const method of ["render", "renderSync"] as const) {
               type: "html",
               raw: match[0],
               block: true,
-              text: `<pre>${escapeHtml(match[0])}</pre>\n`,
+              text: `<pre onclick="alert(1)">${escapeHtml(match[0])}</pre>\n`,
             };
           },
         },
@@ -89,6 +77,29 @@ for (const method of ["render", "renderSync"] as const) {
     expect(html).toBe(
       "<p>Before <strong>default</strong>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong>.</p>\n",
     );
+  });
+
+  test(`${method} propagates tokenizer callback errors`, async ({ page }) => {
+    await gotoPage(page, "markdown");
+    const message = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      const renderer = createMarkdownRenderer({
+        tokenizer: {
+          paragraph() {
+            throw new Error("tokenizer failed");
+          },
+        },
+      });
+      try {
+        const result = renderer[method]("Paragraph.");
+        if (method === "renderSync") return "renderSync returned";
+        await result;
+        return "render resolved";
+      } catch (error) {
+        return (error as Error).message;
+      }
+    }, method);
+    expect(message).toBe("tokenizer failed");
   });
 
   test(`${method} preserves source line breaks by default`, async ({ page }) => {
