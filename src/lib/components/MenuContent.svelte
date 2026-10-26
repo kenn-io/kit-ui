@@ -175,7 +175,7 @@
     z-index: var(--z-popover);
     width: max-content;
     max-width: min(320px, calc(100vw - 16px));
-    max-height: min(360px, calc(100vh - 16px));
+    max-height: 80vh;
     overflow-y: auto;
     padding: var(--space-2);
   }
