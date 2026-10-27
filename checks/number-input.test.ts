@@ -39,6 +39,15 @@ describe("isNumberDraft", () => {
     expect(isNumberDraft("-9007199254740992", { step: 1 })).toBe(false);
   });
 
+  test("decimals past Number.MAX_SAFE_INTEGER are refused, though they round onto it", () => {
+    const bounds = { step: 0.1 };
+    expect(isNumberDraft("9007199254740991.1", bounds)).toBe(false);
+    expect(isNumberDraft("-9007199254740991.1", bounds)).toBe(false);
+    expect(isNumberDraft("9007199254740991.", bounds)).toBe(true);
+    expect(isNumberDraft("9007199254740991.00", bounds)).toBe(true);
+    expect(isNumberDraft("9007199254740990.9", bounds)).toBe(true);
+  });
+
   test("a bound in exponent form counts only its real decimals", () => {
     expect(isNumberDraft("1.5", { max: 1.25e21, step: 1 })).toBe(false);
     expect(isNumberDraft("0.5", { min: 1e-7, step: 1 })).toBe(true);

@@ -34,8 +34,12 @@ export function allowsNegative({ min }: NumberBounds): boolean {
  * value would no longer match the digits typed. */
 export function isNumberDraft(text: string, bounds: NumberBounds): boolean {
   if (!isNumberText(text, bounds)) return false;
-  const value = parseNumberDraft(text);
-  return value === null || isSafeNumber(value);
+  // Compare the digits themselves: Number() rounds "9007199254740991.1"
+  // back onto the limit, so a check on the parsed value would let it in.
+  const [whole = "", fraction = ""] = text.replace("-", "").split(".");
+  const size = BigInt(whole || "0");
+  const limit = BigInt(Number.MAX_SAFE_INTEGER);
+  return size < limit || (size === limit && !/[1-9]/.test(fraction));
 }
 
 /** Whether `text` has the shape of a number draft, whatever its size:
