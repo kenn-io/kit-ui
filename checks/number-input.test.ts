@@ -1,11 +1,31 @@
 import { describe, expect, test } from "bun:test";
 import {
   clampNumber,
+  decimalSeparator,
   formatNumber,
   isNumberDraft,
+  normalizeNumberDraft,
   parseNumberDraft,
   stepNumber,
 } from "../src/lib/components/number-input.js";
+
+describe("decimalSeparator", () => {
+  test("follows the locale", () => {
+    expect(decimalSeparator("en-US")).toBe(".");
+    expect(decimalSeparator("de-DE")).toBe(",");
+    expect(decimalSeparator("fr-FR")).toBe(",");
+    expect(decimalSeparator("de-CH")).toBe(".");
+  });
+
+  test("is the separator the locale pairs with ASCII digits", () => {
+    // ar-EG writes "٠٫٥" with its own digits, but "0.5" with Latin ones.
+    expect(decimalSeparator("ar-EG")).toBe(".");
+  });
+
+  test("an invalid language tag fails loudly", () => {
+    expect(() => decimalSeparator("not a tag")).toThrow(RangeError);
+  });
+});
 
 describe("isNumberDraft", () => {
   test("integers with an optional minus when the range is unbounded below", () => {
@@ -61,6 +81,43 @@ describe("isNumberDraft", () => {
     const bounds = { min: 0, max: 2.5, step: 1 };
     expect(isNumberDraft(formatNumber(clampNumber(3, bounds)), bounds)).toBe(true);
   });
+
+  test("a comma locale takes its comma or a point, once", () => {
+    const bounds = { min: 0, max: 1, step: 0.1 };
+    for (const text of ["0,", ",5", "0,25", "0.25", "1"]) {
+      expect(isNumberDraft(text, bounds, ",")).toBe(true);
+    }
+    for (const text of ["0,1,2", "0,1.2", "1.000,5", "1,000.5"]) {
+      expect(isNumberDraft(text, bounds, ",")).toBe(false);
+    }
+  });
+
+  test("a point locale refuses a comma", () => {
+    expect(isNumberDraft("0,5", { min: 0, max: 1, step: 0.1 }, ".")).toBe(false);
+  });
+
+  test("an integer field refuses every separator", () => {
+    expect(isNumberDraft("1,5", { step: 1 }, ",")).toBe(false);
+    expect(isNumberDraft("1.5", { step: 1 }, ",")).toBe(false);
+  });
+
+  test("the safe-integer cap holds with a comma separator", () => {
+    expect(isNumberDraft("9007199254740991", { step: 0.5 }, ",")).toBe(true);
+    expect(isNumberDraft("9007199254740992,5", { step: 0.5 }, ",")).toBe(false);
+  });
+});
+
+describe("normalizeNumberDraft", () => {
+  test("a point becomes the locale's separator", () => {
+    expect(normalizeNumberDraft("0.5", ",")).toBe("0,5");
+    expect(normalizeNumberDraft("0,5", ",")).toBe("0,5");
+    expect(normalizeNumberDraft("0.5", ".")).toBe("0.5");
+  });
+
+  test("surrounding whitespace is dropped, inner whitespace kept", () => {
+    expect(normalizeNumberDraft(" 42.5 ", ",")).toBe("42,5");
+    expect(normalizeNumberDraft(" 4 2 ", ",")).toBe("4 2");
+  });
 });
 
 describe("parseNumberDraft", () => {
@@ -75,6 +132,13 @@ describe("parseNumberDraft", () => {
     expect(parseNumberDraft("1.")).toBe(1);
     expect(parseNumberDraft("-.5")).toBe(-0.5);
     expect(parseNumberDraft("007")).toBe(7);
+  });
+
+  test("a comma locale reads its comma and a point as the decimal separator", () => {
+    expect(parseNumberDraft("0,25", ",")).toBe(0.25);
+    expect(parseNumberDraft("-,5", ",")).toBe(-0.5);
+    expect(parseNumberDraft("0.25", ",")).toBe(0.25);
+    expect(parseNumberDraft(",", ",")).toBeNull();
   });
 });
 
@@ -227,5 +291,12 @@ describe("formatNumber", () => {
 
   test("a formatted small value is still an editable draft", () => {
     expect(isNumberDraft(formatNumber(1e-7), { min: 0, step: 1e-7 })).toBe(true);
+  });
+
+  test("a comma locale writes a comma and no grouping", () => {
+    expect(formatNumber(0.5, ",")).toBe("0,5");
+    expect(formatNumber(-1234567.25, ",")).toBe("-1234567,25");
+    expect(formatNumber(1e-7, ",")).toBe("0,0000001");
+    expect(formatNumber(1e21, ",")).toBe("1000000000000000000000");
   });
 });

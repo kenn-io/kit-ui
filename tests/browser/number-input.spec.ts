@@ -259,3 +259,37 @@ test("leaving the field normalizes in-progress text", async ({ page }) => {
   await field.press("Enter");
   await expect(field).toHaveValue("0.4");
 });
+
+test("a comma locale types and shows a comma, and takes a point as one", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Share in a comma locale/ });
+  await field.fill("");
+  await field.pressSequentially("0,25");
+  await expect(field).toHaveValue("0,25");
+  await expect(page.getByTestId("share-value")).toHaveText("value: 0.25 (number)");
+
+  await field.fill("");
+  await field.pressSequentially("0.75");
+  await expect(field).toHaveValue("0,75");
+  await expect(page.getByTestId("share-value")).toHaveText("value: 0.75 (number)");
+
+  // A second separator of either kind is refused.
+  await field.pressSequentially(",.");
+  await expect(field).toHaveValue("0,75");
+
+  await field.press("ArrowUp");
+  await expect(field).toHaveValue("0,8");
+  await expect(field).toHaveAttribute("aria-valuenow", "0.8");
+});
+
+test.describe("in a browser set to de-DE", () => {
+  test.use({ locale: "de-DE" });
+
+  test("a field without a locale prop uses the browser's separator", async ({ page }) => {
+    await gotoPage(page, "number-input");
+    const ratio = page.getByRole("spinbutton", { name: /Ratio/ });
+    await expect(ratio).toHaveValue("0,5");
+    await ratio.press("ArrowUp");
+    await expect(ratio).toHaveValue("0,6");
+  });
+});
