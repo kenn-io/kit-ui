@@ -40,7 +40,8 @@ for (const method of ["render", "renderSync"] as const) {
         tokenizer: {
           paragraph(src) {
             const boundary = src.indexOf("\n<current_file_diff>");
-            if (boundary < 0) return false;
+            // Yield only when the diff ends the current paragraph.
+            if (boundary < 0 || src.slice(0, boundary).includes("\n\n")) return false;
             const text = src.slice(0, boundary);
             return {
               type: "paragraph",
@@ -55,6 +56,7 @@ for (const method of ["render", "renderSync"] as const) {
             return {
               type: "html",
               raw: match[0],
+              pre: false,
               block: true,
               text: `<pre onclick="alert(1)">${escapeHtml(match[0])}</pre>\n`,
             };
@@ -62,11 +64,11 @@ for (const method of ["render", "renderSync"] as const) {
         },
       });
       return renderer[method](
-        "Before **default** @item.\n<current_file_diff>\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n</current_file_diff>\nAfter **default** @item.",
+        "Intro.\n\nBefore **default** @item.\n<current_file_diff>\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n</current_file_diff>\nAfter **default** @item.",
       );
     }, method);
     expect(html).toBe(
-      '<p>Before <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n',
+      '<p>Intro.</p>\n<p>Before <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n',
     );
   });
 

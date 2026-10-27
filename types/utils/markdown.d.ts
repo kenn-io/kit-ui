@@ -71,7 +71,8 @@ export interface MarkdownRendererOptions {
     extensions?: TokenizerAndRendererExtension[];
     /** Built-in marked tokenizer overrides (paragraph, html, etc.). Use
      * method syntax for Marked's native `this` context; return false to
-     * fall back to the built-in tokenizer. Output is still sanitized.
+     * fall back to the built-in tokenizer (undefined skips it). Output
+     * is still sanitized.
      * Callback errors reject `render` or throw from `renderSync`. */
     tokenizer?: TokenizerObject;
     /** Intercept specific fences (mermaid diagrams, custom viewers):

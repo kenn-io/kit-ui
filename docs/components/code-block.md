@@ -113,7 +113,9 @@ such as `paragraph` or `html` consumes input. Block `extensions` add
 rules; built-in overrides let an app coordinate paragraph and HTML
 parsing, for example, around a wrapped diff. The option uses Marked's
 `TokenizerObject` type. Use method syntax to keep its native `this`
-context, and return `false` to use the built-in rule. Both `render` and
+context, and return `false` to use the built-in rule. Unlike
+`extensions`, returning `undefined` skips the built-in rule, which can
+silently drop paragraph wrappers. Both `render` and
 `renderSync` apply the overrides and sanitize their output. Callback
 errors reject `render` or throw from `renderSync`.
 
