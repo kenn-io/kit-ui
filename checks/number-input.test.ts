@@ -101,6 +101,25 @@ describe("stepNumber", () => {
     // A distant min does not blur neighboring grid points together.
     expect(stepNumber(1, 1, { min: -1e15, step: 5 })).toBe(5);
     expect(stepNumber(1, -1, { min: -1e15, step: 5 })).toBe(0);
+    // Nor does subtracting one near the safe-integer limit round the offset.
+    expect(stepNumber(42, 1, { min: -Number.MAX_SAFE_INTEGER, step: 1024 })).toBe(1025);
+  });
+
+  test("a large value between grid points snaps to the next one", () => {
+    expect(stepNumber(100000000000000.25, 1, { step: 0.5 })).toBe(100000000000000.5);
+  });
+
+  test("a max with many decimals does not leak float noise into steps", () => {
+    const bounds = { step: 0.1, max: 0.9999999999999999 };
+    expect(stepNumber(0.6, 1, bounds)).toBe(0.7);
+    expect(stepNumber(0.7, 1, bounds)).toBe(0.8);
+  });
+
+  test("a value supplied beyond the safe-integer limit moves to its edge toward zero", () => {
+    expect(stepNumber(1e17, -1, { step: 1e15 })).toBe(Number.MAX_SAFE_INTEGER);
+    expect(stepNumber(-1e17, 1, { step: 1e15 })).toBe(-Number.MAX_SAFE_INTEGER);
+    expect(stepNumber(1e17, 1, { step: 1e15 })).toBe(1e17);
+    expect(stepNumber(1e17, -1, { max: 100, step: 1 })).toBe(100);
   });
 
   test("a tiny negative value snaps to the grid point above it", () => {

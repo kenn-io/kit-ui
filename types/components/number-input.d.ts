@@ -36,11 +36,12 @@ export declare function clampNumber(value: number, { min, max }: NumberBounds): 
  * step; a value between grid points snaps to the next point in that
  * direction, as native number inputs do. An empty field starts from `min`
  * going up and `max` going down (0 when that bound is unset). The result
- * is rounded to the field's precision so repeated 0.1 steps stay exact,
- * then clamped to the range. Numbers stay within ±Number.MAX_SAFE_INTEGER,
- * where typed digits still match the value: a step past it changes
- * nothing, an empty field starts inside it, and a range entirely beyond
- * it leaves the field empty (null). */
+ * is rounded to the decimals of `step` and `min`, so repeated 0.1 steps
+ * stay exact, then clamped to the range. Numbers stay within
+ * ±Number.MAX_SAFE_INTEGER, where typed digits still match the value: a
+ * step past it changes nothing, an empty field starts inside it, a value
+ * supplied beyond it moves to its edge on a press toward zero, and a
+ * range entirely beyond it leaves the field empty (null). */
 export declare function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number | null;
 /** Whether typed digits for `n` still read back as exactly `n`. */
 export declare function isSafeNumber(n: number): boolean;

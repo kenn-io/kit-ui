@@ -146,6 +146,11 @@
     // Pasted or dropped numbers often carry surrounding whitespace.
     const pasted = event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop";
     const inserted = pasted ? raw.trim() : raw;
+    // A paste of only whitespace would just delete the selection.
+    if (pasted && inserted === "" && raw !== "") {
+      event.preventDefault();
+      return;
+    }
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     const next = input.value.slice(0, start) + inserted + input.value.slice(end);

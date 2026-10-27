@@ -60,7 +60,8 @@ is a `number`, or `null` while the field is empty; it is never a string.
   An empty field starts at `min` going up and `max` going down (0 when
   that bound is unset). Decimal steps are rounded, so 0.1 + 0.2 lands on
   0.3. Stepping stays within `Number.MAX_SAFE_INTEGER` in either
-  direction, an empty field included.
+  direction, an empty field included; a larger value set from outside
+  moves to that limit on the first press toward zero.
 - **Leaving the field** (blur, or Enter) clamps the number into
   `min`..`max` and rewrites in-progress text in its canonical form:
   `1.` becomes `1`, `007` becomes `7`, and a lone `-` empties the field.

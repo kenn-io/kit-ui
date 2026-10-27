@@ -76,6 +76,11 @@ test("a real paste lands only as a number", async ({ page, context, browserName 
   await expect(field).toHaveValue("30");
   await expect(page.getByTestId("timeout-value")).toHaveText("value: 30 (number)");
 
+  // A paste of only whitespace leaves the selected text in place.
+  await paste("\n");
+  await expect(field).toHaveValue("30");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 30 (number)");
+
   // Whitespace around a pasted number is dropped.
   await paste(" 42 ");
   await expect(field).toHaveValue("42");

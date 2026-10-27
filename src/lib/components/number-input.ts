@@ -93,55 +93,56 @@ export function clampNumber(value: number, { min, max }: NumberBounds): number {
  * step; a value between grid points snaps to the next point in that
  * direction, as native number inputs do. An empty field starts from `min`
  * going up and `max` going down (0 when that bound is unset). The result
- * is rounded to the field's precision so repeated 0.1 steps stay exact,
- * then clamped to the range. Numbers stay within ±Number.MAX_SAFE_INTEGER,
- * where typed digits still match the value: a step past it changes
- * nothing, an empty field starts inside it, and a range entirely beyond
- * it leaves the field empty (null). */
+ * is rounded to the decimals of `step` and `min`, so repeated 0.1 steps
+ * stay exact, then clamped to the range. Numbers stay within
+ * ±Number.MAX_SAFE_INTEGER, where typed digits still match the value: a
+ * step past it changes nothing, an empty field starts inside it, a value
+ * supplied beyond it moves to its edge on a press toward zero, and a
+ * range entirely beyond it leaves the field empty (null). */
 export function stepNumber(
   value: number | null,
   direction: 1 | -1,
   bounds: NumberBounds,
 ): number | null {
-  if (value === null) {
-    const start = clampNumber((direction === 1 ? bounds.min : bounds.max) ?? 0, SAFE_RANGE);
-    const result = clampNumber(start, bounds);
-    return isSafeNumber(result) ? result : null;
+  if (value === null || !isSafeNumber(value)) {
+    if (value !== null && Math.sign(value) !== -direction) return value;
+    const start = value ?? (direction === 1 ? bounds.min : bounds.max) ?? 0;
+    const result = clampNumber(clampToSafe(start), bounds);
+    return isSafeNumber(result) ? result : value;
   }
-  const precision = numberPrecision(bounds);
+  const { min = 0, step } = bounds;
+  // Round to the grid's own decimals. max's decimals only decide whether a
+  // decimal point may be typed; rounding to a long max such as
+  // 0.9999999999999999 would keep float noise like 0.7999999999999999.
+  const precision = Math.max(decimalsOf(step), decimalsOf(min));
   // toFixed takes at most 100 places; a step finer than that is left
   // unrounded rather than rounded to zero.
   const round = (n: number): number => (precision > 100 ? n : Number(n.toFixed(precision)));
-  const { step } = bounds;
-  // Distances from the value to the grid points below and above it, from
-  // the signed remainder: adding a whole step to a tiny negative remainder
-  // would round it to exactly one step. The step is then taken from the
-  // value itself, so no count of grid points is built that could outgrow
-  // exact integers.
-  const distance = value - (bounds.min ?? 0);
-  const remainder = distance % step;
+  // Distances from the value to the grid points below and above it. The
+  // remainders of value and min are taken separately, so subtracting a
+  // distant min never rounds, and kept signed, since adding a whole step
+  // to a tiny negative remainder would round it to exactly one step. The
+  // step is then taken from the value itself, so no count of grid points
+  // is built that could outgrow exact integers.
+  const remainder = ((value % step) - (min % step)) % step;
   const down = remainder >= 0 ? remainder : step + remainder;
   const up = remainder > 0 ? step - remainder : -remainder;
   // Within a few rounding errors of a grid point counts as on it: the
   // noise a value picks up from repeated decimal steps
-  // (0.30000000000000004) plus the rounding in subtracting min. It follows
-  // those sizes, not the step's, so a huge step still snaps a small value,
-  // and stays under a quarter step so neighboring grid points never merge.
-  const tolerance = Math.min(
-    Number.EPSILON * (16 * Math.abs(value) + 2 * Math.abs(distance)),
-    step / 4,
-  );
+  // (0.30000000000000004) plus the error in min's own decimal form. It
+  // follows those sizes, not the step's, so a huge step still snaps a
+  // small value, and stays under a quarter step so neighboring grid
+  // points never merge.
+  const tolerance = Math.min(Number.EPSILON * (16 * Math.abs(value) + 2 * Math.abs(min)), step / 4);
   const onGrid = down <= tolerance || up <= tolerance;
   const next = onGrid ? value + direction * step : direction === 1 ? value + up : value - down;
   const result = clampNumber(round(next), bounds);
   return isSafeNumber(result) ? result : value;
 }
 
-const SAFE_RANGE: NumberBounds = {
-  min: -Number.MAX_SAFE_INTEGER,
-  max: Number.MAX_SAFE_INTEGER,
-  step: 1,
-};
+function clampToSafe(n: number): number {
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(-Number.MAX_SAFE_INTEGER, n));
+}
 
 /** Whether typed digits for `n` still read back as exactly `n`. */
 export function isSafeNumber(n: number): boolean {
