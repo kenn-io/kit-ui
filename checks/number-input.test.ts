@@ -39,6 +39,11 @@ describe("isNumberDraft", () => {
     expect(isNumberDraft("-9007199254740992", { step: 1 })).toBe(false);
   });
 
+  test("a bound in exponent form counts only its real decimals", () => {
+    expect(isNumberDraft("1.5", { max: 1.25e21, step: 1 })).toBe(false);
+    expect(isNumberDraft("0.5", { min: 1e-7, step: 1 })).toBe(true);
+  });
+
   test("a fractional min allows decimals even with an integer step", () => {
     expect(isNumberDraft("1.5", { min: 0.5, step: 1 })).toBe(true);
   });

@@ -8,10 +8,9 @@ export interface NumberBounds {
      * `min`, or 0 without one). Must be positive. */
     step: number;
 }
-/** Decimal places a value can carry: enough for `step`, for the `min` the
- * step grid is anchored on, and for a `max` a clamp can land on. 0 means
- * the field takes integers only. */
-export declare function numberPrecision({ min, max, step }: NumberBounds): number;
+/** Whether a decimal point may be typed: only when `step`, the `min` the
+ * step grid is anchored on, or a `max` a clamp can land on has decimals. */
+export declare function allowsDecimals({ min, max, step }: NumberBounds): boolean;
 /** Whether a minus sign may be typed: only when the range reaches below 0. */
 export declare function allowsNegative({ min }: NumberBounds): boolean;
 /** Whether `text` is a number, or the start of one, that the field may

@@ -2,13 +2,13 @@
   import type { Snippet } from "svelte";
   import TextInput, { type TextInputSize } from "./TextInput.svelte";
   import {
+    allowsDecimals,
     allowsNegative,
     clampNumber,
     formatNumber,
     isNumberDraft,
     isNumberText,
     isSafeNumber,
-    numberPrecision,
     parseNumberDraft,
     stepNumber,
     type NumberBounds,
@@ -96,7 +96,7 @@
   // iOS numeric and decimal keypads have no minus key, so a field that
   // takes negatives falls back to the full keyboard.
   const inputmode = $derived(
-    allowsNegative(bounds) ? "text" : numberPrecision(bounds) > 0 ? "decimal" : "numeric",
+    allowsNegative(bounds) ? "text" : allowsDecimals(bounds) ? "decimal" : "numeric",
   );
 
   // What the user typed, kept while it still means the current value so
@@ -108,9 +108,7 @@
     void value;
     return null;
   });
-  const text = $derived(
-    draft !== null && parseNumberDraft(draft) === value ? draft : formatNumber(value),
-  );
+  const text = $derived(draft ?? formatNumber(value));
 
   // A required field must not submit a draft like "-": the browser sees
   // non-empty text and its own required check passes.
@@ -135,11 +133,15 @@
   function commit(): void {
     if (readonly || disabled) return;
     if (value !== null) setValue(clampNumber(value, bounds));
+    settle(committed);
+  }
+
+  /** Drop in-progress text and report a change from `previous`. */
+  function settle(previous: number | null): void {
     draft = null;
-    if (value !== committed) {
-      committed = value;
-      onchange?.(value);
-    }
+    if (value === previous) return;
+    committed = value;
+    onchange?.(value);
   }
 
   function handleBeforeInput(event: InputEvent): void {
@@ -213,10 +215,7 @@
     event.preventDefault();
     const before = value;
     setValue(stepNumber(value, event.key === "ArrowUp" ? 1 : -1, bounds));
-    draft = null;
-    if (value === before) return;
-    committed = value;
-    onchange?.(value);
+    settle(before);
   }
 
   function handleBlur(): void {

@@ -12,26 +12,13 @@ export interface NumberBounds {
 
 /** Digits after the decimal point in `n`'s shortest decimal form. */
 function decimalsOf(n: number): number {
-  const text = String(n);
-  const exponent = text.match(/e-(\d+)$/);
-  if (exponent) {
-    const mantissa = text.slice(0, exponent.index);
-    const dot = mantissa.indexOf(".");
-    return Number(exponent[1]) + (dot === -1 ? 0 : mantissa.length - dot - 1);
-  }
-  const dot = text.indexOf(".");
-  return dot === -1 ? 0 : text.length - dot - 1;
+  return formatNumber(n).split(".")[1]?.length ?? 0;
 }
 
-/** Decimal places a value can carry: enough for `step`, for the `min` the
- * step grid is anchored on, and for a `max` a clamp can land on. 0 means
- * the field takes integers only. */
-export function numberPrecision({ min, max, step }: NumberBounds): number {
-  return Math.max(
-    decimalsOf(step),
-    min === undefined ? 0 : decimalsOf(min),
-    max === undefined ? 0 : decimalsOf(max),
-  );
+/** Whether a decimal point may be typed: only when `step`, the `min` the
+ * step grid is anchored on, or a `max` a clamp can land on has decimals. */
+export function allowsDecimals({ min, max, step }: NumberBounds): boolean {
+  return [step, min, max].some((n) => n !== undefined && decimalsOf(n) > 0);
 }
 
 /** Whether a minus sign may be typed: only when the range reaches below 0. */
@@ -55,7 +42,7 @@ export function isNumberDraft(text: string, bounds: NumberBounds): boolean {
  * isNumberDraft without the safe-integer limit. */
 export function isNumberText(text: string, bounds: NumberBounds): boolean {
   const sign = allowsNegative(bounds) ? "-?" : "";
-  const fraction = numberPrecision(bounds) > 0 ? "(?:\\.\\d*)?" : "";
+  const fraction = allowsDecimals(bounds) ? "(?:\\.\\d*)?" : "";
   return new RegExp(`^${sign}\\d*${fraction}$`).test(text);
 }
 
@@ -83,6 +70,13 @@ export function formatNumber(value: number | null): string {
   return sign + digits + "0".repeat(point - digits.length);
 }
 
+/** The range where typed digits still match the value. */
+const SAFE_RANGE: NumberBounds = {
+  min: -Number.MAX_SAFE_INTEGER,
+  max: Number.MAX_SAFE_INTEGER,
+  step: 1,
+};
+
 export function clampNumber(value: number, { min, max }: NumberBounds): number {
   if (min !== undefined && value < min) return min;
   if (max !== undefined && value > max) return max;
@@ -107,8 +101,7 @@ export function stepNumber(
   if (value === null || !isSafeNumber(value)) {
     if (value !== null && Math.sign(value) !== -direction) return value;
     const start = value ?? (direction === 1 ? bounds.min : bounds.max) ?? 0;
-    const safe = Math.min(Number.MAX_SAFE_INTEGER, Math.max(-Number.MAX_SAFE_INTEGER, start));
-    const result = clampNumber(safe, bounds);
+    const result = clampNumber(clampNumber(start, SAFE_RANGE), bounds);
     return isSafeNumber(result) ? result : value;
   }
   const { min = 0, step } = bounds;
@@ -126,19 +119,18 @@ export function stepNumber(
   // round back to the value itself. Rounding never reverses order, so the
   // first point that rounds to a different number is found by doubling
   // the count of steps until one does, then bisecting.
-  let skip = 0n;
-  if (pointAt(0n) === value) {
-    let high = 1n;
-    while (pointAt(high) === value) high *= 2n;
-    let low = high / 2n;
-    while (high - low > 1n) {
-      const middle = (low + high) / 2n;
-      if (pointAt(middle) === value) low = middle;
-      else high = middle;
-    }
-    skip = high;
+  let low = -1n;
+  let high = 0n;
+  while (pointAt(high) === value) {
+    low = high;
+    high = high * 2n + 1n;
   }
-  const result = clampNumber(pointAt(skip), bounds);
+  while (high - low > 1n) {
+    const middle = (low + high) / 2n;
+    if (pointAt(middle) === value) low = middle;
+    else high = middle;
+  }
+  const result = clampNumber(pointAt(high), bounds);
   return isSafeNumber(result) ? result : value;
 }
 
