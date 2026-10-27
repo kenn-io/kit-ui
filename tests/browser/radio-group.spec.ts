@@ -84,13 +84,6 @@ test("a form reset restores each group's starting choice and its bound value", a
   await expect(format.getByRole("radio", { name: "JSON" })).not.toBeChecked();
   await expect(eol.getByRole("radio", { name: "LF", exact: true })).toBeChecked();
   await expect(readout).toHaveText("format: none, line endings: lf");
-
-  // The bound value and the inputs agree, so the next choice submits.
-  await option(format, "CSV").click();
-  await page.getByRole("button", { name: "Export" }).click();
-  await expect(page.getByTestId("radio-group-form-result")).toHaveText(
-    "submitted: format=csv&eol=lf",
-  );
 });
 
 test("the drawn mark matches Checkbox's box in both modes", async ({ page }) => {

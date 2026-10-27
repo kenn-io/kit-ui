@@ -62,8 +62,10 @@
   function syncOnReset(fieldset: HTMLFieldSetElement) {
     const form = fieldset.form;
     if (!form) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const onReset = (event: Event) => {
-      setTimeout(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
         if (event.defaultPrevented) return;
         const next = fieldset.querySelector<HTMLInputElement>(
           ".kit-radio-group__input:checked",
@@ -74,7 +76,12 @@
       });
     };
     form.addEventListener("reset", onReset);
-    return () => form.removeEventListener("reset", onReset);
+    return () => {
+      // A reset can also remove the group; its pending read must not write
+      // into the app's state afterwards.
+      clearTimeout(timer);
+      form.removeEventListener("reset", onReset);
+    };
   }
 </script>
 
