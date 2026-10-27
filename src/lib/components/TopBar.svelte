@@ -232,16 +232,21 @@
         </div>
       {/if}
       <!-- Measurement probe: the full tab row, never collapsed. Indicators
-           render here too so they count toward the collapse math. -->
-      <div class="kit-top-bar__probe" bind:this={probeEl} aria-hidden="true">
-        {#each tabs as tab (tab.id)}
-          <span class="kit-top-bar__tab">
-            {tab.label}
-            {#if tab.indicator}
-              {@render indicatorDot(tab.indicator)}
-            {/if}
-          </span>
-        {/each}
+           render here too so they count toward the collapse math. The
+           clipping frame keeps the probe, which is wider than the bar
+           whenever the tabs collapse, out of every ancestor's scrollable
+           overflow. -->
+      <div class="kit-top-bar__probe-frame" aria-hidden="true">
+        <div class="kit-top-bar__probe" bind:this={probeEl}>
+          {#each tabs as tab (tab.id)}
+            <span class="kit-top-bar__tab">
+              {tab.label}
+              {#if tab.indicator}
+                {@render indicatorDot(tab.indicator)}
+              {/if}
+            </span>
+          {/each}
+        </div>
       </div>
     </nav>
   {/if}
@@ -395,15 +400,27 @@
     flex-shrink: 0;
   }
 
+  /* Covers the bar and clips: hidden content still counts toward an
+   * ancestor's scrollable overflow, so an unclipped probe would give a
+   * phone-width page sideways scroll whenever the tabs collapse. */
+  .kit-top-bar__probe-frame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* max-content so the frame never narrows the row the collapse math
+   * measures. */
   .kit-top-bar__probe {
     position: absolute;
     top: 0;
     left: 0;
+    width: max-content;
     display: flex;
     align-items: center;
     gap: 2px;
     padding: 2px;
-    visibility: hidden;
-    pointer-events: none;
   }
 </style>

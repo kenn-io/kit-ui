@@ -85,3 +85,44 @@ test("per-tab indicator dot renders on the tab, in the probe, and survives colla
   await expect(triggerDot).toBeVisible();
   await expect(triggerDot).toHaveAttribute("title", "roborev daemon unreachable");
 });
+
+test("the hidden measurement probe adds no sideways scroll to a narrow container", async ({
+  page,
+}) => {
+  await gotoPage(page, "top-bar");
+
+  // The demo host clips (overflow: hidden), which makes it a scroll
+  // container: anything the bar spills past its edge shows up in its
+  // scrollWidth, the same way it would on a phone-width page. The second
+  // (search) demo is used because its collapsed bar still fits at 360px;
+  // the first demo's side regions alone overflow there.
+  const host = page.locator(".bar-host").nth(1);
+  const bar = host.locator(".kit-top-bar");
+  const tabs = bar.locator(".kit-top-bar__tabs");
+  const dropdown = bar.locator(".kit-top-bar__nav-select");
+  const probe = bar.locator(".kit-top-bar__probe");
+  const slider = page.locator('input[type="range"]').nth(1);
+  const overflow = () =>
+    host.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+
+  for (const width of [800, 680, 560, 440, 360]) {
+    await setSlider(slider, width);
+  }
+  await expect(dropdown).toBeVisible();
+
+  // The probe still lays out the full row, wider than the bar…
+  const probeWidth = await probe.evaluate((el) => (el as HTMLElement).offsetWidth);
+  const barWidth = await bar.evaluate((el) => el.clientWidth);
+  expect(probeWidth).toBeGreaterThan(barWidth);
+  // …without pushing the container's scrollable area past its edge.
+  const collapsed = await overflow();
+  expect(collapsed.scrollWidth).toBeLessThanOrEqual(collapsed.clientWidth);
+
+  for (const width of [440, 560, 680, 800, 920]) {
+    await setSlider(slider, width);
+  }
+  await expect(tabs).toBeVisible();
+  await expect(dropdown).not.toBeVisible();
+  const expanded = await overflow();
+  expect(expanded.scrollWidth).toBeLessThanOrEqual(expanded.clientWidth);
+});
