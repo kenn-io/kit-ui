@@ -1,10 +1,32 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { defineConfig } from "vite-plus";
+import { defineConfig, type Plugin } from "vite-plus";
+
+const CHARSET = '<meta charset="UTF-8" />';
+const GALLERY = fileURLToPath(new URL("index.html", import.meta.url));
+
+// Inlines the first-paint hold script into the gallery page right after
+// <meta charset>, which must stay in the first 1024 bytes, and before any
+// stylesheet. Test fixture pages keep their markup as written.
+function holdFirstPaint(): Plugin {
+  const script = readFileSync(new URL("src/demo/hold-first-paint.js", import.meta.url), "utf8");
+  return {
+    name: "kit-ui:hold-first-paint",
+    transformIndexHtml(html, { filename }) {
+      if (filename !== GALLERY) return html;
+      if (!html.includes(CHARSET)) {
+        throw new Error(`${filename} has no ${CHARSET} to put the first-paint hold script after`);
+      }
+      return html.replace(CHARSET, `${CHARSET}\n    <script>\n${script}    </script>`);
+    },
+  };
+}
 
 // The library itself is consumed as source (package.json `exports` points at
 // src/lib). `vite dev` / `vite build` serve and bundle the demo app.
 export default defineConfig(({ command }) => ({
-  plugins: [svelte()],
+  plugins: [svelte(), holdFirstPaint()],
   // The dev server tags the styles and scripts it injects with this nonce, so
   // tests/browser/strict-csp.spec.ts can serve a page under a strict Content
   // Security Policy that still admits the dev server's own additions.
@@ -13,6 +35,9 @@ export default defineConfig(({ command }) => ({
   // reports on svelte2tsx/tsc output style, not on authored code.
   lint: { ignorePatterns: ["types/**"] },
   build: {
+    // Embed fonts in the render-blocking stylesheet so the gallery never
+    // paints text in a fallback face while a font file is still loading.
+    assetsInlineLimit: (file) => (file.endsWith(".woff2") ? true : undefined),
     // The gallery intentionally bundles every component plus optional heavy
     // peers (Mermaid and Shiki); the published library is consumed as source.
     chunkSizeWarningLimit: 800,

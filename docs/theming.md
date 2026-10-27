@@ -489,6 +489,26 @@ Italics are synthesized and non-latin scripts fall through to the platform
 fallbacks in each stack. Licenses: `src/lib/fonts/OFL.txt`. Apps with their
 own font pipeline can skip the file and self-host any of these families.
 
+To keep text from painting in a fallback face before a font arrives, embed
+the faces in the app's render-blocking stylesheet and hold the first paint
+until they load. With Vite or SvelteKit, inline the font files as data URLs:
+
+```js
+build: {
+  assetsInlineLimit: (file) => (file.endsWith(".woff2") ? true : undefined),
+},
+```
+
+Then inline
+[`hold-first-paint.js`](https://github.com/kenn-io/actions/blob/main/first-paint/hold-first-paint.js)
+in each page's `<head>`, directly after `<meta charset>` and before any
+stylesheet; a `script-src` Content Security Policy needs its hash. Embedding
+puts every face `fonts.css` declares into that stylesheet (about 390KB as
+base64), so an app that offers no theme pack can declare only Inter and
+JetBrains Mono from `@kenn-io/kit-ui/fonts/*` instead. The demo
+gallery does both (`vite.config.ts`), and CI runs the kenn-io/actions
+`first-paint` check against its build.
+
 ### Authoring a custom theme
 
 `setThemeName` accepts any string, so apps can define their own themes with
