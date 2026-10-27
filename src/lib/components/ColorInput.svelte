@@ -27,7 +27,8 @@
     ariaLabel?: string;
     /** Accessible name for the native picker. */
     pickerLabel?: string;
-    /** Accessible name for the hex text field. */
+    /** Accessible name for the hex text field. Defaults to "Hex color",
+     * unless `id` is set, so an external `<label for>` names the field. */
     hexLabel?: string;
     /** Marks the control invalid, for example when the app finds the color
      * has too little contrast. The hex field also marks itself invalid
@@ -49,7 +50,7 @@
     swatches = [],
     ariaLabel = undefined,
     pickerLabel = "Open color picker",
-    hexLabel = "Hex color",
+    hexLabel = undefined,
     invalid = false,
     ariaDescribedby = undefined,
     size = "md",
@@ -62,7 +63,11 @@
   // The field shows the committed color until the user types; a new value
   // from the parent (a reset, a swatch) replaces any draft.
   let draft = $derived(normalized);
-  let draftRejected = $state(false);
+  // A new value from the parent also clears a rejected draft.
+  let draftRejected = $derived.by(() => {
+    void normalized;
+    return false;
+  });
 
   function commit(next: string): void {
     const parsed = parseHexColor(next);
@@ -103,7 +108,7 @@
     value={draft}
     {disabled}
     invalid={invalid || draftRejected}
-    ariaLabel={hexLabel}
+    ariaLabel={hexLabel ?? (id === undefined ? "Hex color" : undefined)}
     {ariaDescribedby}
     autocomplete="off"
     oninput={(next) => {

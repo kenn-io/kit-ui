@@ -27,6 +27,29 @@ test("hex field commits valid colors and rejects others", async ({ page }) => {
   await expect(hex).not.toHaveAttribute("aria-invalid");
 });
 
+test("a new value from the app replaces a rejected draft", async ({ page }) => {
+  await gotoPage(page, "color-input");
+  const group = page.getByRole("group", { name: "Accent color" });
+  const hex = group.getByRole("textbox", { name: "Hex color" });
+
+  await hex.fill("D55E00");
+  await hex.press("Enter");
+  await hex.fill("not a color");
+  await hex.press("Enter");
+  await expect(hex).toHaveAttribute("aria-invalid", "true");
+
+  await page.getByRole("button", { name: "Reset" }).click();
+  await expect(hex).toHaveValue("#0072b2");
+  await expect(hex).not.toHaveAttribute("aria-invalid");
+});
+
+test("an external label names the hex field", async ({ page }) => {
+  await gotoPage(page, "color-input");
+  await expect(page.getByRole("textbox", { name: "Brand color", exact: true })).toHaveValue(
+    "#cc79a7",
+  );
+});
+
 test("swatches set the color and the picker reflects it", async ({ page }) => {
   await gotoPage(page, "color-input");
   const group = page.getByRole("group", { name: "Accent color" });

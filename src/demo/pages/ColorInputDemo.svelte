@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ColorInput, contrastRatio, WCAG_AA_TEXT } from "../../lib/index.js";
+  import { Button, ColorInput, contrastRatio, WCAG_AA_TEXT } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   // The Okabe-Ito palette: hues chosen to stay distinct under the common
@@ -16,6 +16,7 @@
 
   let accent = $state("#0072b2");
   let ink = $state("#f0e442");
+  let brand = $state("#cc79a7");
   const inkRatio = $derived(contrastRatio(ink, "#ffffff"));
   const inkTooFaint = $derived(inkRatio < WCAG_AA_TEXT);
 </script>
@@ -27,10 +28,25 @@
 >
   <div class="col">
     <ColorInput bind:value={accent} ariaLabel="Accent color" swatches={okabeIto} />
-    <p class="value" data-testid="color-input-value">
-      <span class="chip" style:background={accent}></span>
-      {accent}
-    </p>
+    <div class="row">
+      <p class="value" data-testid="color-input-value">
+        <span class="chip" style:background={accent}></span>
+        {accent}
+      </p>
+      <Button size="sm" onclick={() => (accent = "#0072b2")}>Reset</Button>
+    </div>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="External label"
+  description="With an id, a visible <label for> names the hex field. hexLabel is only needed when there is no visible label."
+  code={`<label for="brand-color">Brand color</label>
+<ColorInput id="brand-color" bind:value={brand} />`}
+>
+  <div class="row">
+    <label class="label" for="color-input-brand">Brand color</label>
+    <ColorInput id="color-input-brand" bind:value={brand} />
   </div>
 </DemoSection>
 
@@ -72,6 +88,17 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
   }
 
   .value,

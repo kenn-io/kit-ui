@@ -19,7 +19,8 @@ interface Props {
     ariaLabel?: string;
     /** Accessible name for the native picker. */
     pickerLabel?: string;
-    /** Accessible name for the hex text field. */
+    /** Accessible name for the hex text field. Defaults to "Hex color",
+     * unless `id` is set, so an external `<label for>` names the field. */
     hexLabel?: string;
     /** Marks the control invalid, for example when the app finds the color
      * has too little contrast. The hex field also marks itself invalid
