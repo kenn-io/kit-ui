@@ -50,6 +50,10 @@
       "types": "./types/utils/color-hash.d.ts",
       "default": "./src/lib/utils/color-hash.ts"
     },
+    "./utils/palette": {
+      "types": "./types/utils/palette.d.ts",
+      "default": "./src/lib/utils/palette.ts"
+    },
     "./utils/debounce": {
       "types": "./types/utils/debounce.d.ts",
       "default": "./src/lib/utils/debounce.ts"

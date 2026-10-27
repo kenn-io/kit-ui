@@ -25,6 +25,7 @@
   import CodeBlockDemo from "./pages/CodeBlockDemo.svelte";
   import ColorInputDemo from "./pages/ColorInputDemo.svelte";
   import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
+  import PaletteDemo from "./pages/PaletteDemo.svelte";
   import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
   import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
@@ -137,6 +138,7 @@
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "notice", label: "Notice", component: NoticeDemo },
     { id: "page-frame", label: "PageFrame", component: PageFrameDemo },
+    { id: "palette", label: "Palette", component: PaletteDemo },
     { id: "pan-zoom", label: "Pan and zoom", component: PanZoomDemo },
     { id: "provider-brand", label: "Provider brand", component: ProviderBrandDemo },
     { id: "date-picker", label: "DatePicker", component: DatePickerDemo },

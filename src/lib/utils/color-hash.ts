@@ -32,10 +32,15 @@ function djb2(s: string): number {
   return Math.abs(h);
 }
 
+/** The stable slot `hashColor` picks for a name in a palette of `length`. */
+export function hashIndex(name: string, length: number): number {
+  return djb2(name) % length;
+}
+
 /** Picks a stable color for a name (repo, project, user, …). The same name
  * always yields the same palette entry. Empty names fall back to
  * `var(--text-muted)`. */
 export function hashColor(name: string, palette: readonly string[] = DEFAULT_HASH_PALETTE): string {
   if (!name || palette.length === 0) return FALLBACK;
-  return palette[djb2(name) % palette.length]!;
+  return palette[hashIndex(name, palette.length)]!;
 }

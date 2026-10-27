@@ -165,7 +165,7 @@ everything and aren't repeated per row.
 | CommandPalette, shortcut system            | no rule — ad-hoc `keydown` listeners are legitimate in components; app-level shortcut sprawl is found in review                                |
 | FitStages                                  | no rule — the hand-rolled equivalent is a media query, which `nonstandard-breakpoint` already flags                                            |
 | `debounce`                                 | `local-debounce` (relative debounce imports / inline implementations)                                                                          |
-| Formatters, `hashColor`                    | no rule — plain functions; duplication isn't detectable from markup                                                                            |
+| Formatters, `hashColor`, `createPalette`   | no rule — plain functions; duplication isn't detectable from markup                                                                            |
 
 ## Adoption path
 

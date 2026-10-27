@@ -237,6 +237,22 @@ export {
   WCAG_AA_TEXT,
 } from "./utils/color-contrast.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
+export {
+  createPalette,
+  PALETTES,
+  seriesDashArray,
+  seriesPattern,
+  seriesSwatchBackground,
+  type Palette,
+  type PaletteName,
+  type PaletteOptions,
+  type PaletteOrder,
+  type SeriesDash,
+  type SeriesFill,
+  type SeriesMarker,
+  type SeriesPattern,
+  type SeriesStyle,
+} from "./utils/palette.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
