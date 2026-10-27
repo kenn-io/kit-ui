@@ -173,6 +173,12 @@ describe("stepNumber", () => {
     expect(stepNumber(2, -1, { min: -1e-17, step: 1 })).toBe(1);
   });
 
+  test("a step finer than the gap between numbers lands on the first one that differs", () => {
+    expect(stepNumber(0.1, 1, { min: 0.1, step: 9e-18 })).toBe(0.10000000000000002);
+    expect(stepNumber(1, 1, { min: 3e-17, step: 1.6e-16 })).toBe(1.0000000000000002);
+    expect(stepNumber(1, -1, { min: 3e-17, step: 1.6e-16 })).toBe(0.9999999999999999);
+  });
+
   test("steps finer than 100 decimal places still move the value", () => {
     expect(stepNumber(0, 1, { step: 1e-101 })).toBe(1e-101);
   });
