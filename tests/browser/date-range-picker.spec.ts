@@ -366,3 +366,82 @@ test("Sunday-start picker highlights and commits Sunday through Saturday", async
   await day(page, 21).click();
   await expect(demo.locator("output")).toHaveText("2026-06-21 → 2026-06-27");
 });
+
+// The "Extra choices" demo offers a "No date" choice beside the date tabs and
+// starts on the last 30 days.
+function choiceDemo(page: import("@playwright/test").Page) {
+  return page.getByTestId("choice-picker");
+}
+
+test("a picker without extra choices renders no choice group", async ({ page }) => {
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  await expect(panel(page).locator(".kit-date-range-picker__choices")).toHaveCount(0);
+});
+
+test("picking an extra choice commits it, closes the panel and labels the trigger", async ({
+  page,
+}) => {
+  const demo = choiceDemo(page);
+  const trigger = demo.locator(".kit-date-range-picker__trigger");
+  await trigger.click();
+  await panel(page)
+    .getByRole("group", { name: "Other" })
+    .getByRole("button", { name: "No date" })
+    .click();
+
+  await expect(panel(page)).toHaveCount(0);
+  await expect(demo.getByTestId("choice-selection")).toHaveText(
+    '{"mode":"choice","value":"no-date"}',
+  );
+  await expect(trigger).toHaveText("No date");
+  await expect(trigger).toBeFocused();
+});
+
+test("the chosen extra choice is marked, and a preset returns to a date range", async ({
+  page,
+}) => {
+  const demo = choiceDemo(page);
+  const trigger = demo.locator(".kit-date-range-picker__trigger");
+  await trigger.click();
+  await panel(page).getByRole("button", { name: "No date" }).click();
+
+  // Reopening lands on the Relative tab with the choice marked like a preset.
+  await trigger.click();
+  await expect(panel(page).getByRole("radio", { name: "Relative" })).toBeChecked();
+  await expect(panel(page).getByRole("button", { name: "No date" })).toHaveClass(/active/);
+  await expect(panel(page).locator(".kit-date-range-picker__pill.active")).toHaveCount(1);
+
+  await panel(page).getByRole("button", { name: "7d" }).click();
+  await expect(demo.getByTestId("choice-selection")).toHaveText('{"mode":"relative","days":7}');
+  await expect(demo.getByTestId("choice-period")).toHaveText("2026-06-09 → 2026-06-15");
+  await expect(panel(page).getByRole("button", { name: "No date" })).not.toHaveClass(/active/);
+  await expect(trigger).toHaveText("Last 7 days");
+});
+
+test("a calendar pick after an extra choice commits a date period", async ({ page }) => {
+  const demo = choiceDemo(page);
+  const trigger = demo.locator(".kit-date-range-picker__trigger");
+  await trigger.click();
+  await panel(page).getByRole("button", { name: "No date" }).click();
+
+  await trigger.click();
+  await panel(page).getByRole("radio", { name: "Calendar" }).click();
+  await expect(panel(page).getByRole("button", { name: "No date" })).toBeVisible();
+  await day(page, 3).click();
+  await expect(demo.getByTestId("choice-period")).toHaveText("2026-06-01 → 2026-06-07");
+  await expect(trigger).toHaveText("Week of Jun 1");
+});
+
+test("keyboard Tab reaches the extra choice after the presets", async ({ page }) => {
+  const demo = choiceDemo(page);
+  await demo.locator(".kit-date-range-picker__trigger").focus();
+  await page.keyboard.press("Enter");
+
+  await panel(page).getByRole("button", { name: "All" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(panel(page).getByRole("button", { name: "No date" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(demo.getByTestId("choice-selection")).toHaveText(
+    '{"mode":"choice","value":"no-date"}',
+  );
+});

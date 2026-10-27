@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="V extends string = never">
   import CalendarIcon from "@lucide/svelte/icons/calendar";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
@@ -16,10 +16,13 @@
     resolveRange,
     todayStr,
     type CalendarNavLabels,
+    type ChoiceSelection,
     type WeekStart,
     type CalendarUnit,
     type DateRange,
+    type RangeChoice,
     type RangeMode,
+    type RangePickerSelection,
     type RangePreset,
     type RangeSelection,
   } from "./date-range.js";
@@ -27,8 +30,8 @@
   interface Props extends CalendarNavLabels {
     /** First weekday for calendar layout and week selection. */
     weekStart?: WeekStart | undefined;
-    selection: RangeSelection;
-    onSelect: (selection: RangeSelection) => void;
+    selection: RangePickerSelection<V>;
+    onSelect: (selection: RangePickerSelection<V>) => void;
     /** Dim the trigger while the consumer reloads data. */
     busy?: boolean;
     /** Earliest known data date (YYYY-MM-DD); anchors the "All" preset. */
@@ -41,6 +44,10 @@
     block?: boolean;
     /** Relative presets shown as pills; override to relabel or reduce. */
     presets?: RangePreset[];
+    /** Choices that are not date ranges (e.g. "No date"), shown as pills
+     * below the tabs. Picking one reports `{ mode: "choice", value }`
+     * through `onSelect` and closes the panel. */
+    extraChoices?: RangeChoice<V>[] | undefined;
     relativeTabLabel?: string;
     calendarTabLabel?: string;
     customTabLabel?: string;
@@ -60,6 +67,7 @@
     dialogLabel?: string;
     relativeGroupLabel?: string;
     calendarGroupLabel?: string;
+    choiceGroupLabel?: string;
     /** BCP 47 tag for calendar-mode trigger labels and the embedded calendar.
      * Complete custom ranges deliberately stay as canonical YYYY-MM-DD so
      * cross-year bounds are unambiguous in every locale. Omitted = browser
@@ -77,6 +85,7 @@
     maxDate = null,
     block = false,
     presets = DEFAULT_RANGE_PRESETS,
+    extraChoices = [],
     relativeTabLabel = "Relative",
     calendarTabLabel = "Calendar",
     customTabLabel = "Custom",
@@ -91,6 +100,7 @@
     dialogLabel = "Select date range",
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
+    choiceGroupLabel = "Other",
     locale = undefined,
     weekStart = "monday",
     // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
@@ -123,7 +133,8 @@
   // seed()/pick handlers, so a plain (non-reactive) variable.
   let pendingFor: string | null = null;
 
-  function selectionKey(sel: RangeSelection): string {
+  function selectionKey(sel: RangeSelection | ChoiceSelection<V>): string {
+    if (sel.mode === "choice") return `choice:${sel.value}`;
     if (sel.mode === "relative") return `relative:${sel.days}`;
     if (sel.mode === "calendar") return `calendar:${sel.unit}:${sel.anchor}`;
     return `custom:${sel.from}:${sel.to}`;
@@ -152,6 +163,10 @@
 
   /** Short label for the trigger button reflecting the current selection. */
   const label = $derived.by(() => {
+    if (selection.mode === "choice") {
+      const value = selection.value;
+      return extraChoices.find((c) => c.value === value)?.label ?? value;
+    }
     if (selection.mode === "relative") {
       const preset = presets.find((p) => p.days === selection.days);
       if (preset) return preset.longLabel;
@@ -183,7 +198,7 @@
       tab = "custom";
       return;
     }
-    tab = selection.mode;
+    tab = selection.mode === "choice" ? "relative" : selection.mode;
     reseedFromSelection();
   }
 
@@ -192,6 +207,18 @@
   // is deliberately left alone — an open panel shouldn't switch tabs under
   // the user just because the parent swapped the selection.
   function reseedFromSelection(): void {
+    if (selection.mode === "choice") {
+      // A choice has no dates to carry into the date tabs; start them fresh.
+      calUnit = "week";
+      calAnchor = todayStr();
+      calMonth = calAnchor;
+      customFrom = "";
+      customTo = "";
+      customPending = false;
+      pendingFor = null;
+      customMonth = calAnchor;
+      return;
+    }
     if (selection.mode === "calendar") {
       calUnit = selection.unit;
       calAnchor = selection.anchor;
@@ -244,6 +271,14 @@
       await tick();
       positionPanel();
     }
+  }
+
+  function applyChoice(value: V): void {
+    open = false;
+    triggerEl?.focus();
+    // TypeScript cannot resolve RangePickerSelection's conditional while V is
+    // generic; this branch only runs when a choice exists, so V is not never.
+    onSelect({ mode: "choice", value } as RangePickerSelection<V>);
   }
 
   function isRelativeActive(days: number): boolean {
@@ -453,6 +488,20 @@
           />
         </div>
       {/if}
+
+      {#if extraChoices.length > 0}
+        <div class="kit-date-range-picker__choices">
+          {@render pillGroup(
+            choiceGroupLabel,
+            extraChoices.map((choice) => ({
+              key: choice.value,
+              label: choice.label,
+              active: selection.mode === "choice" && selection.value === choice.value,
+              pick: () => applyChoice(choice.value),
+            })),
+          )}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -576,6 +625,14 @@
   .kit-date-range-picker__pill.active {
     background: var(--accent-blue);
     color: var(--accent-blue-foreground, #fff);
+  }
+
+  /* Set apart from the date tabs: these choices replace the period rather
+   * than pick dates within it. */
+  .kit-date-range-picker__choices {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: var(--border-width) solid var(--border-muted);
   }
 
   .kit-date-range-picker__calendar {

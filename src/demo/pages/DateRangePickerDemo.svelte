@@ -5,6 +5,8 @@
     daysAgo,
     resolveRange,
     todayStr,
+    type RangeChoice,
+    type RangePickerSelection,
     type RangeSelection,
   } from "../../lib/components/date-range.js";
   import DemoSection from "../DemoSection.svelte";
@@ -32,6 +34,18 @@
     anchor: "2026-06-15",
   });
   const sundayRange = $derived(resolveRange(sundaySelection, undefined, "sunday"));
+
+  // A period that is not a date range: records with no date of their own.
+  const noDateChoices: RangeChoice<"no-date">[] = [{ value: "no-date", label: "No date" }];
+  let choiceSelection = $state.raw<RangePickerSelection<"no-date">>({
+    mode: "relative",
+    days: 30,
+  });
+  const choicePeriod = $derived(
+    choiceSelection.mode === "choice"
+      ? `choice: ${choiceSelection.value}`
+      : (({ from, to }) => `${from} → ${to}`)(resolveRange(choiceSelection, earliestDate)),
+  );
 
   let blockSelection = $state.raw<RangeSelection>({
     mode: "custom",
@@ -136,6 +150,29 @@
       onSelect={(value) => (sundaySelection = value)}
     />
     <output>{sundayRange.from} → {sundayRange.to}</output>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Extra choices"
+  description="extraChoices adds pills for periods that are not date ranges, set apart below the tabs. Picking one closes the panel, shows its label on the trigger, and reports a choice selection (mode choice plus its value) through onSelect; picking any date afterwards returns to a date range."
+  code={`const extraChoices = [{ value: "no-date", label: "No date" }];
+
+<DateRangePicker
+  {selection}
+  onSelect={(sel) => (selection = sel)}
+  {extraChoices}
+/>`}
+>
+  <div data-testid="choice-picker" class="readout">
+    <DateRangePicker
+      selection={choiceSelection}
+      onSelect={(sel) => (choiceSelection = sel)}
+      extraChoices={noDateChoices}
+      {earliestDate}
+    />
+    <output data-testid="choice-selection">{JSON.stringify(choiceSelection)}</output>
+    <output data-testid="choice-period">{choicePeriod}</output>
   </div>
 </DemoSection>
 

@@ -39,6 +39,31 @@ export interface CustomSelection {
 
 export type RangeSelection = RelativeSelection | CalendarSelection | CustomSelection;
 
+/**
+ * A choice DateRangePicker offers beside the date ranges, for a period that
+ * is not a range of dates (e.g. "No date" for records without one).
+ */
+export interface RangeChoice<V extends string = string> {
+  value: V;
+  /** Pill label, also shown on the trigger while the choice is selected. */
+  label: string;
+}
+
+/** The selection DateRangePicker reports when one of its choices is picked. */
+export interface ChoiceSelection<V extends string = string> {
+  mode: "choice";
+  value: V;
+}
+
+/**
+ * What a DateRangePicker holds and reports: a date range, or one of the
+ * picker's extra choices. With no choices (`V` = never) this is exactly
+ * RangeSelection, so pickers without choices keep their plain type.
+ */
+export type RangePickerSelection<V extends string = never> =
+  | RangeSelection
+  | ([V] extends [never] ? never : ChoiceSelection<V>);
+
 export interface DateRange {
   from: string;
   to: string;
