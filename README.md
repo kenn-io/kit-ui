@@ -53,6 +53,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [ChipStack](docs/components/chip-stack.md)                    | new (consumer mobile-view pattern) | Collapsing chip/button row with "+N" expansion                                                |
 | [CodeBlock](docs/components/code-block.md)                    | both (consolidated)                | Standalone code card: shiki dual-theme highlighting, line numbers, wrap toggle, copy          |
 | [CollapsibleSidebar](docs/components/collapsible-sidebar.md)  | consumer app                       | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`)                       |
+| [ColorInput](docs/components/color-input.md)                  | new (agentsview message colors)    | Color picker well, hex field, and quick-pick swatches                                         |
 | [ColorLabel](docs/components/color-label.md)                  | consumer app `GitHubLabels`        | Hex-colored pill with WCAG contrast-picked text                                               |
 | [CommandPalette](docs/components/command-palette.md)          | new                                | ⌘K overlay: filtered commands, sections, recents; pairs with the shortcut system              |
 | [CopyButton](docs/components/copy-button.md)                  | agentsview                         | Copy-to-clipboard icon button with success feedback                                           |
@@ -100,7 +101,7 @@ shiki → DOMPurify; peers `marked@^18`/`shiki@^4`/`dompurify@^3`),
 [utilities](docs/utilities.md) (`copyToClipboard`,
 `formatRelativeTime`, `formatTimestamp`, `truncate`, `createRefreshScheduler`,
 `floatingPopoverStyle`, `formatDuration`/`formatTokenCount`/`formatCost`,
-`debounce`, `hashColor`), the [theme store](docs/theming.md#theme-store)
+`debounce`, `hashColor`, `contrastRatio`/`readableInk`), the [theme store](docs/theming.md#theme-store)
 (`initTheme`/`setThemeMode`/`setHighContrast`), shared breakpoints
 (`BREAKPOINTS`/`MEDIA` — see the
 [theming guide](docs/theming.md#breakpoints)), and the design tokens

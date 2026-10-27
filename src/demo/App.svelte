@@ -23,6 +23,7 @@
   import ChipDemo from "./pages/ChipDemo.svelte";
   import ChipStackDemo from "./pages/ChipStackDemo.svelte";
   import CodeBlockDemo from "./pages/CodeBlockDemo.svelte";
+  import ColorInputDemo from "./pages/ColorInputDemo.svelte";
   import ColorLabelDemo from "./pages/ColorLabelDemo.svelte";
   import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
@@ -113,6 +114,7 @@
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
     { id: "code-block", label: "CodeBlock", component: CodeBlockDemo },
+    { id: "color-input", label: "ColorInput", component: ColorInputDemo },
     { id: "color-label", label: "ColorLabel", component: ColorLabelDemo },
     { id: "command-palette", label: "CommandPalette", component: CommandPaletteDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },

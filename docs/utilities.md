@@ -527,3 +527,37 @@ consolidated from Forge's `repoColor` and agentsview's `projectColor`.
 `DEFAULT_HASH_PALETTE` is the deduped union of both palettes; entries beyond
 kit-ui's core six accents carry hex fallbacks (`var(--accent-rose, #e11d48)`)
 so they render even where an app doesn't define the extra accent tokens.
+
+## Color contrast
+
+```ts
+import {
+  contrastRatio,
+  mixHexColors,
+  parseHexColor,
+  readableInk,
+  WCAG_AA_NON_TEXT,
+  WCAG_AA_TEXT,
+} from "@kenn-io/kit-ui";
+
+parseHexColor("0072B2"); // "#0072b2"; null for anything but 3 or 6 hex digits
+contrastRatio("#767676", "#ffffff"); // 4.54
+readableInk("#fef08a"); // "#1f2328" (dark ink); "#ffffff" on dark colors
+mixHexColors("#0072b2", "#ffffff", 0.1); // "#e6f1f7"
+```
+
+WCAG 2 contrast math for colors a user or caller supplies. CSS custom
+properties can't be measured from JS, so check a pick against known surfaces,
+such as the palettes in `@kenn-io/kit-ui/brand.json`.
+
+- `WCAG_AA_TEXT` (4.5) is the AA floor for body text. `WCAG_AA_NON_TEXT` (3)
+  is the floor for large text and for borders, icons, and other UI graphics.
+- `mixHexColors(a, b, weight)` matches `color-mix(in srgb, a <weight>%, b)`
+  to within one step per channel, so you can measure a tint that CSS draws
+  from the same colors.
+- `contrastRatio` and `relativeLuminance` throw on a color that is not hex.
+  Run untrusted input through `parseHexColor` first.
+
+ColorLabel picks its text with `readableInk`, and
+[ColorInput](components/color-input.md) pairs with these helpers for
+contrast warnings.

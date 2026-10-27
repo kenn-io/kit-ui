@@ -705,6 +705,13 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("DatePicker (one date)");
   });
 
+  test("color input: native type=color", () => {
+    const src = svelte(``, `<input type="color" value="#ff0000" /><input type="text" />`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-color-input"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("ColorInput");
+  });
+
   test("toast: classes including compounds like undo-toast", () => {
     const src = svelte(
       `.undo-toast { position: fixed; }`,

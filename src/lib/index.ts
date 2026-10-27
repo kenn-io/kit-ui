@@ -33,6 +33,8 @@ export type { ChipSize, ChipTone } from "./components/Chip.svelte";
 export { default as ChipStack } from "./components/ChipStack.svelte";
 export { default as CodeBlock } from "./components/CodeBlock.svelte";
 export { default as CollapsibleSidebar } from "./components/CollapsibleSidebar.svelte";
+export { default as ColorInput } from "./components/ColorInput.svelte";
+export type { ColorInputSize, ColorInputSwatch } from "./components/ColorInput.svelte";
 export { default as ColorLabel } from "./components/ColorLabel.svelte";
 export type { ColorLabelSize } from "./components/ColorLabel.svelte";
 export { default as CommandPalette } from "./components/CommandPalette.svelte";
@@ -225,6 +227,15 @@ export {
   type VisitOptions,
 } from "./utils/browser-telemetry.js";
 export { copyToClipboard } from "./utils/clipboard.js";
+export {
+  contrastRatio,
+  mixHexColors,
+  parseHexColor,
+  readableInk,
+  relativeLuminance,
+  WCAG_AA_NON_TEXT,
+  WCAG_AA_TEXT,
+} from "./utils/color-contrast.js";
 export { DEFAULT_HASH_PALETTE, hashColor } from "./utils/color-hash.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";

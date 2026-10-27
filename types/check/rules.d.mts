@@ -192,6 +192,13 @@ export function checkHandRolledDateInput(source: any): {
     line: number;
     message: string;
 }[];
+/** Native color inputs render unthemed platform chrome and offer no hex
+ * entry or quick picks. */
+export function checkHandRolledColorInput(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Hand-rolled toasts/snackbars duplicate FlashBanner + the flash store.
  * \b also matches inside compounds like undo-toast. */
 export function checkHandRolledToast(source: any): {
@@ -416,6 +423,7 @@ export const ALL_RULES: {
     "hand-rolled-top-bar": typeof checkHandRolledTopBar;
     "hand-rolled-search-input": typeof checkHandRolledSearchInput;
     "hand-rolled-date-input": typeof checkHandRolledDateInput;
+    "hand-rolled-color-input": typeof checkHandRolledColorInput;
     "hand-rolled-toast": typeof checkHandRolledToast;
     "hand-rolled-drawer": typeof checkHandRolledDrawer;
     "hand-rolled-find-bar": typeof checkHandRolledFindBar;
