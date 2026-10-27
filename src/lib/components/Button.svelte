@@ -6,6 +6,7 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import Spinner from "./Spinner.svelte";
 
   interface Props {
     tone?: ButtonTone;
@@ -13,6 +14,11 @@
     size?: ButtonSize;
     type?: "button" | "submit" | "reset";
     disabled?: boolean;
+    /** Shows a centered spinner over the faded label and ignores clicks,
+     * keeping the button's size, colors, and focus. */
+    busy?: boolean;
+    /** Accessible name while busy; falls back to `ariaLabel`, then `label`. */
+    busyLabel?: string | undefined;
     title?: string | undefined;
     ariaLabel?: string | undefined;
     ariaDescribedby?: string | undefined;
@@ -31,6 +37,8 @@
     size = "md",
     type = "button",
     disabled = false,
+    busy = false,
+    busyLabel = undefined,
     title = undefined,
     ariaLabel = undefined,
     ariaDescribedby = undefined,
@@ -50,11 +58,27 @@
       `kit-button--${tone}`,
       `kit-button--${surface}`,
       `kit-button--${size}`,
+      busy && "kit-button--busy",
       className,
     ]
       .filter(Boolean)
       .join(" "),
   );
+
+  const SPINNER_SIZE: Record<ButtonSize, number> = { sm: 10, md: 12, lg: 16 };
+  const restingLabel = $derived(ariaLabel ?? (label && shortLabel ? label : undefined));
+  const busyName = $derived(busyLabel ?? ariaLabel ?? label);
+
+  // aria-disabled keeps a busy button focusable, so it still receives
+  // clicks; drop them here. preventDefault also stops a submit button from
+  // submitting its form.
+  function handleClick(event: MouseEvent) {
+    if (busy) {
+      event.preventDefault();
+      return;
+    }
+    onclick?.(event);
+  }
 
   // Publishes the pointer's element-relative position as --kit-pointer-x/y
   // for themes that paint a cursor-tracking glow (ember's tactile hover in
@@ -74,9 +98,11 @@
   {disabled}
   {title}
   aria-expanded={ariaExpanded}
-  aria-label={ariaLabel ?? (label && shortLabel ? label : undefined)}
+  aria-label={busy ? (busyName ?? restingLabel) : restingLabel}
   aria-describedby={ariaDescribedby}
-  {onclick}
+  aria-disabled={busy || undefined}
+  aria-busy={busy || undefined}
+  onclick={handleClick}
   onpointermove={trackPointer}
 >
   {#if children}
@@ -92,6 +118,9 @@
   {/if}
   {#if trailing}
     {@render trailing()}
+  {/if}
+  {#if busy}
+    <span class="kit-button__busy"><Spinner size={SPINNER_SIZE[size]} label={busyName} /></span>
   {/if}
 </button>
 
@@ -155,7 +184,7 @@
     box-shadow: var(--shadow-raised-solid, var(--shadow-raised, none));
   }
 
-  .kit-button:where(:active:not(:disabled), [aria-expanded="true"]) {
+  .kit-button:where(:active:not(:disabled, [aria-disabled="true"]), [aria-expanded="true"]) {
     --kit-button-fill: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
@@ -188,13 +217,41 @@
     display: none;
   }
 
+  /* Busy: the button keeps its resting box, colors, and focus. The class is
+   * repeated to beat the shared aria-disabled dimming in theme.css. */
+  .kit-button.kit-button--busy[aria-disabled="true"] {
+    opacity: 1;
+    cursor: progress;
+  }
+
+  /* Every child but the spinner fades in place, keeping its space. */
+  .kit-button--busy > :global(:not(.kit-button__busy)) {
+    opacity: 0.1;
+  }
+
+  /* No insets: an absolutely positioned child of a flex container sits at
+   * its static position, which justify-content and align-items center in
+   * the button. The button itself stays unpositioned, so a consumer's
+   * position rule is never overridden. */
+  .kit-button__busy {
+    position: absolute;
+    display: flex;
+    pointer-events: none;
+  }
+
+  /* The spinner takes the button's ink so it reads on every surface. */
+  .kit-button__busy :global(.kit-spinner) {
+    border-color: color-mix(in srgb, currentColor 25%, transparent);
+    border-top-color: currentColor;
+  }
+
   /* Neutral outline — cancel / secondary */
   .kit-button--outline.kit-button--neutral {
     background: var(--kit-button-fill);
     color: var(--text-secondary);
     border: var(--border-width) solid var(--border-default);
   }
-  .kit-button--outline.kit-button--neutral:hover:not(:disabled) {
+  .kit-button--outline.kit-button--neutral:hover:not(:disabled, [aria-disabled="true"]) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
   }
@@ -205,7 +262,7 @@
     color: var(--text-secondary);
     border: var(--border-width) solid color-mix(in srgb, var(--border-default) 80%, transparent);
   }
-  .kit-button--soft.kit-button--neutral:hover:not(:disabled) {
+  .kit-button--soft.kit-button--neutral:hover:not(:disabled, [aria-disabled="true"]) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
     border-color: var(--border-default);
@@ -220,7 +277,7 @@
     color: var(--text-secondary);
     border: var(--border-width) solid var(--border-default);
   }
-  .kit-button--outline.kit-button--danger:hover:not(:disabled) {
+  .kit-button--outline.kit-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-red) 9%, var(--bg-surface));
     color: color-mix(in srgb, var(--accent-red) 72%, var(--text-primary));
     border-color: color-mix(in srgb, var(--accent-red) 30%, var(--border-default));
@@ -232,7 +289,7 @@
     color: var(--bg-surface);
     border: var(--border-width) solid var(--accent-red);
   }
-  .kit-button--solid.kit-button--danger:hover:not(:disabled) {
+  .kit-button--solid.kit-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-red) 88%, #000);
     border-color: color-mix(in srgb, var(--accent-red) 88%, #000);
   }
@@ -245,11 +302,11 @@
     color: var(--bg-surface);
     border: var(--border-width) solid color-mix(in srgb, var(--accent-green) 82%, #000);
   }
-  .kit-button--solid.kit-button--success:hover:not(:disabled) {
+  .kit-button--solid.kit-button--success:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-green) 72%, #000);
     border-color: color-mix(in srgb, var(--accent-green) 72%, #000);
   }
-  .kit-button--solid.kit-button--success:active:not(:disabled),
+  .kit-button--solid.kit-button--success:active:not(:disabled, [aria-disabled="true"]),
   .kit-button--solid.kit-button--success[aria-expanded="true"] {
     background: color-mix(in srgb, var(--accent-green) 62%, #000);
     border-color: color-mix(in srgb, var(--accent-green) 62%, #000);
@@ -261,7 +318,7 @@
     color: var(--bg-primary);
     border: var(--border-width) solid var(--text-primary);
   }
-  .kit-button--solid.kit-button--neutral:hover:not(:disabled) {
+  .kit-button--solid.kit-button--neutral:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--text-primary) 82%, var(--bg-primary));
     border-color: color-mix(in srgb, var(--text-primary) 82%, var(--bg-primary));
   }
@@ -272,7 +329,7 @@
     color: var(--bg-surface);
     border: var(--border-width) solid var(--accent-purple);
   }
-  .kit-button--solid.kit-button--workflow:hover:not(:disabled) {
+  .kit-button--solid.kit-button--workflow:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-purple) 88%, #000);
     border-color: color-mix(in srgb, var(--accent-purple) 88%, #000);
   }
@@ -283,11 +340,11 @@
     color: var(--bg-surface);
     border: var(--border-width) solid var(--accent-blue);
   }
-  .kit-button--solid.kit-button--info:hover:not(:disabled) {
+  .kit-button--solid.kit-button--info:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-blue) 88%, #000);
     border-color: color-mix(in srgb, var(--accent-blue) 88%, #000);
   }
-  .kit-button--solid.kit-button--info:active:not(:disabled),
+  .kit-button--solid.kit-button--info:active:not(:disabled, [aria-disabled="true"]),
   .kit-button--solid.kit-button--info[aria-expanded="true"] {
     background: color-mix(in srgb, var(--accent-blue) 78%, #000);
     border-color: color-mix(in srgb, var(--accent-blue) 78%, #000);
@@ -302,10 +359,10 @@
     color: color-mix(in srgb, var(--accent-green) 72%, var(--text-primary));
     border: var(--border-width) solid color-mix(in srgb, var(--accent-green) 30%, transparent);
   }
-  .kit-button--soft.kit-button--success:hover:not(:disabled) {
+  .kit-button--soft.kit-button--success:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-green) 20%, transparent);
   }
-  .kit-button--soft.kit-button--success:active:not(:disabled),
+  .kit-button--soft.kit-button--success:active:not(:disabled, [aria-disabled="true"]),
   .kit-button--soft.kit-button--success[aria-expanded="true"] {
     background: color-mix(in srgb, var(--accent-green) 26%, transparent);
     border-color: color-mix(in srgb, var(--accent-green) 48%, transparent);
@@ -317,7 +374,7 @@
     color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-primary));
     border: var(--border-width) solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
   }
-  .kit-button--soft.kit-button--info:hover:not(:disabled) {
+  .kit-button--soft.kit-button--info:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-blue) 18%, transparent);
   }
 
@@ -327,7 +384,7 @@
     color: color-mix(in srgb, var(--accent-purple) 72%, var(--text-primary));
     border: var(--border-width) solid color-mix(in srgb, var(--accent-purple) 30%, transparent);
   }
-  .kit-button--soft.kit-button--workflow:hover:not(:disabled) {
+  .kit-button--soft.kit-button--workflow:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
   }
 
@@ -337,7 +394,7 @@
     color: color-mix(in srgb, var(--accent-red) 72%, var(--text-primary));
     border: var(--border-width) solid color-mix(in srgb, var(--accent-red) 30%, transparent);
   }
-  .kit-button--soft.kit-button--danger:hover:not(:disabled) {
+  .kit-button--soft.kit-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-red) 18%, transparent);
   }
 
@@ -348,7 +405,7 @@
     border: var(--border-width) solid
       color-mix(in srgb, var(--accent-green) 40%, var(--border-default));
   }
-  .kit-button--outline.kit-button--success:hover:not(:disabled) {
+  .kit-button--outline.kit-button--success:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-green) 8%, var(--bg-surface));
   }
 
@@ -358,7 +415,7 @@
     border: var(--border-width) solid
       color-mix(in srgb, var(--accent-blue) 40%, var(--border-default));
   }
-  .kit-button--outline.kit-button--info:hover:not(:disabled) {
+  .kit-button--outline.kit-button--info:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-surface));
   }
 
@@ -368,7 +425,7 @@
     border: var(--border-width) solid
       color-mix(in srgb, var(--accent-purple) 40%, var(--border-default));
   }
-  .kit-button--outline.kit-button--workflow:hover:not(:disabled) {
+  .kit-button--outline.kit-button--workflow:hover:not(:disabled, [aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-purple) 8%, var(--bg-surface));
   }
 </style>

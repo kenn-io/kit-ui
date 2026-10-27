@@ -8,6 +8,11 @@ interface Props {
     size?: ButtonSize;
     type?: "button" | "submit" | "reset";
     disabled?: boolean;
+    /** Shows a centered spinner over the faded label and ignores clicks,
+     * keeping the button's size, colors, and focus. */
+    busy?: boolean;
+    /** Accessible name while busy; falls back to `ariaLabel`, then `label`. */
+    busyLabel?: string | undefined;
     title?: string | undefined;
     ariaLabel?: string | undefined;
     ariaDescribedby?: string | undefined;

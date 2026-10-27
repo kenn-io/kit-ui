@@ -24,11 +24,36 @@ variants. Extracted from Forge's `ActionButton`.
 | `shortLabel`                                            | `string`                                                     | —           | Alternate compact label (hidden by default; reveal via CSS at narrow widths) |
 | `type`                                                  | `"button" \| "submit" \| "reset"`                            | `"button"`  |                                                                              |
 | `disabled`                                              | `boolean`                                                    | `false`     |                                                                              |
+| `busy`                                                  | `boolean`                                                    | `false`     | Spinner over the faded label; ignores clicks (see [Busy state](#busy-state)) |
+| `busyLabel`                                             | `string`                                                     | —           | Accessible name while busy; falls back to `ariaLabel`, then `label`          |
 | `title`, `ariaLabel`, `ariaDescribedby`, `ariaExpanded` |                                                              | —           | Accessibility passthroughs                                                   |
 | `class`                                                 | `string`                                                     | `""`        | Extra classes                                                                |
 | `onclick`                                               | `(event: MouseEvent) => void`                                | —           |                                                                              |
 | `children`                                              | `Snippet`                                                    | —           | Leading content (icons)                                                      |
 | `trailing`                                              | `Snippet`                                                    | —           | Content after the label                                                      |
+
+## Busy state
+
+Set `busy` while the button's action runs:
+
+```svelte
+<Button label="Refresh" busy={refreshing} busyLabel="Refreshing" onclick={refresh} />
+```
+
+- The button keeps its resting width, height, and position, so neighbors never
+  move. The label and any icons stay in place at 10% opacity, and a
+  [`Spinner`](spinner.md) sits at the button's center (10px for `sm`, 12px for
+  `md`, 16px for `lg`) in the button's text color.
+- The button keeps its full colors: no disabled dimming, and no hover or press
+  feedback.
+- It sets `aria-busy` and `aria-disabled` and ignores clicks, including the
+  form submission of a `type="submit"` button. It stays focusable, so keyboard
+  focus is not lost.
+- Its accessible name while busy is `busyLabel`, falling back to `ariaLabel`,
+  then `label`.
+
+Prefer `busy` over swapping the label text (which resizes the button) or
+setting `disabled` (which dims the spinner along with the button).
 
 ## Variant guide
 
