@@ -385,7 +385,7 @@ test("picking an extra choice commits it, closes the panel and labels the trigge
   const trigger = demo.locator(".kit-date-range-picker__trigger");
   await trigger.click();
   await panel(page)
-    .getByRole("group", { name: "Other" })
+    .getByRole("group", { name: "Other periods" })
     .getByRole("button", { name: "No date" })
     .click();
 
@@ -427,9 +427,36 @@ test("a calendar pick after an extra choice commits a date period", async ({ pag
   await trigger.click();
   await panel(page).getByRole("radio", { name: "Calendar" }).click();
   await expect(panel(page).getByRole("button", { name: "No date" })).toBeVisible();
+  // The choice has no period, so the calendar marks no unit and no days.
+  await expect(
+    panel(page).getByRole("group", { name: "Calendar period" }).locator(".active"),
+  ).toHaveCount(0);
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(0);
   await day(page, 3).click();
   await expect(demo.getByTestId("choice-period")).toHaveText("2026-06-01 → 2026-06-07");
   await expect(trigger).toHaveText("Week of Jun 1");
+});
+
+test("re-picking the selected choice drops a half-picked custom range", async ({ page }) => {
+  const demo = choiceDemo(page);
+  const trigger = demo.locator(".kit-date-range-picker__trigger");
+  await trigger.click();
+  await panel(page).getByRole("button", { name: "No date" }).click();
+
+  await trigger.click();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  await day(page, 5).click();
+  await panel(page).getByRole("button", { name: "No date" }).click();
+
+  // Reopening starts fresh on Relative; the abandoned start is gone, so the
+  // next custom click starts a new range instead of committing one.
+  await trigger.click();
+  await expect(panel(page).getByRole("radio", { name: "Relative" })).toBeChecked();
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  await day(page, 10).click();
+  await expect(demo.getByTestId("choice-selection")).toHaveText(
+    '{"mode":"choice","value":"no-date"}',
+  );
 });
 
 test("keyboard Tab reaches the extra choice after the presets", async ({ page }) => {

@@ -100,7 +100,7 @@
     dialogLabel = "Select date range",
     relativeGroupLabel = "Relative window",
     calendarGroupLabel = "Calendar period",
-    choiceGroupLabel = "Other",
+    choiceGroupLabel = "Other periods",
     locale = undefined,
     weekStart = "monday",
     // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
@@ -181,8 +181,11 @@
   });
 
   // The period the calendar highlights: the day/week/month around the
-  // current anchor.
-  const calSelected = $derived(periodBounds(calUnit, calAnchor, weekStart));
+  // current anchor. A selected choice has no period, so nothing highlights
+  // until the user picks one.
+  const calSelected = $derived(
+    selection.mode === "choice" ? null : periodBounds(calUnit, calAnchor, weekStart),
+  );
 
   // While an end pick is pending only the start day highlights.
   const calCustomSelected = $derived<DateRange | null>(
@@ -274,6 +277,10 @@
   }
 
   function applyChoice(value: V): void {
+    // Drop any half-picked custom range. Re-picking the selected choice keeps
+    // the selection key, so the drift effect would not clear it.
+    customPending = false;
+    pendingFor = null;
     open = false;
     triggerEl?.focus();
     // TypeScript cannot resolve RangePickerSelection's conditional while V is
@@ -439,7 +446,7 @@
           calendarUnits.map((u) => ({
             key: u.unit,
             label: u.label,
-            active: calUnit === u.unit,
+            active: selection.mode !== "choice" && calUnit === u.unit,
             pick: () => applyCalendar(u.unit, calAnchor),
           })),
         )}
