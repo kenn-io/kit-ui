@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { NumberInput, TextInput } from "../../lib/index.js";
+  import { Button, NumberInput, TextInput } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let timeout = $state<number | null>(30);
@@ -70,7 +70,23 @@
       <label class="field__label" for="number-demo-offset">Offset (any integer, required)</label>
       <span class="row">
         <NumberInput bind:value={offset} required id="number-demo-offset" />
-        <span class="readout">value: <code>{describe(offset)}</code></span>
+        <span class="readout" data-testid="offset-value"
+          >value: <code>{describe(offset)}</code></span
+        >
+        <!-- Sets the value the way an app would, without taking focus from
+             the field, so its in-progress text can be checked. The
+             mousedown handler only keeps focus where it is; the buttons
+             inside stay the interactive elements. -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <span
+          class="row"
+          role="group"
+          aria-label="Set the offset from outside"
+          onmousedown={(event) => event.preventDefault()}
+        >
+          <Button size="sm" label="Set to 10" onclick={() => (offset = 10)} />
+          <Button size="sm" label="Clear" onclick={() => (offset = null)} />
+        </span>
       </span>
     </div>
     <div class="field">

@@ -66,7 +66,8 @@ is a `number`, or `null` while the field is empty; it is never a string.
   `min`..`max` and rewrites in-progress text in its canonical form:
   `1.` becomes `1`, `007` becomes `7`, and a lone `-` empties the field.
   Very small and very large values are written out in full (`0.0000001`,
-  never `1e-7`), so they stay editable.
+  never `1e-7`), so they stay editable. A value the app sets while the
+  field has focus replaces in-progress text the same way.
 - **The wheel does nothing**, unlike a native number input that changes
   under a scrolling pointer.
 

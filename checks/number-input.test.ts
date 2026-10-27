@@ -103,6 +103,25 @@ describe("stepNumber", () => {
     expect(stepNumber(1, -1, { min: -1e15, step: 5 })).toBe(0);
     // Nor does subtracting one near the safe-integer limit round the offset.
     expect(stepNumber(42, 1, { min: -Number.MAX_SAFE_INTEGER, step: 1024 })).toBe(1025);
+    expect(stepNumber(1, 1, { min: -4e15, step: 5 })).toBe(5);
+    expect(stepNumber(1, -1, { min: -4e15, step: 5 })).toBe(0);
+    expect(stepNumber(0.125, 1, { min: -1e15, step: 2.5 })).toBe(2.5);
+    expect(stepNumber(0.125, -1, { min: -1e15, step: 2.5 })).toBe(0);
+    expect(stepNumber(0.5, 1, { min: -4e15, step: 2.5 })).toBe(2.5);
+    // A step with no exact binary form still tolerates the error it
+    // carries across a distant min.
+    expect(stepNumber(-499.6, 1, { min: -332472, step: 0.05 })).toBe(-499.55);
+  });
+
+  test("an integer grid near the safe-integer limit keeps offsets of a few units", () => {
+    const bounds = { min: 1819798019476871, step: 10 };
+    expect(stepNumber(5992820858716763, 1, bounds)).toBe(5992820858716771);
+    expect(stepNumber(5992820858716763, -1, bounds)).toBe(5992820858716761);
+  });
+
+  test("remainders of opposite sign do not round with a large step", () => {
+    const bounds = { min: -7000000000000000, step: 8000000000000000 };
+    expect(stepNumber(3000000000000001, -1, bounds)).toBe(1000000000000000);
   });
 
   test("a large value between grid points snaps to the next one", () => {

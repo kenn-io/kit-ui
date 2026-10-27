@@ -107,7 +107,8 @@ export function stepNumber(
   if (value === null || !isSafeNumber(value)) {
     if (value !== null && Math.sign(value) !== -direction) return value;
     const start = value ?? (direction === 1 ? bounds.min : bounds.max) ?? 0;
-    const result = clampNumber(clampToSafe(start), bounds);
+    const safe = Math.min(Number.MAX_SAFE_INTEGER, Math.max(-Number.MAX_SAFE_INTEGER, start));
+    const result = clampNumber(safe, bounds);
     return isSafeNumber(result) ? result : value;
   }
   const { min = 0, step } = bounds;
@@ -121,27 +122,41 @@ export function stepNumber(
   // Distances from the value to the grid points below and above it. The
   // remainders of value and min are taken separately, so subtracting a
   // distant min never rounds, and kept signed, since adding a whole step
-  // to a tiny negative remainder would round it to exactly one step. The
-  // step is then taken from the value itself, so no count of grid points
-  // is built that could outgrow exact integers.
-  const remainder = ((value % step) - (min % step)) % step;
+  // to a tiny negative remainder would round it to exactly one step.
+  // Remainders of opposite sign are moved a step closer first: their plain
+  // difference can reach two steps, past exact integers for a large step.
+  // The step is then taken from the value itself, so no count of grid
+  // points is built that could outgrow exact integers.
+  const a = value % step;
+  const b = min % step;
+  const offset = a > 0 && b < 0 ? a - step - b : a < 0 && b > 0 ? a + step - b : a - b;
+  const remainder = offset % step;
   const down = remainder >= 0 ? remainder : step + remainder;
   const up = remainder > 0 ? step - remainder : -remainder;
-  // Within a few rounding errors of a grid point counts as on it: the
-  // noise a value picks up from repeated decimal steps
-  // (0.30000000000000004) plus the error in min's own decimal form. It
-  // follows those sizes, not the step's, so a huge step still snaps a
-  // small value, and stays under a quarter step so neighboring grid
-  // points never merge.
-  const tolerance = Math.min(Number.EPSILON * (16 * Math.abs(value) + 2 * Math.abs(min)), step / 4);
+  // A grid built from decimals with no exact binary form, such as 0.1,
+  // counts a value within a few rounding errors of a grid point as on it:
+  // the noise a value picks up from repeated steps (0.30000000000000004)
+  // and the error min's remainder inherits from the step and min. The
+  // margin follows those sizes, not the step's, so a huge step still snaps
+  // a small value, and stays under a quarter step so neighboring grid
+  // points never merge. A grid of exact numbers (integers, 2.5, 0.125) has
+  // no such noise and gets no margin: near the safe-integer limit a margin
+  // sized to the value or min would swallow real offsets of a few units.
+  const tolerance =
+    isExactDecimal(step) && isExactDecimal(min)
+      ? 0
+      : Math.min(Number.EPSILON * (16 * Math.abs(value) + 2 * Math.abs(min)), step / 4);
   const onGrid = down <= tolerance || up <= tolerance;
   const next = onGrid ? value + direction * step : direction === 1 ? value + up : value - down;
   const result = clampNumber(round(next), bounds);
   return isSafeNumber(result) ? result : value;
 }
 
-function clampToSafe(n: number): number {
-  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(-Number.MAX_SAFE_INTEGER, n));
+/** Whether `n` is exactly the decimal it prints as. Multiplying by a power
+ * of two is exact, so `n` times 2^places is an integer only when `n` has no
+ * binary digits past the ones its decimal places can hold. */
+function isExactDecimal(n: number): boolean {
+  return Number.isInteger(n * 2 ** decimalsOf(n));
 }
 
 /** Whether typed digits for `n` still read back as exactly `n`. */

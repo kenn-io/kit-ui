@@ -153,6 +153,22 @@ test("a required field holding only a minus sign blocks form submission", async 
   expect(await field.evaluate((el) => (el as HTMLInputElement).checkValidity())).toBe(true);
 });
 
+test("a value set from outside replaces in-progress text", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Offset/ });
+  await field.fill("");
+  await field.pressSequentially("-");
+  await expect(field).toHaveValue("-");
+  // The buttons keep focus in the field, so no blur commit clears the "-".
+  await page.getByRole("button", { name: "Set to 10" }).click();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("10");
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("");
+  await expect(page.getByTestId("offset-value")).toHaveText("value: null");
+});
+
 test("a read-only field keeps an out-of-range value on blur", async ({ page }) => {
   await gotoPage(page, "number-input");
   const field = page.getByRole("spinbutton", { name: "Read-only number" });

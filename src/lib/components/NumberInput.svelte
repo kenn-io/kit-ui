@@ -100,9 +100,14 @@
   );
 
   // What the user typed, kept while it still means the current value so
-  // in-progress text like "1." or "-" survives. A new value from outside
-  // replaces it with the canonical form.
-  let draft = $state<string | null>(null);
+  // in-progress text like "1." or "-" survives. Any change to value resets
+  // it, so a value set from outside shows in its canonical form even when
+  // it parses the same as the draft; handleText writes the draft after
+  // setting the value.
+  let draft = $derived.by((): string | null => {
+    void value;
+    return null;
+  });
   const text = $derived(
     draft !== null && parseNumberDraft(draft) === value ? draft : formatNumber(value),
   );
@@ -191,8 +196,8 @@
       replaceText(text, raw);
       return;
     }
-    draft = cleaned;
     setValue(parseNumberDraft(cleaned));
+    draft = cleaned;
     if (cleaned !== raw) replaceText(cleaned, raw);
   }
 
