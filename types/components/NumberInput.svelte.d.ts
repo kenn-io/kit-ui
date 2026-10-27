@@ -22,6 +22,10 @@ interface Props {
     name?: string;
     /** Accessible name when there is no associated `<label for>`. */
     ariaLabel?: string;
+    /** Validation message when a required field holds text that is not a
+     * number yet, such as a lone "-". An empty required field uses the
+     * browser's own message. */
+    requiredMessage?: string;
     ariaDescribedby?: string;
     /** Focus the input when it mounts. */
     autofocus?: boolean;

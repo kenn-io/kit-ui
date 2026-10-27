@@ -16,11 +16,16 @@ export declare function allowsNegative({ min }: NumberBounds): boolean;
 /** Whether `text` is a number, or the start of one, that the field may
  * hold while the user types: an optional leading minus (when negatives are
  * allowed), digits, and one decimal point (when the precision allows
- * decimals). "-", "." and "" are accepted as in-progress text. */
+ * decimals). "-", "." and "" are accepted as in-progress text. Numbers
+ * beyond Number.MAX_SAFE_INTEGER are refused, since past it the parsed
+ * value would no longer match the digits typed. */
 export declare function isNumberDraft(text: string, bounds: NumberBounds): boolean;
 /** The number a draft means, or null while it has no digits yet. */
 export declare function parseNumberDraft(text: string): number | null;
-/** Canonical text for a value: "" for null, shortest decimal otherwise. */
+/** Canonical text for a value: "" for null, otherwise the shortest
+ * decimal that round-trips, written out in full. JavaScript switches to
+ * exponent form ("1e-7", "1e+21") at the extremes, which the draft rules
+ * do not accept, so those digits are expanded. */
 export declare function formatNumber(value: number | null): string;
 export declare function clampNumber(value: number, { min, max }: NumberBounds): number;
 /** The value one arrow press moves to. A value on the step grid moves one
@@ -30,7 +35,3 @@ export declare function clampNumber(value: number, { min, max }: NumberBounds): 
  * is rounded to the field's precision so repeated 0.1 steps stay exact,
  * then clamped to the range. */
 export declare function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number;
-/** The text an insertion (typing, paste, drop) would leave in the field:
- * `inserted` replaces the selected range. Deletions need no such check,
- * since removing characters from an allowed draft leaves an allowed one. */
-export declare function draftAfterInsert(current: string, selectionStart: number, selectionEnd: number, inserted: string): string;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  draftAfterInsert,
+  formatNumber,
   isNumberDraft,
   parseNumberDraft,
   stepNumber,
@@ -30,6 +30,12 @@ describe("isNumberDraft", () => {
     }
     expect(isNumberDraft("0.1.2", bounds)).toBe(false);
     expect(isNumberDraft("-0.5", bounds)).toBe(false);
+  });
+
+  test("numbers past Number.MAX_SAFE_INTEGER are refused", () => {
+    expect(isNumberDraft("9007199254740991", { step: 1 })).toBe(true);
+    expect(isNumberDraft("9007199254740992", { step: 1 })).toBe(false);
+    expect(isNumberDraft("-9007199254740992", { step: 1 })).toBe(false);
   });
 
   test("a fractional min allows decimals even with an integer step", () => {
@@ -88,12 +94,21 @@ describe("stepNumber", () => {
   });
 });
 
-describe("draftAfterInsert", () => {
-  test("inserts at the caret", () => {
-    expect(draftAfterInsert("12", 1, 1, ".")).toBe("1.2");
+describe("formatNumber", () => {
+  test("extreme values are written out in full digits", () => {
+    expect(formatNumber(1e-7)).toBe("0.0000001");
+    expect(formatNumber(-1.5e-7)).toBe("-0.00000015");
+    expect(formatNumber(1e21)).toBe("1000000000000000000000");
+    expect(formatNumber(1.25e21)).toBe("1250000000000000000000");
   });
 
-  test("replaces the selected range", () => {
-    expect(draftAfterInsert("1234", 1, 3, "-")).toBe("1-4");
+  test("ordinary values keep their shortest form", () => {
+    expect(formatNumber(null)).toBe("");
+    expect(formatNumber(0.1)).toBe("0.1");
+    expect(formatNumber(-42)).toBe("-42");
+  });
+
+  test("a formatted small value is still an editable draft", () => {
+    expect(isNumberDraft(formatNumber(1e-7), { min: 0, step: 1e-7 })).toBe(true);
   });
 });

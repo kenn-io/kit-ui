@@ -22,35 +22,38 @@ is a `number`, or `null` while the field is empty; it is never a string.
 
 ## Props
 
-| Prop                                 | Type                              | Default | Notes                                                                                                                       |
-| ------------------------------------ | --------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `value`                              | `number \| null` (bindable)       | `null`  | `null` while the field holds no digits                                                                                      |
-| `min` / `max`                        | `number`                          | —       | Arrow keys stay inside the range; leaving the field clamps a typed value into it. A `min` of 0 or more blocks the minus key |
-| `step`                               | `number`                          | `1`     | Arrow-key increment and the grid it snaps to, anchored at `min`. Must be positive                                           |
-| `placeholder`                        | `string`                          | —       |                                                                                                                             |
-| `size`                               | `"sm" \| "md" \| "lg"`            | `"md"`  | Same heights as TextInput                                                                                                   |
-| `invalid`                            | `boolean`                         | `false` | Red border + `aria-invalid`. The field does not set it on its own: the consumer decides what is invalid                     |
-| `disabled` / `readonly` / `required` | `boolean`                         | `false` | Arrow keys do nothing on a read-only field                                                                                  |
-| `block`                              | `boolean`                         | `false` | Stretch to container width                                                                                                  |
-| `id` / `name`                        | `string`                          | —       | For `<label for>` / forms                                                                                                   |
-| `ariaLabel` / `ariaDescribedby`      | `string`                          | —       | Name the unit in the label: the `suffix` text is not part of the accessible name                                            |
-| `autofocus`                          | `boolean`                         | `false` | Focus on mount                                                                                                              |
-| `oninput`                            | `(value: number \| null) => void` | —       | Each time typing or an arrow key changes the number (not on keystrokes that leave it unchanged, such as a trailing `.`)     |
-| `onchange`                           | `(value: number \| null) => void` | —       | When a change is committed: each arrow step, and blur or Enter when the number differs from the one on focus                |
-| `onkeydown`                          | `(event: KeyboardEvent) => void`  | —       | Runs first; calling `preventDefault()` skips the field's own arrow and Enter handling                                       |
-| `onblur`                             | `() => void`                      | —       | After the blur commit                                                                                                       |
-| `prefix` / `suffix`                  | `Snippet`                         | —       | TextInput's adornments, e.g. a unit such as `sec` or `px` in `suffix`                                                       |
-| `inputEl`                            | `HTMLInputElement` (bindable)     | —       | The underlying input, for focus management                                                                                  |
-| `class`                              | `string`                          | `""`    | Added to the wrapper beside `kit-number-input`                                                                              |
+| Prop                                 | Type                              | Default             | Notes                                                                                                                                                                                                  |
+| ------------------------------------ | --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `value`                              | `number \| null` (bindable)       | `null`              | `null` while the field holds no digits                                                                                                                                                                 |
+| `min` / `max`                        | `number`                          | —                   | Arrow keys stay inside the range; leaving the field clamps a typed value into it. A `min` of 0 or more blocks the minus key                                                                            |
+| `step`                               | `number`                          | `1`                 | Arrow-key increment and the grid it snaps to, anchored at `min`. Must be positive                                                                                                                      |
+| `placeholder`                        | `string`                          | —                   |                                                                                                                                                                                                        |
+| `size`                               | `"sm" \| "md" \| "lg"`            | `"md"`              | Same heights as TextInput                                                                                                                                                                              |
+| `invalid`                            | `boolean`                         | `false`             | Red border + `aria-invalid`. The field does not set it on its own: the consumer decides what is invalid                                                                                                |
+| `disabled` / `readonly` / `required` | `boolean`                         | `false`             | A read-only field ignores the arrow keys and keeps its value as given, even out of range. A required field also fails form validation while it holds text that is not a number yet, such as a lone `-` |
+| `requiredMessage`                    | `string`                          | `"Enter a number."` | Validation message for that case. An empty required field uses the browser's own message                                                                                                               |
+| `block`                              | `boolean`                         | `false`             | Stretch to container width                                                                                                                                                                             |
+| `id` / `name`                        | `string`                          | —                   | For `<label for>` / forms                                                                                                                                                                              |
+| `ariaLabel` / `ariaDescribedby`      | `string`                          | —                   | Name the unit in the label: the `suffix` text is not part of the accessible name                                                                                                                       |
+| `autofocus`                          | `boolean`                         | `false`             | Focus on mount                                                                                                                                                                                         |
+| `oninput`                            | `(value: number \| null) => void` | —                   | Each time typing or an arrow key changes the number (not on keystrokes that leave it unchanged, such as a trailing `.`)                                                                                |
+| `onchange`                           | `(value: number \| null) => void` | —                   | When a change is committed: each arrow step that changes the number, and blur or Enter when the number differs from the one on focus                                                                   |
+| `onkeydown`                          | `(event: KeyboardEvent) => void`  | —                   | Runs first; calling `preventDefault()` skips the field's own arrow and Enter handling                                                                                                                  |
+| `onblur`                             | `() => void`                      | —                   | After the blur commit                                                                                                                                                                                  |
+| `prefix` / `suffix`                  | `Snippet`                         | —                   | TextInput's adornments, e.g. a unit such as `sec` or `px` in `suffix`                                                                                                                                  |
+| `inputEl`                            | `HTMLInputElement` (bindable)     | —                   | The underlying input, for focus management                                                                                                                                                             |
+| `class`                              | `string`                          | `""`                | Added to the wrapper beside `kit-number-input`                                                                                                                                                         |
 
 ## Behavior
 
 - **Typing.** The field accepts digits, one leading minus sign when the
   range reaches below 0 (no `min`, or a negative one), and one decimal
   point when `step` or `min` has decimal places. The default `step` of 1
-  takes integers only. Any other edit, including a paste such as `1,000`,
-  is rejected whole before it lands. The decimal separator is `.` in every
-  locale.
+  takes integers only. Whitespace around a pasted number is dropped. Any
+  other edit, including a paste such as `1,000`, is rejected whole. Numbers
+  beyond `Number.MAX_SAFE_INTEGER` are refused, since past it the value
+  would no longer match the digits typed. The decimal separator is `.` in
+  every locale.
 - **Arrow Up / Arrow Down** step by `step`. A value between grid points
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when
@@ -59,6 +62,8 @@ is a `number`, or `null` while the field is empty; it is never a string.
 - **Leaving the field** (blur, or Enter) clamps the number into
   `min`..`max` and rewrites in-progress text in its canonical form:
   `1.` becomes `1`, `007` becomes `7`, and a lone `-` empties the field.
+  Very small and very large values are written out in full (`0.0000001`,
+  never `1e-7`), so they stay editable.
 - **The wheel does nothing**, unlike a native number input that changes
   under a scrolling pointer.
 

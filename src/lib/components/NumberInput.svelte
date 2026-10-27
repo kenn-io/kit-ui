@@ -4,7 +4,6 @@
   import {
     allowsNegative,
     clampNumber,
-    draftAfterInsert,
     formatNumber,
     isNumberDraft,
     numberPrecision,
@@ -35,6 +34,10 @@
     name?: string;
     /** Accessible name when there is no associated `<label for>`. */
     ariaLabel?: string;
+    /** Validation message when a required field holds text that is not a
+     * number yet, such as a lone "-". An empty required field uses the
+     * browser's own message. */
+    requiredMessage?: string;
     ariaDescribedby?: string;
     /** Focus the input when it mounts. */
     autofocus?: boolean;
@@ -69,6 +72,7 @@
     id = undefined,
     name = undefined,
     ariaLabel = undefined,
+    requiredMessage = "Enter a number.",
     ariaDescribedby = undefined,
     autofocus = false,
     oninput = undefined,
@@ -100,6 +104,12 @@
     draft !== null && parseNumberDraft(draft) === value ? draft : formatNumber(value),
   );
 
+  // A required field must not submit a draft like "-": the browser sees
+  // non-empty text and its own required check passes.
+  $effect(() => {
+    inputEl?.setCustomValidity(required && value === null && text !== "" ? requiredMessage : "");
+  });
+
   // The value when the field was entered or last committed, so onchange
   // fires only for real changes.
   let committed: number | null = null;
@@ -115,6 +125,7 @@
   }
 
   function commit(): void {
+    if (readonly || disabled) return;
     if (value !== null) setValue(clampNumber(value, bounds));
     draft = null;
     if (value !== committed) {
@@ -125,32 +136,44 @@
 
   function handleBeforeInput(event: InputEvent): void {
     if (!event.inputType.startsWith("insert")) return;
-    // Composition text can't be cancelled; handleInput reverts it instead.
+    // Composition text can't be cancelled; handleText reverts it instead.
     if (event.inputType === "insertCompositionText" || !event.cancelable) return;
     const input = event.currentTarget as HTMLInputElement;
-    const inserted = event.data ?? event.dataTransfer?.getData("text/plain") ?? "";
-    const next = draftAfterInsert(
-      input.value,
-      input.selectionStart ?? input.value.length,
-      input.selectionEnd ?? input.value.length,
-      inserted,
-    );
+    let inserted = event.data ?? event.dataTransfer?.getData("text/plain") ?? "";
+    // Pasted or dropped numbers often carry surrounding whitespace;
+    // handleText strips it once the text lands.
+    if (event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop") {
+      inserted = inserted.trim();
+    }
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const next = input.value.slice(0, start) + inserted + input.value.slice(end);
     if (!isNumberDraft(next, bounds)) event.preventDefault();
   }
 
-  function handleInput(raw: string): void {
-    if (!isNumberDraft(raw, bounds)) {
-      // An edit beforeinput could not cancel (IME composition): put the
-      // last allowed text back with the caret where the edit started.
-      if (inputEl) {
-        const caret = Math.max(0, (inputEl.selectionStart ?? 0) - (raw.length - text.length));
-        inputEl.value = text;
-        inputEl.setSelectionRange(caret, caret);
-      }
+  /** Put `next` in the DOM after it received `raw`, keeping the caret where
+   * the edit left it. */
+  function replaceText(next: string, raw: string): void {
+    if (!inputEl) return;
+    const caret = Math.max(0, (inputEl.selectionStart ?? 0) - (raw.length - next.length));
+    inputEl.value = next;
+    inputEl.setSelectionRange(caret, caret);
+  }
+
+  // TextInput writes every edit here. Text that is not an allowed draft,
+  // from an edit beforeinput could not cancel (IME composition) or a
+  // deletion that leaves too large a number, is reverted. TextInput reads
+  // its text back through `text`, so a rejected edit never reaches its
+  // state.
+  function handleText(raw: string): void {
+    const cleaned = raw.replace(/\s+/g, "");
+    if (!isNumberDraft(cleaned, bounds)) {
+      replaceText(text, raw);
       return;
     }
-    draft = raw;
-    setValue(parseNumberDraft(raw));
+    draft = cleaned;
+    setValue(parseNumberDraft(cleaned));
+    if (cleaned !== raw) replaceText(cleaned, raw);
   }
 
   function handleKeydown(event: KeyboardEvent): void {
@@ -163,8 +186,10 @@
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     if (disabled || readonly) return;
     event.preventDefault();
+    const before = value;
     setValue(stepNumber(value, event.key === "ArrowUp" ? 1 : -1, bounds));
     draft = null;
+    if (value === before) return;
     committed = value;
     onchange?.(value);
   }
@@ -180,7 +205,7 @@
      filter can reject characters before they land. -->
 <TextInput
   bind:inputEl
-  value={text}
+  bind:value={() => text, handleText}
   type="text"
   role="spinbutton"
   ariaValuenow={value ?? undefined}
@@ -203,7 +228,6 @@
   {prefix}
   {suffix}
   onbeforeinput={handleBeforeInput}
-  oninput={handleInput}
   onkeydown={handleKeydown}
   onfocus={handleFocus}
   onblur={handleBlur}

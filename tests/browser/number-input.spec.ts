@@ -24,6 +24,8 @@ for (const dark of [false, true]) {
     }) => {
       await gotoPage(page, "number-input");
       await setTheme(page, { dark });
+      // The theme switch starts color transitions; compare settled styles.
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
       const pair = page.getByTestId(`pair-${size}`);
       const [text, number] = await Promise.all(
         [".kit-text-input:not(.kit-number-input)", ".kit-number-input"].map((selector) =>
@@ -56,25 +58,66 @@ test("typing keeps only digits and reports a number", async ({ page }) => {
   await expect(page.getByTestId("timeout-value")).toHaveText("value: 45 (number)");
 });
 
-test("a pasted non-number is rejected whole", async ({ page }) => {
+test("a real paste lands only as a number", async ({ page, context, browserName }) => {
+  if (browserName === "chromium") {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  }
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Timeout/ });
+
+  async function paste(text: string): Promise<void> {
+    await page.evaluate((value) => navigator.clipboard.writeText(value), text);
+    await field.focus();
+    await field.press("ControlOrMeta+a");
+    await field.press("ControlOrMeta+v");
+  }
+
+  await paste("1,000");
+  await expect(field).toHaveValue("30");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 30 (number)");
+
+  // Whitespace around a pasted number is dropped.
+  await paste(" 42 ");
+  await expect(field).toHaveValue("42");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 42 (number)");
+});
+
+test("text an edit could not cancel is reverted and stays reverted", async ({ page }) => {
   await gotoPage(page, "number-input");
   const field = page.getByRole("spinbutton", { name: /Timeout/ });
   await field.focus();
+  // IME composition cannot be cancelled in beforeinput, so the bad text
+  // reaches the DOM before the field sees it.
   await field.evaluate((el) => {
     const input = el as HTMLInputElement;
-    input.setSelectionRange(0, input.value.length);
-    const data = new DataTransfer();
-    data.setData("text/plain", "1,000");
+    input.value = "30a";
     input.dispatchEvent(
-      new InputEvent("beforeinput", {
-        inputType: "insertFromPaste",
-        dataTransfer: data,
-        cancelable: true,
-        bubbles: true,
-      }),
+      new InputEvent("input", { inputType: "insertCompositionText", bubbles: true }),
     );
   });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
   await expect(field).toHaveValue("30");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 30 (number)");
+});
+
+test("a required field holding only a minus sign blocks form submission", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Offset/ });
+  await field.fill("");
+  await field.pressSequentially("-");
+  expect(await field.evaluate((el) => (el as HTMLInputElement).checkValidity())).toBe(false);
+  await field.pressSequentially("5");
+  expect(await field.evaluate((el) => (el as HTMLInputElement).checkValidity())).toBe(true);
+});
+
+test("a read-only field keeps an out-of-range value on blur", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: "Read-only number" });
+  await field.focus();
+  await field.press("ArrowUp");
+  await field.press("Enter");
+  await field.blur();
+  await expect(field).toHaveValue("5000");
 });
 
 test("a minus sign and decimals are typed only where the range allows", async ({ page }) => {
@@ -132,6 +175,11 @@ test("leaving the field clamps to the range and commits once", async ({ page }) 
 
   await field.focus();
   await field.blur();
+  await expect(page.getByTestId("change-count")).toHaveText("timeout changes committed: 1");
+
+  // Arrow Up at max changes nothing, so it commits nothing.
+  await field.press("ArrowUp");
+  await expect(field).toHaveValue("3600");
   await expect(page.getByTestId("change-count")).toHaveText("timeout changes committed: 1");
 });
 

@@ -37,11 +37,15 @@ export function allowsNegative({ min }: NumberBounds): boolean {
 /** Whether `text` is a number, or the start of one, that the field may
  * hold while the user types: an optional leading minus (when negatives are
  * allowed), digits, and one decimal point (when the precision allows
- * decimals). "-", "." and "" are accepted as in-progress text. */
+ * decimals). "-", "." and "" are accepted as in-progress text. Numbers
+ * beyond Number.MAX_SAFE_INTEGER are refused, since past it the parsed
+ * value would no longer match the digits typed. */
 export function isNumberDraft(text: string, bounds: NumberBounds): boolean {
   const sign = allowsNegative(bounds) ? "-?" : "";
   const fraction = numberPrecision(bounds) > 0 ? "(?:\\.\\d*)?" : "";
-  return new RegExp(`^${sign}\\d*${fraction}$`).test(text);
+  if (!new RegExp(`^${sign}\\d*${fraction}$`).test(text)) return false;
+  const value = parseNumberDraft(text);
+  return value === null || Math.abs(value) <= Number.MAX_SAFE_INTEGER;
 }
 
 /** The number a draft means, or null while it has no digits yet. */
@@ -50,9 +54,21 @@ export function parseNumberDraft(text: string): number | null {
   return Number(text);
 }
 
-/** Canonical text for a value: "" for null, shortest decimal otherwise. */
+/** Canonical text for a value: "" for null, otherwise the shortest
+ * decimal that round-trips, written out in full. JavaScript switches to
+ * exponent form ("1e-7", "1e+21") at the extremes, which the draft rules
+ * do not accept, so those digits are expanded. */
 export function formatNumber(value: number | null): string {
-  return value === null ? "" : String(value);
+  if (value === null) return "";
+  const text = String(value);
+  const exponent = text.match(/^(-?)(\d+)(?:\.(\d+))?e([+-]\d+)$/);
+  if (!exponent) return text;
+  const [, sign = "", whole = "", fraction = "", power = "0"] = exponent;
+  const digits = whole + fraction;
+  const point = whole.length + Number(power);
+  if (point <= 0) return `${sign}0.${"0".repeat(-point)}${digits}`;
+  if (point >= digits.length) return sign + digits + "0".repeat(point - digits.length);
+  return `${sign}${digits.slice(0, point)}.${digits.slice(point)}`;
 }
 
 export function clampNumber(value: number, { min, max }: NumberBounds): number {
@@ -83,16 +99,4 @@ export function stepNumber(value: number | null, direction: 1 | -1, bounds: Numb
       ? Math.ceil(index)
       : Math.floor(index);
   return clampNumber(round(base + next * bounds.step), bounds);
-}
-
-/** The text an insertion (typing, paste, drop) would leave in the field:
- * `inserted` replaces the selected range. Deletions need no such check,
- * since removing characters from an allowed draft leaves an allowed one. */
-export function draftAfterInsert(
-  current: string,
-  selectionStart: number,
-  selectionEnd: number,
-  inserted: string,
-): string {
-  return current.slice(0, selectionStart) + inserted + current.slice(selectionEnd);
 }

@@ -34,6 +34,7 @@
           min={1}
           max={3600}
           invalid={timeoutInvalid}
+          required
           onchange={() => changes++}
           id="number-demo-timeout"
         >
@@ -65,9 +66,9 @@
       </span>
     </div>
     <div class="field">
-      <label class="field__label" for="number-demo-offset">Offset (any integer)</label>
+      <label class="field__label" for="number-demo-offset">Offset (any integer, required)</label>
       <span class="row">
-        <NumberInput bind:value={offset} id="number-demo-offset" />
+        <NumberInput bind:value={offset} required id="number-demo-offset" />
         <span class="readout">value: <code>{describe(offset)}</code></span>
       </span>
     </div>
@@ -91,6 +92,11 @@
     <div class="row" data-testid="pair-disabled">
       <TextInput placeholder="disabled" disabled ariaLabel="Disabled text" />
       <NumberInput value={12} disabled ariaLabel="Disabled number" />
+    </div>
+    <div class="row">
+      <TextInput value="read-only" readonly ariaLabel="Read-only text" />
+      <!-- Out of range on purpose: a read-only field shows the value as given. -->
+      <NumberInput value={5000} max={3600} readonly ariaLabel="Read-only number" />
     </div>
   </div>
 </DemoSection>
