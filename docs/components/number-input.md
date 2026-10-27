@@ -59,10 +59,13 @@ is a `number`, or `null` while the field is empty; it is never a string.
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when
   that bound is unset). The grid math is exact in decimal, so 0.1 steps
-  land on 0.2 and 0.3, even on a grid anchored far from the value. A grid
-  point that rounds to the current number is skipped, so each press moves. Stepping stays within `Number.MAX_SAFE_INTEGER` in either
-  direction, an empty field included; a larger value set from outside
-  moves to that limit on the first press toward zero.
+  land on 0.2 and 0.3, even on a grid anchored far from the value. When
+  a grid point has no exact JavaScript number and would round to the
+  current value, the arrow skips to the first point that changes it, so
+  each press still moves the value. Stepping stays within
+  `Number.MAX_SAFE_INTEGER` in either direction, an empty field
+  included; a larger value set from outside moves to that limit on the
+  first press toward zero.
 - **Leaving the field** (blur, or Enter) clamps the number into
   `min`..`max` and rewrites in-progress text in its canonical form:
   `1.` becomes `1`, `007` becomes `7`, and a lone `-` empties the field.

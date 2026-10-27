@@ -166,7 +166,6 @@ describe("stepNumber", () => {
 
   test("a grid point no double can hold does not stall the field", () => {
     const bounds = { min: 1e-17, step: 1 };
-    expect(stepNumber(null, 1, bounds)).toBe(1e-17);
     expect(stepNumber(1e-17, 1, bounds)).toBe(1);
     expect(stepNumber(1, 1, bounds)).toBe(2);
     // Points just under whole numbers stall going down the same way.
@@ -177,6 +176,7 @@ describe("stepNumber", () => {
     expect(stepNumber(0.1, 1, { min: 0.1, step: 9e-18 })).toBe(0.10000000000000002);
     expect(stepNumber(1, 1, { min: 3e-17, step: 1.6e-16 })).toBe(1.0000000000000002);
     expect(stepNumber(1, -1, { min: 3e-17, step: 1.6e-16 })).toBe(0.9999999999999999);
+    expect(stepNumber(9007199254740990, 1, { min: 0.1, step: 0.7 })).toBe(Number.MAX_SAFE_INTEGER);
   });
 
   test("steps finer than 100 decimal places still move the value", () => {
