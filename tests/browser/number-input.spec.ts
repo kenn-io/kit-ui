@@ -169,6 +169,16 @@ test("a value set from outside replaces in-progress text", async ({ page }) => {
   await expect(page.getByTestId("offset-value")).toHaveText("value: null");
 });
 
+test("a value the app corrects in oninput shows at once", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Percent/ });
+  await field.fill("");
+  await field.pressSequentially("150");
+  await expect(field).toHaveValue("100");
+  await expect(field).toHaveAttribute("aria-valuenow", "100");
+  await expect(page.getByTestId("percent-value")).toHaveText("value: 100 (number)");
+});
+
 test("a read-only field keeps an out-of-range value on blur", async ({ page }) => {
   await gotoPage(page, "number-input");
   const field = page.getByRole("spinbutton", { name: "Read-only number" });

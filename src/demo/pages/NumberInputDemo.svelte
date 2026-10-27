@@ -5,6 +5,7 @@
   let timeout = $state<number | null>(30);
   let port = $state<number | null>(8080);
   let ratio = $state<number | null>(0.5);
+  let percent = $state<number | null>(40);
   let offset = $state<number | null>(-2);
   let oversized = $state<number | null>(1e20);
   let changes = $state(0);
@@ -57,6 +58,24 @@
           id="number-demo-port"
         />
         <span class="readout">value: <code>{describe(port)}</code></span>
+      </span>
+    </div>
+    <div class="field">
+      <label class="field__label" for="number-demo-percent"
+        >Percent (the app caps it at 100 as you type)</label
+      >
+      <span class="row">
+        <NumberInput
+          bind:value={percent}
+          min={0}
+          oninput={(next) => {
+            if (next !== null && next > 100) percent = 100;
+          }}
+          id="number-demo-percent"
+        />
+        <span class="readout" data-testid="percent-value"
+          >value: <code>{describe(percent)}</code></span
+        >
       </span>
     </div>
     <div class="field">

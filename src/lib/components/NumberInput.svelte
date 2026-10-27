@@ -103,7 +103,7 @@
   // in-progress text like "1." or "-" survives. Any change to value resets
   // it, so a value set from outside shows in its canonical form even when
   // it parses the same as the draft; handleText writes the draft after
-  // setting the value.
+  // setting the value, and only while the value is still what it parsed.
   let draft = $derived.by((): string | null => {
     void value;
     return null;
@@ -198,9 +198,12 @@
       replaceText(text, raw);
       return;
     }
-    setValue(parseNumberDraft(cleaned));
-    draft = cleaned;
-    if (cleaned !== raw) replaceText(cleaned, raw);
+    const parsed = parseNumberDraft(cleaned);
+    setValue(parsed);
+    // An oninput handler may already have replaced the value, such as an
+    // app capping it; then the field shows the app's value instead.
+    if (value === parsed) draft = cleaned;
+    if (text !== raw) replaceText(text, raw);
   }
 
   function handleKeydown(event: KeyboardEvent): void {
