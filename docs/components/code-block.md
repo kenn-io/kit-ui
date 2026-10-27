@@ -86,6 +86,19 @@ cache, cleared past 500 entries):
 const renderer = createMarkdownRenderer({
   // marked tokenizer/renderer extensions (issue refs, wrapper tags)
   extensions: [myItemRefExtension],
+  // override a built-in tokenizer, with Marked's native `this` context
+  tokenizer: {
+    paragraph(src) {
+      const match = /^(Note: [^\n]+)(?:\n|$)/.exec(src);
+      if (!match) return false;
+      return {
+        type: "paragraph",
+        raw: match[0],
+        text: match[1],
+        tokens: this.lexer.inline(match[1]),
+      };
+    },
+  },
   // intercept fences (custom viewers); undefined falls through. For
   // mermaid, pass the ready-made `mermaidCodeFence` (see mermaid.md)
   codeFence: (code, lang) =>
@@ -94,6 +107,17 @@ const renderer = createMarkdownRenderer({
   allowedAttributes: ["data-item-ref"],
 });
 ```
+
+Use `tokenizer` when custom syntax needs to change how a built-in rule
+such as `paragraph` or `html` consumes input. Block `extensions` add
+rules; built-in overrides let an app coordinate paragraph and HTML
+parsing, for example, around a wrapped diff. The option uses Marked's
+`TokenizerObject` type. Use method syntax to keep its native `this`
+context, and return `false` to use the built-in rule. Unlike
+`extensions`, returning `undefined` skips the built-in rule, which can
+silently drop paragraph wrappers. Both `render` and
+`renderSync` apply the overrides and sanitize their output. Callback
+errors reject `render` or throw from `renderSync`.
 
 Mermaid diagram rendering (fence interceptor + pan/zoom viewer) ships as
 an opt-in module on top of this hook — see
@@ -181,8 +205,10 @@ grammar-fetch protection). Constants are exported
   per repo context; interactive task lists (checkbox indexes, drag
   handles) remain a Forge renderer concern layered on top. The block
   slicer (`renderMarkdownBlocks`) is Forge-specific and stays there.
-- **agentsview** `renderMarkdown(text)` → default renderer plus its
-  bash-wrapper tokenizer extensions via `extensions`; `asset://` URL
-  resolution stays an app-side pre-pass; per-message `CodeBlock` swaps to
+- **agentsview** currently uses its own renderer fork with bash-wrapper
+  extensions and built-in paragraph/HTML overrides. A migration would
+  pass those through `extensions` and `tokenizer`, respectively. Its custom XML
+  literal escaping and `asset://` URL resolution remain app-side until
+  separately ported; per-message `CodeBlock` swaps to
   kit-ui's (search-mark integration hooks pending the browser test infra
   work).

@@ -14,6 +14,87 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
 }
 
 for (const method of ["render", "renderSync"] as const) {
+  test(`${method} combines extensions and tokenizer overrides around a sanitized wrapped diff`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "markdown");
+    const html = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer, escapeHtml } = await import("/src/lib/utils/markdown.ts");
+      const renderer = createMarkdownRenderer({
+        extensions: [
+          {
+            name: "itemRef",
+            level: "inline",
+            start(src) {
+              return src.indexOf("@item");
+            },
+            tokenizer(src) {
+              if (!src.startsWith("@item")) return;
+              return { type: "itemRef", raw: "@item", text: "Item" };
+            },
+            renderer() {
+              return '<a href="https://example.com/items/1">Item</a>';
+            },
+          },
+        ],
+        tokenizer: {
+          paragraph(src) {
+            const boundary = src.indexOf("\n<current_file_diff>");
+            // Yield only when the diff ends the current paragraph.
+            if (boundary < 0 || src.slice(0, boundary).includes("\n\n")) return false;
+            const text = src.slice(0, boundary);
+            return {
+              type: "paragraph",
+              raw: `${text}\n`,
+              text,
+              tokens: this.lexer.inline(text),
+            };
+          },
+          html(src) {
+            const match = /^<current_file_diff>[\s\S]*?<\/current_file_diff>/.exec(src);
+            if (!match) return false;
+            return {
+              type: "html",
+              raw: match[0],
+              pre: false,
+              block: true,
+              text: `<pre onclick="alert(1)">${escapeHtml(match[0])}</pre>\n`,
+            };
+          },
+        },
+      });
+      return renderer[method](
+        "Intro.\n\nBefore **default** @item.\n<current_file_diff>\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n</current_file_diff>\nAfter **default** @item.",
+      );
+    }, method);
+    expect(html).toBe(
+      '<p>Intro.</p>\n<p>Before <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n<pre>&lt;current_file_diff&gt;\ndiff --git a/example.py b/example.py\n-    # FIXME: replace this\n+    new_value\n&lt;/current_file_diff&gt;</pre>\n<p>After <strong>default</strong> <a href="https://example.com/items/1">Item</a>.</p>\n',
+    );
+  });
+
+  test(`${method} propagates tokenizer callback errors`, async ({ page }) => {
+    await gotoPage(page, "markdown");
+    const message = await page.evaluate(async (method) => {
+      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      const renderer = createMarkdownRenderer({
+        tokenizer: {
+          paragraph() {
+            throw new Error("tokenizer failed");
+          },
+        },
+      });
+      try {
+        const result = renderer[method]("Paragraph.");
+        if (method === "renderSync") return "renderSync returned";
+        await result;
+        return "render resolved";
+      } catch (error) {
+        return (error as Error).message;
+      }
+    }, method);
+    expect(message).toBe("tokenizer failed");
+  });
+
   test(`${method} preserves source line breaks by default`, async ({ page }) => {
     await gotoPage(page, "markdown");
     const html = await page.evaluate(async (method) => {
