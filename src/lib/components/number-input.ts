@@ -112,18 +112,44 @@ export function stepNumber(
     return isSafeNumber(result) ? result : value;
   }
   const { min = 0, step } = bounds;
-  // Binary floats cannot hold decimals such as 0.1 exactly, and lose digits
-  // once a grid is anchored far away, so the grid math runs on whole
-  // numbers: value, min and step scaled by the decimal places they carry.
-  const places = Math.max(decimalsOf(value), decimalsOf(min), decimalsOf(step));
-  const v = toScaled(value, places);
+  let next = gridPoint(value, direction, min, step, true);
+  // A grid point no double can hold, such as 1.00000000000000001, rounds
+  // back to the value itself. The first grid point past the next double
+  // over always lands on a different number.
+  if (next === value) next = gridPoint(nextDouble(value, direction), direction, min, step, false);
+  const result = clampNumber(next, bounds);
+  return isSafeNumber(result) ? result : value;
+}
+
+/** The first point of the grid anchored at `min` beyond `x` in
+ * `direction`, or at `x` itself when `x` is on the grid and not `strict`.
+ * Binary floats cannot hold decimals such as 0.1 exactly, and lose digits
+ * once a grid is anchored far away, so the math runs on whole numbers:
+ * `x`, `min` and `step` scaled by the decimal places they carry. */
+function gridPoint(
+  x: number,
+  direction: 1 | -1,
+  min: number,
+  step: number,
+  strict: boolean,
+): number {
+  const places = Math.max(decimalsOf(x), decimalsOf(min), decimalsOf(step));
+  const v = toScaled(x, places);
   const m = toScaled(min, places);
   const s = toScaled(step, places);
   const offset = (((v - m) % s) + s) % s;
-  const next =
-    offset === 0n ? v + BigInt(direction) * s : direction === 1 ? v + s - offset : v - offset;
-  const result = clampNumber(fromScaled(next, places), bounds);
-  return isSafeNumber(result) ? result : value;
+  if (offset === 0n) return fromScaled(strict ? v + BigInt(direction) * s : v, places);
+  return fromScaled(direction === 1 ? v - offset + s : v - offset, places);
+}
+
+/** The neighboring double of `n` in `direction`. */
+function nextDouble(n: number, direction: 1 | -1): number {
+  if (n === 0) return direction * Number.MIN_VALUE;
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, n);
+  // Adding one to the bit pattern moves away from zero.
+  view.setBigInt64(0, view.getBigInt64(0) + (n > 0 === (direction === 1) ? 1n : -1n));
+  return view.getFloat64(0);
 }
 
 /** `n` times 10^places as an exact integer, read from its decimal digits. */
