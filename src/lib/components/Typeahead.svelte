@@ -604,112 +604,116 @@
       {#if header}
         <div class="kit-typeahead__header">{@render header()}</div>
       {/if}
-      {#if loading}
-        <div class="kit-typeahead__status">{loadingLabel}</div>
-      {:else if error}
-        <!-- Above (not instead of) the options: the user must be able to
+      <!-- Messages sit outside the listbox but scroll with it, so a long error
+           can't push the panel past its height cap and hide the options. -->
+      <div class="kit-typeahead__body">
+        {#if loading}
+          <div class="kit-typeahead__status">{loadingLabel}</div>
+        {:else if error}
+          <!-- Above (not instead of) the options: the user must be able to
              retry, since callers clear `error` on the next onselect.
              role="alert" announces the veto to screen readers. -->
-        <div class="kit-typeahead__status kit-typeahead__status--error" role="alert">
-          {error}
-        </div>
-      {/if}
-      {#if listShown}
-        <ul
-          class="kit-typeahead__list"
-          id={listId}
-          role={grouped ? "tree" : "listbox"}
-          aria-label={placeholder}
-        >
-          {#if allowClear}
-            <li
-              class="kit-typeahead__option"
-              class:highlighted={activeIndex === 0}
-              class:selected={value === ""}
-              id={`${listId}-row-0`}
-              role={grouped ? "treeitem" : "option"}
-              aria-selected={value === ""}
-              aria-level={grouped ? 1 : undefined}
-              aria-posinset={grouped ? 1 : undefined}
-              aria-setsize={grouped ? rootTreeSize : undefined}
-              onmousedown={() => void select("")}
-              onmouseenter={() => (highlightIndex = 0)}
-            >
-              {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
-              <span class="kit-typeahead__option-label">{clearLabel}</span>
-            </li>
-          {/if}
-          {#each rows as row, i (row.option.name)}
-            <li
-              class="kit-typeahead__option"
-              class:kit-typeahead__option--group={row.group}
-              class:kit-typeahead__option--root-group={row.group && row.depth === 0}
-              class:kit-typeahead__option--nested={row.depth > 0}
-              class:highlighted={i + clearOffset === activeIndex}
-              class:selected={!row.group && row.option.name === value}
-              id={`${listId}-row-${i + clearOffset}`}
-              role={grouped ? "treeitem" : "option"}
-              aria-selected={row.group ? undefined : row.option.name === value}
-              aria-expanded={row.group ? row.expanded : undefined}
-              aria-level={grouped ? row.depth + 1 : undefined}
-              aria-posinset={grouped
-                ? row.posInSet + (row.depth === 0 ? clearOffset : 0)
-                : undefined}
-              aria-setsize={grouped ? (row.depth === 0 ? rootTreeSize : row.setSize) : undefined}
-              style:--typeahead-depth={row.depth}
-              onmousedown={() => activateRow(row)}
-              onmouseenter={() => (highlightIndex = i + clearOffset)}
-            >
-              {#if row.group}
-                <ChevronRightIcon
-                  class="kit-typeahead__group-chevron{row.expanded
-                    ? ' kit-typeahead__group-chevron--open'
-                    : ''}"
-                  size="12"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                />
-              {/if}
-              {#if icon}
-                <span class="kit-typeahead__icon" aria-hidden="true">
-                  {@render icon(row.option)}
+          <div class="kit-typeahead__status kit-typeahead__status--error" role="alert">
+            {error}
+          </div>
+        {/if}
+        {#if listShown}
+          <ul
+            class="kit-typeahead__list"
+            id={listId}
+            role={grouped ? "tree" : "listbox"}
+            aria-label={placeholder}
+          >
+            {#if allowClear}
+              <li
+                class="kit-typeahead__option"
+                class:highlighted={activeIndex === 0}
+                class:selected={value === ""}
+                id={`${listId}-row-0`}
+                role={grouped ? "treeitem" : "option"}
+                aria-selected={value === ""}
+                aria-level={grouped ? 1 : undefined}
+                aria-posinset={grouped ? 1 : undefined}
+                aria-setsize={grouped ? rootTreeSize : undefined}
+                onmousedown={() => void select("")}
+                onmouseenter={() => (highlightIndex = 0)}
+              >
+                {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
+                <span class="kit-typeahead__option-label">{clearLabel}</span>
+              </li>
+            {/if}
+            {#each rows as row, i (row.option.name)}
+              <li
+                class="kit-typeahead__option"
+                class:kit-typeahead__option--group={row.group}
+                class:kit-typeahead__option--root-group={row.group && row.depth === 0}
+                class:kit-typeahead__option--nested={row.depth > 0}
+                class:highlighted={i + clearOffset === activeIndex}
+                class:selected={!row.group && row.option.name === value}
+                id={`${listId}-row-${i + clearOffset}`}
+                role={grouped ? "treeitem" : "option"}
+                aria-selected={row.group ? undefined : row.option.name === value}
+                aria-expanded={row.group ? row.expanded : undefined}
+                aria-level={grouped ? row.depth + 1 : undefined}
+                aria-posinset={grouped
+                  ? row.posInSet + (row.depth === 0 ? clearOffset : 0)
+                  : undefined}
+                aria-setsize={grouped ? (row.depth === 0 ? rootTreeSize : row.setSize) : undefined}
+                style:--typeahead-depth={row.depth}
+                onmousedown={() => activateRow(row)}
+                onmouseenter={() => (highlightIndex = i + clearOffset)}
+              >
+                {#if row.group}
+                  <ChevronRightIcon
+                    class="kit-typeahead__group-chevron{row.expanded
+                      ? ' kit-typeahead__group-chevron--open'
+                      : ''}"
+                    size="12"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  />
+                {/if}
+                {#if icon}
+                  <span class="kit-typeahead__icon" aria-hidden="true">
+                    {@render icon(row.option)}
+                  </span>
+                {/if}
+                <span class="kit-typeahead__option-label">
+                  {@render segments(row.option.label)}
                 </span>
-              {/if}
-              <span class="kit-typeahead__option-label">
-                {@render segments(row.option.label)}
-              </span>
-              {#if row.option.meta}
-                <span class="kit-typeahead__option-meta">
-                  {@render segments(row.option.meta)}
+                {#if row.option.meta}
+                  <span class="kit-typeahead__option-meta">
+                    {@render segments(row.option.meta)}
+                  </span>
+                {/if}
+              </li>
+            {/each}
+            {#if customValue !== ""}
+              <li
+                class="kit-typeahead__option"
+                class:highlighted={activeIndex === customOffset}
+                class:selected={customValue === value}
+                id={`${listId}-row-${customOffset}`}
+                role={grouped ? "treeitem" : "option"}
+                aria-selected={customValue === value}
+                aria-level={grouped ? 1 : undefined}
+                aria-posinset={grouped ? rootTreeSize : undefined}
+                aria-setsize={grouped ? rootTreeSize : undefined}
+                onmousedown={() => void select(customValue)}
+                onmouseenter={() => (highlightIndex = customOffset)}
+              >
+                {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
+                <span class="kit-typeahead__option-label">
+                  {customLabel.replace("{query}", customValue)}
                 </span>
-              {/if}
-            </li>
-          {/each}
-          {#if customValue !== ""}
-            <li
-              class="kit-typeahead__option"
-              class:highlighted={activeIndex === customOffset}
-              class:selected={customValue === value}
-              id={`${listId}-row-${customOffset}`}
-              role={grouped ? "treeitem" : "option"}
-              aria-selected={customValue === value}
-              aria-level={grouped ? 1 : undefined}
-              aria-posinset={grouped ? rootTreeSize : undefined}
-              aria-setsize={grouped ? rootTreeSize : undefined}
-              onmousedown={() => void select(customValue)}
-              onmouseenter={() => (highlightIndex = customOffset)}
-            >
-              {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
-              <span class="kit-typeahead__option-label">
-                {customLabel.replace("{query}", customValue)}
-              </span>
-            </li>
-          {/if}
-        </ul>
-      {/if}
-      {#if !loading && rows.length === 0 && customValue === ""}
-        <div class="kit-typeahead__empty">{emptyLabel}</div>
-      {/if}
+              </li>
+            {/if}
+          </ul>
+        {/if}
+        {#if !loading && rows.length === 0 && customValue === ""}
+          <div class="kit-typeahead__empty">{emptyLabel}</div>
+        {/if}
+      </div>
     </div>
   {:else if !trigger}
     <button
@@ -886,8 +890,12 @@
     margin-bottom: 2px;
   }
 
-  .kit-typeahead__list {
+  .kit-typeahead__body {
+    min-height: 0;
     overflow-y: auto;
+  }
+
+  .kit-typeahead__list {
     list-style: none;
     padding: 0;
     margin: 0;

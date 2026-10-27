@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { createRequire } from "node:module";
 import { gotoPage, setTheme } from "./helpers.js";
 
-// axe-core against the open Typeahead panel. Consumers run axe on their
+// axe-core against an open Typeahead (its combobox input and panel). Consumers run axe on their
 // pages with a picker open, so every open state the component renders must
 // pass on its own: the empty and loading popups (a listbox needs option
 // children) and highlighted matches (normal-size text needs 4.5:1).
@@ -13,7 +13,7 @@ async function axeViolations(page: Page): Promise<string[]> {
   await page.addScriptTag({ path: axePath });
   return page.evaluate(async () => {
     const axe = (window as unknown as { axe: typeof import("axe-core") }).axe;
-    const result = await axe.run(".kit-typeahead__panel", {
+    const result = await axe.run(".kit-typeahead:has(.kit-typeahead__panel)", {
       runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
     });
     return result.violations.flatMap((v) =>
@@ -47,6 +47,12 @@ async function mountTypeahead(page: Page, props: Record<string, unknown>): Promi
   await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
 }
 
+async function expectCollapsed(page: Page): Promise<void> {
+  const input = page.getByRole("combobox", { name: "Find a person…" });
+  await expect(input).toHaveAttribute("aria-expanded", "false");
+  await expect(input).not.toHaveAttribute("aria-controls");
+}
+
 for (const dark of [false, true]) {
   const theme = dark ? "dark" : "light";
 
@@ -55,6 +61,7 @@ for (const dark of [false, true]) {
       await mountTypeahead(page, { options: [], remote: true, loading: true });
       await setTheme(page, { dark });
       await expect(page.getByText("Loading…")).toBeVisible();
+      await expectCollapsed(page);
       expect(await axeViolations(page)).toEqual([]);
     });
 
@@ -62,6 +69,7 @@ for (const dark of [false, true]) {
       await mountTypeahead(page, { options: [], remote: true });
       await setTheme(page, { dark });
       await expect(page.getByText("No matches")).toBeVisible();
+      await expectCollapsed(page);
       expect(await axeViolations(page)).toEqual([]);
     });
 
@@ -69,6 +77,7 @@ for (const dark of [false, true]) {
       await mountTypeahead(page, { options: [], remote: true, error: "Could not load people" });
       await setTheme(page, { dark });
       await expect(page.getByText("Could not load people")).toBeVisible();
+      await expectCollapsed(page);
       expect(await axeViolations(page)).toEqual([]);
     });
 
@@ -78,6 +87,10 @@ for (const dark of [false, true]) {
       await page.getByRole("button", { name: "Filter repositories…" }).click();
       await page.getByRole("combobox", { name: "Filter repositories…" }).fill("kenn");
       await expect(page.locator(".kit-typeahead__match").first()).toBeVisible();
+      const input = page.getByRole("combobox", { name: "Filter repositories…" });
+      await expect(input).toHaveAttribute("aria-expanded", "true");
+      const listId = await input.getAttribute("aria-controls");
+      await expect(page.locator(`[id="${listId}"]`)).toHaveAttribute("role", "listbox");
       expect(await axeViolations(page)).toEqual([]);
     });
   });

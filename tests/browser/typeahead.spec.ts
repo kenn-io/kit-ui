@@ -407,6 +407,46 @@ test("a vetoed selection keeps the list open and shows the error row", async ({ 
   await expect(page.locator(".kit-typeahead__status--error")).toHaveCount(0);
 });
 
+// The error sits outside the listbox, so it must share the options' scroll
+// area: a long message on a short window would otherwise push the panel past
+// its height cap and squeeze the options out of reach.
+test("a long error scrolls with the options inside the panel's height", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 360 });
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    document.body.replaceChildren();
+    const target = document.createElement("div");
+    document.body.append(target);
+    mount(Typeahead, {
+      target,
+      props: {
+        options: Array.from({ length: 12 }, (_, i) => ({ name: `opt-${i}`, label: `Option ${i}` })),
+        value: "",
+        fallbackLabel: "None",
+        placeholder: "Pick one…",
+        error: "Could not save this choice. ".repeat(30),
+        onselect: (value: string) => {
+          target.dataset.value = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Pick one…" }).click();
+
+  const panel = page.locator(".kit-typeahead__panel");
+  const panelBox = (await panel.boundingBox())!;
+  expect(panelBox.height).toBeLessThanOrEqual(360 / 2 + 1);
+
+  const last = page.getByRole("option", { name: "Option 11" });
+  await last.scrollIntoViewIfNeeded();
+  await last.click();
+  await expect(page.locator("body > div")).toHaveAttribute("data-value", "opt-11");
+});
+
 test("tabbing out of a focusable header control dismisses the panel", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter refs…" }).click();
