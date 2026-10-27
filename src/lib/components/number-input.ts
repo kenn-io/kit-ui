@@ -70,13 +70,6 @@ export function formatNumber(value: number | null): string {
   return sign + digits + "0".repeat(point - digits.length);
 }
 
-/** The range where typed digits still match the value. */
-const SAFE_RANGE: NumberBounds = {
-  min: -Number.MAX_SAFE_INTEGER,
-  max: Number.MAX_SAFE_INTEGER,
-  step: 1,
-};
-
 export function clampNumber(value: number, { min, max }: NumberBounds): number {
   if (min !== undefined && value < min) return min;
   if (max !== undefined && value > max) return max;
@@ -101,7 +94,8 @@ export function stepNumber(
   if (value === null || !isSafeNumber(value)) {
     if (value !== null && Math.sign(value) !== -direction) return value;
     const start = value ?? (direction === 1 ? bounds.min : bounds.max) ?? 0;
-    const result = clampNumber(clampNumber(start, SAFE_RANGE), bounds);
+    const safe = Math.min(Number.MAX_SAFE_INTEGER, Math.max(-Number.MAX_SAFE_INTEGER, start));
+    const result = clampNumber(safe, bounds);
     return isSafeNumber(result) ? result : value;
   }
   const { min = 0, step } = bounds;
