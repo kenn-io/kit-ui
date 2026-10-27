@@ -240,6 +240,22 @@ test("a long menu grows to 80% of the viewport before it scrolls", async ({ page
   expect(short.scroll).toBeGreaterThan(short.client);
 });
 
+test("an app class rule can lift the menu height cap", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 400 });
+  await gotoPage(page, "menu");
+  await page.evaluate(async () => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: DetachedMenu } = await import("/tests/browser/fixtures/DetachedMenu.svelte");
+    document.body.replaceChildren();
+    mount(DetachedMenu, { target: document.body });
+  });
+  const menu = page.getByRole("menu", { name: "Detached" });
+  await expect(menu.getByRole("menuitem", { name: "Item 30" })).toBeAttached();
+  const size = await menu.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(size.client).toBeGreaterThan(400);
+  expect(size.scroll).toBeLessThanOrEqual(size.client);
+});
+
 test("only the focused item is filled when the pointer rests on another", async ({ page }) => {
   await gotoPage(page, "menu");
   await page.getByRole("button", { name: "Task actions" }).click();

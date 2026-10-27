@@ -167,7 +167,7 @@
     id={`${menu.id}-content`}
     class={["kit-menu__content", "kit-popover-card", className]}
     style={position}
-    style:max-height={maxHeight}
+    style:--kit-menu-max-height={maxHeight}
     role="menu"
     tabindex="-1"
     aria-label={ariaLabel}
@@ -184,7 +184,8 @@
     z-index: var(--z-popover);
     width: max-content;
     max-width: min(320px, calc(100vw - 16px));
-    max-height: 80vh;
+    /* A variable, not an inline max-height, so an app's class rule still wins. */
+    max-height: var(--kit-menu-max-height, 80vh);
     overflow-y: auto;
     padding: var(--space-2);
   }
