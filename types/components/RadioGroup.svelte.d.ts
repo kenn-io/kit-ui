@@ -20,7 +20,9 @@ interface Props {
     required?: boolean;
     /** Points at hint/error text elsewhere in the form. */
     ariaDescribedby?: string;
-    onchange?: (value: string) => void;
+    /** Called with the newly chosen value. A form reset also calls it, with
+     * undefined when the reset leaves no option chosen. */
+    onchange?: (value: string | undefined) => void;
     class?: string;
 }
 declare const RadioGroup: import("svelte").Component<Props, {}, "value">;

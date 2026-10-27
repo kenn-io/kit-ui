@@ -16,6 +16,9 @@
     { value: "large", label: "Large (unavailable)", disabled: true },
   ];
 
+  let format = $state<string | undefined>();
+  let lineEnding = $state<string | undefined>("lf");
+
   let submitted = $state("");
   function submitForm(event: SubmitEvent) {
     event.preventDefault();
@@ -26,7 +29,7 @@
 
 <DemoSection
   title="Basic"
-  description="A fieldset whose legend names the group, one real radio per line under a drawn 16px round mark. Arrow keys move the choice, as with native radios."
+  description="Short exclusive choices, one per line. Click a label or use the arrow keys to change the choice."
   code={`<RadioGroup
   legend="Update channel"
   options={[
@@ -64,7 +67,7 @@
 
 <DemoSection
   title="Form contract"
-  description="Next to a Checkbox in a form. The inputs are real radios sharing a name, so the choice submits natively and required blocks submission until an option is chosen."
+  description="Next to a Checkbox in a form. The inputs are real radios sharing a name, so the choice submits natively and required blocks submission until an option is chosen. Reset returns each group to the choice it started with and updates the bound value."
   code={`<form onsubmit={submitForm}>
   <RadioGroup
     legend="Export format"
@@ -74,9 +77,20 @@
       { value: "csv", label: "CSV" },
       { value: "json", label: "JSON" },
     ]}
+    bind:value={format}
+  />
+  <RadioGroup
+    legend="Line endings"
+    name="eol"
+    options={[
+      { value: "lf", label: "LF" },
+      { value: "crlf", label: "CRLF" },
+    ]}
+    bind:value={lineEnding}
   />
   <Checkbox name="headers" value="yes" label="Include headers" />
   <Button type="submit" size="sm" label="Export" />
+  <Button type="reset" size="sm" label="Reset" />
 </form>`}
 >
   <form class="col" onsubmit={submitForm}>
@@ -88,11 +102,25 @@
         { value: "csv", label: "CSV" },
         { value: "json", label: "JSON" },
       ]}
+      bind:value={format}
+    />
+    <RadioGroup
+      legend="Line endings"
+      name="eol"
+      options={[
+        { value: "lf", label: "LF" },
+        { value: "crlf", label: "CRLF" },
+      ]}
+      bind:value={lineEnding}
     />
     <Checkbox name="headers" value="yes" label="Include headers" />
-    <div>
+    <div class="actions">
       <Button type="submit" size="sm" label="Export" />
+      <Button type="reset" size="sm" label="Reset" />
     </div>
+    <span class="readout" data-testid="radio-group-form-value">
+      format: {format ?? "none"}, line endings: {lineEnding ?? "none"}
+    </span>
     <span class="readout" data-testid="radio-group-form-result">{submitted}</span>
   </form>
 </DemoSection>
@@ -108,6 +136,11 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-8);
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--space-4);
   }
 
   .readout {

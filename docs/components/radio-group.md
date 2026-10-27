@@ -27,20 +27,27 @@ surface-colored centre dot when chosen.
 
 ## Props
 
-| Prop              | Type                      | Default     | Notes                                                                                  |
-| ----------------- | ------------------------- | ----------- | -------------------------------------------------------------------------------------- |
-| `options`         | `RadioGroupOption[]`      | required    | `{ value, label, disabled? }`                                                          |
-| `legend`          | `string`                  | required    | The group's visible name, rendered as the legend                                       |
-| `value`           | `string \| undefined`     | `undefined` | Bindable. `undefined` leaves every option unchosen                                     |
-| `onchange`        | `(value: string) => void` | —           | Called with the newly chosen value; choosing the current option again does not call it |
-| `name`            | `string`                  | unique id   | Shared input name. Set it when the group submits with a `<form>`                       |
-| `required`        | `boolean`                 | `false`     | Native constraint validation: the form won't submit with no choice                     |
-| `disabled`        | `boolean`                 | `false`     | Disables the whole group (the native `fieldset` attribute) and dims the legend with it |
-| `id`              | `string`                  | —           | Id of the fieldset                                                                     |
-| `ariaDescribedby` | `string`                  | —           | Points the fieldset at hint or error text                                              |
-| `class`           | `string`                  | `""`        |                                                                                        |
+| Prop              | Type                                   | Default     | Notes                                                                                                                                                                        |
+| ----------------- | -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`         | `RadioGroupOption[]`                   | required    | `{ value, label, disabled? }`                                                                                                                                                |
+| `legend`          | `string`                               | required    | The group's visible name, rendered as the legend                                                                                                                             |
+| `value`           | `string \| undefined`                  | `undefined` | Bindable. `undefined` leaves every option unchosen                                                                                                                           |
+| `onchange`        | `(value: string \| undefined) => void` | —           | Called with the newly chosen value; choosing the current option again does not call it. A form reset calls it too (see below)                                                |
+| `name`            | `string`                               | unique id   | Shared input name. Set it when the group submits with a `<form>`                                                                                                             |
+| `required`        | `boolean`                              | `false`     | Native constraint validation: the form won't submit with no choice. The group shows no marker, so say "required" in the legend or in hint text linked with `ariaDescribedby` |
+| `disabled`        | `boolean`                              | `false`     | Disables every option and dims the group, legend included                                                                                                                    |
+| `id`              | `string`                               | —           | Id of the fieldset                                                                                                                                                           |
+| `ariaDescribedby` | `string`                               | —           | Points the fieldset at hint or error text                                                                                                                                    |
+| `class`           | `string`                               | `""`        |                                                                                                                                                                              |
 
 `option.disabled` disables one option and dims it.
+
+## Form reset
+
+The value at mount is the group's default. Resetting the surrounding form
+returns the radios to it, as the `checked` attribute does for native
+radios, then updates the bound `value` and calls `onchange`. A group that
+started with no choice resets to `undefined`.
 
 ## Keyboard
 

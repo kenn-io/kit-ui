@@ -1052,8 +1052,13 @@ describe("hand-rolled-radio", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-radio"])).toHaveLength(0);
   });
 
-  test("<RadioGroup> component usage is clean", () => {
-    const src = svelte(``, `<RadioGroup legend="Size" options={sizes} bind:value={size} />`);
+  test("<RadioGroup> usage with radio-named layout styling is clean", () => {
+    // Only accent-color makes a radio-named selector a styled native radio;
+    // spacing a RadioGroup must not flag.
+    const src = svelte(
+      `.settings :global(.kit-radio-group) { margin: 0; }`,
+      `<div class="settings"><RadioGroup legend="Size" options={sizes} bind:value={size} /></div>`,
+    );
     expect(checkSource(src, "A.svelte", ["hand-rolled-radio"])).toHaveLength(0);
   });
 });

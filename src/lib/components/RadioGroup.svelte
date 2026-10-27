@@ -7,6 +7,8 @@
 </script>
 
 <script lang="ts">
+  import { untrack } from "svelte";
+
   interface Props {
     options: RadioGroupOption[];
     /** Chosen option value (bindable); undefined leaves every option unchosen. */
@@ -24,7 +26,9 @@
     required?: boolean;
     /** Points at hint/error text elsewhere in the form. */
     ariaDescribedby?: string;
-    onchange?: (value: string) => void;
+    /** Called with the newly chosen value. A form reset also calls it, with
+     * undefined when the reset leaves no option chosen. */
+    onchange?: (value: string | undefined) => void;
     class?: string;
   }
 
@@ -43,19 +47,43 @@
 
   const uid = $props.id();
   const groupName = $derived(name ?? uid);
+  // The value at mount is the default a form reset returns to, as the
+  // `checked` attribute is for native radios.
+  const initialValue = untrack(() => value);
 
   function choose(event: Event & { currentTarget: HTMLInputElement }): void {
     value = event.currentTarget.value;
     onchange?.(value);
   }
+
+  // A form reset restores the radios without a change event, so read the
+  // restored choice back. The reset event fires before the inputs change,
+  // hence the timeout.
+  function syncOnReset(fieldset: HTMLFieldSetElement) {
+    const form = fieldset.form;
+    if (!form) return;
+    const onReset = (event: Event) => {
+      setTimeout(() => {
+        if (event.defaultPrevented) return;
+        const next = fieldset.querySelector<HTMLInputElement>(
+          ".kit-radio-group__input:checked",
+        )?.value;
+        if (next === value) return;
+        value = next;
+        onchange?.(next);
+      });
+    };
+    form.addEventListener("reset", onReset);
+    return () => form.removeEventListener("reset", onReset);
+  }
 </script>
 
 <fieldset
   class={["kit-radio-group", className]}
-  class:kit-radio-group--disabled={disabled}
   {id}
   {disabled}
   aria-describedby={ariaDescribedby}
+  {@attach syncOnReset}
 >
   <legend class="kit-radio-group__legend">{legend}</legend>
   {#each options as option (option.value)}
@@ -69,6 +97,7 @@
         name={groupName}
         value={option.value}
         checked={option.value === value}
+        defaultChecked={option.value === initialValue}
         disabled={option.disabled}
         {required}
         onchange={choose}
@@ -91,7 +120,7 @@
     border: 0;
   }
 
-  .kit-radio-group--disabled {
+  .kit-radio-group:disabled {
     opacity: var(--opacity-disabled);
   }
 
@@ -114,7 +143,7 @@
     position: relative;
   }
 
-  .kit-radio-group--disabled .kit-radio-group__option,
+  .kit-radio-group:disabled .kit-radio-group__option,
   .kit-radio-group__option--disabled {
     cursor: not-allowed;
   }
@@ -137,7 +166,6 @@
 
   /* Checkbox's 16px box and edge, drawn round. */
   .kit-radio-group__mark {
-    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;

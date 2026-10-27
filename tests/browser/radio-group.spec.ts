@@ -67,7 +67,30 @@ test("a required group blocks submission until chosen, then submits name=value",
   await expect(result).toHaveText("");
   await option(group(page, "Export format"), "JSON").click();
   await page.getByRole("button", { name: "Export" }).click();
-  await expect(result).toHaveText("submitted: format=json");
+  await expect(result).toHaveText("submitted: format=json&eol=lf");
+});
+
+test("a form reset restores each group's starting choice and its bound value", async ({ page }) => {
+  await gotoPage(page, "radio-group");
+  const format = group(page, "Export format");
+  const eol = group(page, "Line endings");
+  const readout = page.getByTestId("radio-group-form-value");
+  await option(format, "JSON").click();
+  await option(eol, "CRLF").click();
+  await expect(readout).toHaveText("format: json, line endings: crlf");
+
+  await page.getByRole("button", { name: "Reset" }).click();
+  // Export format started with no choice; Line endings started on LF.
+  await expect(format.getByRole("radio", { name: "JSON" })).not.toBeChecked();
+  await expect(eol.getByRole("radio", { name: "LF", exact: true })).toBeChecked();
+  await expect(readout).toHaveText("format: none, line endings: lf");
+
+  // The bound value and the inputs agree, so the next choice submits.
+  await option(format, "CSV").click();
+  await page.getByRole("button", { name: "Export" }).click();
+  await expect(page.getByTestId("radio-group-form-result")).toHaveText(
+    "submitted: format=csv&eol=lf",
+  );
 });
 
 test("the drawn mark matches Checkbox's box in both modes", async ({ page }) => {
