@@ -1,0 +1,144 @@
+import { expect, test } from "@playwright/test";
+import { gotoPage, resolvedStyle, setTheme } from "./helpers.js";
+
+// NumberInput on the demo page: it must render exactly like the TextInput
+// beside it, filter typing to numeric text, step with the arrow keys, and
+// hand the page a number or null.
+
+const CHROME = [
+  "height",
+  "padding-left",
+  "padding-right",
+  "border-top-width",
+  "border-top-color",
+  "border-radius",
+  "background-color",
+  "box-shadow",
+  "font-size",
+];
+
+for (const dark of [false, true]) {
+  for (const size of ["sm", "md", "lg"]) {
+    test(`${size} matches the TextInput beside it (${dark ? "dark" : "light"})`, async ({
+      page,
+    }) => {
+      await gotoPage(page, "number-input");
+      await setTheme(page, { dark });
+      const pair = page.getByTestId(`pair-${size}`);
+      const [text, number] = await Promise.all(
+        [".kit-text-input:not(.kit-number-input)", ".kit-number-input"].map((selector) =>
+          pair.locator(selector).evaluate((el, props) => {
+            const style = getComputedStyle(el);
+            return Object.fromEntries(props.map((p) => [p, style.getPropertyValue(p)]));
+          }, CHROME),
+        ),
+      );
+      expect(number).toEqual(text);
+    });
+  }
+}
+
+test("renders a text spinbutton, which has no native spinner buttons", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: "Port (1 to 65535)" });
+  await expect(field).toHaveAttribute("type", "text");
+  await expect(field).toHaveAttribute("aria-valuenow", "8080");
+  await expect(field).toHaveAttribute("aria-valuemin", "1");
+  await expect(field).toHaveAttribute("aria-valuemax", "65535");
+});
+
+test("typing keeps only digits and reports a number", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Timeout/ });
+  await field.fill("");
+  await field.pressSequentially("4a5.-e");
+  await expect(field).toHaveValue("45");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 45 (number)");
+});
+
+test("a pasted non-number is rejected whole", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Timeout/ });
+  await field.focus();
+  await field.evaluate((el) => {
+    const input = el as HTMLInputElement;
+    input.setSelectionRange(0, input.value.length);
+    const data = new DataTransfer();
+    data.setData("text/plain", "1,000");
+    input.dispatchEvent(
+      new InputEvent("beforeinput", {
+        inputType: "insertFromPaste",
+        dataTransfer: data,
+        cancelable: true,
+        bubbles: true,
+      }),
+    );
+  });
+  await expect(field).toHaveValue("30");
+});
+
+test("a minus sign and decimals are typed only where the range allows", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const offset = page.getByRole("spinbutton", { name: /Offset/ });
+  await offset.fill("");
+  await offset.pressSequentially("-7.5");
+  await expect(offset).toHaveValue("-75");
+
+  const ratio = page.getByRole("spinbutton", { name: /Ratio/ });
+  await ratio.fill("");
+  await ratio.pressSequentially("-.25");
+  await expect(ratio).toHaveValue(".25");
+  await expect(page.getByTestId("ratio-value")).toHaveText("value: 0.25 (number)");
+});
+
+test("arrow keys step from the value and commit each step", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const ratio = page.getByRole("spinbutton", { name: /Ratio/ });
+  await ratio.press("ArrowUp");
+  await ratio.press("ArrowUp");
+  await expect(ratio).toHaveValue("0.7");
+  await expect(page.getByTestId("ratio-value")).toHaveText("value: 0.7 (number)");
+  await ratio.press("ArrowDown");
+  await expect(ratio).toHaveAttribute("aria-valuenow", "0.6");
+
+  const timeout = page.getByRole("spinbutton", { name: /Timeout/ });
+  await timeout.press("ArrowDown");
+  await expect(timeout).toHaveValue("29");
+  await expect(page.getByTestId("change-count")).toHaveText("timeout changes committed: 1");
+});
+
+test("an empty field reports null and shows the invalid border", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Timeout/ });
+  await field.fill("");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: null");
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  const wrapper = page.locator(".kit-number-input").filter({ has: field });
+  await expect(wrapper).toHaveCSS(
+    "border-top-color",
+    await resolvedStyle(page, "color", "var(--accent-red)"),
+  );
+});
+
+test("leaving the field clamps to the range and commits once", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Timeout/ });
+  await field.fill("5000");
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  await field.blur();
+  await expect(field).toHaveValue("3600");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 3600 (number)");
+  await expect(page.getByTestId("change-count")).toHaveText("timeout changes committed: 1");
+
+  await field.focus();
+  await field.blur();
+  await expect(page.getByTestId("change-count")).toHaveText("timeout changes committed: 1");
+});
+
+test("leaving the field normalizes in-progress text", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Ratio/ });
+  await field.fill("0.40");
+  await field.press("Enter");
+  await expect(field).toHaveValue("0.4");
+});

@@ -49,6 +49,7 @@
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
   import NoticeDemo from "./pages/NoticeDemo.svelte";
+  import NumberInputDemo from "./pages/NumberInputDemo.svelte";
   import PageFrameDemo from "./pages/PageFrameDemo.svelte";
   import PanZoomDemo from "./pages/PanZoomDemo.svelte";
   import ProviderBrandDemo from "./pages/ProviderBrandDemo.svelte";
@@ -137,6 +138,7 @@
     { id: "mermaid", label: "Mermaid", component: MermaidDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "notice", label: "Notice", component: NoticeDemo },
+    { id: "number-input", label: "NumberInput", component: NumberInputDemo },
     { id: "page-frame", label: "PageFrame", component: PageFrameDemo },
     { id: "palette", label: "Palette", component: PaletteDemo },
     { id: "pan-zoom", label: "Pan and zoom", component: PanZoomDemo },

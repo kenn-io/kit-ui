@@ -4,7 +4,8 @@ The bordered text-field primitives. `TextInput` is the base: a wrapper that
 carries all chrome (border, focus, invalid state) around a chromeless input,
 sized to the shared toolbar control heights. `SearchInput` is TextInput
 preconfigured for filtering: search-icon prefix, a clear button that appears
-with content, and an optional shortcut hint while empty.
+with content, and an optional shortcut hint while empty. For numbers, use
+[`NumberInput`](number-input.md), another TextInput preset.
 
 ```svelte
 <script lang="ts">
@@ -34,9 +35,13 @@ with content, and an optional shortcut hint while empty.
 | `autofocus`                                                                            | `boolean`                                                       | `false`  | Focus on mount                                                                                                                               |
 | `autocomplete`                                                                         | `string`                                                        | —        |                                                                                                                                              |
 | `role` / `ariaExpanded` / `ariaControls` / `ariaActivedescendant` / `ariaAutocomplete` | combobox wiring                                                 | —        | For fields that drive a listbox (CommandPalette): `role="combobox"` plus pointers at the list and highlighted option                         |
+| `role="spinbutton"` / `ariaValuenow` / `ariaValuemin` / `ariaValuemax`                 | numeric wiring                                                  | —        | What `NumberInput` uses; prefer that component over wiring a spinbutton by hand                                                              |
+| `inputmode`                                                                            | `string`                                                        | —        | Touch keyboard hint, e.g. `"decimal"`                                                                                                        |
 | `oninput` / `onchange`                                                                 | `(value: string) => void`                                       | —        | Called with the new value                                                                                                                    |
 | `onkeydown`                                                                            | `(event: KeyboardEvent) => void`                                | —        |                                                                                                                                              |
+| `onfocus`                                                                              | `() => void`                                                    | —        | Called when the control gains focus                                                                                                          |
 | `onblur`                                                                               | `() => void`                                                    | —        | Called when the control loses focus                                                                                                          |
+| `onbeforeinput`                                                                        | `(event: InputEvent) => void`                                   | —        | Runs before an edit lands; `preventDefault()` rejects it                                                                                     |
 | `ariaDescribedby`                                                                      | `string`                                                        | —        | Connects supporting or error text to the native input                                                                                        |
 | `prefix` / `suffix`                                                                    | `Snippet`                                                       | —        | Adornments inside the border (icon, unit, kbd, button). Interactive suffix actions must handle `disabled` themselves — the wrapper only dims |
 | `inputEl`                                                                              | `HTMLInputElement` (bindable)                                   | —        | The underlying input, for focus management                                                                                                   |

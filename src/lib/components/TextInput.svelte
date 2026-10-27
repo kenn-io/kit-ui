@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import type { HTMLInputAttributes } from "svelte/elements";
 
   interface Props {
     /** Current text (bindable). */
@@ -27,19 +28,29 @@
     ariaLabel?: string;
     /** Combobox wiring for fields that drive a listbox (CommandPalette):
      * set `role="combobox"` and point these at the list and the
-     * highlighted option so keyboard navigation is announced. */
-    role?: "combobox";
+     * highlighted option so keyboard navigation is announced.
+     * `role="spinbutton"` with the `ariaValue*` props is the numeric
+     * wiring NumberInput uses. */
+    role?: "combobox" | "spinbutton";
     ariaExpanded?: boolean;
     ariaControls?: string;
     ariaActivedescendant?: string;
     ariaAutocomplete?: "list" | "inline" | "both" | "none";
     ariaDescribedby?: string;
+    ariaValuenow?: number;
+    ariaValuemin?: number;
+    ariaValuemax?: number;
+    /** Virtual keyboard hint on touch devices, e.g. "decimal". */
+    inputmode?: HTMLInputAttributes["inputmode"];
     /** Focus the input when it mounts. */
     autofocus?: boolean;
     autocomplete?: HTMLInputElement["autocomplete"];
     oninput?: (value: string) => void;
     onchange?: (value: string) => void;
     onkeydown?: (event: KeyboardEvent) => void;
+    /** Runs before an edit lands; `preventDefault()` rejects it. */
+    onbeforeinput?: (event: InputEvent) => void;
+    onfocus?: () => void;
     onblur?: () => void;
     /** Leading adornment inside the border (icon, unit). */
     prefix?: Snippet;
@@ -69,11 +80,17 @@
     ariaActivedescendant = undefined,
     ariaAutocomplete = undefined,
     ariaDescribedby = undefined,
+    ariaValuenow = undefined,
+    ariaValuemin = undefined,
+    ariaValuemax = undefined,
+    inputmode = undefined,
     autofocus = false,
     autocomplete = undefined,
     oninput = undefined,
     onchange = undefined,
     onkeydown = undefined,
+    onbeforeinput = undefined,
+    onfocus = undefined,
     onblur = undefined,
     prefix = undefined,
     suffix = undefined,
@@ -116,6 +133,7 @@
     {id}
     {name}
     {autocomplete}
+    {inputmode}
     aria-label={ariaLabel}
     aria-invalid={invalid ? "true" : undefined}
     {role}
@@ -124,9 +142,14 @@
     aria-activedescendant={ariaActivedescendant}
     aria-autocomplete={ariaAutocomplete}
     aria-describedby={ariaDescribedby}
+    aria-valuenow={ariaValuenow}
+    aria-valuemin={ariaValuemin}
+    aria-valuemax={ariaValuemax}
+    {onbeforeinput}
     oninput={handleInput}
     onchange={(event) => onchange?.((event.currentTarget as HTMLInputElement).value)}
     {onkeydown}
+    {onfocus}
     {onblur}
     {@attach focusOnMount}
   />

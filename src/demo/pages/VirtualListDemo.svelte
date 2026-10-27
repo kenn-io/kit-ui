@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { showFlash, VirtualList } from "../../lib/index.js";
+  import { NumberInput, showFlash, VirtualList } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   interface Row {
@@ -20,7 +20,7 @@
   let active = $state(-1);
   let range = $state<[number, number]>([0, 0]);
   let list = $state<ReturnType<typeof VirtualList<Row>>>();
-  let jump = $state(5000);
+  let jump = $state<number | null>(5000);
 
   // Mount-time controlled selection: the list mounts with activeIndex
   // already pointing far outside the first slice, exercising the
@@ -44,12 +44,12 @@
   <div class="controls">
     <label class="control">
       Jump to
-      <input type="number" min="0" max="9999" bind:value={jump} />
+      <NumberInput bind:value={jump} min={0} max={9999} size="sm" />
     </label>
     <button
       class="jump-btn kit-control-states"
       type="button"
-      onclick={() => list?.scrollToIndex(jump)}
+      onclick={() => list?.scrollToIndex(jump ?? 0)}
     >
       scrollToIndex
     </button>
@@ -137,16 +137,8 @@
     color: var(--text-secondary);
   }
 
-  .control input {
-    width: 80px;
-    height: 24px;
-    border: var(--border-width) solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    padding: 0 var(--space-3);
+  .control :global(.kit-number-input) {
+    width: 96px;
   }
 
   .jump-btn {

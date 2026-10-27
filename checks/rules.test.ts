@@ -705,6 +705,18 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("DatePicker (one date)");
   });
 
+  test("number input: native type=number in either quote style", () => {
+    const src = svelte(``, `<input type="number" min="0" />\n<input type='number' />`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-number-input"]);
+    expect(findings.map((f) => f.line)).toEqual([2, 3]);
+    expect(findings[0]!.message).toContain("NumberInput");
+  });
+
+  test("number input: other input types and type props are not flagged", () => {
+    const src = svelte(``, `<input type="text" inputmode="numeric" /><Field type="numbers" />`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-number-input"])).toHaveLength(0);
+  });
+
   test("color input: native type=color", () => {
     const src = svelte(``, `<input type="color" value="#ff0000" /><input type="text" />`);
     const findings = checkSource(src, "A.svelte", ["hand-rolled-color-input"]);
