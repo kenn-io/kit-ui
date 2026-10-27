@@ -6,6 +6,7 @@
   let port = $state<number | null>(8080);
   let ratio = $state<number | null>(0.5);
   let offset = $state<number | null>(-2);
+  let oversized = $state<number | null>(1e20);
   let changes = $state(0);
 
   const timeoutInvalid = $derived(timeout === null || timeout < 1 || timeout > 3600);
@@ -70,6 +71,17 @@
       <span class="row">
         <NumberInput bind:value={offset} required id="number-demo-offset" />
         <span class="readout">value: <code>{describe(offset)}</code></span>
+      </span>
+    </div>
+    <div class="field">
+      <label class="field__label" for="number-demo-oversized"
+        >Oversized (set to 1e20 from outside; Backspace shortens it)</label
+      >
+      <span class="row">
+        <NumberInput bind:value={oversized} id="number-demo-oversized" />
+        <span class="readout" data-testid="oversized-value"
+          >value: <code>{describe(oversized)}</code></span
+        >
       </span>
     </div>
     <span class="readout" data-testid="change-count">timeout changes committed: {changes}</span>

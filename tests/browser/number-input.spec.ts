@@ -80,6 +80,13 @@ test("a real paste lands only as a number", async ({ page, context, browserName 
   await paste(" 42 ");
   await expect(field).toHaveValue("42");
   await expect(page.getByTestId("timeout-value")).toHaveText("value: 42 (number)");
+
+  // Also when the paste lands between existing digits.
+  await page.evaluate(() => navigator.clipboard.writeText(" 1 "));
+  await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(1, 1));
+  await field.press("ControlOrMeta+v");
+  await expect(field).toHaveValue("412");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 412 (number)");
 });
 
 test("text an edit could not cancel is reverted and stays reverted", async ({ page }) => {
@@ -98,6 +105,37 @@ test("text an edit could not cancel is reverted and stays reverted", async ({ pa
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
   await expect(field).toHaveValue("30");
   await expect(page.getByTestId("timeout-value")).toHaveText("value: 30 (number)");
+
+  // A space inside a number is refused on this path too, as a paste of it is.
+  await field.evaluate((el) => {
+    const input = el as HTMLInputElement;
+    input.value = "1 2";
+    input.dispatchEvent(
+      new InputEvent("input", { inputType: "insertCompositionText", bubbles: true }),
+    );
+  });
+  await expect(field).toHaveValue("30");
+  await expect(page.getByTestId("timeout-value")).toHaveText("value: 30 (number)");
+});
+
+test("Backspace shortens a value supplied beyond the safe-integer limit", async ({ page }) => {
+  await gotoPage(page, "number-input");
+  const field = page.getByRole("spinbutton", { name: /Oversized/ });
+  await expect(field).toHaveValue("100000000000000000000");
+  // End does not move the caret on macOS, so place it directly.
+  await field.evaluate((el) => {
+    const input = el as HTMLInputElement;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+  await field.press("Backspace");
+  await expect(field).toHaveValue("10000000000000000000");
+  await expect(page.getByTestId("oversized-value")).toHaveText(
+    "value: 10000000000000000000 (number)",
+  );
+  // Making it longer is still refused.
+  await field.press("1");
+  await expect(field).toHaveValue("10000000000000000000");
 });
 
 test("a required field holding only a minus sign blocks form submission", async ({ page }) => {

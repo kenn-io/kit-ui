@@ -21,6 +21,9 @@ export declare function allowsNegative({ min }: NumberBounds): boolean;
  * beyond Number.MAX_SAFE_INTEGER are refused, since past it the parsed
  * value would no longer match the digits typed. */
 export declare function isNumberDraft(text: string, bounds: NumberBounds): boolean;
+/** Whether `text` has the shape of a number draft, whatever its size:
+ * isNumberDraft without the safe-integer limit. */
+export declare function isNumberText(text: string, bounds: NumberBounds): boolean;
 /** The number a draft means, or null while it has no digits yet. */
 export declare function parseNumberDraft(text: string): number | null;
 /** Canonical text for a value: "" for null, otherwise the shortest
@@ -34,6 +37,10 @@ export declare function clampNumber(value: number, { min, max }: NumberBounds): 
  * direction, as native number inputs do. An empty field starts from `min`
  * going up and `max` going down (0 when that bound is unset). The result
  * is rounded to the field's precision so repeated 0.1 steps stay exact,
- * then clamped to the range. A step that would leave the safe-integer
- * range, where typed digits stop matching the value, changes nothing. */
-export declare function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number;
+ * then clamped to the range. Numbers stay within ±Number.MAX_SAFE_INTEGER,
+ * where typed digits still match the value: a step past it changes
+ * nothing, an empty field starts inside it, and a range entirely beyond
+ * it leaves the field empty (null). */
+export declare function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number | null;
+/** Whether typed digits for `n` still read back as exactly `n`. */
+export declare function isSafeNumber(n: number): boolean;

@@ -90,11 +90,25 @@ describe("stepNumber", () => {
     expect(stepNumber(1000000.2, 1, { min: 0, step: 0.1 })).toBe(1000000.3);
     expect(stepNumber(1, -1, { step: 1e10 })).toBe(0);
     expect(stepNumber(1, 1, { step: 1e10 })).toBe(1e10);
+    expect(stepNumber(1, -1, { step: 1e15 })).toBe(0);
+  });
+
+  test("a grid anchored far from the value still steps one at a time", () => {
+    const bounds = { min: -Number.MAX_SAFE_INTEGER, step: 1 };
+    expect(stepNumber(1, 1, bounds)).toBe(2);
+    expect(stepNumber(2, 1, bounds)).toBe(3);
+    expect(stepNumber(2, -1, bounds)).toBe(1);
   });
 
   test("stepping stops at the safe-integer limit", () => {
     expect(stepNumber(Number.MAX_SAFE_INTEGER, 1, { step: 1 })).toBe(Number.MAX_SAFE_INTEGER);
     expect(stepNumber(-Number.MAX_SAFE_INTEGER, -1, { step: 1 })).toBe(-Number.MAX_SAFE_INTEGER);
+  });
+
+  test("an empty field starts inside the safe-integer range", () => {
+    expect(stepNumber(null, -1, { max: 1e16, step: 1 })).toBe(Number.MAX_SAFE_INTEGER);
+    expect(stepNumber(null, 1, { min: -1e16, step: 1 })).toBe(-Number.MAX_SAFE_INTEGER);
+    expect(stepNumber(null, 1, { min: 1e16, step: 1 })).toBeNull();
   });
 
   test("steps finer than 100 decimal places still move the value", () => {

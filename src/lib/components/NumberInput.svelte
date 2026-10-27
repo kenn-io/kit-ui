@@ -6,6 +6,8 @@
     clampNumber,
     formatNumber,
     isNumberDraft,
+    isNumberText,
+    isSafeNumber,
     numberPrecision,
     parseNumberDraft,
     stepNumber,
@@ -140,16 +142,22 @@
     // Composition text can't be cancelled; handleText reverts it instead.
     if (event.inputType === "insertCompositionText" || !event.cancelable) return;
     const input = event.currentTarget as HTMLInputElement;
-    let inserted = event.data ?? event.dataTransfer?.getData("text/plain") ?? "";
-    // Pasted or dropped numbers often carry surrounding whitespace;
-    // handleText strips it once the text lands.
-    if (event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop") {
-      inserted = inserted.trim();
-    }
+    const raw = event.data ?? event.dataTransfer?.getData("text/plain") ?? "";
+    // Pasted or dropped numbers often carry surrounding whitespace.
+    const pasted = event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop";
+    const inserted = pasted ? raw.trim() : raw;
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     const next = input.value.slice(0, start) + inserted + input.value.slice(end);
-    if (!isNumberDraft(next, bounds)) event.preventDefault();
+    if (!isNumberDraft(next, bounds)) {
+      event.preventDefault();
+    } else if (inserted !== raw) {
+      // The native insert would keep the whitespace, so insert the trimmed
+      // text instead and report it as the same kind of edit.
+      event.preventDefault();
+      input.setRangeText(inserted, start, end, "end");
+      input.dispatchEvent(new InputEvent("input", { inputType: event.inputType, bubbles: true }));
+    }
   }
 
   /** Put `next` in the DOM after it received `raw`, keeping the caret where
@@ -165,10 +173,16 @@
   // from an edit beforeinput could not cancel (IME composition) or a
   // deletion that leaves too large a number, is reverted. TextInput reads
   // its text back through `text`, so a rejected edit never reaches its
-  // state.
+  // state. A value supplied from outside beyond the safe-integer limit may
+  // still be shortened, so Backspace can bring it back into range.
   function handleText(raw: string): void {
-    const cleaned = raw.replace(/\s+/g, "");
-    if (!isNumberDraft(cleaned, bounds)) {
+    const cleaned = raw.trim();
+    const shortensUnsafe =
+      value !== null &&
+      !isSafeNumber(value) &&
+      cleaned.length < text.length &&
+      isNumberText(cleaned, bounds);
+    if (!shortensUnsafe && !isNumberDraft(cleaned, bounds)) {
       replaceText(text, raw);
       return;
     }

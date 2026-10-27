@@ -46,11 +46,17 @@ export function allowsNegative({ min }: NumberBounds): boolean {
  * beyond Number.MAX_SAFE_INTEGER are refused, since past it the parsed
  * value would no longer match the digits typed. */
 export function isNumberDraft(text: string, bounds: NumberBounds): boolean {
+  if (!isNumberText(text, bounds)) return false;
+  const value = parseNumberDraft(text);
+  return value === null || isSafeNumber(value);
+}
+
+/** Whether `text` has the shape of a number draft, whatever its size:
+ * isNumberDraft without the safe-integer limit. */
+export function isNumberText(text: string, bounds: NumberBounds): boolean {
   const sign = allowsNegative(bounds) ? "-?" : "";
   const fraction = numberPrecision(bounds) > 0 ? "(?:\\.\\d*)?" : "";
-  if (!new RegExp(`^${sign}\\d*${fraction}$`).test(text)) return false;
-  const value = parseNumberDraft(text);
-  return value === null || Math.abs(value) <= Number.MAX_SAFE_INTEGER;
+  return new RegExp(`^${sign}\\d*${fraction}$`).test(text);
 }
 
 /** The number a draft means, or null while it has no digits yet. */
@@ -72,8 +78,9 @@ export function formatNumber(value: number | null): string {
   const digits = whole + fraction;
   const point = whole.length + Number(power);
   if (point <= 0) return `${sign}0.${"0".repeat(-point)}${digits}`;
-  if (point >= digits.length) return sign + digits + "0".repeat(point - digits.length);
-  return `${sign}${digits.slice(0, point)}.${digits.slice(point)}`;
+  // Exponent form only appears below 1e-6 or from 1e21 up, so the point
+  // never falls inside the digits.
+  return sign + digits + "0".repeat(point - digits.length);
 }
 
 export function clampNumber(value: number, { min, max }: NumberBounds): number {
@@ -87,29 +94,48 @@ export function clampNumber(value: number, { min, max }: NumberBounds): number {
  * direction, as native number inputs do. An empty field starts from `min`
  * going up and `max` going down (0 when that bound is unset). The result
  * is rounded to the field's precision so repeated 0.1 steps stay exact,
- * then clamped to the range. A step that would leave the safe-integer
- * range, where typed digits stop matching the value, changes nothing. */
-export function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number {
+ * then clamped to the range. Numbers stay within ±Number.MAX_SAFE_INTEGER,
+ * where typed digits still match the value: a step past it changes
+ * nothing, an empty field starts inside it, and a range entirely beyond
+ * it leaves the field empty (null). */
+export function stepNumber(
+  value: number | null,
+  direction: 1 | -1,
+  bounds: NumberBounds,
+): number | null {
+  if (value === null) {
+    const start = clampNumber((direction === 1 ? bounds.min : bounds.max) ?? 0, SAFE_RANGE);
+    const result = clampNumber(start, bounds);
+    return isSafeNumber(result) ? result : null;
+  }
   const precision = numberPrecision(bounds);
   // toFixed takes at most 100 places; a step finer than that is left
   // unrounded rather than rounded to zero.
   const round = (n: number): number => (precision > 100 ? n : Number(n.toFixed(precision)));
-  if (value === null) {
-    return clampNumber((direction === 1 ? bounds.min : bounds.max) ?? 0, bounds);
-  }
-  const base = bounds.min ?? 0;
-  const index = (value - base) / bounds.step;
-  const nearest = Math.round(index);
-  // A value within a few float rounding errors of a grid point (such as
-  // 0.30000000000000004) is on the grid. The tolerance scales with the
-  // numbers involved, so it holds for large values and for huge steps.
-  const tolerance = 16 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(base), bounds.step);
-  const next =
-    Math.abs(value - (base + nearest * bounds.step)) <= tolerance
-      ? nearest + direction
-      : direction === 1
-        ? Math.ceil(index)
-        : Math.floor(index);
-  const result = clampNumber(round(base + next * bounds.step), bounds);
-  return Math.abs(result) <= Number.MAX_SAFE_INTEGER ? result : value;
+  const { step } = bounds;
+  // How far the value sits past the grid point below it. The step is then
+  // taken from the value itself, so no count of grid points is built that
+  // could outgrow exact integers.
+  let offset = (value - (bounds.min ?? 0)) % step;
+  if (offset < 0) offset += step;
+  // Within a few rounding errors of a grid point (0.30000000000000004 with
+  // step 0.1) counts as on it. The tolerance follows the value's size, not
+  // the step's, so a huge step still snaps a small value.
+  const tolerance = 16 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(bounds.min ?? 0));
+  const onGrid = offset <= tolerance || step - offset <= tolerance;
+  const below = value - offset;
+  const next = onGrid ? value + direction * step : direction === 1 ? below + step : below;
+  const result = clampNumber(round(next), bounds);
+  return isSafeNumber(result) ? result : value;
+}
+
+const SAFE_RANGE: NumberBounds = {
+  min: -Number.MAX_SAFE_INTEGER,
+  max: Number.MAX_SAFE_INTEGER,
+  step: 1,
+};
+
+/** Whether typed digits for `n` still read back as exactly `n`. */
+export function isSafeNumber(n: number): boolean {
+  return Math.abs(n) <= Number.MAX_SAFE_INTEGER;
 }
