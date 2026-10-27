@@ -52,6 +52,7 @@
   import ProviderBrandDemo from "./pages/ProviderBrandDemo.svelte";
   import DatePickerDemo from "./pages/DatePickerDemo.svelte";
   import DateRangePickerDemo from "./pages/DateRangePickerDemo.svelte";
+  import RadioGroupDemo from "./pages/RadioGroupDemo.svelte";
   import RefreshControlDemo from "./pages/RefreshControlDemo.svelte";
   import ScrollBoxDemo from "./pages/ScrollBoxDemo.svelte";
   import SegmentedControlDemo from "./pages/SegmentedControlDemo.svelte";
@@ -138,6 +139,7 @@
     { id: "provider-brand", label: "Provider brand", component: ProviderBrandDemo },
     { id: "date-picker", label: "DatePicker", component: DatePickerDemo },
     { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },
+    { id: "radio-group", label: "RadioGroup", component: RadioGroupDemo },
     { id: "refresh-control", label: "RefreshControl", component: RefreshControlDemo },
     { id: "scroll-box", label: "ScrollBox", component: ScrollBoxDemo },
     { id: "segmented-control", label: "SegmentedControl", component: SegmentedControlDemo },
