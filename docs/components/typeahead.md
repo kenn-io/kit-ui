@@ -118,6 +118,11 @@ While a `loading` status row is showing it stands in for the options: arrow
 keys and Enter are inert (Escape still closes), and `aria-activedescendant`
 is dropped so nothing hidden is announced as active.
 
+The `role="listbox"` (or `tree`) element renders only while it has rows to
+choose from, because an empty listbox is invalid ARIA. Loading, empty, and
+error messages render beside it, and while no list is showing the input
+reports `aria-expanded="false"` and drops `aria-controls`.
+
 Escape closes the list from any focused descendant — the input or a
 focusable `header` control — consuming the event so a parent overlay does
 not also close (a header control that already handled Escape, e.g. a
@@ -153,7 +158,7 @@ button:
 ```
 
 The attachment sets `aria-haspopup`, `aria-expanded`, and, while the list is
-open, `aria-controls` on the button, and adds `kit-control-states`. Click,
+open with rows, `aria-controls` on the button, and adds `kit-control-states`. Click,
 Arrow Up, and Arrow Down open the list, and typing a character opens it with
 that character as the query. The button stays in place while the list is
 open, so the search field moves into the popover above the options. Escape or

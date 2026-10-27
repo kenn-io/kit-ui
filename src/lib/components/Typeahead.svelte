@@ -219,6 +219,10 @@
   );
   const customOffset = $derived(clearOffset + rows.length);
   const rowCount = $derived(rows.length + clearOffset + (customValue !== "" ? 1 : 0));
+  // The listbox (or tree) exists only while it has rows to choose from: an
+  // empty one is invalid ARIA, so loading, empty, and error messages render
+  // beside it and the combobox reports its popup collapsed meanwhile.
+  const listShown = $derived(!loading && rowCount > 0);
   const rootTreeSize = $derived(
     rows.filter((row) => row.depth === 0).length + clearOffset + (customValue !== "" ? 1 : 0),
   );
@@ -366,7 +370,7 @@
       node.type = "button";
       node.setAttribute("aria-haspopup", grouped ? "tree" : "listbox");
       node.setAttribute("aria-expanded", String(open));
-      if (open) node.setAttribute("aria-controls", listId);
+      if (open && listShown) node.setAttribute("aria-controls", listId);
       else node.removeAttribute("aria-controls");
       node.disabled = disabled;
     });
@@ -564,11 +568,11 @@
     {placeholder}
     {disabled}
     aria-label={placeholder}
-    aria-expanded="true"
-    aria-controls={listId}
+    aria-expanded={listShown}
+    aria-controls={listShown ? listId : undefined}
     aria-haspopup={grouped ? "tree" : "listbox"}
     aria-autocomplete="list"
-    aria-activedescendant={!loading && rowCount > 0 ? `${listId}-row-${activeIndex}` : undefined}
+    aria-activedescendant={listShown ? `${listId}-row-${activeIndex}` : undefined}
     autocomplete="off"
     data-1p-ignore="true"
     data-bwignore="true"
@@ -600,23 +604,23 @@
       {#if header}
         <div class="kit-typeahead__header">{@render header()}</div>
       {/if}
-      <ul
-        class="kit-typeahead__list"
-        id={listId}
-        role={grouped ? "tree" : "listbox"}
-        aria-label={placeholder}
-      >
-        {#if loading}
-          <li class="kit-typeahead__status" role="presentation">{loadingLabel}</li>
-        {:else}
-          {#if error}
-            <!-- Above (not instead of) the options: the user must be able to
-                 retry, since callers clear `error` on the next onselect.
-                 role="alert" announces the veto to screen readers. -->
-            <li class="kit-typeahead__status kit-typeahead__status--error" role="alert">
-              {error}
-            </li>
-          {/if}
+      {#if loading}
+        <div class="kit-typeahead__status">{loadingLabel}</div>
+      {:else if error}
+        <!-- Above (not instead of) the options: the user must be able to
+             retry, since callers clear `error` on the next onselect.
+             role="alert" announces the veto to screen readers. -->
+        <div class="kit-typeahead__status kit-typeahead__status--error" role="alert">
+          {error}
+        </div>
+      {/if}
+      {#if listShown}
+        <ul
+          class="kit-typeahead__list"
+          id={listId}
+          role={grouped ? "tree" : "listbox"}
+          aria-label={placeholder}
+        >
           {#if allowClear}
             <li
               class="kit-typeahead__option"
@@ -700,11 +704,12 @@
                 {customLabel.replace("{query}", customValue)}
               </span>
             </li>
-          {:else if rows.length === 0}
-            <li class="kit-typeahead__empty" role="presentation">{emptyLabel}</li>
           {/if}
-        {/if}
-      </ul>
+        </ul>
+      {/if}
+      {#if !loading && rows.length === 0 && customValue === ""}
+        <div class="kit-typeahead__empty">{emptyLabel}</div>
+      {/if}
     </div>
   {:else if !trigger}
     <button
@@ -952,9 +957,11 @@
     font-weight: var(--font-weight-semibold, 600);
   }
 
+  /* Primary ink on a light tint: accent-colored text on an accent tint
+     can't reach AA (4.5:1) for option-sized text. */
   .kit-typeahead__match {
-    background: color-mix(in srgb, var(--accent-blue) 40%, transparent);
-    color: var(--accent-blue);
+    background: color-mix(in srgb, var(--accent-blue) 22%, transparent);
+    color: var(--text-primary);
     font-weight: var(--font-weight-semibold, 600);
     border-radius: var(--radius-sm);
   }
@@ -963,7 +970,7 @@
   .kit-typeahead__status {
     padding: 6px 8px;
     font-size: var(--font-size-xs);
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-style: italic;
   }
 
