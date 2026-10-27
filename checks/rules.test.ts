@@ -1027,6 +1027,42 @@ describe("chip-label-override", () => {
   });
 });
 
+describe("hand-rolled-radio", () => {
+  test("flags bare native radio markup", () => {
+    const src = svelte(``, `<label><input type="radio" name="size" value="s" /> Small</label>`);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-radio"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("RadioGroup");
+  });
+
+  test("flags input[type=radio] selectors and radio-scoped accent-color", () => {
+    const src = svelte(
+      `input[type="radio"] { width: 14px; }
+      .radio-row input { accent-color: var(--accent-blue); }`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-radio"])).toHaveLength(2);
+  });
+
+  test("checkboxes and checkbox styling are left to the checkbox rule", () => {
+    const src = svelte(
+      `input[type="checkbox"] { width: 14px; }
+      .checkbox-row input { accent-color: var(--accent-blue); }`,
+      `<input type="checkbox" />`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-radio"])).toHaveLength(0);
+  });
+
+  test("<RadioGroup> usage with radio-named layout styling is clean", () => {
+    // Only accent-color makes a radio-named selector a styled native radio;
+    // spacing a RadioGroup must not flag.
+    const src = svelte(
+      `.settings :global(.kit-radio-group) { margin: 0; }`,
+      `<div class="settings"><RadioGroup legend="Size" options={sizes} bind:value={size} /></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-radio"])).toHaveLength(0);
+  });
+});
+
 describe("hand-rolled-checkbox / hand-rolled-toggle", () => {
   test("checkbox: flags bare native checkbox markup", () => {
     const src = svelte(``, `<label><input type="checkbox" checked /> Auto-sync</label>`);

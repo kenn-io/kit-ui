@@ -103,6 +103,8 @@ export {
   type RangeSelection,
   type RelativeSelection,
 } from "./components/date-range.js";
+export { default as RadioGroup } from "./components/RadioGroup.svelte";
+export type { RadioGroupOption } from "./components/RadioGroup.svelte";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as ScrollBox } from "./components/ScrollBox.svelte";
 export { default as SearchInput } from "./components/SearchInput.svelte";

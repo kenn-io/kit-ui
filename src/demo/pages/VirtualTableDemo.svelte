@@ -222,6 +222,7 @@
             <td class="num">{note.lines.length}</td>
           {/if}
           <td>
+            <!-- kit-ui-check-ignore -- one native radio per row; the spec checks that column measurement keeps its checked state -->
             <input
               type="radio"
               name="favorite-note"

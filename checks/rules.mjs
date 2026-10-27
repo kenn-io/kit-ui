@@ -936,25 +936,28 @@ export function checkHandRolledSidebarToggle(source) {
   return findings;
 }
 
-/** Raw native checkboxes (bare markup, input[type=checkbox] selectors, or
- * checkbox-scoped accent-color styling) duplicate Checkbox/Toggle.
+/** Raw native inputs of one type (bare markup, input[type=…] selectors, or
+ * type-scoped accent-color styling) that duplicate a drawn kit-ui control.
  * accent-color on OTHER controls (range sliders, progress) is legitimate —
  * theme.css sets it globally — so the CSS signal requires a selector that
- * names checkboxes. kit-ui's own Markdown component already styles
- * rendered task-list checkboxes. */
-export function checkHandRolledCheckbox(source, filename) {
+ * names the input type.
+ * @param {string} source
+ * @param {string} filename
+ * @param {{ type: string, rule: string, replacement: string }} options */
+function handRolledNativeInput(source, filename, { type, rule, replacement }) {
   const findings = [];
   // [^<>] (not [^>]) so a failed attempt can't rescan past the next tag —
   // the checker runs over arbitrary project files, so its regexes must
   // stay linear on pathological inputs (CodeQL js/polynomial-redos).
-  const markupRe = /<input\b[^<>]*type=["']checkbox["']/g;
+  const markupRe = new RegExp(`<input\\b[^<>]*type=["']${type}["']`, "g");
+  const selectorRe = new RegExp(`input\\[type=["']?${type}["']?\\]`);
+  const namedRe = new RegExp(type, "i");
   let match;
   while ((match = markupRe.exec(source)) !== null) {
     findings.push({
-      rule: "hand-rolled-checkbox",
+      rule,
       line: lineOfIndex(source, match.index),
-      message:
-        "native checkbox markup — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+      message: `native ${type} markup — use ${replacement} from @kenn-io/kit-ui`,
     });
   }
   for (const { css, offset } of styleBlocks(source, filename)) {
@@ -1033,15 +1036,13 @@ export function checkHandRolledCheckbox(source, filename) {
         const frame = stack.pop();
         if (frame) {
           frame.direct += pending;
-          const selectsCheckbox = /input\[type=["']?checkbox["']?\]/.test(frame.selector);
-          const checkboxAccent =
-            /checkbox/i.test(frame.selector) && frame.direct.includes("accent-color:");
-          if (selectsCheckbox || checkboxAccent) {
+          const selectsType = selectorRe.test(frame.selector);
+          const typeAccent = namedRe.test(frame.selector) && frame.direct.includes("accent-color:");
+          if (selectsType || typeAccent) {
             findings.push({
-              rule: "hand-rolled-checkbox",
+              rule,
               line: baseLine + frame.line,
-              message:
-                "styled native checkbox — use Checkbox (or Toggle for on/off settings) from @kenn-io/kit-ui",
+              message: `styled native ${type} — use ${replacement} from @kenn-io/kit-ui`,
             });
           }
         }
@@ -1053,6 +1054,25 @@ export function checkHandRolledCheckbox(source, filename) {
     }
   }
   return findings;
+}
+
+/** Raw native checkboxes duplicate Checkbox/Toggle. kit-ui's own Markdown
+ * component already styles rendered task-list checkboxes. */
+export function checkHandRolledCheckbox(source, filename) {
+  return handRolledNativeInput(source, filename, {
+    type: "checkbox",
+    rule: "hand-rolled-checkbox",
+    replacement: "Checkbox (or Toggle for on/off settings)",
+  });
+}
+
+/** Raw native radios duplicate RadioGroup. */
+export function checkHandRolledRadio(source, filename) {
+  return handRolledNativeInput(source, filename, {
+    type: "radio",
+    rule: "hand-rolled-radio",
+    replacement: "RadioGroup (or SegmentedControl for inline view switches)",
+  });
 }
 
 /** Hand-built switches (role="switch" plus a track/knob) duplicate Toggle. */
@@ -1805,6 +1825,7 @@ export const ALL_RULES = {
   "hand-rolled-find-bar": checkHandRolledFindBar,
   "hand-rolled-status-dot": checkHandRolledStatusDot,
   "hand-rolled-checkbox": checkHandRolledCheckbox,
+  "hand-rolled-radio": checkHandRolledRadio,
   "hand-rolled-toggle": checkHandRolledToggle,
   "hand-rolled-sidebar-toggle": checkHandRolledSidebarToggle,
   "hand-rolled-sr-only": checkHandRolledSrOnly,

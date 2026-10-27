@@ -227,13 +227,15 @@ export function checkHandRolledSidebarToggle(source: any): {
     line: number;
     message: string;
 }[];
-/** Raw native checkboxes (bare markup, input[type=checkbox] selectors, or
- * checkbox-scoped accent-color styling) duplicate Checkbox/Toggle.
- * accent-color on OTHER controls (range sliders, progress) is legitimate —
- * theme.css sets it globally — so the CSS signal requires a selector that
- * names checkboxes. kit-ui's own Markdown component already styles
- * rendered task-list checkboxes. */
+/** Raw native checkboxes duplicate Checkbox/Toggle. kit-ui's own Markdown
+ * component already styles rendered task-list checkboxes. */
 export function checkHandRolledCheckbox(source: any, filename: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
+/** Raw native radios duplicate RadioGroup. */
+export function checkHandRolledRadio(source: any, filename: any): {
     rule: string;
     line: number;
     message: string;
@@ -419,6 +421,7 @@ export const ALL_RULES: {
     "hand-rolled-find-bar": typeof checkHandRolledFindBar;
     "hand-rolled-status-dot": typeof checkHandRolledStatusDot;
     "hand-rolled-checkbox": typeof checkHandRolledCheckbox;
+    "hand-rolled-radio": typeof checkHandRolledRadio;
     "hand-rolled-toggle": typeof checkHandRolledToggle;
     "hand-rolled-sidebar-toggle": typeof checkHandRolledSidebarToggle;
     "hand-rolled-sr-only": typeof checkHandRolledSrOnly;
