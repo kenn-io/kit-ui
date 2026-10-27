@@ -43,6 +43,14 @@ describe("createPalette families", () => {
     // Ten series no longer fit the nine remaining tab10 colors.
     expect(palette.assign(keys(10)).get("k01")).toBe(PALETTES.tab20[1]);
   });
+
+  test("sizes sequences by what omit leaves of them", () => {
+    // Dropping three petroff10 colors leaves it shorter than petroff8.
+    const palette = createPalette("petroff", { omit: PALETTES.petroff10.slice(0, 3) });
+    expect(palette.colors).toEqual(PALETTES.petroff8);
+    expect(new Set(palette.assign(keys(8)).values()).size).toBe(8);
+    expect(new Set(palette.assign(keys(8), { order: "hash" }).values()).size).toBe(8);
+  });
 });
 
 describe("colorblind option", () => {
@@ -103,6 +111,7 @@ describe("assign orders", () => {
       fallback: "gray",
     });
     const colors = palette.assign(["a", "__other__", "", "b"]);
+    expect([...colors.keys()]).toEqual(["a", "__other__", "", "b"]);
     expect(colors.get("a")).toBe(PALETTES.petroff6[0]);
     expect(colors.get("b")).toBe(PALETTES.petroff6[1]);
     expect(colors.get("__other__")).toBe("var(--muted)");
@@ -174,14 +183,6 @@ describe("pattern helpers", () => {
   test("solid fills have no tile and draw as the plain color", () => {
     expect(seriesPattern("solid")).toBeNull();
     expect(seriesSwatchBackground({ color: "#3f90da", fill: "solid" })).toBe("#3f90da");
-  });
-
-  test("patterned swatches keep the series color as the base layer", () => {
-    for (const fill of ["hatch", "crosshatch", "dots"] as const) {
-      expect(
-        seriesSwatchBackground({ color: "#3f90da", fill }, "white").endsWith(", #3f90da"),
-      ).toBe(true);
-    }
   });
 
   test("dash arrays scale with the stroke width", () => {

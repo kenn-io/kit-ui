@@ -226,9 +226,12 @@ function sequencesFor(
   const sequences = typeof source === "string" ? FAMILIES[source] : [source];
   const omitted = new Set((options.omit ?? []).map((color) => color.toLowerCase()));
   if (omitted.size === 0) return sequences;
+  // Omitting can shorten a longer sequence below a shorter one, so sort
+  // again: callers take the first that fits and the last as the longest.
   return sequences
     .map((sequence) => sequence.filter((color) => !omitted.has(color.toLowerCase())))
-    .filter((sequence) => sequence.length > 0);
+    .filter((sequence) => sequence.length > 0)
+    .sort((a, b) => a.length - b.length);
 }
 
 /**
@@ -310,15 +313,20 @@ export function createPalette(
   ): ReadonlyMap<string, SeriesStyle> {
     const keySlots = slots(keys, order);
     const colors = order === "hash" ? longest : sequenceFor(keySlots.size);
-    const styles = new Map<string, SeriesStyle>();
-    for (const [key, slot] of keySlots) styles.set(key, styleFor(colors, slot));
-    // Fixed and empty keys follow, sorted unless the caller's order counts,
-    // so sorted and hash maps list their entries the same way for any input
-    // order.
-    const rest = [...new Set(keys)].filter((key) => !keySlots.has(key));
-    if (order !== "given") rest.sort();
-    for (const key of rest) styles.set(key, solid(isFixed(key) ? fixed[key]! : fallback));
-    return styles;
+    const styleOf = (key: string): SeriesStyle => {
+      const slot = keySlots.get(key);
+      if (slot !== undefined) return styleFor(colors, slot);
+      return solid(isFixed(key) ? fixed[key]! : fallback);
+    };
+    const unique = [...new Set(keys)];
+    // Given order keeps the caller's order, such as a ranked legend. Sorted
+    // and hash maps list palette keys first, then fixed and empty keys
+    // sorted, so they come out the same for any input order.
+    const listed =
+      order === "given"
+        ? unique
+        : [...keySlots.keys(), ...unique.filter((key) => !keySlots.has(key)).sort()];
+    return new Map(listed.map((key) => [key, styleOf(key)]));
   }
 
   return {
