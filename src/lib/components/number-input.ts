@@ -113,18 +113,26 @@ export function stepNumber(
   // unrounded rather than rounded to zero.
   const round = (n: number): number => (precision > 100 ? n : Number(n.toFixed(precision)));
   const { step } = bounds;
-  // How far the value sits past the grid point below it. The step is then
-  // taken from the value itself, so no count of grid points is built that
-  // could outgrow exact integers.
-  let offset = (value - (bounds.min ?? 0)) % step;
-  if (offset < 0) offset += step;
-  // Within a few rounding errors of a grid point (0.30000000000000004 with
-  // step 0.1) counts as on it. The tolerance follows the value's size, not
-  // the step's, so a huge step still snaps a small value.
-  const tolerance = 16 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(bounds.min ?? 0));
-  const onGrid = offset <= tolerance || step - offset <= tolerance;
-  const below = value - offset;
-  const next = onGrid ? value + direction * step : direction === 1 ? below + step : below;
+  // Distances from the value to the grid points below and above it, from
+  // the signed remainder: adding a whole step to a tiny negative remainder
+  // would round it to exactly one step. The step is then taken from the
+  // value itself, so no count of grid points is built that could outgrow
+  // exact integers.
+  const distance = value - (bounds.min ?? 0);
+  const remainder = distance % step;
+  const down = remainder >= 0 ? remainder : step + remainder;
+  const up = remainder > 0 ? step - remainder : -remainder;
+  // Within a few rounding errors of a grid point counts as on it: the
+  // noise a value picks up from repeated decimal steps
+  // (0.30000000000000004) plus the rounding in subtracting min. It follows
+  // those sizes, not the step's, so a huge step still snaps a small value,
+  // and stays under a quarter step so neighboring grid points never merge.
+  const tolerance = Math.min(
+    Number.EPSILON * (16 * Math.abs(value) + 2 * Math.abs(distance)),
+    step / 4,
+  );
+  const onGrid = down <= tolerance || up <= tolerance;
+  const next = onGrid ? value + direction * step : direction === 1 ? value + up : value - down;
   const result = clampNumber(round(next), bounds);
   return isSafeNumber(result) ? result : value;
 }

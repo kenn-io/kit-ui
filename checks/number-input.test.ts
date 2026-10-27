@@ -98,6 +98,14 @@ describe("stepNumber", () => {
     expect(stepNumber(1, 1, bounds)).toBe(2);
     expect(stepNumber(2, 1, bounds)).toBe(3);
     expect(stepNumber(2, -1, bounds)).toBe(1);
+    // A distant min does not blur neighboring grid points together.
+    expect(stepNumber(1, 1, { min: -1e15, step: 5 })).toBe(5);
+    expect(stepNumber(1, -1, { min: -1e15, step: 5 })).toBe(0);
+  });
+
+  test("a tiny negative value snaps to the grid point above it", () => {
+    expect(stepNumber(-1e-20, 1, { step: 0.1 })).toBe(0);
+    expect(stepNumber(-1e-20, -1, { step: 0.1 })).toBe(-0.1);
   });
 
   test("stepping stops at the safe-integer limit", () => {
