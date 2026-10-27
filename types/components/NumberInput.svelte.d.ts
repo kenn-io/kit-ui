@@ -6,8 +6,9 @@ interface Props {
     min?: number;
     max?: number;
     /** Arrow-key increment, and the grid the arrows snap to (anchored at
-     * `min`). Its decimal places, and `min`'s, decide whether a decimal
-     * point can be typed: the default 1 takes integers only. */
+     * `min`). Its decimal places, and those of `min` and `max`, decide
+     * whether a decimal point can be typed: the default 1 takes integers
+     * only. */
     step?: number;
     placeholder?: string;
     size?: TextInputSize;

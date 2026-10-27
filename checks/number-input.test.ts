@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  clampNumber,
   formatNumber,
   isNumberDraft,
   parseNumberDraft,
@@ -41,6 +42,11 @@ describe("isNumberDraft", () => {
   test("a fractional min allows decimals even with an integer step", () => {
     expect(isNumberDraft("1.5", { min: 0.5, step: 1 })).toBe(true);
   });
+
+  test("a fractional max allows decimals, so a value clamped to it stays editable", () => {
+    const bounds = { min: 0, max: 2.5, step: 1 };
+    expect(isNumberDraft(formatNumber(clampNumber(3, bounds)), bounds)).toBe(true);
+  });
 });
 
 describe("parseNumberDraft", () => {
@@ -78,6 +84,21 @@ describe("stepNumber", () => {
     expect(stepNumber(0.2, 1, { min: 0, max: 1, step: 0.1 })).toBe(0.3);
     expect(stepNumber(0.3, -1, { min: 0, max: 1, step: 0.1 })).toBe(0.2);
     expect(stepNumber(0.30000000000000004, 1, { step: 0.1 })).toBe(0.4);
+  });
+
+  test("grid checks hold for large values and huge steps", () => {
+    expect(stepNumber(1000000.2, 1, { min: 0, step: 0.1 })).toBe(1000000.3);
+    expect(stepNumber(1, -1, { step: 1e10 })).toBe(0);
+    expect(stepNumber(1, 1, { step: 1e10 })).toBe(1e10);
+  });
+
+  test("stepping stops at the safe-integer limit", () => {
+    expect(stepNumber(Number.MAX_SAFE_INTEGER, 1, { step: 1 })).toBe(Number.MAX_SAFE_INTEGER);
+    expect(stepNumber(-Number.MAX_SAFE_INTEGER, -1, { step: 1 })).toBe(-Number.MAX_SAFE_INTEGER);
+  });
+
+  test("steps finer than 100 decimal places still move the value", () => {
+    expect(stepNumber(0, 1, { step: 1e-101 })).toBe(1e-101);
   });
 
   test("results stay inside min and max", () => {

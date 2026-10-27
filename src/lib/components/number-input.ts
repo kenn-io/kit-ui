@@ -23,10 +23,15 @@ function decimalsOf(n: number): number {
   return dot === -1 ? 0 : text.length - dot - 1;
 }
 
-/** Decimal places a value can carry: enough for `step` and for the `min`
- * the step grid is anchored on. 0 means the field takes integers only. */
-export function numberPrecision({ min, step }: NumberBounds): number {
-  return Math.max(decimalsOf(step), min === undefined ? 0 : decimalsOf(min));
+/** Decimal places a value can carry: enough for `step`, for the `min` the
+ * step grid is anchored on, and for a `max` a clamp can land on. 0 means
+ * the field takes integers only. */
+export function numberPrecision({ min, max, step }: NumberBounds): number {
+  return Math.max(
+    decimalsOf(step),
+    min === undefined ? 0 : decimalsOf(min),
+    max === undefined ? 0 : decimalsOf(max),
+  );
 }
 
 /** Whether a minus sign may be typed: only when the range reaches below 0. */
@@ -82,21 +87,29 @@ export function clampNumber(value: number, { min, max }: NumberBounds): number {
  * direction, as native number inputs do. An empty field starts from `min`
  * going up and `max` going down (0 when that bound is unset). The result
  * is rounded to the field's precision so repeated 0.1 steps stay exact,
- * then clamped to the range. */
+ * then clamped to the range. A step that would leave the safe-integer
+ * range, where typed digits stop matching the value, changes nothing. */
 export function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number {
   const precision = numberPrecision(bounds);
-  const round = (n: number): number => Number(n.toFixed(precision));
+  // toFixed takes at most 100 places; a step finer than that is left
+  // unrounded rather than rounded to zero.
+  const round = (n: number): number => (precision > 100 ? n : Number(n.toFixed(precision)));
   if (value === null) {
     return clampNumber((direction === 1 ? bounds.min : bounds.max) ?? 0, bounds);
   }
   const base = bounds.min ?? 0;
-  // Round the grid index so float noise (0.30000000000000004) counts as
-  // on-grid instead of snapping a step short.
-  const index = Number(((value - base) / bounds.step).toFixed(9));
-  const next = Number.isInteger(index)
-    ? index + direction
-    : direction === 1
-      ? Math.ceil(index)
-      : Math.floor(index);
-  return clampNumber(round(base + next * bounds.step), bounds);
+  const index = (value - base) / bounds.step;
+  const nearest = Math.round(index);
+  // A value within a few float rounding errors of a grid point (such as
+  // 0.30000000000000004) is on the grid. The tolerance scales with the
+  // numbers involved, so it holds for large values and for huge steps.
+  const tolerance = 16 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(base), bounds.step);
+  const next =
+    Math.abs(value - (base + nearest * bounds.step)) <= tolerance
+      ? nearest + direction
+      : direction === 1
+        ? Math.ceil(index)
+        : Math.floor(index);
+  const result = clampNumber(round(base + next * bounds.step), bounds);
+  return Math.abs(result) <= Number.MAX_SAFE_INTEGER ? result : value;
 }

@@ -48,7 +48,7 @@ is a `number`, or `null` while the field is empty; it is never a string.
 
 - **Typing.** The field accepts digits, one leading minus sign when the
   range reaches below 0 (no `min`, or a negative one), and one decimal
-  point when `step` or `min` has decimal places. The default `step` of 1
+  point when `step`, `min` or `max` has decimal places. The default `step` of 1
   takes integers only. Whitespace around a pasted number is dropped. Any
   other edit, including a paste such as `1,000`, is rejected whole. Numbers
   beyond `Number.MAX_SAFE_INTEGER` are refused, since past it the value
@@ -58,7 +58,7 @@ is a `number`, or `null` while the field is empty; it is never a string.
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when
   that bound is unset). Decimal steps are rounded, so 0.1 + 0.2 lands on
-  0.3.
+  0.3. Stepping stops at `Number.MAX_SAFE_INTEGER` in either direction.
 - **Leaving the field** (blur, or Enter) clamps the number into
   `min`..`max` and rewrites in-progress text in its canonical form:
   `1.` becomes `1`, `007` becomes `7`, and a lone `-` empties the field.

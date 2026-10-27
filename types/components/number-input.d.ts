@@ -8,9 +8,10 @@ export interface NumberBounds {
      * `min`, or 0 without one). Must be positive. */
     step: number;
 }
-/** Decimal places a value can carry: enough for `step` and for the `min`
- * the step grid is anchored on. 0 means the field takes integers only. */
-export declare function numberPrecision({ min, step }: NumberBounds): number;
+/** Decimal places a value can carry: enough for `step`, for the `min` the
+ * step grid is anchored on, and for a `max` a clamp can land on. 0 means
+ * the field takes integers only. */
+export declare function numberPrecision({ min, max, step }: NumberBounds): number;
 /** Whether a minus sign may be typed: only when the range reaches below 0. */
 export declare function allowsNegative({ min }: NumberBounds): boolean;
 /** Whether `text` is a number, or the start of one, that the field may
@@ -33,5 +34,6 @@ export declare function clampNumber(value: number, { min, max }: NumberBounds): 
  * direction, as native number inputs do. An empty field starts from `min`
  * going up and `max` going down (0 when that bound is unset). The result
  * is rounded to the field's precision so repeated 0.1 steps stay exact,
- * then clamped to the range. */
+ * then clamped to the range. A step that would leave the safe-integer
+ * range, where typed digits stop matching the value, changes nothing. */
 export declare function stepNumber(value: number | null, direction: 1 | -1, bounds: NumberBounds): number;
