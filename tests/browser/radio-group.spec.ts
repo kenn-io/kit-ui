@@ -86,6 +86,27 @@ test("a form reset restores each group's starting choice and its bound value", a
   await expect(readout).toHaveText("format: none, line endings: lf");
 });
 
+test("a cancelled second reset does not undo the first reset's sync", async ({ page }) => {
+  await gotoPage(page, "radio-group");
+  const format = group(page, "Export format");
+  const readout = page.getByTestId("radio-group-form-value");
+  await option(format, "JSON").click();
+  await expect(readout).toHaveText("format: json, line endings: lf");
+  // Two resets in one tick; another listener cancels the second.
+  await format.evaluate((fieldset) => {
+    const form = (fieldset as HTMLFieldSetElement).form!;
+    let resets = 0;
+    form.addEventListener("reset", (event) => {
+      resets += 1;
+      if (resets === 2) event.preventDefault();
+    });
+    form.reset();
+    form.reset();
+  });
+  await expect(format.getByRole("radio", { name: "JSON" })).not.toBeChecked();
+  await expect(readout).toHaveText("format: none, line endings: lf");
+});
+
 test("the drawn mark matches Checkbox's box in both modes", async ({ page }) => {
   await gotoPage(page, "radio-group");
   const box = page.locator(".kit-checkbox", { hasText: "Include headers" });

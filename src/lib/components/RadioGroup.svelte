@@ -63,10 +63,11 @@
     const form = fieldset.form;
     if (!form) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const onReset = (event: Event) => {
+    // No cancelled-reset check: a cancelled reset changes no radio, so the
+    // read finds nothing new, and the last pending read covers every reset.
+    const onReset = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (event.defaultPrevented) return;
         const next = fieldset.querySelector<HTMLInputElement>(
           ".kit-radio-group__input:checked",
         )?.value;
