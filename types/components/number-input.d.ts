@@ -35,9 +35,9 @@ export declare function clampNumber(value: number, { min, max }: NumberBounds): 
 /** The value one arrow press moves to. A value on the step grid moves one
  * step; a value between grid points snaps to the next point in that
  * direction, as native number inputs do. An empty field starts from `min`
- * going up and `max` going down (0 when that bound is unset). The result
- * is rounded to the decimals of `step` and `min`, so repeated 0.1 steps
- * stay exact, then clamped to the range. Numbers stay within
+ * going up and `max` going down (0 when that bound is unset). The grid math
+ * is exact in decimal, so repeated 0.1 steps land on 0.2 and 0.3, then the
+ * result is clamped to the range. Numbers stay within
  * ±Number.MAX_SAFE_INTEGER, where typed digits still match the value: a
  * step past it changes nothing, an empty field starts inside it, a value
  * supplied beyond it moves to its edge on a press toward zero, and a

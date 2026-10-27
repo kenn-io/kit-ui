@@ -92,9 +92,9 @@ export function clampNumber(value: number, { min, max }: NumberBounds): number {
 /** The value one arrow press moves to. A value on the step grid moves one
  * step; a value between grid points snaps to the next point in that
  * direction, as native number inputs do. An empty field starts from `min`
- * going up and `max` going down (0 when that bound is unset). The result
- * is rounded to the decimals of `step` and `min`, so repeated 0.1 steps
- * stay exact, then clamped to the range. Numbers stay within
+ * going up and `max` going down (0 when that bound is unset). The grid math
+ * is exact in decimal, so repeated 0.1 steps land on 0.2 and 0.3, then the
+ * result is clamped to the range. Numbers stay within
  * ±Number.MAX_SAFE_INTEGER, where typed digits still match the value: a
  * step past it changes nothing, an empty field starts inside it, a value
  * supplied beyond it moves to its edge on a press toward zero, and a
@@ -112,51 +112,32 @@ export function stepNumber(
     return isSafeNumber(result) ? result : value;
   }
   const { min = 0, step } = bounds;
-  // Round to the grid's own decimals. max's decimals only decide whether a
-  // decimal point may be typed; rounding to a long max such as
-  // 0.9999999999999999 would keep float noise like 0.7999999999999999.
-  const precision = Math.max(decimalsOf(step), decimalsOf(min));
-  // toFixed takes at most 100 places; a step finer than that is left
-  // unrounded rather than rounded to zero.
-  const round = (n: number): number => (precision > 100 ? n : Number(n.toFixed(precision)));
-  // Distances from the value to the grid points below and above it. The
-  // remainders of value and min are taken separately, so subtracting a
-  // distant min never rounds, and kept signed, since adding a whole step
-  // to a tiny negative remainder would round it to exactly one step.
-  // Remainders of opposite sign are moved a step closer first: their plain
-  // difference can reach two steps, past exact integers for a large step.
-  // The step is then taken from the value itself, so no count of grid
-  // points is built that could outgrow exact integers.
-  const a = value % step;
-  const b = min % step;
-  const offset = a > 0 && b < 0 ? a - step - b : a < 0 && b > 0 ? a + step - b : a - b;
-  const remainder = offset % step;
-  const down = remainder >= 0 ? remainder : step + remainder;
-  const up = remainder > 0 ? step - remainder : -remainder;
-  // A grid built from decimals with no exact binary form, such as 0.1,
-  // counts a value within a few rounding errors of a grid point as on it:
-  // the noise a value picks up from repeated steps (0.30000000000000004)
-  // and the error min's remainder inherits from the step and min. The
-  // margin follows those sizes, not the step's, so a huge step still snaps
-  // a small value, and stays under a quarter step so neighboring grid
-  // points never merge. A grid of exact numbers (integers, 2.5, 0.125) has
-  // no such noise and gets no margin: near the safe-integer limit a margin
-  // sized to the value or min would swallow real offsets of a few units.
-  const tolerance =
-    isExactDecimal(step) && isExactDecimal(min)
-      ? 0
-      : Math.min(Number.EPSILON * (16 * Math.abs(value) + 2 * Math.abs(min)), step / 4);
-  const onGrid = down <= tolerance || up <= tolerance;
-  const next = onGrid ? value + direction * step : direction === 1 ? value + up : value - down;
-  const result = clampNumber(round(next), bounds);
+  // Binary floats cannot hold decimals such as 0.1 exactly, and lose digits
+  // once a grid is anchored far away, so the grid math runs on whole
+  // numbers: value, min and step scaled by the decimal places they carry.
+  const places = Math.max(decimalsOf(value), decimalsOf(min), decimalsOf(step));
+  const v = toScaled(value, places);
+  const m = toScaled(min, places);
+  const s = toScaled(step, places);
+  const offset = (((v - m) % s) + s) % s;
+  const next =
+    offset === 0n ? v + BigInt(direction) * s : direction === 1 ? v + s - offset : v - offset;
+  const result = clampNumber(fromScaled(next, places), bounds);
   return isSafeNumber(result) ? result : value;
 }
 
-/** Whether `n` is exactly the decimal it prints as. Multiplying by a power
- * of two is exact, so `n` times 2^places is an integer only when `n` has no
- * binary digits past the ones its decimal places can hold. */
-function isExactDecimal(n: number): boolean {
-  return Number.isInteger(n * 2 ** decimalsOf(n));
+/** `n` times 10^places as an exact integer, read from its decimal digits. */
+function toScaled(n: number, places: number): bigint {
+  const [whole = "0", fraction = ""] = formatNumber(n).split(".");
+  return BigInt(whole + fraction.padEnd(places, "0"));
+}
+
+/** The number `scaled` / 10^places names. */
+function fromScaled(scaled: bigint, places: number): number {
+  const sign = scaled < 0n ? "-" : "";
+  const digits = (scaled < 0n ? -scaled : scaled).toString().padStart(places + 1, "0");
+  const point = digits.length - places;
+  return Number(`${sign}${digits.slice(0, point)}.${digits.slice(point)}`);
 }
 
 /** Whether typed digits for `n` still read back as exactly `n`. */

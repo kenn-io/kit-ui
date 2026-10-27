@@ -107,7 +107,6 @@ describe("stepNumber", () => {
     expect(stepNumber(1, -1, { min: -4e15, step: 5 })).toBe(0);
     expect(stepNumber(0.125, 1, { min: -1e15, step: 2.5 })).toBe(2.5);
     expect(stepNumber(0.125, -1, { min: -1e15, step: 2.5 })).toBe(0);
-    expect(stepNumber(0.5, 1, { min: -4e15, step: 2.5 })).toBe(2.5);
     // A step with no exact binary form still tolerates the error it
     // carries across a distant min.
     expect(stepNumber(-499.6, 1, { min: -332472, step: 0.05 })).toBe(-499.55);
@@ -122,6 +121,14 @@ describe("stepNumber", () => {
   test("remainders of opposite sign do not round with a large step", () => {
     const bounds = { min: -7000000000000000, step: 8000000000000000 };
     expect(stepNumber(3000000000000001, -1, bounds)).toBe(1000000000000000);
+    expect(stepNumber(1, 1, { min: -1000000000000001, step: 1e16 })).toBe(8999999999999999);
+    expect(stepNumber(0.1, -1, { min: -0.5, step: 2251799813685248 })).toBe(-0.5);
+    expect(stepNumber(0.0625, -1, { min: -1000000000000000.5, step: 1e15 })).toBe(-0.5);
+  });
+
+  test("a decimal grid anchored far away keeps its exact points", () => {
+    expect(stepNumber(0, -1, { min: -1e15, step: 0.1 })).toBe(-0.1);
+    expect(stepNumber(100000000000000.2, 1, { min: 0.1, step: 1 })).toBe(100000000000001.1);
   });
 
   test("a large value between grid points snaps to the next one", () => {

@@ -58,8 +58,8 @@ is a `number`, or `null` while the field is empty; it is never a string.
 - **Arrow Up / Arrow Down** step by `step`. A value between grid points
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when
-  that bound is unset). Decimal steps are rounded, so 0.1 + 0.2 lands on
-  0.3. Stepping stays within `Number.MAX_SAFE_INTEGER` in either
+  that bound is unset). The grid math is exact in decimal, so 0.1 steps
+  land on 0.2 and 0.3, even on a grid anchored far from the value. Stepping stays within `Number.MAX_SAFE_INTEGER` in either
   direction, an empty field included; a larger value set from outside
   moves to that limit on the first press toward zero.
 - **Leaving the field** (blur, or Enter) clamps the number into
