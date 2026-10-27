@@ -933,7 +933,7 @@
     );
   }
 
-  :root[data-kit-theme="ember"] .kit-button:hover:not(:disabled)::after {
+  :root[data-kit-theme="ember"] .kit-button:hover:not(:disabled, [aria-disabled="true"])::after {
     opacity: 1;
     transform: scale(1);
     /* Ignite: a 0.18s bloom in — noticeably faster than the cool-off. */

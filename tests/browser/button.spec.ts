@@ -351,3 +351,96 @@ test("centers lowercase ink and keeps descenders inside clipped labels", async (
     JSON.stringify(mostOffCenter),
   ).toBeLessThan(1);
 });
+
+test("busy buttons keep their box, colors, and neighbors in place", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  const demo = page.locator('[data-demo="button-busy"]');
+  const buttons = demo.locator(".kit-button");
+  await expect(buttons).toHaveCount(24);
+  const snapshot = () =>
+    buttons.evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        const label = element.querySelector(".kit-button__label")!.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          box: [rect.x, rect.y, rect.width, rect.height],
+          label: [label.x, label.y, label.width, label.height],
+          opacity: style.opacity,
+          background: style.backgroundColor,
+          border: style.borderTopColor,
+        };
+      }),
+    );
+
+  const resting = await snapshot();
+  await page.getByRole("switch", { name: "All busy" }).check();
+  await expect(demo.locator('.kit-button[aria-busy="true"]')).toHaveCount(18);
+  expect(await snapshot()).toEqual(resting);
+
+  const spinners = await demo.locator('.kit-button[aria-busy="true"]').evaluateAll((elements) =>
+    elements.map((element) => {
+      const button = element.getBoundingClientRect();
+      const spinnerElement = element.querySelector<HTMLElement>(".kit-spinner")!;
+      // The rotating box's bounding rect grows mid-turn; its center does not.
+      const spinner = spinnerElement.getBoundingClientRect();
+      const label = element.querySelector(".kit-button__label")!;
+      return {
+        dx: Math.abs(spinner.x + spinner.width / 2 - (button.x + button.width / 2)),
+        dy: Math.abs(spinner.y + spinner.height / 2 - (button.y + button.height / 2)),
+        size: spinnerElement.offsetWidth,
+        labelOpacity: getComputedStyle(label).opacity,
+      };
+    }),
+  );
+  for (const spinner of spinners) {
+    expect(spinner.dx).toBeLessThanOrEqual(0.5);
+    expect(spinner.dy).toBeLessThanOrEqual(0.5);
+    expect(spinner.labelOpacity).toBe("0.1");
+  }
+  // 15 default-size tone buttons, then the sm / md / lg size row.
+  expect(spinners.map((spinner) => spinner.size)).toEqual([...Array(15).fill(12), 10, 12, 16]);
+
+  await page.getByRole("switch", { name: "All busy" }).uncheck();
+  await expect(demo.locator('.kit-button[aria-busy="true"]')).toHaveCount(0);
+  expect(await snapshot()).toEqual(resting);
+});
+
+test("a busy button ignores activation but keeps focus", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  const button = page.locator('[data-busy-tone="success"] .kit-button').nth(1);
+  const runs = page.getByTestId("busy-runs");
+
+  await button.click();
+  await expect(runs).toHaveText("Tasks started: 1");
+  await expect(button).toHaveAttribute("aria-busy", "true");
+  await expect(button).toHaveAttribute("aria-disabled", "true");
+  await expect(button).toBeFocused();
+
+  // force: Playwright waits for aria-disabled controls to become enabled.
+  await button.click({ force: true });
+  await button.press("Enter");
+  await button.press("Space");
+  await expect(button).toBeFocused();
+  await expect(runs).toHaveText("Tasks started: 1");
+
+  // The demo task ends after two seconds; the button then activates again.
+  await expect(button).not.toHaveAttribute("aria-busy", "true", { timeout: 4000 });
+  await expect(button).not.toHaveAttribute("aria-disabled", "true");
+  await button.click();
+  await expect(runs).toHaveText("Tasks started: 2");
+});
+
+test("a busy button is named by busyLabel, falling back to its label", async ({ page }) => {
+  await gotoPage(page, "button");
+
+  const refresh = page.locator('[data-busy-tone="neutral"] .kit-button').first();
+  const save = page.locator('[data-busy-tone="info"] .kit-button').first();
+  await expect(refresh).toHaveAccessibleName("Refresh");
+
+  await page.getByRole("switch", { name: "All busy" }).check();
+  await expect(refresh).toHaveAccessibleName("Refreshing");
+  await expect(save).toHaveAccessibleName("Save changes");
+});

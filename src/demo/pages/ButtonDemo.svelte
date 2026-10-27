@@ -2,11 +2,38 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import GitMergeIcon from "@lucide/svelte/icons/git-merge";
   import XIcon from "@lucide/svelte/icons/x";
-  import { Button, showFlash, type ButtonSurface, type ButtonTone } from "../../lib/index.js";
+  import {
+    Button,
+    showFlash,
+    Toggle,
+    type ButtonSize,
+    type ButtonSurface,
+    type ButtonTone,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const tones: ButtonTone[] = ["neutral", "info", "success", "danger", "workflow"];
   const surfaces: ButtonSurface[] = ["outline", "soft", "solid"];
+  const busyRows: { tone: ButtonTone; label: string; busyLabel?: string }[] = [
+    { tone: "neutral", label: "Refresh", busyLabel: "Refreshing" },
+    { tone: "info", label: "Save changes" },
+    { tone: "success", label: "Approve" },
+    { tone: "danger", label: "Delete" },
+    { tone: "workflow", label: "Run workflow" },
+  ];
+  const busySizes: ButtonSize[] = ["sm", "md", "lg"];
+  let allBusy = $state(false);
+  let runningKeys = $state<string[]>([]);
+  let busyRuns = $state(0);
+
+  function runTask(key: string) {
+    busyRuns += 1;
+    runningKeys = [...runningKeys, key];
+    setTimeout(() => {
+      runningKeys = runningKeys.filter((running) => running !== key);
+    }, 2000);
+  }
+
   let structuralSelected = $state(false);
   let structuralElement = $state<HTMLButtonElement>();
   const centeringCode = '<Button label="info soft" size="sm" />';
@@ -56,6 +83,48 @@
   <Button label="Close" tone="danger" surface="outline" />
   <Button label="Delete" tone="danger" surface="solid" />
   <Button label="Run workflow" tone="workflow" surface="soft" />
+</DemoSection>
+
+<DemoSection
+  title="Busy state"
+  description="Set busy while a button's action runs. The spinner sits over the faded label at the button's center, so the button keeps its size and its neighbors stay put. A busy button keeps focus and full color but ignores clicks; busyLabel names it for assistive technology. Click a button to run a two-second task."
+  code={`<Button label="Refresh" busy={refreshing} busyLabel="Refreshing" onclick={refresh} />
+<Button label="Save changes" tone="info" surface="solid" busy={saving} onclick={save} />`}
+>
+  <div class="busy-demo" data-demo="button-busy">
+    <Toggle label="All busy" bind:checked={allBusy} />
+    {#each busyRows as row (row.tone)}
+      <div class="busy-demo__row" data-busy-tone={row.tone}>
+        {#each surfaces as surface (surface)}
+          {@const key = `${row.tone}-${surface}`}
+          <Button
+            label={row.label}
+            busyLabel={row.busyLabel}
+            tone={row.tone}
+            {surface}
+            busy={allBusy || runningKeys.includes(key)}
+            onclick={() => runTask(key)}
+          />
+        {/each}
+        <Button label="Cancel" class="busy-demo__neighbor" />
+      </div>
+    {/each}
+    <div class="busy-demo__row" data-busy-sizes>
+      {#each busySizes as size (size)}
+        {@const key = `size-${size}`}
+        <Button
+          label={`Sync ${size}`}
+          tone="info"
+          surface="soft"
+          {size}
+          busy={allBusy || runningKeys.includes(key)}
+          onclick={() => runTask(key)}
+        />
+      {/each}
+      <Button label="Cancel" class="busy-demo__neighbor" />
+    </div>
+    <p class="busy-demo__runs" data-testid="busy-runs">Tasks started: {busyRuns}</p>
+  </div>
 </DemoSection>
 
 <DemoSection
@@ -209,6 +278,24 @@
 </DemoSection>
 
 <style>
+  .busy-demo {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .busy-demo__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .busy-demo__runs {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+  }
+
   .structural-control {
     box-sizing: border-box;
     appearance: none;
