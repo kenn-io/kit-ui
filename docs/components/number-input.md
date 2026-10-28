@@ -68,8 +68,7 @@ is a `number`, or `null` while the field is empty; it is never a string.
   `de-DE` field shows `0,5`. A consequence: a `de-DE` paste of `1.000`
   (one thousand with grouping) reads as 1. A `,` is never a separator in a
   `.` locale. The bound value is a JavaScript number either way. Numbers
-  are shown without grouping separators or exponent form. When `locale`
-  changes during an edit, the text is rewritten in the new locale's form.
+  are shown without grouping separators or exponent form.
 - **Arrow Up / Arrow Down** step by `step`. A value between grid points
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when

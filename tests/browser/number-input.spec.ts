@@ -293,25 +293,3 @@ test.describe("in a browser set to de-DE", () => {
     await expect(ratio).toHaveValue("0,6");
   });
 });
-
-test("switching the locale mid-edit rewrites the text in the new form", async ({ page }) => {
-  await gotoPage(page, "number-input");
-  const field = page.getByRole("spinbutton", { name: /Share/ });
-  // HTMLElement.click() does not move focus, so the field keeps its draft
-  // through the switch, as it would when an app changes locale on its own.
-  const switchLocale = () =>
-    page.getByRole("button", { name: /^Use / }).evaluate((el) => (el as HTMLElement).click());
-
-  await field.fill("");
-  await field.pressSequentially(",");
-  await switchLocale();
-  await expect(field).toHaveValue("");
-  await field.pressSequentially("5");
-  await expect(field).toHaveValue("5");
-
-  await field.fill("");
-  await field.pressSequentially("0.25");
-  await expect(field).toHaveValue("0.25");
-  await switchLocale();
-  await expect(field).toHaveValue("0,25");
-});
