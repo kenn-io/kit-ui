@@ -29,7 +29,8 @@ export declare function allowsNegative({ min }: NumberBounds): boolean;
  * would no longer match the digits typed. */
 export declare function isNumberDraft(text: string, bounds: NumberBounds, separator?: string): boolean;
 /** Whether `text` has the shape of a number draft, whatever its size:
- * isNumberDraft without the safe-integer limit. */
+ * isNumberDraft without the safe-integer limit. The separator is a single
+ * "." or ",", so a character class holds it without escaping. */
 export declare function isNumberText(text: string, bounds: NumberBounds, separator?: string): boolean;
 /** The text the field keeps for an edit: surrounding whitespace dropped,
  * and a "." written as `separator`, so the field always shows the

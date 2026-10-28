@@ -26,10 +26,10 @@
      * whether a decimal separator can be typed: the default 1 takes integers
      * only. */
     step?: number;
-    /** BCP 47 language tag whose decimal separator the field shows and
-     * accepts, such as "de-DE" for "0,5". "." is accepted in every
-     * locale and rewritten to the locale's separator. Defaults to the
-     * browser's locale. */
+    /** Hyphenated BCP 47 language tag whose decimal separator the field
+     * shows and accepts, such as "de-DE" for "0,5". "." is accepted in
+     * every locale and rewritten to the locale's separator. Defaults to
+     * the browser's locale. */
     locale?: string;
     placeholder?: string;
     size?: TextInputSize;
@@ -114,8 +114,11 @@
   // it, so a value set from outside shows in its canonical form even when
   // it parses the same as the draft; handleText writes the draft after
   // setting the value, and only while the value is still what it parsed.
+  // A locale change resets it too: the old draft no longer fits the new
+  // separator's rules, so the field shows the value in the new form.
   let draft = $derived.by((): string | null => {
     void value;
+    void separator;
     return null;
   });
   const text = $derived(draft ?? formatNumber(value, separator));

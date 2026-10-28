@@ -10,10 +10,10 @@ interface Props {
      * whether a decimal separator can be typed: the default 1 takes integers
      * only. */
     step?: number;
-    /** BCP 47 language tag whose decimal separator the field shows and
-     * accepts, such as "de-DE" for "0,5". "." is accepted in every
-     * locale and rewritten to the locale's separator. Defaults to the
-     * browser's locale. */
+    /** Hyphenated BCP 47 language tag whose decimal separator the field
+     * shows and accepts, such as "de-DE" for "0,5". "." is accepted in
+     * every locale and rewritten to the locale's separator. Defaults to
+     * the browser's locale. */
     locale?: string;
     placeholder?: string;
     size?: TextInputSize;

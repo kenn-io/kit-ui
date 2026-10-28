@@ -30,7 +30,7 @@ is a `number`, or `null` while the field is empty; it is never a string.
 | `value`                              | `number \| null` (bindable)       | `null`              | `null` while the field holds no digits                                                                                                                                                                                  |
 | `min` / `max`                        | `number`                          | —                   | Arrow keys stay inside the range; leaving the field clamps a typed value into it. A `min` of 0 or more blocks the minus key                                                                                             |
 | `step`                               | `number`                          | `1`                 | Arrow-key increment and the grid it snaps to, anchored at `min`. Must be positive                                                                                                                                       |
-| `locale`                             | `string`                          | browser's locale    | BCP 47 language tag whose decimal separator the field shows and accepts, such as `"de-DE"` for `0,5`. See Decimal separator                                                                                             |
+| `locale`                             | `string`                          | browser's locale    | Hyphenated BCP 47 language tag whose decimal separator the field shows and accepts, such as `"de-DE"` for `0,5`. A malformed tag such as `"en_US"` throws. See Decimal separator                                        |
 | `placeholder`                        | `string`                          | —                   |                                                                                                                                                                                                                         |
 | `size`                               | `"sm" \| "md" \| "lg"`            | `"md"`              | Same heights as TextInput                                                                                                                                                                                               |
 | `invalid`                            | `boolean`                         | `false`             | Red border + `aria-invalid`. The field does not set it on its own: the consumer decides what is invalid                                                                                                                 |
@@ -68,7 +68,8 @@ is a `number`, or `null` while the field is empty; it is never a string.
   `de-DE` field shows `0,5`. A consequence: a `de-DE` paste of `1.000`
   (one thousand with grouping) reads as 1. A `,` is never a separator in a
   `.` locale. The bound value is a JavaScript number either way. Numbers
-  are shown without grouping separators or exponent form.
+  are shown without grouping separators or exponent form. When `locale`
+  changes during an edit, the text is rewritten in the new locale's form.
 - **Arrow Up / Arrow Down** step by `step`. A value between grid points
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when

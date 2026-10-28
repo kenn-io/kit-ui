@@ -7,6 +7,7 @@
   let ratio = $state<number | null>(0.5);
   let percent = $state<number | null>(40);
   let share = $state<number | null>(0.5);
+  let shareLocale = $state("de-DE");
   let offset = $state<number | null>(-2);
   let oversized = $state<number | null>(1e20);
   let changes = $state(0);
@@ -89,7 +90,7 @@
     </div>
     <div class="field">
       <label class="field__label" for="number-demo-share"
-        >Share in a comma locale (de-DE, 0 to 1, step 0.1)</label
+        >Share (0 to 1, step 0.1) in {shareLocale}</label
       >
       <span class="row">
         <NumberInput
@@ -97,8 +98,13 @@
           min={0}
           max={1}
           step={0.1}
-          locale="de-DE"
+          locale={shareLocale}
           id="number-demo-share"
+        />
+        <Button
+          label={shareLocale === "de-DE" ? "Use en-US" : "Use de-DE"}
+          size="sm"
+          onclick={() => (shareLocale = shareLocale === "de-DE" ? "en-US" : "de-DE")}
         />
         <span class="readout" data-testid="share-value">value: <code>{describe(share)}</code></span>
       </span>

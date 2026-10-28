@@ -27,12 +27,20 @@ export function allowsDecimals({ min, max, step }: NumberBounds): boolean {
  * digits: ar-EG gives ".", not the Arabic decimal separator it pairs with
  * its own digits. `undefined` means the runtime's default locale. */
 export function decimalSeparator(locale?: string): string {
-  const parts = new Intl.NumberFormat(locale, { numberingSystem: "latn" }).formatToParts(0.5);
+  let format: Intl.NumberFormat;
+  try {
+    format = new Intl.NumberFormat(locale, { numberingSystem: "latn" });
+  } catch (error) {
+    // Chromium's message names neither the component nor the tag, and a
+    // POSIX-style "en_US" from a user setting is an easy mistake.
+    if (!(error instanceof RangeError)) throw error;
+    throw new RangeError(
+      `NumberInput: locale must be a hyphenated BCP 47 tag such as "de-DE", got ${JSON.stringify(locale)}`,
+      { cause: error },
+    );
+  }
+  const parts = format.formatToParts(0.5);
   return parts.find((part) => part.type === "decimal")?.value ?? ".";
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Whether a minus sign may be typed: only when the range reaches below 0. */
@@ -59,10 +67,11 @@ export function isNumberDraft(text: string, bounds: NumberBounds, separator = ".
 }
 
 /** Whether `text` has the shape of a number draft, whatever its size:
- * isNumberDraft without the safe-integer limit. */
+ * isNumberDraft without the safe-integer limit. The separator is a single
+ * "." or ",", so a character class holds it without escaping. */
 export function isNumberText(text: string, bounds: NumberBounds, separator = "."): boolean {
   const sign = allowsNegative(bounds) ? "-?" : "";
-  const fraction = allowsDecimals(bounds) ? `(?:(?:\\.|${escapeRegExp(separator)})\\d*)?` : "";
+  const fraction = allowsDecimals(bounds) ? `(?:[.${separator}]\\d*)?` : "";
   return new RegExp(`^${sign}\\d*${fraction}$`).test(text);
 }
 
