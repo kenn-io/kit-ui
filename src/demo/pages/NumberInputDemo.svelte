@@ -6,6 +6,7 @@
   let port = $state<number | null>(8080);
   let ratio = $state<number | null>(0.5);
   let percent = $state<number | null>(40);
+  let share = $state<number | null>(0.5);
   let offset = $state<number | null>(-2);
   let oversized = $state<number | null>(1e20);
   let changes = $state(0);
@@ -19,11 +20,12 @@
 
 <DemoSection
   title="NumberInput"
-  description="A numeric field built on TextInput, so it shares its sizes, border, focus ring and states. Arrow Up and Arrow Down step the value, typing accepts only digits (plus a minus sign or decimal point when the range and step allow them), and the bound value is a number or null."
+  description="A numeric field built on TextInput, so it shares its sizes, border, focus ring and states. Arrow Up and Arrow Down step the value, typing accepts only digits (plus a minus sign or decimal separator when the range and step allow them), and the bound value is a number or null. The decimal separator follows the locale prop, which defaults to the browser's locale."
   code={`<NumberInput bind:value={timeout} min={1} max={3600} invalid={timeoutInvalid} ariaLabel="Timeout">
   {#snippet suffix()}sec{/snippet}
 </NumberInput>
-<NumberInput bind:value={ratio} min={0} max={1} step={0.1} ariaLabel="Ratio" />`}
+<NumberInput bind:value={ratio} min={0} max={1} step={0.1} ariaLabel="Ratio" />
+<NumberInput bind:value={share} min={0} max={1} step={0.1} locale="de-DE" ariaLabel="Share" />`}
 >
   <div class="col">
     <div class="field">
@@ -83,6 +85,22 @@
       <span class="row">
         <NumberInput bind:value={ratio} min={0} max={1} step={0.1} id="number-demo-ratio" />
         <span class="readout" data-testid="ratio-value">value: <code>{describe(ratio)}</code></span>
+      </span>
+    </div>
+    <div class="field">
+      <label class="field__label" for="number-demo-share"
+        >Share in a comma locale (de-DE, 0 to 1, step 0.1)</label
+      >
+      <span class="row">
+        <NumberInput
+          bind:value={share}
+          min={0}
+          max={1}
+          step={0.1}
+          locale="de-DE"
+          id="number-demo-share"
+        />
+        <span class="readout" data-testid="share-value">value: <code>{describe(share)}</code></span>
       </span>
     </div>
     <div class="field">

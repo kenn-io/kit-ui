@@ -5,10 +5,12 @@
     allowsDecimals,
     allowsNegative,
     clampNumber,
+    decimalSeparator,
     formatNumber,
     isNumberDraft,
     isNumberText,
     isSafeNumber,
+    normalizeNumberDraft,
     parseNumberDraft,
     stepNumber,
     type NumberBounds,
@@ -21,9 +23,14 @@
     max?: number;
     /** Arrow-key increment, and the grid the arrows snap to (anchored at
      * `min`). Its decimal places, and those of `min` and `max`, decide
-     * whether a decimal point can be typed: the default 1 takes integers
+     * whether a decimal separator can be typed: the default 1 takes integers
      * only. */
     step?: number;
+    /** Hyphenated BCP 47 language tag whose decimal separator the field
+     * shows and accepts, such as "de-DE" for "0,5". "." is accepted in
+     * every locale and rewritten to the locale's separator. Defaults to
+     * the browser's locale. */
+    locale?: string;
     placeholder?: string;
     size?: TextInputSize;
     /** Red border + aria-invalid, e.g. failed validation. */
@@ -65,6 +72,7 @@
     min = undefined,
     max = undefined,
     step = 1,
+    locale = undefined,
     placeholder = undefined,
     size = "md",
     invalid = false,
@@ -93,6 +101,8 @@
     return { min, max, step };
   });
 
+  const separator = $derived(decimalSeparator(locale));
+
   // iOS numeric and decimal keypads have no minus key, so a field that
   // takes negatives falls back to the full keyboard.
   const inputmode = $derived(
@@ -108,7 +118,7 @@
     void value;
     return null;
   });
-  const text = $derived(draft ?? formatNumber(value));
+  const text = $derived(draft ?? formatNumber(value, separator));
 
   // A required field must not submit a draft like "-": the browser sees
   // non-empty text and its own required check passes.
@@ -161,7 +171,7 @@
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     const next = input.value.slice(0, start) + inserted + input.value.slice(end);
-    if (!isNumberDraft(next, bounds)) {
+    if (!isNumberDraft(next, bounds, separator)) {
       event.preventDefault();
     } else if (inserted !== raw) {
       // The native insert would keep the whitespace, so insert the trimmed
@@ -183,22 +193,24 @@
 
   // TextInput writes every edit here. Text that is not an allowed draft,
   // from an edit beforeinput could not cancel (IME composition) or a
-  // deletion that leaves too large a number, is reverted. TextInput reads
-  // its text back through `text`, so a rejected edit never reaches its
-  // state. A value supplied from outside beyond the safe-integer limit may
-  // still be shortened, so Backspace can bring it back into range.
+  // deletion that leaves too large a number, is reverted. An allowed edit
+  // is normalized (surrounding whitespace dropped, "." written as the
+  // locale's separator). TextInput reads its text back through `text`, so
+  // a rejected edit never reaches its state. A value supplied from outside
+  // beyond the safe-integer limit may still be shortened, so Backspace can
+  // bring it back into range.
   function handleText(raw: string): void {
-    const cleaned = raw.trim();
+    const cleaned = normalizeNumberDraft(raw, separator);
     const shortensUnsafe =
       value !== null &&
       !isSafeNumber(value) &&
       cleaned.length < text.length &&
-      isNumberText(cleaned, bounds);
-    if (!shortensUnsafe && !isNumberDraft(cleaned, bounds)) {
+      isNumberText(cleaned, bounds, separator);
+    if (!shortensUnsafe && !isNumberDraft(cleaned, bounds, separator)) {
       replaceText(text, raw);
       return;
     }
-    const parsed = parseNumberDraft(cleaned);
+    const parsed = parseNumberDraft(cleaned, separator);
     setValue(parsed);
     // An oninput handler may already have replaced the value, such as an
     // app capping it; then the field shows the app's value instead.

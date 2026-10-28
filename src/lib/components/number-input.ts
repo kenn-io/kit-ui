@@ -15,10 +15,32 @@ function decimalsOf(n: number): number {
   return formatNumber(n).split(".")[1]?.length ?? 0;
 }
 
-/** Whether a decimal point may be typed: only when `step`, the `min` the
+/** Whether a decimal separator may be typed: only when `step`, the `min` the
  * step grid is anchored on, or a `max` a clamp can land on has decimals. */
 export function allowsDecimals({ min, max, step }: NumberBounds): boolean {
   return [step, min, max].some((n) => n !== undefined && decimalsOf(n) > 0);
+}
+
+/** The decimal separator `locale` writes between whole and fractional
+ * digits, such as "." for en-US and "," for de-DE. The field shows plain
+ * ASCII digits, so this is the separator the locale uses with Latin
+ * digits: ar-EG gives ".", not the Arabic decimal separator it pairs with
+ * its own digits. `undefined` means the runtime's default locale. */
+export function decimalSeparator(locale?: string): string {
+  let format: Intl.NumberFormat;
+  try {
+    format = new Intl.NumberFormat(locale, { numberingSystem: "latn" });
+  } catch (error) {
+    // Chromium's message names neither the component nor the tag, and a
+    // POSIX-style "en_US" from a user setting is an easy mistake.
+    if (!(error instanceof RangeError)) throw error;
+    throw new RangeError(
+      `NumberInput: locale must be a hyphenated BCP 47 tag such as "de-DE", got ${JSON.stringify(locale)}`,
+      { cause: error },
+    );
+  }
+  const parts = format.formatToParts(0.5);
+  return parts.find((part) => part.type === "decimal")?.value ?? ".";
 }
 
 /** Whether a minus sign may be typed: only when the range reaches below 0. */
@@ -28,39 +50,56 @@ export function allowsNegative({ min }: NumberBounds): boolean {
 
 /** Whether `text` is a number, or the start of one, that the field may
  * hold while the user types: an optional leading minus (when negatives are
- * allowed), digits, and one decimal point (when the precision allows
- * decimals). "-", "." and "" are accepted as in-progress text. Numbers
- * beyond Number.MAX_SAFE_INTEGER are refused, since past it the parsed
- * value would no longer match the digits typed. */
-export function isNumberDraft(text: string, bounds: NumberBounds): boolean {
-  if (!isNumberText(text, bounds)) return false;
+ * allowed), digits, and one decimal separator (when the precision allows
+ * decimals). The separator is `separator` or ".", which is accepted in
+ * every locale so a number copied from elsewhere still pastes. "-", the
+ * separator alone and "" are accepted as in-progress text. Numbers beyond
+ * Number.MAX_SAFE_INTEGER are refused, since past it the parsed value
+ * would no longer match the digits typed. */
+export function isNumberDraft(text: string, bounds: NumberBounds, separator = "."): boolean {
+  if (!isNumberText(text, bounds, separator)) return false;
   // Compare the digits themselves: Number() rounds "9007199254740991.1"
   // back onto the limit, so a check on the parsed value would let it in.
-  const [whole = "", fraction = ""] = text.replace("-", "").split(".");
+  const [whole = "", fraction = ""] = text.replace("-", "").replace(separator, ".").split(".");
   const size = BigInt(whole || "0");
   const limit = BigInt(Number.MAX_SAFE_INTEGER);
   return size < limit || (size === limit && !/[1-9]/.test(fraction));
 }
 
 /** Whether `text` has the shape of a number draft, whatever its size:
- * isNumberDraft without the safe-integer limit. */
-export function isNumberText(text: string, bounds: NumberBounds): boolean {
+ * isNumberDraft without the safe-integer limit. The separator is a single
+ * "." or ",", so a character class holds it without escaping. */
+export function isNumberText(text: string, bounds: NumberBounds, separator = "."): boolean {
   const sign = allowsNegative(bounds) ? "-?" : "";
-  const fraction = allowsDecimals(bounds) ? "(?:\\.\\d*)?" : "";
+  const fraction = allowsDecimals(bounds) ? `(?:[.${separator}]\\d*)?` : "";
   return new RegExp(`^${sign}\\d*${fraction}$`).test(text);
 }
 
-/** The number a draft means, or null while it has no digits yet. */
-export function parseNumberDraft(text: string): number | null {
+/** The text the field keeps for an edit: surrounding whitespace dropped,
+ * and a "." written as `separator`, so the field always shows the
+ * locale's form. */
+export function normalizeNumberDraft(text: string, separator = "."): string {
+  return text.trim().replace(".", separator);
+}
+
+/** The number a draft means, or null while it has no digits yet. The
+ * decimal separator may be `separator` or ".". */
+export function parseNumberDraft(text: string, separator = "."): number | null {
   if (!/\d/.test(text)) return null;
-  return Number(text);
+  return Number(text.replace(separator, "."));
 }
 
 /** Canonical text for a value: "" for null, otherwise the shortest
- * decimal that round-trips, written out in full. JavaScript switches to
+ * decimal that round-trips, written out in full with `separator` as the
+ * decimal separator and no grouping. */
+export function formatNumber(value: number | null, separator = "."): string {
+  return expandExponent(value).replace(".", separator);
+}
+
+/** `value` as the shortest round-tripping decimal. JavaScript switches to
  * exponent form ("1e-7", "1e+21") at the extremes, which the draft rules
  * do not accept, so those digits are expanded. */
-export function formatNumber(value: number | null): string {
+function expandExponent(value: number | null): string {
   if (value === null) return "";
   const text = String(value);
   const exponent = text.match(/^(-?)(\d+)(?:\.(\d+))?e([+-]\d+)$/);

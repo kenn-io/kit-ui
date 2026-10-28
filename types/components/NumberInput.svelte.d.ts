@@ -7,9 +7,14 @@ interface Props {
     max?: number;
     /** Arrow-key increment, and the grid the arrows snap to (anchored at
      * `min`). Its decimal places, and those of `min` and `max`, decide
-     * whether a decimal point can be typed: the default 1 takes integers
+     * whether a decimal separator can be typed: the default 1 takes integers
      * only. */
     step?: number;
+    /** Hyphenated BCP 47 language tag whose decimal separator the field
+     * shows and accepts, such as "de-DE" for "0,5". "." is accepted in
+     * every locale and rewritten to the locale's separator. Defaults to
+     * the browser's locale. */
+    locale?: string;
     placeholder?: string;
     size?: TextInputSize;
     /** Red border + aria-invalid, e.g. failed validation. */

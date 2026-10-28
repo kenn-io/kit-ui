@@ -18,6 +18,9 @@ is a `number`, or `null` while the field is empty; it is never a string.
 </NumberInput>
 
 <NumberInput bind:value={ratio} min={0} max={1} step={0.1} ariaLabel="Ratio" />
+
+<!-- Shows and accepts "0,5" -->
+<NumberInput bind:value={ratio} min={0} max={1} step={0.1} locale="de-DE" ariaLabel="Ratio" />
 ```
 
 ## Props
@@ -27,6 +30,7 @@ is a `number`, or `null` while the field is empty; it is never a string.
 | `value`                              | `number \| null` (bindable)       | `null`              | `null` while the field holds no digits                                                                                                                                                                                  |
 | `min` / `max`                        | `number`                          | —                   | Arrow keys stay inside the range; leaving the field clamps a typed value into it. A `min` of 0 or more blocks the minus key                                                                                             |
 | `step`                               | `number`                          | `1`                 | Arrow-key increment and the grid it snaps to, anchored at `min`. Must be positive                                                                                                                                       |
+| `locale`                             | `string`                          | browser's locale    | Hyphenated BCP 47 language tag whose decimal separator the field shows and accepts, such as `"de-DE"` for `0,5`. A malformed tag such as `"en_US"` throws. See Decimal separator                                        |
 | `placeholder`                        | `string`                          | —                   |                                                                                                                                                                                                                         |
 | `size`                               | `"sm" \| "md" \| "lg"`            | `"md"`              | Same heights as TextInput                                                                                                                                                                                               |
 | `invalid`                            | `boolean`                         | `false`             | Red border + `aria-invalid`. The field does not set it on its own: the consumer decides what is invalid                                                                                                                 |
@@ -48,13 +52,23 @@ is a `number`, or `null` while the field is empty; it is never a string.
 
 - **Typing.** The field accepts digits, one leading minus sign when the
   range reaches below 0 (no `min`, or a negative one), and one decimal
-  point when `step`, `min` or `max` has decimal places. The default `step` of 1
-  takes integers only. Whitespace around a pasted number is dropped. Any
-  other edit, including a paste such as `1,000` or `1 2`, is rejected
-  whole. Numbers beyond `Number.MAX_SAFE_INTEGER` are refused, since past
-  it the value would no longer match the digits typed; a larger value set
-  from outside can still be shortened with Backspace. The decimal
-  separator is `.` in every locale.
+  separator when `step`, `min` or `max` has decimal places. The default `step` of
+  1 takes integers only. Whitespace around a pasted number is dropped. Any
+  other edit, including a paste with grouping such as `1,000,000` or `1 2`,
+  is rejected whole. Numbers beyond `Number.MAX_SAFE_INTEGER` are refused,
+  since past it the value would no longer match the digits typed; a larger
+  value set from outside can still be shortened with Backspace.
+- **Decimal separator.** The field shows and accepts the separator of
+  `locale` (default: the browser's locale), taken from
+  `Intl.NumberFormat`: `.` for `en-US`, `,` for `de-DE` and `fr-FR`. It is
+  the separator the locale uses with ASCII digits, which the field always
+  shows, so `ar-EG` gets `.`. A `.` is also accepted in every locale,
+  because numbers copied from code, logs and other pages use it, and it is
+  rewritten to the locale's separator as it lands: typing `0.5` in a
+  `de-DE` field shows `0,5`. A consequence: a `de-DE` paste of `1.000`
+  (one thousand with grouping) reads as 1. A `,` is never a separator in a
+  `.` locale. The bound value is a JavaScript number either way. Numbers
+  are shown without grouping separators or exponent form.
 - **Arrow Up / Arrow Down** step by `step`. A value between grid points
   snaps to the next point in that direction, as native number inputs do.
   An empty field starts at `min` going up and `max` going down (0 when
@@ -68,7 +82,8 @@ is a `number`, or `null` while the field is empty; it is never a string.
   first press toward zero.
 - **Leaving the field** (blur, or Enter) clamps the number into
   `min`..`max` and rewrites in-progress text in its canonical form:
-  `1.` becomes `1`, `007` becomes `7`, and a lone `-` empties the field.
+  `1.` (or `1,`) becomes `1`, `007` becomes `7`, and a lone `-` empties
+  the field.
   Very small and very large values are written out in full (`0.0000001`,
   never `1e-7`), so they stay editable. A value the app sets while the
   field has focus replaces in-progress text the same way.
