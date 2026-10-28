@@ -1,5 +1,6 @@
 export type TextInputSize = "sm" | "md" | "lg";
 import type { Snippet } from "svelte";
+import type { HTMLInputAttributes } from "svelte/elements";
 interface Props {
     /** Current text (bindable). */
     value?: string;
@@ -22,19 +23,29 @@ interface Props {
     ariaLabel?: string;
     /** Combobox wiring for fields that drive a listbox (CommandPalette):
      * set `role="combobox"` and point these at the list and the
-     * highlighted option so keyboard navigation is announced. */
-    role?: "combobox";
+     * highlighted option so keyboard navigation is announced.
+     * `role="spinbutton"` with the `ariaValue*` props is the numeric
+     * wiring NumberInput uses. */
+    role?: "combobox" | "spinbutton";
     ariaExpanded?: boolean;
     ariaControls?: string;
     ariaActivedescendant?: string;
     ariaAutocomplete?: "list" | "inline" | "both" | "none";
     ariaDescribedby?: string;
+    ariaValuenow?: number;
+    ariaValuemin?: number;
+    ariaValuemax?: number;
+    /** Virtual keyboard hint on touch devices, e.g. "decimal". */
+    inputmode?: HTMLInputAttributes["inputmode"];
     /** Focus the input when it mounts. */
     autofocus?: boolean;
     autocomplete?: HTMLInputElement["autocomplete"];
     oninput?: (value: string) => void;
     onchange?: (value: string) => void;
     onkeydown?: (event: KeyboardEvent) => void;
+    /** Runs before an edit lands; `preventDefault()` rejects it. */
+    onbeforeinput?: (event: InputEvent) => void;
+    onfocus?: () => void;
     onblur?: () => void;
     /** Leading adornment inside the border (icon, unit). */
     prefix?: Snippet;

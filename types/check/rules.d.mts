@@ -192,6 +192,13 @@ export function checkHandRolledDateInput(source: any): {
     line: number;
     message: string;
 }[];
+/** Native number inputs duplicate NumberInput: they render platform
+ * spinner buttons and size themselves apart from the other fields. */
+export function checkHandRolledNumberInput(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Native color inputs render unthemed platform chrome and offer no hex
  * entry or quick picks. */
 export function checkHandRolledColorInput(source: any): {
@@ -423,6 +430,7 @@ export const ALL_RULES: {
     "hand-rolled-top-bar": typeof checkHandRolledTopBar;
     "hand-rolled-search-input": typeof checkHandRolledSearchInput;
     "hand-rolled-date-input": typeof checkHandRolledDateInput;
+    "hand-rolled-number-input": typeof checkHandRolledNumberInput;
     "hand-rolled-color-input": typeof checkHandRolledColorInput;
     "hand-rolled-toast": typeof checkHandRolledToast;
     "hand-rolled-drawer": typeof checkHandRolledDrawer;

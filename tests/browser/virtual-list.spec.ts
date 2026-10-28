@@ -38,7 +38,7 @@ test("windows 10k rows and navigates from the container", async ({ page }) => {
 
 test("scrollToIndex reaches deep rows with measured heights", async ({ page }) => {
   await gotoPage(page, "virtual-list");
-  await page.locator('input[type="number"]').fill("5000");
+  await page.getByRole("spinbutton", { name: "Jump to" }).fill("5000");
   await page.getByRole("button", { name: "scrollToIndex" }).click();
   await expect(page.locator(".kit-virtual-list")).toContainText("Session #5000");
 });
@@ -69,7 +69,7 @@ test("mount-time initial activeIndex renders and announces after measurement", a
 
 test("keys typed into nested demo controls are not stolen", async ({ page }) => {
   await gotoPage(page, "virtual-list");
-  const jump = page.locator('input[type="number"]');
+  const jump = page.getByRole("spinbutton", { name: "Jump to" });
   await jump.fill("123");
   // Arrow keys in the number input must not move the list's active row.
   await jump.press("ArrowDown");

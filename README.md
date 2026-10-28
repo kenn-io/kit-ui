@@ -70,6 +70,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [Markdown](docs/components/code-block.md)                     | both (consolidated)                | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
 | [Menu](docs/components/menu.md)                               | consumer app action menus          | Compositional action and single-choice menus with APG keyboard behavior                       |
 | [Modal](docs/components/modal.md)                             | both (consolidated)                | Dialog primitive: overlay, header, body, footer snippet                                       |
+| [NumberInput](docs/components/number-input.md)                | new (TextInput preset)             | Numeric field: min/max/step, arrow-key stepping, number-or-null value                         |
 | [DateRangePicker](docs/components/date-range-picker.md)       | agentsview                         | Relative / calendar / custom date-range popover with `resolveRange()`                         |
 | [RadioGroup](docs/components/radio-group.md)                  | new                                | Labelled list of 2–4 exclusive choices, drawn to the Checkbox recipe                          |
 | [RefreshControl](docs/components/refresh-control.md)          | agentsview                         | Refresh button + "Updated Xm ago" label with auto-refresh                                     |

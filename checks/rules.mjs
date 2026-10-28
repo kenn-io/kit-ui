@@ -828,6 +828,22 @@ export function checkHandRolledDateInput(source) {
   return findings;
 }
 
+/** Native number inputs duplicate NumberInput: they render platform
+ * spinner buttons and size themselves apart from the other fields. */
+export function checkHandRolledNumberInput(source) {
+  const findings = [];
+  const re = /type=(["'])number\1/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-number-input",
+      line: lineOfIndex(source, match.index),
+      message: 'type="number" input — use NumberInput from @kenn-io/kit-ui',
+    });
+  }
+  return findings;
+}
+
 /** Native color inputs render unthemed platform chrome and offer no hex
  * entry or quick picks. */
 export function checkHandRolledColorInput(source) {
@@ -1836,6 +1852,7 @@ export const ALL_RULES = {
   "hand-rolled-top-bar": checkHandRolledTopBar,
   "hand-rolled-search-input": checkHandRolledSearchInput,
   "hand-rolled-date-input": checkHandRolledDateInput,
+  "hand-rolled-number-input": checkHandRolledNumberInput,
   "hand-rolled-color-input": checkHandRolledColorInput,
   "hand-rolled-toast": checkHandRolledToast,
   "hand-rolled-drawer": checkHandRolledDrawer,
