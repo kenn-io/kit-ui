@@ -51,6 +51,7 @@
   import NoticeDemo from "./pages/NoticeDemo.svelte";
   import NumberInputDemo from "./pages/NumberInputDemo.svelte";
   import PageFrameDemo from "./pages/PageFrameDemo.svelte";
+  import PageHeaderDemo from "./pages/PageHeaderDemo.svelte";
   import PanZoomDemo from "./pages/PanZoomDemo.svelte";
   import ProviderBrandDemo from "./pages/ProviderBrandDemo.svelte";
   import DatePickerDemo from "./pages/DatePickerDemo.svelte";
@@ -140,6 +141,7 @@
     { id: "notice", label: "Notice", component: NoticeDemo },
     { id: "number-input", label: "NumberInput", component: NumberInputDemo },
     { id: "page-frame", label: "PageFrame", component: PageFrameDemo },
+    { id: "page-header", label: "PageHeader", component: PageHeaderDemo },
     { id: "palette", label: "Palette", component: PaletteDemo },
     { id: "pan-zoom", label: "Pan and zoom", component: PanZoomDemo },
     { id: "provider-brand", label: "Provider brand", component: ProviderBrandDemo },

@@ -478,6 +478,23 @@ export function checkHandRolledTopBar(source) {
   return findings;
 }
 
+/** Hand-rolled page headers duplicate PageHeader, and the copies tend to draw
+ * a rule under the title that doubles with the first bordered block below.
+ * Matches page-header / page-heading class names; kit-page-header is exempt. */
+export function checkHandRolledPageHeader(source) {
+  const findings = [];
+  const re = /class="[^"]*(?<!kit-)\bpage-head(?:er|ing)\b|\.(?<!kit-)page-head(?:er|ing)\b/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-page-header",
+      line: lineOfIndex(source, match.index),
+      message: "page-header markup — use PageHeader from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled square icon buttons duplicate IconButton. Matches the
  * icon-btn / icon-button class names both apps converged on;
  * kit-icon-button is exempt. */
@@ -1850,6 +1867,7 @@ export const ALL_RULES = {
   "hand-rolled-lightbox": checkHandRolledLightbox,
   "hand-rolled-video-player": checkHandRolledVideoPlayer,
   "hand-rolled-top-bar": checkHandRolledTopBar,
+  "hand-rolled-page-header": checkHandRolledPageHeader,
   "hand-rolled-search-input": checkHandRolledSearchInput,
   "hand-rolled-date-input": checkHandRolledDateInput,
   "hand-rolled-number-input": checkHandRolledNumberInput,

@@ -548,6 +548,19 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
   });
 
+  test("page header: page-header and page-heading classes and selectors", () => {
+    const src = svelte(
+      `.page-header { border-bottom: 1px solid var(--border-default); }`,
+      `<header class="page-header"><h1>Runs</h1></header><div class="toolbar page-heading">x</div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-page-header"])).toHaveLength(3);
+  });
+
+  test("page header: does not match kit-page-header, its parts, or prose", () => {
+    const src = `<script>// the page-header pattern</script>\n<header class="kit-page-header"><h1 class="kit-page-header__title">Runs</h1></header>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-page-header"])).toHaveLength(0);
+  });
+
   test("image preview: class and CSS selector, prefixed names included", () => {
     const src = svelte(
       `.diff-image-preview { background-size: 20px 20px; }`,

@@ -120,6 +120,14 @@ export function checkHandRolledTopBar(source: any): {
     line: number;
     message: string;
 }[];
+/** Hand-rolled page headers duplicate PageHeader, and the copies tend to draw
+ * a rule under the title that doubles with the first bordered block below.
+ * Matches page-header / page-heading class names; kit-page-header is exempt. */
+export function checkHandRolledPageHeader(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Hand-rolled square icon buttons duplicate IconButton. Matches the
  * icon-btn / icon-button class names both apps converged on;
  * kit-icon-button is exempt. */
@@ -428,6 +436,7 @@ export const ALL_RULES: {
     "hand-rolled-lightbox": typeof checkHandRolledLightbox;
     "hand-rolled-video-player": typeof checkHandRolledVideoPlayer;
     "hand-rolled-top-bar": typeof checkHandRolledTopBar;
+    "hand-rolled-page-header": typeof checkHandRolledPageHeader;
     "hand-rolled-search-input": typeof checkHandRolledSearchInput;
     "hand-rolled-date-input": typeof checkHandRolledDateInput;
     "hand-rolled-number-input": typeof checkHandRolledNumberInput;
