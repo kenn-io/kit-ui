@@ -50,6 +50,11 @@ jobs:
       - name: Build demo gallery
         run: bun run build
 
+      # Fails if the gallery can paint before its stylesheet and fonts load.
+      - uses: kenn-io/actions/first-paint@b523fb403607f01de5eec5f4556c7668544c70fe # main
+        with:
+          dist: dist
+
   browser:
     name: Browser tests
     runs-on: namespace-profile-linux-4cpu
