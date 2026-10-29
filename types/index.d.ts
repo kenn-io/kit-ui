@@ -57,6 +57,7 @@ export { default as MetricCard } from "./components/MetricCard.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
 export { default as NumberInput } from "./components/NumberInput.svelte";
+export { default as PageHeader } from "./components/PageHeader.svelte";
 export { default as ProviderBrandMark } from "./components/ProviderBrandMark.svelte";
 export { default as ProviderButton } from "./components/ProviderButton.svelte";
 export type { ProviderBrand } from "./components/provider-brand.js";
