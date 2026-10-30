@@ -837,7 +837,9 @@ test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL
     await open(page, "reports/overview", 1440);
     const gutter = () =>
       scroller(page).evaluate((element) => element.offsetWidth - element.clientWidth);
-    expect(await gutter()).toBe(0);
+    const overflows = () =>
+      scroller(page).evaluate((element) => element.scrollHeight > element.clientHeight);
+    expect(await overflows()).toBe(false);
 
     await edge(page).focus();
     for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
@@ -845,7 +847,8 @@ test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL
     // A shorter window makes the panel scroll, and its scrollbar takes room
     // from the words.
     await page.setViewportSize({ width: 1440, height: 300 });
-    await expect.poll(gutter).toBeGreaterThan(0);
+    await expect.poll(overflows).toBe(true);
+    expect(await gutter()).toBeGreaterThan(0);
     expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
   } finally {
     await browser.close();

@@ -53,6 +53,8 @@
   let hideBots = $state(false);
   let theme = $state("system");
   let compactLists = $state(false);
+  let wideContent = $state(false);
+  let reduceMotion = $state(false);
 </script>
 
 <DemoSection
@@ -154,6 +156,24 @@
                 <span class="row__hint">Tighter rows in tables and feeds.</span>
               </span>
               <Toggle bind:checked={compactLists} ariaLabel="Compact lists" />
+            </div>
+          </SettingsSection>
+          <SettingsSection title="Layout" description="Where panels sit in the window.">
+            <div class="row">
+              <span class="row__text">
+                <span class="row__label">Wide content</span>
+                <span class="row__hint">Let tables use the full window width.</span>
+              </span>
+              <Toggle bind:checked={wideContent} ariaLabel="Wide content" />
+            </div>
+          </SettingsSection>
+          <SettingsSection title="Motion" description="How the interface animates.">
+            <div class="row">
+              <span class="row__text">
+                <span class="row__label">Reduce motion</span>
+                <span class="row__hint">Replace slides with fades.</span>
+              </span>
+              <Toggle bind:checked={reduceMotion} ariaLabel="Reduce motion" />
             </div>
           </SettingsSection>
         {/if}

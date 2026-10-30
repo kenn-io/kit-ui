@@ -389,6 +389,9 @@
   .content__body {
     flex: 1;
     overflow-y: auto;
+    /* Reserve the scrollbar's width up front so page content does not shift
+       when opening example code first makes the page scroll. */
+    scrollbar-gutter: stable;
     padding: 20px 32px 64px;
     /* Table headers that stick to this scroller cover its top padding. */
     --kit-table-sticky-top: -20px;
