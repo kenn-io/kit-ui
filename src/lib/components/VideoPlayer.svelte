@@ -45,16 +45,16 @@
     }
   }
 
-  // Video.js's clock for a video's length, which rounds down, so the bar
-  // does not change when the video's own length replaces this one.
-  function formatLength(seconds: number): string {
+  // Video.js's clock: it rounds down and pads to fit the video's length, so
+  // a known length reads the same as the video's own once that replaces it.
+  function formatClock(seconds: number, length: number): string {
     const total = Math.floor(seconds);
-    const hours = Math.floor(total / 3600);
     const minutes = Math.floor((total % 3600) / 60);
     const secs = String(total % 60).padStart(2, "0");
-    return hours > 0
-      ? `${hours}:${String(minutes).padStart(2, "0")}:${secs}`
-      : `${minutes}:${secs}`;
+    if (length >= 3600) {
+      return `${Math.floor(total / 3600)}:${String(minutes).padStart(2, "0")}:${secs}`;
+    }
+    return `${String(minutes).padStart(length >= 600 ? 2 : 1, "0")}:${secs}`;
   }
 </script>
 
@@ -292,12 +292,17 @@
               <media-slider-thumb class="kit-video-player__thumb"></media-slider-thumb>
             </media-time-slider>
             <media-time-group class="kit-video-player__time">
-              <media-time type="current"></media-time>
-              <media-time-separator></media-time-separator>
-              <media-time type="duration" class="kit-video-player__length"></media-time>
+              <media-time type="current" class="kit-video-player__clock"></media-time>
               {#if duration !== undefined}
-                <time class="kit-video-player__known-length" datetime={`PT${Math.floor(duration)}S`}
-                  >{formatLength(duration)}</time
+                <time class="kit-video-player__known-clock" datetime="PT0S"
+                  >{formatClock(0, duration)}</time
+                >
+              {/if}
+              <media-time-separator></media-time-separator>
+              <media-time type="duration" class="kit-video-player__clock"></media-time>
+              {#if duration !== undefined}
+                <time class="kit-video-player__known-clock" datetime={`PT${Math.floor(duration)}S`}
+                  >{formatClock(duration, duration)}</time
                 >
               {/if}
             </media-time-group>
@@ -592,10 +597,10 @@
     white-space: nowrap;
   }
 
-  /* Video.js marks its length unavailable until the video reports one. It
-   * drives the swap, so the video's own length always wins. */
-  .kit-video-player__length:global([data-unavailable]):has(+ .kit-video-player__known-length),
-  .kit-video-player__length:global(:not([data-unavailable])) + .kit-video-player__known-length {
+  /* Video.js marks its clocks unavailable until the video reports a length.
+   * It drives the swap, so the video's own clocks always win. */
+  .kit-video-player__clock:global([data-unavailable]):has(+ .kit-video-player__known-clock),
+  .kit-video-player__clock:global(:not([data-unavailable])) + .kit-video-player__known-clock {
     display: none;
   }
 
