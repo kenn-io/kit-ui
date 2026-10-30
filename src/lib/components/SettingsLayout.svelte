@@ -265,6 +265,9 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    /* Reserve the scrollbar's width up front so the centered panel does not
+       shift left when a taller category first makes the pane scroll. */
+    scrollbar-gutter: stable;
   }
 
   .kit-settings__panel {

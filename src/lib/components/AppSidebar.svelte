@@ -775,10 +775,19 @@
     flex-direction: column;
     min-width: 0;
     overflow-y: auto;
+    /* Reserve the scrollbar's width up front so the collapse button does not
+       shift left when a section's views first make the sidebar scroll. */
+    scrollbar-gutter: stable;
   }
 
   .kit-app-sidebar--rail {
     width: 3.5rem;
+  }
+
+  /* The rail's icons are centered, and a reserved gutter would pull them off
+     center for good. */
+  .kit-app-sidebar--rail .kit-app-sidebar__scroll {
+    scrollbar-gutter: auto;
   }
 
   .kit-app-sidebar__bar {

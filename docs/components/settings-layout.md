@@ -6,6 +6,8 @@ content (save/cancel actions). Generalizes Forge's `SettingsPage` —
 category rendering is left to the `panel` snippet, which receives the active
 category id. Below 760px the sidebar collapses to a horizontal strip above the
 content (labels only: group headings, icons and summaries are hidden there).
+The content pane always reserves room for a scrollbar that takes space, so the
+centered panel stays put when a taller category makes the pane scroll.
 
 Categories may carry a `group` — a muted heading is rendered above each run of
 categories sharing one, so the array order stays the display order — an
