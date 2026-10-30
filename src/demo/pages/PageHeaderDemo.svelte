@@ -148,8 +148,8 @@
 >
   <div class="page-host" data-testid="page-sizes">
     <PageHeader title="Large" />
-    <PageHeader level={2} title="Medium" size="medium" />
-    <PageHeader level={3} title="Small" size="small" />
+    <PageHeader title="Medium" size="medium" />
+    <PageHeader title="Small" size="small" />
   </div>
 </DemoSection>
 
