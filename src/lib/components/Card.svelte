@@ -283,6 +283,15 @@
     min-width: 0;
   }
 
+  /* A table that ends a flush card's body sits on the card's bottom border,
+   * or on the footer's divider. Its last row's rule would run just above that
+   * edge as a second line. */
+  .kit-card--pad-none
+    > .kit-card__body
+    > :global(.kit-table-wrapper:last-child > .kit-table > tbody > tr:last-child > td) {
+    border-bottom: 0;
+  }
+
   .kit-card__footer {
     min-width: 0;
     border-top: 1px solid var(--border-muted);

@@ -1,10 +1,23 @@
 <script lang="ts">
   import PencilIcon from "@lucide/svelte/icons/pencil";
-  import { Button, Card, Chip, IconButton, MetricCard } from "../../lib/index.js";
+  import {
+    Button,
+    Card,
+    Chip,
+    IconButton,
+    MetricCard,
+    Table,
+    TableHeaderCell,
+  } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let clicks = $state(0);
   let plan = $state("pro");
+
+  const builds = [
+    { version: "2.4.0", status: "Passed" },
+    { version: "2.5.0-rc.1", status: "Running" },
+  ];
 </script>
 
 <DemoSection
@@ -125,12 +138,57 @@
   </Card>
 </DemoSection>
 
+<DemoSection
+  title="Table in a flush card"
+  description="With padding none, a table fills the card edge to edge. When the table ends the card's body, its last row drops its rule so the card's border, or the footer's divider, is the only line under it. Content after the table keeps the rule as its divider."
+  code={`<Card padding="none">
+  <Table ariaLabel="Builds">…</Table>
+</Card>`}
+>
+  <div class="grid grid--top" data-testid="flush-table-cards">
+    <Card padding="none" ariaLabel="Builds">
+      {@render buildTable()}
+    </Card>
+    <Card padding="none" ariaLabel="Builds with a note">
+      {@render buildTable()}
+      <p class="table-note">Showing 2 of 2</p>
+    </Card>
+  </div>
+</DemoSection>
+
+{#snippet buildTable()}
+  <Table ariaLabel="Builds" unsorted>
+    {#snippet header()}
+      <TableHeaderCell label="Version" />
+      <TableHeaderCell label="Status" />
+    {/snippet}
+    {#each builds as build (build.version)}
+      <tr>
+        <td>{build.version}</td>
+        <td>{build.status}</td>
+      </tr>
+    {/each}
+  </Table>
+{/snippet}
+
 <style>
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--space-5);
     width: 100%;
+  }
+
+  /* Cards keep their own height so each table ends at its card's bottom edge. */
+  .grid--top {
+    align-items: start;
+  }
+
+  .table-note {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .footer-row {
