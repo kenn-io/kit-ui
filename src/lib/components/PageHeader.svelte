@@ -13,7 +13,7 @@
     /** Lets the title take focus from script, for moving focus to it after a view change. */
     focusable?: boolean;
     /** The rendered heading element. */
-    titleElement?: HTMLHeadingElement;
+    titleElement?: HTMLHeadingElement | undefined;
     /** Rendered above the title, typically a back link or breadcrumbs. */
     before?: Snippet;
     /** Beside the title on its line, typically a status chip or label. */
