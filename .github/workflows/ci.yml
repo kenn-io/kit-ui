@@ -17,6 +17,7 @@ jobs:
   checks:
     name: Check, unit tests, build
     runs-on: namespace-profile-linux-4cpu
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -58,6 +59,7 @@ jobs:
   browser:
     name: Browser tests
     runs-on: namespace-profile-linux-4cpu
+    timeout-minutes: 28
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -86,6 +88,7 @@ jobs:
         run: bunx playwright install-deps chromium
 
       - name: Run browser suite
+        timeout-minutes: 17
         run: bun run test:browser
 
       - name: Upload Playwright report
