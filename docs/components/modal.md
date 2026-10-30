@@ -24,6 +24,13 @@ Render it conditionally — the parent owns the open state:
 ```
 
 `onclose` fires on Escape, overlay click (unless disabled), and the X button.
+The X shows only when there is no `footer`: a footer carries its own way out,
+such as Cancel, and a dialog should not offer two controls that do the same
+thing. Pass `closable` to override.
+
+When the title says everything, leave the body out; the dialog is then the
+header and the footer. A body whose content is all conditional, such as an
+error message that has not happened, renders no empty band either.
 Set `closeLabel` when the default English close-button label is not appropriate,
 including localized interfaces.
 
@@ -51,7 +58,7 @@ virtual cursors rely on `aria-modal` support (all evergreen browsers).
 | `title`               | `string`                                                    | —                                  | Header text; header renders if `title` or `closable`                                                                                                                                                                                                                                                                      |
 | `tone`                | `"neutral" \| "info" \| "success" \| "warning" \| "danger"` | `"neutral"`                        | Header accent: neutral is a plain inset band; the others tint the band, the title, and the band's entire border area — top, side edges, and the divider below — with the semantic accent, so the band never sits against a grey line (pick the tone matching the primary action — e.g. `danger` for destructive confirms) |
 | `onclose`             | `() => void`                                                | —                                  | Dismiss callback                                                                                                                                                                                                                                                                                                          |
-| `closable`            | `boolean`                                                   | `true`                             | Show the X button                                                                                                                                                                                                                                                                                                         |
+| `closable`            | `boolean`                                                   | `!footer`                          | Show the X button                                                                                                                                                                                                                                                                                                         |
 | `closeLabel`          | `string`                                                    | `"Close"`                          | Accessible label for the X button; localize this in non-English interfaces                                                                                                                                                                                                                                                |
 | `closeOnOverlayClick` | `boolean`                                                   | `true`                             |                                                                                                                                                                                                                                                                                                                           |
 | `width`               | `string`                                                    | `"auto"`                           |                                                                                                                                                                                                                                                                                                                           |
