@@ -2,13 +2,22 @@
   import type { Snippet } from "svelte";
 
   interface Props {
-    title: string;
-    /** Muted line under the title. */
-    description?: string;
+    /** Heading text, or a snippet for a title with markup such as inline code or an edit field. */
+    title: string | Snippet;
+    /** Muted line under the title, as text or a snippet with markup. */
+    description?: string | Snippet;
     /** Heading level of the title. Pages use 1; a header inside a pane can use 2 or 3. */
     level?: 1 | 2 | 3;
+    /** Title size, independent of the heading level. */
+    size?: "large" | "medium" | "small";
+    /** Lets the title take focus from script, for moving focus to it after a view change. */
+    focusable?: boolean;
+    /** The rendered heading element. */
+    titleElement?: HTMLHeadingElement | undefined;
     /** Rendered above the title, typically a back link or breadcrumbs. */
     before?: Snippet;
+    /** Beside the title on its line, typically a status chip or label. */
+    trailing?: Snippet;
     /** Trailing controls or status, aligned with the bottom of the title block. */
     actions?: Snippet;
   }
@@ -17,7 +26,11 @@
     title,
     description = undefined,
     level = 1,
+    size = "large",
+    focusable = false,
+    titleElement = $bindable(undefined),
     before = undefined,
+    trailing = undefined,
     actions = undefined,
   }: Props = $props();
 </script>
@@ -30,9 +43,23 @@
     {#if before}
       <div class="kit-page-header__before">{@render before()}</div>
     {/if}
-    <svelte:element this={`h${level}`} class="kit-page-header__title">{title}</svelte:element>
+    <div class="kit-page-header__title-row">
+      <svelte:element
+        this={`h${level}`}
+        bind:this={titleElement}
+        class="kit-page-header__title kit-page-header__title--{size}"
+        tabindex={focusable ? -1 : undefined}
+      >
+        {#if typeof title === "string"}{title}{:else}{@render title()}{/if}
+      </svelte:element>
+      {#if trailing}
+        <div class="kit-page-header__trailing">{@render trailing()}</div>
+      {/if}
+    </div>
     {#if description}
-      <p class="kit-page-header__description">{description}</p>
+      <p class="kit-page-header__description">
+        {#if typeof description === "string"}{description}{:else}{@render description()}{/if}
+      </p>
     {/if}
   </div>
   {#if actions}
@@ -67,14 +94,44 @@
     font-size: var(--font-size-sm);
   }
 
+  .kit-page-header__title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    min-width: 0;
+  }
+
   .kit-page-header__title {
+    min-width: 0;
     margin: 0;
     color: var(--text-primary);
     font-family: var(--kit-page-header-title-font, inherit);
-    font-size: var(--kit-page-header-title-size, var(--font-size-xl));
-    font-weight: var(--font-weight-bold, 700);
+    font-weight: var(--kit-page-header-title-weight, var(--font-weight-bold, 700));
     line-height: 1.2;
     overflow-wrap: anywhere;
+  }
+
+  .kit-page-header__title--large {
+    font-size: var(--kit-page-header-title-size, var(--font-size-xl));
+  }
+
+  .kit-page-header__title--medium {
+    font-size: var(--kit-page-header-title-size-medium, var(--font-size-lg));
+  }
+
+  .kit-page-header__title--small {
+    font-size: var(--kit-page-header-title-size-small, var(--font-size-md));
+  }
+
+  .kit-page-header__trailing {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .kit-page-header__description {

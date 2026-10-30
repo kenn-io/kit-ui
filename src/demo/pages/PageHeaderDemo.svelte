@@ -8,6 +8,8 @@
     { version: "2.4.0", channel: "Stable", published: "Mar 3" },
     { version: "2.5.0-rc.1", channel: "Preview", published: "Mar 9" },
   ];
+
+  let stepTitle = $state<HTMLHeadingElement>();
 </script>
 
 <DemoSection
@@ -78,10 +80,85 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Status beside the title"
+  description="The trailing snippet sits on the title's line, for a status chip or label. Use a smaller size for a record page whose title shares its row with details."
+  code={`<PageHeader title="build-host-a" size="medium">
+  {#snippet trailing()}<Chip tone="success">Online</Chip>{/snippet}
+  {#snippet actions()}<Button label="Restart" size="sm" surface="soft" />{/snippet}
+</PageHeader>`}
+>
+  <div class="page-host" data-testid="page-with-status">
+    <PageHeader
+      title="build-host-a"
+      size="medium"
+      description="Linux arm64, last seen 2 minutes ago."
+    >
+      {#snippet trailing()}
+        <Chip tone="success" uppercase={false}>Online</Chip>
+      {/snippet}
+      {#snippet actions()}
+        <Button
+          label="Restart"
+          size="sm"
+          surface="soft"
+          onclick={() => showFlash("Would restart the host")}
+        />
+      {/snippet}
+    </PageHeader>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Title with markup"
+  description="Pass title or description as a snippet when the text needs inline code, a monospace ID, or a field. Keep a snippet title to phrasing content; the heading element stays the component's."
+  code={`<PageHeader>
+  {#snippet title()}Run <code>a1b2c3d</code>{/snippet}
+  {#snippet description()}Started by <code>release.yml</code> on main.{/snippet}
+</PageHeader>`}
+>
+  <div class="page-host" data-testid="page-with-markup">
+    <PageHeader>
+      {#snippet title()}Run <code>a1b2c3d</code>{/snippet}
+      {#snippet description()}Started by <code>release.yml</code> on main.{/snippet}
+    </PageHeader>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Moving focus to the title"
+  description="Set focusable and bind titleElement to move keyboard focus to the title after a step or view change, so a screen reader announces the new view."
+  code={`<PageHeader title="Choose repositories" focusable bind:titleElement={heading} />
+<Button label="Next step" onclick={() => heading?.focus()} />`}
+>
+  <div class="page-host" data-testid="page-with-focus">
+    <PageHeader title="Choose repositories" focusable bind:titleElement={stepTitle} />
+    <div>
+      <Button label="Next step" surface="soft" onclick={() => stepTitle?.focus()} />
+    </div>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Sizes"
+  description="Size is separate from the heading level. Large is the page title; medium and small suit record pages and panes."
+  code={`<PageHeader title="Large" />
+<PageHeader title="Medium" size="medium" />
+<PageHeader title="Small" size="small" />`}
+>
+  <div class="page-host" data-testid="page-sizes">
+    <PageHeader title="Large" />
+    <PageHeader title="Medium" size="medium" />
+    <PageHeader title="Small" size="small" />
+  </div>
+</DemoSection>
+
 <style>
   .page-host {
     display: grid;
+    flex: 1 1 auto;
     gap: var(--space-7);
+    min-width: 0;
   }
 
   .back-link {
