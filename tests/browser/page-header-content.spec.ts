@@ -43,4 +43,15 @@ test.describe("PageHeader content", () => {
     expect(large).toBeGreaterThan(medium);
     expect(medium).toBeGreaterThan(small);
   });
+
+  test("takes the title weight from the theme", async ({ page }) => {
+    await gotoPage(page, "page-header");
+    const heading = page
+      .getByTestId("page-sizes")
+      .getByRole("heading", { name: "Large", exact: true });
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty("--kit-page-header-title-weight", "600"),
+    );
+    await expect(heading).toHaveCSS("font-weight", "600");
+  });
 });

@@ -107,7 +107,7 @@
     margin: 0;
     color: var(--text-primary);
     font-family: var(--kit-page-header-title-font, inherit);
-    font-weight: var(--font-weight-bold, 700);
+    font-weight: var(--kit-page-header-title-weight, var(--font-weight-bold, 700));
     line-height: 1.2;
     overflow-wrap: anywhere;
   }

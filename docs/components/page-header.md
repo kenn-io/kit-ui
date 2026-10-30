@@ -81,12 +81,13 @@ new view. The title does not join the tab order.
 
 ## Theming
 
-| Custom property                       | Default               | Notes             |
-| ------------------------------------- | --------------------- | ----------------- |
-| `--kit-page-header-title-size`        | `var(--font-size-xl)` | Large title size  |
-| `--kit-page-header-title-size-medium` | `var(--font-size-lg)` | Medium title size |
-| `--kit-page-header-title-size-small`  | `var(--font-size-md)` | Small title size  |
-| `--kit-page-header-title-font`        | `inherit`             | Title font family |
+| Custom property                       | Default                        | Notes             |
+| ------------------------------------- | ------------------------------ | ----------------- |
+| `--kit-page-header-title-size`        | `var(--font-size-xl)`          | Large title size  |
+| `--kit-page-header-title-size-medium` | `var(--font-size-lg)`          | Medium title size |
+| `--kit-page-header-title-size-small`  | `var(--font-size-md)`          | Small title size  |
+| `--kit-page-header-title-font`        | `inherit`                      | Title font family |
+| `--kit-page-header-title-weight`      | `var(--font-weight-bold, 700)` | Title font weight |
 
 Set these on `:root` or on a page container to give an app a larger display
 title without changing the component.
