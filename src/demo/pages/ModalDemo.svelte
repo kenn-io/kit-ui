@@ -4,6 +4,8 @@
 
   let basicOpen = $state(false);
   let confirmOpen = $state(false);
+  let discardOpen = $state(false);
+  let discardFailed = $state(false);
   let toneOpen = $state<ModalTone | null>(null);
   let tallOpen = $state(false);
 
@@ -75,7 +77,7 @@
 
 <DemoSection
   title="Confirm dialog with footer"
-  description="Use the footer snippet for action rows."
+  description="Use the footer snippet for action rows. A footer carries its own way out, so the header drops its X; Escape and the backdrop still dismiss."
   code={`{#if open}
   <Modal title="Delete session" onclose={close}>
     <p>This cannot be undone.</p>
@@ -100,6 +102,36 @@
             confirmOpen = false;
             showFlash("Deleted (not really)");
           }}
+        />
+      {/snippet}
+    </Modal>
+  {/if}
+</DemoSection>
+
+<DemoSection
+  title="Title-only confirmation"
+  description="When the title says it all, leave the body out. A body whose content is all conditional, such as an error that has not happened, renders no empty band either."
+  code={`{#if open}
+  <Modal title="Discard this draft?" tone="danger" onclose={close}>
+    {#if error}<p>{error}</p>{/if}
+    {#snippet footer()}
+      <Button label="Cancel" onclick={close} />
+      <Button label="Discard" tone="danger" surface="solid" onclick={discard} />
+    {/snippet}
+  </Modal>
+{/if}`}
+>
+  <Button label="Discard draft…" tone="danger" onclick={() => (discardOpen = true)} />
+  {#if discardOpen}
+    <Modal title="Discard this draft?" tone="danger" onclose={() => (discardOpen = false)}>
+      {#if discardFailed}<p>Could not discard the draft.</p>{/if}
+      {#snippet footer()}
+        <Button label="Cancel" onclick={() => (discardOpen = false)} />
+        <Button
+          label="Discard"
+          tone="danger"
+          surface="solid"
+          onclick={() => (discardFailed = true)}
         />
       {/snippet}
     </Modal>

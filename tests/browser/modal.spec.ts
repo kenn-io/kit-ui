@@ -117,3 +117,31 @@ test("without layout, a backdrop press still closes the modal", async ({ page })
   });
   await expect(dialog).toBeHidden();
 });
+
+test("a dialog offers one way out: the X only without a footer", async ({ page }) => {
+  await gotoPage(page, "modal");
+  const dialog = page.getByRole("dialog");
+
+  await page.getByRole("button", { name: "Open modal" }).click();
+  await expect(dialog.getByRole("button", { name: "Dismiss example dialog" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Delete…" }).click();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Close" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});
+
+test("a title-only dialog shows no empty body band", async ({ page }) => {
+  await gotoPage(page, "modal");
+  const dialog = page.getByRole("dialog");
+  await page.getByRole("button", { name: "Discard draft…" }).click();
+  const body = dialog.locator(".kit-modal-body");
+  await expect(body).toBeHidden();
+
+  // The conditional content still shows once there is something to say.
+  await dialog.getByRole("button", { name: "Discard" }).click();
+  await expect(dialog.getByText("Could not discard the draft.")).toBeVisible();
+  await expect(body).toBeVisible();
+});

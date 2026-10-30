@@ -16,7 +16,10 @@
     tone?: ModalTone;
     /** Called when the user dismisses via Escape, overlay click, or the close button. */
     onclose?: () => void;
-    /** Render the X button in the header. */
+    /** Render the X button in the header. Defaults to true without a footer
+     * and false with one: a footer carries its own way out, such as Cancel,
+     * and a second control that does the same is noise. Escape and the
+     * backdrop still dismiss either way. */
     closable?: boolean;
     /** Accessible label for the close button. */
     closeLabel?: string;
@@ -38,7 +41,7 @@
     title = undefined,
     tone = "neutral",
     onclose = undefined,
-    closable = true,
+    closable = undefined,
     closeLabel = "Close",
     closeOnOverlayClick = true,
     width = "auto",
@@ -50,6 +53,7 @@
   }: Props = $props();
 
   const close = () => onclose?.();
+  const showClose = $derived(closable ?? !footer);
 </script>
 
 <svelte:window onkeydown={escapeCloses(close)} />
@@ -66,18 +70,18 @@
     aria-label={ariaLabel ?? title}
     tabindex="-1"
     data-kit-tone={tone === "neutral" ? undefined : tone}
-    class:kit-modal-panel--headered={!!title || closable}
+    class:kit-modal-panel--headered={!!title || showClose}
     style:width
     style:max-width={maxWidth}
     style:max-height={maxHeight}
     {@attach trapFocus}
   >
-    {#if title || closable}
+    {#if title || showClose}
       <div class="kit-modal-header">
         {#if title}
           <span class="kit-modal-title">{title}</span>
         {/if}
-        {#if closable}
+        {#if showClose}
           <IconButton
             size="sm"
             class="kit-modal-close"
@@ -89,11 +93,11 @@
         {/if}
       </div>
     {/if}
-    <div class="kit-modal-body">
-      {#if children}
+    {#if children}
+      <div class="kit-modal-body">
         {@render children()}
-      {/if}
-    </div>
+      </div>
+    {/if}
     {#if footer}
       <div class="kit-modal-footer">
         {@render footer()}
@@ -204,6 +208,13 @@
     /* The header's 16px side padding is for text; pull the button's box
      * back out so its edge gap matches the 6px vertical padding. */
     margin-right: calc(var(--space-3) - var(--space-6));
+  }
+
+  /* A title-only confirmation has nothing to say in its body, and a body whose
+   * content is all conditional can render nothing; either way no empty band
+   * sits between the header and the footer. */
+  .kit-modal-body:empty {
+    display: none;
   }
 
   .kit-modal-body {

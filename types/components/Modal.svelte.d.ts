@@ -7,7 +7,10 @@ interface Props {
     tone?: ModalTone;
     /** Called when the user dismisses via Escape, overlay click, or the close button. */
     onclose?: () => void;
-    /** Render the X button in the header. */
+    /** Render the X button in the header. Defaults to true without a footer
+     * and false with one: a footer carries its own way out, such as Cancel,
+     * and a second control that does the same is noise. Escape and the
+     * backdrop still dismiss either way. */
     closable?: boolean;
     /** Accessible label for the close button. */
     closeLabel?: string;
