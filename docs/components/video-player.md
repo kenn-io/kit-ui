@@ -99,6 +99,7 @@ every theme. To change them, set `--video-control-color`,
 | `label`           | `string`                           | —                               | Accessible name of the video, and of the expanded view               |
 | `poster`          | `string`                           | —                               | Image shown before playback                                          |
 | `preload`         | `"none" \| "metadata" \| "auto"`   | `"metadata"`                    | The `<video>` preload hint                                           |
+| `duration`        | `number`                           | —                               | Length in seconds to show until the video reports its own            |
 | `expandable`      | `boolean`                          | `true`                          | Show the expand control and join the page gallery                    |
 | `expandLabel`     | `string`                           | `"Open video in expanded view"` | Accessible name of the expand control                                |
 | `controlsLabel`   | `string`                           | `"Video controls"`              | Accessible name of the control bar                                   |
@@ -109,6 +110,12 @@ every theme. To change them, set `--video-control-color`,
 | `class`           | `string`                           | —                               | Extra class on the player's root                                     |
 
 Changing `src` or `sources` loads the new video, from the start.
+
+A player with `preload="none"` knows nothing about its video until it plays,
+so its bar reads `0:00 / 0:00`. A host that has the length from elsewhere can
+pass it as `duration`. Only the time text changes: the seek bar stays off until
+the video loads. Once the video reports its own length, that length replaces
+`duration`, even if the two differ.
 
 Video.js labels its own buttons ("Play", "Mute", "Enter fullscreen") in
 English. kit-ui does not localize them yet.

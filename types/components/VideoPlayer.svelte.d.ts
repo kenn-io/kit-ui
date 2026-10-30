@@ -34,6 +34,10 @@ interface Props {
     label: string;
     poster?: string;
     preload?: "none" | "metadata" | "auto";
+    /** The video's length in seconds, if the host already knows it. The
+     * bar shows it until the video reports its own, so an idle player with
+     * `preload="none"` can show its length without fetching anything. */
+    duration?: number | undefined;
     /** Show the expand control, which opens the page gallery (MediaViewer)
      * on this video. The gallery pages through the page's other images,
      * diagrams, and videos. */

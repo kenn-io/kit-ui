@@ -711,3 +711,65 @@ for (const scenario of [
     ).toEqual([{ currentTime: 2, playing: scenario.expectedPlaying }]);
   });
 }
+
+/** Mounts an idle player with no known length, then gives it one, as a host
+ * that reads the length elsewhere does. 12:34 is far from the clip's own. */
+async function mountWithKnownLength(page: Page) {
+  const mediaRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "media") mediaRequests.push(request.url());
+  });
+  await page.evaluate(async () => {
+    const { mountVideoPlayer, clip } =
+      await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+    const { update } = mountVideoPlayer({
+      label: "Idle video",
+      preload: "none",
+      sources: [{ src: clip, type: "video/webm" }],
+    });
+    (window as KnownLengthWindow).knowLength = (duration) => update({ duration });
+  });
+  const player = page.locator(".kit-video-player").filter({ has: page.getByLabel("Idle video") });
+  return { player, video: player.locator("video"), mediaRequests };
+}
+
+type KnownLengthWindow = typeof window & { knowLength: (duration: number) => void };
+
+test("an idle player shows the length its host knows without fetching anything", async ({
+  page,
+}) => {
+  const { player, mediaRequests } = await mountWithKnownLength(page);
+  const lengths = player.locator(".kit-video-player__time").getByText(/^\d+:\d+$/);
+
+  // No known length yet: both clocks read zero, as they always have.
+  await expect(lengths).toHaveText(["0:00", "0:00"]);
+
+  await page.evaluate(() => (window as KnownLengthWindow).knowLength(754.9));
+
+  await expect(player.locator(".kit-video-player__time").getByText("12:34")).toBeVisible();
+  await expect(player.locator(".kit-video-player__length")).toBeHidden();
+  // A length alone gives nothing to seek in.
+  await expect(player.locator("media-time-slider")).toHaveAttribute("data-disabled");
+  expect(mediaRequests).toEqual([]);
+});
+
+test("the video's own length replaces a known one that differs", async ({ page }) => {
+  const { player, video } = await mountWithKnownLength(page);
+  await page.evaluate(() => (window as KnownLengthWindow).knowLength(754));
+  await expect(player.locator(".kit-video-player__time").getByText("12:34")).toBeVisible();
+
+  await video.evaluate((node) => {
+    const media = node as HTMLVideoElement;
+    media.muted = true;
+    return media.play();
+  });
+
+  await expect(player.locator(".kit-video-player__time").getByText("12:34")).toBeHidden();
+  await expect(player.locator(".kit-video-player__length")).toHaveText("0:06");
+  // The seek bar spans the video's own length, not the known one.
+  const length = await video.evaluate((node) => (node as HTMLVideoElement).duration);
+  await expect(player.getByRole("slider", { name: "Seek" })).toHaveAttribute(
+    "aria-valuemax",
+    String(length),
+  );
+});
