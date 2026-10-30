@@ -1,7 +1,8 @@
 # PageHeader
 
 The title block at the top of a page: an optional back link or breadcrumbs,
-the title, a muted description, and trailing actions. Use it for every page
+the title with an optional status beside it, a muted description, and trailing
+actions. Use it for every page
 title so pages share one heading design.
 
 ```svelte
@@ -37,22 +38,55 @@ The text block and the actions sit on one row, with the actions aligned to the
 bottom of the text. When the row is too narrow for both, the actions wrap under
 the title. Long titles wrap anywhere instead of overflowing.
 
+The `trailing` snippet sits on the title's line, for a status chip or label,
+and wraps under the title when the line is full.
+
+## Titles with markup
+
+`title` and `description` take a string or a snippet. Use a snippet when the
+text needs inline code, a monospace ID, or a field such as an inline title
+editor. The heading element and its styles stay the component's, so keep a
+snippet title to content that belongs inside a heading.
+
+```svelte
+<PageHeader>
+  {#snippet title()}Run <code>a1b2c3d</code>{/snippet}
+  {#snippet description()}Started by <code>release.yml</code> on main.{/snippet}
+</PageHeader>
+```
+
+## Moving focus to the title
+
+Set `focusable` to give the heading `tabindex="-1"`, and bind `titleElement` to
+move focus to it after a step or view change, so a screen reader announces the
+new view. The title does not join the tab order.
+
+```svelte
+<PageHeader title="Choose repositories" focusable bind:titleElement={heading} />
+```
+
 ## Props
 
-| Prop          | Type          | Default | Notes                                                          |
-| ------------- | ------------- | ------- | -------------------------------------------------------------- |
-| `title`       | `string`      | —       | Heading text                                                   |
-| `description` | `string`      | —       | Muted line under the title (max-width 75ch)                    |
-| `level`       | `1 \| 2 \| 3` | `1`     | Heading level; use 2 or 3 for a pane on a page with its own h1 |
-| `before`      | `Snippet`     | —       | Above the title: a back link or breadcrumbs                    |
-| `actions`     | `Snippet`     | —       | Trailing controls or status text                               |
+| Prop           | Type                             | Default   | Notes                                                          |
+| -------------- | -------------------------------- | --------- | -------------------------------------------------------------- |
+| `title`        | `string \| Snippet`              | —         | Heading text, or a snippet for a title with markup             |
+| `description`  | `string \| Snippet`              | —         | Muted line under the title (max-width 75ch)                    |
+| `level`        | `1 \| 2 \| 3`                    | `1`       | Heading level; use 2 or 3 for a pane on a page with its own h1 |
+| `size`         | `"large" \| "medium" \| "small"` | `"large"` | Title size, independent of the heading level                   |
+| `focusable`    | `boolean`                        | `false`   | Gives the heading `tabindex="-1"` so script can focus it       |
+| `titleElement` | `HTMLHeadingElement` (bindable)  | —         | The rendered heading                                           |
+| `before`       | `Snippet`                        | —         | Above the title: a back link or breadcrumbs                    |
+| `trailing`     | `Snippet`                        | —         | Beside the title on its line: a status chip or label           |
+| `actions`      | `Snippet`                        | —         | Trailing controls or status text                               |
 
 ## Theming
 
-| Custom property                | Default               | Notes                       |
-| ------------------------------ | --------------------- | --------------------------- |
-| `--kit-page-header-title-size` | `var(--font-size-xl)` | Title size (the Title tier) |
-| `--kit-page-header-title-font` | `inherit`             | Title font family           |
+| Custom property                       | Default               | Notes             |
+| ------------------------------------- | --------------------- | ----------------- |
+| `--kit-page-header-title-size`        | `var(--font-size-xl)` | Large title size  |
+| `--kit-page-header-title-size-medium` | `var(--font-size-lg)` | Medium title size |
+| `--kit-page-header-title-size-small`  | `var(--font-size-md)` | Small title size  |
+| `--kit-page-header-title-font`        | `inherit`             | Title font family |
 
 Set these on `:root` or on a page container to give an app a larger display
 title without changing the component.
