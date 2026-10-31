@@ -711,3 +711,127 @@ for (const scenario of [
     ).toEqual([{ currentTime: 2, playing: scenario.expectedPlaying }]);
   });
 }
+
+/** Mounts an idle player with no known length, then gives it one, as a host
+ * that reads the length elsewhere does. 12:34 is far from the clip's own. */
+async function mountWithKnownLength(page: Page) {
+  const mediaRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "media") mediaRequests.push(request.url());
+  });
+  await page.evaluate(async () => {
+    const { mountVideoPlayer, clip } =
+      await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+    const { update } = mountVideoPlayer({
+      label: "Idle video",
+      preload: "none",
+      sources: [{ src: clip, type: "video/webm" }],
+    });
+    (window as KnownLengthWindow).knowLength = (duration) => update({ duration });
+  });
+  const player = page.locator(".kit-video-player").filter({ has: page.getByLabel("Idle video") });
+  return { player, video: player.locator("video"), mediaRequests };
+}
+
+type KnownLengthWindow = typeof window & { knowLength: (duration: number) => void };
+
+test("an idle player shows the length its host knows without fetching anything", async ({
+  page,
+}) => {
+  const { player, mediaRequests } = await mountWithKnownLength(page);
+  const lengths = player.locator(".kit-video-player__time").getByText(/^\d+:\d+$/);
+
+  // No known length yet: both clocks read zero, as they always have.
+  await expect(lengths).toHaveText(["0:00", "0:00"]);
+
+  await page.evaluate(() => (window as KnownLengthWindow).knowLength(754.9));
+
+  await expect(player.locator(".kit-video-player__time").getByText("12:34")).toBeVisible();
+  await expect(player.locator(".kit-video-player__clock")).toHaveCount(2);
+  await expect(player.locator(".kit-video-player__clock:visible")).toHaveCount(0);
+  // A length alone gives nothing to seek in.
+  await expect(player.locator("media-time-slider")).toHaveAttribute("data-disabled");
+  expect(mediaRequests).toEqual([]);
+});
+
+test("the video's own length replaces a known one that differs", async ({ page }) => {
+  const { player, video } = await mountWithKnownLength(page);
+  await page.evaluate(() => (window as KnownLengthWindow).knowLength(754));
+  await expect(player.locator(".kit-video-player__time").getByText("12:34")).toBeVisible();
+
+  await video.evaluate((node) => {
+    const media = node as HTMLVideoElement;
+    media.muted = true;
+    return media.play();
+  });
+
+  await expect(player.locator(".kit-video-player__time").getByText("12:34")).toBeHidden();
+  await expect(player.locator(".kit-video-player__clock").last()).toHaveText("0:06");
+  // The seek bar spans the video's own length, not the known one.
+  const length = await video.evaluate((node) => (node as HTMLVideoElement).duration);
+  await expect(player.getByRole("slider", { name: "Seek" })).toHaveAttribute(
+    "aria-valuemax",
+    String(length),
+  );
+});
+
+// A real clip of the given length, so Video.js formats the clocks itself once
+// it loads. Silence at the lowest sample rate Chromium accepts keeps it small.
+async function mountSilentClip(page: Page, seconds: number) {
+  const rate = 3000;
+  const samples = rate * seconds;
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + samples, 4);
+  header.write("WAVEfmt ", 8);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate, 28);
+  header.writeUInt16LE(1, 32);
+  header.writeUInt16LE(8, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(samples, 40);
+  const body = Buffer.concat([header, Buffer.alloc(samples, 128)]);
+  await page.route("**/silent-clip.wav", (route) =>
+    route.fulfill({ body, contentType: "audio/wav" }),
+  );
+  await page.evaluate(async (seconds) => {
+    const { mountVideoPlayer } =
+      await import("/tests/browser/fixtures/mount-video-player.svelte.ts");
+    mountVideoPlayer({
+      label: "Long video",
+      preload: "none",
+      duration: seconds,
+      src: "/silent-clip.wav",
+    });
+  }, seconds);
+}
+
+for (const clip of [
+  { name: "under ten minutes", seconds: 599, clocks: ["0:00", "9:59"] },
+  { name: "ten minutes or more", seconds: 754, clocks: ["00:00", "12:34"] },
+  { name: "an hour or more", seconds: 3700, clocks: ["0:00:00", "1:01:40"] },
+]) {
+  test(`the clocks of a video ${clip.name} read the same before and after it loads`, async ({
+    page,
+  }) => {
+    await mountSilentClip(page, clip.seconds);
+    const player = page.locator(".kit-video-player").filter({ has: page.getByLabel("Long video") });
+    const clocks = player.locator(".kit-video-player__time > :is(media-time, time):visible");
+    const video = player.locator("video");
+
+    await expect(clocks).toHaveText(clip.clocks);
+    expect(await video.evaluate((node) => (node as HTMLVideoElement).readyState)).toBe(0);
+
+    await video.evaluate((node) => {
+      const media = node as HTMLVideoElement;
+      media.load();
+      return new Promise((resolve) => media.addEventListener("loadedmetadata", resolve));
+    });
+
+    await expect(player.locator("media-time-slider")).not.toHaveAttribute("data-disabled");
+    await expect(clocks).toHaveText(clip.clocks);
+  });
+}

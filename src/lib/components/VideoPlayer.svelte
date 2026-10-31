@@ -44,6 +44,18 @@
       // Storage blocked; the speed lasts only for this player.
     }
   }
+
+  // Video.js's clock: it rounds down and pads to fit the video's length, so
+  // a known length reads the same as the video's own once that replaces it.
+  function formatClock(seconds: number, length: number): string {
+    const total = Math.floor(seconds);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = String(total % 60).padStart(2, "0");
+    if (length >= 3600) {
+      return `${Math.floor(total / 3600)}:${String(minutes).padStart(2, "0")}:${secs}`;
+    }
+    return `${String(minutes).padStart(length >= 600 ? 2 : 1, "0")}:${secs}`;
+  }
 </script>
 
 <script lang="ts">
@@ -75,6 +87,10 @@
     label: string;
     poster?: string;
     preload?: "none" | "metadata" | "auto";
+    /** The video's length in seconds, if the host already knows it. The
+     * bar shows it until the video reports its own, so an idle player with
+     * `preload="none"` can show its length without fetching anything. */
+    duration?: number | undefined;
     /** Show the expand control, which opens the page gallery (MediaViewer)
      * on this video. The gallery pages through the page's other images,
      * diagrams, and videos. */
@@ -100,6 +116,7 @@
     label,
     poster = undefined,
     preload = "metadata",
+    duration = undefined,
     expandable = true,
     expandLabel = "Open video in expanded view",
     onViewerOpen = undefined,
@@ -275,9 +292,19 @@
               <media-slider-thumb class="kit-video-player__thumb"></media-slider-thumb>
             </media-time-slider>
             <media-time-group class="kit-video-player__time">
-              <media-time type="current"></media-time>
+              <media-time type="current" class="kit-video-player__clock"></media-time>
+              {#if duration !== undefined}
+                <time class="kit-video-player__known-clock" datetime="PT0S"
+                  >{formatClock(0, duration)}</time
+                >
+              {/if}
               <media-time-separator></media-time-separator>
-              <media-time type="duration"></media-time>
+              <media-time type="duration" class="kit-video-player__clock"></media-time>
+              {#if duration !== undefined}
+                <time class="kit-video-player__known-clock" datetime={`PT${Math.floor(duration)}S`}
+                  >{formatClock(duration, duration)}</time
+                >
+              {/if}
             </media-time-group>
 
             <span class="kit-video-player__spacer"></span>
@@ -568,6 +595,13 @@
     font-size: var(--font-size-sm);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+  }
+
+  /* Video.js marks its clocks unavailable until the video reports a length.
+   * It drives the swap, so the video's own clocks always win. */
+  .kit-video-player__clock:global([data-unavailable]):has(+ .kit-video-player__known-clock),
+  .kit-video-player__clock:global(:not([data-unavailable])) + .kit-video-player__known-clock {
+    display: none;
   }
 
   /* A narrow player keeps every control on one row, as Video.js's own
