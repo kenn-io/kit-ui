@@ -1,0 +1,47 @@
+review_guidelines = """
+## What this repository is
+
+kit-ui is a public, Apache-2.0 Svelte 5 component library shared by frontends such as
+Forge and agentsview. Consumers take it as source: `package.json` exports point at
+`src/lib/index.ts`, there is no library build, and `vite build` bundles only the demo gallery.
+`types/` holds generated declarations, committed because git dependencies get no install-time
+build; `bun run check:types` in CI checks that they are present, fresh, and exported. Do not flag
+the missing library build or the committed declarations, and do not review `types/` as
+hand-written code.
+
+Breaking API changes are acceptable (AGENTS.md "API stability"). Do not flag a renamed prop,
+removed export, or changed default as a compatibility break, and do not ask for deprecation
+aliases or compatibility shims.
+
+## Where untrusted input enters
+
+Markdown and Mermaid documents rendered through kit-ui are untrusted.
+
+- `src/lib/utils/markdown.ts` renders with marked, highlights fences with shiki, and sanitizes the
+  result with DOMPurify. Inline `style` survives only on nonce-tagged shiki nodes and only as
+  `--shiki-*` hex colors; `<style>` is forbidden; links with `target` get
+  `rel="noopener noreferrer"`; per-document budgets cap highlighted fences, languages, and bytes;
+  rendering refuses to run without a DOM so unsanitized output never escapes. Flag a change that
+  widens the allowed tags or attributes, opens another style channel, skips sanitization, or
+  removes a budget.
+- `src/lib/utils/markdown-mermaid.ts` uses Mermaid's strict security level, no HTML labels, a
+  DOMPurify configuration that forbids `style`, security-relevant configuration keys locked with
+  `secure` so init directives cannot loosen them, and per-root diagram budgets. A diagram's own
+  `classDef` and `style` directives are trusted author styling that kit-ui re-applies through
+  CSSOM. Do not report diagram author styling as a kit-ui vulnerability.
+  Flag a change that loosens the security level, enables HTML labels, unlocks a `secure` key, or
+  removes a budget. The module is deliberately absent from the `src/lib/index.ts` barrel so apps
+  without the optional `mermaid` peer still build.
+
+CI runs on `pull_request` with a read-only contents token and no secrets. Public Namespace runner
+profiles use Restricted access, which disables workload access to Namespace features and APIs; do
+not treat it as fork, network, or cache isolation. Flag a workflow change that adds secrets, write
+permissions, or `pull_request_target`.
+
+## Findings that do not apply
+
+Rules in `checks/rules.mjs` are heuristics meant to be right for the common case, not exact
+parsers of Svelte, CSS, or JS. Do not report edge cases of the matching itself, such as braces
+inside strings, unusual nesting, markup inside script strings, or rare attribute forms. Do report
+a rule that misfires on common, idiomatic code.
+"""
