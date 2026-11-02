@@ -147,7 +147,7 @@
     "svelte": "5.56.3",
     "svelte-check": "4.6.0",
     "svelte2tsx": "0.7.61",
-    "typescript": "^5.9.0",
+    "typescript": "^6.0.0",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
     "vite-plus": "1.4.0"
   },
