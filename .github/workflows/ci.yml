@@ -49,7 +49,7 @@ jobs:
         run: bun run check:usage
 
       - name: Build demo gallery
-        run: bun run build
+        run: bun run build:demo
 
       # Fails if the gallery can paint before its stylesheet and fonts load.
       - uses: kenn-io/actions/first-paint@main

@@ -10,6 +10,14 @@ condition pointing into it. Consumers type-checking with
 `svelte-check --tsgo` only transpile `.svelte` files in their own workspace,
 so without these declarations kit-ui components lose their prop types there.
 
+Keep the git-dependency install free of npm preparation. If `package.json` has
+`workspaces` or a `build`, `prepare`, `prepack`, `preinstall`, `install`, or
+`postinstall` script, npm runs `npm install --force` in a fresh clone of
+kit-ui on every consumer install. That install ignores `bun.lock` and the
+consumer's lockfile, so it fetches the whole dev toolchain at whatever versions
+the registry serves that minute. The demo build is `build:demo` for this
+reason, and `vercel.json` names it as the Vercel build command.
+
 ## Namespace runners
 
 Public Namespace runner profiles use **Restricted** access, which [disables workload access to Namespace features and APIs](https://namespace.so/docs/solutions/github-actions/runner-controls/access-levels).
@@ -53,7 +61,7 @@ bun run generate:types     # regenerate the committed types/ declarations
 bun run check:types        # CI/hook guard: declarations present, fresh, exported
 bun run fmt      # vp fmt (oxfmt, .oxfmtrc.json) — same Vite+ setup as Forge
 bun run fmt:check && bun run lint   # CI-enforced format + lint (vite-plus)
-bun run build    # builds the demo gallery
+bun run build:demo   # builds the demo gallery
 bun test         # unit tests (checks/*.test.ts — rules, windowing, shortcuts, markdown)
 bun run test:browser       # Playwright suite against the demo gallery (docs/testing.md)
 bun run check:usage        # dogfood kit-ui-check against src/demo, and rounded-side-stripe against src/lib (must be clean)

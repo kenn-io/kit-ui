@@ -187,7 +187,7 @@ bun run dev</pre>
       </p>
 
       <h2>Production preview</h2>
-      <pre>bun run build
+      <pre>bun run build:demo
 bun run preview</pre>
 
       <p class="closing">Before sharing a change, check the relevant components in light mode, dark mode, and Mobile preview.</p>
