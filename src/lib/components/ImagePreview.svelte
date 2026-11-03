@@ -39,6 +39,17 @@
   // automatically clears the error without an effect.
   let failedSrc = $state<string | null>(null);
   const failed = $derived(failedSrc === src);
+  // An SVG that declares only a viewBox has an aspect ratio but no natural
+  // size, so it lays out at zero width inside the shrink-to-fit trigger.
+  // Such an image fills the panel instead; tracked per URL like failedSrc.
+  let fillSrc = $state<string | null>(null);
+  const fill = $derived(fillSrc === src);
+
+  function measureNaturalSize(event: Event): void {
+    const img = event.currentTarget as HTMLImageElement;
+    const rendered = img.getClientRects().length > 0;
+    if (rendered && img.naturalWidth > 0 && img.clientWidth === 0) fillSrc = src;
+  }
 
   const triggerLabel = $derived(alt.trim() ? `${expandLabel}: ${alt}` : expandLabel);
 
@@ -70,7 +81,7 @@
   }
 </script>
 
-<div class="kit-image-preview">
+<div class="kit-image-preview" class:kit-image-preview--fill={fill}>
   {#if failed}
     <p class="kit-image-preview__error">{errorLabel}</p>
   {:else if expandable}
@@ -87,6 +98,7 @@
         {src}
         {alt}
         style:max-height={maxHeight}
+        onload={measureNaturalSize}
         onerror={() => (failedSrc = src)}
       />
       <span class="kit-image-preview__hint" aria-hidden="true">
@@ -99,6 +111,7 @@
       {src}
       {alt}
       style:max-height={maxHeight}
+      onload={measureNaturalSize}
       onerror={() => (failedSrc = src)}
     />
   {/if}
@@ -148,6 +161,14 @@
     object-fit: contain;
     border: var(--border-width) solid var(--border-muted);
     background: var(--bg-surface);
+  }
+
+  .kit-image-preview--fill .kit-image-preview__trigger {
+    width: min(100%, 960px);
+  }
+
+  .kit-image-preview--fill .kit-image-preview__img {
+    width: min(100%, 960px);
   }
 
   /* Decorative affordance only — the whole trigger is the control. */
