@@ -29,9 +29,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // CI keeps GitHub annotations and also lists every test by name, so a
-  // passing rerun's log shows which tests passed.
-  reporter: process.env.CI ? [["list"], ["github"]] : "list",
+  // CI keeps GitHub annotations and lists every test by name. It also
+  // writes a JSON report, uploaded as an artifact, where a test that failed
+  // and then passed on a retry is marked "flaky".
+  reporter: process.env.CI
+    ? [["list"], ["github"], ["json", { outputFile: "test-results/playwright/browser.json" }]]
+    : "list",
   use: {
     baseURL,
     viewport: { width: 1280, height: 800 },

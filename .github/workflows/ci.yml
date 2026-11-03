@@ -91,6 +91,17 @@ jobs:
         timeout-minutes: 17
         run: bun run test:browser
 
+      # The JSON report marks a test that failed and then passed on a retry
+      # as "flaky", so flaky tests can be found without parsing the log.
+      - name: Upload Playwright JSON report
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: playwright-browser-attempt-${{ github.run_attempt }}
+          path: test-results/playwright/browser.json
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7.0.2
