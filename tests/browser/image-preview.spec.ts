@@ -97,3 +97,32 @@ test("a viewBox-only SVG that loads while hidden fills the panel once shown", as
     .poll(() => image.evaluate((img) => (img as HTMLImageElement).offsetWidth))
     .toBeGreaterThan(100);
 });
+
+test("a sized image that loads in a zero-width container keeps its natural size", async ({
+  page,
+}) => {
+  await gotoPage(page, "image-preview");
+  const src = svg(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24"/></svg>',
+  );
+  await page.evaluate(async (previewSrc) => {
+    const { mountImagePreview } = await import("/tests/browser/fixtures/mount-image-preview.ts");
+    mountImagePreview("Squeezed icon", previewSrc);
+    // The fixture appends its host last; give it no width before the image loads.
+    (document.body.lastElementChild as HTMLElement).style.width = "0";
+  }, src);
+  const image = page.getByRole("img", { name: "Squeezed icon" });
+  await expect.poll(() => image.evaluate((img) => (img as HTMLImageElement).complete)).toBe(true);
+
+  await image.evaluate((img) => {
+    (img.closest(".kit-image-preview")!.parentElement as HTMLElement).style.width = "600px";
+  });
+  await expect
+    .poll(() =>
+      image.evaluate((img) => [
+        (img as HTMLImageElement).offsetWidth,
+        (img as HTMLImageElement).offsetHeight,
+      ]),
+    )
+    .toEqual([26, 26]);
+});

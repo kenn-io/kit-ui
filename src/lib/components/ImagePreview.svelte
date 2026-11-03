@@ -46,8 +46,17 @@
   const fill = $derived(fillSrc === src);
 
   function measureNaturalSize(img: HTMLImageElement): void {
-    const rendered = img.getClientRects().length > 0;
-    if (img.complete && rendered && img.naturalWidth > 0 && img.clientWidth === 0) fillSrc = src;
+    if (!img.complete || img.naturalWidth === 0 || img.clientWidth > 0) return;
+    // A zero-width image only means "no natural size" when it had room to
+    // grow; a hidden or zero-width panel squeezes every image to nothing.
+    const panel = img.closest<HTMLElement>(".kit-image-preview");
+    if (!panel || panel.getClientRects().length === 0) return;
+    const style = getComputedStyle(panel);
+    const room =
+      panel.clientWidth -
+      Number.parseFloat(style.paddingLeft) -
+      Number.parseFloat(style.paddingRight);
+    if (room > 0) fillSrc = src;
   }
 
   // An image that loads while hidden cannot be measured on load, and showing
