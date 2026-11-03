@@ -29,7 +29,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  // CI keeps GitHub annotations and also lists every test by name, so a
+  // passing rerun's log shows which tests passed.
+  reporter: process.env.CI ? [["list"], ["github"]] : "list",
   use: {
     baseURL,
     viewport: { width: 1280, height: 800 },
