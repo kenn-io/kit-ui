@@ -45,10 +45,21 @@
   let fillSrc = $state<string | null>(null);
   const fill = $derived(fillSrc === src);
 
-  function measureNaturalSize(event: Event): void {
-    const img = event.currentTarget as HTMLImageElement;
+  function measureNaturalSize(img: HTMLImageElement): void {
     const rendered = img.getClientRects().length > 0;
-    if (rendered && img.naturalWidth > 0 && img.clientWidth === 0) fillSrc = src;
+    if (img.complete && rendered && img.naturalWidth > 0 && img.clientWidth === 0) fillSrc = src;
+  }
+
+  // An image that loads while hidden cannot be measured on load, and showing
+  // it fires no new load event. The panel gains a size when it is shown, so
+  // measure again then.
+  function remeasureWhenShown(panel: HTMLElement) {
+    const observer = new ResizeObserver(() => {
+      const img = panel.querySelector<HTMLImageElement>(".kit-image-preview__img");
+      if (img) measureNaturalSize(img);
+    });
+    observer.observe(panel);
+    return () => observer.disconnect();
   }
 
   const triggerLabel = $derived(alt.trim() ? `${expandLabel}: ${alt}` : expandLabel);
@@ -81,7 +92,7 @@
   }
 </script>
 
-<div class="kit-image-preview" class:kit-image-preview--fill={fill}>
+<div class="kit-image-preview" class:kit-image-preview--fill={fill} {@attach remeasureWhenShown}>
   {#if failed}
     <p class="kit-image-preview__error">{errorLabel}</p>
   {:else if expandable}
@@ -98,7 +109,7 @@
         {src}
         {alt}
         style:max-height={maxHeight}
-        onload={measureNaturalSize}
+        onload={(event) => measureNaturalSize(event.currentTarget as HTMLImageElement)}
         onerror={() => (failedSrc = src)}
       />
       <span class="kit-image-preview__hint" aria-hidden="true">
@@ -111,7 +122,7 @@
       {src}
       {alt}
       style:max-height={maxHeight}
-      onload={measureNaturalSize}
+      onload={(event) => measureNaturalSize(event.currentTarget as HTMLImageElement)}
       onerror={() => (failedSrc = src)}
     />
   {/if}

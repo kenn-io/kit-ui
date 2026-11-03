@@ -74,3 +74,26 @@ test("a small sized image keeps its natural size", async ({ page }) => {
   );
   expect(size).toMatchObject({ width: 26, height: 26 });
 });
+
+test("a viewBox-only SVG that loads while hidden fills the panel once shown", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 900 });
+  await gotoPage(page, "image-preview");
+  const src = svg(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 256"><rect width="512" height="256"/></svg>',
+  );
+  await page.evaluate(async (previewSrc) => {
+    const { mountImagePreview } = await import("/tests/browser/fixtures/mount-image-preview.ts");
+    mountImagePreview("Hidden viewbox", previewSrc);
+    // The fixture appends its host last; hide it before the image loads.
+    (document.body.lastElementChild as HTMLElement).hidden = true;
+  }, src);
+  const image = page.getByRole("img", { name: "Hidden viewbox", includeHidden: true });
+  await expect.poll(() => image.evaluate((img) => (img as HTMLImageElement).complete)).toBe(true);
+
+  await image.evaluate((img) => {
+    (img.closest(".kit-image-preview")!.parentElement as HTMLElement).hidden = false;
+  });
+  await expect
+    .poll(() => image.evaluate((img) => (img as HTMLImageElement).offsetWidth))
+    .toBeGreaterThan(100);
+});
