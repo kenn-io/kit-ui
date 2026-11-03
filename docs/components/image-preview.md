@@ -13,8 +13,10 @@ built-in failure state. Extracted from Forge's diff rich preview
 <ImagePreview src={dataURL} alt="screenshot.png" />
 ```
 
-The image never exceeds the panel (`max-width: min(100%, 960px)`) and is
-capped at `maxHeight` (default `70vh`). When the source fails to load, the
+The image keeps its natural size, never exceeds the panel (`max-width:
+min(100%, 960px)`), and is capped at `maxHeight` (default `70vh`). An SVG
+that declares only a `viewBox` has no natural size, so it fills the panel up
+to the same 960px limit instead of collapsing to nothing. When the source fails to load, the
 panel shows `errorLabel` instead of the browser's broken-image glyph. A
 `src` change retries automatically.
 

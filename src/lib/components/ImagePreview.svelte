@@ -39,6 +39,37 @@
   // automatically clears the error without an effect.
   let failedSrc = $state<string | null>(null);
   const failed = $derived(failedSrc === src);
+  // An SVG that declares only a viewBox has an aspect ratio but no natural
+  // size, so it lays out at zero width inside the shrink-to-fit trigger.
+  // Such an image fills the panel instead; tracked per URL like failedSrc.
+  let fillSrc = $state<string | null>(null);
+  const fill = $derived(fillSrc === src);
+
+  function measureNaturalSize(img: HTMLImageElement): void {
+    if (!img.complete || img.naturalWidth === 0 || img.clientWidth > 0) return;
+    // A zero-width image only means "no natural size" when it had room to
+    // grow; a hidden or zero-width panel squeezes every image to nothing.
+    const panel = img.closest<HTMLElement>(".kit-image-preview");
+    if (!panel || panel.getClientRects().length === 0) return;
+    const style = getComputedStyle(panel);
+    const room =
+      panel.clientWidth -
+      Number.parseFloat(style.paddingLeft) -
+      Number.parseFloat(style.paddingRight);
+    if (room > 0) fillSrc = src;
+  }
+
+  // An image that loads while hidden cannot be measured on load, and showing
+  // it fires no new load event. The panel gains a size when it is shown, so
+  // measure again then.
+  function remeasureWhenShown(panel: HTMLElement) {
+    const observer = new ResizeObserver(() => {
+      const img = panel.querySelector<HTMLImageElement>(".kit-image-preview__img");
+      if (img) measureNaturalSize(img);
+    });
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }
 
   const triggerLabel = $derived(alt.trim() ? `${expandLabel}: ${alt}` : expandLabel);
 
@@ -70,7 +101,7 @@
   }
 </script>
 
-<div class="kit-image-preview">
+<div class="kit-image-preview" class:kit-image-preview--fill={fill} {@attach remeasureWhenShown}>
   {#if failed}
     <p class="kit-image-preview__error">{errorLabel}</p>
   {:else if expandable}
@@ -87,6 +118,7 @@
         {src}
         {alt}
         style:max-height={maxHeight}
+        onload={(event) => measureNaturalSize(event.currentTarget as HTMLImageElement)}
         onerror={() => (failedSrc = src)}
       />
       <span class="kit-image-preview__hint" aria-hidden="true">
@@ -99,6 +131,7 @@
       {src}
       {alt}
       style:max-height={maxHeight}
+      onload={(event) => measureNaturalSize(event.currentTarget as HTMLImageElement)}
       onerror={() => (failedSrc = src)}
     />
   {/if}
@@ -148,6 +181,14 @@
     object-fit: contain;
     border: var(--border-width) solid var(--border-muted);
     background: var(--bg-surface);
+  }
+
+  .kit-image-preview--fill .kit-image-preview__trigger {
+    width: min(100%, 960px);
+  }
+
+  .kit-image-preview--fill .kit-image-preview__img {
+    width: min(100%, 960px);
   }
 
   /* Decorative affordance only — the whole trigger is the control. */
