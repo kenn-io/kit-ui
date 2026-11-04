@@ -45,6 +45,7 @@ const SHIKI_DARK_THEME = "github-dark-default";
 const SHIKI_THEMES = { light: SHIKI_LIGHT_THEME, dark: SHIKI_DARK_THEME } as const;
 const SHIKI_PLAINTEXT_LANG = "text";
 const SHIKI_GENERATED_ATTR = "data-kit-shiki";
+const MARKDOWN_CACHE_MAX_SOURCE_CHARACTERS = 8 * 1024 * 1024;
 
 // Highlighting budgets per document — beyond these, remaining fences
 // render as escaped plain text instead of stalling the main thread or
@@ -381,7 +382,8 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
 
 /** Build a renderer with app-specific options. Create one per app (or
  * per distinct option set) and reuse it — each instance owns a Marked
- * instance and an LRU-ish render cache. */
+ * instance and an LRU render cache bounded by 8 * 1024 * 1024 source
+ * characters, measured by string.length in UTF-16 code units. */
 export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): MarkdownRenderer {
   const marked = new Marked({ gfm: true, breaks: options.breaks ?? true });
   if (options.extensions?.length) {
@@ -399,6 +401,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
     return false;
   });
   const cache = new Map<string, Promise<string>>();
+  let cacheSourceCharacters = 0;
 
   function renderTokens(
     tokens: Tokens.Generic[],
@@ -423,7 +426,11 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
     async render(raw: string): Promise<string> {
       if (!raw) return "";
       const cached = cache.get(raw);
-      if (cached !== undefined) return cached;
+      if (cached !== undefined) {
+        cache.delete(raw);
+        cache.set(raw, cached);
+        return cached;
+      }
       const html = (async () => {
         const tokens = marked.lexer(raw) as Tokens.Generic[];
         const skip = options.codeFence
@@ -433,9 +440,25 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
         await loadCodeFenceLanguages(plan.languages);
         return renderTokens(tokens, plan.tokens);
       })();
-      if (cache.size > 500) cache.clear();
-      cache.set(raw, html);
-      html.catch(() => cache.delete(raw));
+      // Count source characters using string.length, in UTF-16 code units.
+      // Oversized sources still render, but leave the working set intact.
+      const sourceCharacters = raw.length;
+      if (sourceCharacters <= MARKDOWN_CACHE_MAX_SOURCE_CHARACTERS) {
+        while (cacheSourceCharacters + sourceCharacters > MARKDOWN_CACHE_MAX_SOURCE_CHARACTERS) {
+          const oldest = cache.keys().next().value!;
+          cache.delete(oldest);
+          cacheSourceCharacters -= oldest.length;
+        }
+        cache.set(raw, html);
+        cacheSourceCharacters += sourceCharacters;
+        html.catch(() => {
+          // An evicted render may fail after the same source was cached again.
+          if (cache.get(raw) === html) {
+            cache.delete(raw);
+            cacheSourceCharacters -= sourceCharacters;
+          }
+        });
+      }
       return html;
     },
 

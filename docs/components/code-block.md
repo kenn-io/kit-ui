@@ -80,7 +80,7 @@ import {
 
 `createMarkdownRenderer(options)` is the app extension point — create one
 per app and reuse it (each instance owns a Marked instance and a render
-cache, cleared past 500 entries):
+cache capped at 8,388,608 source characters):
 
 ```ts
 const renderer = createMarkdownRenderer({
@@ -186,9 +186,16 @@ Highlighting failures never reject: a failed shiki/theme chunk load
 failed init isn't cached, so a later render retries. `highlightCode`
 resolves `null` on any failure. The `Markdown` component keeps the
 previous document and logs a `console.error` if rendering itself throws.
-The per-renderer cache holds raw→HTML promises and clears wholesale past
-500 entries; documents are typically small, but byte-bound your own layer
-if you render huge sources.
+The per-renderer cache holds raw→HTML promises within a budget of
+`8 * 1024 * 1024` source characters, measured by `raw.length` in UTF-16 code
+units. Hits refresh recency; new entries evict the least recently used
+sources individually. Sources larger than the budget render without
+caching. Failed renders leave the cache so later calls can retry. This
+budget measures source length only; rendered HTML and cache overhead use
+additional memory. A working set larger than the budget that is
+re-rendered in order, such as remounting an unvirtualized transcript,
+misses on every source; 8 Mi characters holds about 5,000 messages of
+1,600 source characters each.
 
 ### Highlighting budgets
 
