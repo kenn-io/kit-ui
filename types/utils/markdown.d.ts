@@ -98,7 +98,8 @@ export interface MarkdownRenderer {
 }
 /** Build a renderer with app-specific options. Create one per app (or
  * per distinct option set) and reuse it — each instance owns a Marked
- * instance and an LRU render cache bounded by 8 MiB of UTF-16 source text. */
+ * instance and an LRU render cache bounded by 8 * 1024 * 1024 source
+ * characters, measured by string.length in UTF-16 code units. */
 export declare function createMarkdownRenderer(options?: MarkdownRendererOptions): MarkdownRenderer;
 /** Render markdown with the default (no app extensions) renderer. */
 export declare function renderMarkdown(raw: string): Promise<string>;

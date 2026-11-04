@@ -45,7 +45,7 @@ const SHIKI_DARK_THEME = "github-dark-default";
 const SHIKI_THEMES = { light: SHIKI_LIGHT_THEME, dark: SHIKI_DARK_THEME } as const;
 const SHIKI_PLAINTEXT_LANG = "text";
 const SHIKI_GENERATED_ATTR = "data-kit-shiki";
-const MARKDOWN_CACHE_MAX_SOURCE_BYTES = 8 * 1024 * 1024;
+const MARKDOWN_CACHE_MAX_SOURCE_CHARACTERS = 8 * 1024 * 1024;
 
 // Highlighting budgets per document — beyond these, remaining fences
 // render as escaped plain text instead of stalling the main thread or
@@ -382,7 +382,8 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
 
 /** Build a renderer with app-specific options. Create one per app (or
  * per distinct option set) and reuse it — each instance owns a Marked
- * instance and an LRU render cache bounded by 8 MiB of UTF-16 source text. */
+ * instance and an LRU render cache bounded by 8 * 1024 * 1024 source
+ * characters, measured by string.length in UTF-16 code units. */
 export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): MarkdownRenderer {
   const marked = new Marked({ gfm: true, breaks: options.breaks ?? true });
   if (options.extensions?.length) {
@@ -400,7 +401,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
     return false;
   });
   const cache = new Map<string, Promise<string>>();
-  let cacheSourceBytes = 0;
+  let cacheSourceCharacters = 0;
 
   function renderTokens(
     tokens: Tokens.Generic[],
@@ -439,22 +440,22 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
         await loadCodeFenceLanguages(plan.languages);
         return renderTokens(tokens, plan.tokens);
       })();
-      // Count two bytes per UTF-16 code unit, including surrogate pairs.
+      // Count source characters using string.length, in UTF-16 code units.
       // Oversized sources still render, but leave the working set intact.
-      const sourceBytes = raw.length * 2;
-      if (sourceBytes <= MARKDOWN_CACHE_MAX_SOURCE_BYTES) {
-        while (cacheSourceBytes + sourceBytes > MARKDOWN_CACHE_MAX_SOURCE_BYTES) {
+      const sourceCharacters = raw.length;
+      if (sourceCharacters <= MARKDOWN_CACHE_MAX_SOURCE_CHARACTERS) {
+        while (cacheSourceCharacters + sourceCharacters > MARKDOWN_CACHE_MAX_SOURCE_CHARACTERS) {
           const oldest = cache.keys().next().value!;
           cache.delete(oldest);
-          cacheSourceBytes -= oldest.length * 2;
+          cacheSourceCharacters -= oldest.length;
         }
         cache.set(raw, html);
-        cacheSourceBytes += sourceBytes;
+        cacheSourceCharacters += sourceCharacters;
         html.catch(() => {
           // An evicted render may fail after the same source was cached again.
           if (cache.get(raw) === html) {
             cache.delete(raw);
-            cacheSourceBytes -= sourceBytes;
+            cacheSourceCharacters -= sourceCharacters;
           }
         });
       }

@@ -16,7 +16,7 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
 test.describe("render cache", () => {
   test.beforeEach(async ({ page }) => gotoPage(page, "markdown"));
 
-  test("reuses more than 500 sources and shares concurrent renders", async ({ page }) => {
+  test("reuses 1000 sources of 5 KiB and shares concurrent renders", async ({ page }) => {
     const result = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
       let parses = 0;
@@ -29,19 +29,20 @@ test.describe("render cache", () => {
         },
       });
       const concurrent = await Promise.all([renderer.render("Hello"), renderer.render("Hello")]);
-      for (let i = 0; i < 600; i++) await renderer.render(`Message ${i}`);
+      const sources = Array.from({ length: 1000 }, (_, i) => `Message ${i} `.padEnd(5 * 1024, "x"));
+      for (const source of sources) await renderer.render(source);
       const before = parses;
-      for (let i = 0; i < 600; i++) await renderer.render(`Message ${i}`);
+      for (const source of sources) await renderer.render(source);
       return { concurrent, before, after: parses };
     });
     expect(result).toEqual({
       concurrent: ["<p>Hello</p>\n", "<p>Hello</p>\n"],
-      before: 601,
-      after: 601,
+      before: 1001,
+      after: 1001,
     });
   });
 
-  test("evicts only the least recently used sources at the byte limit", async ({ page }) => {
+  test("evicts only the least recently used sources at the character limit", async ({ page }) => {
     const result = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
       let parses = 0;
@@ -53,9 +54,9 @@ test.describe("render cache", () => {
           },
         },
       });
-      // Four 2 MiB UTF-16 sources fill the 8 MiB budget exactly.
+      // Four sources of 2 * 1024 * 1024 characters fill the budget exactly.
       const sources = ["a", "b", "c", "d"].map(
-        (id) => `<!--${id}${"文".repeat(1024 * 1024 - 8)}-->`,
+        (id) => `<!--${id}${"文".repeat(2 * 1024 * 1024 - 8)}-->`,
       );
       for (const source of sources) await renderer.render(source);
       await renderer.render(sources[0]);
@@ -82,7 +83,7 @@ test.describe("render cache", () => {
         },
       });
       await renderer.render("<!--keep-->");
-      const oversized = `<!--${"x".repeat(4 * 1024 * 1024)}-->`;
+      const oversized = `<!--${"x".repeat(8 * 1024 * 1024)}-->`;
       const html = await renderer.render(oversized);
       await renderer.render(oversized);
       await renderer.render("<!--keep-->");
@@ -105,7 +106,7 @@ test.describe("render cache", () => {
           },
         },
       });
-      const source = `<!--${"x".repeat(2 * 1024 * 1024)}-->`;
+      const source = `<!--${"x".repeat(4 * 1024 * 1024)}-->`;
       const error = await renderer.render(source).catch((error: Error) => error.message);
       fail = false;
       const html = await renderer.render(source);
@@ -130,8 +131,8 @@ test.describe("render cache", () => {
       });
       // Queue eviction and replacement before the rejection cleanup runs.
       const first = renderer.render("<!--retry-->").catch((error: Error) => error.message);
-      const a = renderer.render(`<!--a${"x".repeat(2 * 1024 * 1024 - 8)}-->`);
-      const b = renderer.render(`<!--b${"x".repeat(2 * 1024 * 1024 - 8)}-->`);
+      const a = renderer.render(`<!--a${"x".repeat(4 * 1024 * 1024 - 8)}-->`);
+      const b = renderer.render(`<!--b${"x".repeat(4 * 1024 * 1024 - 8)}-->`);
       const replacement = renderer.render("<!--retry-->");
       const results = await Promise.all([first, a, b, replacement]);
       await renderer.render("<!--retry-->");

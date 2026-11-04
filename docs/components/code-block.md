@@ -186,11 +186,12 @@ Highlighting failures never reject: a failed shiki/theme chunk load
 failed init isn't cached, so a later render retries. `highlightCode`
 resolves `null` on any failure. The `Markdown` component keeps the
 previous document and logs a `console.error` if rendering itself throws.
-The per-renderer cache holds raw→HTML promises within an 8 MiB source-text
-budget, counting two bytes per UTF-16 code unit. Hits refresh recency;
-new entries evict the least recently used sources individually. Sources
+The per-renderer cache holds raw→HTML promises within a budget of
+`8 * 1024 * 1024` source characters, measured by `raw.length` in UTF-16 code
+units. Hits refresh recency; new entries evict the least recently used
+sources individually. Sources
 larger than the budget render without caching. Failed renders leave the
-cache so later calls can retry. This budget measures source text only;
+cache so later calls can retry. This budget measures source length only;
 rendered HTML and cache overhead use additional memory.
 
 ### Highlighting budgets
