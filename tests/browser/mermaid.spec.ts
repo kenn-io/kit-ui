@@ -328,7 +328,7 @@ test("skips mermaid.run when the runtime version differs from the pinned release
     };
   });
 
-  expect(result.message).toContain("requires mermaid 12.0.0");
+  expect(result.message).toContain("requires mermaid 12.2.0");
   expect(result.rendered).toBeNull();
   expect(result.runCalls).toBe(0);
   expect(result.source).toBe("graph LR\nA-->B");
@@ -360,7 +360,7 @@ test("loader-level failures leave diagrams retryable", async ({ page }) => {
     };
     const renderedCount = await renderMarkdownMermaidDiagrams(root, {
       load: async () => ({
-        version: "12.0.0",
+        version: "12.2.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
@@ -416,7 +416,7 @@ test("retry budget uses same-node source changes after transient failures", asyn
     node.textContent = `graph LR\nA["${"x".repeat(200_001)}"]`;
     const renderedCount = await renderMarkdownMermaidDiagrams(root, {
       load: async () => ({
-        version: "12.0.0",
+        version: "12.2.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
@@ -457,7 +457,7 @@ test("run-level failures leave diagrams retryable", async ({ page }) => {
     try {
       await renderMarkdownMermaidDiagrams(root, {
         load: async () => ({
-          version: "12.0.0",
+          version: "12.2.0",
           initialize() {},
           async run() {
             runCalls += 1;
@@ -475,7 +475,7 @@ test("run-level failures leave diagrams retryable", async ({ page }) => {
     };
     const renderedCount = await renderMarkdownMermaidDiagrams(root, {
       load: async () => ({
-        version: "12.0.0",
+        version: "12.2.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
@@ -522,7 +522,7 @@ test("budget caps: excess diagrams and over-budget sources stay plain blocks", a
     }
     let runNodeCounts: number[] = [];
     const fakeLoad = async () => ({
-      version: "12.0.0",
+      version: "12.2.0",
       initialize() {},
       async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
         runNodeCounts.push(nodes.length);
@@ -622,7 +622,7 @@ test("a controller settles after a run failure that mutated the node", async ({ 
     let runCalls = 0;
     const controller = initMarkdownMermaidRendering(host, {
       load: async () => ({
-        version: "12.0.0",
+        version: "12.2.0",
         initialize() {},
         async run({ nodes }: { nodes: ArrayLike<HTMLElement> }) {
           runCalls += 1;
