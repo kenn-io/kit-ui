@@ -29,7 +29,7 @@ const renderer = createMarkdownRenderer({ codeFence: mermaidCodeFence });
 const controller = initMarkdownMermaidRendering(appRoot); // once at startup
 ```
 
-and install the pinned peer: `bun add --exact mermaid@12.0.0`.
+and install the pinned peer: `bun add --exact mermaid@12.2.0`.
 
 ## How it works
 
@@ -74,7 +74,7 @@ mermaidCodeFence(code: string, lang: string): string | undefined
 
 | Option         | Default                                     | Notes                                                                                                                   |
 | -------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `load`         | dynamic `import("mermaid")`                 | Injectable loader (tests, custom bundling); custom loaders must expose `version: "12.0.0"` for the runtime guard        |
+| `load`         | dynamic `import("mermaid")`                 | Injectable loader (tests, custom bundling); custom loaders must expose `version: "12.2.0"` for the runtime guard        |
 | `onViewerOpen` | push `"kit-media-viewer"` on `appShortcuts` | Suspend app keyboard handling while the expanded view is open; returns the restore function. Hook a modal stack in here |
 | `viewerLabels` | English defaults                            | `MediaViewerLabels` for the expanded view (see [MediaViewer](media-viewer.md))                                          |
 
