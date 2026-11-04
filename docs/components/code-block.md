@@ -80,7 +80,7 @@ import {
 
 `createMarkdownRenderer(options)` is the app extension point — create one
 per app and reuse it (each instance owns a Marked instance and a render
-cache with an 8 MiB source-text budget):
+cache capped at 8,388,608 source characters):
 
 ```ts
 const renderer = createMarkdownRenderer({
