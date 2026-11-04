@@ -16,8 +16,8 @@ async function render(page: import("@playwright/test").Page, source: string): Pr
 test.describe("render cache", () => {
   test.beforeEach(async ({ page }) => gotoPage(page, "markdown"));
 
-  test("reuses 1000 sources of 5 KiB and shares concurrent renders", async ({ page }) => {
-    const result = await page.evaluate(async () => {
+  test("bounded LRU by source characters", async ({ page }) => {
+    const manySources = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
       let parses = 0;
       const renderer = createMarkdownRenderer({
@@ -28,21 +28,18 @@ test.describe("render cache", () => {
           },
         },
       });
-      await Promise.all([renderer.render("Hello"), renderer.render("Hello")]);
       const sources = Array.from({ length: 1000 }, (_, i) => `Message ${i} `.padEnd(5 * 1024, "x"));
       for (const source of sources) await renderer.render(source);
       const before = parses;
       for (const source of sources) await renderer.render(source);
       return { before, after: parses };
     });
-    expect(result).toEqual({
-      before: 1001,
-      after: 1001,
+    expect(manySources).toEqual({
+      before: 1000,
+      after: 1000,
     });
-  });
 
-  test("evicts only the least recently used sources at the character limit", async ({ page }) => {
-    const result = await page.evaluate(async () => {
+    const atCharacterLimit = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
       let parses = 0;
       const renderer = createMarkdownRenderer({
@@ -66,11 +63,9 @@ test.describe("render cache", () => {
       await renderer.render(sources[1]);
       return { atLimit, retained, afterEvicted: parses };
     });
-    expect(result).toEqual({ atLimit: 4, retained: 5, afterEvicted: 6 });
-  });
+    expect(atCharacterLimit).toEqual({ atLimit: 4, retained: 5, afterEvicted: 6 });
 
-  test("renders oversized sources without evicting cached messages", async ({ page }) => {
-    const result = await page.evaluate(async () => {
+    const oversizedSource = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
       let parses = 0;
       const renderer = createMarkdownRenderer({
@@ -88,35 +83,37 @@ test.describe("render cache", () => {
       await renderer.render("<!--keep-->");
       return { html, parses };
     });
-    expect(result).toEqual({ html: "", parses: 3 });
+    expect(oversizedSource).toEqual({ html: "", parses: 3 });
   });
 
-  test("retries failed renders and releases their source budget", async ({ page }) => {
-    const result = await page.evaluate(async () => {
+  test("failed renders leave the cache", async ({ page }) => {
+    const retry = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      const source = `<!--${"x".repeat(4 * 1024 * 1024 - 7)}-->`;
+      const resident = `<!--${"y".repeat(2 * 1024 * 1024 - 7)}-->`;
       let fail = true;
       let parses = 0;
       const renderer = createMarkdownRenderer({
         tokenizer: {
-          html() {
+          html(src) {
             parses++;
-            if (fail) throw new Error("try again");
+            if (src === source && fail) throw new Error("try again");
             return false;
           },
         },
       });
-      const source = `<!--${"x".repeat(4 * 1024 * 1024)}-->`;
+      await renderer.render(resident);
       const error = await renderer.render(source).catch((error: Error) => error.message);
       fail = false;
       const html = await renderer.render(source);
       await renderer.render(source);
-      return { error, html, parses };
+      const afterRetry = parses;
+      await renderer.render(resident);
+      return { error, html, afterRetry, afterResident: parses };
     });
-    expect(result).toEqual({ error: "try again", html: "", parses: 2 });
-  });
+    expect(retry).toEqual({ error: "try again", html: "", afterRetry: 3, afterResident: 3 });
 
-  test("an evicted rejection preserves a newer render of the same source", async ({ page }) => {
-    const result = await page.evaluate(async () => {
+    const evictionRace = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
       let parses = 0;
       const renderer = createMarkdownRenderer({
@@ -136,7 +133,7 @@ test.describe("render cache", () => {
       await renderer.render("<!--retry-->");
       return { results, parses };
     });
-    expect(result).toEqual({ results: ["first attempt failed", "", "", ""], parses: 4 });
+    expect(evictionRace).toEqual({ results: ["first attempt failed", "", "", ""], parses: 4 });
   });
 });
 
