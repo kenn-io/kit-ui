@@ -193,6 +193,7 @@ sources individually. Sources
 larger than the budget render without caching. Failed renders leave the
 cache so later calls can retry. This budget measures source length only;
 rendered HTML and cache overhead use additional memory.
+A working set larger than the budget that is re-rendered in order, such as remounting an unvirtualized transcript, misses on every source; 8 Mi characters holds about 5,000 messages of 1,600 source characters each.
 
 ### Highlighting budgets
 
