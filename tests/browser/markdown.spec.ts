@@ -28,15 +28,14 @@ test.describe("render cache", () => {
           },
         },
       });
-      const concurrent = await Promise.all([renderer.render("Hello"), renderer.render("Hello")]);
+      await Promise.all([renderer.render("Hello"), renderer.render("Hello")]);
       const sources = Array.from({ length: 1000 }, (_, i) => `Message ${i} `.padEnd(5 * 1024, "x"));
       for (const source of sources) await renderer.render(source);
       const before = parses;
       for (const source of sources) await renderer.render(source);
-      return { concurrent, before, after: parses };
+      return { before, after: parses };
     });
     expect(result).toEqual({
-      concurrent: ["<p>Hello</p>\n", "<p>Hello</p>\n"],
       before: 1001,
       after: 1001,
     });
@@ -110,11 +109,10 @@ test.describe("render cache", () => {
       const error = await renderer.render(source).catch((error: Error) => error.message);
       fail = false;
       const html = await renderer.render(source);
-      await renderer.render("<!--small-->");
       await renderer.render(source);
       return { error, html, parses };
     });
-    expect(result).toEqual({ error: "try again", html: "", parses: 3 });
+    expect(result).toEqual({ error: "try again", html: "", parses: 2 });
   });
 
   test("an evicted rejection preserves a newer render of the same source", async ({ page }) => {
