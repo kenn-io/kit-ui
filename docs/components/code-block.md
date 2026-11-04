@@ -189,11 +189,13 @@ previous document and logs a `console.error` if rendering itself throws.
 The per-renderer cache holds raw→HTML promises within a budget of
 `8 * 1024 * 1024` source characters, measured by `raw.length` in UTF-16 code
 units. Hits refresh recency; new entries evict the least recently used
-sources individually. Sources
-larger than the budget render without caching. Failed renders leave the
-cache so later calls can retry. This budget measures source length only;
-rendered HTML and cache overhead use additional memory.
-A working set larger than the budget that is re-rendered in order, such as remounting an unvirtualized transcript, misses on every source; 8 Mi characters holds about 5,000 messages of 1,600 source characters each.
+sources individually. Sources larger than the budget render without
+caching. Failed renders leave the cache so later calls can retry. This
+budget measures source length only; rendered HTML and cache overhead use
+additional memory. A working set larger than the budget that is
+re-rendered in order, such as remounting an unvirtualized transcript,
+misses on every source; 8 Mi characters holds about 5,000 messages of
+1,600 source characters each.
 
 ### Highlighting budgets
 
