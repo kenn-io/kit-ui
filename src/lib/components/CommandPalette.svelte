@@ -9,11 +9,14 @@
     /** Shortcut combo displayed as a KbdBadge, e.g. "mod+shift+p". */
     combo?: string;
     disabled?: boolean;
+    children?: PaletteLeaf[];
   }
+
+  export type PaletteLeaf = Omit<PaletteCommand, "children">;
 </script>
 
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { highlightSegments } from "../utils/highlight.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
@@ -26,12 +29,12 @@
     /** Whether the palette is showing (bindable). */
     open?: boolean;
     commands: PaletteCommand[];
-    /** Run a command (the palette closes first). */
+    /** Run a leaf command (the palette closes first). */
     onrun: (command: PaletteCommand, query: string) => void;
     /** Search text used on each open. */
     initialQuery?: string;
     /** Extra commands following all matches for a non-empty query. */
-    fallbacks?: (query: string) => PaletteCommand[];
+    fallbacks?: (query: string) => PaletteLeaf[];
     /** Ids shown under `recentLabel` while the query is empty. */
     recentIds?: string[];
     placeholder?: string;
@@ -58,6 +61,44 @@
   const uid = $props.id();
   let query = $state("");
   let highlighted = $state(0);
+  let parentId = $state<string>();
+  let inputEl = $state<HTMLInputElement>();
+  let listEl = $state<HTMLDivElement>();
+  const { tree, allCommands, recent, originals } = $derived.by(() => {
+    const originals = new WeakMap<PaletteCommand, PaletteCommand>();
+    const tree = commands.map((c) => {
+      if (!c.children) return c;
+      const copy = {
+        ...c,
+        disabled: c.disabled || c.children.length === 0,
+        children: c.children.map((child) => {
+          const copy = {
+            ...child,
+            section: child.section ?? c.section,
+            disabled: c.disabled || child.disabled,
+          };
+          originals.set(copy, child);
+          return copy;
+        }),
+      };
+      originals.set(copy, c);
+      return copy;
+    });
+    const allCommands = tree.flatMap((c) => [c, ...(c.children ?? [])]);
+    const recent = recentIds
+      .map((id) => allCommands.find((c) => c.id === id))
+      .filter((c): c is PaletteCommand => c !== undefined)
+      .map((c) => {
+        const copy = { ...c, section: recentLabel };
+        originals.set(copy, originals.get(c) ?? c);
+        return copy;
+      });
+    return { tree, allCommands, recent, originals };
+  });
+  const parent = $derived(tree.find((c) => c.id === parentId && c.children));
+  const parentLabels = $derived(
+    new Map(tree.flatMap((c) => (c.children ?? []).map((child) => [child.id, c.label]))),
+  );
 
   interface Group {
     section: string | undefined;
@@ -68,17 +109,14 @@
   const ranked = $derived.by(() => {
     const q = query.trim().toLowerCase();
     if (!q) {
-      const recent = recentIds
-        .map((id) => commands.find((c) => c.id === id))
-        .filter((c): c is PaletteCommand => c !== undefined)
-        .map((c) => ({ ...c, section: recentLabel }));
-      const rest = commands.filter((c) => !recentIds.includes(c.id));
+      if (parent) return parent.children ?? [];
+      const rest = tree.filter((c) => !recentIds.includes(c.id));
       return [...recent, ...rest];
     }
     const prefix: PaletteCommand[] = [];
     const substring: PaletteCommand[] = [];
     const keyword: PaletteCommand[] = [];
-    for (const c of commands) {
+    for (const c of parent ? (parent.children ?? []) : allCommands) {
       const label = c.label.toLowerCase();
       if (label.startsWith(q)) prefix.push(c);
       else if (label.includes(q)) substring.push(c);
@@ -89,7 +127,7 @@
 
   const matchedIds = $derived(new Set(ranked.map((c) => c.id)));
   const extra = $derived.by(() => {
-    if (!query.trim() || !fallbacks) return [];
+    if (parent || !query.trim() || !fallbacks) return [];
     const listedIds = new Set(matchedIds);
     return fallbacks(query.trim()).filter((c) => {
       if (listedIds.has(c.id)) return false;
@@ -135,7 +173,10 @@
     if (!open) return;
     query = untrack(() => initialQuery);
     const pop = appShortcuts.pushScope(`kit-command-palette-${uid}`);
-    return pop;
+    return () => {
+      parentId = undefined;
+      pop();
+    };
   });
 
   // Re-highlight on open and whenever results change; skip disabled leading
@@ -145,15 +186,33 @@
     highlighted = firstEnabled();
   });
 
+  $effect(() => {
+    if (parentId !== undefined && !parent) setParent(undefined);
+  });
+
+  async function setParent(id: string | undefined): Promise<void> {
+    parentId = id;
+    query = "";
+    if (listEl) listEl.scrollTop = 0;
+    inputEl?.focus();
+    await tick();
+    document.getElementById(`${uid}-option-${highlighted}`)?.scrollIntoView({ block: "nearest" });
+  }
+
   function close(): void {
     open = false;
   }
 
   function run(command: PaletteCommand): void {
     if (command.disabled) return;
+    if (!parent && command.children) {
+      setParent(command.id);
+      return;
+    }
     const typed = query.trim();
+    const original = originals.get(command) ?? command;
     close();
-    onrun(command, typed);
+    onrun(original, typed);
   }
 
   function move(delta: number): void {
@@ -174,15 +233,22 @@
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       move(-1);
-    } else if (event.key === "Enter") {
+    } else if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement)) {
       event.preventDefault();
       const command = flat[highlighted];
       if (command) run(command);
+    } else if (event.key === "Backspace" && !query && parent) {
+      event.preventDefault();
+      setParent(undefined);
     } else if (event.key === "Escape") {
       // SearchInput already consumed Escape-with-content (clear); an
-      // Escape that reaches here closes the palette.
+      // Escape off the input clears, then leaves a child list or closes.
       event.stopPropagation();
-      close();
+      if (query) {
+        query = "";
+        inputEl?.focus();
+      } else if (parent) setParent(undefined);
+      else close();
     }
   }
 </script>
@@ -201,9 +267,20 @@
       <!-- Focus stays in the field; combobox wiring announces the
            highlighted option to assistive tech as arrows move it. -->
       <div class="kit-command-palette__search">
+        {#if parent}
+          <button
+            type="button"
+            class="kit-command-palette__parent"
+            title={parent.label}
+            tabindex="-1"
+            onpointerdown={(event) => event.preventDefault()}
+            onclick={() => setParent(undefined)}>{parent.label}</button
+          >
+        {/if}
         <SearchInput
+          bind:inputEl
           bind:value={query}
-          {placeholder}
+          placeholder={parent ? "" : placeholder}
           block
           autofocus
           {ariaLabel}
@@ -217,10 +294,11 @@
         />
       </div>
       <div
+        bind:this={listEl}
         class="kit-command-palette__list"
         role="listbox"
         id="{uid}-listbox"
-        aria-label={ariaLabel}
+        aria-label={parent?.label ?? ariaLabel}
       >
         {#if flat.length === 0}
           <div class="kit-command-palette__empty">{emptyLabel}</div>
@@ -244,12 +322,17 @@
               aria-selected={index === highlighted}
               aria-disabled={command.disabled ? "true" : undefined}
               tabindex="-1"
+              onpointerdown={(event) => event.preventDefault()}
               onpointermove={() => {
                 if (!command.disabled) highlighted = index;
               }}
               onclick={() => run(command)}
             >
               <span class="kit-command-palette__label">
+                {#if !parent && matchedIds.has(command.id) && parentLabels.has(command.id)}{parentLabels.get(
+                    command.id,
+                  )} ›
+                {/if}
                 {#each highlightSegments(command.label, matchedIds.has(command.id) ? query.trim() : "") as segment, si (si)}
                   {#if segment.match}<mark>{segment.text}</mark>{:else}{segment.text}{/if}
                 {/each}
@@ -288,8 +371,32 @@
   }
 
   .kit-command-palette__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     padding: var(--space-3);
     border-bottom: 1px solid var(--border-muted);
+  }
+
+  .kit-command-palette__parent {
+    flex: 0 1 auto;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: var(--space-1) var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-hover);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+
+  .kit-command-palette__search :global(.kit-search-input) {
+    flex: 1;
+    min-width: 0;
   }
 
   .kit-command-palette__list {

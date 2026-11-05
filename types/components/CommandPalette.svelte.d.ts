@@ -8,17 +8,19 @@ export interface PaletteCommand {
     /** Shortcut combo displayed as a KbdBadge, e.g. "mod+shift+p". */
     combo?: string;
     disabled?: boolean;
+    children?: PaletteLeaf[];
 }
+export type PaletteLeaf = Omit<PaletteCommand, "children">;
 interface Props {
     /** Whether the palette is showing (bindable). */
     open?: boolean;
     commands: PaletteCommand[];
-    /** Run a command (the palette closes first). */
+    /** Run a leaf command (the palette closes first). */
     onrun: (command: PaletteCommand, query: string) => void;
     /** Search text used on each open. */
     initialQuery?: string;
     /** Extra commands following all matches for a non-empty query. */
-    fallbacks?: (query: string) => PaletteCommand[];
+    fallbacks?: (query: string) => PaletteLeaf[];
     /** Ids shown under `recentLabel` while the query is empty. */
     recentIds?: string[];
     placeholder?: string;
