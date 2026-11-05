@@ -5,6 +5,43 @@ import { gotoPage } from "./helpers.js";
 // combobox ARIA state, disabled-skip highlighting, Escape semantics,
 // scope suspension, all-disabled inertness.
 
+test("a resting pointer does not highlight a command", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.keyboard.press("ControlOrMeta+k");
+  const palette = page.locator(".kit-command-palette");
+  const later = page.getByRole("option", { name: "Find session…", exact: true });
+  const bounds = await later.boundingBox();
+  expect(bounds).toBeTruthy();
+  await page.keyboard.press("Escape");
+  await expect(palette).not.toBeVisible();
+  await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(page.getByRole("option", { name: /^New session/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(later).toHaveAttribute("aria-selected", "false");
+});
+
+test("pointer movement highlights a command and reopening resets the highlight", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  await page.keyboard.press("ControlOrMeta+k");
+  const later = page.getByRole("option", { name: "Find session…", exact: true });
+  await later.hover();
+  await expect(later).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(page.getByRole("option", { name: /^New session/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
 test("combobox wiring announces the highlighted option", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.getByRole("button", { name: /Open palette/ }).click();

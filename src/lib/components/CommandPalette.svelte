@@ -122,9 +122,10 @@
     return pop;
   });
 
-  // Re-highlight whenever the result set changes; skip disabled leading
+  // Re-highlight on open and whenever results change; skip disabled leading
   // results so Enter always has a runnable target (−1 when nothing is).
   $effect(() => {
+    if (!open) return;
     highlighted = firstEnabled();
   });
 
@@ -226,7 +227,7 @@
               aria-selected={index === highlighted}
               aria-disabled={command.disabled ? "true" : undefined}
               tabindex="-1"
-              onpointerenter={() => {
+              onpointermove={() => {
                 if (!command.disabled) highlighted = index;
               }}
               onclick={() => run(command)}

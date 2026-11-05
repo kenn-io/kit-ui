@@ -93,8 +93,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
   **keyword** matches. Each section then appears **once**, ordered by its
   best-ranked match, with ranking preserved within the section — a
   section never repeats across rank buckets.
-- ↑/↓ move (skipping disabled), Enter runs, pointer hover highlights,
-  click runs. When results change, the highlight lands on the **first
+- ↑/↓ move (skipping disabled), Enter runs, pointer movement highlights,
+  click runs. On every open and when results change, the highlight lands on the **first
   enabled** command (disabled leading results are skipped so Enter always
   has a runnable target). Escape follows SearchInput semantics: clears
   the query first, closes when already empty.
