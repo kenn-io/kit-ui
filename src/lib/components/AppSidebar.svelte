@@ -643,7 +643,10 @@
                        assistive tech skips it. -->
                   {@const titleOnly = section.viewRuns.length === 0}
                   <div
-                    class={["kit-app-sidebar__flyout kit-popover-card", titleOnly && "kit-app-sidebar__flyout--title"]}
+                    class={[
+                      "kit-app-sidebar__flyout kit-popover-card",
+                      titleOnly && "kit-app-sidebar__flyout--title",
+                    ]}
                     role={titleOnly ? undefined : "group"}
                     aria-label={titleOnly ? undefined : section.label}
                     aria-hidden={titleOnly ? "true" : undefined}
