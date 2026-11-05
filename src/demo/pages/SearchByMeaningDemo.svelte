@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    Checkbox,
     SearchByMeaningRow,
     SearchByMeaningHint,
     type SearchByMeaningState,
@@ -34,19 +35,24 @@
   ];
   let turnOnClicks = $state<Record<string, number>>({});
   let builtInClicks = $state<Record<string, number>>({});
+  let readonly = $state(false);
 </script>
 
 <div class="meaning-demo">
+  <div data-testid="meaning-readonly">
+    <Checkbox bind:checked={readonly} label="Status only" />
+  </div>
   {#each examples as example (example.id)}
     <DemoSection title={example.title}>
       <div class="example" data-testid={`meaning-${example.id}`}>
         <SearchByMeaningRow
           state={example.state}
+          {readonly}
           itemNoun="messages"
           onturnon={() => (turnOnClicks[example.id] = (turnOnClicks[example.id] ?? 0) + 1)}
           onusebuiltin={() => (builtInClicks[example.id] = (builtInClicks[example.id] ?? 0) + 1)}
         />
-        {#if example.state.kind === "off" || example.state.kind === "downloaded" || example.state.kind.startsWith("ollama")}
+        {#if !readonly && (example.state.kind === "off" || example.state.kind === "downloaded" || example.state.kind.startsWith("ollama"))}
           <p
             class="readout"
             data-testid="clicks"
