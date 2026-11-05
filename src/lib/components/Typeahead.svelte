@@ -557,7 +557,7 @@
   // keyboard user could tab from the input into a header button and then out
   // of the component, leaving the panel stuck open.
   function handleFocusOut(e: FocusEvent) {
-    if (opening) return;
+    if (!open || opening) return;
     const related = e.relatedTarget as Node | null;
     if (containerEl && related && containerEl.contains(related)) return;
     closeDropdown();
