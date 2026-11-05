@@ -78,7 +78,7 @@
 
 <DemoSection
   title="Command palette"
-  description="Press ⌘K (or the button) to open. Type to filter (label prefix > label substring > keywords), ↑/↓ + Enter to run. Group by… opens a child list. Escape clears, returns to the full list, then closes. Ran commands populate a Recent section. While the palette is open it pushes a shortcut scope — the page-level 'g' shortcut below stops counting."
+  description="Press ⌘K (or the button) to open. Type to filter (label prefix > label substring > keywords), ↑/↓ + Enter to run. Escape clears, returns to the full list, then closes. Ran commands populate a Recent section. While the palette is open it pushes a shortcut scope — the page-level 'g' shortcut below stops counting."
   code={`import { appShortcuts, CommandPalette, initShortcuts, showFlash, type PaletteCommand } from "@kenn-io/kit-ui";
 
 let open = $state(false);
