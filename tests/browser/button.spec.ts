@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
 test("kit-control-states preserves native structural controls and shared interaction states", async ({
@@ -143,20 +143,8 @@ test("renders an ellipsis when a label is constrained", async ({ page }) => {
   expect(ellipsis.equals(hardClip)).toBe(false);
 });
 
-test("centers lowercase ink and keeps descenders inside clipped labels", async ({ page }) => {
-  await gotoPage(page, "button");
-  await page.evaluate(() => document.fonts.ready);
-
-  const glyphSafetyButtons = page.locator('[data-demo="button-glyph-safety"] .kit-button');
-  await expect(glyphSafetyButtons).toHaveCount(7);
-  await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
-  expect(
-    await glyphSafetyButtons.evaluateAll((buttons) =>
-      buttons.map((button) => button.getBoundingClientRect().height),
-    ),
-  ).toEqual([24, 24, 24, 24, 28, 28, 28]);
-
-  async function measureGlyph(button: Locator, glyph: "o" | "g") {
+test.describe("button glyph safety", () => {
+  async function measureGlyph(page: Page, button: Locator, glyph: "o" | "g") {
     const geometry = await button.evaluate((element, targetGlyph) => {
       const text = element.querySelector<HTMLElement>(".kit-button__label-text");
       const node = text?.firstChild;
@@ -266,9 +254,9 @@ test("centers lowercase ink and keeps descenders inside clipped labels", async (
     );
   }
 
-  const infoSoft = page.locator(".button-matrix .kit-button", { hasText: "info soft" });
-  const merge = glyphSafetyButtons.nth(1);
-  const themes = [
+  // Each theme takes 12 screenshots. Keep their work in separate tests so the
+  // full theme matrix cannot exhaust one test's timeout on a busy CI runner.
+  for (const theme of [
     "default",
     "control-room",
     "terminal",
@@ -279,77 +267,86 @@ test("centers lowercase ink and keeps descenders inside clipped labels", async (
     "ember",
     "graphite",
     "quiet",
-  ] as const;
-  const measurements = [];
+  ] as const) {
+    test(`centers lowercase ink and keeps descenders inside clipped labels in ${theme}`, async ({
+      page,
+    }) => {
+      await gotoPage(page, "button");
+      const glyphSafetyButtons = page.locator('[data-demo="button-glyph-safety"] .kit-button');
+      if (theme === "default") {
+        await page.evaluate(() => document.fonts.ready);
+        await expect(glyphSafetyButtons).toHaveCount(7);
+        await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
+        expect(
+          await glyphSafetyButtons.evaluateAll((buttons) =>
+            buttons.map((button) => button.getBoundingClientRect().height),
+          ),
+        ).toEqual([24, 24, 24, 24, 28, 28, 28]);
+      }
 
-  for (const theme of themes) {
-    await page.evaluate((themeName) => {
-      if (themeName === "default") delete document.documentElement.dataset.kitTheme;
-      else document.documentElement.dataset.kitTheme = themeName;
-    }, theme);
-    await page.evaluate(() => document.fonts.ready);
+      const infoSoft = page.locator(".button-matrix .kit-button", { hasText: "info soft" });
+      const merge = glyphSafetyButtons.nth(1);
 
-    for (const phase of [0, 0.5]) {
-      const lowercaseProbe = await infoSoft.evaluate((source, top) => {
-        document.querySelector('[data-production-button-probe="lowercase"]')?.remove();
-        const button = source.cloneNode(true) as HTMLButtonElement;
-        button.dataset.productionButtonProbe = "lowercase";
-        button.style.position = "fixed";
-        button.style.left = "300px";
-        button.style.top = `${top}px`;
-        button.style.zIndex = "99999";
-        document.body.append(button);
-        return button.dataset.productionButtonProbe;
-      }, 100 + phase);
-      const lowercaseButton = page.locator(`[data-production-button-probe="${lowercaseProbe}"]`);
-      const lowercase = await measureGlyph(lowercaseButton, "o");
-      expect(lowercase.height).toBe(24);
+      await page.evaluate((themeName) => {
+        if (themeName === "default") delete document.documentElement.dataset.kitTheme;
+        else document.documentElement.dataset.kitTheme = themeName;
+      }, theme);
+      await page.evaluate(() => document.fonts.ready);
 
-      const mergeProbe = await merge.evaluate((source, top) => {
-        document.querySelector('[data-production-button-probe="descender"]')?.remove();
-        const button = source.cloneNode(true) as HTMLButtonElement;
-        button.dataset.productionButtonProbe = "descender";
-        button.style.position = "fixed";
-        button.style.left = "500px";
-        button.style.top = `${top}px`;
-        button.style.zIndex = "99999";
-        document.body.append(button);
-        return button.dataset.productionButtonProbe;
-      }, 100 + phase);
-      const mergeButton = page.locator(`[data-production-button-probe="${mergeProbe}"]`);
-      const label = mergeButton.locator(".kit-button__label");
-      await label.evaluate((element) => {
-        element.style.overflow = "hidden";
-      });
-      const clipped = await measureGlyph(mergeButton, "g");
-      await label.evaluate((element) => {
-        element.style.overflow = "visible";
-      });
-      const visible = await measureGlyph(mergeButton, "g");
-      const clippedPaintLoss = Math.max(
-        0,
-        (visible.paintWeight - clipped.paintWeight) / visible.paintWeight,
-      );
-      expect(clippedPaintLoss).toBeLessThan(0.001);
-      measurements.push({ theme, phase, lowercase, clippedPaintLoss });
-    }
+      for (const phase of [0, 0.5]) {
+        const lowercaseProbe = await infoSoft.evaluate((source, top) => {
+          document.querySelector('[data-production-button-probe="lowercase"]')?.remove();
+          const button = source.cloneNode(true) as HTMLButtonElement;
+          button.dataset.productionButtonProbe = "lowercase";
+          button.style.position = "fixed";
+          button.style.left = "300px";
+          button.style.top = `${top}px`;
+          button.style.zIndex = "99999";
+          document.body.append(button);
+          return button.dataset.productionButtonProbe;
+        }, 100 + phase);
+        const lowercaseButton = page.locator(`[data-production-button-probe="${lowercaseProbe}"]`);
+        const lowercase = await measureGlyph(page, lowercaseButton, "o");
+        expect(lowercase.height).toBe(24);
+
+        const mergeProbe = await merge.evaluate((source, top) => {
+          document.querySelector('[data-production-button-probe="descender"]')?.remove();
+          const button = source.cloneNode(true) as HTMLButtonElement;
+          button.dataset.productionButtonProbe = "descender";
+          button.style.position = "fixed";
+          button.style.left = "500px";
+          button.style.top = `${top}px`;
+          button.style.zIndex = "99999";
+          document.body.append(button);
+          return button.dataset.productionButtonProbe;
+        }, 100 + phase);
+        const mergeButton = page.locator(`[data-production-button-probe="${mergeProbe}"]`);
+        const label = mergeButton.locator(".kit-button__label");
+        await label.evaluate((element) => {
+          element.style.overflow = "hidden";
+        });
+        const clipped = await measureGlyph(page, mergeButton, "g");
+        await label.evaluate((element) => {
+          element.style.overflow = "visible";
+        });
+        const visible = await measureGlyph(page, mergeButton, "g");
+        const clippedPaintLoss = Math.max(
+          0,
+          (visible.paintWeight - clipped.paintWeight) / visible.paintWeight,
+        );
+        expect(clippedPaintLoss).toBeLessThan(0.001);
+        // Raster weights vary by font engine; a whole-pixel drift is a layout regression.
+        expect(
+          Math.abs(lowercase.opticalOffset),
+          JSON.stringify({ theme, phase, lowercase, clippedPaintLoss }),
+        ).toBeLessThan(1);
+      }
+
+      await page
+        .locator("[data-production-button-probe]")
+        .evaluateAll((probes) => probes.forEach((probe) => probe.remove()));
+    });
   }
-
-  await page
-    .locator("[data-production-button-probe]")
-    .evaluateAll((probes) => probes.forEach((probe) => probe.remove()));
-
-  expect(measurements).toHaveLength(themes.length * 2);
-  const mostOffCenter = measurements.reduce((worst, current) =>
-    Math.abs(current.lowercase.opticalOffset) > Math.abs(worst.lowercase.opticalOffset)
-      ? current
-      : worst,
-  );
-  // Raster weights vary by font engine; a whole-pixel drift is a layout regression.
-  expect(
-    Math.abs(mostOffCenter.lowercase.opticalOffset),
-    JSON.stringify(mostOffCenter),
-  ).toBeLessThan(1);
 });
 
 test("busy buttons keep their box, colors, and neighbors in place", async ({ page }) => {

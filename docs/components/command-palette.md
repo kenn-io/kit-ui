@@ -75,17 +75,19 @@ const off = appShortcuts.register("mod+k", openPalette, {
 
 ### Props
 
-| Prop          | Type                                | Default                  | Notes                                                                 |
-| ------------- | ----------------------------------- | ------------------------ | --------------------------------------------------------------------- |
-| `open`        | `boolean` (bindable)                | `false`                  |                                                                       |
-| `commands`    | `PaletteCommand[]`                  | required                 | `{ id, label, section?, keywords?, combo?, disabled? }`               |
-| `onrun`       | `(command: PaletteCommand) => void` | required                 | Palette closes, then runs                                             |
-| `recentIds`   | `string[]`                          | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency) |
-| `placeholder` | `string`                            | `"Type a command…"`      |                                                                       |
-| `emptyLabel`  | `string`                            | `"No matching commands"` |                                                                       |
-| `recentLabel` | `string`                            | `"Recent"`               |                                                                       |
-| `ariaLabel`   | `string`                            | `"Command palette"`      | Dialog + listbox label                                                |
-| `class`       | `string`                            | `""`                     |                                                                       |
+| Prop           | Type                                               | Default                  | Notes                                                                 |
+| -------------- | -------------------------------------------------- | ------------------------ | --------------------------------------------------------------------- |
+| `open`         | `boolean` (bindable)                               | `false`                  |                                                                       |
+| `commands`     | `PaletteCommand[]`                                 | required                 | `{ id, label, section?, keywords?, combo?, disabled? }`               |
+| `onrun`        | `(command: PaletteCommand, query: string) => void` | required                 | Palette closes, then runs                                             |
+| `initialQuery` | `string`                                           | `""`                     | Seeds the search on every open; typing stays local                    |
+| `fallbacks`    | `(query: string) => PaletteCommand[]`              |                          | Receives the trimmed, non-empty query                                 |
+| `recentIds`    | `string[]`                                         | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency) |
+| `placeholder`  | `string`                                           | `"Type a command…"`      |                                                                       |
+| `emptyLabel`   | `string`                                           | `"No matching commands"` |                                                                       |
+| `recentLabel`  | `string`                                           | `"Recent"`               |                                                                       |
+| `ariaLabel`    | `string`                                           | `"Command palette"`      | Dialog + listbox label                                                |
+| `class`        | `string`                                           | `""`                     |                                                                       |
 
 ### Behavior
 
@@ -93,6 +95,14 @@ const off = appShortcuts.register("mod+k", openPalette, {
   **keyword** matches. Each section then appears **once**, ordered by its
   best-ranked match, with ranking preserved within the section — a
   section never repeats across rank buckets.
+- Matched label characters are bold. Keyword-only matches stay plain.
+- Fallback rows follow all matches, grouped by their own sections. A fallback
+  section that repeats a command section shows its header again after the matches.
+  Fallbacks share keyboard navigation and disabled handling, stay plain, and skip
+  ids already listed among the matches or earlier fallback rows. The first row for
+  each id wins. Apps must keep fallback rows out of Recent.
+- `initialQuery` seeds the search on every open. `onrun` receives the trimmed
+  search text as its second argument.
 - ↑/↓ move (skipping disabled), Enter runs, pointer movement highlights,
   click runs. On every open and when results change, the highlight lands on the **first
   enabled** command (disabled leading results are skipped so Enter always

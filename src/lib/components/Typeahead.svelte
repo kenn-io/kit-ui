@@ -1,9 +1,11 @@
 <script lang="ts">
+  import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick, type Snippet } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import { SvelteMap } from "svelte/reactivity";
+  import { highlightSegments } from "../utils/highlight.js";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type {
@@ -14,7 +16,18 @@
 
   interface Props {
     options: TypeaheadOption[];
-    value: string;
+    /** The chosen option name. Unused in `multiple` mode, which reads
+     * `values`. */
+    value?: string;
+    /** Choose several options: each choice calls `onselect` with that
+     * option's name and the list stays open. The caller adds or removes it
+     * from `values`. */
+    multiple?: boolean;
+    /** The chosen option names in `multiple` mode. */
+    values?: readonly string[];
+    /** Closed-trigger text when `multiple` has more than one choice;
+     * `{count}` is replaced with the number chosen. */
+    multipleLabel?: string;
     fallbackLabel: string;
     placeholder: string;
     /** Native attributes for the open search input. Typeahead-owned behavior
@@ -65,7 +78,10 @@
 
   let {
     options,
-    value,
+    value = "",
+    multiple = false,
+    values = [],
+    multipleLabel = "{count} selected",
     fallbackLabel,
     placeholder,
     inputAttributes = {},
@@ -242,14 +258,23 @@
     return undefined;
   }
 
-  const selectedOption = $derived(value === "" ? undefined : findByName(options, value));
+  function isChosen(name: string): boolean {
+    return multiple ? values.includes(name) : name === value;
+  }
+  const nothingChosen = $derived(multiple ? values.length === 0 : value === "");
+  // The one value the closed trigger names: in multiple mode, the only
+  // choice, or none when there are several.
+  const shownValue = $derived(multiple ? (values.length === 1 ? values[0]! : "") : value);
+  const selectedOption = $derived(shownValue === "" ? undefined : findByName(options, shownValue));
   // A custom value has no matching option — show it verbatim so the closed
   // trigger doesn't look unselected.
   const displayValue = $derived(
-    selectedOption?.displayLabel ??
-      selectedOption?.label ??
-      (remote ? selectedLabelCache.get(value)?.label : undefined) ??
-      (allowCustom && value !== "" ? value : fallbackLabel),
+    multiple && values.length > 1
+      ? multipleLabel.replace("{count}", String(values.length))
+      : (selectedOption?.displayLabel ??
+          selectedOption?.label ??
+          (remote ? selectedLabelCache.get(shownValue)?.label : undefined) ??
+          (allowCustom && shownValue !== "" ? shownValue : fallbackLabel)),
   );
   // The closed trigger's accessible name carries the current selection, so a
   // screen reader hears "Time zone: UTC" rather than only the placeholder.
@@ -268,9 +293,16 @@
     }
   }
 
+  // With several choices no single option is "selected", so remember the
+  // label of every chosen row still listed. Removing all but one choice
+  // must leave its label on the trigger after the remote rows are gone.
   function rememberSelectedLabel(): void {
-    if (!remote || !selectedOption) return;
-    cacheSelectedLabel(selectedOption.name, selectedOption.displayLabel ?? selectedOption.label);
+    if (!remote) return;
+    const chosen = multiple ? values : selectedOption ? [selectedOption.name] : [];
+    for (const name of chosen) {
+      const option = findByName(options, name);
+      if (option) cacheSelectedLabel(name, option.displayLabel ?? option.label);
+    }
   }
 
   function updateQuery(nextQuery: string): void {
@@ -406,7 +438,8 @@
         if (remote && selectedLabel !== undefined) {
           cacheSelectedLabel(name, selectedLabel, selectedLabelVersion);
         }
-        if (seq === selectSeq) void closeDropdown(true);
+        // A multiple choice leaves the list open for the next one.
+        if (seq === selectSeq && !multiple) void closeDropdown(true);
       }
     } catch {
       // Keep the list open so the caller can surface its own error state
@@ -499,33 +532,12 @@
     }
   }
 
-  function highlightSegments(label: string, q: string): { text: string; match: boolean }[] {
-    if (!q) return [{ text: label, match: false }];
-    const idx = label.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return [{ text: label, match: false }];
-    return [
-      ...(idx > 0 ? [{ text: label.slice(0, idx), match: false }] : []),
-      {
-        text: label.slice(idx, idx + q.length),
-        match: true,
-      },
-      ...(idx + q.length < label.length
-        ? [
-            {
-              text: label.slice(idx + q.length),
-              match: false,
-            },
-          ]
-        : []),
-    ];
-  }
-
   // focusout bubbles (blur does not), so one handler on the container catches
   // focus leaving the input *or* a focusable header control. Without it, a
   // keyboard user could tab from the input into a header button and then out
   // of the component, leaving the panel stuck open.
   function handleFocusOut(e: FocusEvent) {
-    if (opening) return;
+    if (!open || opening) return;
     const related = e.relatedTarget as Node | null;
     if (containerEl && related && containerEl.contains(related)) return;
     closeDropdown();
@@ -544,6 +556,13 @@
   {#each highlightSegments(text, query.trim()) as seg, segIndex (segIndex)}
     {#if seg.match}<mark class="kit-typeahead__match">{seg.text}</mark>{:else}{seg.text}{/if}
   {/each}
+{/snippet}
+
+<!-- aria-selected carries the state; the mark only shows it. -->
+{#snippet check(chosen: boolean)}
+  <span class="kit-typeahead__check" aria-hidden="true">
+    {#if chosen}<CheckIcon size="12" strokeWidth="2.2" />{/if}
+  </span>
 {/snippet}
 
 {#snippet searchInput()}
@@ -623,21 +642,23 @@
             id={listId}
             role={grouped ? "tree" : "listbox"}
             aria-label={placeholder}
+            aria-multiselectable={multiple || undefined}
           >
             {#if allowClear}
               <li
                 class="kit-typeahead__option"
                 class:highlighted={activeIndex === 0}
-                class:selected={value === ""}
+                class:selected={nothingChosen}
                 id={`${listId}-row-0`}
                 role={grouped ? "treeitem" : "option"}
-                aria-selected={value === ""}
+                aria-selected={nothingChosen}
                 aria-level={grouped ? 1 : undefined}
                 aria-posinset={grouped ? 1 : undefined}
                 aria-setsize={grouped ? rootTreeSize : undefined}
                 onmousedown={() => void select("")}
                 onmouseenter={() => (highlightIndex = 0)}
               >
+                {#if multiple}{@render check(nothingChosen)}{/if}
                 {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
                 <span class="kit-typeahead__option-label">{clearLabel}</span>
               </li>
@@ -649,10 +670,10 @@
                 class:kit-typeahead__option--root-group={row.group && row.depth === 0}
                 class:kit-typeahead__option--nested={row.depth > 0}
                 class:highlighted={i + clearOffset === activeIndex}
-                class:selected={!row.group && row.option.name === value}
+                class:selected={!row.group && isChosen(row.option.name)}
                 id={`${listId}-row-${i + clearOffset}`}
                 role={grouped ? "treeitem" : "option"}
-                aria-selected={row.group ? undefined : row.option.name === value}
+                aria-selected={row.group ? undefined : isChosen(row.option.name)}
                 aria-expanded={row.group ? row.expanded : undefined}
                 aria-level={grouped ? row.depth + 1 : undefined}
                 aria-posinset={grouped
@@ -673,6 +694,7 @@
                     aria-hidden="true"
                   />
                 {/if}
+                {#if multiple && !row.group}{@render check(isChosen(row.option.name))}{/if}
                 {#if icon}
                   <span class="kit-typeahead__icon" aria-hidden="true">
                     {@render icon(row.option)}
@@ -692,16 +714,17 @@
               <li
                 class="kit-typeahead__option"
                 class:highlighted={activeIndex === customOffset}
-                class:selected={customValue === value}
+                class:selected={isChosen(customValue)}
                 id={`${listId}-row-${customOffset}`}
                 role={grouped ? "treeitem" : "option"}
-                aria-selected={customValue === value}
+                aria-selected={isChosen(customValue)}
                 aria-level={grouped ? 1 : undefined}
                 aria-posinset={grouped ? rootTreeSize : undefined}
                 aria-setsize={grouped ? rootTreeSize : undefined}
                 onmousedown={() => void select(customValue)}
                 onmouseenter={() => (highlightIndex = customOffset)}
               >
+                {#if multiple}{@render check(isChosen(customValue))}{/if}
                 {#if icon}<span class="kit-typeahead__icon" aria-hidden="true"></span>{/if}
                 <span class="kit-typeahead__option-label">
                   {customLabel.replace("{query}", customValue)}
@@ -890,9 +913,13 @@
     margin-bottom: 2px;
   }
 
+  /* An overlay scrollbar draws over the row's trailing edge, so keep the
+     meta text clear of it; a classic one gets its own gutter. */
   .kit-typeahead__body {
     min-height: 0;
     overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-right: var(--space-3);
   }
 
   .kit-typeahead__list {
@@ -913,6 +940,12 @@
     cursor: pointer;
     border-radius: var(--radius-sm);
     white-space: nowrap;
+  }
+
+  .kit-typeahead__check {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 12px;
   }
 
   .kit-typeahead__option-label {

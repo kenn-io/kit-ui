@@ -237,13 +237,19 @@ test("remote results move Enter past the clear row after an empty loading state"
 test("remote results move Enter past the clear row when they arrive after opening", async ({
   page,
 }) => {
+  await page.clock.install({ time: new Date("2026-01-15T08:00:00Z") });
   await gotoPage(page, "typeahead");
+  await page.clock.pauseAt(new Date("2026-01-15T09:00:00Z"));
   const trigger = page.getByRole("button", { name: "Search remote options…" });
   await trigger.click();
   await page.getByRole("combobox", { name: "Search remote options…" }).fill("async-open");
   await page.keyboard.press("Escape");
 
+  // A duplicate close can start the response timer before the picker reopens.
+  await expect(trigger).toBeFocused();
+  await page.clock.runFor(200);
   await trigger.click();
+  await page.clock.runFor(100);
   await expect(page.getByRole("option", { name: "New result" })).toBeVisible();
   await page.keyboard.press("Enter");
 
@@ -385,6 +391,76 @@ test("Enter honors a deliberately highlighted clear row while filtering", async 
   await expect(page.locator(`[id="${activeId}"]`)).toHaveText("None");
   await page.keyboard.press("Enter");
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("(none)");
+});
+
+test("multiple choices keep the list open and mark each chosen row", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Filter labels…: bug" });
+  await trigger.click();
+
+  const input = page.getByRole("combobox", { name: "Filter labels…" });
+  const list = page.getByRole("listbox", { name: "Filter labels…" });
+  await expect(list).toHaveAttribute("aria-multiselectable", "true");
+  const chosenRows = list.locator('[role="option"][aria-selected="true"]');
+  const chosen = chosenRows.locator(".kit-typeahead__option-label");
+  await expect(chosen).toHaveText(["bug"]);
+
+  // Enter chooses the highlighted match; the list and the query stay.
+  await input.fill("perf");
+  await page.keyboard.press("Enter");
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("perf");
+  await expect(page.locator('[data-demo="labels-value"]')).toHaveText("bug, performance");
+
+  await input.fill("");
+  await expect(chosen).toHaveText(["bug", "performance"]);
+  await expect(list.locator(".kit-typeahead__check svg")).toHaveCount(2);
+
+  // Choosing a chosen row removes it, by mouse too.
+  await list.getByRole("option", { name: /^bug/ }).click();
+  await expect(page.locator('[data-demo="labels-value"]')).toHaveText("performance");
+  await expect(chosen).toHaveText(["performance"]);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Filter labels…: performance" })).toBeFocused();
+});
+
+test("the clear row chooses none in multiple mode", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Filter labels…: bug" }).click();
+  const list = page.getByRole("listbox", { name: "Filter labels…" });
+  await list.getByRole("option", { name: /^docs/ }).click();
+  await page.keyboard.press("Escape");
+
+  const trigger = page.getByRole("button", { name: "Filter labels…: 2 selected" });
+  await trigger.click();
+  await list.getByRole("option", { name: "Any label" }).click();
+  await expect(page.locator('[data-demo="labels-value"]')).toHaveText("(none)");
+  await expect(list.getByRole("option", { name: "Any label" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
+test("remote multiple choices keep the remaining label after its row is gone", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: Fixture } =
+      await import("/tests/browser/fixtures/RemoteMultipleTypeahead.svelte");
+    document.body.replaceChildren();
+    mount(Fixture, { target: document.body });
+  });
+  await page.getByRole("button", { name: "Remote labels: 2 selected" }).click();
+  await expect(page.getByRole("option", { name: "Alpha" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Remote labels" }).fill("be");
+  await page.getByRole("option", { name: "Beta" }).click();
+  await expect(page.locator('[data-fixture="remote-values"]')).toHaveText("alpha");
+  await page.keyboard.press("Escape");
+
+  // Alpha's row left the list when the query narrowed to Beta, and the
+  // closed source lists nothing, yet the trigger still names it.
+  await expect(page.getByRole("button", { name: "Remote labels: Alpha" })).toBeVisible();
 });
 
 test("a vetoed selection keeps the list open and shows the error row", async ({ page }) => {

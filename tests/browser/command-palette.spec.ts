@@ -145,3 +145,98 @@ test("an all-disabled result set leaves Enter inert with no active descendant", 
   await expect(page.locator(".kit-command-palette")).toBeVisible();
   await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
 });
+
+test("a no-match fallback is active and runs with trimmed text", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("checkbox", { name: "Search action" }).check();
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("  zzzxxyy  ");
+  const fallback = page.getByRole("option", { name: 'Search for "zzzxxyy" ↵' });
+  await expect(fallback).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-flash-banner")).toHaveText('Searched for "zzzxxyy"');
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  await expect(input).toHaveValue("");
+});
+
+test("matches are bold and trailing fallback rows stay plain", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("checkbox", { name: "Search action" }).check();
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("  tHeMe  ");
+  const options = page.getByRole("option");
+  await expect(options).toHaveCount(2);
+  await expect(options.first().locator("mark")).toHaveText("theme");
+  await expect(options.last()).toContainText('Search for "tHeMe"');
+  await expect(options.last().locator("mark")).toHaveCount(0);
+});
+
+test("fallbacks skip listed ids, follow every section, and skip disabled rows", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const { host } = mountCommandPalette({
+      open: true,
+      initialQuery: "theme",
+      commands: [
+        { id: "one", label: "Theme one", section: "First" },
+        { id: "two", label: "Theme two", section: "Second" },
+      ],
+      fallbacks: () => [
+        { id: "one", label: "Duplicate" },
+        { id: "disabled", label: "Disabled fallback", section: "First", disabled: true },
+        { id: "search", label: "Search theme", section: "First" },
+        { id: "search", label: "Repeated search", section: "First" },
+        { id: "search", label: "Repeated in another section", section: "Second" },
+      ],
+      onrun: (command, query) => {
+        host.dataset.ran = `${command.id}:${query}`;
+      },
+    });
+  });
+  const options = page.getByRole("option");
+  await expect(options).toHaveText(["Theme one", "Theme two", "Disabled fallback", "Search theme"]);
+  await expect(page.locator(".kit-command-palette__section")).toHaveText([
+    "First",
+    "Second",
+    "First",
+  ]);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(options.last()).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "search:theme");
+});
+
+test("changing the seed while open preserves typing and uses the next seed on reopen", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  const fixture = await page.evaluateHandle(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    return mountCommandPalette({
+      open: true,
+      initialQuery: "theme",
+      commands: [{ id: "theme", label: "Toggle theme" }],
+      onrun: () => {},
+    });
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await expect(input).toHaveValue("theme");
+  await expect(page.getByRole("option")).toHaveCount(1);
+  await expect(page.getByRole("option")).toContainText("Toggle theme");
+  await input.fill("typed search");
+  await fixture.evaluate(({ update }) => update({ initialQuery: "" }));
+  await expect(input).toHaveValue("typed search");
+  await expect(input).toBeFocused();
+  await fixture.evaluate(({ update }) => update({ open: false }));
+  await expect(input).not.toBeVisible();
+  await fixture.evaluate(({ update }) => update({ initialQuery: "next", open: true }));
+  await expect(input).toHaveValue("next");
+});
