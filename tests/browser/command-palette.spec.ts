@@ -200,7 +200,7 @@ test("a preset query filters on open and clear keeps focus", async ({ page }) =>
   await expect(input).toHaveValue("");
 });
 
-test("fallbacks skip matched ids, follow every section, and skip disabled rows", async ({
+test("fallbacks skip listed ids, follow every section, and skip disabled rows", async ({
   page,
 }) => {
   await gotoPage(page, "command-palette");
@@ -218,6 +218,8 @@ test("fallbacks skip matched ids, follow every section, and skip disabled rows",
         { id: "one", label: "Duplicate" },
         { id: "disabled", label: "Disabled fallback", section: "First", disabled: true },
         { id: "search", label: "Search theme", section: "First" },
+        { id: "search", label: "Repeated search", section: "First" },
+        { id: "search", label: "Repeated in another section", section: "Second" },
       ],
       onrun: (command, query) => {
         host.dataset.ran = `${command.id}:${query}`;

@@ -88,9 +88,15 @@
   });
 
   const matchedIds = $derived(new Set(ranked.map((c) => c.id)));
-  const extra = $derived(
-    query.trim() && fallbacks ? fallbacks(query.trim()).filter((c) => !matchedIds.has(c.id)) : [],
-  );
+  const extra = $derived.by(() => {
+    if (!query.trim() || !fallbacks) return [];
+    const listedIds = new Set(matchedIds);
+    return fallbacks(query.trim()).filter((c) => {
+      if (listedIds.has(c.id)) return false;
+      listedIds.add(c.id);
+      return true;
+    });
+  });
 
   // Group matches and fallbacks separately so every fallback follows the matches.
   const groups = $derived.by(() => {

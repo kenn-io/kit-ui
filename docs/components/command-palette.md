@@ -99,8 +99,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
 - Fallback rows follow all matches, grouped by their own sections. A fallback
   section that repeats a command section shows its header again after the matches.
   Fallbacks share keyboard navigation and disabled handling, stay plain, and skip
-  ids already listed among the matches. Fallback ids must be unique among themselves
-  and across `commands`. Apps must keep fallback rows out of Recent.
+  ids already listed among the matches or earlier fallback rows. The first row for
+  each id wins. Apps must keep fallback rows out of Recent.
 - `initialQuery` seeds the search on every open. `onrun` receives the trimmed
   search text as its second argument.
 - ↑/↓ move (skipping disabled), Enter runs, pointer movement highlights,
