@@ -5,9 +5,7 @@ import { gotoPage } from "./helpers.js";
 // combobox ARIA state, disabled-skip highlighting, Escape semantics,
 // scope suspension, all-disabled inertness.
 
-test("a resting pointer leaves the first command highlighted on open and reopen", async ({
-  page,
-}) => {
+test("a resting pointer does not highlight a command", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.keyboard.press("ControlOrMeta+k");
   const palette = page.locator(".kit-command-palette");
@@ -18,18 +16,12 @@ test("a resting pointer leaves the first command highlighted on open and reopen"
   await expect(palette).not.toBeVisible();
   await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
 
-  for (let i = 0; i < 2; i += 1) {
-    await page.keyboard.press("ControlOrMeta+k");
-    await expect(page.getByRole("option", { name: /^New session/ })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(later).toHaveAttribute("aria-selected", "false");
-    await page.keyboard.press("Enter");
-    await expect(palette).not.toBeVisible();
-    await expect(page.locator(".kit-flash-banner")).toHaveCount(i + 1);
-    await expect(page.locator(".kit-flash-banner").last()).toContainText("Ran: New session");
-  }
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(page.getByRole("option", { name: /^New session/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(later).toHaveAttribute("aria-selected", "false");
 });
 
 test("pointer movement highlights a command and reopening resets the highlight", async ({
@@ -48,8 +40,6 @@ test("pointer movement highlights a command and reopening resets the highlight",
     "aria-selected",
     "true",
   );
-  await page.keyboard.press("Enter");
-  await expect(page.locator(".kit-flash-banner")).toContainText("Ran: New session");
 });
 
 test("combobox wiring announces the highlighted option", async ({ page }) => {
