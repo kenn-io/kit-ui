@@ -75,19 +75,22 @@ const off = appShortcuts.register("mod+k", openPalette, {
 
 ### Props
 
-| Prop           | Type                                                                                 | Default                  | Notes                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------- |
-| `open`         | `boolean` (bindable)                                                                 | `false`                  |                                                                                          |
-| `commands`     | `PaletteCommand[]`                                                                   | required                 | `{ id, label, section?, keywords?, combo?, disabled?, icon?, children?: PaletteLeaf[] }` |
-| `onrun`        | `(command: PaletteCommand, query: string) => void`                                   | required                 | Palette closes, then runs the leaf command                                               |
-| `initialQuery` | `string`                                                                             | `""`                     | Seeds the search on every open; typing stays local                                       |
-| `fallbacks`    | `(query: string) => PaletteLeaf[]`                                                   |                          | Receives the trimmed, non-empty query                                                    |
-| `recentIds`    | `string[]`                                                                           | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency)                    |
-| `placeholder`  | `string`                                                                             | `"Type a command…"`      |                                                                                          |
-| `emptyLabel`   | `string`                                                                             | `"No matching commands"` |                                                                                          |
-| `recentLabel`  | `string`                                                                             | `"Recent"`               |                                                                                          |
-| `ariaLabel`    | `string`                                                                             | `"Command palette"`      | Dialog + listbox label                                                                   |
-| `class`        | `string`                                                                             | `""`                     |                                                                                          |
+| Prop            | Type                                               | Default                  | Notes                                                                                    |
+| --------------- | -------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| `open`          | `boolean` (bindable)                               | `false`                  |                                                                                          |
+| `commands`      | `PaletteCommand[]`                                 | required                 | `{ id, label, section?, keywords?, combo?, disabled?, icon?, children?: PaletteLeaf[] }` |
+| `onrun`         | `(command: PaletteCommand, query: string) => void` | required                 | Palette closes, then runs the leaf command                                               |
+| `initialQuery`  | `string`                                           | `""`                     | Seeds the search on every open; typing stays local                                       |
+| `fallbacks`     | `(query: string) => PaletteLeaf[]`                 |                          | Receives the trimmed, non-empty query                                                    |
+| `recentIds`     | `string[]`                                         | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency)                    |
+| `placeholder`   | `string`                                           | `"Type a command…"`      |                                                                                          |
+| `emptyLabel`    | `string`                                           | `"No matching commands"` |                                                                                          |
+| `recentLabel`   | `string`                                           | `"Recent"`               |                                                                                          |
+| `navigateLabel` | `string`                                           | `"navigate"`             | Footer navigation label                                                                  |
+| `runLabel`      | `string`                                           | `"run"`                  | Footer run label                                                                         |
+| `closeLabel`    | `string`                                           | `"close"`                | Footer close label                                                                       |
+| `ariaLabel`     | `string`                                           | `"Command palette"`      | Dialog + listbox label                                                                   |
+| `class`         | `string`                                           | `""`                     |                                                                                          |
 
 ### Behavior
 

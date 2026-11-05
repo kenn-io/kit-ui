@@ -44,6 +44,9 @@
     placeholder?: string;
     emptyLabel?: string;
     recentLabel?: string;
+    navigateLabel?: string;
+    runLabel?: string;
+    closeLabel?: string;
     ariaLabel?: string;
     class?: string;
   }
@@ -58,6 +61,9 @@
     placeholder = "Type a command…",
     emptyLabel = "No matching commands",
     recentLabel = "Recent",
+    navigateLabel = "navigate",
+    runLabel = "run",
+    closeLabel = "close",
     ariaLabel = "Command palette",
     class: className = "",
   }: Props = $props();
@@ -355,11 +361,11 @@
       </div>
       <div class="kit-command-palette__footer" aria-hidden="true">
         <KbdBadge keys={["↑", "↓"]} />
-        navigate ·
+        {navigateLabel} ·
         <KbdBadge keys={["↵"]} />
-        run ·
+        {runLabel} ·
         <KbdBadge keys={["esc"]} />
-        close
+        {closeLabel}
       </div>
     </div>
   </div>

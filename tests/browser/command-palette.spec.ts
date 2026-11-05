@@ -178,6 +178,27 @@ test("fallback icons render without moving regular labels while typing, clearing
   expect((await label.boundingBox())!.x).toBe(x);
 });
 
+test("custom footer labels keep the keyboard hints", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    mountCommandPalette({
+      open: true,
+      commands: [{ id: "theme", label: "Toggle theme" }],
+      navigateLabel: "naviguer",
+      runLabel: "exécuter",
+      closeLabel: "fermer",
+      onrun: () => {},
+    });
+  });
+  const footer = page.locator(".kit-command-palette__footer");
+  await expect(footer).toBeVisible();
+  await expect(footer).toContainText("naviguer ·");
+  await expect(footer).toContainText("exécuter ·");
+  await expect(footer).toContainText("fermer");
+});
+
 test.describe("touch palette", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
