@@ -50,7 +50,8 @@
   let forgeWidth = $state(920);
   let repo = $state("all");
 
-  let avActive = $state("sessions");
+  // Left unset: the bar starts on its first enabled tab.
+  let avActive = $state<string | undefined>();
   let avCollapsed = $state(false);
   let avWidth = $state(920);
   let avSearchStage = $state(0);
@@ -78,7 +79,7 @@
 
 <DemoSection
   title="Forge-style: brand + centered tabs + actions"
-  description="Reserved left/right regions never shrink; the tab group collapses into a SelectDropdown the moment the full row stops fitting (measured, not a breakpoint). The Reviews tab carries a per-tab indicator dot — it follows the tab into the collapsed dropdown's options and trigger. Drag the slider."
+  description="Reserved left/right regions never shrink; the tab group collapses into a SelectDropdown the moment the full row stops fitting (measured, not a breakpoint). The Reviews tab carries a per-tab indicator dot — it follows the tab into the collapsed dropdown's options and trigger. Drag the slider. The Settings button opens a page with no tab, so no tab is current."
   code={`<TopBar tabs={TABS} bind:active bind:collapsed centerTabs>
   {#snippet left()}<span class="brand">Forge</span><SelectDropdown … />{/snippet}
   {#snippet right()}<IconButton ariaLabel="Search"><Search /></IconButton>…{/snippet}
@@ -134,7 +135,9 @@ const TABS: TopBarTab[] = [
         <IconButton ariaLabel="Toggle theme">
           <MoonIcon size="14" strokeWidth="2" aria-hidden="true" />
         </IconButton>
-        <IconButton ariaLabel="Settings">
+        <!-- Settings is a page with no tab: while it is open no tab is
+             current, and the collapsed dropdown shows noCurrentLabel. -->
+        <IconButton ariaLabel="Settings" onclick={() => (forgeActive = "settings")}>
           <SettingsIcon size="14" strokeWidth="2" aria-hidden="true" />
         </IconButton>
       {/snippet}
