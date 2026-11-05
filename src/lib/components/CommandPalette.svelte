@@ -44,11 +44,13 @@
     placeholder?: string;
     emptyLabel?: string;
     recentLabel?: string;
-    navigateHint?: string;
-    runHint?: string;
-    clearHint?: string;
-    backHint?: string;
-    closeHint?: string;
+    hints?: {
+      navigate?: string;
+      run?: string;
+      clear?: string;
+      back?: string;
+      close?: string;
+    };
     ariaLabel?: string;
     class?: string;
   }
@@ -63,11 +65,7 @@
     placeholder = "Type a command…",
     emptyLabel = "No matching commands",
     recentLabel = "Recent",
-    navigateHint = "navigate",
-    runHint = "run",
-    clearHint = "clear",
-    backHint = "back",
-    closeHint = "close",
+    hints = {},
     ariaLabel = "Command palette",
     class: className = "",
   }: Props = $props();
@@ -366,13 +364,19 @@
           {/each}
         {/each}
       </div>
-      <div class="kit-command-palette__footer">
+      <div class="kit-command-palette__footer" aria-hidden="true">
         <KbdBadge keys={["↑", "↓"]} />
-        {navigateHint} ·
-        <KbdBadge keys={["↵"]} />
-        {runHint} ·
+        {hints.navigate ?? "navigate"} ·
+        {#if highlighted >= 0}
+          <KbdBadge keys={["↵"]} />
+          {hints.run ?? "run"} ·
+        {/if}
         <KbdBadge keys={["esc"]} />
-        {query ? clearHint : parent ? backHint : closeHint}
+        {query
+          ? (hints.clear ?? "clear")
+          : parent
+            ? (hints.back ?? "back")
+            : (hints.close ?? "close")}
       </div>
     </div>
   </div>

@@ -133,6 +133,8 @@ for (const viewport of [
     await expect(input).toHaveCSS("box-shadow", "none");
     const footer = page.locator(".kit-command-palette__footer");
     expect((await footer.boundingBox())!.height).toBe(32);
+    await expect(footer).toHaveAttribute("aria-hidden", "true");
+    await expect(footer).toContainText("run");
     await expect(footer).toContainText("close");
     await page.getByRole("option", { name: "Group by…", exact: true }).click();
     await expect(footer).toContainText("back");
@@ -293,9 +295,12 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   const input = page.locator(".kit-command-palette input");
   await input.fill("zzzzz");
   await expect(page.locator(".kit-command-palette__empty")).toBeVisible();
+  await expect(page.locator(".kit-command-palette__footer")).not.toContainText("run");
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await expect(page.locator(".kit-command-palette__footer")).toContainText("run");
 });
 
 test("an all-disabled result set leaves Enter inert with no active descendant", async ({
@@ -310,6 +315,7 @@ test("an all-disabled result set leaves Enter inert with no active descendant", 
   const options = page.locator(".kit-command-palette__option");
   await expect(options).toHaveCount(1);
   await expect(options.first()).toHaveAttribute("aria-disabled", "true");
+  await expect(page.locator(".kit-command-palette__footer")).not.toContainText("run");
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
 
   // Enter and arrows have no runnable target — the palette stays open

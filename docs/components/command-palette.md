@@ -86,11 +86,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
 | `placeholder`  | `string`                                           | `"Type a command…"`      |                                                                                   |
 | `emptyLabel`   | `string`                                           | `"No matching commands"` |                                                                                   |
 | `recentLabel`  | `string`                                           | `"Recent"`               |                                                                                   |
-| `navigateHint` | `string` | `"navigate"` | Footer arrow-key hint |
-| `runHint` | `string` | `"run"` | Footer Enter hint |
-| `clearHint` | `string` | `"clear"` | Footer Escape hint while searching |
-| `backHint` | `string` | `"back"` | Footer Escape hint in a child list |
-| `closeHint` | `string` | `"close"` | Footer Escape hint at root |
+| `hints`       | `{ navigate?: string; run?: string; clear?: string; back?: string; close?: string }` | `{}`                     | Footer labels; each omitted label defaults to its English key             |
 | `ariaLabel`    | `string`                                           | `"Command palette"`      | Dialog + listbox label                                                            |
 | `class`        | `string`                                           | `""`                     |                                                                                   |
 
@@ -100,9 +96,11 @@ const off = appShortcuts.register("mod+k", openPalette, {
   All visible rows reserve the icon column when any visible command has an icon.
 - The borderless search row is 48px tall, command rows are at least 36px tall,
   and only the results list scrolls. Shortcut badges stay right-aligned.
+  The search field shows no focus ring inside the palette.
   A 32px footer shows ↑↓ navigate, ↵ run, and esc close, changing to esc back
-  inside a child list or esc clear while the query has text. The hint props
-  translate these labels. Coarse pointers hide the footer alongside key badges.
+  inside a child list or esc clear while the query has text. The run hint appears
+  only when a command is highlighted. The `hints` prop translates these labels.
+  Assistive technology ignores the footer. Coarse pointers hide it alongside key badges.
 - Filtering ranks label **prefix** over label **substring** over
   **keyword** matches. Each section then appears **once**, ordered by its
   best-ranked match, with ranking preserved within the section — a
