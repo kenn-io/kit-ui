@@ -124,6 +124,17 @@ test("palette layout and keyboard hints", async ({ page }) => {
   await expect(search.locator(".kit-text-input__control")).toHaveCSS("outline-style", "none");
   const footer = page.locator(".kit-command-palette__footer");
   expect((await footer.boundingBox())!.height).toBe(32);
+  expect((await footer.locator("kbd").first().boundingBox())!.x).toBe(icon!.x);
+  const sections = page.locator(".kit-command-palette__section");
+  for (let i = 1; i < (await sections.count()); i++) {
+    const gap = await sections.nth(i).evaluate((section) => {
+      return (
+        section.getBoundingClientRect().top -
+        section.previousElementSibling!.getBoundingClientRect().bottom
+      );
+    });
+    expect(gap).toBe(8);
+  }
 });
 
 test("fallback icons do not shift regular labels while typing", async ({ page }) => {

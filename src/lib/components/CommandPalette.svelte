@@ -452,6 +452,10 @@
     color: var(--text-muted);
   }
 
+  .kit-command-palette__section ~ .kit-command-palette__section {
+    margin-top: var(--space-4);
+  }
+
   .kit-command-palette__option {
     display: flex;
     align-items: center;
@@ -501,7 +505,7 @@
     gap: var(--space-2);
     flex-shrink: 0;
     height: 32px;
-    padding: 0 var(--space-4);
+    padding: 0 var(--space-5);
     border-top: 1px solid var(--border-muted);
     color: var(--text-muted);
     font-size: var(--font-size-2xs);
