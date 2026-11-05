@@ -13,6 +13,7 @@
 </script>
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import { highlightSegments } from "../utils/highlight.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
@@ -126,7 +127,7 @@
   // shortcuts are suspended while the palette is up.
   $effect(() => {
     if (!open) return;
-    query = initialQuery;
+    query = untrack(() => initialQuery);
     const pop = appShortcuts.pushScope(`kit-command-palette-${uid}`);
     return pop;
   });

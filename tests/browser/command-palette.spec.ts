@@ -205,32 +205,24 @@ test("fallbacks skip matched ids, follow every section, and skip disabled rows",
 }) => {
   await gotoPage(page, "command-palette");
   await page.evaluate(async () => {
-    const [{ mount }, { default: CommandPalette }] = await Promise.all([
-      import("/node_modules/.vite/deps/svelte.js"),
-      import("/src/lib/components/CommandPalette.svelte"),
-    ]);
-    const target = document.createElement("div");
-    document.body.append(target);
-    mount(CommandPalette, {
-      target,
-      props: {
-        open: true,
-        initialQuery: "theme",
-        commands: [
-          { id: "one", label: "Theme one", section: "First" },
-          { id: "two", label: "Theme two", section: "Second" },
-        ],
-        fallbacks: () => [
-          { id: "one", label: "Duplicate" },
-          { id: "disabled", label: "Disabled fallback", section: "First", disabled: true },
-          { id: "search", label: "Search theme", section: "First" },
-        ],
-        onrun: (command, query) => {
-          target.dataset.ran = `${command.id}:${query}`;
-        },
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const { host } = mountCommandPalette({
+      open: true,
+      initialQuery: "theme",
+      commands: [
+        { id: "one", label: "Theme one", section: "First" },
+        { id: "two", label: "Theme two", section: "Second" },
+      ],
+      fallbacks: () => [
+        { id: "one", label: "Duplicate" },
+        { id: "disabled", label: "Disabled fallback", section: "First", disabled: true },
+        { id: "search", label: "Search theme", section: "First" },
+      ],
+      onrun: (command, query) => {
+        host.dataset.ran = `${command.id}:${query}`;
       },
     });
-    target.dataset.testid = "mounted-palette";
   });
   const options = page.getByRole("option");
   await expect(options).toHaveText(["Theme one", "Theme two", "Disabled fallback", "Search theme"]);
@@ -244,4 +236,30 @@ test("fallbacks skip matched ids, follow every section, and skip disabled rows",
   await expect(options.last()).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "search:theme");
+});
+
+test("changing the seed while open preserves typing and uses the next seed on reopen", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  const fixture = await page.evaluateHandle(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    return mountCommandPalette({
+      open: true,
+      initialQuery: "theme",
+      commands: [{ id: "theme", label: "Toggle theme" }],
+      onrun: () => {},
+    });
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await expect(input).toHaveValue("theme");
+  await input.fill("typed search");
+  await fixture.evaluate(({ update }) => update({ initialQuery: "" }));
+  await expect(input).toHaveValue("typed search");
+  await expect(input).toBeFocused();
+  await fixture.evaluate(({ update }) => update({ open: false }));
+  await expect(input).not.toBeVisible();
+  await fixture.evaluate(({ update }) => update({ initialQuery: "next", open: true }));
+  await expect(input).toHaveValue("next");
 });
