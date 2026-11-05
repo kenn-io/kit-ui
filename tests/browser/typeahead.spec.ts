@@ -237,13 +237,19 @@ test("remote results move Enter past the clear row after an empty loading state"
 test("remote results move Enter past the clear row when they arrive after opening", async ({
   page,
 }) => {
+  await page.clock.install({ time: new Date("2026-01-15T08:00:00Z") });
   await gotoPage(page, "typeahead");
+  await page.clock.pauseAt(new Date("2026-01-15T09:00:00Z"));
   const trigger = page.getByRole("button", { name: "Search remote options…" });
   await trigger.click();
   await page.getByRole("combobox", { name: "Search remote options…" }).fill("async-open");
   await page.keyboard.press("Escape");
 
+  // A duplicate close can start the response timer before the picker reopens.
+  await expect(trigger).toBeFocused();
+  await page.clock.runFor(200);
   await trigger.click();
+  await page.clock.runFor(100);
   await expect(page.getByRole("option", { name: "New result" })).toBeVisible();
   await page.keyboard.press("Enter");
 
