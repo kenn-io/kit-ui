@@ -139,10 +139,12 @@ for (const viewport of [
     await page.getByRole("option", { name: "Group by…", exact: true }).click();
     await expect(footer).toContainText("back");
     await expect(page.locator(".kit-command-palette__icon")).toHaveCount(0);
-    const back = (await page.getByRole("button", { name: "Group by…", exact: true }).boundingBox())!;
+    const chip = (await page
+      .getByRole("button", { name: "Group by…", exact: true })
+      .boundingBox())!;
     const childSearch = (await search.boundingBox())!;
     expect(childSearch.height).toBe(48);
-    expect(back.x - childSearch.x).toBe(6);
+    expect(chip.x - childSearch.x).toBe(6);
   });
 }
 
@@ -277,9 +279,12 @@ test("Escape clears the query first, then closes; page shortcuts are suspended w
 
   const input = page.locator(".kit-command-palette input");
   await expect(input).toHaveValue("g");
+  const footer = page.locator(".kit-command-palette__footer");
+  await expect(footer).toContainText("clear");
 
   await page.keyboard.press("Escape"); // clears
   await expect(input).toHaveValue("");
+  await expect(footer).toContainText("close");
   await expect(palette).toBeVisible();
   await page.keyboard.press("Escape"); // closes
   await expect(palette).not.toBeVisible();
@@ -494,6 +499,30 @@ test("a parent opens children and records a child in Recent", async ({ page }) =
   await page.getByRole("button", { name: /Open palette/ }).click();
   await expect(input).toHaveAttribute("placeholder", "Type a command…");
   await expect(page.locator(".kit-command-palette__section").first()).toHaveText("Recent");
+  await expect(page.getByRole("option").first()).toHaveText("Group by… › Source");
+});
+
+test("Escape clears child text off the input, steps back, and closes", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  const footer = page.locator(".kit-command-palette__footer");
+  await expect(footer).toContainText("back");
+  await input.fill("a");
+  await expect(footer).toContainText("clear");
+  await expect(page.locator(".kit-command-palette__parent")).toHaveText("Group by…");
+  await page.getByRole("option", { name: "account", exact: true }).click({ force: true });
+  await expect(input).not.toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
+  await expect(footer).toContainText("back");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
+  await expect(footer).toContainText("close");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
 });
 
 test("root search reaches children with inherited sections and keywords", async ({ page }) => {

@@ -150,7 +150,15 @@ appShortcuts.register("mod+k", () => openPalette());
     {commands}
     {initialQuery}
     fallbacks={fallbackCommands
-      ? (q) => [{ id: "search", label: `Search for "${q}"`, icon: Search, section: "Search", combo: "enter" }]
+      ? (q) => [
+          {
+            id: "search",
+            label: `Search for "${q}"`,
+            icon: Search,
+            section: "Search",
+            combo: "enter",
+          },
+        ]
       : undefined}
     recentIds={recent}
     onrun={run}
