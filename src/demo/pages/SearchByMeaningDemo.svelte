@@ -43,15 +43,10 @@
           state={example.state}
           itemNoun="messages"
           onturnon={() => (clicks[example.id] = (clicks[example.id] ?? 0) + 1)}
-          onusebuiltin={() =>
-            (clicks[`${example.id}-builtin`] = (clicks[`${example.id}-builtin`] ?? 0) + 1)}
+          onusebuiltin={() => (clicks[example.id] = (clicks[example.id] ?? 0) + 1)}
         />
         {#if example.state.kind === "off" || example.state.kind === "downloaded" || example.state.kind.startsWith("ollama")}
-          <p class="readout" data-testid="clicks">
-            Clicks: {clicks[
-              example.state.kind.startsWith("ollama") ? `${example.id}-builtin` : example.id
-            ] ?? 0}
-          </p>
+          <p class="readout" data-testid="clicks">Clicks: {clicks[example.id] ?? 0}</p>
         {/if}
       </div>
     </DemoSection>
@@ -80,6 +75,7 @@
   }
   ul {
     margin: 0 0 var(--space-4);
-    padding-left: var(--space-5);
+    padding: 0;
+    list-style: none;
   }
 </style>

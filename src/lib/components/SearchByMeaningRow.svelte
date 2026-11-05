@@ -21,29 +21,14 @@
   const description = $derived(describeSearchByMeaning(state, itemNoun, words));
   const percent = $derived(
     description.progress && description.progress.max > 0
-      ? Math.min(100, Math.max(0, (description.progress.value / description.progress.max) * 100))
+      ? Math.min(100, (description.progress.value / description.progress.max) * 100)
       : 0,
   );
 </script>
 
-<div class="kit-search-by-meaning">
+<div class="kit-search-by-meaning" class:kit-search-by-meaning--no-action={!description.action}>
   <span class="kit-search-by-meaning__name">{words.name}</span>
   <Chip size="xs" uppercase={false} tone={description.tone}>{description.chip}</Chip>
-  {#if description.action}
-    <div class="kit-search-by-meaning__action">
-      <Button
-        size="sm"
-        tone={description.action === "turn-on" ? "info" : "neutral"}
-        surface={description.action === "turn-on" ? "soft" : "outline"}
-        onclick={description.action === "turn-on" ? onturnon : onusebuiltin}
-      >
-        {description.action === "turn-on" ? words.turnOn : words.useBuiltIn}
-      </Button>
-    </div>
-  {/if}
-  {#if description.line && !description.progress}
-    <p class="kit-search-by-meaning__line">{description.line}</p>
-  {/if}
   {#if description.warning}
     <p class="kit-search-by-meaning__warning">{description.warning}</p>
   {/if}
@@ -59,7 +44,21 @@
     >
       <div class="kit-search-by-meaning__fill" style:width={`${percent}%`}></div>
     </div>
+  {/if}
+  {#if description.line}
     <p class="kit-search-by-meaning__line">{description.line}</p>
+  {/if}
+  {#if description.action}
+    <div class="kit-search-by-meaning__action">
+      <Button
+        size="sm"
+        tone={description.action === "turn-on" ? "info" : "neutral"}
+        surface={description.action === "turn-on" ? "soft" : "outline"}
+        onclick={description.action === "turn-on" ? onturnon : onusebuiltin}
+      >
+        {description.action === "turn-on" ? words.turnOn : words.useBuiltIn}
+      </Button>
+    </div>
   {/if}
 </div>
 
@@ -71,12 +70,17 @@
     min-height: 32px;
     align-items: center;
   }
+  .kit-search-by-meaning--no-action {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
   .kit-search-by-meaning__name {
     font-size: var(--font-size-md);
     font-weight: 500;
     color: var(--text-primary);
   }
   .kit-search-by-meaning__action {
+    grid-column: 3;
+    grid-row: 1;
     justify-self: end;
   }
   .kit-search-by-meaning__line,
@@ -86,7 +90,7 @@
     font-size: var(--font-size-xs);
     color: var(--text-muted);
     line-height: 1.45;
-    overflow-wrap: anywhere;
+    text-wrap: pretty;
   }
   .kit-search-by-meaning__warning {
     color: color-mix(in srgb, var(--accent-amber) 65%, var(--text-primary));
@@ -115,6 +119,7 @@
     }
     .kit-search-by-meaning__action {
       grid-column: 1 / -1;
+      grid-row: auto;
       justify-self: start;
     }
   }

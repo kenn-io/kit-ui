@@ -60,6 +60,11 @@ test("exposes progress values and text", async ({ page }) => {
       "aria-valuetext",
       (await row.locator(".kit-search-by-meaning__line").textContent())!,
     );
+    const edges = await row.evaluate((el) => ({
+      chip: el.querySelector(".kit-chip")!.getBoundingClientRect().right,
+      bar: el.querySelector('[role="progressbar"]')!.getBoundingClientRect().right,
+    }));
+    expect(edges.chip).toBeCloseTo(edges.bar, 0);
   }
 });
 
@@ -71,7 +76,11 @@ test("wraps actions within the row at the mobile breakpoint", async ({ page }) =
     const name = el.querySelector(".kit-search-by-meaning__name")!.getBoundingClientRect();
     const button = el.querySelector("button")!.getBoundingClientRect();
     const host = el.getBoundingClientRect();
+    const description = el
+      .querySelector(".kit-search-by-meaning__warning")!
+      .getBoundingClientRect();
     return {
+      descriptionBottom: description.bottom,
       buttonRight: button.right,
       hostRight: host.right,
       nameBottom: name.bottom,
@@ -83,6 +92,7 @@ test("wraps actions within the row at the mobile breakpoint", async ({ page }) =
     };
   });
   expect(bounds.buttonTop).toBeGreaterThanOrEqual(bounds.nameBottom);
+  expect(bounds.buttonTop).toBeGreaterThan(bounds.descriptionBottom);
   expect(bounds.buttonLeft).toBeCloseTo(bounds.nameLeft, 0);
   expect(bounds.scroll).toBeLessThanOrEqual(bounds.width);
   expect(bounds.buttonRight).toBeLessThanOrEqual(bounds.hostRight);
