@@ -174,6 +174,30 @@ test("filtering skips a disabled first result and Enter runs the highlight", asy
   await expect(page.locator(".kit-flash-banner")).toContainText("Find session");
 });
 
+test("Enter on Clear search empties the query without running a command", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const { host } = mountCommandPalette({
+      open: true,
+      commands: [{ id: "source", label: "Source" }],
+      onrun: () => {
+        host.dataset.ran = "true";
+      },
+    });
+    host.dataset.ran = "false";
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("source");
+  await input.press("Tab");
+  await expect(page.getByRole("button", { name: "Clear search" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-command-palette")).toBeVisible();
+  await expect(input).toHaveValue("");
+  await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "false");
+});
+
 test("Escape clears the query first, then closes; page shortcuts are suspended while open", async ({
   page,
 }) => {

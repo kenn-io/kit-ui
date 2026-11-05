@@ -233,17 +233,10 @@
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       move(-1);
-    } else if (event.key === "Enter") {
+    } else if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement)) {
       event.preventDefault();
-      if (
-        event.target instanceof HTMLButtonElement &&
-        event.target.classList.contains("kit-command-palette__parent")
-      ) {
-        setParent(undefined);
-      } else {
-        const command = flat[highlighted];
-        if (command) run(command);
-      }
+      const command = flat[highlighted];
+      if (command) run(command);
     } else if (event.key === "Backspace" && !query && parent) {
       event.preventDefault();
       setParent(undefined);
@@ -336,7 +329,10 @@
               onclick={() => run(command)}
             >
               <span class="kit-command-palette__label">
-                {#if !parent && matchedIds.has(command.id) && parentLabels.has(command.id)}{parentLabels.get(command.id)} › {/if}
+                {#if !parent && matchedIds.has(command.id) && parentLabels.has(command.id)}{parentLabels.get(
+                    command.id,
+                  )} ›
+                {/if}
                 {#each highlightSegments(command.label, matchedIds.has(command.id) ? query.trim() : "") as segment, si (si)}
                   {#if segment.match}<mark>{segment.text}</mark>{:else}{segment.text}{/if}
                 {/each}
