@@ -126,3 +126,47 @@ test("the hidden measurement probe adds no sideways scroll to a narrow container
   const expanded = await overflow();
   expect(expanded.scrollWidth).toBeLessThanOrEqual(expanded.clientWidth);
 });
+
+test("a page outside the tab set leaves every tab inactive in both modes", async ({ page }) => {
+  await gotoPage(page, "top-bar");
+
+  const host = page.locator(".bar-host").first();
+  const bar = host.locator(".kit-top-bar");
+  const tabs = bar.locator(".kit-top-bar__tabs");
+  const dropdown = bar.locator(".kit-top-bar__nav-select");
+  const slider = page.locator('input[type="range"]').first();
+
+  await expect(tabs.locator('[aria-current="page"]')).toHaveText("Activity");
+
+  // The demo's Settings button sets active to an id no tab has.
+  await bar.getByRole("button", { name: "Settings" }).click();
+  await expect(bar.locator('[aria-current="page"]')).toHaveCount(0);
+  await expect(tabs.locator(".kit-top-bar__tab.active")).toHaveCount(0);
+
+  for (const width of [800, 680, 560, 440, 360]) {
+    await setSlider(slider, width);
+  }
+  const trigger = dropdown.locator(".kit-select-dropdown__trigger");
+  await expect(trigger).toHaveText("—");
+  await expect(trigger).not.toContainText("Activity");
+
+  // The placeholder cannot be picked; a real tab still can.
+  await trigger.click();
+  await expect(page.getByRole("option", { name: "—" })).toBeDisabled();
+  await page.getByRole("option", { name: "Pulls" }).click();
+  await expect(trigger).toHaveText("Pulls");
+
+  for (const width of [440, 560, 680, 800, 920]) {
+    await setSlider(slider, width);
+  }
+  await expect(tabs.locator('[aria-current="page"]')).toHaveText("Pulls");
+});
+
+test("an unset active starts on the first enabled tab", async ({ page }) => {
+  await gotoPage(page, "top-bar");
+
+  // The agentsview demo bar never sets active.
+  const bar = page.locator(".bar-host").nth(1).locator(".kit-top-bar");
+  await expect(bar.locator('[aria-current="page"]')).toHaveText("Sessions");
+  await expect(bar.locator(".kit-top-bar__tab.active")).toHaveText("Sessions");
+});
