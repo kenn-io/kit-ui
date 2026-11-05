@@ -1,6 +1,61 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
+test("a fallback keeps its identity when an unmatched command has the same id", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: CommandPalette } = await import("/src/lib/components/CommandPalette.svelte");
+    const fallback = { id: "search", label: 'Search archive for "quarterly budget"' };
+    const host = document.createElement("div");
+    host.dataset.testid = "mounted-palette";
+    document.body.append(host);
+    mount(CommandPalette, {
+      target: host,
+      props: {
+        open: true,
+        commands: [{ id: "search", label: "Search archive" }],
+        fallbacks: () => [fallback],
+        onrun: (selected) => {
+          host.dataset.sameCommand = String(selected === fallback);
+          host.dataset.ran = selected.label;
+        },
+      },
+    });
+  });
+  await page.getByRole("combobox", { name: "Command palette" }).fill("quarterly budget");
+  await expect(page.getByRole("option")).toHaveText(['Search archive for "quarterly budget"']);
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-same-command", "true");
+  await expect(page.getByTestId("mounted-palette")).toHaveAttribute(
+    "data-ran",
+    'Search archive for "quarterly budget"',
+  );
+});
+
+test("a parent with no children stays disabled on click and Enter", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const { host } = mountCommandPalette({
+      open: true,
+      commands: [{ id: "views", label: "Saved views…", children: [] }],
+      onrun: (command) => {
+        host.dataset.ran = command.id;
+      },
+    });
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  const parent = page.getByRole("option", { name: "Saved views…", exact: true });
+  await parent.click({ force: true });
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("listbox", { name: "Command palette", exact: true })).toBeVisible();
+  await expect(parent).toHaveAttribute("aria-disabled", "true");
+  await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
+  await expect(page.getByTestId("mounted-palette")).not.toHaveAttribute("data-ran", /./);
+});
+
 // CommandPalette acceptance (docs/components/command-palette.md):
 // combobox ARIA state, disabled-skip highlighting, Escape semantics,
 // scope suspension, all-disabled inertness.

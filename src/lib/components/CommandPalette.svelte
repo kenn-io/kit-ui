@@ -64,22 +64,38 @@
   let parentId = $state<string>();
   let inputEl = $state<HTMLInputElement>();
   let listEl = $state<HTMLDivElement>();
-  const tree: PaletteCommand[] = $derived(
-    commands.map((c) =>
-      c.children
-        ? {
-            ...c,
-            children: c.children.map((child) => ({
-              ...child,
-              section: child.section ?? c.section,
-              disabled: c.disabled || child.disabled,
-            })),
-          }
-        : c,
-    ),
-  );
+  const { tree, allCommands, recent, originals } = $derived.by(() => {
+    const originals = new WeakMap<PaletteCommand, PaletteCommand>();
+    const tree = commands.map((c) => {
+      if (!c.children) return c;
+      const copy = {
+        ...c,
+        disabled: c.disabled || c.children.length === 0,
+        children: c.children.map((child) => {
+          const copy = {
+            ...child,
+            section: child.section ?? c.section,
+            disabled: c.disabled || child.disabled,
+          };
+          originals.set(copy, child);
+          return copy;
+        }),
+      };
+      originals.set(copy, c);
+      return copy;
+    });
+    const allCommands = tree.flatMap((c) => [c, ...(c.children ?? [])]);
+    const recent = recentIds
+      .map((id) => allCommands.find((c) => c.id === id))
+      .filter((c): c is PaletteCommand => c !== undefined)
+      .map((c) => {
+        const copy = { ...c, section: recentLabel };
+        originals.set(copy, originals.get(c) ?? c);
+        return copy;
+      });
+    return { tree, allCommands, recent, originals };
+  });
   const parent = $derived(tree.find((c) => c.id === parentId && c.children));
-  const allCommands = $derived(tree.flatMap((c) => [c, ...(c.children ?? [])]));
 
   interface Group {
     section: string | undefined;
@@ -91,10 +107,6 @@
     const q = query.trim().toLowerCase();
     if (!q) {
       if (parent) return parent.children ?? [];
-      const recent = recentIds
-        .map((id) => allCommands.find((c) => c.id === id))
-        .filter((c): c is PaletteCommand => c !== undefined)
-        .map((c) => ({ ...c, section: recentLabel }));
       const rest = tree.filter((c) => !recentIds.includes(c.id));
       return [...recent, ...rest];
     }
@@ -195,10 +207,7 @@
       return;
     }
     const typed = query.trim();
-    const original =
-      commands.find((c) => c.id === command.id) ??
-      commands.flatMap((c) => c.children ?? []).find((c) => c.id === command.id) ??
-      command;
+    const original = originals.get(command) ?? command;
     close();
     onrun(original, typed);
   }
