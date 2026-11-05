@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
 test("kit-control-states preserves native structural controls and shared interaction states", async ({
@@ -143,209 +143,211 @@ test("renders an ellipsis when a label is constrained", async ({ page }) => {
   expect(ellipsis.equals(hardClip)).toBe(false);
 });
 
-// Each theme takes 12 screenshots. Keep their work in separate tests so the
-// full theme matrix cannot exhaust one test's timeout on a busy CI runner.
-for (const theme of [
-  "default",
-  "control-room",
-  "terminal",
-  "zine",
-  "pebble",
-  "gallery",
-  "arctic",
-  "ember",
-  "graphite",
-  "quiet",
-] as const) {
-  test(`centers lowercase ink and keeps descenders inside clipped labels in ${theme}`, async ({
-    page,
-  }) => {
-    await gotoPage(page, "button");
-    const glyphSafetyButtons = page.locator('[data-demo="button-glyph-safety"] .kit-button');
-    if (theme === "default") {
-      await page.evaluate(() => document.fonts.ready);
-      await expect(glyphSafetyButtons).toHaveCount(7);
-      await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
-      expect(
-        await glyphSafetyButtons.evaluateAll((buttons) =>
-          buttons.map((button) => button.getBoundingClientRect().height),
-        ),
-      ).toEqual([24, 24, 24, 24, 28, 28, 28]);
-    }
+test.describe("button glyph safety", () => {
+  async function measureGlyph(page: Page, button: Locator, glyph: "o" | "g") {
+    const geometry = await button.evaluate((element, targetGlyph) => {
+      const text = element.querySelector<HTMLElement>(".kit-button__label-text");
+      const node = text?.firstChild;
+      if (!text || !(node instanceof Text)) throw new Error("button text node is missing");
+      const index = node.data.indexOf(targetGlyph);
+      if (index < 0) throw new Error(`glyph ${targetGlyph} is missing`);
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + 1);
+      const buttonRect = element.getBoundingClientRect();
+      const glyphRect = range.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        buttonHeight: buttonRect.height,
+        buttonTopFraction: buttonRect.top - Math.floor(buttonRect.top),
+        glyphLeft: glyphRect.left - buttonRect.left,
+        glyphRight: glyphRect.right - buttonRect.left,
+        borderTop: parseFloat(style.borderTopWidth),
+        borderBottom: parseFloat(style.borderBottomWidth),
+      };
+    }, glyph);
 
-    async function measureGlyph(button: Locator, glyph: "o" | "g") {
-      const geometry = await button.evaluate((element, targetGlyph) => {
-        const text = element.querySelector<HTMLElement>(".kit-button__label-text");
-        const node = text?.firstChild;
-        if (!text || !(node instanceof Text)) throw new Error("button text node is missing");
-        const index = node.data.indexOf(targetGlyph);
-        if (index < 0) throw new Error(`glyph ${targetGlyph} is missing`);
-        const range = document.createRange();
-        range.setStart(node, index);
-        range.setEnd(node, index + 1);
-        const buttonRect = element.getBoundingClientRect();
-        const glyphRect = range.getBoundingClientRect();
-        const style = getComputedStyle(element);
-        return {
-          buttonHeight: buttonRect.height,
-          buttonTopFraction: buttonRect.top - Math.floor(buttonRect.top),
-          glyphLeft: glyphRect.left - buttonRect.left,
-          glyphRight: glyphRect.right - buttonRect.left,
-          borderTop: parseFloat(style.borderTopWidth),
-          borderBottom: parseFloat(style.borderBottomWidth),
+    const screenshot = await button.screenshot({ scale: "css" });
+    await button.locator(".kit-button__label-text").evaluate((text) => {
+      text.style.visibility = "hidden";
+    });
+    const backgroundScreenshot = await button.screenshot({ scale: "css" });
+    await button.locator(".kit-button__label-text").evaluate((text) => {
+      text.style.visibility = "";
+    });
+
+    return page.evaluate(
+      async ({ dataUrl, backgroundDataUrl, ...bounds }) => {
+        const decode = async (url: string) => {
+          const image = new Image();
+          image.src = url;
+          await image.decode();
+          return image;
         };
-      }, glyph);
+        const image = await decode(dataUrl);
+        const backgroundImage = await decode(backgroundDataUrl);
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("canvas context is unavailable");
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, image.width, image.height).data;
+        context.clearRect(0, 0, image.width, image.height);
+        context.drawImage(backgroundImage, 0, 0);
+        const backgroundPixels = context.getImageData(0, 0, image.width, image.height).data;
+        const pixel = (source: Uint8ClampedArray, x: number, y: number) => {
+          const offset = (y * image.width + x) * 4;
+          return [source[offset]!, source[offset + 1]!, source[offset + 2]!] as const;
+        };
+        const startX = Math.max(1, Math.floor(bounds.glyphLeft));
+        const endX = Math.min(image.width - 2, Math.ceil(bounds.glyphRight));
+        const startY = Math.ceil(bounds.borderTop);
+        const endY = image.height - Math.ceil(bounds.borderBottom) - 1;
+        const rowMax: number[] = [];
+        const rowWeight: number[] = [];
 
-      const screenshot = await button.screenshot({ scale: "css" });
-      await button.locator(".kit-button__label-text").evaluate((text) => {
-        text.style.visibility = "hidden";
-      });
-      const backgroundScreenshot = await button.screenshot({ scale: "css" });
-      await button.locator(".kit-button__label-text").evaluate((text) => {
-        text.style.visibility = "";
-      });
-
-      return page.evaluate(
-        async ({ dataUrl, backgroundDataUrl, ...bounds }) => {
-          const decode = async (url: string) => {
-            const image = new Image();
-            image.src = url;
-            await image.decode();
-            return image;
-          };
-          const image = await decode(dataUrl);
-          const backgroundImage = await decode(backgroundDataUrl);
-          const canvas = document.createElement("canvas");
-          canvas.width = image.width;
-          canvas.height = image.height;
-          const context = canvas.getContext("2d");
-          if (!context) throw new Error("canvas context is unavailable");
-          context.drawImage(image, 0, 0);
-          const pixels = context.getImageData(0, 0, image.width, image.height).data;
-          context.clearRect(0, 0, image.width, image.height);
-          context.drawImage(backgroundImage, 0, 0);
-          const backgroundPixels = context.getImageData(0, 0, image.width, image.height).data;
-          const pixel = (source: Uint8ClampedArray, x: number, y: number) => {
-            const offset = (y * image.width + x) * 4;
-            return [source[offset]!, source[offset + 1]!, source[offset + 2]!] as const;
-          };
-          const startX = Math.max(1, Math.floor(bounds.glyphLeft));
-          const endX = Math.min(image.width - 2, Math.ceil(bounds.glyphRight));
-          const startY = Math.ceil(bounds.borderTop);
-          const endY = image.height - Math.ceil(bounds.borderBottom) - 1;
-          const rowMax: number[] = [];
-          const rowWeight: number[] = [];
-
-          for (let y = startY; y <= endY; y += 1) {
-            let maximum = 0;
-            let weight = 0;
-            for (let x = startX; x <= endX; x += 1) {
-              const color = pixel(pixels, x, y);
-              const background = pixel(backgroundPixels, x, y);
-              const red = color[0] - background[0];
-              const green = color[1] - background[1];
-              const blue = color[2] - background[2];
-              maximum = Math.max(maximum, Math.abs(red), Math.abs(green), Math.abs(blue));
-              weight += Math.sqrt(red * red + green * green + blue * blue);
-            }
-            rowMax[y] = maximum;
-            rowWeight[y] = weight;
+        for (let y = startY; y <= endY; y += 1) {
+          let maximum = 0;
+          let weight = 0;
+          for (let x = startX; x <= endX; x += 1) {
+            const color = pixel(pixels, x, y);
+            const background = pixel(backgroundPixels, x, y);
+            const red = color[0] - background[0];
+            const green = color[1] - background[1];
+            const blue = color[2] - background[2];
+            maximum = Math.max(maximum, Math.abs(red), Math.abs(green), Math.abs(blue));
+            weight += Math.sqrt(red * red + green * green + blue * blue);
           }
+          rowMax[y] = maximum;
+          rowWeight[y] = weight;
+        }
 
-          const buttonCenter = bounds.buttonTopFraction + bounds.buttonHeight / 2;
-          let seed = Math.floor(buttonCenter);
-          while ((rowMax[seed] ?? 0) < 8 && seed > startY) seed -= 1;
-          if ((rowMax[seed] ?? 0) < 8) throw new Error("painted glyph component not found");
-          let top = seed;
-          let bottom = seed;
-          while ((rowMax[top - 1] ?? 0) >= 8) top -= 1;
-          while ((rowMax[bottom + 1] ?? 0) >= 8) bottom += 1;
+        const buttonCenter = bounds.buttonTopFraction + bounds.buttonHeight / 2;
+        let seed = Math.floor(buttonCenter);
+        while ((rowMax[seed] ?? 0) < 8 && seed > startY) seed -= 1;
+        if ((rowMax[seed] ?? 0) < 8) throw new Error("painted glyph component not found");
+        let top = seed;
+        let bottom = seed;
+        while ((rowMax[top - 1] ?? 0) >= 8) top -= 1;
+        while ((rowMax[bottom + 1] ?? 0) >= 8) bottom += 1;
 
-          let componentWeight = 0;
-          let weightedPosition = 0;
-          for (let row = top; row <= bottom; row += 1) {
-            const weight = rowWeight[row] ?? 0;
-            componentWeight += weight;
-            weightedPosition += (row + 0.5) * weight;
-          }
+        let componentWeight = 0;
+        let weightedPosition = 0;
+        for (let row = top; row <= bottom; row += 1) {
+          const weight = rowWeight[row] ?? 0;
+          componentWeight += weight;
+          weightedPosition += (row + 0.5) * weight;
+        }
 
-          return {
-            height: bounds.buttonHeight,
-            opticalOffset: weightedPosition / componentWeight - buttonCenter,
-            paintWeight: rowWeight.reduce((sum, weight) => sum + (weight ?? 0), 0),
-          };
-        },
-        {
-          dataUrl: `data:image/png;base64,${screenshot.toString("base64")}`,
-          backgroundDataUrl: `data:image/png;base64,${backgroundScreenshot.toString("base64")}`,
-          ...geometry,
-        },
-      );
-    }
+        return {
+          height: bounds.buttonHeight,
+          opticalOffset: weightedPosition / componentWeight - buttonCenter,
+          paintWeight: rowWeight.reduce((sum, weight) => sum + (weight ?? 0), 0),
+        };
+      },
+      {
+        dataUrl: `data:image/png;base64,${screenshot.toString("base64")}`,
+        backgroundDataUrl: `data:image/png;base64,${backgroundScreenshot.toString("base64")}`,
+        ...geometry,
+      },
+    );
+  }
 
-    const infoSoft = page.locator(".button-matrix .kit-button", { hasText: "info soft" });
-    const merge = glyphSafetyButtons.nth(1);
+  // Each theme takes 12 screenshots. Keep their work in separate tests so the
+  // full theme matrix cannot exhaust one test's timeout on a busy CI runner.
+  for (const theme of [
+    "default",
+    "control-room",
+    "terminal",
+    "zine",
+    "pebble",
+    "gallery",
+    "arctic",
+    "ember",
+    "graphite",
+    "quiet",
+  ] as const) {
+    test(`centers lowercase ink and keeps descenders inside clipped labels in ${theme}`, async ({
+      page,
+    }) => {
+      await gotoPage(page, "button");
+      const glyphSafetyButtons = page.locator('[data-demo="button-glyph-safety"] .kit-button');
+      if (theme === "default") {
+        await page.evaluate(() => document.fonts.ready);
+        await expect(glyphSafetyButtons).toHaveCount(7);
+        await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
+        expect(
+          await glyphSafetyButtons.evaluateAll((buttons) =>
+            buttons.map((button) => button.getBoundingClientRect().height),
+          ),
+        ).toEqual([24, 24, 24, 24, 28, 28, 28]);
+      }
 
-    await page.evaluate((themeName) => {
-      if (themeName === "default") delete document.documentElement.dataset.kitTheme;
-      else document.documentElement.dataset.kitTheme = themeName;
-    }, theme);
-    await page.evaluate(() => document.fonts.ready);
+      const infoSoft = page.locator(".button-matrix .kit-button", { hasText: "info soft" });
+      const merge = glyphSafetyButtons.nth(1);
 
-    for (const phase of [0, 0.5]) {
-      const lowercaseProbe = await infoSoft.evaluate((source, top) => {
-        document.querySelector('[data-production-button-probe="lowercase"]')?.remove();
-        const button = source.cloneNode(true) as HTMLButtonElement;
-        button.dataset.productionButtonProbe = "lowercase";
-        button.style.position = "fixed";
-        button.style.left = "300px";
-        button.style.top = `${top}px`;
-        button.style.zIndex = "99999";
-        document.body.append(button);
-        return button.dataset.productionButtonProbe;
-      }, 100 + phase);
-      const lowercaseButton = page.locator(`[data-production-button-probe="${lowercaseProbe}"]`);
-      const lowercase = await measureGlyph(lowercaseButton, "o");
-      expect(lowercase.height).toBe(24);
+      await page.evaluate((themeName) => {
+        if (themeName === "default") delete document.documentElement.dataset.kitTheme;
+        else document.documentElement.dataset.kitTheme = themeName;
+      }, theme);
+      await page.evaluate(() => document.fonts.ready);
 
-      const mergeProbe = await merge.evaluate((source, top) => {
-        document.querySelector('[data-production-button-probe="descender"]')?.remove();
-        const button = source.cloneNode(true) as HTMLButtonElement;
-        button.dataset.productionButtonProbe = "descender";
-        button.style.position = "fixed";
-        button.style.left = "500px";
-        button.style.top = `${top}px`;
-        button.style.zIndex = "99999";
-        document.body.append(button);
-        return button.dataset.productionButtonProbe;
-      }, 100 + phase);
-      const mergeButton = page.locator(`[data-production-button-probe="${mergeProbe}"]`);
-      const label = mergeButton.locator(".kit-button__label");
-      await label.evaluate((element) => {
-        element.style.overflow = "hidden";
-      });
-      const clipped = await measureGlyph(mergeButton, "g");
-      await label.evaluate((element) => {
-        element.style.overflow = "visible";
-      });
-      const visible = await measureGlyph(mergeButton, "g");
-      const clippedPaintLoss = Math.max(
-        0,
-        (visible.paintWeight - clipped.paintWeight) / visible.paintWeight,
-      );
-      expect(clippedPaintLoss).toBeLessThan(0.001);
-      // Raster weights vary by font engine; a whole-pixel drift is a layout regression.
-      expect(
-        Math.abs(lowercase.opticalOffset),
-        JSON.stringify({ theme, phase, lowercase, clippedPaintLoss }),
-      ).toBeLessThan(1);
-    }
+      for (const phase of [0, 0.5]) {
+        const lowercaseProbe = await infoSoft.evaluate((source, top) => {
+          document.querySelector('[data-production-button-probe="lowercase"]')?.remove();
+          const button = source.cloneNode(true) as HTMLButtonElement;
+          button.dataset.productionButtonProbe = "lowercase";
+          button.style.position = "fixed";
+          button.style.left = "300px";
+          button.style.top = `${top}px`;
+          button.style.zIndex = "99999";
+          document.body.append(button);
+          return button.dataset.productionButtonProbe;
+        }, 100 + phase);
+        const lowercaseButton = page.locator(`[data-production-button-probe="${lowercaseProbe}"]`);
+        const lowercase = await measureGlyph(page, lowercaseButton, "o");
+        expect(lowercase.height).toBe(24);
 
-    await page
-      .locator("[data-production-button-probe]")
-      .evaluateAll((probes) => probes.forEach((probe) => probe.remove()));
-  });
-}
+        const mergeProbe = await merge.evaluate((source, top) => {
+          document.querySelector('[data-production-button-probe="descender"]')?.remove();
+          const button = source.cloneNode(true) as HTMLButtonElement;
+          button.dataset.productionButtonProbe = "descender";
+          button.style.position = "fixed";
+          button.style.left = "500px";
+          button.style.top = `${top}px`;
+          button.style.zIndex = "99999";
+          document.body.append(button);
+          return button.dataset.productionButtonProbe;
+        }, 100 + phase);
+        const mergeButton = page.locator(`[data-production-button-probe="${mergeProbe}"]`);
+        const label = mergeButton.locator(".kit-button__label");
+        await label.evaluate((element) => {
+          element.style.overflow = "hidden";
+        });
+        const clipped = await measureGlyph(page, mergeButton, "g");
+        await label.evaluate((element) => {
+          element.style.overflow = "visible";
+        });
+        const visible = await measureGlyph(page, mergeButton, "g");
+        const clippedPaintLoss = Math.max(
+          0,
+          (visible.paintWeight - clipped.paintWeight) / visible.paintWeight,
+        );
+        expect(clippedPaintLoss).toBeLessThan(0.001);
+        // Raster weights vary by font engine; a whole-pixel drift is a layout regression.
+        expect(
+          Math.abs(lowercase.opticalOffset),
+          JSON.stringify({ theme, phase, lowercase, clippedPaintLoss }),
+        ).toBeLessThan(1);
+      }
+
+      await page
+        .locator("[data-production-button-probe]")
+        .evaluateAll((probes) => probes.forEach((probe) => probe.remove()));
+    });
+  }
+});
 
 test("busy buttons keep their box, colors, and neighbors in place", async ({ page }) => {
   await gotoPage(page, "button");
