@@ -5,7 +5,7 @@
     "": {
       "name": "@kenn-io/kit-ui",
       "devDependencies": {
-        "@lucide/svelte": "1.62.0",
+        "@lucide/svelte": "1.64.0",
         "@playwright/test": "^1.64.1",
         "@sveltejs/mcp": "0.1.28",
         "@sveltejs/vite-plugin-svelte": "7.3.1",
@@ -109,7 +109,7 @@
 
     "@lit/reactive-element": ["@lit/reactive-element@2.1.2", "", { "dependencies": { "@lit-labs/ssr-dom-shim": "^1.5.0" } }, "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="],
 
-    "@lucide/svelte": ["@lucide/svelte@1.62.0", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-GPnNiUlc29piQn+noy/YAwP3Bfgqs9JxbLPIVbb+T4u2vGxUHeCWdZx0dw0EphP9juWbcLLMsellifhGrLw5yg=="],
+    "@lucide/svelte": ["@lucide/svelte@1.64.0", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-PSFui8Gkk0JcU4nXljZzy+MnBhXeY4DIblvvcDNPIvL6r5NIngeDfAvBs4C/XDlz+dTth9+LcHy6/zdhEmxEwQ=="],
 
     "@mermaid-js/parser": ["@mermaid-js/parser@2.0.1", "", { "dependencies": { "@chevrotain/types": "~13.2.0" } }, "sha512-j37dj/h6p6pots1L7pLPPNuABEEu9WP4OYg9pW1g+nYG331j0+3canE9OagtYdytYvdSAMG+2fKU5cxep6LgjA=="],
 
