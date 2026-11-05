@@ -93,7 +93,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
 ### Behavior
 
 - Commands accept an `icon` component, such as a Lucide icon, rendered at 16px.
-  All rows reserve the icon column when any command or current fallback has an icon, keeping labels aligned while filtering or opening a group.
+  All rows reserve the icon column when any command in `commands`, including children, has an icon. Fallback icons render only when this column is reserved, keeping labels aligned while typing, clearing, opening a group, or reopening.
 - The borderless search row is 48px tall, command rows are at least 36px tall,
   and only the results list scrolls. Shortcut badges stay right-aligned.
   The search field shows no focus ring inside the palette.

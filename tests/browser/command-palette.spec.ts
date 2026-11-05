@@ -143,6 +143,39 @@ test("palette layout and keyboard hints", async ({ page }) => {
   await expect(footer).toContainText("back");
 });
 
+test("fallback-only icons keep labels steady while typing, clearing, and reopening", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  const fixture = await page.evaluateHandle(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const { default: Search } = await import("/node_modules/@lucide/svelte/dist/icons/search.js");
+    return mountCommandPalette({
+      open: true,
+      commands: [{ id: "theme", label: "Toggle theme" }],
+      fallbacks: () => [{ id: "search", label: "Search archive", icon: Search }],
+      onrun: () => {},
+    });
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  const label = page
+    .getByRole("option", { name: "Toggle theme", exact: true })
+    .locator(".kit-command-palette__label");
+  await expect(label).toBeVisible();
+  const x = (await label.boundingBox())!.x;
+  await input.fill("theme");
+  await expect(page.getByRole("option", { name: "Search archive", exact: true })).toBeVisible();
+  expect((await label.boundingBox())!.x).toBe(x);
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  expect((await label.boundingBox())!.x).toBe(x);
+  await page.keyboard.press("Escape");
+  await expect(input).not.toBeVisible();
+  await fixture.evaluate(({ update }) => update({ open: true }));
+  await expect(input).toHaveValue("");
+  expect((await label.boundingBox())!.x).toBe(x);
+});
+
 test.describe("touch palette", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
