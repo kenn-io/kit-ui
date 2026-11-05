@@ -13,6 +13,8 @@
 </script>
 
 <script lang="ts">
+  import { untrack } from "svelte";
+  import { highlightSegments } from "../utils/highlight.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
   import { appShortcuts } from "../utils/shortcuts.js";
@@ -25,7 +27,11 @@
     open?: boolean;
     commands: PaletteCommand[];
     /** Run a command (the palette closes first). */
-    onrun: (command: PaletteCommand) => void;
+    onrun: (command: PaletteCommand, query: string) => void;
+    /** Search text used on each open. */
+    initialQuery?: string;
+    /** Extra commands following all matches for a non-empty query. */
+    fallbacks?: (query: string) => PaletteCommand[];
     /** Ids shown under `recentLabel` while the query is empty. */
     recentIds?: string[];
     placeholder?: string;
@@ -39,6 +45,8 @@
     open = $bindable(false),
     commands,
     onrun,
+    initialQuery = "",
+    fallbacks,
     recentIds = [],
     placeholder = "Type a command…",
     emptyLabel = "No matching commands",
@@ -79,20 +87,31 @@
     return [...prefix, ...substring, ...keyword];
   });
 
-  // Each section appears once, ordered by its best-ranked match; ranking
-  // is preserved within a section. (Grouping only adjacent ranks would
-  // repeat section headers across rank buckets.)
+  const matchedIds = $derived(new Set(ranked.map((c) => c.id)));
+  const extra = $derived.by(() => {
+    if (!query.trim() || !fallbacks) return [];
+    const listedIds = new Set(matchedIds);
+    return fallbacks(query.trim()).filter((c) => {
+      if (listedIds.has(c.id)) return false;
+      listedIds.add(c.id);
+      return true;
+    });
+  });
+
+  // Group matches and fallbacks separately so every fallback follows the matches.
   const groups = $derived.by(() => {
     const out: Group[] = [];
-    const bySection = new Map<string | undefined, Group>();
-    for (const c of ranked) {
-      let group = bySection.get(c.section);
-      if (!group) {
-        group = { section: c.section, commands: [] };
-        bySection.set(c.section, group);
-        out.push(group);
+    for (const rows of [ranked, extra]) {
+      const bySection = new Map<string | undefined, Group>();
+      for (const c of rows) {
+        let group = bySection.get(c.section);
+        if (!group) {
+          group = { section: c.section, commands: [] };
+          bySection.set(c.section, group);
+          out.push(group);
+        }
+        group.commands.push(c);
       }
-      group.commands.push(c);
     }
     return out;
   });
@@ -104,11 +123,8 @@
   // quadratic in the result count on every keystroke.
   const flatIndex = $derived(new Map(flat.map((c, i) => [c, i])));
 
-  // Combo parsing is per command set, not per render — the list
-  // re-renders on every keystroke. Keyed by id so the recent-section
-  // clones share their source command's entry.
   const comboKeys = $derived(
-    new Map(commands.filter((c) => c.combo).map((c) => [c.id, formatShortcutKeys(c.combo!)])),
+    new Map(flat.filter((c) => c.combo).map((c) => [c.id, formatShortcutKeys(c.combo!)])),
   );
 
   const firstEnabled = (): number => flat.findIndex((c) => !c.disabled);
@@ -117,7 +133,7 @@
   // shortcuts are suspended while the palette is up.
   $effect(() => {
     if (!open) return;
-    query = "";
+    query = untrack(() => initialQuery);
     const pop = appShortcuts.pushScope(`kit-command-palette-${uid}`);
     return pop;
   });
@@ -135,8 +151,9 @@
 
   function run(command: PaletteCommand): void {
     if (command.disabled) return;
+    const typed = query.trim();
     close();
-    onrun(command);
+    onrun(command, typed);
   }
 
   function move(delta: number): void {
@@ -232,7 +249,11 @@
               }}
               onclick={() => run(command)}
             >
-              <span class="kit-command-palette__label">{command.label}</span>
+              <span class="kit-command-palette__label">
+                {#each highlightSegments(command.label, matchedIds.has(command.id) ? query.trim() : "") as segment, si (si)}
+                  {#if segment.match}<mark>{segment.text}</mark>{:else}{segment.text}{/if}
+                {/each}
+              </span>
               {#if command.combo}
                 <KbdBadge keys={comboKeys.get(command.id) ?? []} />
               {/if}
@@ -316,6 +337,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .kit-command-palette__label mark {
+    font-weight: var(--font-weight-semibold, 600);
+    background: none;
+    color: inherit;
   }
 
   .kit-command-palette__empty {
