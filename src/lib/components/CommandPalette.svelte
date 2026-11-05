@@ -213,7 +213,7 @@
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       move(-1);
-    } else if (event.key === "Enter") {
+    } else if (event.key === "Enter" && event.target === inputEl) {
       event.preventDefault();
       const command = flat[highlighted];
       if (command) run(command);

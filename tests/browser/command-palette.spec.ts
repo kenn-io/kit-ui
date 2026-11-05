@@ -420,6 +420,25 @@ test("clicking the parent chip returns to the full list and focuses search", asy
   );
 });
 
+test("Enter on the parent chip after a canceled click returns to the root", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  const chip = page.locator(".kit-command-palette__parent");
+  await chip.hover();
+  await page.mouse.down();
+  await input.hover();
+  await page.mouse.up();
+  await expect(chip).toBeFocused();
+  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
+
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
+  await expect(input).toBeFocused();
+  await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
+});
+
 test("a disabled parent's children stay disabled in root search and Recent", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.evaluate(async () => {
