@@ -341,7 +341,7 @@
               }}
               onclick={() => run(command)}
             >
-              {#if hasIcons}
+              {#if hasIcons || command.icon}
                 <span class="kit-command-palette__icon" aria-hidden="true">
                   {#if command.icon}
                     <command.icon size={16} />
@@ -365,8 +365,10 @@
         {/each}
       </div>
       <div class="kit-command-palette__footer" aria-hidden="true">
-        <KbdBadge keys={["↑", "↓"]} />
-        {hints.navigate ?? "navigate"} ·
+        {#if flat.length > 0}
+          <KbdBadge keys={["↑", "↓"]} />
+          {hints.navigate ?? "navigate"} ·
+        {/if}
         {#if highlighted >= 0}
           <KbdBadge keys={["↵"]} />
           {hints.run ?? "run"} ·

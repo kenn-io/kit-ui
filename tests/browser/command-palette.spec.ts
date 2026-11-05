@@ -143,7 +143,7 @@ test("palette layout and keyboard hints", async ({ page }) => {
   await expect(footer).toContainText("back");
 });
 
-test("fallback-only icons keep labels steady while typing, clearing, and reopening", async ({
+test("fallback icons render without moving regular labels while typing, clearing, and reopening", async ({
   page,
 }) => {
   await gotoPage(page, "command-palette");
@@ -165,7 +165,12 @@ test("fallback-only icons keep labels steady while typing, clearing, and reopeni
   await expect(label).toBeVisible();
   const x = (await label.boundingBox())!.x;
   await input.fill("theme");
-  await expect(page.getByRole("option", { name: "Search archive", exact: true })).toBeVisible();
+  const fallbackIcon = page
+    .getByRole("option", { name: "Search archive", exact: true })
+    .locator("svg");
+  await expect(fallbackIcon).toBeVisible();
+  expect((await fallbackIcon.boundingBox())!.width).toBe(16);
+  expect((await fallbackIcon.boundingBox())!.height).toBe(16);
   expect((await label.boundingBox())!.x).toBe(x);
   await page.getByRole("button", { name: "Clear search", exact: true }).click();
   expect((await label.boundingBox())!.x).toBe(x);
@@ -321,11 +326,19 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   await gotoPage(page, "command-palette");
   await page.getByRole("button", { name: /Open palette/ }).click();
   const input = page.locator(".kit-command-palette input");
+  const footer = page.locator(".kit-command-palette__footer");
+  await expect(footer).toContainText("navigate");
   await input.fill("zzzzz");
   await expect(page.locator(".kit-command-palette__empty")).toBeVisible();
+  await expect(footer).not.toContainText("navigate");
+  await expect(footer).not.toContainText("run");
+  await expect(footer).toContainText("clear");
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
+  await page.keyboard.press("Escape");
+  await expect(footer).toContainText("navigate");
+  await expect(footer).toContainText("run");
 });
 
 test("an all-disabled result set leaves Enter inert with no active descendant", async ({
