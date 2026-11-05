@@ -90,7 +90,11 @@ function openPalette(seed = ""): void {
 }
 
 function run(command: PaletteCommand, typed: string): void {
-  if (commands.some((c) => c.id === command.id)) {
+  if (
+    commands.some(
+      (c) => c.id === command.id || c.children?.some((child) => child.id === command.id),
+    )
+  ) {
     recent = [command.id, ...recent.filter((id) => id !== command.id)].slice(0, 3);
     showFlash(\`Ran: \${command.label}\`);
   } else {

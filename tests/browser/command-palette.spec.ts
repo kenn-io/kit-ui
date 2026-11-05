@@ -378,7 +378,7 @@ test("root search reaches children with inherited sections and keywords", async 
 
 test("fallbacks stay at the root when a child search has no matches", async ({ page }) => {
   await gotoPage(page, "command-palette");
-  await page.getByRole("checkbox", { name: "Fallback commands" }).check();
+  await page.getByRole("checkbox", { name: "Search action" }).check();
   await page.keyboard.press("ControlOrMeta+k");
   await page.getByRole("option", { name: "Group by…", exact: true }).click();
   const input = page.getByRole("combobox", { name: "Command palette" });
