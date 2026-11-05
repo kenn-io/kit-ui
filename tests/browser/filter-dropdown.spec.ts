@@ -28,6 +28,13 @@ test("a submenu row opens a flyout beside the panel and peels one layer per Esca
   await expect(flyout).toBeVisible();
   await expect(row).toContainText("1 selected");
 
+  // Content that claims Escape first (a search field clearing itself) keeps the flyout open.
+  await flyout.getByRole("button", { name: "bug" }).evaluate((el) => {
+    el.addEventListener("keydown", (event) => event.preventDefault(), { once: true });
+  });
+  await flyout.getByRole("button", { name: "bug" }).press("Escape");
+  await expect(flyout).toBeVisible();
+
   await page.keyboard.press("Escape");
   await expect(flyout).toBeHidden();
   await expect(panel).toBeVisible();

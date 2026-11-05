@@ -196,6 +196,8 @@
   }
 
   function handleSubmenuKeydown(event: KeyboardEvent): void {
+    // Content that already handled the key (a field clearing itself) keeps it.
+    if (event.defaultPrevented) return;
     const target = event.target as HTMLElement;
     const typing = target.matches("input, textarea, [contenteditable='true']");
     if (event.key === "Escape" || (event.key === "ArrowLeft" && !typing)) {
