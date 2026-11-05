@@ -38,6 +38,8 @@ export default defineConfig({
   use: {
     baseURL,
     viewport: { width: 1280, height: 800 },
+    // Keep the failing attempt, even when a later retry passes.
+    trace: process.env.CI ? "retain-on-failure" : "off",
   },
   webServer: {
     command: `vp run dev --port ${port} --strictPort`,
