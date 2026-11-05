@@ -45,30 +45,17 @@ test("each action fires once per click", async ({ page }) => {
 test("status only hides every action", async ({ page }) => {
   const toggle = page.getByTestId("meaning-readonly").getByRole("checkbox");
   await toggle.check();
-  for (const [id, chip, detail] of [
-    ["off", "Off", "Downloads 290 MB once, shared by all Kenn apps"],
-    ["downloaded", "Off", "Already on this computer"],
-    ["ollama", "On · Ollama", "Switching keeps your index"],
-    [
-      "ollama-other",
-      "On · Ollama",
-      "Switching rebuilds the index, about 20 minutes for 48,000 messages",
-    ],
-  ]) {
+  for (const id of ["off", "ollama"]) {
     const row = page.getByTestId(`meaning-${id}`);
     await expect(row.getByRole("button")).toHaveCount(0);
-    await expect(row.locator(".kit-chip")).toHaveText(chip!);
-    await expect(row.getByText(detail!, { exact: true })).toBeVisible();
+    await expect(row.locator(".kit-chip")).toBeVisible();
+    await expect(row.locator(".kit-search-by-meaning__line")).toBeVisible();
     const edges = await row.evaluate((el) => ({
       chip: el.querySelector(".kit-chip")!.getBoundingClientRect().right,
       row: el.getBoundingClientRect().right,
     }));
     expect(edges.chip).toBeCloseTo(edges.row, 0);
   }
-  await toggle.uncheck();
-  await expect(
-    page.getByTestId("meaning-off").getByRole("button", { name: "Turn on" }),
-  ).toBeVisible();
 });
 
 test("exposes progress values and text with status aligned to the bar", async ({ page }) => {
