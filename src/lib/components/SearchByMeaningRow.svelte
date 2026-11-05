@@ -10,6 +10,7 @@
 
   interface Props {
     state: SearchByMeaningState;
+    /** Noun selected by the caller for itemCount or total, including plural rules. */
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
     onturnon: () => void;

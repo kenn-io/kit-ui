@@ -30,7 +30,9 @@ Each click invokes its callback once. Clicking Turn on is the confirmation. The 
 | `downloading`  | `doneBytes`, `totalBytes`         | Turning on  | Downloading 120 MB of 290 MB · Keyword search works meanwhile                                      |                      |
 | `indexing`     | `done`, `total`, optional `etaMs` | Turning on  | Indexing 12,000 of 48,000 messages · about 15 minutes left · Keyword search works meanwhile        |                      |
 
-`itemNoun` supplies the plural item name, such as "messages" or "documents". Sizes use decimal megabytes. Counts and units follow the runtime locale. Durations below one minute read "under a minute"; below 90 minutes use rounded minutes, and longer durations use rounded hours.
+Callers select `itemNoun` for `itemCount` in `ollama-other` or `total` in `indexing`, updating it as the state changes. For example, pass "message" for a count of 1 and "messages" for other counts. Apps supply the appropriate forms for their language.
+
+Sizes use decimal megabytes. Counts and units follow the runtime locale. Durations below one minute read "under a minute"; below 90 minutes use rounded minutes, and longer durations use rounded hours.
 
 ## Labels
 

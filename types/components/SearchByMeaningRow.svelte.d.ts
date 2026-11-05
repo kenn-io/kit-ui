@@ -1,6 +1,7 @@
 import { type SearchByMeaningLabels, type SearchByMeaningState } from "./search-by-meaning.js";
 interface Props {
     state: SearchByMeaningState;
+    /** Noun selected by the caller for itemCount or total, including plural rules. */
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
     onturnon: () => void;
