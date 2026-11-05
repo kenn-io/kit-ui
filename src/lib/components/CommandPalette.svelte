@@ -217,10 +217,17 @@
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       move(-1);
-    } else if (event.key === "Enter" && event.target === inputEl) {
+    } else if (event.key === "Enter") {
       event.preventDefault();
-      const command = flat[highlighted];
-      if (command) run(command);
+      if (
+        event.target instanceof HTMLButtonElement &&
+        event.target.classList.contains("kit-command-palette__parent")
+      ) {
+        setParent(undefined);
+      } else {
+        const command = flat[highlighted];
+        if (command) run(command);
+      }
     } else if (event.key === "Escape") {
       // SearchInput already consumed Escape-with-content (clear); an
       // Escape off the input clears, then leaves a child list or closes.
@@ -254,6 +261,7 @@
             class="kit-command-palette__parent"
             title={parent.label}
             tabindex="-1"
+            onpointerdown={(event) => event.preventDefault()}
             onclick={() => setParent(undefined)}>{parent.label}</button
           >
         {/if}
@@ -302,6 +310,7 @@
               aria-selected={index === highlighted}
               aria-disabled={command.disabled ? "true" : undefined}
               tabindex="-1"
+              onpointerdown={(event) => event.preventDefault()}
               onpointermove={() => {
                 if (!command.disabled) highlighted = index;
               }}

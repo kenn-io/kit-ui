@@ -12,8 +12,7 @@ for (const query of ["", "theme"]) {
     await gotoPage(page, "command-palette");
     await page.evaluate(async () => {
       const { mount } = await import("/node_modules/.vite/deps/svelte.js");
-      const { default: CommandPalette } =
-        await import("/src/lib/components/CommandPalette.svelte");
+      const { default: CommandPalette } = await import("/src/lib/components/CommandPalette.svelte");
       const command = { id: "theme", label: "Toggle theme" };
       const host = document.createElement("div");
       host.dataset.testid = "mounted-palette";
@@ -356,7 +355,9 @@ test("Escape clears child text off the input, steps back, and closes", async ({ 
   const input = page.getByRole("combobox", { name: "Command palette" });
   await input.fill("g");
   await expect(page.locator(".kit-command-palette__parent")).toHaveText("Group by…");
-  await page.getByRole("option", { name: "Group by account" }).click({ force: true });
+  const disabled = page.getByRole("option", { name: "Group by account" });
+  await disabled.click({ force: true });
+  await disabled.focus();
   await expect(input).not.toBeFocused();
   await page.keyboard.press("Escape");
   await expect(input).toHaveValue("");
@@ -454,7 +455,42 @@ test("clicking the parent chip returns to the full list and focuses search", asy
   );
 });
 
-test("Enter on the parent chip after a canceled click returns to the root", async ({ page }) => {
+test("a canceled option click then arrows runs the highlighted command", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await page.getByRole("option", { name: "Find session…", exact: true }).hover();
+  await page.mouse.down();
+  await input.hover();
+  await page.mouse.up();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("option", { name: /^Toggle theme/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-flash-banner")).toHaveText("Ran: Toggle theme");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
+});
+
+test("clicking a disabled child then arrows and Enter runs the selected child", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  await page.getByRole("option", { name: "Group by account" }).click({ force: true });
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-flash-banner")).toHaveText("Ran: Group by Date");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
+});
+
+test("a canceled parent chip click keeps search focused", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.getByRole("button", { name: /Open palette/ }).click();
   await page.getByRole("option", { name: "Group by…", exact: true }).click();
@@ -464,7 +500,19 @@ test("Enter on the parent chip after a canceled click returns to the root", asyn
   await page.mouse.down();
   await input.hover();
   await page.mouse.up();
-  await expect(chip).toBeFocused();
+  await expect(input).toBeFocused();
+  await page.keyboard.type("date");
+  await expect(input).toHaveValue("date");
+  await expect(page.getByRole("option")).toHaveText(["Group by Date"]);
+  await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
+});
+
+test("Enter on a focused parent chip returns to the root", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await page.locator(".kit-command-palette__parent").focus();
   await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
 
   await page.keyboard.press("Enter");
