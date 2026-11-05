@@ -2,7 +2,18 @@ import { type Snippet } from "svelte";
 import type { TypeaheadInputAttributes, TypeaheadOption, TypeaheadTriggerProps } from "./typeahead.js";
 interface Props {
     options: TypeaheadOption[];
-    value: string;
+    /** The chosen option name. Unused in `multiple` mode, which reads
+     * `values`. */
+    value?: string;
+    /** Choose several options: each choice calls `onselect` with that
+     * option's name and the list stays open. The caller adds or removes it
+     * from `values`. */
+    multiple?: boolean;
+    /** The chosen option names in `multiple` mode. */
+    values?: readonly string[];
+    /** Closed-trigger text when `multiple` has more than one choice;
+     * `{count}` is replaced with the number chosen. */
+    multipleLabel?: string;
     fallbackLabel: string;
     placeholder: string;
     /** Native attributes for the open search input. Typeahead-owned behavior
