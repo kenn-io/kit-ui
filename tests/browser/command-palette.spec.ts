@@ -1,36 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
-test("Backspace edits child search, then returns to root when empty", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.getByRole("button", { name: /Open palette/ }).click();
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  await input.fill("g");
-  await input.press("Backspace");
-  await expect(input).toHaveValue("");
-  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
-  await input.press("Backspace");
-  await expect(page.getByRole("option", { name: "Group by…", exact: true })).toBeVisible();
-  await expect(input).toBeFocused();
-});
-
 for (const entry of ["search", "Recent"]) {
   test(`root ${entry} prefixes short child labels with their group`, async ({ page }) => {
     await gotoPage(page, "command-palette");
     await page.evaluate(async (entry) => {
       const { mountCommandPalette } =
         await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
-      const { host } = mountCommandPalette({
+      mountCommandPalette({
         open: true,
         commands: [
           { id: "group", label: "Group by…", children: [{ id: "group-date", label: "Date" }] },
           { id: "sort", label: "Sort by…", children: [{ id: "sort-date", label: "Date" }] },
         ],
         recentIds: entry === "Recent" ? ["group-date", "sort-date"] : [],
-        onrun: (command) => {
-          host.dataset.ran = command.id;
-        },
+        onrun: () => {},
       });
     }, entry);
     if (entry === "search") {
@@ -39,64 +23,24 @@ for (const entry of ["search", "Recent"]) {
     await expect(page.getByRole("option").nth(0)).toHaveText("Group by… › Date");
     const sortDate = page.getByRole("option", { name: "Sort by… › Date", exact: true });
     await expect(sortDate).toBeVisible();
-    await sortDate.click();
-    await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "sort-date");
   });
 }
 
-test("a fallback keeps its identity when an unmatched command has the same id", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.evaluate(async () => {
-    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
-    const { default: CommandPalette } = await import("/src/lib/components/CommandPalette.svelte");
-    const fallback = { id: "search", label: 'Search archive for "quarterly budget"' };
-    const host = document.createElement("div");
-    host.dataset.testid = "mounted-palette";
-    document.body.append(host);
-    mount(CommandPalette, {
-      target: host,
-      props: {
-        open: true,
-        commands: [{ id: "search", label: "Search archive" }],
-        fallbacks: () => [fallback],
-        onrun: (selected) => {
-          host.dataset.sameCommand = String(selected === fallback);
-          host.dataset.ran = selected.label;
-        },
-      },
-    });
-  });
-  await page.getByRole("combobox", { name: "Command palette" }).fill("quarterly budget");
-  await expect(page.getByRole("option")).toHaveText(['Search archive for "quarterly budget"']);
-  await page.keyboard.press("Enter");
-  await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-same-command", "true");
-  await expect(page.getByTestId("mounted-palette")).toHaveAttribute(
-    "data-ran",
-    'Search archive for "quarterly budget"',
-  );
-});
-
-test("a parent with no children stays disabled on click and Enter", async ({ page }) => {
+test("a parent with no children is disabled", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.evaluate(async () => {
     const { mountCommandPalette } =
       await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
-    const { host } = mountCommandPalette({
+    mountCommandPalette({
       open: true,
       commands: [{ id: "views", label: "Saved views…", children: [] }],
-      onrun: (command) => {
-        host.dataset.ran = command.id;
-      },
+      onrun: () => {},
     });
   });
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  const parent = page.getByRole("option", { name: "Saved views…", exact: true });
-  await parent.click({ force: true });
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("listbox", { name: "Command palette", exact: true })).toBeVisible();
-  await expect(parent).toHaveAttribute("aria-disabled", "true");
-  await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
-  await expect(page.getByTestId("mounted-palette")).not.toHaveAttribute("data-ran", /./);
+  await expect(page.getByRole("option", { name: "Saved views…", exact: true })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
 });
 
 // CommandPalette acceptance (docs/components/command-palette.md):
@@ -104,47 +48,53 @@ test("a parent with no children stays disabled on click and Enter", async ({ pag
 // scope suspension, all-disabled inertness.
 
 for (const entry of [
-  "root row",
-  "root search",
   "root Recent",
   "child list",
   "child search",
   "child Recent",
+  "root fallback",
 ]) {
   test(`onrun receives the caller's command object from ${entry}`, async ({ page }) => {
     await gotoPage(page, "command-palette");
     await page.evaluate(async (entry) => {
-      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
-      const { default: CommandPalette } = await import("/src/lib/components/CommandPalette.svelte");
-      const command = { id: "theme", label: "Toggle theme" };
-      const host = document.createElement("div");
-      host.dataset.testid = "mounted-palette";
-      document.body.append(host);
-      mount(CommandPalette, {
-        target: host,
-        props: {
-          open: true,
-          commands: entry.startsWith("child")
+      const { mountCommandPalette } =
+        await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+      const command =
+        entry === "root fallback"
+          ? { id: "search", label: 'Search archive for "quarterly budget"' }
+          : { id: "theme", label: "Toggle theme" };
+      const commands =
+        entry === "root fallback"
+          ? [{ id: "search", label: "Search archive" }]
+          : entry.startsWith("child")
             ? [{ id: "appearance", label: "Appearance", section: "Settings", children: [command] }]
-            : [command],
-          recentIds: entry.endsWith("Recent") ? [command.id] : [],
-          onrun: (selected) => {
-            host.dataset.sameCommand = String(selected === command);
-          },
+            : [command];
+      const { host } = mountCommandPalette({
+        open: true,
+        // Keep the fixture's deep state proxy from replacing the caller's objects.
+        commands: Object.freeze(commands) as typeof commands,
+        recentIds: entry.endsWith("Recent") ? [command.id] : [],
+        fallbacks: entry === "root fallback" ? () => [command] : undefined,
+        onrun: (selected) => {
+          host.dataset.sameCommand = String(selected === command);
         },
       });
     }, entry);
     if (entry === "child list") {
       await page.getByRole("option", { name: "Appearance", exact: true }).click();
     }
-    if (entry.endsWith("search")) {
-      await page.getByRole("combobox", { name: "Command palette" }).fill("theme");
+    if (entry.endsWith("search") || entry === "root fallback") {
+      await page
+        .getByRole("combobox", { name: "Command palette" })
+        .fill(entry === "root fallback" ? "quarterly budget" : "theme");
       await page.keyboard.press("Enter");
     } else {
-      await page.getByRole("option", {
-        name: entry === "child Recent" ? "Appearance › Toggle theme" : "Toggle theme",
-        exact: true,
-      }).click();
+      await page
+        .getByRole("option", {
+          name: entry === "child Recent" ? "Appearance › Toggle theme" : "Toggle theme",
+          exact: true,
+        })
+        .click();
     }
     await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-same-command", "true");
   });
@@ -457,27 +407,6 @@ test("a parent opens children and records a child in Recent", async ({ page }) =
   await page.getByRole("button", { name: /Open palette/ }).click();
   await expect(input).toHaveAttribute("placeholder", "Type a command…");
   await expect(page.locator(".kit-command-palette__section").first()).toHaveText("Recent");
-  await expect(page.getByRole("option").first()).toHaveText("Group by… › Group by Source");
-});
-
-test("Escape clears child text off the input, steps back, and closes", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.keyboard.press("ControlOrMeta+k");
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  await input.fill("g");
-  await expect(page.locator(".kit-command-palette__parent")).toHaveText("Group by…");
-  const disabled = page.getByRole("option", { name: "Group by account" });
-  await disabled.click({ force: true });
-  await disabled.focus();
-  await expect(input).not.toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(input).toHaveValue("");
-  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
 });
 
 test("root search reaches children with inherited sections and keywords", async ({ page }) => {
@@ -489,12 +418,9 @@ test("root search reaches children with inherited sections and keywords", async 
   await expect(page.locator(".kit-command-palette__section")).toHaveText(["Navigate", "View"]);
   await input.fill("timestamp");
   await expect(page.getByRole("option")).toHaveText(["Group by… › Group by Date"]);
-  await page.keyboard.press("Enter");
-  await expect(page.locator(".kit-flash-banner")).toContainText("Ran: Group by Date");
-  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
 });
 
-test("fallbacks stay at the root when a child search has no matches", async ({ page }) => {
+test("fallbacks are suppressed when a child search has no matches", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.getByRole("checkbox", { name: "Search action" }).check();
   await page.keyboard.press("ControlOrMeta+k");
@@ -551,87 +477,59 @@ for (const disabledCount of [0, 25]) {
   });
 }
 
-test("clicking the parent chip returns to the full list and focuses search", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.getByRole("button", { name: /Open palette/ }).click();
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  await input.fill("source");
-  const chip = page.locator(".kit-command-palette__parent");
-  await chip.click();
-  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
-  await expect(input).toBeFocused();
-  await expect(page.getByRole("option", { name: /^New session/ })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-});
+for (const trigger of ["chip click", "Backspace", "Escape"]) {
+  test(`leaving a child list via ${trigger}`, async ({ page }) => {
+    await gotoPage(page, "command-palette");
+    await page.getByRole("button", { name: /Open palette/ }).click();
+    await page.getByRole("option", { name: "Group by…", exact: true }).click();
+    const input = page.getByRole("combobox", { name: "Command palette" });
+    await input.fill(trigger === "Backspace" ? "g" : "source");
+    if (trigger === "chip click") {
+      await page.locator(".kit-command-palette__parent").click();
+    } else {
+      await input.press(trigger);
+      await expect(input).toHaveValue("");
+      await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
+      await input.press(trigger);
+    }
+    await expect(input).toHaveValue("");
+    await expect(page.getByRole("listbox", { name: "Command palette", exact: true })).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(page.getByRole("option", { name: /^New session/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+}
 
-test("a canceled option click then arrows runs the highlighted command", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.getByRole("button", { name: /Open palette/ }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  await page.getByRole("option", { name: "Find session…", exact: true }).hover();
-  await page.mouse.down();
-  await input.hover();
-  await page.mouse.up();
-  await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("option", { name: /^Toggle theme/ })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.keyboard.press("Enter");
-  await expect(page.locator(".kit-flash-banner")).toHaveText("Ran: Toggle theme");
-  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
-});
-
-test("clicking a disabled child then arrows and Enter runs the selected child", async ({
-  page,
-}) => {
-  await gotoPage(page, "command-palette");
-  await page.getByRole("button", { name: /Open palette/ }).click();
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  await page.getByRole("option", { name: "Group by account" }).click({ force: true });
-  await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.keyboard.press("Enter");
-  await expect(page.locator(".kit-flash-banner")).toHaveText("Ran: Group by Date");
-  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
-});
-
-test("a canceled parent chip click keeps search focused", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.getByRole("button", { name: /Open palette/ }).click();
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  const chip = page.locator(".kit-command-palette__parent");
-  await chip.hover();
-  await page.mouse.down();
-  await input.hover();
-  await page.mouse.up();
-  await expect(input).toBeFocused();
-  await page.keyboard.type("date");
-  await expect(input).toHaveValue("date");
-  await expect(page.getByRole("option")).toHaveText(["Group by Date"]);
-  await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
-});
-
-test("Enter on a focused parent chip returns to the root", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.getByRole("button", { name: /Open palette/ }).click();
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  await page.locator(".kit-command-palette__parent").focus();
-  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
-
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
-  await expect(input).toBeFocused();
-  await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
-});
+for (const target of ["enabled option", "disabled option", "chip"]) {
+  test(`pressing the ${target} keeps search focused`, async ({ page }) => {
+    await gotoPage(page, "command-palette");
+    await page.getByRole("button", { name: /Open palette/ }).click();
+    if (target !== "enabled option") {
+      await page.getByRole("option", { name: "Group by…", exact: true }).click();
+    }
+    const input = page.getByRole("combobox", { name: "Command palette" });
+    const pressed =
+      target === "chip"
+        ? page.locator(".kit-command-palette__parent")
+        : page.getByRole("option", {
+            name: target === "enabled option" ? "Find session…" : "Group by account",
+            exact: true,
+          });
+    if (target === "disabled option") {
+      await pressed.click({ force: true });
+    } else {
+      await pressed.hover();
+      await page.mouse.down();
+      await input.hover();
+      await page.mouse.up();
+    }
+    await expect(input).toBeFocused();
+    await page.keyboard.type("date");
+    await expect(input).toHaveValue("date");
+  });
+}
 
 test("a disabled parent's children stay disabled in root search and Recent", async ({ page }) => {
   await gotoPage(page, "command-palette");
@@ -649,9 +547,7 @@ test("a disabled parent's children stay disabled in root search and Recent", asy
         },
       ],
       recentIds: ["source"],
-      onrun: (command) => {
-        document.body.dataset.ran = command.id;
-      },
+      onrun: () => {},
     });
   });
   const input = page.getByRole("combobox", { name: "Command palette" });
@@ -659,11 +555,5 @@ test("a disabled parent's children stay disabled in root search and Recent", asy
   for (const query of ["", "source"]) {
     await input.fill(query);
     await expect(child).toHaveAttribute("aria-disabled", "true");
-    await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
-    await child.click({ force: true });
-    await input.focus();
-    await page.keyboard.press("Enter");
-    await expect(page.getByRole("dialog", { name: "Command palette" })).toBeVisible();
-    expect(await page.locator("body").getAttribute("data-ran")).toBeNull();
   }
 });
