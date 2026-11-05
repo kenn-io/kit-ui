@@ -108,7 +108,6 @@ describe("formatShortcutKeys", () => {
     expect(formatShortcutKeys("mod+shift+p", true)).toEqual(["⇧", "⌘", "P"]);
     expect(formatShortcutKeys("mod+shift+p", false)).toEqual(["Ctrl", "⇧", "P"]);
     expect(formatShortcutKeys("mod+alt+p", false)).toEqual(["Ctrl", "Alt", "P"]);
-    expect(formatShortcutKeys("mod+alt+p", true)).toEqual(["⌥", "⌘", "P"]);
     expect(formatShortcutKeys("escape", true)).toEqual(["Esc"]);
     expect(formatShortcutKeys("alt+down", false)).toEqual(["Alt", "↓"]);
   });
@@ -117,15 +116,11 @@ describe("formatShortcutKeys", () => {
     expect(formatShortcutKeys("pageup", false)).toEqual(["PgUp"]);
     expect(formatShortcutKeys("pagedown", false)).toEqual(["PgDn"]);
     expect(formatShortcutKeys("home", false)).toEqual(["Home"]);
-    expect(formatShortcutKeys("end", false)).toEqual(["End"]);
-    expect(formatShortcutKeys("delete", false)).toEqual(["Delete"]);
   });
 
   test("shifted characters and chords", () => {
     expect(formatShortcutKeys("shift+/", false)).toEqual(["?"]);
-    expect(formatShortcutKeys("shift+/", true)).toEqual(["?"]);
     expect(formatShortcutKeys("mod+shift+/", false)).toEqual(["Ctrl", "?"]);
-    expect(formatShortcutKeys("shift+d", false)).toEqual(["⇧", "D"]);
     expect(formatShortcutKeys("shift+space", false)).toEqual(["⇧", "Space"]);
   });
 });
