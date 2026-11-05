@@ -397,7 +397,7 @@
 
 <DemoSection
   title="Several choices"
-  description="multiple keeps the list open after each choice, marks the chosen rows, and sets aria-selected on each. The caller adds or removes each name from values."
+  description="The list stays open after each choice. Use onselect to add or remove names from values."
   code={`<Typeahead
   options={labelOptions}
   multiple

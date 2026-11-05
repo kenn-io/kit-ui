@@ -292,9 +292,16 @@
     }
   }
 
+  // With several choices no single option is "selected", so remember the
+  // label of every chosen row still listed. Removing all but one choice
+  // must leave its label on the trigger after the remote rows are gone.
   function rememberSelectedLabel(): void {
-    if (!remote || !selectedOption) return;
-    cacheSelectedLabel(selectedOption.name, selectedOption.displayLabel ?? selectedOption.label);
+    if (!remote) return;
+    const chosen = multiple ? values : selectedOption ? [selectedOption.name] : [];
+    for (const name of chosen) {
+      const option = findByName(options, name);
+      if (option) cacheSelectedLabel(name, option.displayLabel ?? option.label);
+    }
   }
 
   function updateQuery(nextQuery: string): void {
@@ -926,9 +933,13 @@
     margin-bottom: 2px;
   }
 
+  /* An overlay scrollbar draws over the row's trailing edge, so keep the
+     meta text clear of it; a classic one gets its own gutter. */
   .kit-typeahead__body {
     min-height: 0;
     overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-right: var(--space-3);
   }
 
   .kit-typeahead__list {

@@ -436,6 +436,27 @@ test("the clear row chooses none in multiple mode", async ({ page }) => {
   );
 });
 
+test("remote multiple choices keep the remaining label after its row is gone", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: Fixture } =
+      await import("/tests/browser/fixtures/RemoteMultipleTypeahead.svelte");
+    document.body.replaceChildren();
+    mount(Fixture, { target: document.body });
+  });
+  await page.getByRole("button", { name: "Remote labels: 2 selected" }).click();
+  await expect(page.getByRole("option", { name: "Alpha" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Remote labels" }).fill("be");
+  await page.getByRole("option", { name: "Beta" }).click();
+  await expect(page.locator('[data-fixture="remote-values"]')).toHaveText("alpha");
+  await page.keyboard.press("Escape");
+
+  // Alpha's row left the list when the query narrowed to Beta, and the
+  // closed source lists nothing, yet the trigger still names it.
+  await expect(page.getByRole("button", { name: "Remote labels: Alpha" })).toBeVisible();
+});
+
 test("a vetoed selection keeps the list open and shows the error row", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter branches…" }).click();
