@@ -1,9 +1,9 @@
 interface Props {
     /** Key glyphs to display, e.g. ["⌘", "K"] or ["Ctrl", "Shift", "P"]. */
     keys: string[];
-    /** Separator between keys: "compact" renders them run together (mac
-     * style, "⌘K"); "plus" joins with "+" ("Ctrl+K"). */
-    joiner?: "compact" | "plus";
+    /** "keys" gives each key its own cap; "compact" runs glyphs together
+     * ("⌘K"); "plus" joins with "+" ("Ctrl+K"). */
+    joiner?: "keys" | "compact" | "plus";
     ariaLabel?: string;
 }
 declare const KbdBadge: import("svelte").Component<Props, {}, "">;

@@ -67,11 +67,11 @@ Forwarded from TextInput: `value`, `placeholder`, `size`, `invalid`,
 `onchange`, `onkeydown`. (`type`, `prefix`, and `suffix` are owned by
 SearchInput.) Plus:
 
-| Prop         | Type         | Default          | Notes                                                           |
-| ------------ | ------------ | ---------------- | --------------------------------------------------------------- |
-| `keys`       | `string[]`   | —                | Shortcut hint (`KbdBadge`) shown while empty, e.g. `["⌘", "K"]` |
-| `onclear`    | `() => void` | —                | After the clear button or Escape empties the field              |
-| `clearLabel` | `string`     | `"Clear search"` | Clear button label                                              |
+| Prop         | Type         | Default          | Notes                                                 |
+| ------------ | ------------ | ---------------- | ----------------------------------------------------- |
+| `keys`       | `string[]`   | —                | Separate keycaps shown while empty, e.g. `["⌘", "K"]` |
+| `onclear`    | `() => void` | —                | After the clear button or Escape empties the field    |
+| `clearLabel` | `string`     | `"Clear search"` | Clear button label                                    |
 
 Clearing behavior: the clear button only renders with content on an
 enabled, non-readonly field (disabled fields can't be mutated through it),

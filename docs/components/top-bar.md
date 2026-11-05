@@ -14,7 +14,7 @@ removing tabs still moves the re-expand threshold in both directions.
 
 Consolidated from Forge's `AppHeader` (centered tab group, tabs →
 dropdown when narrow) and agentsview's `AppHeader` (nav next to the brand,
-centered ⌘K search trigger, icon-button cluster on the right).
+centered ⌘ K search trigger, icon-button cluster on the right).
 
 ```svelte
 <script lang="ts">

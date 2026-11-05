@@ -45,7 +45,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
   function pops it (out-of-order pops are safe). Modal-like components
   should push a scope while open — CommandPalette does.
 - **Display**: `formatShortcutKeys("mod+k")` → `["⌘", "K"]` / `["Ctrl",
-  "K"]` for [KbdBadge](kbd-badge.md).
+  "K"]` for [KbdBadge](kbd-badge.md), with each key in its own cap.
 - `createShortcutManager()` builds an isolated manager (embedded surfaces,
   tests); `appShortcuts` is the app-level singleton `initShortcuts()`
   wires to `window`. `initShortcuts()` is idempotent — repeat calls while
@@ -102,8 +102,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
   are suspended (registry-driven ones — its own keys are DOM handlers).
 - Overlay + `trapFocus` + `aria-modal`; the query field autofocuses.
 - `combo` values render as platform-correct KbdBadges via
-  `formatShortcutKeys` — the palette does **not** register them; the app
-  owns actual shortcut registration.
+  `formatShortcutKeys`, with each key in its own cap. The app registers
+  the shortcuts.
 - The palette closes **before** `onrun` fires; exceptions thrown by
   `onrun` propagate to the caller (the palette stays closed).
 - Recents are app-owned (`recentIds` in, updated by your `onrun`) — the

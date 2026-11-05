@@ -168,7 +168,7 @@ const PC_LABELS: Record<string, string> = {
   meta: "Win",
   ctrl: "Ctrl",
   alt: "Alt",
-  shift: "Shift",
+  shift: "⇧",
 };
 const KEY_LABELS: Record<string, string> = {
   escape: "Esc",
@@ -177,6 +177,8 @@ const KEY_LABELS: Record<string, string> = {
   arrowdown: "↓",
   arrowleft: "←",
   arrowright: "→",
+  pageup: "PgUp",
+  pagedown: "PgDn",
   " ": "Space",
 };
 
@@ -185,14 +187,15 @@ const KEY_LABELS: Record<string, string> = {
 export function formatShortcutKeys(combo: string, isMac: boolean = isMacPlatform()): string[] {
   const parsed = parseShortcut(combo);
   const labels = isMac ? MAC_LABELS : PC_LABELS;
+  const shiftedKey = parsed.shift ? SHIFTED_KEYS[parsed.key] : undefined;
   const keys: string[] = [];
-  if (parsed.ctrl) keys.push(labels["ctrl"]!);
+  if (parsed.ctrl || (parsed.mod && !isMac)) keys.push(labels["ctrl"]!);
   if (parsed.alt) keys.push(labels["alt"]!);
-  if (parsed.shift) keys.push(labels["shift"]!);
+  if (parsed.shift && !shiftedKey) keys.push(labels["shift"]!);
   if (parsed.meta) keys.push(labels["meta"]!);
-  if (parsed.mod) keys.push(labels["mod"]!);
+  if (parsed.mod && isMac) keys.push(labels["mod"]!);
   keys.push(
-    KEY_LABELS[parsed.key] ?? (parsed.key.length === 1 ? parsed.key.toUpperCase() : parsed.key),
+    shiftedKey ?? KEY_LABELS[parsed.key] ?? parsed.key[0]!.toUpperCase() + parsed.key.slice(1),
   );
   return keys;
 }
