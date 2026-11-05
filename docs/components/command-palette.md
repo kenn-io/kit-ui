@@ -86,21 +86,17 @@ const off = appShortcuts.register("mod+k", openPalette, {
 | `placeholder`  | `string`                                                                             | `"Type a command…"`      |                                                                                          |
 | `emptyLabel`   | `string`                                                                             | `"No matching commands"` |                                                                                          |
 | `recentLabel`  | `string`                                                                             | `"Recent"`               |                                                                                          |
-| `hints`        | `{ navigate?: string; run?: string; clear?: string; back?: string; close?: string }` | `{}`                     | Footer labels; each omitted label defaults to its English key                            |
 | `ariaLabel`    | `string`                                                                             | `"Command palette"`      | Dialog + listbox label                                                                   |
 | `class`        | `string`                                                                             | `""`                     |                                                                                          |
 
 ### Behavior
 
 - Commands accept an `icon` component, such as a Lucide icon, rendered at 16px.
-  All rows reserve the icon column when any command in `commands`, including children, has an icon. Fallbacks always render their own icons without changing the column reserved by regular rows, keeping regular labels steady while typing, clearing, opening a group, or reopening.
+  Every row reserves the 16px icon column.
 - The borderless search row is 48px tall, command rows are at least 36px tall,
   and only the results list scrolls. Shortcut badges stay right-aligned.
   The search field shows no focus ring inside the palette.
-  A 32px footer shows ↑↓ navigate, ↵ run, and esc close, changing to esc back
-  inside a child list or esc clear while the query has text. The navigate hint appears
-  only when there are rows. The run hint appears
-  only when a command is highlighted. The `hints` prop translates these labels.
+  A 32px footer shows ↑↓ navigate, ↵ run, and esc close.
   Assistive technology ignores the footer. Coarse pointers hide it alongside key badges.
 - Filtering ranks label **prefix** over label **substring** over
   **keyword** matches. Each section then appears **once**, ordered by its

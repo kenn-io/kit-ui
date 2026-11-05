@@ -133,14 +133,11 @@ test("palette layout and keyboard hints", async ({ page }) => {
   const archiveX = (await archiveLabel.boundingBox())!.x;
   const query = page.getByRole("combobox", { name: "Command palette", exact: true });
   await query.fill("archive");
-  await expect(footer).toContainText("clear");
   expect((await archiveLabel.boundingBox())!.x).toBe(archiveX);
   await page.getByRole("button", { name: "Clear search", exact: true }).click();
   await page.getByRole("option", { name: "Group by…", exact: true }).click();
   await query.fill("g");
-  await expect(footer).toContainText("clear");
   await page.keyboard.press("Escape");
-  await expect(footer).toContainText("back");
 });
 
 test("fallback icons render without moving regular labels while typing, clearing, and reopening", async ({
@@ -326,19 +323,12 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   await gotoPage(page, "command-palette");
   await page.getByRole("button", { name: /Open palette/ }).click();
   const input = page.locator(".kit-command-palette input");
-  const footer = page.locator(".kit-command-palette__footer");
-  await expect(footer).toContainText("navigate");
   await input.fill("zzzzz");
   await expect(page.locator(".kit-command-palette__empty")).toBeVisible();
-  await expect(footer).not.toContainText("navigate");
-  await expect(footer).not.toContainText("run");
-  await expect(footer).toContainText("clear");
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
   await page.keyboard.press("Escape");
-  await expect(footer).toContainText("navigate");
-  await expect(footer).toContainText("run");
 });
 
 test("an all-disabled result set leaves Enter inert with no active descendant", async ({
@@ -353,7 +343,6 @@ test("an all-disabled result set leaves Enter inert with no active descendant", 
   const options = page.locator(".kit-command-palette__option");
   await expect(options).toHaveCount(1);
   await expect(options.first()).toHaveAttribute("aria-disabled", "true");
-  await expect(page.locator(".kit-command-palette__footer")).not.toContainText("run");
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
 
   // Enter and arrows have no runnable target — the palette stays open

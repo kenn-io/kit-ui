@@ -29,13 +29,6 @@ interface Props {
     placeholder?: string;
     emptyLabel?: string;
     recentLabel?: string;
-    hints?: {
-        navigate?: string;
-        run?: string;
-        clear?: string;
-        back?: string;
-        close?: string;
-    };
     ariaLabel?: string;
     class?: string;
 }

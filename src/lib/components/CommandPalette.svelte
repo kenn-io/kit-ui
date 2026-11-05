@@ -44,13 +44,6 @@
     placeholder?: string;
     emptyLabel?: string;
     recentLabel?: string;
-    hints?: {
-      navigate?: string;
-      run?: string;
-      clear?: string;
-      back?: string;
-      close?: string;
-    };
     ariaLabel?: string;
     class?: string;
   }
@@ -65,7 +58,6 @@
     placeholder = "Type a command…",
     emptyLabel = "No matching commands",
     recentLabel = "Recent",
-    hints = {},
     ariaLabel = "Command palette",
     class: className = "",
   }: Props = $props();
@@ -168,7 +160,6 @@
 
   // Visual order — highlight/keyboard navigation indexes into this.
   const flat = $derived(groups.flatMap((g) => g.commands));
-  const hasIcons = $derived(allCommands.some((c) => c.icon));
 
   // Rendered options need their flat index; indexOf per option would be
   // quadratic in the result count on every keystroke.
@@ -341,13 +332,11 @@
               }}
               onclick={() => run(command)}
             >
-              {#if hasIcons || command.icon}
-                <span class="kit-command-palette__icon" aria-hidden="true">
-                  {#if command.icon}
-                    <command.icon size={16} />
-                  {/if}
-                </span>
-              {/if}
+              <span class="kit-command-palette__icon" aria-hidden="true">
+                {#if command.icon}
+                  <command.icon size={16} />
+                {/if}
+              </span>
               <span class="kit-command-palette__label">
                 {#if !parent && matchedIds.has(command.id) && parentLabels.has(command.id)}{parentLabels.get(
                     command.id,
@@ -365,20 +354,12 @@
         {/each}
       </div>
       <div class="kit-command-palette__footer" aria-hidden="true">
-        {#if flat.length > 0}
-          <KbdBadge keys={["↑", "↓"]} />
-          {hints.navigate ?? "navigate"} ·
-        {/if}
-        {#if highlighted >= 0}
-          <KbdBadge keys={["↵"]} />
-          {hints.run ?? "run"} ·
-        {/if}
+        <KbdBadge keys={["↑", "↓"]} />
+        navigate ·
+        <KbdBadge keys={["↵"]} />
+        run ·
         <KbdBadge keys={["esc"]} />
-        {query
-          ? (hints.clear ?? "clear")
-          : parent
-            ? (hints.back ?? "back")
-            : (hints.close ?? "close")}
+        close
       </div>
     </div>
   </div>
