@@ -4,8 +4,8 @@ import { gotoPage, setTheme } from "./helpers.js";
 test("a chord has a separate cap for each key and one accessible name", async ({ page }) => {
   await gotoPage(page, "kbd-badge");
   await setTheme(page, { dark: true });
-  const chord = page.locator('.kit-kbd-badge[aria-label="Ctrl ⇧ P"]');
-  await expect(chord).toHaveAccessibleName("Ctrl ⇧ P");
+  const chord = page.locator('.kit-kbd-badge[data-joiner="keys"][aria-label="Ctrl Shift P"]');
+  await expect(chord).toHaveAccessibleName("Ctrl Shift P");
   const caps = chord.locator(".kit-kbd-badge__key");
   await expect(caps).toHaveCount(3);
   await expect(caps).toHaveText(["Ctrl", "⇧", "P"]);

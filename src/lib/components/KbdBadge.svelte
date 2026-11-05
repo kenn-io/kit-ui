@@ -11,7 +11,7 @@
   let { keys, joiner = "keys", ariaLabel = undefined }: Props = $props();
 
   const glyph = $derived(keys.join(joiner === "plus" ? "+" : ""));
-  const aria = $derived(ariaLabel ?? keys.join(" "));
+  const aria = $derived(ariaLabel ?? keys.map((key) => (key === "⇧" ? "Shift" : key)).join(" "));
 </script>
 
 <kbd class="kit-kbd-badge" data-joiner={joiner} aria-label={aria}>

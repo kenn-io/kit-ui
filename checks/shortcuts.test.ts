@@ -106,7 +106,9 @@ describe("formatShortcutKeys", () => {
     expect(formatShortcutKeys("mod+k", true)).toEqual(["⌘", "K"]);
     expect(formatShortcutKeys("mod+k", false)).toEqual(["Ctrl", "K"]);
     expect(formatShortcutKeys("mod+shift+p", true)).toEqual(["⇧", "⌘", "P"]);
-    expect(formatShortcutKeys("mod+shift+p", false)).toEqual(["⇧", "Ctrl", "P"]);
+    expect(formatShortcutKeys("mod+shift+p", false)).toEqual(["Ctrl", "⇧", "P"]);
+    expect(formatShortcutKeys("mod+alt+p", false)).toEqual(["Ctrl", "Alt", "P"]);
+    expect(formatShortcutKeys("mod+alt+p", true)).toEqual(["⌥", "⌘", "P"]);
     expect(formatShortcutKeys("escape", true)).toEqual(["Esc"]);
     expect(formatShortcutKeys("alt+down", false)).toEqual(["Alt", "↓"]);
   });

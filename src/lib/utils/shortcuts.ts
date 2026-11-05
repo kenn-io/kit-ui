@@ -179,8 +179,6 @@ const KEY_LABELS: Record<string, string> = {
   arrowright: "→",
   pageup: "PgUp",
   pagedown: "PgDn",
-  home: "Home",
-  end: "End",
   " ": "Space",
 };
 
@@ -191,11 +189,11 @@ export function formatShortcutKeys(combo: string, isMac: boolean = isMacPlatform
   const labels = isMac ? MAC_LABELS : PC_LABELS;
   const shiftedKey = parsed.shift ? SHIFTED_KEYS[parsed.key] : undefined;
   const keys: string[] = [];
-  if (parsed.ctrl) keys.push(labels["ctrl"]!);
+  if (parsed.ctrl || (parsed.mod && !isMac)) keys.push(labels["ctrl"]!);
   if (parsed.alt) keys.push(labels["alt"]!);
   if (parsed.shift && !shiftedKey) keys.push(labels["shift"]!);
   if (parsed.meta) keys.push(labels["meta"]!);
-  if (parsed.mod) keys.push(labels["mod"]!);
+  if (parsed.mod && isMac) keys.push(labels["mod"]!);
   keys.push(
     shiftedKey ?? KEY_LABELS[parsed.key] ?? parsed.key[0]!.toUpperCase() + parsed.key.slice(1),
   );
