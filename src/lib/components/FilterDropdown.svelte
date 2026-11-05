@@ -118,7 +118,7 @@
   );
 
   $effect(() => {
-    if (disabled && isOpen) isOpen = false;
+    if (disabled && isOpen) closeDropdown();
   });
 
   $effect(() => {
@@ -155,6 +155,9 @@
       popoverHeight: dropdownRef.offsetHeight,
       align,
     });
+    // A moved panel moves the row the flyout lines up with, and the
+    // flyout's own observers only see size changes.
+    if (submenuId) void tick().then(positionSubmenu);
   }
 
   function closeDropdown(): void {
@@ -185,8 +188,18 @@
     submenuId = item.id;
     await tick();
     positionSubmenu();
-    const first = submenuRef?.querySelector<HTMLElement>(TABBABLE_SELECTOR);
-    (first ?? submenuRef)?.focus();
+    if (!submenuRef) return;
+    // The selector also matches hidden inputs and controls in a disabled
+    // fieldset; take the first control the browser would actually tab to.
+    const first = Array.from(submenuRef.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).find(
+      (element) =>
+        element.tabIndex >= 0 &&
+        !element.matches(":disabled") &&
+        element.getClientRects().length > 0,
+    );
+    first?.focus();
+    // Focus must land in the flyout, or Escape would close the whole dropdown.
+    if (!submenuRef.contains(document.activeElement)) submenuRef.focus();
   }
 
   function closeSubmenu(): void {
@@ -199,7 +212,7 @@
     // Content that already handled the key (a field clearing itself) keeps it.
     if (event.defaultPrevented) return;
     const target = event.target as HTMLElement;
-    const typing = target.matches("input, textarea, [contenteditable='true']");
+    const typing = target.matches("input, textarea") || target.isContentEditable;
     if (event.key === "Escape" || (event.key === "ArrowLeft" && !typing)) {
       // Claim Escape so the document-level dismiss leaves the panel open:
       // one press closes one layer.

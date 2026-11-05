@@ -155,6 +155,8 @@
 
 {#snippet labelPicker()}
   <div class="demo-label-picker">
+    <!-- A form-backed picker can lead with a hidden field; focus skips it. -->
+    <input type="hidden" name="labels" value={[...pickedLabels].join(",")} />
     {#each labelOptions as name (name)}
       <button type="button" aria-pressed={pickedLabels.has(name)} onclick={() => toggleLabel(name)}>
         {name}
