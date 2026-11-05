@@ -13,13 +13,16 @@
     /** Noun selected by the caller for itemCount or total, including plural rules. */
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
+    /** Show status only, with no button, for viewers who can't change it. */
+    readonly?: boolean;
     onturnon: () => void;
     onusebuiltin: () => void;
   }
 
-  let { state, itemNoun, labels = {}, onturnon, onusebuiltin }: Props = $props();
+  let { state, itemNoun, labels = {}, readonly = false, onturnon, onusebuiltin }: Props = $props();
   const words = $derived({ ...DEFAULT_SEARCH_BY_MEANING_LABELS, ...labels });
   const description = $derived(describeSearchByMeaning(state, itemNoun, words));
+  const action = $derived(readonly ? undefined : description.action);
   const percent = $derived(
     description.progress && description.progress.max > 0
       ? Math.min(100, (description.progress.value / description.progress.max) * 100)
@@ -27,7 +30,7 @@
   );
 </script>
 
-<div class="kit-search-by-meaning" class:kit-search-by-meaning--no-action={!description.action}>
+<div class="kit-search-by-meaning" class:kit-search-by-meaning--no-action={!action}>
   <span class="kit-search-by-meaning__name">{words.name}</span>
   <Chip size="xs" uppercase={false} tone={description.tone}>{description.chip}</Chip>
   {#if description.warning}
@@ -49,15 +52,15 @@
   {#if description.line}
     <p class="kit-search-by-meaning__line">{description.line}</p>
   {/if}
-  {#if description.action}
+  {#if action}
     <div class="kit-search-by-meaning__action">
       <Button
         size="sm"
-        tone={description.action === "turn-on" ? "info" : "neutral"}
-        surface={description.action === "turn-on" ? "soft" : "outline"}
-        onclick={description.action === "turn-on" ? onturnon : onusebuiltin}
+        tone={action === "turn-on" ? "info" : "neutral"}
+        surface={action === "turn-on" ? "soft" : "outline"}
+        onclick={action === "turn-on" ? onturnon : onusebuiltin}
       >
-        {description.action === "turn-on" ? words.turnOn : words.useBuiltIn}
+        {action === "turn-on" ? words.turnOn : words.useBuiltIn}
       </Button>
     </div>
   {/if}

@@ -4,6 +4,8 @@ interface Props {
     /** Noun selected by the caller for itemCount or total, including plural rules. */
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
+    /** Show status only, with no button, for viewers who can't change it. */
+    readonly?: boolean;
     onturnon: () => void;
     onusebuiltin: () => void;
 }

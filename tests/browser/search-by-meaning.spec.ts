@@ -42,6 +42,22 @@ test("each action fires once per click", async ({ page }) => {
   }
 });
 
+test("status only hides every action", async ({ page }) => {
+  const toggle = page.getByTestId("meaning-readonly").getByRole("checkbox");
+  await toggle.check();
+  for (const id of ["off", "ollama"]) {
+    const row = page.getByTestId(`meaning-${id}`);
+    await expect(row.getByRole("button")).toHaveCount(0);
+    await expect(row.locator(".kit-chip")).toBeVisible();
+    await expect(row.locator(".kit-search-by-meaning__line")).toBeVisible();
+    const edges = await row.evaluate((el) => ({
+      chip: el.querySelector(".kit-chip")!.getBoundingClientRect().right,
+      row: el.getBoundingClientRect().right,
+    }));
+    expect(edges.chip).toBeCloseTo(edges.row, 0);
+  }
+});
+
 test("exposes progress values and text with status aligned to the bar", async ({ page }) => {
   for (const [id, current, max] of [
     ["downloading", "120000000", "290000000"],
