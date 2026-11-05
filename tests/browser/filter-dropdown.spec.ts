@@ -11,6 +11,8 @@ test("a submenu row opens a flyout beside the panel and peels one layer per Esca
   await expect(row).toHaveAttribute("aria-haspopup", "dialog");
   await expect(row).toHaveAttribute("aria-expanded", "false");
   await expect(row).toContainText("Any");
+  // A submenu row is navigation, not an unselected option, so it is never dimmed.
+  await expect(row).toHaveCSS("opacity", "1");
 
   await row.click();
   const flyout = page.getByRole("dialog", { name: "Labels" });
@@ -21,7 +23,13 @@ test("a submenu row opens a flyout beside the panel and peels one layer per Esca
   const panel = page.locator(".kit-filter-dropdown__panel");
   const panelBox = (await panel.boundingBox())!;
   const flyoutBox = (await flyout.boundingBox())!;
-  expect(flyoutBox.x).toBeGreaterThanOrEqual(panelBox.x + panelBox.width);
+  // The flyout's border overlaps the panel's, and its top lines up with the row.
+  expect(flyoutBox.x).toBe(panelBox.x + panelBox.width - 1);
+  const rowBox = (await row.boundingBox())!;
+  expect(Math.abs(flyoutBox.y - (rowBox.y - 4))).toBeLessThanOrEqual(1);
+  // With the pointer away from the row, the open row keeps its fill.
+  await page.mouse.move(flyoutBox.x + 20, flyoutBox.y + 40);
+  await expect(row).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   await flyout.getByRole("button", { name: "docs" }).click();
   await expect(page.getByTestId("filter-submenu-picked")).toHaveText("picked: docs");
@@ -64,5 +72,5 @@ test("a submenu flyout flips left when the right side is too narrow", async ({ p
 
   const panelBox = (await page.locator(".kit-filter-dropdown__panel").boundingBox())!;
   const flyoutBox = (await page.getByRole("dialog", { name: "Labels" }).boundingBox())!;
-  expect(flyoutBox.x + flyoutBox.width).toBeLessThanOrEqual(panelBox.x);
+  expect(flyoutBox.x + flyoutBox.width).toBe(panelBox.x + 1);
 });

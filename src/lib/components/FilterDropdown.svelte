@@ -331,6 +331,7 @@
           <button
             class="kit-filter-dropdown__item kit-control-states"
             class:active={item.active}
+            class:submenu={item.submenu !== undefined}
             class:open={submenuItem?.id === item.id}
             onclick={() => handleSelect(item)}
             onkeydown={(event) => handleItemKeydown(event, item)}
@@ -578,8 +579,21 @@
     flex-shrink: 0;
   }
 
+  /* A submenu row navigates rather than toggles, so it never dims like an
+     unselected option; its detail text carries the value. */
+  .kit-filter-dropdown__item.submenu {
+    opacity: 1;
+  }
+
+  /* The open row stays lit, like a focused kit menu item, so it reads as
+     the flyout's source. */
   .kit-filter-dropdown__item.open {
     background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
+  .kit-filter-dropdown__item.open .kit-filter-dropdown__chevron {
+    color: var(--text-primary);
   }
 
   .kit-filter-dropdown__detail {

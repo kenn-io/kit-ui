@@ -78,6 +78,8 @@ export interface FloatingFlyoutInput {
   flyoutWidth: number;
   flyoutHeight: number;
   edgeGap?: number;
+  /** Space between panel and flyout. The default -1 overlaps the two
+   * borders, so the flyout reads as attached to the panel. */
   panelGap?: number;
 }
 
@@ -92,7 +94,7 @@ export function floatingFlyoutStyle({
   flyoutWidth,
   flyoutHeight,
   edgeGap = 8,
-  panelGap = 4,
+  panelGap = -1,
 }: FloatingFlyoutInput): string {
   const right = panel.right + panelGap;
   const left = panel.left - panelGap - flyoutWidth;
