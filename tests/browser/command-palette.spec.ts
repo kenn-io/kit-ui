@@ -152,7 +152,7 @@ test("a no-match fallback is active and runs with trimmed text", async ({ page }
   await page.getByRole("button", { name: /Open palette/ }).click();
   const input = page.getByRole("combobox", { name: "Command palette" });
   await input.fill("  zzzxxyy  ");
-  const fallback = page.getByRole("option", { name: 'Search for "zzzxxyy" ↵' });
+  const fallback = page.getByRole("option", { name: 'Search for "zzzxxyy" Enter' });
   await expect(fallback).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-flash-banner")).toHaveText('Searched for "zzzxxyy"');
