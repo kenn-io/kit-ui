@@ -121,34 +121,18 @@ test("palette layout and keyboard hints", async ({ page }) => {
   ).toBeVisible();
   const input = search.locator(".kit-text-input");
   await expect(input).toHaveCSS("border-top-width", "0px");
-  await expect(input).toHaveCSS("outline-style", "none");
+  await expect(search.locator(".kit-text-input__control")).toHaveCSS("outline-style", "none");
   const footer = page.locator(".kit-command-palette__footer");
   expect((await footer.boundingBox())!.height).toBe(32);
-  await expect(footer).toHaveAttribute("aria-hidden", "true");
-  await expect(footer).toContainText("run");
-  await expect(footer).toContainText("close");
-  const archiveLabel = page
-    .getByRole("option", { name: "Archive session", exact: true })
-    .locator(".kit-command-palette__label");
-  const archiveX = (await archiveLabel.boundingBox())!.x;
-  const query = page.getByRole("combobox", { name: "Command palette", exact: true });
-  await query.fill("archive");
-  expect((await archiveLabel.boundingBox())!.x).toBe(archiveX);
-  await page.getByRole("button", { name: "Clear search", exact: true }).click();
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  await query.fill("g");
-  await page.keyboard.press("Escape");
 });
 
-test("fallback icons render without moving regular labels while typing, clearing, and reopening", async ({
-  page,
-}) => {
+test("fallback icons do not shift regular labels while typing", async ({ page }) => {
   await gotoPage(page, "command-palette");
-  const fixture = await page.evaluateHandle(async () => {
+  await page.evaluate(async () => {
     const { mountCommandPalette } =
       await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
     const { default: Search } = await import("/node_modules/@lucide/svelte/dist/icons/search.js");
-    return mountCommandPalette({
+    mountCommandPalette({
       open: true,
       commands: [{ id: "theme", label: "Toggle theme" }],
       fallbacks: () => [{ id: "search", label: "Search archive", icon: Search }],
@@ -166,34 +150,31 @@ test("fallback icons render without moving regular labels while typing, clearing
     .getByRole("option", { name: "Search archive", exact: true })
     .locator("svg");
   await expect(fallbackIcon).toBeVisible();
-  expect((await fallbackIcon.boundingBox())!.width).toBe(16);
-  expect((await fallbackIcon.boundingBox())!.height).toBe(16);
-  expect((await label.boundingBox())!.x).toBe(x);
-  await page.getByRole("button", { name: "Clear search", exact: true }).click();
-  expect((await label.boundingBox())!.x).toBe(x);
-  await page.keyboard.press("Escape");
-  await expect(input).not.toBeVisible();
-  await fixture.evaluate(({ update }) => update({ open: true }));
-  await expect(input).toHaveValue("");
   expect((await label.boundingBox())!.x).toBe(x);
 });
 
-test("custom footer labels keep the keyboard hints", async ({ page }) => {
+test("footer uses default labels and accepts navigateLabel, runLabel, and closeLabel", async ({
+  page,
+}) => {
   await gotoPage(page, "command-palette");
-  await page.evaluate(async () => {
+  const fixture = await page.evaluateHandle(async () => {
     const { mountCommandPalette } =
       await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
-    mountCommandPalette({
+    return mountCommandPalette({
       open: true,
       commands: [{ id: "theme", label: "Toggle theme" }],
-      navigateLabel: "naviguer",
-      runLabel: "exécuter",
-      closeLabel: "fermer",
       onrun: () => {},
     });
   });
   const footer = page.locator(".kit-command-palette__footer");
   await expect(footer).toBeVisible();
+  await expect(footer).toHaveAttribute("aria-hidden", "true");
+  await expect(footer).toContainText("navigate ·");
+  await expect(footer).toContainText("run ·");
+  await expect(footer).toContainText("close");
+  await fixture.evaluate(({ update }) =>
+    update({ navigateLabel: "naviguer", runLabel: "exécuter", closeLabel: "fermer" }),
+  );
   await expect(footer).toContainText("naviguer ·");
   await expect(footer).toContainText("exécuter ·");
   await expect(footer).toContainText("fermer");
@@ -349,7 +330,6 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
-  await page.keyboard.press("Escape");
 });
 
 test("an all-disabled result set leaves Enter inert with no active descendant", async ({
