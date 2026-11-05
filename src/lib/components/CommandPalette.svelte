@@ -96,6 +96,9 @@
     return { tree, allCommands, recent, originals };
   });
   const parent = $derived(tree.find((c) => c.id === parentId && c.children));
+  const parentLabels = $derived(
+    new Map(tree.flatMap((c) => (c.children ?? []).map((child) => [child.id, c.label]))),
+  );
 
   interface Group {
     section: string | undefined;
@@ -241,6 +244,9 @@
         const command = flat[highlighted];
         if (command) run(command);
       }
+    } else if (event.key === "Backspace" && !query && parent) {
+      event.preventDefault();
+      setParent(undefined);
     } else if (event.key === "Escape") {
       // SearchInput already consumed Escape-with-content (clear); an
       // Escape off the input clears, then leaves a child list or closes.
@@ -330,6 +336,7 @@
               onclick={() => run(command)}
             >
               <span class="kit-command-palette__label">
+                {#if !parent && matchedIds.has(command.id) && parentLabels.has(command.id)}{parentLabels.get(command.id)} › {/if}
                 {#each highlightSegments(command.label, matchedIds.has(command.id) ? query.trim() : "") as segment, si (si)}
                   {#if segment.match}<mark>{segment.text}</mark>{:else}{segment.text}{/if}
                 {/each}
