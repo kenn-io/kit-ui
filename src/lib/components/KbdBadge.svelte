@@ -22,15 +22,48 @@
     "→": "Arrow right",
   };
 
+  // Tight view boxes keep symbol ink at the surrounding letters' cap height.
+  const symbolPaths: Record<string, string> = {
+    "⌘": "M5 5H2.5A2.5 2.5 0 1 1 5 2.5V13.5A2.5 2.5 0 1 1 2.5 11H13.5A2.5 2.5 0 1 1 11 13.5V2.5A2.5 2.5 0 1 1 13.5 5Z",
+    "⌥": "M0 0H5L11 16H16M10 0H16",
+    "⌃": "M0 16L8 0L16 16",
+    "⇧": "M8 0L16 8H12V16H4V8H0Z",
+    "↵": "M16 0V10H0M6 4L0 10L6 16",
+    "↑": "M8 16V0M0 8L8 0L16 8",
+    "↓": "M8 0V16M0 8L8 16L16 8",
+    "←": "M16 8H0M8 0L0 8L8 16",
+    "→": "M0 8H16M8 0L16 8L8 16",
+  };
+
+  // Symbol-only compact and plus badges keep their original text layout.
+  const compactChord = $derived(joiner === "compact" && keys.some((key) => !symbolPaths[key]));
+
   const glyph = $derived(keys.join(joiner === "plus" ? "+" : ""));
   const aria = $derived(ariaLabel ?? keys.map((key) => glyphNames[key] ?? key).join(" "));
 </script>
 
+{#snippet keyContent(key: string)}
+  {#if symbolPaths[key]}
+    <svg class="kit-kbd-badge__symbol" viewBox="-1 -1 18 18" aria-hidden="true">
+      <path d={symbolPaths[key]} />
+    </svg>
+    <span class="kit-sr-only">{key}</span>
+  {:else}
+    {key}
+  {/if}
+{/snippet}
+
 <kbd class="kit-kbd-badge" data-joiner={joiner} aria-label={aria}>
   {#if joiner === "keys"}
-    {#each keys as key}
-      <kbd class="kit-kbd-badge__key" aria-hidden="true">{key}</kbd>
+    {#each keys as key, index (index)}
+      <kbd class="kit-kbd-badge__key" aria-hidden="true">{@render keyContent(key)}</kbd>
     {/each}
+  {:else if compactChord}
+    <span class="kit-kbd-badge__chord" aria-hidden="true">
+      {#each keys as key, index (index)}
+        {@render keyContent(key)}
+      {/each}
+    </span>
   {:else}
     <span aria-hidden="true">{glyph}</span>
   {/if}
@@ -56,7 +89,29 @@
   }
 
   .kit-kbd-badge__key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: calc(1em + 10px + 2 * var(--border-width));
+    min-height: calc(1em + 2px + 2 * var(--border-width));
     font: inherit;
+  }
+
+  .kit-kbd-badge__chord {
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: inherit;
+  }
+
+  .kit-kbd-badge__symbol {
+    width: 1cap;
+    height: 1cap;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .kit-kbd-badge[data-joiner="keys"] {

@@ -34,6 +34,35 @@ test("glyphs have readable names once in every badge format", async ({ page }) =
   }
 });
 
+test("symbol caps share a width and center their cap-height glyphs", async ({ page }) => {
+  await gotoPage(page, "kbd-badge");
+  const caps = page.locator(".demo-section").nth(1).locator(".kit-kbd-badge__key");
+  const bounds = await caps.evaluateAll((elements) =>
+    elements.map((element) => {
+      const cap = element.getBoundingClientRect();
+      const symbol = element.querySelector("svg")!.getBoundingClientRect();
+      const probe = document.createElement("span");
+      probe.style.height = "1cap";
+      probe.style.display = "inline-block";
+      element.append(probe);
+      const capHeight = probe.getBoundingClientRect().height;
+      probe.remove();
+      return {
+        width: cap.width,
+        height: symbol.height,
+        capHeight,
+        offset: symbol.y + symbol.height / 2 - (cap.y + cap.height / 2),
+      };
+    }),
+  );
+  expect(bounds).toHaveLength(9);
+  for (const bound of bounds) {
+    expect(bound.width).toBeCloseTo(bounds[0]!.width, 1);
+    expect(bound.height).toBeCloseTo(bound.capHeight, 1);
+    expect(bound.offset).toBeCloseTo(0, 1);
+  }
+});
+
 test("a custom label replaces the visible keys for screen readers", async ({ page }) => {
   await gotoPage(page, "kbd-badge");
   const badge = page.locator('.kit-kbd-badge[aria-label="g then i"]');
