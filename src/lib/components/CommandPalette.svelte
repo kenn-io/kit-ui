@@ -44,6 +44,11 @@
     placeholder?: string;
     emptyLabel?: string;
     recentLabel?: string;
+    navigateHint?: string;
+    runHint?: string;
+    clearHint?: string;
+    backHint?: string;
+    closeHint?: string;
     ariaLabel?: string;
     class?: string;
   }
@@ -58,6 +63,11 @@
     placeholder = "Type a command…",
     emptyLabel = "No matching commands",
     recentLabel = "Recent",
+    navigateHint = "navigate",
+    runHint = "run",
+    clearHint = "clear",
+    backHint = "back",
+    closeHint = "close",
     ariaLabel = "Command palette",
     class: className = "",
   }: Props = $props();
@@ -357,10 +367,12 @@
         {/each}
       </div>
       <div class="kit-command-palette__footer">
-        <KbdBadge keys={["↑", "↓"]} /> navigate ·
-        <KbdBadge keys={["↵"]} /> run ·
+        <KbdBadge keys={["↑", "↓"]} />
+        {navigateHint} ·
+        <KbdBadge keys={["↵"]} />
+        {runHint} ·
         <KbdBadge keys={["esc"]} />
-        {parent ? "back" : "close"}
+        {query ? clearHint : parent ? backHint : closeHint}
       </div>
     </div>
   </div>
@@ -394,7 +406,7 @@
     gap: var(--space-2);
     flex-shrink: 0;
     height: 48px;
-    padding: 0;
+    padding: 0 var(--space-3);
     border-bottom: 1px solid var(--border-muted);
   }
 
@@ -513,5 +525,11 @@
     font-size: var(--font-size-sm);
     color: var(--text-muted);
     text-align: center;
+  }
+
+  @media (pointer: coarse) {
+    .kit-command-palette__footer {
+      display: none;
+    }
   }
 </style>

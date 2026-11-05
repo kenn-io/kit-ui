@@ -86,6 +86,11 @@ const off = appShortcuts.register("mod+k", openPalette, {
 | `placeholder`  | `string`                                           | `"Type a command…"`      |                                                                                   |
 | `emptyLabel`   | `string`                                           | `"No matching commands"` |                                                                                   |
 | `recentLabel`  | `string`                                           | `"Recent"`               |                                                                                   |
+| `navigateHint` | `string` | `"navigate"` | Footer arrow-key hint |
+| `runHint` | `string` | `"run"` | Footer Enter hint |
+| `clearHint` | `string` | `"clear"` | Footer Escape hint while searching |
+| `backHint` | `string` | `"back"` | Footer Escape hint in a child list |
+| `closeHint` | `string` | `"close"` | Footer Escape hint at root |
 | `ariaLabel`    | `string`                                           | `"Command palette"`      | Dialog + listbox label                                                            |
 | `class`        | `string`                                           | `""`                     |                                                                                   |
 
@@ -96,7 +101,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
 - The borderless search row is 48px tall, command rows are at least 36px tall,
   and only the results list scrolls. Shortcut badges stay right-aligned.
   A 32px footer shows ↑↓ navigate, ↵ run, and esc close, changing to esc back
-  inside a child list.
+  inside a child list or esc clear while the query has text. The hint props
+  translate these labels. Coarse pointers hide the footer alongside key badges.
 - Filtering ranks label **prefix** over label **substring** over
   **keyword** matches. Each section then appears **once**, ordered by its
   best-ranked match, with ranking preserved within the section — a

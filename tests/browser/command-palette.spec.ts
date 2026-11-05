@@ -104,7 +104,7 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
 ]) {
-  test(`palette layout and footer at ${viewport.width}px`, async ({ page }, testInfo) => {
+  test(`palette layout and footer at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await gotoPage(page, "command-palette");
     await setTheme(page, { dark: true });
@@ -116,6 +116,7 @@ for (const viewport of [
     const icon = await option.locator("svg").boundingBox();
     expect(icon!.width).toBe(16);
     expect(icon!.height).toBe(16);
+    expect((await search.locator("svg").boundingBox())!.x).toBe(icon!.x);
     const label = (await option.locator(".kit-command-palette__label").boundingBox())!;
     expect(label.x - icon!.x - icon!.width).toBe(8);
     await expect(
@@ -133,13 +134,27 @@ for (const viewport of [
     const footer = page.locator(".kit-command-palette__footer");
     expect((await footer.boundingBox())!.height).toBe(32);
     await expect(footer).toContainText("close");
-    await page.screenshot({ path: testInfo.outputPath("palette-dark.png") });
     await page.getByRole("option", { name: "Group by…", exact: true }).click();
     await expect(footer).toContainText("back");
     await expect(page.locator(".kit-command-palette__icon")).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath("palette-children-dark.png") });
+    const back = (await page.getByRole("button", { name: "Group by…", exact: true }).boundingBox())!;
+    const childSearch = (await search.boundingBox())!;
+    expect(childSearch.height).toBe(48);
+    expect(back.x - childSearch.x).toBe(6);
   });
 }
+
+test.describe("touch palette", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("hides keyboard hints alongside shortcut badges", async ({ page }) => {
+    await gotoPage(page, "command-palette");
+    await page.getByRole("button", { name: /Open palette/ }).click();
+    await expect(page.locator(".kit-command-palette__footer")).toBeHidden();
+    await page.getByRole("option", { name: "Group by…", exact: true }).click();
+    await expect(page.locator(".kit-command-palette__footer")).toBeHidden();
+  });
+});
 
 test("a resting pointer does not highlight a command", async ({ page }) => {
   await gotoPage(page, "command-palette");
