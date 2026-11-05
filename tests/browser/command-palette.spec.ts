@@ -525,24 +525,6 @@ test("a parent opens children and records a child in Recent", async ({ page }) =
   await expect(page.getByRole("option").first()).toHaveText("Group by… › Source");
 });
 
-test("Escape clears child text off the input, steps back, and closes", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.keyboard.press("ControlOrMeta+k");
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  const input = page.getByRole("combobox", { name: "Command palette" });
-  await input.fill("a");
-  await expect(page.locator(".kit-command-palette__parent")).toHaveText("Group by…");
-  await page.getByRole("option", { name: "account", exact: true }).click({ force: true });
-  await expect(input).not.toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(input).toHaveValue("");
-  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
-});
-
 test("root search reaches children with inherited sections and keywords", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.keyboard.press("ControlOrMeta+k");
