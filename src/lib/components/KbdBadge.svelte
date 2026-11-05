@@ -98,6 +98,45 @@
     gap: var(--space-2);
   }
 
+  /* Lucide paths leave space inside their 24-unit view box. Fill the cap
+     height with the drawing while preserving the keycap's layout box. */
+  .kit-kbd-badge__key :global(svg) {
+    overflow: visible;
+    --symbol-scale-x: 1.3333;
+    --symbol-scale-y: 1.3333;
+  }
+
+  .kit-kbd-badge__key :global(svg > *) {
+    transform-box: view-box;
+    transform-origin: center;
+    transform: scale(var(--symbol-scale-x), var(--symbol-scale-y));
+    vector-effect: non-scaling-stroke;
+    stroke-width: 0.09em;
+  }
+
+  .kit-kbd-badge__key :global(.lucide-arrow-big-up) {
+    --symbol-scale-x: 1.45;
+    --symbol-scale-y: 1.45;
+  }
+
+  .kit-kbd-badge__key :global(.lucide-corner-down-left) {
+    --symbol-scale-x: 1.5;
+    --symbol-scale-y: 1.5;
+  }
+
+  .kit-kbd-badge__key :global(.lucide-chevron-up) {
+    --symbol-scale-x: 2;
+    --symbol-scale-y: 4;
+  }
+
+  .kit-kbd-badge__key :global(.lucide-arrow-up),
+  .kit-kbd-badge__key :global(.lucide-arrow-down),
+  .kit-kbd-badge__key :global(.lucide-arrow-left),
+  .kit-kbd-badge__key :global(.lucide-arrow-right) {
+    --symbol-scale-x: 1.7143;
+    --symbol-scale-y: 1.7143;
+  }
+
   .kit-kbd-badge[data-joiner="compact"] {
     font-family: var(--font-sans);
     letter-spacing: var(--letter-spacing-label, 0.07em);
