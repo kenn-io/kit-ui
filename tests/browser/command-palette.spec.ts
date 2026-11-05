@@ -5,6 +5,40 @@ import { gotoPage } from "./helpers.js";
 // combobox ARIA state, disabled-skip highlighting, Escape semantics,
 // scope suspension, all-disabled inertness.
 
+for (const query of ["", "theme"]) {
+  test(`onrun receives the caller's command object for ${query ? "a search result" : "a root row"}`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "command-palette");
+    await page.evaluate(async () => {
+      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: CommandPalette } =
+        await import("/src/lib/components/CommandPalette.svelte");
+      const command = { id: "theme", label: "Toggle theme" };
+      const host = document.createElement("div");
+      host.dataset.testid = "mounted-palette";
+      document.body.append(host);
+      mount(CommandPalette, {
+        target: host,
+        props: {
+          open: true,
+          commands: [command],
+          onrun: (selected) => {
+            host.dataset.sameCommand = String(selected === command);
+          },
+        },
+      });
+    });
+    if (query) {
+      await page.getByRole("combobox", { name: "Command palette" }).fill(query);
+      await page.keyboard.press("Enter");
+    } else {
+      await page.getByRole("option", { name: "Toggle theme", exact: true }).click();
+    }
+    await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-same-command", "true");
+  });
+}
+
 test("a resting pointer does not highlight a command", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.keyboard.press("ControlOrMeta+k");

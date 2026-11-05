@@ -65,14 +65,18 @@
   let inputEl = $state<HTMLInputElement>();
   let listEl = $state<HTMLDivElement>();
   const tree: PaletteCommand[] = $derived(
-    commands.map((c) => ({
-      ...c,
-      children: c.children?.map((child) => ({
-        ...child,
-        section: child.section ?? c.section,
-        disabled: c.disabled || child.disabled,
-      })),
-    })),
+    commands.map((c) =>
+      c.children
+        ? {
+            ...c,
+            children: c.children.map((child) => ({
+              ...child,
+              section: child.section ?? c.section,
+              disabled: c.disabled || child.disabled,
+            })),
+          }
+        : c,
+    ),
   );
   const parent = $derived(tree.find((c) => c.id === parentId && c.children));
   const allCommands = $derived(tree.flatMap((c) => [c, ...(c.children ?? [])]));
