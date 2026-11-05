@@ -1,4 +1,8 @@
 <script lang="ts">
+  import Plus from "@lucide/svelte/icons/plus";
+  import Search from "@lucide/svelte/icons/search";
+  import SunMoon from "@lucide/svelte/icons/sun-moon";
+  import Layers from "@lucide/svelte/icons/layers";
   import {
     appShortcuts,
     Checkbox,
@@ -18,10 +22,22 @@
   let pageShortcutFires = $state(0);
 
   const commands: PaletteCommand[] = [
-    { id: "new-session", label: "New session", section: "Sessions", combo: "mod+n" },
-    { id: "find-session", label: "Find session…", section: "Sessions", keywords: "search filter" },
+    { id: "new-session", label: "New session", section: "Sessions", combo: "mod+n", icon: Plus },
+    {
+      id: "find-session",
+      label: "Find session…",
+      section: "Sessions",
+      keywords: "search filter",
+      icon: Search,
+    },
     { id: "archive", label: "Archive session", section: "Sessions", disabled: true },
-    { id: "toggle-theme", label: "Toggle theme", section: "View", combo: "mod+shift+l" },
+    {
+      id: "toggle-theme",
+      label: "Toggle theme",
+      section: "View",
+      combo: "mod+shift+l",
+      icon: SunMoon,
+    },
     { id: "toggle-sidebar", label: "Toggle sidebar", section: "View", keywords: "collapse panel" },
     { id: "goto-usage", label: "Go to Usage", section: "Navigate", keywords: "metrics tokens" },
     { id: "goto-trends", label: "Go to Trends", section: "Navigate" },
@@ -30,6 +46,7 @@
       id: "group-by",
       label: "Group by…",
       section: "View",
+      icon: Layers,
       children: [
         { id: "group-account", label: "account", disabled: true },
         { id: "group-source", label: "Source" },
@@ -133,7 +150,15 @@ appShortcuts.register("mod+k", () => openPalette());
     {commands}
     {initialQuery}
     fallbacks={fallbackCommands
-      ? (q) => [{ id: "search", label: `Search for "${q}"`, section: "Search", combo: "enter" }]
+      ? (q) => [
+          {
+            id: "search",
+            label: `Search for "${q}"`,
+            icon: Search,
+            section: "Search",
+            combo: "enter",
+          },
+        ]
       : undefined}
     recentIds={recent}
     onrun={run}

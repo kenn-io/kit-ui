@@ -1,4 +1,6 @@
 <script module lang="ts">
+  import type { Component } from "svelte";
+
   export interface PaletteCommand {
     id: string;
     label: string;
@@ -9,6 +11,8 @@
     /** Shortcut combo displayed as a KbdBadge, e.g. "mod+shift+p". */
     combo?: string;
     disabled?: boolean;
+    /** Decorative leading icon, rendered at 16px. */
+    icon?: Component;
     children?: PaletteLeaf[];
   }
 
@@ -40,6 +44,9 @@
     placeholder?: string;
     emptyLabel?: string;
     recentLabel?: string;
+    navigateLabel?: string;
+    runLabel?: string;
+    closeLabel?: string;
     ariaLabel?: string;
     class?: string;
   }
@@ -54,6 +61,9 @@
     placeholder = "Type a command…",
     emptyLabel = "No matching commands",
     recentLabel = "Recent",
+    navigateLabel = "navigate",
+    runLabel = "run",
+    closeLabel = "close",
     ariaLabel = "Command palette",
     class: className = "",
   }: Props = $props();
@@ -328,6 +338,11 @@
               }}
               onclick={() => run(command)}
             >
+              <span class="kit-command-palette__icon" aria-hidden="true">
+                {#if command.icon}
+                  <command.icon size={16} />
+                {/if}
+              </span>
               <span class="kit-command-palette__label">
                 {#if !parent && matchedIds.has(command.id) && parentLabels.has(command.id)}{parentLabels.get(
                     command.id,
@@ -343,6 +358,14 @@
             </button>
           {/each}
         {/each}
+      </div>
+      <div class="kit-command-palette__footer" aria-hidden="true">
+        <KbdBadge keys={["↑", "↓"]} />
+        {navigateLabel} ·
+        <KbdBadge keys={["↵"]} />
+        {runLabel} ·
+        <KbdBadge keys={["esc"]} />
+        {closeLabel}
       </div>
     </div>
   </div>
@@ -373,8 +396,10 @@
   .kit-command-palette__search {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3);
+    gap: var(--space-2);
+    flex-shrink: 0;
+    height: 48px;
+    padding: 0 var(--space-3);
     border-bottom: 1px solid var(--border-muted);
   }
 
@@ -399,6 +424,20 @@
     min-width: 0;
   }
 
+  .kit-command-palette__search :global(.kit-text-input),
+  .kit-command-palette__search :global(.kit-text-input:focus-within) {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+  }
+
+  .kit-command-palette__search :global(.kit-text-input__control:focus-visible) {
+    outline: none;
+  }
+
   .kit-command-palette__list {
     overflow-y: auto;
     padding: var(--space-2);
@@ -413,11 +452,16 @@
     color: var(--text-muted);
   }
 
+  .kit-command-palette__section ~ .kit-command-palette__section {
+    margin-top: var(--space-4);
+  }
+
   .kit-command-palette__option {
     display: flex;
     align-items: center;
     gap: var(--space-4);
     width: 100%;
+    min-height: 36px;
     padding: var(--space-3) var(--space-4);
     border: 0;
     background: transparent;
@@ -446,6 +490,27 @@
     white-space: nowrap;
   }
 
+  .kit-command-palette__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .kit-command-palette__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 var(--space-5);
+    border-top: 1px solid var(--border-muted);
+    color: var(--text-muted);
+    font-size: var(--font-size-2xs);
+  }
+
   .kit-command-palette__label mark {
     font-weight: var(--font-weight-semibold, 600);
     background: none;
@@ -457,5 +522,11 @@
     font-size: var(--font-size-sm);
     color: var(--text-muted);
     text-align: center;
+  }
+
+  @media (pointer: coarse) {
+    .kit-command-palette__footer {
+      display: none;
+    }
   }
 </style>

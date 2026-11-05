@@ -75,22 +75,32 @@ const off = appShortcuts.register("mod+k", openPalette, {
 
 ### Props
 
-| Prop           | Type                                               | Default                  | Notes                                                                             |
-| -------------- | -------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------- |
-| `open`         | `boolean` (bindable)                               | `false`                  |                                                                                   |
-| `commands`     | `PaletteCommand[]`                                 | required                 | `{ id, label, section?, keywords?, combo?, disabled?, children?: PaletteLeaf[] }` |
-| `onrun`        | `(command: PaletteCommand, query: string) => void` | required                 | Palette closes, then runs the leaf command                                        |
-| `initialQuery` | `string`                                           | `""`                     | Seeds the search on every open; typing stays local                                |
-| `fallbacks`    | `(query: string) => PaletteLeaf[]`                 |                          | Receives the trimmed, non-empty query                                             |
-| `recentIds`    | `string[]`                                         | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency)             |
-| `placeholder`  | `string`                                           | `"Type a command…"`      |                                                                                   |
-| `emptyLabel`   | `string`                                           | `"No matching commands"` |                                                                                   |
-| `recentLabel`  | `string`                                           | `"Recent"`               |                                                                                   |
-| `ariaLabel`    | `string`                                           | `"Command palette"`      | Dialog + listbox label                                                            |
-| `class`        | `string`                                           | `""`                     |                                                                                   |
+| Prop            | Type                                               | Default                  | Notes                                                                                    |
+| --------------- | -------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| `open`          | `boolean` (bindable)                               | `false`                  |                                                                                          |
+| `commands`      | `PaletteCommand[]`                                 | required                 | `{ id, label, section?, keywords?, combo?, disabled?, icon?, children?: PaletteLeaf[] }` |
+| `onrun`         | `(command: PaletteCommand, query: string) => void` | required                 | Palette closes, then runs the leaf command                                               |
+| `initialQuery`  | `string`                                           | `""`                     | Seeds the search on every open; typing stays local                                       |
+| `fallbacks`     | `(query: string) => PaletteLeaf[]`                 |                          | Receives the trimmed, non-empty query                                                    |
+| `recentIds`     | `string[]`                                         | `[]`                     | Shown under `recentLabel` while the query is empty (app owns recency)                    |
+| `placeholder`   | `string`                                           | `"Type a command…"`      |                                                                                          |
+| `emptyLabel`    | `string`                                           | `"No matching commands"` |                                                                                          |
+| `recentLabel`   | `string`                                           | `"Recent"`               |                                                                                          |
+| `navigateLabel` | `string`                                           | `"navigate"`             | Footer navigation label                                                                  |
+| `runLabel`      | `string`                                           | `"run"`                  | Footer run label                                                                         |
+| `closeLabel`    | `string`                                           | `"close"`                | Footer close label                                                                       |
+| `ariaLabel`     | `string`                                           | `"Command palette"`      | Dialog + listbox label                                                                   |
+| `class`         | `string`                                           | `""`                     |                                                                                          |
 
 ### Behavior
 
+- Commands accept an `icon` component, such as a Lucide icon, rendered at 16px.
+  Every row reserves the 16px icon column.
+- The borderless search row is 48px tall, command rows are at least 36px tall,
+  and only the results list scrolls. Shortcut badges stay right-aligned.
+  The search field shows no focus ring inside the palette.
+  A 32px footer shows ↑↓ navigate, ↵ run, and esc close.
+  Assistive technology ignores the footer. Coarse pointers hide it alongside key badges.
 - Filtering ranks label **prefix** over label **substring** over
   **keyword** matches. Each section then appears **once**, ordered by its
   best-ranked match, with ranking preserved within the section — a

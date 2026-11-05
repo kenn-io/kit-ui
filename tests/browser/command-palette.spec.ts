@@ -100,6 +100,107 @@ for (const entry of [
   });
 }
 
+test("palette layout and keyboard hints", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const search = page.locator(".kit-command-palette__search");
+  const option = page.getByRole("option").first();
+  expect((await search.boundingBox())!.height).toBe(48);
+  expect((await option.boundingBox())!.height).toBe(36);
+  const icon = await option.locator(".kit-command-palette__icon svg").boundingBox();
+  expect(icon!.width).toBe(16);
+  expect(icon!.height).toBe(16);
+  expect((await search.locator("svg").boundingBox())!.x).toBe(icon!.x);
+  const label = (await option.locator(".kit-command-palette__label").boundingBox())!;
+  expect(label.x - icon!.x - icon!.width).toBe(8);
+  await expect(
+    page
+      .getByRole("option", { name: "Archive session", exact: true })
+      .locator(".kit-command-palette__icon"),
+  ).toBeVisible();
+  const input = search.locator(".kit-text-input");
+  await expect(input).toHaveCSS("border-top-width", "0px");
+  await expect(search.locator(".kit-text-input__control")).toHaveCSS("outline-style", "none");
+  const footer = page.locator(".kit-command-palette__footer");
+  expect((await footer.boundingBox())!.height).toBe(32);
+  expect((await footer.locator("kbd").first().boundingBox())!.x).toBe(icon!.x);
+  const sections = page.locator(".kit-command-palette__section");
+  for (let i = 1; i < (await sections.count()); i++) {
+    const gap = await sections.nth(i).evaluate((section) => {
+      return (
+        section.getBoundingClientRect().top -
+        section.previousElementSibling!.getBoundingClientRect().bottom
+      );
+    });
+    expect(gap).toBe(8);
+  }
+});
+
+test("fallback icons do not shift regular labels while typing", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const { default: Search } = await import("/node_modules/@lucide/svelte/dist/icons/search.js");
+    mountCommandPalette({
+      open: true,
+      commands: [{ id: "theme", label: "Toggle theme" }],
+      fallbacks: () => [{ id: "search", label: "Search archive", icon: Search }],
+      onrun: () => {},
+    });
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  const label = page
+    .getByRole("option", { name: "Toggle theme", exact: true })
+    .locator(".kit-command-palette__label");
+  await expect(label).toBeVisible();
+  const x = (await label.boundingBox())!.x;
+  await input.fill("theme");
+  const fallbackIcon = page
+    .getByRole("option", { name: "Search archive", exact: true })
+    .locator("svg");
+  await expect(fallbackIcon).toBeVisible();
+  expect((await label.boundingBox())!.x).toBe(x);
+});
+
+test("footer uses default labels and accepts navigateLabel, runLabel, and closeLabel", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  const fixture = await page.evaluateHandle(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    return mountCommandPalette({
+      open: true,
+      commands: [{ id: "theme", label: "Toggle theme" }],
+      onrun: () => {},
+    });
+  });
+  const footer = page.locator(".kit-command-palette__footer");
+  await expect(footer).toBeVisible();
+  await expect(footer).toHaveAttribute("aria-hidden", "true");
+  await expect(footer).toContainText("navigate ·");
+  await expect(footer).toContainText("run ·");
+  await expect(footer).toContainText("close");
+  await fixture.evaluate(({ update }) =>
+    update({ navigateLabel: "naviguer", runLabel: "exécuter", closeLabel: "fermer" }),
+  );
+  await expect(footer).toContainText("naviguer ·");
+  await expect(footer).toContainText("exécuter ·");
+  await expect(footer).toContainText("fermer");
+});
+
+test.describe("touch palette", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("hides keyboard hints on touch", async ({ page }) => {
+    await gotoPage(page, "command-palette");
+    await page.getByRole("button", { name: /Open palette/ }).click();
+    await expect(page.locator(".kit-command-palette__footer")).toBeHidden();
+  });
+});
+
 test("a resting pointer does not highlight a command", async ({ page }) => {
   await gotoPage(page, "command-palette");
   await page.keyboard.press("ControlOrMeta+k");
@@ -432,6 +533,7 @@ test("a parent opens children and records a child in Recent", async ({ page }) =
   await page.getByRole("button", { name: /Open palette/ }).click();
   await expect(input).toHaveAttribute("placeholder", "Type a command…");
   await expect(page.locator(".kit-command-palette__section").first()).toHaveText("Recent");
+  await expect(page.getByRole("option").first()).toHaveText("Group by… › Source");
 });
 
 test("root search reaches children with inherited sections and keywords", async ({ page }) => {
