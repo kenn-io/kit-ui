@@ -108,7 +108,7 @@ test("palette layout and keyboard hints", async ({ page }) => {
   const option = page.getByRole("option").first();
   expect((await search.boundingBox())!.height).toBe(48);
   expect((await option.boundingBox())!.height).toBe(36);
-  const icon = await option.locator("svg").boundingBox();
+  const icon = await option.locator(".kit-command-palette__icon svg").boundingBox();
   expect(icon!.width).toBe(16);
   expect(icon!.height).toBe(16);
   expect((await search.locator("svg").boundingBox())!.x).toBe(icon!.x);
