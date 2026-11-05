@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     appShortcuts,
+    Checkbox,
     CommandPalette,
     formatShortcutKeys,
     initShortcuts,
@@ -11,6 +12,8 @@
   import DemoSection from "../DemoSection.svelte";
 
   let open = $state(false);
+  let initialQuery = $state("");
+  let fallbackCommands = $state(false);
   let recent = $state<string[]>([]);
   let pageShortcutFires = $state(0);
 
@@ -25,15 +28,24 @@
     { id: "copy-link", label: "Copy link to page", section: "Share", combo: "mod+shift+c" },
   ];
 
-  function run(command: PaletteCommand): void {
-    recent = [command.id, ...recent.filter((id) => id !== command.id)].slice(0, 3);
-    showFlash(`Ran: ${command.label}`);
+  function run(command: PaletteCommand, typed: string): void {
+    if (commands.some((c) => c.id === command.id)) {
+      recent = [command.id, ...recent.filter((id) => id !== command.id)].slice(0, 3);
+      showFlash(`Ran: ${command.label}`);
+    } else {
+      showFlash(`Searched for "${typed}"`);
+    }
+  }
+
+  function openPalette(seed = ""): void {
+    initialQuery = seed;
+    open = true;
   }
 
   // App wiring: one initShortcuts() at startup, then register combos.
   $effect(() => {
     const detach = initShortcuts();
-    const offOpen = appShortcuts.register("mod+k", () => (open = true), {
+    const offOpen = appShortcuts.register("mod+k", () => openPalette(), {
       description: "Open command palette",
     });
     // A page-level shortcut to demonstrate scope suspension: it counts
@@ -61,15 +73,28 @@ appShortcuts.register("mod+k", () => (open = true));
 <CommandPalette bind:open {commands} recentIds={recent} onrun={run} />`}
 >
   <div class="row">
-    <button class="open-btn kit-control-states" type="button" onclick={() => (open = true)}>
+    <button class="open-btn kit-control-states" type="button" onclick={() => openPalette()}>
       Open palette <KbdBadge keys={formatShortcutKeys("mod+k")} />
     </button>
+    <button class="open-btn kit-control-states" type="button" onclick={() => openPalette("theme")}>
+      Search theme
+    </button>
+    <Checkbox bind:checked={fallbackCommands} label="Fallback commands" />
     <span class="readout">
       page shortcut <code>g</code> fired: <code>{pageShortcutFires}</code>
       (suspended while the palette is open)
     </span>
   </div>
-  <CommandPalette bind:open {commands} recentIds={recent} onrun={run} />
+  <CommandPalette
+    bind:open
+    {commands}
+    {initialQuery}
+    fallbacks={fallbackCommands
+      ? (q) => [{ id: "search", label: `Search for "${q}"`, section: "Search", combo: "enter" }]
+      : undefined}
+    recentIds={recent}
+    onrun={run}
+  />
 </DemoSection>
 
 <style>

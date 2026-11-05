@@ -14,7 +14,11 @@ interface Props {
     open?: boolean;
     commands: PaletteCommand[];
     /** Run a command (the palette closes first). */
-    onrun: (command: PaletteCommand) => void;
+    onrun: (command: PaletteCommand, query: string) => void;
+    /** Search text used on each open. */
+    initialQuery?: string;
+    /** Extra commands following all matches for a non-empty query. */
+    fallbacks?: (query: string) => PaletteCommand[];
     /** Ids shown under `recentLabel` while the query is empty. */
     recentIds?: string[];
     placeholder?: string;

@@ -4,6 +4,7 @@
   import { tick, type Snippet } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import { SvelteMap } from "svelte/reactivity";
+  import { highlightSegments } from "../utils/highlight.js";
   import { autoReposition } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type {
@@ -497,27 +498,6 @@
       e.preventDefault();
       selectHighlighted();
     }
-  }
-
-  function highlightSegments(label: string, q: string): { text: string; match: boolean }[] {
-    if (!q) return [{ text: label, match: false }];
-    const idx = label.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return [{ text: label, match: false }];
-    return [
-      ...(idx > 0 ? [{ text: label.slice(0, idx), match: false }] : []),
-      {
-        text: label.slice(idx, idx + q.length),
-        match: true,
-      },
-      ...(idx + q.length < label.length
-        ? [
-            {
-              text: label.slice(idx + q.length),
-              match: false,
-            },
-          ]
-        : []),
-    ];
   }
 
   // focusout bubbles (blur does not), so one handler on the container catches
