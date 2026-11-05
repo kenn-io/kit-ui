@@ -124,6 +124,20 @@
     return true;
   }
 
+  let labels = $state<string[]>(["bug"]);
+  const labelOptions: TypeaheadOption[] = [
+    { name: "bug", label: "bug", meta: "12" },
+    { name: "docs", label: "docs", meta: "4" },
+    { name: "feature", label: "feature", meta: "9" },
+    { name: "help-wanted", label: "help-wanted", meta: "2" },
+    { name: "performance", label: "performance", meta: "3" },
+  ];
+  function toggleLabel(name: string): void {
+    if (name === "") labels = [];
+    else if (labels.includes(name)) labels = labels.filter((label) => label !== name);
+    else labels = [...labels, name];
+  }
+
   let grouped = $state("");
   const groupedOptions: TypeaheadOption[] = [
     {
@@ -379,6 +393,33 @@
     }}
   />
   <span>value: <code data-demo="grouped-value">{grouped || "(none)"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Several choices"
+  description="multiple keeps the list open after each choice, marks the chosen rows, and sets aria-selected on each. The caller adds or removes each name from values."
+  code={`<Typeahead
+  options={labelOptions}
+  multiple
+  values={labels}
+  fallbackLabel="Any label"
+  placeholder="Filter labels…"
+  allowClear
+  clearLabel="Any label"
+  onselect={toggleLabel}
+/>`}
+>
+  <Typeahead
+    options={labelOptions}
+    multiple
+    values={labels}
+    fallbackLabel="Any label"
+    placeholder="Filter labels…"
+    allowClear
+    clearLabel="Any label"
+    onselect={toggleLabel}
+  />
+  <span>values: <code data-demo="labels-value">{labels.join(", ") || "(none)"}</code></span>
 </DemoSection>
 
 <DemoSection

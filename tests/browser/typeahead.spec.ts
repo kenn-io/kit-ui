@@ -387,6 +387,55 @@ test("Enter honors a deliberately highlighted clear row while filtering", async 
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("(none)");
 });
 
+test("multiple choices keep the list open and mark each chosen row", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const trigger = page.getByRole("button", { name: "Filter labels…: bug" });
+  await trigger.click();
+
+  const input = page.getByRole("combobox", { name: "Filter labels…" });
+  const list = page.getByRole("listbox", { name: "Filter labels…" });
+  await expect(list).toHaveAttribute("aria-multiselectable", "true");
+  const chosenRows = list.locator('[role="option"][aria-selected="true"]');
+  const chosen = chosenRows.locator(".kit-typeahead__option-label");
+  await expect(chosen).toHaveText(["bug"]);
+
+  // Enter chooses the highlighted match; the list and the query stay.
+  await input.fill("perf");
+  await page.keyboard.press("Enter");
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("perf");
+  await expect(page.locator('[data-demo="labels-value"]')).toHaveText("bug, performance");
+
+  await input.fill("");
+  await expect(chosen).toHaveText(["bug", "performance"]);
+  await expect(list.locator(".kit-typeahead__check svg")).toHaveCount(2);
+
+  // Choosing a chosen row removes it, by mouse too.
+  await list.getByRole("option", { name: /^bug/ }).click();
+  await expect(page.locator('[data-demo="labels-value"]')).toHaveText("performance");
+  await expect(chosen).toHaveText(["performance"]);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Filter labels…: performance" })).toBeFocused();
+});
+
+test("the clear row chooses none in multiple mode", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.getByRole("button", { name: "Filter labels…: bug" }).click();
+  const list = page.getByRole("listbox", { name: "Filter labels…" });
+  await list.getByRole("option", { name: /^docs/ }).click();
+  await page.keyboard.press("Escape");
+
+  const trigger = page.getByRole("button", { name: "Filter labels…: 2 selected" });
+  await trigger.click();
+  await list.getByRole("option", { name: "Any label" }).click();
+  await expect(page.locator('[data-demo="labels-value"]')).toHaveText("(none)");
+  await expect(list.getByRole("option", { name: "Any label" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
 test("a vetoed selection keeps the list open and shows the error row", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.getByRole("button", { name: "Filter branches…" }).click();
