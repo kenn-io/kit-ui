@@ -97,8 +97,11 @@ const off = appShortcuts.register("mod+k", openPalette, {
   section never repeats across rank buckets.
 - Running a parent opens its children and keeps the palette open without calling `onrun`.
   Its label stays visible in a truncated chip and becomes the search placeholder and listbox name.
+  Clicking or tapping the chip returns to the root; it stays out of the tab order.
+  Entering or leaving a child list scrolls the list to the top.
   Root search and `recentIds` also reach children. A child without its own section
-  takes its parent's section in root results and in the child list. Command ids
+  takes its parent's section in root results and in the child list. A disabled parent
+  also disables its children, including in root search and Recent. Command ids
   must be globally unique. Reopening starts at the root.
 - Matched label characters are bold. Keyword-only matches stay plain.
 - Fallback rows appear only at the root and follow all matches, grouped by their own sections. A fallback

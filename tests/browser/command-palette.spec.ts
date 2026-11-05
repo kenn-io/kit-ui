@@ -364,3 +364,102 @@ test("fallbacks stay at the root when a child search has no matches", async ({ p
   await input.fill("zzzxxyy");
   await expect(page.getByRole("option", { name: 'Search for "zzzxxyy" ↵' })).toBeVisible();
 });
+
+test("opening and leaving a long group shows the first highlighted row", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    mountCommandPalette({
+      open: true,
+      commands: [
+        ...Array.from({ length: 30 }, (_, i) => ({ id: `root-${i}`, label: `Root ${i}` })),
+        {
+          id: "group",
+          label: "Group by…",
+          children: Array.from({ length: 30 }, (_, i) => ({
+            id: `child-${i}`,
+            label: `Child ${i}`,
+          })),
+        },
+      ],
+      onrun: () => {},
+    });
+  });
+  const list = page.getByRole("listbox");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("option", { name: "Group by…", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await page.keyboard.press("Enter");
+  await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBe(0);
+  const child = page.getByRole("option", { name: "Child 0", exact: true });
+  await expect(child).toHaveAttribute("aria-selected", "true");
+  await expect(child).toBeInViewport();
+  await page.keyboard.press("ArrowUp");
+  expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBe(0);
+  const root = page.getByRole("option", { name: "Root 0", exact: true });
+  await expect(root).toHaveAttribute("aria-selected", "true");
+  await expect(root).toBeInViewport();
+});
+
+test.describe("touch group navigation", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("tapping the parent chip returns to the full list and focuses search", async ({ page }) => {
+    await gotoPage(page, "command-palette");
+    await page.getByRole("button", { name: /Open palette/ }).tap();
+    await page.getByRole("option", { name: "Group by…", exact: true }).tap();
+    const input = page.getByRole("combobox", { name: "Command palette" });
+    await input.fill("source");
+    const chip = page.locator(".kit-command-palette__parent");
+    await expect(chip).toHaveAttribute("tabindex", "-1");
+    await chip.tap();
+    await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
+    await expect(input).toHaveValue("");
+    await expect(input).toBeFocused();
+    await expect(page.getByRole("option", { name: "New session", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+});
+
+test("a disabled parent's children stay disabled in root search and Recent", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    mountCommandPalette({
+      open: true,
+      commands: [
+        {
+          id: "group",
+          label: "Group by…",
+          disabled: true,
+          children: [{ id: "source", label: "Group by Source" }],
+        },
+      ],
+      recentIds: ["source"],
+      onrun: (command) => {
+        document.body.dataset.ran = command.id;
+      },
+    });
+  });
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  const child = page.getByRole("option", { name: "Group by Source", exact: true });
+  for (const query of ["", "source"]) {
+    await input.fill(query);
+    await expect(child).toHaveAttribute("aria-disabled", "true");
+    await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
+    await child.click({ force: true });
+    await input.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Command palette" })).toBeVisible();
+    expect(await page.locator("body").getAttribute("data-ran")).toBeNull();
+  }
+});

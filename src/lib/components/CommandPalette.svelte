@@ -63,10 +63,15 @@
   let highlighted = $state(0);
   let parentId = $state<string>();
   let inputEl = $state<HTMLInputElement>();
+  let listEl = $state<HTMLDivElement>();
   const tree: PaletteCommand[] = $derived(
     commands.map((c) => ({
       ...c,
-      children: c.children?.map((child) => ({ ...child, section: child.section ?? c.section })),
+      children: c.children?.map((child) => ({
+        ...child,
+        section: child.section ?? c.section,
+        disabled: c.disabled || child.disabled,
+      })),
     })),
   );
   const parent = $derived(tree.find((c) => c.id === parentId && c.children));
@@ -169,6 +174,7 @@
   function setParent(id?: string): void {
     parentId = id;
     query = "";
+    if (listEl) listEl.scrollTop = 0;
     inputEl?.focus();
   }
 
@@ -237,7 +243,13 @@
            highlighted option to assistive tech as arrows move it. -->
       <div class="kit-command-palette__search">
         {#if parent}
-          <span class="kit-command-palette__parent" title={parent.label}>{parent.label}</span>
+          <button
+            type="button"
+            class="kit-command-palette__parent"
+            title={parent.label}
+            tabindex="-1"
+            onclick={() => setParent(undefined)}>{parent.label}</button
+          >
         {/if}
         <SearchInput
           bind:inputEl
@@ -256,6 +268,7 @@
         />
       </div>
       <div
+        bind:this={listEl}
         class="kit-command-palette__list"
         role="listbox"
         id="{uid}-listbox"
@@ -341,10 +354,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     padding: var(--space-1) var(--space-2);
+    border: 0;
     border-radius: var(--radius-sm);
     background: var(--bg-surface-hover);
     color: var(--text-secondary);
+    font-family: inherit;
     font-size: var(--font-size-sm);
+    cursor: pointer;
   }
 
   .kit-command-palette__search :global(.kit-search-input) {
