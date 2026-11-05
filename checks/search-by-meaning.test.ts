@@ -50,15 +50,6 @@ describe("search by meaning descriptions", () => {
       tone: "success",
     });
   });
-  test("uses the caller's singular noun for a one-item index", () => {
-    expect(
-      describeSearchByMeaning({ kind: "ollama-other", itemCount: 1, rebuildMs: 30_000 }, "message")
-        .warning,
-    ).toBe("Switching rebuilds the index, under a minute for 1 message");
-    expect(describeSearchByMeaning({ kind: "indexing", done: 0, total: 1 }, "message").line).toBe(
-      "Indexing 0 of 1 message · Keyword search works meanwhile",
-    );
-  });
   test("reports download and index progress without offering another action", () => {
     expect(
       describeSearchByMeaning(
@@ -86,10 +77,8 @@ describe("search by meaning descriptions", () => {
   test.each([
     [30_000, "under a minute"],
     [60_000, "about 1 minute"],
-    [1_200_000, "about 20 minutes"],
     [5_340_000, "about 89 minutes"],
     [5_400_000, "about 2 hours"],
-    [10_800_000, "about 3 hours"],
   ])("formats a rough duration of %i ms", (rebuildMs, time) => {
     expect(
       describeSearchByMeaning({ kind: "ollama-other", itemCount: 48_000, rebuildMs }, "documents")

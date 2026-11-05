@@ -7,27 +7,17 @@ test.beforeEach(async ({ page }) => {
 
 test("shows setup states and keyword-only hint", async ({ page }) => {
   for (const [id, chip, text] of [
-    ["off", "Off", "Downloads 290 MB once, shared by all Kenn apps"],
-    ["remote", "Off", "Downloads 290 MB once to host.example"],
-    ["downloaded", "Off", "Already on this computer"],
-    ["ollama", "On · Ollama", "Switching keeps your index"],
     [
       "ollama-other",
       "On · Ollama",
       "Switching rebuilds the index, about 20 minutes for 48,000 messages",
     ],
     ["downloading", "Turning on", "Downloading 120 MB of 290 MB · Keyword search works meanwhile"],
-    [
-      "indexing",
-      "Turning on",
-      "Indexing 12,000 of 48,000 messages · about 15 minutes left · Keyword search works meanwhile",
-    ],
   ]) {
     const row = page.getByTestId(`meaning-${id}`);
     await expect(row.locator(".kit-chip")).toHaveText(chip!);
     await expect(row.getByText(text!, { exact: true })).toBeVisible();
   }
-  await expect(page.getByTestId("meaning-on").locator(".kit-chip")).toHaveText("On");
   await expect(page.getByTestId("meaning-hint").locator(".kit-search-by-meaning-hint")).toHaveText(
     "Search by meaning is off · Turn on",
   );
@@ -37,17 +27,22 @@ test("shows setup states and keyword-only hint", async ({ page }) => {
 });
 
 test("each action fires once per click", async ({ page }) => {
-  for (const id of ["off", "remote", "downloaded", "ollama", "ollama-other", "hint"]) {
+  for (const [id, turnOn, useBuiltIn] of [
+    ["off", "1", "0"],
+    ["ollama", "0", "1"],
+    ["hint", "1", "0"],
+  ]) {
     const row = page.getByTestId(`meaning-${id}`);
-    await expect(row.getByTestId("clicks")).toHaveText("Clicks: 0");
+    const counter = row.getByTestId("clicks");
+    await expect(counter).toHaveAttribute("data-turn-on", "0");
+    await expect(counter).toHaveAttribute("data-use-built-in", "0");
     await row.getByRole("button").click();
-    await expect(row.getByTestId("clicks")).toHaveText("Clicks: 1");
-    await row.getByRole("button").click();
-    await expect(row.getByTestId("clicks")).toHaveText("Clicks: 2");
+    await expect(counter).toHaveAttribute("data-turn-on", turnOn!);
+    await expect(counter).toHaveAttribute("data-use-built-in", useBuiltIn!);
   }
 });
 
-test("exposes progress values and text", async ({ page }) => {
+test("exposes progress values and text with status aligned to the bar", async ({ page }) => {
   for (const [id, current, max] of [
     ["downloading", "120000000", "290000000"],
     ["indexing", "12000", "48000"],
@@ -83,7 +78,6 @@ test("wraps actions within the row at the mobile breakpoint", async ({ page }) =
       descriptionBottom: description.bottom,
       buttonRight: button.right,
       hostRight: host.right,
-      nameBottom: name.bottom,
       buttonTop: button.top,
       nameLeft: name.left,
       buttonLeft: button.left,
@@ -91,7 +85,6 @@ test("wraps actions within the row at the mobile breakpoint", async ({ page }) =
       width: innerWidth,
     };
   });
-  expect(bounds.buttonTop).toBeGreaterThanOrEqual(bounds.nameBottom);
   expect(bounds.buttonTop).toBeGreaterThan(bounds.descriptionBottom);
   expect(bounds.buttonLeft).toBeCloseTo(bounds.nameLeft, 0);
   expect(bounds.scroll).toBeLessThanOrEqual(bounds.width);

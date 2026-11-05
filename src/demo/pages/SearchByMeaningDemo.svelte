@@ -32,7 +32,8 @@
       state: { kind: "indexing", done: 12_000, total: 48_000, etaMs: 900_000 },
     },
   ];
-  let clicks = $state<Record<string, number>>({});
+  let turnOnClicks = $state<Record<string, number>>({});
+  let builtInClicks = $state<Record<string, number>>({});
 </script>
 
 <div class="meaning-demo">
@@ -42,11 +43,18 @@
         <SearchByMeaningRow
           state={example.state}
           itemNoun="messages"
-          onturnon={() => (clicks[example.id] = (clicks[example.id] ?? 0) + 1)}
-          onusebuiltin={() => (clicks[example.id] = (clicks[example.id] ?? 0) + 1)}
+          onturnon={() => (turnOnClicks[example.id] = (turnOnClicks[example.id] ?? 0) + 1)}
+          onusebuiltin={() => (builtInClicks[example.id] = (builtInClicks[example.id] ?? 0) + 1)}
         />
         {#if example.state.kind === "off" || example.state.kind === "downloaded" || example.state.kind.startsWith("ollama")}
-          <p class="readout" data-testid="clicks">Clicks: {clicks[example.id] ?? 0}</p>
+          <p
+            class="readout"
+            data-testid="clicks"
+            data-turn-on={turnOnClicks[example.id] ?? 0}
+            data-use-built-in={builtInClicks[example.id] ?? 0}
+          >
+            Clicks: {(turnOnClicks[example.id] ?? 0) + (builtInClicks[example.id] ?? 0)}
+          </p>
         {/if}
       </div>
     </DemoSection>
@@ -57,8 +65,17 @@
         <li>Meeting notes</li>
         <li>Project update</li>
       </ul>
-      <SearchByMeaningHint onturnon={() => (clicks["hint"] = (clicks["hint"] ?? 0) + 1)} />
-      <p class="readout" data-testid="clicks">Clicks: {clicks["hint"] ?? 0}</p>
+      <SearchByMeaningHint
+        onturnon={() => (turnOnClicks["hint"] = (turnOnClicks["hint"] ?? 0) + 1)}
+      />
+      <p
+        class="readout"
+        data-testid="clicks"
+        data-turn-on={turnOnClicks["hint"] ?? 0}
+        data-use-built-in="0"
+      >
+        Clicks: {turnOnClicks["hint"] ?? 0}
+      </p>
     </div>
   </DemoSection>
 </div>
