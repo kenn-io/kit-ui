@@ -64,13 +64,37 @@
 <DemoSection
   title="Command palette"
   description="Press ⌘K (or the button) to open. Type to filter (label prefix > label substring > keywords), ↑/↓ + Enter to run, Escape clears then closes. Ran commands populate a Recent section. While the palette is open it pushes a shortcut scope — the page-level 'g' shortcut below stops counting."
-  code={`import { appShortcuts, CommandPalette, initShortcuts } from "@kenn-io/kit-ui";
+  code={`import { appShortcuts, CommandPalette, initShortcuts, showFlash, type PaletteCommand } from "@kenn-io/kit-ui";
 
 let open = $state(false);
-initShortcuts(); // once, at app startup
-appShortcuts.register("mod+k", () => (open = true));
+let initialQuery = $state("");
 
-<CommandPalette bind:open {commands} recentIds={recent} onrun={run} />`}
+function openPalette(seed = ""): void {
+  initialQuery = seed;
+  open = true;
+}
+
+function run(command: PaletteCommand, typed: string): void {
+  if (commands.some((c) => c.id === command.id)) {
+    recent = [command.id, ...recent.filter((id) => id !== command.id)].slice(0, 3);
+    showFlash(\`Ran: \${command.label}\`);
+  } else {
+    showFlash(\`Searched for "\${typed}"\`);
+  }
+}
+
+initShortcuts(); // once, at app startup
+appShortcuts.register("mod+k", () => openPalette());
+
+<button onclick={() => openPalette("theme")}>Search theme</button>
+<CommandPalette
+  bind:open
+  {commands}
+  {initialQuery}
+  fallbacks={(q) => [{ id: "search", label: \`Search for "\${q}"\`, section: "Search", combo: "enter" }]}
+  recentIds={recent}
+  onrun={run}
+/>`}
 >
   <div class="row">
     <button class="open-btn kit-control-states" type="button" onclick={() => openPalette()}>
