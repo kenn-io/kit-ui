@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { highlightSegments } from "../utils/highlight.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
@@ -171,11 +171,13 @@
     if (parentId && !parent) setParent(undefined);
   });
 
-  function setParent(id?: string): void {
+  async function setParent(id?: string): Promise<void> {
     parentId = id;
     query = "";
     if (listEl) listEl.scrollTop = 0;
     inputEl?.focus();
+    await tick();
+    document.getElementById(`${uid}-option-${highlighted}`)?.scrollIntoView({ block: "nearest" });
   }
 
   function close(): void {

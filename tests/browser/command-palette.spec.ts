@@ -243,22 +243,44 @@ test("changing the seed while open preserves typing and uses the next seed on re
 
 test("child lists follow command refreshes and forget a removed parent", async ({ page }) => {
   await gotoPage(page, "command-palette");
-  await page.evaluate(async () => {
-    const [{ mount }, { default: Fixture }] = await Promise.all([
-      import("/node_modules/.vite/deps/svelte.js"),
-      import("/tests/browser/fixtures/UpdatingCommandPalette.svelte"),
-    ]);
-    mount(Fixture, { target: document.body });
+  const fixture = await page.evaluateHandle(async () => {
+    const { mountCommandPalette } =
+      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+    const parent = {
+      id: "group",
+      label: "Group by…",
+      section: "View",
+      children: [
+        { id: "source", label: "Group by Source" },
+        { id: "date", label: "Group by Date" },
+      ],
+    };
+    const fixture = mountCommandPalette({
+      open: true,
+      commands: [parent],
+      onrun: (command) => (fixture.host.dataset.ran = command.id),
+    });
+    return { ...fixture, parent };
   });
   await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  // The fixture controls simulate incoming app data without dismissing the dialog.
-  await page.getByRole("button", { name: "Remove parent" }).evaluate((el) => el.click());
+  await fixture.evaluate(({ update }) =>
+    update({ commands: [{ id: "root", label: "Root command" }] }),
+  );
   await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
   await expect(page.getByRole("option")).toHaveText(["Root command"]);
-  await page.getByRole("button", { name: "Restore parent" }).evaluate((el) => el.click());
+  await fixture.evaluate(({ update, parent }) => update({ commands: [parent] }));
   await expect(page.getByRole("option")).toHaveText(["Group by…"]);
   await page.getByRole("option").click();
-  await page.getByRole("button", { name: "Refresh commands" }).evaluate((el) => el.click());
+  await fixture.evaluate(({ update, parent }) =>
+    update({
+      commands: [
+        {
+          ...parent,
+          children: parent.children.map((c) => ({ ...c, disabled: c.id === "source" })),
+        },
+      ],
+    }),
+  );
   await expect(page.getByRole("option", { name: "Group by Source" })).toHaveAttribute(
     "aria-disabled",
     "true",
@@ -273,7 +295,7 @@ test("child lists follow command refreshes and forget a removed parent", async (
     "true",
   );
   await page.keyboard.press("Enter");
-  await expect(page.locator("output")).toHaveText("date");
+  await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "date");
 });
 
 test("a parent opens children, wraps enabled rows, and records a child in Recent", async ({
@@ -365,47 +387,51 @@ test("fallbacks stay at the root when a child search has no matches", async ({ p
   await expect(page.getByRole("option", { name: 'Search for "zzzxxyy" ↵' })).toBeVisible();
 });
 
-test("opening and leaving a long group shows the first highlighted row", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  await page.evaluate(async () => {
-    const { mountCommandPalette } =
-      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
-    mountCommandPalette({
-      open: true,
-      commands: [
-        ...Array.from({ length: 30 }, (_, i) => ({ id: `root-${i}`, label: `Root ${i}` })),
-        {
-          id: "group",
-          label: "Group by…",
-          children: Array.from({ length: 30 }, (_, i) => ({
-            id: `child-${i}`,
-            label: `Child ${i}`,
-          })),
-        },
-      ],
-      onrun: () => {},
-    });
+for (const disabledCount of [0, 25]) {
+  test(`opening and leaving a long group with ${disabledCount} disabled children shows the highlight`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "command-palette");
+    await page.evaluate(async (disabledCount) => {
+      const { mountCommandPalette } =
+        await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+      mountCommandPalette({
+        open: true,
+        commands: [
+          ...Array.from({ length: 30 }, (_, i) => ({ id: `root-${i}`, label: `Root ${i}` })),
+          {
+            id: "group",
+            label: "Group by…",
+            children: Array.from({ length: 30 }, (_, i) => ({
+              id: `child-${i}`,
+              label: `Child ${i}`,
+              disabled: i < disabledCount,
+            })),
+          },
+        ],
+        onrun: () => {},
+      });
+    }, disabledCount);
+    const list = page.getByRole("listbox");
+    await page.keyboard.press("ArrowUp");
+    await expect(page.getByRole("option", { name: "Group by…", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await page.keyboard.press("Enter");
+    const child = page.getByRole("option", { name: `Child ${disabledCount}`, exact: true });
+    await expect(child).toHaveAttribute("aria-selected", "true");
+    await expect(child).toBeInViewport();
+    await page.keyboard.press("ArrowUp");
+    expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await page.keyboard.press("Escape");
+    await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBe(0);
+    const root = page.getByRole("option", { name: "Root 0", exact: true });
+    await expect(root).toHaveAttribute("aria-selected", "true");
+    await expect(root).toBeInViewport();
   });
-  const list = page.getByRole("listbox");
-  await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("option", { name: "Group by…", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  await page.keyboard.press("Enter");
-  await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBe(0);
-  const child = page.getByRole("option", { name: "Child 0", exact: true });
-  await expect(child).toHaveAttribute("aria-selected", "true");
-  await expect(child).toBeInViewport();
-  await page.keyboard.press("ArrowUp");
-  expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  await page.keyboard.press("Escape");
-  await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBe(0);
-  const root = page.getByRole("option", { name: "Root 0", exact: true });
-  await expect(root).toHaveAttribute("aria-selected", "true");
-  await expect(root).toBeInViewport();
-});
+}
 
 test.describe("touch group navigation", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
