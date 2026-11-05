@@ -168,7 +168,7 @@
   });
 
   $effect(() => {
-    if (parentId && !parent) setParent(undefined);
+    if (parentId !== undefined && !parent) setParent(undefined);
   });
 
   async function setParent(id?: string): Promise<void> {

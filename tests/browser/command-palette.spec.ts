@@ -241,62 +241,66 @@ test("changing the seed while open preserves typing and uses the next seed on re
   await expect(input).toHaveValue("next");
 });
 
-test("child lists follow command refreshes and forget a removed parent", async ({ page }) => {
-  await gotoPage(page, "command-palette");
-  const fixture = await page.evaluateHandle(async () => {
-    const { mountCommandPalette } =
-      await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
-    const parent = {
-      id: "group",
-      label: "Group by…",
-      section: "View",
-      children: [
-        { id: "source", label: "Group by Source" },
-        { id: "date", label: "Group by Date" },
-      ],
-    };
-    const fixture = mountCommandPalette({
-      open: true,
-      commands: [parent],
-      onrun: (command) => (fixture.host.dataset.ran = command.id),
-    });
-    return { ...fixture, parent };
+for (const parentId of ["group", ""]) {
+  test(`child lists follow command refreshes and forget a removed parent with id ${JSON.stringify(parentId)}`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "command-palette");
+    const fixture = await page.evaluateHandle(async (parentId) => {
+      const { mountCommandPalette } =
+        await import("/tests/browser/fixtures/mount-command-palette.svelte.ts");
+      const parent = {
+        id: parentId,
+        label: "Group by…",
+        section: "View",
+        children: [
+          { id: "source", label: "Group by Source" },
+          { id: "date", label: "Group by Date" },
+        ],
+      };
+      const fixture = mountCommandPalette({
+        open: true,
+        commands: [parent],
+        onrun: (command) => (fixture.host.dataset.ran = command.id),
+      });
+      return { ...fixture, parent };
+    }, parentId);
+    await page.getByRole("option", { name: "Group by…", exact: true }).click();
+    await fixture.evaluate(({ update }) =>
+      update({ commands: [{ id: "root", label: "Root command" }] }),
+    );
+    await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
+    await expect(page.getByRole("option")).toHaveText(["Root command"]);
+    await fixture.evaluate(({ update, parent }) => update({ commands: [parent] }));
+    await expect(page.getByRole("option")).toHaveText(["Group by…"]);
+    await page.getByRole("option").click();
+    await fixture.evaluate(({ update, parent }) =>
+      update({
+        commands: [
+          {
+            ...parent,
+            children: parent.children.map((c) => ({ ...c, disabled: c.id === "source" })),
+          },
+        ],
+      }),
+    );
+    await expect(page.getByRole("option", { name: "Group by Source" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await page.keyboard.press("ArrowUp");
+    await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "date");
   });
-  await page.getByRole("option", { name: "Group by…", exact: true }).click();
-  await fixture.evaluate(({ update }) =>
-    update({ commands: [{ id: "root", label: "Root command" }] }),
-  );
-  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
-  await expect(page.getByRole("option")).toHaveText(["Root command"]);
-  await fixture.evaluate(({ update, parent }) => update({ commands: [parent] }));
-  await expect(page.getByRole("option")).toHaveText(["Group by…"]);
-  await page.getByRole("option").click();
-  await fixture.evaluate(({ update, parent }) =>
-    update({
-      commands: [
-        {
-          ...parent,
-          children: parent.children.map((c) => ({ ...c, disabled: c.id === "source" })),
-        },
-      ],
-    }),
-  );
-  await expect(page.getByRole("option", { name: "Group by Source" })).toHaveAttribute(
-    "aria-disabled",
-    "true",
-  );
-  await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.keyboard.press("Enter");
-  await expect(page.getByTestId("mounted-palette")).toHaveAttribute("data-ran", "date");
-});
+}
 
 test("a parent opens children, wraps enabled rows, and records a child in Recent", async ({
   page,
