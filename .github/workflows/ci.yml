@@ -102,11 +102,11 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      - name: Upload Playwright report
-        if: failure()
+      - name: Upload Playwright diagnostics
+        if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: playwright-report
+          name: playwright-report-attempt-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/

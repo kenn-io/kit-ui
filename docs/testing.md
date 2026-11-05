@@ -19,6 +19,12 @@ server alive across runs while iterating. Chromium comes from
 `bunx playwright install chromium` (one-time locally; CI installs it in
 `.github/workflows/ci.yml` with the download cached on `bun.lock`).
 
+CI retains traces and page error context from failed attempts, including
+tests that pass on a retry. Download `playwright-report-attempt-<n>` from
+the workflow run and open a failed attempt's `trace.zip` with
+`bunx playwright show-trace path/to/trace.zip` to inspect its page state,
+console, and network requests.
+
 CI runs Chromium only. Run Firefox and WebKit locally with
 `bunx playwright test --browser=firefox` (or `webkit`) after
 `bunx playwright install firefox webkit`. Tests that need the Chrome
