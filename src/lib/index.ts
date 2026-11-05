@@ -111,6 +111,13 @@ export { default as RadioGroup } from "./components/RadioGroup.svelte";
 export type { RadioGroupOption } from "./components/RadioGroup.svelte";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as ScrollBox } from "./components/ScrollBox.svelte";
+export { default as SearchByMeaningRow } from "./components/SearchByMeaningRow.svelte";
+export { default as SearchByMeaningHint } from "./components/SearchByMeaningHint.svelte";
+export type {
+  SearchByMeaningState,
+  SearchByMeaningLabels,
+} from "./components/search-by-meaning.js";
+
 export { default as SearchInput } from "./components/SearchInput.svelte";
 export { default as SegmentedControl } from "./components/SegmentedControl.svelte";
 export type {

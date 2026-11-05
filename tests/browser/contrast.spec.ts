@@ -168,3 +168,13 @@ for (const mode of MODES) {
     );
   });
 }
+
+for (const mode of MODES) {
+  test(`search by meaning hint contrast · ${mode.name}`, async ({ page }) => {
+    await gotoPage(page, "search-by-meaning");
+    await applyMode(page, mode);
+    expect(
+      await contrastOf(page.locator(".kit-search-by-meaning-hint button")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+}

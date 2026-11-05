@@ -76,6 +76,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [RadioGroup](docs/components/radio-group.md)                  | new                                | Labelled list of 2–4 exclusive choices, drawn to the Checkbox recipe                          |
 | [RefreshControl](docs/components/refresh-control.md)          | agentsview                         | Refresh button + "Updated Xm ago" label with auto-refresh                                     |
 | [ScrollBox](docs/components/scroll-box.md)                    | consumer app `ScrollBox`           | Labelled keyboard-accessible vertical scroller with the native scrollbar                      |
+| [Search by meaning](docs/components/search-by-meaning.md)     | new                                | Search setup row and keyword-only results hint                                                |
 | [SearchInput](docs/components/text-input.md)                  | new (TextInput preset)             | Filter field: search icon, clear button, optional ⌘K hint                                     |
 | [SegmentedControl](docs/components/segmented-control.md)      | consumer app (inline pattern)      | "All / PRs / Issues" style value selector                                                     |
 | [SelectDropdown](docs/components/select-dropdown.md)          | consumer app                       | Accessible single-select combobox                                                             |

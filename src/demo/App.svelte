@@ -49,6 +49,7 @@
   import MobileFrame from "./MobileFrame.svelte";
   import ModalDemo from "./pages/ModalDemo.svelte";
   import NoticeDemo from "./pages/NoticeDemo.svelte";
+  import SearchByMeaningDemo from "./pages/SearchByMeaningDemo.svelte";
   import NumberInputDemo from "./pages/NumberInputDemo.svelte";
   import PageFrameDemo from "./pages/PageFrameDemo.svelte";
   import PageHeaderDemo from "./pages/PageHeaderDemo.svelte";
@@ -139,6 +140,7 @@
     { id: "mermaid", label: "Mermaid", component: MermaidDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "notice", label: "Notice", component: NoticeDemo },
+    { id: "search-by-meaning", label: "Search by meaning", component: SearchByMeaningDemo },
     { id: "number-input", label: "NumberInput", component: NumberInputDemo },
     { id: "page-frame", label: "PageFrame", component: PageFrameDemo },
     { id: "page-header", label: "PageHeader", component: PageHeaderDemo },
