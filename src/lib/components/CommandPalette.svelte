@@ -256,7 +256,7 @@
         <SearchInput
           bind:inputEl
           bind:value={query}
-          placeholder={parent?.label ?? placeholder}
+          placeholder={parent ? "" : placeholder}
           block
           autofocus
           {ariaLabel}

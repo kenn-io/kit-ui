@@ -96,7 +96,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
   best-ranked match, with ranking preserved within the section — a
   section never repeats across rank buckets.
 - Running a parent opens its children and keeps the palette open without calling `onrun`.
-  Its label stays visible in a truncated chip and becomes the search placeholder and listbox name.
+  Its label stays visible in a truncated chip and becomes the listbox name. The search placeholder is empty while the group is open.
   Clicking or tapping the chip returns to the root; it stays out of the tab order.
   Entering or leaving a child list scrolls the list to the top.
   Root search and `recentIds` also reach children. A child without its own section

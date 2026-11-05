@@ -303,7 +303,7 @@ test("a parent opens children and records a child in Recent", async ({ page }) =
   await page.keyboard.press("Enter");
   await expect(input).toHaveValue("");
   await expect(input).toBeFocused();
-  await expect(input).toHaveAttribute("placeholder", "Group by…");
+  await expect(input).toHaveAttribute("placeholder", "");
   await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
   await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
   await page.keyboard.press("Enter");
