@@ -25,7 +25,7 @@ export { default as ColorLabel } from "./components/ColorLabel.svelte";
 export type { ColorLabelSize } from "./components/ColorLabel.svelte";
 export { default as CommandPalette } from "./components/CommandPalette.svelte";
 export { default as CommentCard } from "./components/CommentCard.svelte";
-export type { PaletteCommand } from "./components/CommandPalette.svelte";
+export type { PaletteCommand, PaletteLeaf } from "./components/CommandPalette.svelte";
 export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";

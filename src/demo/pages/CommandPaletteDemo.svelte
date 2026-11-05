@@ -25,11 +25,26 @@
     { id: "toggle-sidebar", label: "Toggle sidebar", section: "View", keywords: "collapse panel" },
     { id: "goto-usage", label: "Go to Usage", section: "Navigate", keywords: "metrics tokens" },
     { id: "goto-trends", label: "Go to Trends", section: "Navigate" },
+    { id: "sources", label: "Sources", section: "Navigate" },
+    {
+      id: "group-by",
+      label: "Group by…",
+      section: "View",
+      children: [
+        { id: "group-account", label: "Group by account", disabled: true },
+        { id: "group-source", label: "Group by Source" },
+        { id: "group-date", label: "Group by Date", keywords: "timestamp" },
+      ],
+    },
     { id: "copy-link", label: "Copy link to page", section: "Share", combo: "mod+shift+c" },
   ];
 
   function run(command: PaletteCommand, typed: string): void {
-    if (commands.some((c) => c.id === command.id)) {
+    if (
+      commands.some(
+        (c) => c.id === command.id || c.children?.some((child) => child.id === command.id),
+      )
+    ) {
       recent = [command.id, ...recent.filter((id) => id !== command.id)].slice(0, 3);
       showFlash(`Ran: ${command.label}`);
     } else {
@@ -63,7 +78,7 @@
 
 <DemoSection
   title="Command palette"
-  description="Press ⌘K (or the button) to open. Type to filter (label prefix > label substring > keywords), ↑/↓ + Enter to run, Escape clears then closes. Ran commands populate a Recent section. While the palette is open it pushes a shortcut scope — the page-level 'g' shortcut below stops counting."
+  description="Press ⌘K (or the button) to open. Type to filter (label prefix > label substring > keywords), ↑/↓ + Enter to run. Group by… opens a child list. Escape clears, returns to the full list, then closes. Ran commands populate a Recent section. While the palette is open it pushes a shortcut scope — the page-level 'g' shortcut below stops counting."
   code={`import { appShortcuts, CommandPalette, initShortcuts, showFlash, type PaletteCommand } from "@kenn-io/kit-ui";
 
 let open = $state(false);

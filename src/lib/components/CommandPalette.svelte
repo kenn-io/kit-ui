@@ -9,7 +9,10 @@
     /** Shortcut combo displayed as a KbdBadge, e.g. "mod+shift+p". */
     combo?: string;
     disabled?: boolean;
+    children?: PaletteLeaf[];
   }
+
+  export type PaletteLeaf = Omit<PaletteCommand, "children">;
 </script>
 
 <script lang="ts">
@@ -26,12 +29,12 @@
     /** Whether the palette is showing (bindable). */
     open?: boolean;
     commands: PaletteCommand[];
-    /** Run a command (the palette closes first). */
+    /** Run a leaf command (the palette closes first). */
     onrun: (command: PaletteCommand, query: string) => void;
     /** Search text used on each open. */
     initialQuery?: string;
     /** Extra commands following all matches for a non-empty query. */
-    fallbacks?: (query: string) => PaletteCommand[];
+    fallbacks?: (query: string) => PaletteLeaf[];
     /** Ids shown under `recentLabel` while the query is empty. */
     recentIds?: string[];
     placeholder?: string;
@@ -58,6 +61,16 @@
   const uid = $props.id();
   let query = $state("");
   let highlighted = $state(0);
+  let parentId = $state<string>();
+  let inputEl = $state<HTMLInputElement>();
+  const tree: PaletteCommand[] = $derived(
+    commands.map((c) => ({
+      ...c,
+      children: c.children?.map((child) => ({ ...child, section: child.section ?? c.section })),
+    })),
+  );
+  const parent = $derived(tree.find((c) => c.id === parentId && c.children));
+  const allCommands = $derived(tree.flatMap((c) => [c, ...(c.children ?? [])]));
 
   interface Group {
     section: string | undefined;
@@ -68,17 +81,18 @@
   const ranked = $derived.by(() => {
     const q = query.trim().toLowerCase();
     if (!q) {
+      if (parent) return parent.children ?? [];
       const recent = recentIds
-        .map((id) => commands.find((c) => c.id === id))
+        .map((id) => allCommands.find((c) => c.id === id))
         .filter((c): c is PaletteCommand => c !== undefined)
         .map((c) => ({ ...c, section: recentLabel }));
-      const rest = commands.filter((c) => !recentIds.includes(c.id));
+      const rest = tree.filter((c) => !recentIds.includes(c.id));
       return [...recent, ...rest];
     }
     const prefix: PaletteCommand[] = [];
     const substring: PaletteCommand[] = [];
     const keyword: PaletteCommand[] = [];
-    for (const c of commands) {
+    for (const c of parent ? (parent.children ?? []) : allCommands) {
       const label = c.label.toLowerCase();
       if (label.startsWith(q)) prefix.push(c);
       else if (label.includes(q)) substring.push(c);
@@ -89,7 +103,7 @@
 
   const matchedIds = $derived(new Set(ranked.map((c) => c.id)));
   const extra = $derived.by(() => {
-    if (!query.trim() || !fallbacks) return [];
+    if (parent || !query.trim() || !fallbacks) return [];
     const listedIds = new Set(matchedIds);
     return fallbacks(query.trim()).filter((c) => {
       if (listedIds.has(c.id)) return false;
@@ -135,7 +149,10 @@
     if (!open) return;
     query = untrack(() => initialQuery);
     const pop = appShortcuts.pushScope(`kit-command-palette-${uid}`);
-    return pop;
+    return () => {
+      parentId = undefined;
+      pop();
+    };
   });
 
   // Re-highlight on open and whenever results change; skip disabled leading
@@ -145,12 +162,26 @@
     highlighted = firstEnabled();
   });
 
+  $effect(() => {
+    if (parentId && !parent) setParent(undefined);
+  });
+
+  function setParent(id?: string): void {
+    parentId = id;
+    query = "";
+    inputEl?.focus();
+  }
+
   function close(): void {
     open = false;
   }
 
   function run(command: PaletteCommand): void {
     if (command.disabled) return;
+    if (!parent && command.children) {
+      setParent(command.id);
+      return;
+    }
     const typed = query.trim();
     close();
     onrun(command, typed);
@@ -180,9 +211,13 @@
       if (command) run(command);
     } else if (event.key === "Escape") {
       // SearchInput already consumed Escape-with-content (clear); an
-      // Escape that reaches here closes the palette.
+      // Escape off the input clears, then leaves a child list or closes.
       event.stopPropagation();
-      close();
+      if (query) {
+        query = "";
+        inputEl?.focus();
+      } else if (parent) setParent(undefined);
+      else close();
     }
   }
 </script>
@@ -201,9 +236,13 @@
       <!-- Focus stays in the field; combobox wiring announces the
            highlighted option to assistive tech as arrows move it. -->
       <div class="kit-command-palette__search">
+        {#if parent}
+          <span class="kit-command-palette__parent" title={parent.label}>{parent.label}</span>
+        {/if}
         <SearchInput
+          bind:inputEl
           bind:value={query}
-          {placeholder}
+          placeholder={parent?.label ?? placeholder}
           block
           autofocus
           {ariaLabel}
@@ -220,7 +259,7 @@
         class="kit-command-palette__list"
         role="listbox"
         id="{uid}-listbox"
-        aria-label={ariaLabel}
+        aria-label={parent?.label ?? ariaLabel}
       >
         {#if flat.length === 0}
           <div class="kit-command-palette__empty">{emptyLabel}</div>
@@ -288,8 +327,29 @@
   }
 
   .kit-command-palette__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     padding: var(--space-3);
     border-bottom: 1px solid var(--border-muted);
+  }
+
+  .kit-command-palette__parent {
+    flex: 0 1 auto;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-hover);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .kit-command-palette__search :global(.kit-search-input) {
+    flex: 1;
+    min-width: 0;
   }
 
   .kit-command-palette__list {

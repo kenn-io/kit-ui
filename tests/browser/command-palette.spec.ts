@@ -240,3 +240,127 @@ test("changing the seed while open preserves typing and uses the next seed on re
   await fixture.evaluate(({ update }) => update({ initialQuery: "next", open: true }));
   await expect(input).toHaveValue("next");
 });
+
+test("child lists follow command refreshes and forget a removed parent", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Fixture }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/tests/browser/fixtures/UpdatingCommandPalette.svelte"),
+    ]);
+    mount(Fixture, { target: document.body });
+  });
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  // The fixture controls simulate incoming app data without dismissing the dialog.
+  await page.getByRole("button", { name: "Remove parent" }).evaluate((el) => el.click());
+  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
+  await expect(page.getByRole("option")).toHaveText(["Root command"]);
+  await page.getByRole("button", { name: "Restore parent" }).evaluate((el) => el.click());
+  await expect(page.getByRole("option")).toHaveText(["Group by…"]);
+  await page.getByRole("option").click();
+  await page.getByRole("button", { name: "Refresh commands" }).evaluate((el) => el.click());
+  await expect(page.getByRole("option", { name: "Group by Source" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("Enter");
+  await expect(page.locator("output")).toHaveText("date");
+});
+
+test("a parent opens children, wraps enabled rows, and records a child in Recent", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("Group by…");
+  await page.keyboard.press("Enter");
+  await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
+  await expect(input).toHaveAttribute("placeholder", "Group by…");
+  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
+  await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
+  await expect(page.locator(".kit-command-palette__section")).toHaveText(["View"]);
+  const source = page.getByRole("option", { name: "Group by Source" });
+  const date = page.getByRole("option", { name: "Group by Date" });
+  await expect(page.getByRole("option", { name: "Group by account" })).toHaveAttribute(
+    "aria-selected",
+    "false",
+  );
+  await expect(source).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("ArrowUp");
+  await expect(date).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("ArrowDown");
+  await expect(source).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
+  await expect(page.locator(".kit-flash-banner")).toContainText("Ran: Group by Source");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  await expect(input).toHaveAttribute("placeholder", "Type a command…");
+  await expect(page.locator(".kit-command-palette__section").first()).toHaveText("Recent");
+  await expect(page.getByRole("option").first()).toHaveText("Group by Source");
+});
+
+test("Escape clears child text off the input, steps back, and releases page shortcuts on close", async ({
+  page,
+}) => {
+  await gotoPage(page, "command-palette");
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("g");
+  await expect(page.locator(".kit-command-palette__parent")).toHaveText("Group by…");
+  await page.getByRole("option", { name: "Group by account" }).click({ force: true });
+  await expect(input).not.toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
+  const readout = page.locator(".readout code").nth(1);
+  await page.keyboard.press("g");
+  await expect(readout).toHaveText("0");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
+  await page.keyboard.press("g");
+  await expect(readout).toHaveText("1");
+});
+
+test("root search reaches children with inherited sections and keywords", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.keyboard.press("ControlOrMeta+k");
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("source");
+  await expect(page.getByRole("option")).toHaveText(["Sources", "Group by Source"]);
+  await expect(page.locator(".kit-command-palette__section")).toHaveText(["Navigate", "View"]);
+  await input.fill("timestamp");
+  await expect(page.getByRole("option")).toHaveText(["Group by Date"]);
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-flash-banner")).toContainText("Ran: Group by Date");
+  await expect(page.locator(".kit-command-palette")).not.toBeVisible();
+});
+
+test("fallbacks stay at the root when a child search has no matches", async ({ page }) => {
+  await gotoPage(page, "command-palette");
+  await page.getByRole("checkbox", { name: "Fallback commands" }).check();
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "Command palette" });
+  await input.fill("zzzxxyy");
+  await expect(page.locator(".kit-command-palette__empty")).toHaveText("No matching commands");
+  await expect(page.getByRole("option")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await input.fill("zzzxxyy");
+  await expect(page.getByRole("option", { name: 'Search for "zzzxxyy" ↵' })).toBeVisible();
+});
