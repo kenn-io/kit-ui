@@ -349,8 +349,8 @@ for (const parentId of ["group", ""]) {
         label: "Group by…",
         section: "View",
         children: [
-          { id: "source", label: "Group by Source" },
-          { id: "date", label: "Group by Date" },
+          { id: "source", label: "Source" },
+          { id: "date", label: "Date" },
         ],
       };
       const fixture = mountCommandPalette({
@@ -379,11 +379,11 @@ for (const parentId of ["group", ""]) {
         ],
       }),
     );
-    await expect(page.getByRole("option", { name: "Group by Source" })).toHaveAttribute(
+    await expect(page.getByRole("option", { name: "Source" })).toHaveAttribute(
       "aria-disabled",
       "true",
     );
-    await expect(page.getByRole("option", { name: "Group by Date" })).toHaveAttribute(
+    await expect(page.getByRole("option", { name: "Date" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -400,10 +400,11 @@ test("a parent opens children and records a child in Recent", async ({ page }) =
   await expect(input).toBeFocused();
   await expect(input).toHaveAttribute("placeholder", "");
   await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
+  await expect(page.getByRole("option")).toHaveText(["account", "Source", "Date"]);
   await expect(page.locator(".kit-flash-banner")).toHaveCount(0);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).not.toBeVisible();
-  await expect(page.locator(".kit-flash-banner")).toContainText("Ran: Group by Source");
+  await expect(page.locator(".kit-flash-banner")).toContainText("Ran: Source");
   await page.getByRole("button", { name: /Open palette/ }).click();
   await expect(input).toHaveAttribute("placeholder", "Type a command…");
   await expect(page.locator(".kit-command-palette__section").first()).toHaveText("Recent");
@@ -414,10 +415,10 @@ test("root search reaches children with inherited sections and keywords", async 
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("combobox", { name: "Command palette" });
   await input.fill("source");
-  await expect(page.getByRole("option")).toHaveText(["Sources", "Group by… › Group by Source"]);
+  await expect(page.getByRole("option")).toHaveText(["Sources", "Group by… › Source"]);
   await expect(page.locator(".kit-command-palette__section")).toHaveText(["Navigate", "View"]);
   await input.fill("timestamp");
-  await expect(page.getByRole("option")).toHaveText(["Group by… › Group by Date"]);
+  await expect(page.getByRole("option")).toHaveText(["Group by… › Date"]);
 });
 
 test("fallbacks are suppressed when a child search has no matches", async ({ page }) => {
@@ -514,7 +515,7 @@ for (const target of ["enabled option", "disabled option", "chip"]) {
       target === "chip"
         ? page.locator(".kit-command-palette__parent")
         : page.getByRole("option", {
-            name: target === "enabled option" ? "Find session…" : "Group by account",
+            name: target === "enabled option" ? "Find session…" : "account",
             exact: true,
           });
     if (target === "disabled option") {
@@ -543,7 +544,7 @@ test("a disabled parent's children stay disabled in root search and Recent", asy
           id: "group",
           label: "Group by…",
           disabled: true,
-          children: [{ id: "source", label: "Group by Source" }],
+          children: [{ id: "source", label: "Source" }],
         },
       ],
       recentIds: ["source"],
@@ -551,7 +552,7 @@ test("a disabled parent's children stay disabled in root search and Recent", asy
     });
   });
   const input = page.getByRole("combobox", { name: "Command palette" });
-  const child = page.getByRole("option", { name: "Group by… › Group by Source", exact: true });
+  const child = page.getByRole("option", { name: "Group by… › Source", exact: true });
   for (const query of ["", "source"]) {
     await input.fill(query);
     await expect(child).toHaveAttribute("aria-disabled", "true");

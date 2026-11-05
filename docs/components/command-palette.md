@@ -99,7 +99,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
   Its label stays visible in a truncated chip and becomes the listbox name. The search placeholder is empty while the group is open.
   Clicking or tapping the chip returns to the root; it stays out of the tab order.
   Entering or leaving a child list scrolls the list to the top.
-  Root search and `recentIds` also reach children, with the group label before the child label, such as "Sort by… › Date". Inside the group, rows show only the child label. A child without its own section
+  Root search and `recentIds` also reach children, with the group label before the child label, such as "Group by… › Source". Use bare dimensions as child labels: "account", "Source", and "Date". Inside the group, rows show only the child label. Searching "source" at the root finds both "Sources" and "Group by… › Source" in the demo. A child without its own section
   takes its parent's section in root results and in the child list. A disabled parent
   also disables its children, including in root search and Recent. Command ids
   must be globally unique. Reopening starts at the root.

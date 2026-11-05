@@ -31,9 +31,9 @@
       label: "Group by…",
       section: "View",
       children: [
-        { id: "group-account", label: "Group by account", disabled: true },
-        { id: "group-source", label: "Group by Source" },
-        { id: "group-date", label: "Group by Date", keywords: "timestamp" },
+        { id: "group-account", label: "account", disabled: true },
+        { id: "group-source", label: "Source" },
+        { id: "group-date", label: "Date", keywords: "timestamp" },
       ],
     },
     { id: "copy-link", label: "Copy link to page", section: "Share", combo: "mod+shift+c" },
