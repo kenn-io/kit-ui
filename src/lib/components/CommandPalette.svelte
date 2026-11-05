@@ -171,7 +171,7 @@
     if (parentId !== undefined && !parent) setParent(undefined);
   });
 
-  async function setParent(id?: string): Promise<void> {
+  async function setParent(id: string | undefined): Promise<void> {
     parentId = id;
     query = "";
     if (listEl) listEl.scrollTop = 0;
