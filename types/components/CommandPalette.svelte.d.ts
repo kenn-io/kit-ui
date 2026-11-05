@@ -1,3 +1,4 @@
+import type { Component } from "svelte";
 export interface PaletteCommand {
     id: string;
     label: string;
@@ -8,6 +9,8 @@ export interface PaletteCommand {
     /** Shortcut combo displayed as a KbdBadge, e.g. "mod+shift+p". */
     combo?: string;
     disabled?: boolean;
+    /** Decorative leading icon, rendered at 16px. */
+    icon?: Component;
     children?: PaletteLeaf[];
 }
 export type PaletteLeaf = Omit<PaletteCommand, "children">;
@@ -29,6 +32,6 @@ interface Props {
     ariaLabel?: string;
     class?: string;
 }
-declare const CommandPalette: import("svelte").Component<Props, {}, "open">;
+declare const CommandPalette: Component<Props, {}, "open">;
 type CommandPalette = ReturnType<typeof CommandPalette>;
 export default CommandPalette;
