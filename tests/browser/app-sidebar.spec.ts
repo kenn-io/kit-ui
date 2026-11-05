@@ -242,6 +242,18 @@ test("a flyout without views gives way to the next icon's at once", async ({ pag
   await expect(flyout(page)).toHaveCount(0);
 });
 
+test("a flyout without views fits its name", async ({ page }) => {
+  await open(page, "home", 1024);
+  await sectionLink(page, "Settings").hover();
+  const [box, text] = await flyout(page).evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element.querySelector(".kit-app-sidebar__flyout-title")!);
+    return [element.getBoundingClientRect().width, range.getBoundingClientRect().width];
+  });
+  // Only the flyout's and title's padding sits beside the name.
+  expect(box - text).toBeLessThan(48);
+});
+
 test("a hover flyout closes after a delay once the pointer leaves the rail", async ({ page }) => {
   await openPaused(page, "home", 1024);
   await sectionLink(page, "Reports").hover();
