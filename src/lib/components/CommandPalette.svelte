@@ -168,7 +168,7 @@
 
   // Visual order — highlight/keyboard navigation indexes into this.
   const flat = $derived(groups.flatMap((g) => g.commands));
-  const hasIcons = $derived(flat.some((c) => c.icon));
+  const hasIcons = $derived(allCommands.some((c) => c.icon) || extra.some((c) => c.icon));
 
   // Rendered options need their flat index; indexOf per option would be
   // quadratic in the result count on every keystroke.

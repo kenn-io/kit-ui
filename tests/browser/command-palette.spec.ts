@@ -136,9 +136,16 @@ for (const viewport of [
     await expect(footer).toHaveAttribute("aria-hidden", "true");
     await expect(footer).toContainText("run");
     await expect(footer).toContainText("close");
+    const archiveLabel = page
+      .getByRole("option", { name: "Archive session", exact: true })
+      .locator(".kit-command-palette__label");
+    const archiveX = (await archiveLabel.boundingBox())!.x;
+    await page.getByRole("combobox", { name: "Command palette", exact: true }).fill("archive");
+    expect((await archiveLabel.boundingBox())!.x).toBe(archiveX);
+    await page.getByRole("button", { name: "Clear search", exact: true }).click();
     await page.getByRole("option", { name: "Group by…", exact: true }).click();
     await expect(footer).toContainText("back");
-    await expect(page.locator(".kit-command-palette__icon")).toHaveCount(0);
+    await expect(page.locator(".kit-command-palette__icon")).toHaveCount(3);
     const chip = (await page
       .getByRole("button", { name: "Group by…", exact: true })
       .boundingBox())!;
