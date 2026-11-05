@@ -103,7 +103,7 @@ appShortcuts.register("mod+k", () => openPalette());
     <button class="open-btn kit-control-states" type="button" onclick={() => openPalette("theme")}>
       Search theme
     </button>
-    <Checkbox bind:checked={fallbackCommands} label="Fallback commands" />
+    <Checkbox bind:checked={fallbackCommands} label="Search action" />
     <span class="readout">
       page shortcut <code>g</code> fired: <code>{pageShortcutFires}</code>
       (suspended while the palette is open)

@@ -148,7 +148,7 @@ test("an all-disabled result set leaves Enter inert with no active descendant", 
 
 test("a no-match fallback is active and runs with trimmed text", async ({ page }) => {
   await gotoPage(page, "command-palette");
-  await page.getByRole("checkbox", { name: "Fallback commands" }).check();
+  await page.getByRole("checkbox", { name: "Search action" }).check();
   await page.getByRole("button", { name: /Open palette/ }).click();
   const input = page.getByRole("combobox", { name: "Command palette" });
   await input.fill("  zzzxxyy  ");
@@ -162,7 +162,7 @@ test("a no-match fallback is active and runs with trimmed text", async ({ page }
 
 test("matches are bold and trailing fallback rows stay plain", async ({ page }) => {
   await gotoPage(page, "command-palette");
-  await page.getByRole("checkbox", { name: "Fallback commands" }).check();
+  await page.getByRole("checkbox", { name: "Search action" }).check();
   await page.getByRole("button", { name: /Open palette/ }).click();
   const input = page.getByRole("combobox", { name: "Command palette" });
   await input.fill("  tHeMe  ");
