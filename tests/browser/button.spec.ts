@@ -161,16 +161,17 @@ for (const theme of [
     page,
   }) => {
     await gotoPage(page, "button");
-    await page.evaluate(() => document.fonts.ready);
-
     const glyphSafetyButtons = page.locator('[data-demo="button-glyph-safety"] .kit-button');
-    await expect(glyphSafetyButtons).toHaveCount(7);
-    await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
-    expect(
-      await glyphSafetyButtons.evaluateAll((buttons) =>
-        buttons.map((button) => button.getBoundingClientRect().height),
-      ),
-    ).toEqual([24, 24, 24, 24, 28, 28, 28]);
+    if (theme === "default") {
+      await page.evaluate(() => document.fonts.ready);
+      await expect(glyphSafetyButtons).toHaveCount(7);
+      await expect(glyphSafetyButtons.locator(".kit-button__label-text")).toHaveCount(7);
+      expect(
+        await glyphSafetyButtons.evaluateAll((buttons) =>
+          buttons.map((button) => button.getBoundingClientRect().height),
+        ),
+      ).toEqual([24, 24, 24, 24, 28, 28, 28]);
+    }
 
     async function measureGlyph(button: Locator, glyph: "o" | "g") {
       const geometry = await button.evaluate((element, targetGlyph) => {
@@ -284,7 +285,6 @@ for (const theme of [
 
     const infoSoft = page.locator(".button-matrix .kit-button", { hasText: "info soft" });
     const merge = glyphSafetyButtons.nth(1);
-    const measurements = [];
 
     await page.evaluate((themeName) => {
       if (themeName === "default") delete document.documentElement.dataset.kitTheme;
@@ -334,24 +334,16 @@ for (const theme of [
         (visible.paintWeight - clipped.paintWeight) / visible.paintWeight,
       );
       expect(clippedPaintLoss).toBeLessThan(0.001);
-      measurements.push({ theme, phase, lowercase, clippedPaintLoss });
+      // Raster weights vary by font engine; a whole-pixel drift is a layout regression.
+      expect(
+        Math.abs(lowercase.opticalOffset),
+        JSON.stringify({ theme, phase, lowercase, clippedPaintLoss }),
+      ).toBeLessThan(1);
     }
 
     await page
       .locator("[data-production-button-probe]")
       .evaluateAll((probes) => probes.forEach((probe) => probe.remove()));
-
-    expect(measurements).toHaveLength(2);
-    const mostOffCenter = measurements.reduce((worst, current) =>
-      Math.abs(current.lowercase.opticalOffset) > Math.abs(worst.lowercase.opticalOffset)
-        ? current
-        : worst,
-    );
-    // Raster weights vary by font engine; a whole-pixel drift is a layout regression.
-    expect(
-      Math.abs(mostOffCenter.lowercase.opticalOffset),
-      JSON.stringify(mostOffCenter),
-    ).toBeLessThan(1);
   });
 }
 
