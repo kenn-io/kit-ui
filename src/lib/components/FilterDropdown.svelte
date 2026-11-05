@@ -1,4 +1,6 @@
 <script module lang="ts">
+  import type { Snippet } from "svelte";
+
   export interface FilterDropdownItem {
     id: string;
     label: string;
@@ -8,6 +10,11 @@
     count?: number;
     disabled?: boolean;
     closeOnSelect?: boolean;
+    /** Short value summary at the row's end, such as "2 selected". */
+    detail?: string;
+    /** Content for a flyout beside the panel. A row with a submenu opens
+     * the flyout instead of calling `onSelect`. */
+    submenu?: Snippet;
     onSelect: () => void;
   }
 
@@ -20,11 +27,13 @@
 <script lang="ts">
   import ArrowUpDownIcon from "@lucide/svelte/icons/arrow-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
   import { tick } from "svelte";
+  import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
+  import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
   import SearchInput from "./SearchInput.svelte";
 
   interface Props {
@@ -80,6 +89,10 @@
   let buttonRef = $state<HTMLButtonElement>();
   let dropdownRef = $state<HTMLDivElement>();
   let dropdownStyle = $state("");
+  let submenuId = $state<string | null>(null);
+  let submenuRef = $state<HTMLDivElement>();
+  let submenuStyle = $state("");
+  const instanceId = $props.id();
 
   const isActive = $derived(active || badgeCount > 0);
   const hasReset = $derived(resetLabel !== undefined && onReset !== undefined);
@@ -96,6 +109,14 @@
       .filter((section) => section.items.length > 0);
   });
 
+  const submenuItem = $derived(
+    submenuId === null
+      ? undefined
+      : visibleSections
+          .flatMap((section) => section.items)
+          .find((item) => item.id === submenuId && item.submenu !== undefined),
+  );
+
   $effect(() => {
     if (disabled && isOpen) isOpen = false;
   });
@@ -104,12 +125,21 @@
     if (!isOpen) return;
     const cleanups = [
       dismissable({
-        owners: () => [dropdownRef, buttonRef],
+        owners: () => [dropdownRef, buttonRef, submenuRef],
         dismiss: closeDropdown,
         escapeFocus: () => buttonRef,
       }),
       // Follow panel content changes and container-driven trigger reflow.
       autoReposition(() => [dropdownRef, buttonRef], positionDropdown),
+    ];
+    return () => cleanups.forEach((cleanup) => cleanup());
+  });
+
+  $effect(() => {
+    if (!submenuItem) return;
+    const cleanups = [
+      // The flyout follows its row, so panel scrolls and resizes move it too.
+      autoReposition(() => [dropdownRef, submenuRef], positionSubmenu),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   });
@@ -130,6 +160,60 @@
   function closeDropdown(): void {
     isOpen = false;
     search = "";
+    submenuId = null;
+  }
+
+  function submenuAnchor(id: string): HTMLElement | null | undefined {
+    return dropdownRef?.querySelector<HTMLElement>(`[data-submenu-id="${CSS.escape(id)}"]`);
+  }
+
+  function positionSubmenu(): void {
+    if (!submenuId || !dropdownRef || !submenuRef) return;
+    const anchor = submenuAnchor(submenuId);
+    if (!anchor) return;
+    submenuStyle = floatingFlyoutStyle({
+      anchor: anchor.getBoundingClientRect(),
+      panel: dropdownRef.getBoundingClientRect(),
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      flyoutWidth: submenuRef.offsetWidth,
+      flyoutHeight: submenuRef.offsetHeight,
+    });
+  }
+
+  async function openSubmenu(item: FilterDropdownItem): Promise<void> {
+    submenuId = item.id;
+    await tick();
+    positionSubmenu();
+    const first = submenuRef?.querySelector<HTMLElement>(TABBABLE_SELECTOR);
+    (first ?? submenuRef)?.focus();
+  }
+
+  function closeSubmenu(): void {
+    const id = submenuId;
+    submenuId = null;
+    if (id) submenuAnchor(id)?.focus();
+  }
+
+  function handleSubmenuKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement;
+    const typing = target.matches("input, textarea, [contenteditable='true']");
+    if (event.key === "Escape" || (event.key === "ArrowLeft" && !typing)) {
+      // Claim Escape so the document-level dismiss leaves the panel open:
+      // one press closes one layer.
+      event.preventDefault();
+      closeSubmenu();
+    }
+  }
+
+  function handleItemKeydown(event: KeyboardEvent, item: FilterDropdownItem): void {
+    if (event.key !== "ArrowRight" || !item.submenu || disabled || item.disabled) return;
+    event.preventDefault();
+    void openSubmenu(item);
+  }
+
+  function submenuDomId(item: FilterDropdownItem): string {
+    return `${instanceId}-submenu-${item.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
   }
 
   async function openDropdown(): Promise<void> {
@@ -149,6 +233,12 @@
 
   async function handleSelect(item: FilterDropdownItem): Promise<void> {
     if (disabled || item.disabled) return;
+    if (item.submenu) {
+      if (submenuId === item.id) closeSubmenu();
+      else await openSubmenu(item);
+      return;
+    }
+    submenuId = null;
     item.onSelect();
     if (item.closeOnSelect) {
       closeDropdown();
@@ -239,10 +329,18 @@
           <button
             class="kit-filter-dropdown__item kit-control-states"
             class:active={item.active}
+            class:open={submenuItem?.id === item.id}
             onclick={() => handleSelect(item)}
+            onkeydown={(event) => handleItemKeydown(event, item)}
             disabled={disabled || item.disabled}
             title={item.description}
             aria-describedby={item.description ? itemDescriptionId(item) : undefined}
+            aria-haspopup={item.submenu ? "dialog" : undefined}
+            aria-expanded={item.submenu ? submenuItem?.id === item.id : undefined}
+            aria-controls={item.submenu && submenuItem?.id === item.id
+              ? submenuDomId(item)
+              : undefined}
+            data-submenu-id={item.submenu ? item.id : undefined}
             type="button"
           >
             <span
@@ -255,11 +353,20 @@
             {#if item.count !== undefined}
               <span class="kit-filter-dropdown__count">{item.count}</span>
             {/if}
-            <span class="kit-filter-dropdown__check" class:on={item.active}>
-              {#if item.active}
-                <CheckIcon size="10" strokeWidth="2.2" aria-hidden="true" />
-              {/if}
-            </span>
+            {#if item.detail}
+              <span class="kit-filter-dropdown__detail">{item.detail}</span>
+            {/if}
+            {#if item.submenu}
+              <span class="kit-filter-dropdown__chevron">
+                <ChevronRightIcon size="12" strokeWidth="2" aria-hidden="true" />
+              </span>
+            {:else}
+              <span class="kit-filter-dropdown__check" class:on={item.active}>
+                {#if item.active}
+                  <CheckIcon size="10" strokeWidth="2.2" aria-hidden="true" />
+                {/if}
+              </span>
+            {/if}
           </button>
           {#if item.description}
             <span id={itemDescriptionId(item)} class="kit-sr-only">
@@ -281,6 +388,20 @@
         </button>
       {/if}
     </div>
+    {#if submenuItem?.submenu}
+      <div
+        bind:this={submenuRef}
+        id={submenuDomId(submenuItem)}
+        class="kit-filter-dropdown__submenu kit-popover-card"
+        role="dialog"
+        aria-label={submenuItem.label}
+        tabindex="-1"
+        style={submenuStyle}
+        onkeydown={handleSubmenuKeydown}
+      >
+        {@render submenuItem.submenu()}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -453,6 +574,37 @@
     color: var(--text-muted);
     font-size: var(--font-size-2xs);
     flex-shrink: 0;
+  }
+
+  .kit-filter-dropdown__item.open {
+    background: var(--bg-surface-hover);
+  }
+
+  .kit-filter-dropdown__detail {
+    color: var(--text-muted);
+    font-size: var(--font-size-2xs);
+    flex-shrink: 0;
+  }
+
+  .kit-filter-dropdown__chevron {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .kit-filter-dropdown__submenu {
+    position: fixed;
+    z-index: var(--z-popover);
+    min-width: 220px;
+    max-width: min(320px, calc(100vw - 16px));
+    max-height: min(420px, calc(100vh - 16px));
+    padding: 4px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .kit-filter-dropdown__check {

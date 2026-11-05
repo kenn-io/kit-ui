@@ -28,6 +28,19 @@
     { id: "sonnet-5", count: 96 },
   ];
 
+  let pickedLabels = $state(new Set<string>());
+  const labelOptions = ["bug", "docs", "enhancement"];
+
+  function toggleLabel(name: string) {
+    const next = new Set(pickedLabels);
+    if (next.has(name)) {
+      next.delete(name);
+    } else {
+      next.add(name);
+    }
+    pickedLabels = next;
+  }
+
   function toggleModel(id: string) {
     const next = new Set(models);
     if (next.has(id)) {
@@ -139,3 +152,74 @@
     ]}
   />
 </DemoSection>
+
+{#snippet labelPicker()}
+  <div class="demo-label-picker">
+    {#each labelOptions as name (name)}
+      <button type="button" aria-pressed={pickedLabels.has(name)} onclick={() => toggleLabel(name)}>
+        {name}
+      </button>
+    {/each}
+  </div>
+{/snippet}
+
+<DemoSection
+  title="Submenu row"
+  description="An item with a submenu snippet opens a flyout beside the panel instead of toggling. detail summarizes its value on the row. Escape or ArrowLeft closes the flyout and returns focus to the row."
+  code={`<FilterDropdown
+  label="Filters"
+  sections={[{
+    items: [{
+      id: "labels",
+      label: "Labels",
+      detail: picked.size ? \`\${picked.size} selected\` : "Any",
+      active: picked.size > 0,
+      submenu: labelPicker,
+      onSelect: () => {},
+    }],
+  }]}
+/>`}
+>
+  <FilterDropdown
+    label="Filters"
+    badgeCount={pickedLabels.size}
+    sections={[
+      {
+        items: [
+          {
+            id: "labels",
+            label: "Labels",
+            detail: pickedLabels.size > 0 ? `${pickedLabels.size} selected` : "Any",
+            active: pickedLabels.size > 0,
+            submenu: labelPicker,
+            onSelect: () => {},
+          },
+        ],
+      },
+    ]}
+  />
+  <span data-testid="filter-submenu-picked">picked: {[...pickedLabels].join(", ") || "none"}</span>
+</DemoSection>
+
+<style>
+  .demo-label-picker {
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--space-2);
+  }
+
+  .demo-label-picker button {
+    padding: var(--space-1) var(--space-2);
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .demo-label-picker button[aria-pressed="true"] {
+    color: var(--accent-blue);
+  }
+</style>
