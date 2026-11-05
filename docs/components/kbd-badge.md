@@ -10,7 +10,7 @@ version — it takes plain glyph strings.
 <KbdBadge keys={["⌘", "K"]} />
 <KbdBadge keys={["Ctrl", "⇧", "P"]} />
 <KbdBadge keys={["⌘", "K"]} joiner="compact" />
-<KbdBadge keys={["Ctrl", "Shift", "P"]} joiner="plus" />
+<KbdBadge keys={["Ctrl", "⇧", "P"]} joiner="plus" />
 <KbdBadge keys={["g", "i"]} joiner="plus" ariaLabel="g then i" />
 ```
 

@@ -9,13 +9,13 @@
   code={`<KbdBadge keys={["⌘", "K"]} />
 <KbdBadge keys={["Ctrl", "⇧", "P"]} />
 <KbdBadge keys={["⌘", "K"]} joiner="compact" />
-<KbdBadge keys={["Ctrl", "Shift", "P"]} joiner="plus" />
+<KbdBadge keys={["Ctrl", "⇧", "P"]} joiner="plus" />
 <KbdBadge keys={["?"]} />`}
 >
   <KbdBadge keys={["⌘", "K"]} />
   <KbdBadge keys={["Ctrl", "⇧", "P"]} />
   <KbdBadge keys={["⌘", "K"]} joiner="compact" />
-  <KbdBadge keys={["Ctrl", "Shift", "P"]} joiner="plus" />
+  <KbdBadge keys={["Ctrl", "⇧", "P"]} joiner="plus" />
   <KbdBadge keys={["?"]} />
   <KbdBadge keys={["g", "i"]} joiner="plus" ariaLabel="g then i" />
 </DemoSection>
