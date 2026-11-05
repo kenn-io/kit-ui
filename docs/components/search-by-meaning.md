@@ -16,7 +16,7 @@
 <SearchByMeaningHint onturnon={turnOn} />
 ```
 
-Pass `readonly` to show the chip and detail with no button, for viewers who can't change the setting.
+Pass `readonly` to `SearchByMeaningRow` to show the chip and detail with no button, for viewers who can't change the setting.
 
 Each click invokes its callback once. Clicking Turn on is the confirmation. The app owns downloads, indexing, errors, and state updates.
 
