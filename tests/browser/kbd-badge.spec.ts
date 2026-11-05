@@ -25,20 +25,10 @@ test("a chord has a separate cap for each key and one accessible name", async ({
 
 test("glyphs have readable names once in every badge format", async ({ page }) => {
   await gotoPage(page, "kbd-badge");
-  await page.evaluate(async () => {
-    const [{ mount }, { default: KbdBadge }] = await Promise.all([
-      import("/node_modules/.vite/deps/svelte.js"),
-      import("/src/lib/components/KbdBadge.svelte"),
-    ]);
-    document.body.replaceChildren();
-    for (const joiner of ["keys", "compact", "plus"]) {
-      mount(KbdBadge, {
-        target: document.body,
-        props: { keys: ["⌘", "⌥", "⌃", "⇧", "↵", "↑", "↓", "←", "→"], joiner },
-      });
-    }
-  });
-  const badges = page.locator(".kit-kbd-badge");
+  const badges = page
+    .locator(".demo-section")
+    .filter({ has: page.getByRole("heading", { name: "Key glyphs", exact: true }) })
+    .locator(".kit-kbd-badge");
   await expect(badges).toHaveCount(3);
   for (const badge of await badges.all()) {
     await expect(badge).toHaveAccessibleName(

@@ -19,3 +19,9 @@
   <KbdBadge keys={["?"]} />
   <KbdBadge keys={["g", "i"]} joiner="plus" ariaLabel="g then i" />
 </DemoSection>
+
+<DemoSection title="Key glyphs">
+  {#each ["keys", "compact", "plus"] as const as joiner (joiner)}
+    <KbdBadge keys={["⌘", "⌥", "⌃", "⇧", "↵", "↑", "↓", "←", "→"]} {joiner} />
+  {/each}
+</DemoSection>

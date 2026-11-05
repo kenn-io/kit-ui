@@ -4,6 +4,8 @@ Keyboard-shortcut badge. Hidden automatically on touch devices
 (`@media (pointer: coarse)`). Simplified from Forge's keyspec-bound
 version — it takes plain glyph strings.
 
+`KbdBadge` now defaults to `joiner="keys"` for separate keycaps; set `joiner="compact"` to keep the previous joined appearance.
+
 ```svelte
 <KbdBadge keys={["⌘", "K"]} />
 <KbdBadge keys={["Ctrl", "⇧", "P"]} />
