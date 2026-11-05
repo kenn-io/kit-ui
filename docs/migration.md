@@ -7,6 +7,8 @@ libraries have since diverged in places — the deltas are listed per component
 below. Read the per-component reference in `docs/components/*.md` for
 anything not covered here.
 
+`KbdBadge` now defaults to `joiner="keys"` for separate keycaps; set `joiner="compact"` to keep the previous joined appearance.
+
 ## Ground rules
 
 - Migrate in **small, per-stage PRs**, not one big-bang switch. The stage

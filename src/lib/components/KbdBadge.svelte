@@ -10,17 +10,29 @@
 
   let { keys, joiner = "keys", ariaLabel = undefined }: Props = $props();
 
+  const glyphNames: Record<string, string> = {
+    "⌘": "Command",
+    "⌥": "Option",
+    "⌃": "Control",
+    "⇧": "Shift",
+    "↵": "Enter",
+    "↑": "Arrow up",
+    "↓": "Arrow down",
+    "←": "Arrow left",
+    "→": "Arrow right",
+  };
+
   const glyph = $derived(keys.join(joiner === "plus" ? "+" : ""));
-  const aria = $derived(ariaLabel ?? keys.map((key) => (key === "⇧" ? "Shift" : key)).join(" "));
+  const aria = $derived(ariaLabel ?? keys.map((key) => glyphNames[key] ?? key).join(" "));
 </script>
 
 <kbd class="kit-kbd-badge" data-joiner={joiner} aria-label={aria}>
   {#if joiner === "keys"}
     {#each keys as key}
-      <kbd class="kit-kbd-badge__key">{key}</kbd>
+      <kbd class="kit-kbd-badge__key" aria-hidden="true">{key}</kbd>
     {/each}
   {:else}
-    {glyph}
+    <span aria-hidden="true">{glyph}</span>
   {/if}
   <span class="kit-sr-only">{aria}</span>
 </kbd>
