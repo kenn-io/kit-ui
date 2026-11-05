@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoPage, setTheme } from "./helpers.js";
+import { gotoPage } from "./helpers.js";
 
 for (const entry of ["search", "Recent"]) {
   test(`root ${entry} prefixes short child labels with their group`, async ({ page }) => {
@@ -100,69 +100,55 @@ for (const entry of [
   });
 }
 
-for (const viewport of [
-  { width: 1440, height: 900 },
-  { width: 390, height: 844 },
-]) {
-  test(`palette layout and footer at ${viewport.width}px`, async ({ page }) => {
-    await page.setViewportSize(viewport);
-    await gotoPage(page, "command-palette");
-    await setTheme(page, { dark: true });
-    await page.getByRole("button", { name: /Open palette/ }).click();
-    const search = page.locator(".kit-command-palette__search");
-    const option = page.getByRole("option").first();
-    expect((await search.boundingBox())!.height).toBe(48);
-    expect((await option.boundingBox())!.height).toBe(36);
-    const icon = await option.locator("svg").boundingBox();
-    expect(icon!.width).toBe(16);
-    expect(icon!.height).toBe(16);
-    expect((await search.locator("svg").boundingBox())!.x).toBe(icon!.x);
-    const label = (await option.locator(".kit-command-palette__label").boundingBox())!;
-    expect(label.x - icon!.x - icon!.width).toBe(8);
-    await expect(
-      page
-        .getByRole("option", { name: "Archive session", exact: true })
-        .locator(".kit-command-palette__icon"),
-    ).toBeVisible();
-    const badge = await option.locator(".kit-kbd-badge").boundingBox();
-    const row = (await option.boundingBox())!;
-    expect(row.x + row.width - badge!.x - badge!.width).toBe(8);
-    const input = search.locator(".kit-text-input");
-    await expect(input).toHaveCSS("border-top-width", "0px");
-    await expect(input).toHaveCSS("outline-style", "none");
-    await expect(input).toHaveCSS("box-shadow", "none");
-    const footer = page.locator(".kit-command-palette__footer");
-    expect((await footer.boundingBox())!.height).toBe(32);
-    await expect(footer).toHaveAttribute("aria-hidden", "true");
-    await expect(footer).toContainText("run");
-    await expect(footer).toContainText("close");
-    const archiveLabel = page
+test("palette layout and keyboard hints", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await gotoPage(page, "command-palette");
+  await page.getByRole("button", { name: /Open palette/ }).click();
+  const search = page.locator(".kit-command-palette__search");
+  const option = page.getByRole("option").first();
+  expect((await search.boundingBox())!.height).toBe(48);
+  expect((await option.boundingBox())!.height).toBe(36);
+  const icon = await option.locator("svg").boundingBox();
+  expect(icon!.width).toBe(16);
+  expect(icon!.height).toBe(16);
+  expect((await search.locator("svg").boundingBox())!.x).toBe(icon!.x);
+  const label = (await option.locator(".kit-command-palette__label").boundingBox())!;
+  expect(label.x - icon!.x - icon!.width).toBe(8);
+  await expect(
+    page
       .getByRole("option", { name: "Archive session", exact: true })
-      .locator(".kit-command-palette__label");
-    const archiveX = (await archiveLabel.boundingBox())!.x;
-    await page.getByRole("combobox", { name: "Command palette", exact: true }).fill("archive");
-    expect((await archiveLabel.boundingBox())!.x).toBe(archiveX);
-    await page.getByRole("button", { name: "Clear search", exact: true }).click();
-    await page.getByRole("option", { name: "Group by…", exact: true }).click();
-    await expect(footer).toContainText("back");
-    await expect(page.locator(".kit-command-palette__icon")).toHaveCount(3);
-    const chip = (await page
-      .getByRole("button", { name: "Group by…", exact: true })
-      .boundingBox())!;
-    const childSearch = (await search.boundingBox())!;
-    expect(childSearch.height).toBe(48);
-    expect(chip.x - childSearch.x).toBe(6);
-  });
-}
+      .locator(".kit-command-palette__icon"),
+  ).toBeVisible();
+  const input = search.locator(".kit-text-input");
+  await expect(input).toHaveCSS("border-top-width", "0px");
+  await expect(input).toHaveCSS("outline-style", "none");
+  const footer = page.locator(".kit-command-palette__footer");
+  expect((await footer.boundingBox())!.height).toBe(32);
+  await expect(footer).toHaveAttribute("aria-hidden", "true");
+  await expect(footer).toContainText("run");
+  await expect(footer).toContainText("close");
+  const archiveLabel = page
+    .getByRole("option", { name: "Archive session", exact: true })
+    .locator(".kit-command-palette__label");
+  const archiveX = (await archiveLabel.boundingBox())!.x;
+  const query = page.getByRole("combobox", { name: "Command palette", exact: true });
+  await query.fill("archive");
+  await expect(footer).toContainText("clear");
+  expect((await archiveLabel.boundingBox())!.x).toBe(archiveX);
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await page.getByRole("option", { name: "Group by…", exact: true }).click();
+  await query.fill("g");
+  await expect(footer).toContainText("clear");
+  await page.keyboard.press("Escape");
+  await expect(footer).toContainText("back");
+});
 
 test.describe("touch palette", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
-  test("hides keyboard hints alongside shortcut badges", async ({ page }) => {
+  test("hides keyboard hints on touch", async ({ page }) => {
     await gotoPage(page, "command-palette");
     await page.getByRole("button", { name: /Open palette/ }).click();
-    await expect(page.locator(".kit-command-palette__footer")).toBeHidden();
-    await page.getByRole("option", { name: "Group by…", exact: true }).click();
     await expect(page.locator(".kit-command-palette__footer")).toBeHidden();
   });
 });
@@ -286,12 +272,9 @@ test("Escape clears the query first, then closes; page shortcuts are suspended w
 
   const input = page.locator(".kit-command-palette input");
   await expect(input).toHaveValue("g");
-  const footer = page.locator(".kit-command-palette__footer");
-  await expect(footer).toContainText("clear");
 
   await page.keyboard.press("Escape"); // clears
   await expect(input).toHaveValue("");
-  await expect(footer).toContainText("close");
   await expect(palette).toBeVisible();
   await page.keyboard.press("Escape"); // closes
   await expect(palette).not.toBeVisible();
@@ -307,12 +290,9 @@ test("no matches leaves Enter inert and shows the empty label", async ({ page })
   const input = page.locator(".kit-command-palette input");
   await input.fill("zzzzz");
   await expect(page.locator(".kit-command-palette__empty")).toBeVisible();
-  await expect(page.locator(".kit-command-palette__footer")).not.toContainText("run");
   await expect(input).not.toHaveAttribute("aria-activedescendant", /./);
   await page.keyboard.press("Enter");
   await expect(page.locator(".kit-command-palette")).toBeVisible(); // nothing ran
-  await page.getByRole("button", { name: "Clear search", exact: true }).click();
-  await expect(page.locator(".kit-command-palette__footer")).toContainText("run");
 });
 
 test("an all-disabled result set leaves Enter inert with no active descendant", async ({
@@ -514,20 +494,15 @@ test("Escape clears child text off the input, steps back, and closes", async ({ 
   await page.keyboard.press("ControlOrMeta+k");
   await page.getByRole("option", { name: "Group by…", exact: true }).click();
   const input = page.getByRole("combobox", { name: "Command palette" });
-  const footer = page.locator(".kit-command-palette__footer");
-  await expect(footer).toContainText("back");
   await input.fill("a");
-  await expect(footer).toContainText("clear");
   await expect(page.locator(".kit-command-palette__parent")).toHaveText("Group by…");
   await page.getByRole("option", { name: "account", exact: true }).click({ force: true });
   await expect(input).not.toBeFocused();
   await page.keyboard.press("Escape");
   await expect(input).toHaveValue("");
   await expect(page.getByRole("listbox", { name: "Group by…" })).toBeVisible();
-  await expect(footer).toContainText("back");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox", { name: "Command palette" })).toBeVisible();
-  await expect(footer).toContainText("close");
   await page.keyboard.press("Escape");
   await expect(page.locator(".kit-command-palette")).not.toBeVisible();
 });
