@@ -5,12 +5,17 @@ import { gotoPage } from "./helpers.js";
 // combobox ARIA state, disabled-skip highlighting, Escape semantics,
 // scope suspension, all-disabled inertness.
 
-for (const query of ["", "theme"]) {
-  test(`onrun receives the caller's command object for ${query ? "a search result" : "a root row"}`, async ({
-    page,
-  }) => {
+for (const entry of [
+  "root row",
+  "root search",
+  "root Recent",
+  "child list",
+  "child search",
+  "child Recent",
+]) {
+  test(`onrun receives the caller's command object from ${entry}`, async ({ page }) => {
     await gotoPage(page, "command-palette");
-    await page.evaluate(async () => {
+    await page.evaluate(async (entry) => {
       const { mount } = await import("/node_modules/.vite/deps/svelte.js");
       const { default: CommandPalette } = await import("/src/lib/components/CommandPalette.svelte");
       const command = { id: "theme", label: "Toggle theme" };
@@ -21,15 +26,21 @@ for (const query of ["", "theme"]) {
         target: host,
         props: {
           open: true,
-          commands: [command],
+          commands: entry.startsWith("child")
+            ? [{ id: "appearance", label: "Appearance", section: "Settings", children: [command] }]
+            : [command],
+          recentIds: entry.endsWith("Recent") ? [command.id] : [],
           onrun: (selected) => {
             host.dataset.sameCommand = String(selected === command);
           },
         },
       });
-    });
-    if (query) {
-      await page.getByRole("combobox", { name: "Command palette" }).fill(query);
+    }, entry);
+    if (entry === "child list") {
+      await page.getByRole("option", { name: "Appearance", exact: true }).click();
+    }
+    if (entry.endsWith("search")) {
+      await page.getByRole("combobox", { name: "Command palette" }).fill("theme");
       await page.keyboard.press("Enter");
     } else {
       await page.getByRole("option", { name: "Toggle theme", exact: true }).click();

@@ -195,8 +195,12 @@
       return;
     }
     const typed = query.trim();
+    const original =
+      commands.find((c) => c.id === command.id) ??
+      commands.flatMap((c) => c.children ?? []).find((c) => c.id === command.id) ??
+      command;
     close();
-    onrun(command, typed);
+    onrun(original, typed);
   }
 
   function move(delta: number): void {
