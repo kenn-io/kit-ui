@@ -49,6 +49,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [BottomDock](docs/components/bottom-dock.md)                  | consumer app                       | Inline resizable bottom panel with composable regions                                         |
 | [Button](docs/components/button.md)                           | consumer app `ActionButton`        | Action button with tone × surface × size variants                                             |
 | [Calendar](docs/components/calendar.md)                       | new (DateRangePicker's month grid) | Single-month date grid with range highlight and month paging                                  |
+| [Search by meaning](docs/components/search-by-meaning.md)     | new                                | Search setup row and keyword-only results hint                                                |
 | [Chip](docs/components/chip.md)                               | consumer app `Chip`                | Status/label badge, optionally interactive                                                    |
 | [ChipStack](docs/components/chip-stack.md)                    | new (consumer mobile-view pattern) | Collapsing chip/button row with "+N" expansion                                                |
 | [CodeBlock](docs/components/code-block.md)                    | both (consolidated)                | Standalone code card: shiki dual-theme highlighting, line numbers, wrap toggle, copy          |
