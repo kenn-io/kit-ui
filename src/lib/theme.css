@@ -34,6 +34,35 @@
   --edge-highlight: transparent;
 }
 
+/* Selected state. One idiom marks the chosen option of a choice group
+ * (SegmentedControl, TopBar tabs, DateRangePicker presets): a raised pill.
+ * In light it is the white surface lifted off the grey track by a hairline
+ * and a soft shadow; in dark it is a lighter surface with a faint edge,
+ * because the plain dark surface barely differs from the dark track.
+ * Selected text is primary ink at medium weight. The quieter pair marks
+ * the current row of a list that already sits on the surface (the
+ * SettingsLayout nav). Themes that set --shadow-raised keep their own
+ * edge on the pill. */
+:root {
+  --selected-strong-bg: var(--bg-surface);
+  --selected-strong-edge:
+    0 0 0 1px color-mix(in srgb, var(--text-primary) 9%, transparent),
+    0 1px 2px color-mix(in srgb, var(--text-primary) 14%, transparent);
+  --selected-strong-weight: var(--font-weight-medium, 500);
+  --selected-bg: var(--bg-surface);
+  --selected-edge: inset 0 0 0 1px var(--border-default);
+  --selected-list-bg: var(--bg-inset);
+}
+
+:root.dark {
+  --selected-strong-bg: color-mix(in srgb, var(--text-primary) 15%, var(--bg-surface));
+  --selected-strong-edge:
+    inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 12%, transparent),
+    0 1px 2px color-mix(in srgb, #000 35%, transparent);
+  --selected-bg: var(--bg-surface-hover);
+  --selected-list-bg: var(--bg-surface-hover);
+}
+
 :root.high-contrast :focus-visible {
   outline-width: 3px;
   outline-offset: 2px;

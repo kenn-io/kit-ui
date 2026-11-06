@@ -169,14 +169,18 @@
     padding-inline: 6px;
   }
 
+  /* The shared selected idiom (theme.css). It stays at full strength when
+   * the whole control is disabled, so a read-only setting still shows
+   * which option is chosen. */
   .kit-segmented__btn.active {
-    background: var(--bg-surface);
+    background: var(--selected-strong-bg);
     color: var(--text-primary);
-    box-shadow: var(--shadow-raised, var(--shadow-sm));
+    font-weight: var(--selected-strong-weight);
+    box-shadow: var(--shadow-raised, var(--selected-strong-edge));
   }
 
   .kit-segmented__btn:hover:not(.active):not(:disabled) {
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   .kit-segmented__btn:focus-visible {
@@ -187,6 +191,10 @@
   .kit-segmented__btn:disabled {
     opacity: var(--opacity-disabled);
     cursor: not-allowed;
+  }
+
+  .kit-segmented__btn.active:disabled {
+    opacity: 1;
   }
 
   /* Borderless (flat strip) variant: flush segments sharing hairline

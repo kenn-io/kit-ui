@@ -53,7 +53,7 @@ const PROBES: Record<string, Probe[]> = {
   "segmented-control": [
     {
       selector: body(".kit-segmented:not(.kit-segmented--borderless) .kit-segmented__btn.active"),
-      today: "var(--shadow-sm)",
+      today: "var(--selected-strong-edge)",
       quiet: RAISED,
     },
     {

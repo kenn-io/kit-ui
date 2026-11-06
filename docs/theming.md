@@ -18,19 +18,20 @@ document.documentElement.classList.toggle("dark", prefersDark);
 
 ## Tokens
 
-| Group       | Variables                                                                                               |
-| ----------- | ------------------------------------------------------------------------------------------------------- |
-| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                      |
-| Borders     | `--border-default`, `--border-muted`                                                                    |
-| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                    |
-| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal` |
-| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                       |
-| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                             |
-| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                 |
-| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                           |
-| Fonts       | `--font-sans`, `--font-mono`                                                                            |
-| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                        |
-| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)  |
+| Group       | Variables                                                                                                                                                   |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                          |
+| Borders     | `--border-default`, `--border-muted`                                                                                                                        |
+| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                        |
+| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`                                                     |
+| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                           |
+| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                 |
+| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                     |
+| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                               |
+| Fonts       | `--font-sans`, `--font-mono`                                                                                                                                |
+| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                            |
+| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                                                      |
+| Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state) |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, purple = merged/workflow, teal = workspace.
@@ -40,6 +41,22 @@ One deliberate exception to "tokens only": pure `#000`/`#fff` **inside
 from an accent) — they are arithmetic constants, not palette entries, and the
 `raw-color` checker rule allows them. Standalone hex palette colors are still
 off-limits outside `theme.css`.
+
+## Selected state
+
+One idiom marks the chosen option of a choice group: a raised pill. The
+`--selected-strong-*` tokens draw it. SegmentedControl, TopBar tabs, and
+DateRangePicker presets use them, and apps reuse them for their own choice
+groups (chart toggles, sort pickers) so selection looks the same
+everywhere. In light the pill is the white surface lifted off the grey track
+by a hairline and a soft shadow. In dark it is a lighter fill with a faint
+edge, because the plain dark surface barely differs from the dark track.
+Selected text is primary ink at `--selected-strong-weight`. Themes that set
+`--shadow-raised` keep their own edge on the pill.
+
+The quieter `--selected-bg` / `--selected-edge` pair marks a chosen control
+without lifting it, and `--selected-list-bg` fills the current row of a list
+that already sits on the surface (the SettingsLayout nav).
 
 ## Typography
 
