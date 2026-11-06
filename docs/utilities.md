@@ -276,7 +276,6 @@ formatDuration(4_500_000); // "1h 15m"
 formatDuration(-1); // "—" (also NaN/Infinity)
 
 formatNumber(1234567); // "1,234,567" (toLocaleString)
-formatNumber(1234567, "fr"); // "1 234 567" (selected locale)
 
 formatTokenCount(850); // "850"
 formatTokenCount(1_234); // "1.2k"

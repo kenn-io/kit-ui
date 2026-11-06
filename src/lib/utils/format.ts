@@ -22,15 +22,11 @@ export function formatDuration(ms: number): string {
 /* Memoized at module scope: n.toLocaleString() constructs a fresh
  * Intl.NumberFormat per call and this runs per table cell. Lazy so
  * importing this module stays side-effect free. */
-const numberFormats = new Map<string | undefined, Intl.NumberFormat>();
+let numberFormat: Intl.NumberFormat | undefined;
 
 /** Formats a number with locale thousands separators (e.g. "1,234,567"). */
-export function formatNumber(n: number, locale?: string): string {
-  let numberFormat = numberFormats.get(locale);
-  if (!numberFormat) {
-    numberFormat = new Intl.NumberFormat(locale);
-    numberFormats.set(locale, numberFormat);
-  }
+export function formatNumber(n: number): string {
+  numberFormat ??= new Intl.NumberFormat(undefined);
   return numberFormat.format(n);
 }
 

@@ -1,5 +1,3 @@
-import { formatNumber } from "../utils/format.js";
-
 export type SearchByMeaningState =
   | { kind: "off"; downloadBytes: number; host?: string }
   | { kind: "downloaded" }
@@ -56,6 +54,8 @@ export function formatSize(bytes: number, locale?: string): string {
   }).format(bytes / 1_000_000);
 }
 
+const formatCount = (n: number, locale?: string) => new Intl.NumberFormat(locale).format(n);
+
 function formatRoughTime(ms: number, labels: SearchByMeaningLabels, locale?: string): string {
   if (ms < 60_000) return labels.underMinute;
   const hours = ms >= 90 * 60_000;
@@ -100,7 +100,7 @@ export function describeSearchByMeaning(
         tone: "success",
         warning: fill(labels.rebuild, {
           time: formatRoughTime(state.rebuildMs, labels, locale),
-          count: formatNumber(state.itemCount, locale),
+          count: formatCount(state.itemCount, locale),
           items: itemNoun,
         }),
         action: "use-built-in",
@@ -117,8 +117,8 @@ export function describeSearchByMeaning(
     case "indexing": {
       const parts = [
         fill(labels.indexing, {
-          done: formatNumber(state.done, locale),
-          total: formatNumber(state.total, locale),
+          done: formatCount(state.done, locale),
+          total: formatCount(state.total, locale),
           items: itemNoun,
         }),
       ];
