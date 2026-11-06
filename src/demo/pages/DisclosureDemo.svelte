@@ -39,9 +39,9 @@
       <pre class="disclosure-demo__output">0 errors, 0 warnings</pre>
     </Disclosure>
     <p class="disclosure-demo__readout">
-      open: <span data-testid="disclosure-open">{toolOpen}</span>, toggles:
-      <span data-testid="disclosure-toggles">{toggles}</span>
+      Toggles: <span data-testid="disclosure-toggles">{toggles}</span>
     </p>
+    <span class="disclosure-demo__hidden" data-testid="disclosure-open">{toolOpen}</span>
     <div><Button size="sm" onclick={() => (toolOpen = !toolOpen)}>Toggle from outside</Button></div>
   </div>
 </DemoSection>
@@ -80,6 +80,10 @@
     margin: 0;
     font-family: var(--font-mono);
     font-size: var(--font-size-xs);
+  }
+
+  .disclosure-demo__hidden {
+    display: none;
   }
 
   .disclosure-demo__readout {
