@@ -178,7 +178,17 @@
 
   const pages: Page[] = [...metaPages, ...componentPages];
 
-  let activeId = $state((typeof location !== "undefined" && location.hash.slice(1)) || "theme");
+  // In-page anchors (a Disclosure id, say) start with their page id, as in
+  // `disclosure-seats`. Resolving them to the page with the longest matching
+  // prefix keeps direct links, reloads, and Back on the page that owns them.
+  function pageForHash(hash: string): string {
+    if (!hash) return "theme";
+    if (pages.some((p) => p.id === hash)) return hash;
+    const owners = pages.filter((p) => hash.startsWith(`${p.id}-`));
+    return owners.sort((a, b) => b.id.length - a.id.length)[0]?.id ?? hash;
+  }
+
+  let activeId = $state(pageForHash(typeof location !== "undefined" ? location.hash.slice(1) : ""));
   let filter = $state("");
 
   initTheme();
@@ -201,15 +211,7 @@
   }
 </script>
 
-<!-- A hash that names no page is an in-page anchor (a Disclosure id, say):
-     keep the current page so the anchor can act on it. -->
-<svelte:window
-  onhashchange={() => {
-    const id = location.hash.slice(1);
-    if (!id) activeId = "theme";
-    else if (pages.some((p) => p.id === id)) activeId = id;
-  }}
-/>
+<svelte:window onhashchange={() => (activeId = pageForHash(location.hash.slice(1)))} />
 
 {#if isMobileFrame}
   <MobileFrame />
