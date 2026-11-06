@@ -327,10 +327,16 @@ test("alert options localize titles or turn alerts off", async ({ page }) => {
     const source = "> [!TIP]\n> body";
     return {
       localized: await createMarkdownRenderer({ alertLabels: { tip: "Astuce" } }).render(source),
+      fallback: await createMarkdownRenderer({
+        alertLabels: { tip: undefined, warning: " " },
+      }).render(`${source}\n\n> [!WARNING]\n> body`),
       off: await createMarkdownRenderer({ alerts: false }).render(source),
     };
   });
   expect(result.localized).toContain('<p class="kit-markdown-alert__title">Astuce</p>');
+  // Undefined or blank overrides keep the default titles instead of failing.
+  expect(result.fallback).toContain('<p class="kit-markdown-alert__title">Tip</p>');
+  expect(result.fallback).toContain('<p class="kit-markdown-alert__title">Warning</p>');
   expect(result.off).toContain("<blockquote>");
   expect(result.off).toContain("[!TIP]");
 });
