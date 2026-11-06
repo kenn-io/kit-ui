@@ -5,9 +5,12 @@ import { gotoPage } from "./helpers.js";
 // (clear row, custom values, meta search, veto/error, header snippet,
 // loading row, forced placement) and the t662 grouped-option tree.
 
-async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
+async function mountNestedRepositoryTypeahead(
+  page: Page,
+  overrides: { highlightFirstOption?: boolean } = {},
+): Promise<void> {
   await gotoPage(page, "typeahead");
-  await page.evaluate(async () => {
+  await page.evaluate(async (overrides) => {
     const [{ mount }, { default: Typeahead }] = await Promise.all([
       import("/node_modules/.vite/deps/svelte.js"),
       import("/src/lib/components/Typeahead.svelte"),
@@ -40,9 +43,10 @@ async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
         onselect: (value: string) => {
           target.dataset.value = value;
         },
+        ...overrides,
       },
     });
-  });
+  }, overrides);
 }
 
 // If the component's preferred desktop width becomes a hard minimum again,
@@ -146,7 +150,7 @@ test("typing one character can select a custom value alongside matching options"
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("p");
 });
 
-for (const key of ["Enter", "Space"]) {
+for (const key of ["Enter", "Space", "ArrowDown", "ArrowUp"]) {
   test(`${key} opens the focused trigger with an empty search`, async ({ page }) => {
     await gotoPage(page, "typeahead");
     await page.getByRole("button", { name: "Filter repositories…" }).focus();
@@ -683,6 +687,71 @@ test("filtering nested repository groups keeps ancestry and selects the leaf", a
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
+});
+
+test("grouped options can start and filter on the first choice", async ({ page }) => {
+  await mountNestedRepositoryTypeahead(page, { highlightFirstOption: true });
+  const fixture = page.locator("#nested-typeahead-fixture");
+  await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
+  const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
+  await expect(input).toHaveAttribute(
+    "aria-activedescendant",
+    (await fixture
+      .getByRole("treeitem", { name: "Forge", exact: true })
+      .getAttribute("id")) as string,
+  );
+  await input.fill("a");
+  await expect(input).toHaveAttribute(
+    "aria-activedescendant",
+    (await fixture
+      .getByRole("treeitem", { name: "agentsview", exact: true })
+      .getAttribute("id")) as string,
+  );
+  await page.keyboard.press("Enter");
+  await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
+});
+
+test("the panel aligns with a wider anchor and follows its resize", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    document.body.replaceChildren();
+    const anchor = document.createElement("div");
+    anchor.id = "panel-anchor-fixture";
+    anchor.style.cssText =
+      "position: fixed; left: 40px; top: 40px; width: 480px; height: 80px; display: flex; justify-content: flex-end; align-items: flex-end;";
+    document.body.append(anchor);
+    mount(Typeahead, {
+      target: anchor,
+      props: {
+        options: [{ name: "forge", label: "Forge" }],
+        fallbackLabel: "All repositories",
+        placeholder: "Filter anchored repositories…",
+        panelAnchor: anchor,
+        onselect: () => undefined,
+      },
+    });
+  });
+  const anchor = page.locator("#panel-anchor-fixture");
+  const trigger = anchor.getByRole("button");
+  const triggerBox = (await trigger.boundingBox())!;
+  const anchorBox = (await anchor.boundingBox())!;
+  expect(triggerBox.x).toBeGreaterThan(anchorBox.x);
+  await trigger.click();
+  const panel = page.locator(".kit-typeahead__panel");
+  await expect(panel).toBeVisible();
+  const panelBox = (await panel.boundingBox())!;
+  expect(Math.abs(panelBox.x - anchorBox.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(panelBox.width - anchorBox.width)).toBeLessThanOrEqual(1);
+  expect(panelBox.y).toBeGreaterThanOrEqual(triggerBox.y + triggerBox.height);
+  await anchor.evaluate((element) => {
+    element.style.width = "600px";
+  });
+  await expect.poll(async () => (await panel.boundingBox())!.width).toBeCloseTo(600, 0);
+  expect(Math.abs((await panel.boundingBox())!.x - anchorBox.x)).toBeLessThanOrEqual(1);
 });
 
 test("header snippet drives the option source through the loading row", async ({ page }) => {

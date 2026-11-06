@@ -26,6 +26,8 @@ interface Props {
      * `fallbackLabel` when nothing matches the value. */
     allowClear?: boolean;
     clearLabel?: string;
+    /** Start on the first visible choice instead of a group row. */
+    highlightFirstOption?: boolean;
     /** Offer any non-empty trimmed query that is not an exact option name as
      * a row that selects the query verbatim. */
     allowCustom?: boolean;
@@ -35,6 +37,8 @@ interface Props {
     /** Force the list above/below the trigger; "auto" (default) flips near
      * the viewport bottom. */
     placement?: "auto" | "top" | "bottom";
+    /** Align the panel's left edge and width with this element. */
+    panelAnchor?: HTMLElement;
     /** Dim text rendered before the value on the closed trigger. */
     triggerPrefix?: string;
     /** Replace the option rows with a loading row (async option sources). */
