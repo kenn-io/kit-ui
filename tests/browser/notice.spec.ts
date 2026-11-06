@@ -29,6 +29,11 @@ test("callouts render rich children and a custom icon", async ({ page }) => {
 
   const error = page.getByTestId("notice-callouts").locator('.kit-notice[data-tone="error"]');
   await expect(error.getByRole("listitem")).toHaveCount(2);
+  // Outside list markers sit in the item's indent. Without one they hang
+  // left of the text column, into the gap beside the tone dot.
+  const label = (await error.locator(".kit-notice__tone").boundingBox())!;
+  const item = (await error.getByRole("listitem").first().boundingBox())!;
+  expect(item.x).toBeGreaterThan(label.x + 8);
 });
 
 test("callout body text stays readable on every tone", async ({ page }) => {

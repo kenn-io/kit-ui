@@ -172,6 +172,12 @@
     margin-bottom: 0;
   }
 
+  .kit-notice__body :global(ul),
+  .kit-notice__body :global(ol) {
+    margin: 0;
+    padding-left: 1.25em;
+  }
+
   .kit-notice__body :global(a) {
     color: var(--text-primary);
   }
