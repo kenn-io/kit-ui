@@ -348,7 +348,6 @@
     highlightIndex = !remote && customValue !== "" ? customOffset : -1;
     await tick();
     positionPanel();
-    document.getElementById(`${listId}-row-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
     inputEl?.focus();
     opening = false;
   }

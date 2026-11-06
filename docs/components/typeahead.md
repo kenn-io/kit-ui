@@ -121,7 +121,7 @@ rows expose their position and sibling count through `aria-posinset` and
 `aria-setsize`. Filtering recalculates that metadata for the visible result
 tree while retaining the path to a deep match.
 
-Set `highlightFirstOption` to highlight the first visible choice when opening or filtering locally, so Enter selects a choice instead of toggling a group.
+Set `highlightFirstOption` to highlight the first visible choice, so Enter selects a choice instead of toggling a group.
 
 ## Password managers
 

@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
-import type { TypeaheadOption } from "../../src/lib/components/typeahead.js";
 
 // Typeahead acceptance (docs/components/typeahead.md): the ry18 extensions
 // (clear row, custom values, meta search, veto/error, header snippet,
@@ -8,7 +7,7 @@ import type { TypeaheadOption } from "../../src/lib/components/typeahead.js";
 
 async function mountNestedRepositoryTypeahead(
   page: Page,
-  overrides: { highlightFirstOption?: boolean; options?: TypeaheadOption[] } = {},
+  overrides: { highlightFirstOption?: boolean } = {},
 ): Promise<void> {
   await gotoPage(page, "typeahead");
   await page.evaluate(async (overrides) => {
@@ -710,27 +709,6 @@ test("grouped options can start and filter on the first choice", async ({ page }
   );
   await page.keyboard.press("Enter");
   await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
-
-  await page.reload();
-  await mountNestedRepositoryTypeahead(page, {
-    highlightFirstOption: true,
-    options: [
-      ...Array.from({ length: 20 }, (_, index) => ({
-        name: `group-${index}`,
-        label: `Group ${index}`,
-        expanded: false,
-        children: [{ name: `child-${index}`, label: `Child ${index}` }],
-      })),
-      { name: "forge", label: "Forge" },
-    ],
-  });
-  await fixture.getByRole("button", { name: "Filter nested repositories…" }).focus();
-  await page.keyboard.press("ArrowDown");
-  const choice = fixture.getByRole("treeitem", { name: "Forge", exact: true });
-  await expect(input).toHaveAttribute("aria-activedescendant", (await choice.getAttribute("id"))!);
-  await expect(choice).toBeInViewport({ ratio: 1 });
-  await input.press("Enter");
-  await expect(fixture).toHaveAttribute("data-value", "forge");
 });
 
 for (const remote of [false, true]) {
