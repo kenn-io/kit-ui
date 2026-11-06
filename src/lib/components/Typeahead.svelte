@@ -240,14 +240,11 @@
 
   const filterQuery = $derived(remote ? "" : query.trim().toLowerCase());
   const rows = $derived(buildRows(options, 0, filterQuery, false));
-  const firstOptionIndex = $derived(
-    highlightFirstOption
-      ? Math.max(
-          0,
-          rows.findIndex((row) => !row.group),
-        )
-      : 0,
-  );
+  const firstOptionIndex = $derived.by(() => {
+    if (!highlightFirstOption) return 0;
+    const index = rows.findIndex((row) => !row.group);
+    return index === -1 ? (customValue !== "" ? rows.length : 0) : index;
+  });
   const grouped = $derived(options.some((o) => o.children));
   const clearOffset = $derived(allowClear ? 1 : 0);
   const exactOption = $derived(findByName(options, query.trim()));

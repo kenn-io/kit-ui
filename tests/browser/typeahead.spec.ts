@@ -711,8 +711,12 @@ test("grouped options can start and filter on the first choice", async ({ page }
   await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
 });
 
-for (const remote of [false, true]) {
-  test(`grouped ${remote ? "remote" : "local"} options arriving after opening start on the first choice`, async ({
+for (const { remote, expanded, query, selected } of [
+  { remote: false, expanded: true, query: "", selected: "alpha" },
+  { remote: true, expanded: true, query: "alpha", selected: "alpha" },
+  { remote: true, expanded: false, query: "unmatched", selected: "unmatched" },
+]) {
+  test(`grouped ${remote ? "remote" : "local"} ${expanded ? "expanded" : "collapsed"} options arriving after opening start on the first choice`, async ({
     page,
   }) => {
     await gotoPage(page, "typeahead");
@@ -727,6 +731,8 @@ for (const remote of [false, true]) {
         loading: true,
         remote,
         highlightFirstOption: true,
+        allowCustom: true,
+        allowClear: true,
         fallbackLabel: "Choose an option",
         placeholder: "Grouped choices",
         onselect: (name: string) => {
@@ -737,23 +743,27 @@ for (const remote of [false, true]) {
     await page.getByRole("button", { name: "Grouped choices" }).click();
     const input = page.getByRole("combobox", { name: "Grouped choices" });
     await expect(page.getByText("Loading…", { exact: true })).toBeVisible();
-    if (remote) await input.fill("alpha");
-    await fixture.evaluate((component) =>
-      component.update({
-        options: [
-          {
-            name: "group",
-            label: "Group",
-            expanded: true,
-            children: [{ name: "alpha", label: "Alpha" }],
-          },
-        ],
-        loading: false,
-      }),
+    if (query) await input.fill(query);
+    await fixture.evaluate(
+      (component, expanded) =>
+        component.update({
+          options: [
+            {
+              name: "group",
+              label: "Group",
+              expanded,
+              children: [{ name: "alpha", label: "Alpha" }],
+            },
+          ],
+          loading: false,
+        }),
+      expanded,
     );
-    await expect(page.getByRole("treeitem", { name: "Alpha", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("treeitem", { name: expanded ? "Alpha" : 'Use "unmatched"', exact: true }),
+    ).toBeVisible();
     await input.press("Enter");
-    await expect(page.locator("body")).toHaveAttribute("data-value", "alpha");
+    await expect(page.locator("body")).toHaveAttribute("data-value", selected);
   });
 }
 
