@@ -112,6 +112,8 @@ people resize it or fit it to its content.
   ([SplitResizeHandle](split-resize-handle.md) with `variant="column"`):
   drag it, or focus it and press the arrow keys. `resizable={false}` removes
   it. A column narrower than its label clips the label with an ellipsis.
+  The handle's accessible name defaults to English "Resize the {label}
+  column"; pass a translated `resizeLabel` on the header cell.
 - **Fitting.** Double-click a handle, or press Enter on it, to fit the column
   to its content. VirtualTable measures the widest value in the copy's
   rows; `fitColumn(column)` can return the content width instead,
