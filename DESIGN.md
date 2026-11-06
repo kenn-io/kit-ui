@@ -185,7 +185,7 @@ its resting surfaces keep today's look.
 
 ### Named Rules
 
-**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (surface bg, 1px default border, md radius, lg shadow). Hand-rolled copies are flagged by `kit-ui-check`.
+**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (`--bg-popover` fill, 1px `--border-popover` edge, md radius, lg shadow; the popover tokens equal the surface and default border in light and step lighter in dark). Hand-rolled copies are flagged by `kit-ui-check`.
 
 ## 5. Components
 
@@ -197,6 +197,11 @@ its resting surfaces keep today's look.
 - **Hover / Focus:** 0.12s background/border/color transitions; keyboard focus is the global 2px Action Blue outline ring, 1px offset; press nudges `translateY(1px)`.
 - **Tones × surfaces:** neutral/success/danger/info/workflow × outline/soft/solid, all derived from accent tokens through the shared tone mixes.
 - **Structural controls:** Keep the native element in the owning component and add `kit-control-states` for shared disabled and pressed behavior. Consumers own the control's geometry and use theme tokens for resting and hover styles.
+
+### Selected state
+
+- **Choice groups** (SegmentedControl, TopBar tabs, DateRangePicker presets): the chosen option is one raised pill from the `--selected-strong-*` tokens: the white surface lifted by a hairline and a soft shadow in light, and a lighter fill with a faint edge in dark. Selected text is primary ink at medium weight. Inside a dark popover the pill steps up again so it still stands out on the lighter popover surface.
+- **Navigation rows** (SettingsLayout, AppSidebar) keep Action Blue ink for the current row; `--selected-list-bg` fills it.
 
 ### Chips
 
