@@ -181,7 +181,7 @@ its resting surfaces keep today's look.
 
 - **shadow-sm** (`0 1px 2px rgba(0,0,0,0.05)`): resting cards that genuinely need lift.
 - **shadow-md** (`0 2px 8px rgba(0,0,0,0.08)`): sticky chrome, drag states.
-- **shadow-lg** (`0 4px 16px rgba(0,0,0,0.1)`): the popover card, modals — every transient floating surface.
+- **shadow-lg** (`0 12px 32px` + `0 2px 6px`, cool-tinted at 14% / 8%): the popover card, modals — every transient floating surface. It is soft and wide so a popover lifts off white cards without a hard edge. In dark the shadow barely shows on the near-black page, so popovers also step up to a lighter surface (`--bg-popover`) and edge (`--border-popover`).
 
 ### Named Rules
 

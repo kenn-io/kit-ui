@@ -123,7 +123,7 @@
     background: var(--bg-surface);
     border: var(--border-width) solid var(--border-default);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     /* No overflow: hidden — the header must be able to overlay the
      * panel's border (see the band comment below); children clip their
      * own corners instead. */
@@ -171,6 +171,13 @@
     font-weight: var(--font-weight-semibold, 600);
     line-height: 1.3;
     color: var(--text-primary);
+  }
+
+  /* The panel takes focus only so keyboard focus starts inside the dialog;
+   * it is not a control, so it keeps its border instead of a focus ring.
+   * Controls inside keep theirs. */
+  .kit-modal-panel:focus-visible {
+    outline: none;
   }
 
   /* Tinted header bands for semantic tones: the panel's data-kit-tone
