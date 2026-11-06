@@ -67,10 +67,12 @@ export declare function highlightCode(code: string, lang: string): Promise<strin
 export type MarkdownAlertKind = "note" | "tip" | "important" | "warning" | "caution";
 export declare const DEFAULT_MARKDOWN_ALERT_LABELS: Record<MarkdownAlertKind, string>;
 /** Turn top-level alert blockquotes into alert tokens: tag the kind and
- * drop the marker line. GitHub renders alerts only at the top level, so
- * quotes nested in lists or other quotes are left alone. Exported for
- * tests. */
-export declare function applyMarkdownAlerts(marked: Marked, tokens: Tokens.Generic[]): void;
+ * drop the marker. GitHub renders alerts only at the top level, so quotes
+ * nested in lists or other quotes are left alone. The marker is cut from
+ * the already-lexed inline tokens rather than re-lexing the paragraph, so
+ * reference links resolved against the whole document keep working.
+ * Exported for tests. */
+export declare function applyMarkdownAlerts(tokens: Tokens.Generic[]): void;
 export interface MarkdownRendererOptions {
     /** Turn source newlines into hard breaks (default true). Set false
      * for standard Markdown soft breaks in prose. */

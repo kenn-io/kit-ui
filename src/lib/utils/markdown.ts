@@ -284,10 +284,12 @@ const MARKDOWN_ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(
 type AlertBlockquote = Tokens.Blockquote & { kitAlert?: MarkdownAlertKind };
 
 /** Turn top-level alert blockquotes into alert tokens: tag the kind and
- * drop the marker line. GitHub renders alerts only at the top level, so
- * quotes nested in lists or other quotes are left alone. Exported for
- * tests. */
-export function applyMarkdownAlerts(marked: Marked, tokens: Tokens.Generic[]): void {
+ * drop the marker. GitHub renders alerts only at the top level, so quotes
+ * nested in lists or other quotes are left alone. The marker is cut from
+ * the already-lexed inline tokens rather than re-lexing the paragraph, so
+ * reference links resolved against the whole document keep working.
+ * Exported for tests. */
+export function applyMarkdownAlerts(tokens: Tokens.Generic[]): void {
   for (const token of tokens) {
     if (token.type !== "blockquote") continue;
     const quote = token as AlertBlockquote;
@@ -295,11 +297,29 @@ export function applyMarkdownAlerts(marked: Marked, tokens: Tokens.Generic[]): v
     if (first?.type !== "paragraph") continue;
     const match = MARKDOWN_ALERT_MARKER.exec(first.raw);
     if (!match) continue;
+    const paragraph = first as Tokens.Paragraph;
+    const lead = paragraph.tokens[0];
+    const marker = `[!${match[1]}]`;
+    if (
+      lead?.type !== "text" ||
+      lead.raw.slice(0, marker.length).toUpperCase() !== marker.toUpperCase()
+    ) {
+      continue;
+    }
     quote.kitAlert = match[1]!.toLowerCase() as MarkdownAlertKind;
-    // Re-lex the rest of the first paragraph so its inline markup (and
-    // any app extensions) survives without the marker.
-    const rest = first.raw.slice(match[0].length);
-    quote.tokens = [...(rest.trim() ? marked.lexer(rest) : []), ...quote.tokens.slice(1)];
+    // With `breaks`, the marker line ends in its own `br` token; without,
+    // the newline is part of the lead text.
+    const rest = lead.raw.slice(marker.length).replace(/^[ \t]*\n?/, "");
+    if (rest) {
+      lead.raw = rest;
+      (lead as Tokens.Text).text = rest;
+    } else {
+      paragraph.tokens.shift();
+      if (paragraph.tokens[0]?.type === "br") paragraph.tokens.shift();
+    }
+    paragraph.raw = paragraph.raw.slice(match[0].length);
+    paragraph.text = paragraph.text.replace(MARKDOWN_ALERT_MARKER, "");
+    if (paragraph.tokens.length === 0) quote.tokens.shift();
   }
 }
 
@@ -497,7 +517,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
       }
       const html = (async () => {
         const tokens = marked.lexer(raw) as Tokens.Generic[];
-        if (alerts) applyMarkdownAlerts(marked, tokens);
+        if (alerts) applyMarkdownAlerts(tokens);
         const skip = options.codeFence
           ? (code: string, lang: string) => options.codeFence!(code, lang) !== undefined
           : undefined;
@@ -530,7 +550,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
     renderSync(raw: string): string {
       if (!raw) return "";
       const tokens = marked.lexer(raw) as Tokens.Generic[];
-      if (alerts) applyMarkdownAlerts(marked, tokens);
+      if (alerts) applyMarkdownAlerts(tokens);
       const skip = options.codeFence
         ? (code: string, lang: string) => options.codeFence!(code, lang) !== undefined
         : undefined;
