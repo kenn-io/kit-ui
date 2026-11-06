@@ -14,7 +14,7 @@ export interface RefreshScheduler {
  * initial load; a manual `refreshNow` fires immediately and resets the timer.
  */
 export function createRefreshScheduler(
-  refresh: () => void,
+  refresh: (reason: "manual" | "auto") => void,
   intervalMs: number = DEFAULT_REFRESH_INTERVAL_MS,
 ): RefreshScheduler {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -22,13 +22,13 @@ export function createRefreshScheduler(
   function scheduleNext(): void {
     stop();
     timer = setTimeout(() => {
-      refresh();
+      refresh("auto");
       scheduleNext();
     }, intervalMs);
   }
 
   function refreshNow(): void {
-    refresh();
+    refresh("manual");
     scheduleNext();
   }
 

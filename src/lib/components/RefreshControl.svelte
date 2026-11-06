@@ -73,7 +73,7 @@
   // read once at setup (untrack); a live cadence change would need a fresh
   // scheduler.
   const scheduler = createRefreshScheduler(
-    () => onRefresh("auto"),
+    (reason) => onRefresh(reason),
     untrack(() => intervalMs),
   );
 
@@ -106,10 +106,7 @@
 <div class="kit-refresh-control">
   <IconButton
     class={busy ? "kit-refresh-control__btn querying" : "kit-refresh-control__btn"}
-    onclick={() => {
-      onRefresh("manual");
-      scheduler.scheduleNext();
-    }}
+    onclick={() => scheduler.refreshNow()}
     disabled={busy}
     title={title ?? label}
     ariaLabel={label}

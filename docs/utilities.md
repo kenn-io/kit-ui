@@ -169,6 +169,7 @@ scheduler.stop();
 formatRefreshAge(lastUpdatedAt, Date.now()); // "Updated 3m ago" / "—"
 ```
 
+The callback receives `"manual"` from `refreshNow()` and `"auto"` from the timer.
 This is what `RefreshControl` uses internally.
 
 ## Floating positioning
