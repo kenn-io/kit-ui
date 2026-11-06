@@ -11,6 +11,8 @@ test("a submenu row opens a flyout beside the panel and peels one layer per Esca
   await expect(row).toHaveAttribute("aria-haspopup", "dialog");
   await expect(row).toHaveAttribute("aria-expanded", "false");
   await expect(row).toContainText("Any");
+  // Option rows expose their state; a submenu row is navigation and has none.
+  await expect(row).not.toHaveAttribute("aria-pressed");
   // A submenu row is navigation, not an unselected option, so it is never dimmed.
   await expect(row).toHaveCSS("opacity", "1");
 
@@ -170,6 +172,10 @@ test("a portaled dropdown escapes a host that clips and contains it", async ({ p
 
   // A row that closes the menu puts focus back on the trigger, not on the body.
   await trigger.click();
+  await expect(panel.getByRole("button", { name: "Alpha" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   await panel.getByRole("button", { name: "Close menu" }).press("Enter");
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();

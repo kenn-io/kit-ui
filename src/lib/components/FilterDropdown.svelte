@@ -445,6 +445,7 @@
             disabled={disabled || item.disabled}
             title={item.description}
             aria-describedby={item.description ? itemDescriptionId(item) : undefined}
+            aria-pressed={item.submenu ? undefined : item.active}
             aria-haspopup={item.submenu ? "dialog" : undefined}
             aria-expanded={item.submenu ? submenuItem?.id === item.id : undefined}
             aria-controls={item.submenu && submenuItem?.id === item.id
