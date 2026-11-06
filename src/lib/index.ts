@@ -272,7 +272,13 @@ export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { backdropCloses, escapeCloses } from "./utils/overlay.js";
-export { formatCost, formatDuration, formatNumber, formatTokenCount } from "./utils/format.js";
+export {
+  formatCost,
+  formatCount,
+  formatDuration,
+  formatNumber,
+  formatTokenCount,
+} from "./utils/format.js";
 export {
   createRefreshScheduler,
   DEFAULT_REFRESH_INTERVAL_MS,

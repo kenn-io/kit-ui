@@ -270,6 +270,7 @@ and wraps focus to the other end, as Headless UI and Floating UI do.
 
 ```ts
 import {
+  formatCount,
   formatDuration,
   formatNumber,
   formatTokenCount,
@@ -285,6 +286,12 @@ formatDuration(-1); // "—" (also NaN/Infinity)
 
 formatNumber(1234567); // "1,234,567" (toLocaleString)
 
+formatCount(516); // "516"
+formatCount(7_912); // "7.9K"
+formatCount(18_000); // "18.0K" (always one decimal from 1,000)
+formatCount(32_600_000_000); // "32.6B"
+formatCount(18_000, "fr"); // "18,0 k" (locale-aware)
+
 formatTokenCount(850); // "850"
 formatTokenCount(1_234); // "1.2k"
 formatTokenCount(3_500_000); // "3.5M"
@@ -299,6 +306,12 @@ formatSize(290_000_000, "fr"); // "290 Mo"
 `formatSize(bytes, locale?)` always displays decimal megabytes, rounded to a whole number: one megabyte is 1,000,000 bytes. `Intl.NumberFormat` supplies the unit and spacing for the locale; omitting it uses the runtime locale.
 
 The compact duration, token, and cost formats use plain English.
+
+`formatCount` is the one format for counts and token totals: plain below
+1,000, compact with exactly one decimal from 1,000, so a column of counts
+lines up and never mixes the two forms. Pass the app's `locale` so the
+separators and suffixes follow the app language. `formatTokenCount` is the
+older English-only shape; prefer `formatCount` for new UI.
 `formatDuration` floors sub-minute values to one decimal so 59,999ms can't
 read as "60.0s".
 
