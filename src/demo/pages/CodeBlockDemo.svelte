@@ -57,3 +57,25 @@ bun run check    # svelte-check — must stay at 0 errors / 0 warnings`;
 >
   <CodeBlock code={plainSample} maxHeight="120px" wrapToggle={false} />
 </DemoSection>
+
+<DemoSection
+  title="Localized labels"
+  description="Every button label is a prop. copiedLabel is the copy button's label and tooltip after a copy, so it follows the app language too."
+  code={`<CodeBlock
+  code={source}
+  language="ts"
+  copyLabel="Code kopieren"
+  copiedLabel="Kopiert"
+  wrapLabel="Zeilenumbruch umschalten"
+/>`}
+>
+  <div data-testid="code-block-localized">
+    <CodeBlock
+      code={tsSample}
+      language="ts"
+      copyLabel="Code kopieren"
+      copiedLabel="Kopiert"
+      wrapLabel="Zeilenumbruch umschalten"
+    />
+  </div>
+</DemoSection>
