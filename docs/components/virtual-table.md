@@ -43,7 +43,7 @@ whose rows are options, not cells.
 | `items`                | `T[]`                                     | required                   | Every row's data, in display order                                                                                                                                                                                                                                            |
 | `header`               | `Snippet`                                 | required                   | `<TableHeaderCell>` elements, as in `Table`                                                                                                                                                                                                                                   |
 | `row`                  | `Snippet<[T, number]>`                    | required                   | `(item, index)`; renders exactly one `<tr>`                                                                                                                                                                                                                                   |
-| `rowKey`               | `(item: T, index: number) => unknown`     | index                      | Stable row identity for keyed rendering                                                                                                                                                                                                                                       |
+| `rowKey`               | `(item: T, index: number) => unknown`     | index                      | Stable row identity: keys the rendered rows and the measured heights, so heights survive inserts, removals, reorders, and appends                                                                                                                                             |
 | `empty`                | `Snippet`                                 | —                          | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead                                                                                                                                                                                     |
 | `scroll`               | `"self" \| "page"`                        | `"self"`                   | What scrolls the rows, as on `Table`                                                                                                                                                                                                                                          |
 | `scrollElement`        | `() => HTMLElement \| null`               | nearest scrolling ancestor | With `scroll="page"`, the element that scrolls the table                                                                                                                                                                                                                      |
@@ -91,8 +91,12 @@ browser's scroll anchoring, which current Chrome provides.
 
 - Each `row` renders exactly one `<tr>`. Every rendered row is observed and
   measured when it changes height, so rows may wrap or vary in height.
-- Measurements are kept per index for the current `items` array; a new
-  array (sort, filter, refresh) re-measures rows as they render.
+- With `rowKey`, measurements are kept by row key, so a row keeps its
+  height when rows are inserted, removed, reordered, or appended around it.
+  Opening a detail row below a row, or loading the next page, leaves every
+  measured row where it was; only rows never rendered count at
+  `estimateRowHeight`. Without `rowKey` they are kept per index for the
+  current `items` array, and a new array re-measures rows as they render.
 - Rows are numbered for assistive technology: the table gets
   `aria-rowcount` (all rows plus the header) and each rendered row its
   `aria-rowindex`.

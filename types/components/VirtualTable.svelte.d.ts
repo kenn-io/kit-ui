@@ -9,7 +9,9 @@ declare function $$render<T>(): {
         row: Snippet<[T, number]>;
         /** A `<tr>` shown in the body when `items` is empty. */
         empty?: Snippet;
-        /** Stable identity of a row, for keyed rendering. Defaults to the index. */
+        /** Stable identity of a row, for keyed rendering and for keeping its
+         * measured height when rows are inserted, removed, or reordered around
+         * it. Defaults to the index, whose heights a new `items` array drops. */
         rowKey?: (item: T, index: number) => unknown;
         /** What scrolls the rows: the table's own wrapper (give it a bounded
          * height), or the page or panel the table sits in. */

@@ -2,6 +2,10 @@ import type { Snippet } from "svelte";
 declare function $$render<T>(): {
     props: {
         items: T[];
+        /** Stable identity of a row, for keyed rendering and for keeping its
+         * measured height when rows are inserted, removed, or reordered around
+         * it. Defaults to the index, whose heights a new `items` array drops. */
+        rowKey?: (item: T, index: number) => unknown;
         /** Fixed row height in px — the fast path. Omit for variable-height
          * rows (measured as they render, `estimateHeight` until then). */
         itemHeight?: number;

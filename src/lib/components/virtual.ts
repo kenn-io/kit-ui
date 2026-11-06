@@ -104,6 +104,55 @@ export function offsetOfIndex(
   return offset;
 }
 
+/** Measured heights of a virtualized list's rows. With a key function they
+ * are kept by row key, so a row keeps its height when rows are inserted,
+ * removed, reordered, or appended around it, and heights of rows no longer
+ * in the list are dropped. Without one they are kept by index, and a new
+ * items array drops them all, since an index may now name another row. */
+export class RowHeights<T> {
+  #heights = new Map<unknown, number>();
+  #items: readonly T[] | undefined;
+  // Every row's key, in order; undefined when rows are keyed by index.
+  #keys: unknown[] | undefined;
+
+  /** Follow the list's current items, taking every row's key once per new
+   * array (an app's inline `rowKey` may be a new function on every render,
+   * so only the array's identity counts). Returns whether every height was
+   * dropped, which happens for a new array of rows keyed by index. */
+  sync(items: readonly T[], rowKey?: (item: T, index: number) => unknown): boolean {
+    const keyedBefore = this.#keys !== undefined;
+    if (items === this.#items && keyedBefore === (rowKey !== undefined)) return false;
+    const before = this.#items;
+    this.#items = items;
+    this.#keys = rowKey ? items.map((item, i) => rowKey(item, i)) : undefined;
+    if (this.#keys && keyedBefore) {
+      const live = new Set(this.#keys);
+      for (const key of this.#heights.keys()) if (!live.has(key)) this.#heights.delete(key);
+      return false;
+    }
+    this.#heights.clear();
+    return before !== undefined;
+  }
+
+  /** The key row `index` is measured under. */
+  keyOf(index: number): unknown {
+    return this.#keys ? this.#keys[index] : index;
+  }
+
+  /** Row `index`'s measured height, or undefined before it is measured. */
+  get(index: number): number | undefined {
+    return this.#heights.get(this.keyOf(index));
+  }
+
+  /** Record row `index`'s height. Returns whether it changed. */
+  set(index: number, height: number): boolean {
+    const key = this.keyOf(index);
+    if (this.#heights.get(key) === height) return false;
+    this.#heights.set(key, height);
+    return true;
+  }
+}
+
 /** A box's vertical extent in viewport coordinates. */
 export interface VerticalBounds {
   top: number;
