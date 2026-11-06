@@ -30,6 +30,7 @@ export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
 export { default as EmptyState } from "./components/EmptyState.svelte";
+export { default as MissingData } from "./components/MissingData.svelte";
 export { default as FilterDropdown } from "./components/FilterDropdown.svelte";
 export type { FilterDropdownItem, FilterDropdownSection } from "./components/FilterDropdown.svelte";
 export { default as FindBar } from "./components/FindBar.svelte";

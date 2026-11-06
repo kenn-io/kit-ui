@@ -144,7 +144,7 @@ export function checkHandRolledCodeBlock(source: any): {
     line: number;
     message: string;
 }[];
-/** Hand-rolled empty/placeholder states duplicate EmptyState. */
+/** Hand-rolled empty/placeholder states duplicate EmptyState or MissingData. */
 export function checkHandRolledEmptyState(source: any): {
     rule: string;
     line: number;

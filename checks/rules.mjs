@@ -532,16 +532,18 @@ export function checkHandRolledCodeBlock(source) {
   return findings;
 }
 
-/** Hand-rolled empty/placeholder states duplicate EmptyState. */
+/** Hand-rolled empty/placeholder states duplicate EmptyState or MissingData. */
 export function checkHandRolledEmptyState(source) {
   const findings = [];
-  const re = /class="[^"]*(?<!kit-)\bempty-state\b|\.(?<!kit-)empty-state\b/g;
+  const re =
+    /class="[^"]*(?<!kit-)\b(empty-state|missing-data)\b|\.(?<!kit-)(empty-state|missing-data)\b/g;
   let match;
   while ((match = re.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-empty-state",
       line: lineOfIndex(source, match.index),
-      message: "empty-state markup — use EmptyState from @kenn-io/kit-ui",
+      message:
+        "empty-state markup — use MissingData (a page or panel with nothing to show) or EmptyState (a placeholder in a smaller pane) from @kenn-io/kit-ui",
     });
   }
   return findings;
