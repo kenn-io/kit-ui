@@ -187,8 +187,11 @@
     border-bottom: 1px solid var(--border-muted);
   }
 
+  /* Stripes tint toward the text color, so they read as a faint band in
+   * every theme. The inset surface would match a neutral chip's fill and,
+   * in dark themes, sink striped rows below the card. */
   .kit-table--zebra :global(tbody tr:nth-child(even)) {
-    background: var(--bg-inset);
+    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
   }
 
   .kit-table :global(tbody tr:hover) {

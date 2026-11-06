@@ -5,15 +5,15 @@
   interface Job {
     id: number;
     repo: string;
-    status: "done" | "running" | "failed";
+    status: "done" | "running" | "queued" | "failed";
     elapsed: number;
     cost: number | null;
   }
 
   const jobs: Job[] = [
     { id: 412, repo: "kenn-io/forge", status: "done", elapsed: 312, cost: 1.42 },
-    { id: 413, repo: "kenn-io/agentsview", status: "running", elapsed: 128, cost: null },
-    { id: 414, repo: "kenn-io/kit-ui", status: "done", elapsed: 87, cost: 0.22 },
+    { id: 413, repo: "kenn-io/agentsview", status: "queued", elapsed: 0, cost: null },
+    { id: 414, repo: "kenn-io/kit-ui", status: "running", elapsed: 87, cost: 0.22 },
     { id: 415, repo: "kenn-io/forge", status: "failed", elapsed: 45, cost: 0.19 },
     { id: 416, repo: "kenn-io/infra", status: "done", elapsed: 561, cost: 2.08 },
   ];
@@ -29,7 +29,12 @@
     { key: "id" },
   );
 
-  const statusTone = { done: "success", running: "info", failed: "danger" } as const;
+  const statusTone = {
+    done: "success",
+    running: "info",
+    queued: "neutral",
+    failed: "danger",
+  } as const;
   const totals = [
     { status: "done", count: 3 },
     { status: "running", count: 1 },
