@@ -223,6 +223,22 @@
     const { min, max } = limitsOf(cell);
     return Math.min(max, Math.max(min, width));
   };
+  const sum = (values: number[]): number => values.reduce((total, value) => total + value, 0);
+  // The column that takes the spare width: the first header cell with
+  // `fill`, or -1 when none has it and the last column takes it.
+  const fillerOf = (cells: HTMLTableCellElement[]): number =>
+    cells.findIndex((cell) => cell.dataset["kitFill"] !== undefined);
+  // Whether a column other than the filling one, which needs no width of its
+  // own, still has no width.
+  const unsized = (cells: HTMLTableCellElement[]): boolean => {
+    const filler = fillerOf(cells);
+    return cells.some((cell, i) => i !== filler && !widths.has(keyOf(cell)));
+  };
+  // The width a table has inside its wrapper's padding.
+  const innerWidth = (wrapper: HTMLElement): number => {
+    const style = getComputedStyle(wrapper);
+    return wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  };
 
   const copyTable = () => measureForm?.querySelector("table") ?? undefined;
   const copyCells = (): HTMLTableCellElement[] =>
@@ -230,59 +246,79 @@
 
   // Give every column without a width one: the header's `width`, or its
   // share of the copy's width under automatic layout, the columns with
-  // widths keeping theirs. Measured widths include padding and borders;
-  // pinned cells use border-box sizing, so they become the final widths.
+  // widths keeping theirs. With a filling column, which stands at its
+  // minimum here, the other columns take their content's width when that
+  // leaves the filling column room, so all the spare width goes to it.
+  // Measured widths include padding and borders; pinned cells use
+  // border-box sizing, so they become the final widths.
   function sizeColumns(): void {
     const cells = copyCells();
+    const table = copyTable();
     // A hidden table (a closed <details>, an inactive tab) has no width to
     // measure against yet; the resize when it appears sizes it. An empty
     // list waits for rows.
-    if (cells.length === 0 || items.length === 0 || measureWidth === 0) return;
+    if (!table || cells.length === 0 || items.length === 0 || measureWidth === 0) return;
     columns = headerCells().length;
+    const filler = fillerOf(cells);
     const explicit = (cell: HTMLTableCellElement) =>
       cell.dataset["kitWidth"] ? Number(cell.dataset["kitWidth"]) : undefined;
-    for (const cell of cells) {
-      const known = widths.get(keyOf(cell)) ?? explicit(cell);
-      if (known === undefined) continue;
+    cells.forEach((cell, i) => {
+      const known = i === filler ? limitsOf(cell).min : (widths.get(keyOf(cell)) ?? explicit(cell));
+      if (known === undefined) return;
       cell.style.boxSizing = "border-box";
       cell.style.width = `${known}px`;
+    });
+    const measure = () => cells.map((cell) => cell.getBoundingClientRect().width);
+    let measured: number[] | undefined;
+    if (filler !== -1) {
+      table.style.width = "max-content";
+      const natural = measure();
+      table.style.width = "";
+      if (sum(natural) <= innerWidth(table.parentElement!)) measured = natural;
     }
-    const measured = cells.map((cell) => cell.getBoundingClientRect().width);
+    measured ??= measure();
     cells.forEach((cell, i) => {
-      if (!widths.has(keyOf(cell)))
+      if (i !== filler && !widths.has(keyOf(cell)))
         widths.set(keyOf(cell), clampTo(cell, explicit(cell) ?? measured[i]!));
     });
     sized = true;
     applyWidths();
   }
 
-  // Show the stored widths in fixed layout. When they add up to less than
-  // the wrapper, the last column takes the rest, so the table still fills
-  // it; when they add up to more, the table is wider and scrolls sideways.
+  // Show the stored widths in fixed layout. A filling column takes what the
+  // others leave in the wrapper, and at least its minimum. Without one, the
+  // last column takes the rest when the widths add up to less than the
+  // wrapper, so the table still fills it. When the widths add up to more,
+  // the table is wider and scrolls sideways.
   function applyWidths(): void {
     const table = body?.parentElement;
     const wrapper = table?.parentElement;
     const cells = headerCells();
     if (!table || !wrapper || cells.length === 0) return;
-    const style = getComputedStyle(wrapper);
-    const available =
-      wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    shown = cells.map((cell) => widths.get(keyOf(cell)) ?? clampTo(cell, 100));
-    const total = shown.reduce((sum, width) => sum + width, 0);
-    if (total < available) shown[shown.length - 1]! += available - total;
+    const available = innerWidth(wrapper);
+    const filler = fillerOf(cells);
+    shown = cells.map((cell, i) =>
+      i === filler ? 0 : (widths.get(keyOf(cell)) ?? clampTo(cell, 100)),
+    );
+    const total = sum(shown);
+    if (filler !== -1) shown[filler] = Math.max(limitsOf(cells[filler]!).min, available - total);
+    else if (total < available) shown[shown.length - 1]! += available - total;
     cells.forEach((cell, i) => {
       cell.style.boxSizing = "border-box";
       cell.style.width = `${shown[i]}px`;
     });
     table.style.tableLayout = "fixed";
-    table.style.width = `${shown.reduce((sum, width) => sum + width, 0)}px`;
+    table.style.width = `${sum(shown)}px`;
     if (!table.classList.contains(PINNED)) table.classList.add(PINNED);
     sizingVersion += 1;
   }
 
+  // A filling column reports the width it is shown at.
   function reportWidths(): void {
+    const cells = headerCells();
+    const filler = fillerOf(cells);
     oncolumnwidthschange?.(
-      headerCells().map((cell, i) => widths.get(keyOf(cell)) ?? shown[i] ?? 0),
+      cells.map((cell, i) => (i === filler ? undefined : widths.get(keyOf(cell))) ?? shown[i] ?? 0),
     );
   }
 
@@ -392,7 +428,7 @@
     // Size any column still without a width, until it has one: a column
     // added while the list was empty or the table hidden is sized once rows
     // render or the table appears.
-    if (headerCells().some((cell) => !widths.has(keyOf(cell)))) requestSizing();
+    if (unsized(headerCells())) requestSizing();
   }
 
   // Read rendered row heights, from the gap between consecutive row tops so
@@ -474,7 +510,7 @@
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
     const columnsChanged = new MutationObserver(() => {
       columns = Math.max(1, headerRow?.cells.length ?? 1);
-      if (headerCells().every((cell) => widths.has(keyOf(cell)))) applyWidths();
+      if (!unsized(headerCells())) applyWidths();
       syncRows();
     });
     if (headerRow) columnsChanged.observe(headerRow, { childList: true });
