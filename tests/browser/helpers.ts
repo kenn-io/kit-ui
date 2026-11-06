@@ -1,8 +1,27 @@
-import type { BrowserContext, Locator, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page, Request } from "@playwright/test";
 
 /** Open a gallery page by its hash id and wait for it to render. */
 export async function gotoPage(page: Page, id: string): Promise<void> {
-  await page.goto(`/#${id}`);
+  let networkChanged = false;
+  let navigationInterrupted = false;
+  const onRequestFailed = (request: Request) => {
+    if (request.failure()?.errorText === "net::ERR_NETWORK_CHANGED") networkChanged = true;
+  };
+  page.on("requestfailed", onRequestFailed);
+  try {
+    await page.goto(`/#${id}`);
+  } catch (error) {
+    if (!(error instanceof Error && error.message.includes("net::ERR_NETWORK_CHANGED"))) {
+      throw error;
+    }
+    navigationInterrupted = true;
+  } finally {
+    page.off("requestfailed", onRequestFailed);
+  }
+  // Chromium can abort module imports with ERR_NETWORK_CHANGED even when goto succeeds.
+  // Reload once before component assertions; a second failure stays visible.
+  if (navigationInterrupted) await page.goto(`/#${id}`);
+  else if (networkChanged) await page.reload();
   await page.locator(".content__heading").waitFor();
 }
 
