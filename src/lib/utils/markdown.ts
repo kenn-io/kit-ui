@@ -323,14 +323,23 @@ export function applyMarkdownAlerts(tokens: Tokens.Generic[]): void {
   }
 }
 
-function alertRenderer(labels: Record<MarkdownAlertKind, string>): RendererObject {
+// A missing, undefined, or blank override keeps the English default, so a
+// partial label map can never leave an alert without a title.
+function alertLabel(
+  labels: MarkdownRendererOptions["alertLabels"],
+  kind: MarkdownAlertKind,
+): string {
+  return labels?.[kind]?.trim() || DEFAULT_MARKDOWN_ALERT_LABELS[kind];
+}
+
+function alertRenderer(labels: MarkdownRendererOptions["alertLabels"]): RendererObject {
   return {
     blockquote(token) {
       const kind = (token as AlertBlockquote).kitAlert;
       if (!kind) return false;
       return (
         `<div class="kit-markdown-alert kit-markdown-alert--${kind}" role="note">` +
-        `<p class="kit-markdown-alert__title">${escapeHtml(labels[kind])}</p>` +
+        `<p class="kit-markdown-alert__title">${escapeHtml(alertLabel(labels, kind))}</p>` +
         `${this.parser.parse(token.tokens)}</div>\n`
       );
     },
@@ -471,7 +480,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
   const alerts = options.alerts ?? true;
   if (alerts) {
     marked.use({
-      renderer: alertRenderer({ ...DEFAULT_MARKDOWN_ALERT_LABELS, ...options.alertLabels }),
+      renderer: alertRenderer(options.alertLabels),
     });
   }
   // Enforce the documented constraint: only inert data-* attributes may

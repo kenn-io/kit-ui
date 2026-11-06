@@ -90,6 +90,8 @@ defaults from `DEFAULT_MARKDOWN_ALERT_LABELS`:
 createMarkdownRenderer({ alertLabels: { tip: "Astuce", warning: "Attention" } });
 ```
 
+A missing, undefined, or blank title falls back to the default.
+
 ## Pipeline (`utils/markdown`)
 
 ```ts
