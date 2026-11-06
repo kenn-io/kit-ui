@@ -157,6 +157,9 @@ in the table's box:
 - **Resizing.** The filling column has no resize handle, so it cannot be
   resized or fitted. Resizing another column gives width to it or takes
   width from it, and a resize of the box widens or narrows it.
+- **Changing it.** Setting `fill` on another column moves the spare width to
+  that column right away. The column that gave it up starts at its content's
+  width.
 - **Saving.** `oncolumnwidthschange` reports the width the filling column is
   shown at.
 - **One column.** Set `fill` on one header cell. When several have it, the

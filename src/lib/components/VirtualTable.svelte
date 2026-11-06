@@ -228,11 +228,13 @@
   // `fill`, or -1 when none has it and the last column takes it.
   const fillerOf = (cells: HTMLTableCellElement[]): number =>
     cells.findIndex((cell) => cell.dataset["kitFill"] !== undefined);
-  // Whether a column other than the filling one, which needs no width of its
-  // own, still has no width.
+  // Whether the table still needs sizing: it was never sized, which a table
+  // whose only column fills needs too, or a column other than the filling
+  // one, which needs no width of its own, still has no width.
   const unsized = (cells: HTMLTableCellElement[]): boolean => {
+    if (cells.length === 0) return false;
     const filler = fillerOf(cells);
-    return cells.some((cell, i) => i !== filler && !widths.has(keyOf(cell)));
+    return !sized || cells.some((cell, i) => i !== filler && !widths.has(keyOf(cell)));
   };
   // The width a table has inside its wrapper's padding.
   const innerWidth = (wrapper: HTMLElement): number => {
@@ -274,7 +276,10 @@
       table.style.width = "max-content";
       const natural = measure();
       table.style.width = "";
-      if (sum(natural) <= innerWidth(table.parentElement!)) measured = natural;
+      // The filling column needs only its minimum: in the live table its
+      // content breaks to fit.
+      const needed = sum(natural) - natural[filler]! + limitsOf(cells[filler]!).min;
+      if (needed <= innerWidth(table.parentElement!)) measured = natural;
     }
     measured ??= measure();
     cells.forEach((cell, i) => {
@@ -507,13 +512,21 @@
     });
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
+    // So must the spare width when a column takes or gives up `fill`; a
+    // separate observer watches that attribute, since watching the header's
+    // whole subtree would also report every sort icon and resize handle.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
-    const columnsChanged = new MutationObserver(() => {
+    const headerChanged = () => {
       columns = Math.max(1, headerRow?.cells.length ?? 1);
       if (!unsized(headerCells())) applyWidths();
       syncRows();
-    });
-    if (headerRow) columnsChanged.observe(headerRow, { childList: true });
+    };
+    const columnsChanged = new MutationObserver(headerChanged);
+    const fillChanged = new MutationObserver(headerChanged);
+    if (headerRow) {
+      columnsChanged.observe(headerRow, { childList: true });
+      fillChanged.observe(headerRow, { subtree: true, attributeFilter: ["data-kit-fill"] });
+    }
     return () => {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(applyFrame);
@@ -522,6 +535,7 @@
       window.removeEventListener("resize", resized);
       sizes.disconnect();
       columnsChanged.disconnect();
+      fillChanged.disconnect();
       rowObserver?.disconnect();
       rowObserver = undefined;
       watched = new Set();

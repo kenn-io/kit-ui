@@ -845,6 +845,72 @@ test("in a narrow box the fill column stops at its minWidth and the table scroll
     .toEqual({ name: 160, scrolled: true });
 });
 
+test("moving fill to another column moves the spare width to it", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = filesTable(page);
+  await table.scrollIntoViewIfNeeded();
+  await expect(dataRows(table).first()).toContainText("docs/guides/");
+  const before = await columnWidths(table);
+  await page.getByRole("checkbox", { name: "Let Kind take the spare width" }).check();
+  await expect(table.getByRole("separator", { name: "Resize the Kind column" })).toHaveCount(0);
+  await expect(table.getByRole("separator", { name: "Resize the Name column" })).toHaveCount(1);
+  // Name gives up the spare width it held and Kind, which was at its
+  // content's width, takes it; Size and Modified keep theirs.
+  await expect
+    .poll(async () => {
+      const after = await columnWidths(table);
+      return {
+        nameNarrower: after[0]! < before[0]!,
+        kindWider: after[1]! > before[1]!,
+        others: after.slice(2),
+      };
+    })
+    .toEqual({ nameNarrower: true, kindWider: true, others: before.slice(2) });
+});
+
+test("the other columns keep their content's width when they fit beside the fill column's minWidth", async ({
+  page,
+}) => {
+  // In a wide box Name starts at its content's width once Kind takes the
+  // spare width.
+  await gotoPage(page, "virtual-table");
+  const fill = page.getByRole("checkbox", { name: "Let Kind take the spare width" });
+  let table = filesTable(page);
+  await table.scrollIntoViewIfNeeded();
+  await expect(dataRows(table).first()).toContainText("docs/guides/");
+  await fill.check();
+  await expect.poll(async () => (await columnWidths(table))[1]! > 300).toBe(true);
+  const wide = await columnWidths(table);
+
+  // A box that leaves Kind 40px beside the other columns at those widths:
+  // more than Kind's 20px minimum, less than its longest word.
+  await gotoPage(page, "virtual-table");
+  table = filesTable(page);
+  await table.scrollIntoViewIfNeeded();
+  await expect(dataRows(table).first()).toContainText("docs/guides/");
+  await table.evaluate(
+    (el, others) => {
+      const host = el.closest(".host") as HTMLElement;
+      const wrapper = el.parentElement!;
+      const style = getComputedStyle(wrapper);
+      const inner =
+        wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      host.style.width = `${host.offsetWidth - inner + others + 40}px`;
+    },
+    wide[0]! + wide[2]! + wide[3]!,
+  );
+  await fill.check();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(wide[0]);
+});
+
+test("a table whose only column fills keeps that column at its minWidth", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.locator('table[aria-label="Paths"]');
+  await table.scrollIntoViewIfNeeded();
+  await expect(dataRows(table).first()).toContainText("docs/guides/");
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(320);
+});
+
 test("a wide page-scrolled table keeps its full height in a bounded flex column", async ({
   page,
 }) => {

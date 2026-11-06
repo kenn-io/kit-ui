@@ -143,6 +143,7 @@
     { key: "name" },
   );
   const sortedFiles = $derived(fileSorter.sort(files));
+  let kindFills = $state(false);
 </script>
 
 <DemoSection
@@ -281,7 +282,7 @@
 
 <DemoSection
   title="A column that takes the spare width"
-  description="Set fill on one TableHeaderCell and that column takes whatever width the other columns leave in the table's box, here the Name column. The other columns start at their content's width. Narrowing another column widens Name, and in a narrow box Name stops at its minWidth and the table scrolls sideways. Without fill, the last column takes the spare width."
+  description="Set fill on Name's TableHeaderCell. The other columns start at their content's width. Narrowing another column widens Name; in a narrow box, Name stops at minWidth and the table scrolls sideways. Without fill, the last column takes the spare width. Moving fill to another column moves the spare width with it, and a table of one filling column keeps its minWidth too."
   code={`<VirtualTable items={sorter.sort(files)} rowKey={(f) => f.id} ariaLabel="Files">
   {#snippet header()}
     <TableHeaderCell label="Name" sort={sorter} column="name" fill minWidth={160} />
@@ -293,11 +294,18 @@
   {/snippet}
 </VirtualTable>`}
 >
+  <Checkbox bind:checked={kindFills} label="Let Kind take the spare width" />
   <div class="host">
     <VirtualTable items={sortedFiles} rowKey={(f) => f.id} ariaLabel="Files">
       {#snippet header()}
-        <TableHeaderCell label="Name" sort={fileSorter} column="name" fill minWidth={160} />
-        <TableHeaderCell label="Kind" sort={fileSorter} column="kind" />
+        <TableHeaderCell
+          label="Name"
+          sort={fileSorter}
+          column="name"
+          fill={!kindFills}
+          minWidth={160}
+        />
+        <TableHeaderCell label="Kind" sort={fileSorter} column="kind" fill={kindFills} />
         <TableHeaderCell label="Size" numeric sort={fileSorter} column="size" />
         <TableHeaderCell label="Modified" sort={fileSorter} column="modified" />
       {/snippet}
@@ -308,6 +316,16 @@
           <td class="num">{file.size}</td>
           <td class="date">{file.modified}</td>
         </tr>
+      {/snippet}
+    </VirtualTable>
+  </div>
+  <div class="host paths">
+    <VirtualTable items={sortedFiles} rowKey={(f) => f.id} ariaLabel="Paths" unsorted>
+      {#snippet header()}
+        <TableHeaderCell label="Path" fill minWidth={320} />
+      {/snippet}
+      {#snippet row(file)}
+        <tr><td>{file.name}</td></tr>
       {/snippet}
     </VirtualTable>
   </div>
@@ -416,6 +434,12 @@ table.refresh();`}
     border: var(--border-width) solid var(--border-muted);
     border-radius: var(--radius-md);
     overflow: hidden;
+  }
+
+  /* One column whose minWidth is wider than its box. */
+  .host.paths {
+    width: 240px;
+    height: 200px;
   }
 
   .filter {
