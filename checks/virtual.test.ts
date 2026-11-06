@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { offsetOfIndex, virtualSlice, visibleWindow } from "../src/lib/components/virtual.js";
+import {
+  offsetOfIndex,
+  RowHeights,
+  virtualSlice,
+  visibleWindow,
+} from "../src/lib/components/virtual.js";
 
 const fixed = (h: number) => () => h;
 
@@ -168,5 +173,53 @@ describe("visibleWindow", () => {
       scrollTop: 0,
       viewport: 0,
     });
+  });
+});
+
+describe("RowHeights", () => {
+  const byId = (row: { id: string }) => row.id;
+  const rows = (...ids: string[]) => ids.map((id) => ({ id }));
+
+  test("keyed heights follow their rows through an insert above them", () => {
+    const heights = new RowHeights<{ id: string }>();
+    heights.sync(rows("a", "b", "c"), byId);
+    heights.set(0, 30);
+    heights.set(1, 120);
+    heights.set(2, 45);
+    // A detail row opens under "a", pushing "b" and "c" down one index.
+    expect(heights.sync(rows("a", "a:detail", "b", "c"), byId)).toBe(false);
+    expect([0, 1, 2, 3].map((i) => heights.get(i))).toEqual([30, undefined, 120, 45]);
+  });
+
+  test("keyed heights survive appends and reorders, and drop removed rows", () => {
+    const heights = new RowHeights<{ id: string }>();
+    heights.sync(rows("a", "b"), byId);
+    heights.set(0, 30);
+    heights.set(1, 60);
+    heights.sync(rows("b", "a", "c"), byId);
+    expect([0, 1, 2].map((i) => heights.get(i))).toEqual([60, 30, undefined]);
+    heights.sync(rows("a"), byId);
+    // "b" was removed, so coming back it is measured afresh.
+    heights.sync(rows("a", "b"), byId);
+    expect([0, 1].map((i) => heights.get(i))).toEqual([30, undefined]);
+  });
+
+  test("index heights are dropped for a new array, which may name other rows", () => {
+    const heights = new RowHeights<{ id: string }>();
+    const first = rows("a", "b");
+    expect(heights.sync(first)).toBe(false);
+    heights.set(0, 30);
+    expect(heights.sync(first)).toBe(false);
+    expect(heights.get(0)).toBe(30);
+    expect(heights.sync(rows("b", "a"))).toBe(true);
+    expect(heights.get(0)).toBeUndefined();
+  });
+
+  test("set reports only a changed height", () => {
+    const heights = new RowHeights<{ id: string }>();
+    heights.sync(rows("a"), byId);
+    expect(heights.set(0, 30)).toBe(true);
+    expect(heights.set(0, 30)).toBe(false);
+    expect(heights.set(0, 31)).toBe(true);
   });
 });

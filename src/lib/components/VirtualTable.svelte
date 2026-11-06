@@ -8,7 +8,7 @@
     DEFAULT_MIN_COLUMN_WIDTH,
     type ColumnSizing,
   } from "./table-columns.js";
-  import { scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
+  import { RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
     /** Every row's data; only the rows on screen are rendered. */
@@ -19,7 +19,9 @@
     row: Snippet<[T, number]>;
     /** A `<tr>` shown in the body when `items` is empty. */
     empty?: Snippet;
-    /** Stable identity of a row, for keyed rendering. Defaults to the index. */
+    /** Stable identity of a row, for keyed rendering and for keeping its
+     * measured height when rows are inserted, removed, or reordered around
+     * it. Defaults to the index, whose heights a new `items` array drops. */
     rowKey?: (item: T, index: number) => unknown;
     /** What scrolls the rows: the table's own wrapper (give it a bounded
      * height), or the page or panel the table sits in. */
@@ -58,7 +60,7 @@
     header,
     row,
     empty = undefined,
-    rowKey = (_item: T, index: number) => index,
+    rowKey = undefined,
     scroll = "self",
     scrollElement = undefined,
     estimateRowHeight = 36,
@@ -93,18 +95,21 @@
   let viewport = $state(0);
   let columns = $state(1);
 
-  // Row heights by index, valid only for the `items` array they were taken
-  // from (sorting or filtering reuses indexes for other rows). The Map is not
-  // reactive; `measureVersion` signals that it changed. Rows not yet
-  // measured use the fixed estimate, so measuring one row never moves the
-  // estimated rows around it.
-  const measured = new Map<number, number>();
+  // Row heights by row key, so a row keeps its height when rows are
+  // inserted, removed, or reordered around it; without `rowKey`, by index for
+  // the current `items` array only. The cache is not reactive;
+  // `measureVersion` signals that it changed. Rows not yet measured use the
+  // fixed estimate, so measuring one row never moves the estimated rows
+  // around it.
+  const measured = new RowHeights<T>();
   let measureVersion = $state(0);
-  let measuredFor: T[] | undefined;
-  // The index each row element was last measured at, for the current
-  // `items`. A row not yet measured at its index is observed afresh, which
-  // makes the observer report it once more after the next layout.
-  let measuredAt = new WeakMap<Element, number>();
+  // The key each row element was last measured under. A row not yet
+  // measured under its key (an index-keyed row after `items` changed) is
+  // observed afresh, which makes the observer report it once more after the
+  // next layout.
+  let measuredAt = new WeakMap<Element, unknown>();
+
+  const rowKeyOf = (item: T, index: number): unknown => (rowKey ? rowKey(item, index) : index);
 
   const heightOf = (index: number): number => {
     const h = measured.get(index) ?? estimateRowHeight;
@@ -122,11 +127,7 @@
 
   const slice = $derived.by(() => {
     void measureVersion;
-    if (measuredFor !== items) {
-      measured.clear();
-      measuredAt = new WeakMap();
-      measuredFor = items;
-    }
+    if (measured.sync(items, rowKey)) measuredAt = new WeakMap();
     return windowOf();
   });
 
@@ -350,7 +351,7 @@
     rows.forEach((tr, i) => {
       // A row this observer watches at the index it was measured at needs
       // nothing. A new observer, after the scroller changes, watches none.
-      if (watched.has(tr) && measuredAt.get(tr) === start + i) return;
+      if (watched.has(tr) && measuredAt.get(tr) === measured.keyOf(start + i)) return;
       // observe() ignores a row that is already observed.
       if (watched.has(tr)) rowObserver!.unobserve(tr);
       rowObserver!.observe(tr);
@@ -406,13 +407,10 @@
     let changed = false;
     rows.forEach((tr, i) => {
       const index = start + i;
-      measuredAt.set(tr, index);
+      measuredAt.set(tr, measured.keyOf(index));
       const next = tops[i + 1];
       const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
-      if (h > 0 && measured.get(index) !== h) {
-        measured.set(index, h);
-        changed = true;
-      }
+      if (h > 0 && measured.set(index, h)) changed = true;
     });
     return changed;
   }
@@ -505,7 +503,7 @@
   {#if parityPad}
     <tr class={SPACER} aria-hidden="true" style={SPACER_ROW}></tr>
   {/if}
-  {#each items.slice(slice.start, slice.end) as item, i (rowKey(item, slice.start + i))}
+  {#each items.slice(slice.start, slice.end) as item, i (rowKeyOf(item, slice.start + i))}
     {@render row(item, slice.start + i)}
   {/each}
   <!-- Only a table with no items is empty; a window scrolled out of view
@@ -526,7 +524,7 @@
     style:width="{measureWidth}px"
   >
     <Table {header} {zebra} {unsorted} stickyHeader={false} class={className}>
-      {#each measuredRows as index (rowKey(items[index]!, index))}
+      {#each measuredRows as index (rowKeyOf(items[index]!, index))}
         {@render row(items[index]!, index)}
       {/each}
     </Table>
