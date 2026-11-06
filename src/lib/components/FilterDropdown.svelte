@@ -30,7 +30,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
-  import { tick } from "svelte";
+  import { flushSync, tick } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
@@ -92,6 +92,9 @@
   let submenuId = $state<string | null>(null);
   let submenuRef = $state<HTMLDivElement>();
   let submenuStyle = $state("");
+  // Size limits in the panel's own CSS units. CSS zoom scales vh and vw too,
+  // so the stylesheet's viewport-unit caps overflow a zoomed-in window.
+  let viewportLimits = $state<{ width: number; height: number }>();
   const instanceId = $props.id();
 
   const isActive = $derived(active || badgeCount > 0);
@@ -164,12 +167,23 @@
     if (submenuId) void tick().then(positionSubmenu);
   });
 
+  /** Apply viewport size limits in unzoomed units before anything measures
+   * the panel or flyout, as MenuContent does for its height cap. */
+  function fitToViewport(zoom: number): void {
+    const width = Math.max(0, Math.floor(window.innerWidth / zoom) - 16);
+    const height = Math.max(0, Math.min(420, Math.floor(window.innerHeight / zoom) - 16));
+    if (viewportLimits?.width === width && viewportLimits.height === height) return;
+    viewportLimits = { width, height };
+    flushSync();
+  }
+
   function positionDropdown(): void {
     if (!buttonRef || !dropdownRef) return;
     // Fixed offsets and offsetWidth/Height use the panel's unzoomed CSS
     // units, so bring the zoomed trigger rect and viewport into them, as
     // SelectDropdown does. Engines without currentCSSZoom keep the old maths.
     const zoom = dropdownRef.currentCSSZoom ?? 1;
+    fitToViewport(zoom);
     const rect = buttonRef.getBoundingClientRect();
     dropdownStyle = floatingPopoverStyle({
       trigger: new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom),
@@ -202,6 +216,7 @@
     // units, so bring the zoomed client rects and viewport into them, as
     // SelectDropdown does. Engines without currentCSSZoom keep the old maths.
     const zoom = submenuRef.currentCSSZoom ?? 1;
+    fitToViewport(zoom);
     const unzoom = (rect: DOMRect) =>
       new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom);
     submenuStyle = floatingFlyoutStyle({
@@ -302,7 +317,11 @@
   }
 </script>
 
-<div class="kit-filter-dropdown">
+<div
+  class="kit-filter-dropdown"
+  style:--kit-filter-dropdown-max-width={viewportLimits ? `${viewportLimits.width}px` : undefined}
+  style:--kit-filter-dropdown-max-height={viewportLimits ? `${viewportLimits.height}px` : undefined}
+>
   <button
     class="kit-filter-dropdown__btn kit-control-states"
     class:kit-filter-dropdown__btn--active={isActive}
@@ -335,7 +354,7 @@
       class="kit-filter-dropdown__panel kit-popover-card"
       bind:this={dropdownRef}
       style={dropdownStyle}
-      style:min-width={minWidth}
+      style:min-width={`min(${minWidth}, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)))`}
     >
       {#if searchable}
         <div class="kit-filter-dropdown__search">
@@ -523,10 +542,13 @@
   .kit-filter-dropdown__panel {
     position: fixed;
     z-index: var(--z-popover);
+    box-sizing: border-box;
     padding: 4px 0;
     /* Long item lists (agentsview's branch filter runs to thousands of
-       entries) must scroll instead of growing past the viewport. */
-    max-height: min(420px, calc(100vh - 16px));
+       entries) must scroll instead of growing past the viewport. The script
+       sets the limits in unzoomed units; the fallbacks cover first paint. */
+    max-width: var(--kit-filter-dropdown-max-width, calc(100vw - 16px));
+    max-height: var(--kit-filter-dropdown-max-height, min(420px, calc(100vh - 16px)));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -655,9 +677,10 @@
   .kit-filter-dropdown__submenu {
     position: fixed;
     z-index: var(--z-popover);
-    min-width: 220px;
-    max-width: min(320px, calc(100vw - 16px));
-    max-height: min(420px, calc(100vh - 16px));
+    box-sizing: border-box;
+    min-width: min(220px, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)));
+    max-width: min(320px, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)));
+    max-height: var(--kit-filter-dropdown-max-height, min(420px, calc(100vh - 16px)));
     padding: 4px 0;
     overflow-y: auto;
     overscroll-behavior: contain;

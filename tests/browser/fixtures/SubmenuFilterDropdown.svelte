@@ -4,6 +4,12 @@
 
   // A searchable filter menu whose Labels row opens a flyout holding a
   // SelectDropdown, for the nested-Escape and search-reposition specs.
+  interface Props {
+    /** Extra rows in the flyout, to make it taller than a small viewport. */
+    flyoutRows?: number;
+  }
+
+  let { flyoutRows = 0 }: Props = $props();
   let match = $state("all");
   const noop = () => {};
   // Bumping this rebuilds every item object, the way an app's derived
@@ -42,6 +48,9 @@
       ]}
       onchange={(next) => (match = next)}
     />
+    {#each Array.from({ length: flyoutRows }, (_, i) => i + 1) as row (row)}
+      <button type="button" style="display: block">Flyout row {row}</button>
+    {/each}
   </div>
 {/snippet}
 

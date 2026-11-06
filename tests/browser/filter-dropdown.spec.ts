@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
 test("a submenu row opens a flyout beside the panel and peels one layer per Escape", async ({
@@ -112,18 +112,21 @@ test("a submenu flyout follows the panel when the trigger moves it", async ({ pa
   await expect.poll(gap).toBe(0);
 });
 
-async function mountSubmenuFixture(page: Page, zoom = 1): Promise<void> {
+async function mountSubmenuFixture(page: Page, zoom = 1, flyoutRows = 0): Promise<void> {
   await gotoPage(page, "filter-dropdown");
-  await page.evaluate(async (zoom) => {
-    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
-    const { default: Fixture } =
-      await import("/tests/browser/fixtures/SubmenuFilterDropdown.svelte");
-    document.body.replaceChildren();
-    const target = document.createElement("div");
-    target.style.cssText = `position:fixed;left:40px;top:40px;zoom:${zoom}`;
-    document.body.append(target);
-    mount(Fixture, { target });
-  }, zoom);
+  await page.evaluate(
+    async ({ zoom, flyoutRows }) => {
+      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: Fixture } =
+        await import("/tests/browser/fixtures/SubmenuFilterDropdown.svelte");
+      document.body.replaceChildren();
+      const target = document.createElement("div");
+      target.style.cssText = `position:fixed;left:40px;top:40px;zoom:${zoom}`;
+      document.body.append(target);
+      mount(Fixture, { target, props: { flyoutRows } });
+    },
+    { zoom, flyoutRows },
+  );
 }
 
 test("Escape closes a popover inside the flyout before the flyout, then the panel", async ({
@@ -217,4 +220,31 @@ test("a submenu flyout stays attached to its panel under CSS zoom", async ({ pag
       Math.abs((await flyout.boundingBox())!.y - ((await row.boundingBox())!.y - 4 * zoom)),
     )
     .toBeLessThan(1);
+});
+
+test("a zoomed panel and a tall flyout both fit a small window", async ({ page }) => {
+  const viewport = { width: 800, height: 360 };
+  await page.setViewportSize(viewport);
+  await mountSubmenuFixture(page, 1.5, 30);
+  const inside = async (locator: Locator) => {
+    const box = (await locator.boundingBox())!;
+    return (
+      box.x >= 0 &&
+      box.y >= 0 &&
+      box.x + box.width <= viewport.width &&
+      box.y + box.height <= viewport.height
+    );
+  };
+
+  await page.getByRole("button", { name: "Fixture filters" }).click();
+  const panel = page.locator(".kit-filter-dropdown__panel");
+  await expect.poll(() => inside(panel)).toBe(true);
+
+  await page.getByRole("button", { name: /^Labels/ }).click();
+  const flyout = page.getByRole("dialog", { name: "Labels" });
+  await expect.poll(() => inside(flyout)).toBe(true);
+  // The flyout scrolls, so its last control stays reachable.
+  const last = flyout.getByRole("button", { name: "Flyout row 30" });
+  await last.scrollIntoViewIfNeeded();
+  await expect.poll(() => inside(last)).toBe(true);
 });
