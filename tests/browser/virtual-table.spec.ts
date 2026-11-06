@@ -953,3 +953,12 @@ test("an update reads no layout while it renders the table", async ({
     .map((frame) => frame.functionName);
   expect(forced).toEqual([]);
 });
+
+test("resize handles announce the translated resizeLabel", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.getByTestId("virtual-table-localized");
+  await expect(
+    table.getByRole("separator", { name: "Breite der Spalte Projekt ändern" }),
+  ).toBeAttached();
+  await expect(table.getByRole("separator", { name: /^Resize the/ })).toHaveCount(0);
+});
