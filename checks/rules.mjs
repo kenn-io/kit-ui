@@ -1342,7 +1342,11 @@ export function checkLocalDebounce(source) {
 export function checkPinnedRootFontSize(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const re = /(?:^|[\s,}])(?:html|:root)\b[^{}]*\{[^}]*?font-size:\s*([^;}]+)/gm;
+    // html or :root itself, optionally qualified (:root.dark, html[lang]),
+    // anywhere in a selector list. `:root .kit-tab` styles a descendant,
+    // not the root, so a combinator after it does not count.
+    const re =
+      /(?:^|[\s,}])(?:html|:root)\b[^\s{},>+~]*\s*(?:,[^{}]*)?\{[^}]*?font-size:\s*([^;}]+)/gm;
     let match;
     while ((match = re.exec(css)) !== null) {
       const value = match[1].trim();

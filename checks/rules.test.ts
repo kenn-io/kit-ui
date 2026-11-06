@@ -982,6 +982,16 @@ describe("typography rules", () => {
     expect(findings[0]!.message).toContain("var(--font-size-root)");
   });
 
+  test("pinned root: flags a qualified root and a root later in a list", () => {
+    const src = `:root.dark { font-size: 14px; }\n.a, html { font-size: 12px; }`;
+    expect(checkSource(src, "app.css", ["pinned-root-font-size"])).toHaveLength(2);
+  });
+
+  test("pinned root: ignores descendants styled under :root", () => {
+    const ok = `:root .kit-top-bar .kit-top-bar__tab { padding: 3px; font-size: 12.5px; }\nhtml.dark > .x { font-size: 12px; }`;
+    expect(checkSource(ok, "app.css", ["pinned-root-font-size"])).toHaveLength(0);
+  });
+
   test("pinned root: does not match class names containing html", () => {
     const ok = `.html-view { font-size: 12px; }`;
     expect(checkSource(ok, "app.css", ["pinned-root-font-size"])).toHaveLength(0);
