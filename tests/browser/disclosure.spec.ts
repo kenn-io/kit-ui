@@ -50,7 +50,7 @@ test("a matching URL hash opens the disclosure", async ({ page }) => {
 });
 
 test("an exclusive accordion keeps one item open", async ({ page }) => {
-  const items = page.getByTestId("accordion-exclusive").locator("details");
+  const items = page.getByTestId("accordion-exclusive").locator(".kit-accordion > details");
   await expect(items).toHaveCount(3);
 
   await items.nth(0).locator("summary").click();
@@ -65,8 +65,20 @@ test("an exclusive accordion keeps one item open", async ({ page }) => {
   expect(names[0]).toMatch(/^kit-accordion-/);
 });
 
+test("a disclosure nested in an accordion item leaves its parent open", async ({ page }) => {
+  const accordion = page.getByTestId("accordion-exclusive");
+  const security = accordion.locator("details").filter({ hasText: "Security" }).first();
+  const advanced = security.locator("details");
+
+  await security.locator("> summary").click();
+  await advanced.locator("summary").click();
+  await expect(advanced).toHaveAttribute("open");
+  await expect(security).toHaveAttribute("open");
+  await expect(advanced).not.toHaveAttribute("name");
+});
+
 test("accordion items share the frame and are divided by rules", async ({ page }) => {
-  const items = page.getByTestId("accordion-exclusive").locator("details");
+  const items = page.getByTestId("accordion-exclusive").locator(".kit-accordion > details");
   await expect(items.nth(0)).toHaveCSS("border-top-width", "0px");
   await expect(items.nth(1)).not.toHaveCSS("border-top-width", "0px");
 });
