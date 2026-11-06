@@ -30,7 +30,7 @@
 
 <DemoSection
   title="With a panel"
-  description="A tab list with roving focus: arrow keys move between enabled tabs and select them, Home and End jump to the ends. The children snippet renders the selected tab's panel, labelled by its tab."
+  description="Arrow keys select enabled tabs; Home and End jump to the first and last. The children snippet supplies the panel, labelled by the selected tab."
   code={`<Tabs tabs={tabs} bind:value ariaLabel="Pull request detail">
   {#snippet children(id)}
     {#if id === "files"}<FileList />{:else}<Conversation />{/if}
