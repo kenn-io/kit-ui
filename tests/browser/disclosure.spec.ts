@@ -91,3 +91,21 @@ test("the summary has a visible keyboard focus ring", async ({ page }) => {
   await expect(summary).toBeFocused();
   await expect(summary).not.toHaveCSS("outline-style", "none");
 });
+
+test("a card nested in a plain disclosure keeps its own card styles", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { mountNestedDisclosure } =
+      await import("/tests/browser/fixtures/mount-nested-disclosure.ts");
+    mountNestedDisclosure();
+  });
+  const styles = (selector: string) =>
+    page.locator(selector).evaluate((details) => {
+      const summary = details.querySelector(":scope > summary")!;
+      const content = details.querySelector(":scope > .kit-disclosure__content")!;
+      return {
+        summaryPadding: getComputedStyle(summary).padding,
+        contentPadding: getComputedStyle(content).padding,
+      };
+    });
+  expect(await styles(".fixture-inner")).toEqual(await styles(".fixture-reference"));
+});
