@@ -35,6 +35,10 @@ interface Props {
      * breakdown of the last fetch. Replaces the label's default timestamp
      * `title`, so include the timestamp in the snippet if it still matters. */
     ageTooltip?: Snippet | undefined;
+    /** `sm` sets a smaller, quiet glyph tight against the status text, so a
+     * page toolbar's refresh reads as part of its "Updated ..." label and
+     * not as a second copy of a top-bar Refresh button. */
+    size?: "sm" | "md";
 }
 declare const RefreshControl: import("svelte").Component<Props, {}, "">;
 type RefreshControl = ReturnType<typeof RefreshControl>;

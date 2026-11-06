@@ -69,6 +69,16 @@
 </DemoSection>
 
 <DemoSection
+  title="Small, in a page toolbar"
+  description="size=&quot;sm&quot; sets a smaller, quiet glyph tight against the status text, so a page toolbar's refresh reads as part of its &quot;Updated ...&quot; label and not as a second copy of a top-bar Refresh button."
+  code={`<RefreshControl size="sm" {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh" />`}
+>
+  <div data-testid="refresh-control-sm">
+    <RefreshControl size="sm" {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh" />
+  </div>
+</DemoSection>
+
+<DemoSection
   title="Fixed-width age label"
   description="ageWidthSamples reserves the widest string the label can show, so swapping variants never shifts the element after the control. Text longer than every sample clips with an ellipsis instead of growing the box."
   code={`<RefreshControl
