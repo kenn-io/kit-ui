@@ -72,5 +72,19 @@ interface FilterDropdownItem {
   count?: number; // right-aligned count
   disabled?: boolean;
   closeOnSelect?: boolean; // e.g. sort menus
+  detail?: string; // value summary at the row's end, e.g. "2 selected"
+  submenu?: Snippet; // flyout content; the row opens it instead of calling onSelect
 }
 ```
+
+## Submenu rows
+
+An item with `submenu` shows a chevron and opens its snippet in a flyout
+beside the panel, right side first, flipping left when the viewport is too
+narrow. The row exposes `aria-haspopup="dialog"` and `aria-expanded`; the
+flyout is a `role="dialog"` named by the row label. Opening moves focus to the
+flyout's first tabbable control. Clicking the row again, Escape, or ArrowLeft
+outside a text field closes the flyout and returns focus to the row; a second
+Escape closes the panel. ArrowRight on the row opens it. Clicks inside the
+flyout count as inside the dropdown. Its `onSelect` is never called, so pass a
+no-op. The snippet owns its own selection model.

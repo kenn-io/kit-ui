@@ -1,3 +1,4 @@
+import type { Snippet } from "svelte";
 export interface FilterDropdownItem {
     id: string;
     label: string;
@@ -7,6 +8,11 @@ export interface FilterDropdownItem {
     count?: number;
     disabled?: boolean;
     closeOnSelect?: boolean;
+    /** Short value summary at the row's end, such as "2 selected". */
+    detail?: string;
+    /** Content for a flyout beside the panel. A row with a submenu opens
+     * the flyout instead of calling `onSelect`. */
+    submenu?: Snippet;
     onSelect: () => void;
 }
 export interface FilterDropdownSection {

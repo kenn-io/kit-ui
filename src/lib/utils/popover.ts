@@ -17,12 +17,21 @@ export interface DismissableOptions {
   escapeFocus?: () => HTMLElement | null | undefined;
 }
 
+// Open dismissables, oldest first. Every one listens on the document, and
+// listeners there run in the order they were added, so the outermost popover
+// would hear Escape first. Only the newest answers instead, which closes a
+// nested popover (a select inside a flyout) before the one around it.
+const escapeLayers: object[] = [];
+
 /**
  * Dismiss on `mousedown` outside the owning elements (mousedown, not click:
  * the popover should yield at press, and a press-inside-release-outside
  * drag should not dismiss) or on Escape anywhere in the document.
  */
 export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions): () => void {
+  const layer = {};
+  escapeLayers.push(layer);
+
   function handleMousedown(event: MouseEvent): void {
     const target = event.target as Node;
     if (owners().some((el) => el?.contains(target))) return;
@@ -31,6 +40,7 @@ export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions
 
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape" || event.defaultPrevented) return;
+    if (escapeLayers.at(-1) !== layer) return;
     // Claim the key so enclosing layers (an overlay's escapeCloses) leave
     // their surface open — Escape peels one layer per press.
     event.preventDefault();
@@ -41,6 +51,7 @@ export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions
   document.addEventListener("mousedown", handleMousedown);
   document.addEventListener("keydown", handleKeydown);
   return () => {
+    escapeLayers.splice(escapeLayers.indexOf(layer), 1);
     document.removeEventListener("mousedown", handleMousedown);
     document.removeEventListener("keydown", handleKeydown);
   };
