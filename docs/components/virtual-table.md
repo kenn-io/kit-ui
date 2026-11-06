@@ -150,9 +150,10 @@ in the table's box:
   is wider than its box and scrolls sideways.
 - **The other columns.** They start at their content's width, measured as
   above, so the spare width goes to the filling column instead of being
-  spread over every column. When their content is too wide for the box with
-  the filling column at its `minWidth`, every column takes its share of the
-  box instead, as without `fill`. A `width` on them still sets their
+  spread over every column. When those widths, each within the column's
+  `minWidth` and `maxWidth`, are too wide for the box with the filling
+  column at its `minWidth`, every column takes its share of the box
+  instead, as without `fill`. A `width` on them still sets their
   starting width.
 - **Resizing.** The filling column has no resize handle, so it cannot be
   resized or fitted. Resizing another column gives width to it or takes

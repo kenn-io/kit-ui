@@ -871,8 +871,8 @@ test("moving fill to another column moves the spare width to it", async ({ page 
 test("the other columns keep their content's width when they fit beside the fill column's minWidth", async ({
   page,
 }) => {
-  // In a wide box Name starts at its content's width once Kind takes the
-  // spare width.
+  // In a wide box Name starts at its content's width, capped at its
+  // maxWidth, once Kind takes the spare width.
   await gotoPage(page, "virtual-table");
   const fill = page.getByRole("checkbox", { name: "Let Kind take the spare width" });
   let table = filesTable(page);
@@ -883,8 +883,10 @@ test("the other columns keep their content's width when they fit beside the fill
   const wide = await columnWidths(table);
 
   // A box that leaves Kind 40px beside the other columns at those widths:
-  // more than Kind's 20px minimum, less than its longest word.
-  await gotoPage(page, "virtual-table");
+  // more than Kind's 20px minimum, less than its longest word, and far less
+  // than Name's content beyond its maxWidth. A reload starts the page
+  // over; navigating to its own hash would keep Kind filling.
+  await page.reload();
   table = filesTable(page);
   await table.scrollIntoViewIfNeeded();
   await expect(dataRows(table).first()).toContainText("docs/guides/");

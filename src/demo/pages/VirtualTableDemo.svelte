@@ -282,7 +282,7 @@
 
 <DemoSection
   title="A column that takes the spare width"
-  description="Set fill on Name's TableHeaderCell. The other columns start at their content's width. Narrowing another column widens Name; in a narrow box, Name stops at minWidth and the table scrolls sideways. Without fill, the last column takes the spare width. Moving fill to another column moves the spare width with it, and a table of one filling column keeps its minWidth too."
+  description="Set fill on Name's TableHeaderCell. The other columns start at their content's width. Narrowing another column widens Name; in a narrow box, Name stops at minWidth and the table scrolls sideways. Without fill, the last column takes the spare width. Moving fill to another column moves the spare width with it, and Name's maxWidth of 240 applies once Kind fills. A table of one filling column keeps its minWidth too."
   code={`<VirtualTable items={sorter.sort(files)} rowKey={(f) => f.id} ariaLabel="Files">
   {#snippet header()}
     <TableHeaderCell label="Name" sort={sorter} column="name" fill minWidth={160} />
@@ -304,6 +304,7 @@
           column="name"
           fill={!kindFills}
           minWidth={160}
+          maxWidth={240}
         />
         <TableHeaderCell label="Kind" sort={fileSorter} column="kind" fill={kindFills} />
         <TableHeaderCell label="Size" numeric sort={fileSorter} column="size" />

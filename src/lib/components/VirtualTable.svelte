@@ -276,9 +276,17 @@
       table.style.width = "max-content";
       const natural = measure();
       table.style.width = "";
-      // The filling column needs only its minimum: in the live table its
-      // content breaks to fit.
-      const needed = sum(natural) - natural[filler]! + limitsOf(cells[filler]!).min;
+      // Each column needs the width it will get, not its content's: the
+      // filling column its minimum, the others their stored or set width,
+      // or their content's width within their limits. Their text breaks to
+      // fit in the live table.
+      const needed = sum(
+        cells.map((cell, i) =>
+          i === filler
+            ? limitsOf(cell).min
+            : (widths.get(keyOf(cell)) ?? clampTo(cell, explicit(cell) ?? natural[i]!)),
+        ),
+      );
       if (needed <= innerWidth(table.parentElement!)) measured = natural;
     }
     measured ??= measure();
