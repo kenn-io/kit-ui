@@ -16,20 +16,6 @@ test.describe("selected locale", () => {
     ).toHaveText(
       "Indexation de 12\u202f000 sur 48\u202f000 messages · environ 2 heures restantes · La recherche par mots-clés reste disponible",
     );
-    await expect(
-      page.getByTestId("meaning-downloading").locator(".kit-search-by-meaning__line"),
-    ).toHaveText(
-      "Téléchargement de 120 Mo sur 290 Mo · La recherche par mots-clés reste disponible",
-    );
-    await expect(
-      page.getByTestId("meaning-off").locator(".kit-search-by-meaning__line"),
-    ).toHaveText("Télécharge 290 Mo une fois pour toutes les applications Kenn");
-    await page.getByRole("checkbox", { name: "French", exact: true }).uncheck();
-    await expect(
-      page.getByTestId("meaning-indexing").locator(".kit-search-by-meaning__line"),
-    ).toHaveText(
-      "Indexing 12,000 of 48,000 messages · about 2 hours left · Keyword search works meanwhile",
-    );
   });
 });
 

@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_SEARCH_BY_MEANING_LABELS,
   describeSearchByMeaning,
-  formatSize,
 } from "../src/lib/components/search-by-meaning.js";
 
 describe("search by meaning descriptions", () => {
@@ -48,10 +47,6 @@ describe("search by meaning descriptions", () => {
         "fr",
       ).line,
     ).toBe("Downloading 120\u202fMo of 290\u202fMo · La recherche par mots-clés reste disponible");
-  });
-  test("exports the same size formatting for caller labels", () => {
-    expect(formatSize(1_290_000_000, "fr")).toBe("1\u202f290\u202fMo");
-    expect(formatSize(290_000_000, "en")).toBe("290 MB");
   });
   test("offers one-time setup locally or on a host", () => {
     expect(

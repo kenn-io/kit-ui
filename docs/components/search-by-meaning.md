@@ -38,7 +38,7 @@ Callers select `itemNoun` for `itemCount` in `ollama-other` or `total` in `index
 
 Sizes use decimal megabytes. Pass `locale="fr"` to `SearchByMeaningRow` to format counts, sizes, and duration units in the app's selected language. Omitting `locale` uses the runtime locale. Translated labels and `itemNoun` remain the caller's responsibility. Durations below one minute read "under a minute"; below 90 minutes use rounded minutes, and longer durations use rounded hours.
 
-The exported `formatSize(bytes, locale?)` uses the same decimal megabyte formatting for caller labels, such as `formatSize(290_000_000, "fr")` returning `"290 Mo"`. The internal `describeSearchByMeaning(state, itemNoun, labels, locale?)` accepts the locale as its fourth argument.
+The exported `formatSize(bytes, locale?)` uses the same decimal megabyte formatting for caller labels. It always displays megabytes, with the unit and spacing supplied by `Intl.NumberFormat` for the locale. The internal `describeSearchByMeaning(state, itemNoun, labels, locale?)` accepts the locale as its fourth argument.
 
 ## Labels
 

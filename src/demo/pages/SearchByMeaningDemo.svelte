@@ -42,6 +42,15 @@
     french
       ? {
           name: "Recherche par sens",
+          off: "Désactivée",
+          on: "Activée",
+          ollama: "Activée · Ollama",
+          turningOn: "Activation",
+          useBuiltIn: "Utiliser le serveur intégré",
+          downloaded: "Déjà sur cet ordinateur",
+          keepsIndex: "Le changement conserve votre index",
+          underMinute: "moins d’une minute",
+          progress: "Configuration de la recherche par sens",
           indexing: "Indexation de {done} sur {total} {items}",
           aboutTime: "environ {time}",
           timeLeft: "{time} restantes",

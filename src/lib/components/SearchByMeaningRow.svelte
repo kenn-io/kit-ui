@@ -14,7 +14,7 @@
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
     /** Locale for numbers, download sizes, and durations; defaults to the runtime locale. */
-    locale?: string;
+    locale?: string | undefined;
     /** Show status only, with no button, for viewers who can't change it. */
     readonly?: boolean;
     onturnon: () => void;
