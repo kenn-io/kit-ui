@@ -733,8 +733,29 @@ test("a header's width and limits size its column", async ({ page }) => {
   await page.mouse.move(box.x - 400, box.y + box.height / 2, { steps: 5 });
   await page.mouse.up();
   expect((await columnWidths(table))[1]).toBe(80);
-  // The app is told the widths after a resize.
-  await expect(page.locator(".saved-widths")).toContainText(/Saved widths: 90, 80, /);
+  // The app is told which column a person resized, by the header's
+  // `column`, and its width.
+  await expect(page.getByTestId("note-resize")).toHaveText("Last resized: project column, 80px");
+});
+
+test("a column nobody resized follows its header's width; a resized one keeps its own", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = notesTable(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const wider = page.getByRole("checkbox", { name: "Start the ID column at 120px" });
+  await wider.check();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(120);
+  await wider.uncheck();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(90);
+  // Once a person resizes it, the header's width no longer moves it.
+  await table.getByRole("separator", { name: "Resize the ID column" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByTestId("note-resize")).toHaveText("Last resized: id column, 114px");
+  await wider.check();
+  await page.waitForTimeout(100);
+  expect((await columnWidths(table))[0]).toBe(114);
 });
 
 test("fitColumn supplies the content width for a fit", async ({ page }) => {

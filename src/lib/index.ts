@@ -153,6 +153,7 @@ export { default as Table } from "./components/Table.svelte";
 export { default as Tabs } from "./components/Tabs.svelte";
 export type { TabItem, TabsActivation } from "./components/Tabs.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
+export type { ColumnResize } from "./components/table-columns.js";
 export { TableSort } from "./components/table-sort.svelte.js";
 export {
   compareSortValues,

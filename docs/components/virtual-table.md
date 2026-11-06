@@ -38,24 +38,24 @@ whose rows are options, not cells.
 
 ## Props
 
-| Prop                   | Type                                      | Default                    | Notes                                                                                                                                                                                                                                                                         |
-| ---------------------- | ----------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `items`                | `T[]`                                     | required                   | Every row's data, in display order                                                                                                                                                                                                                                            |
-| `header`               | `Snippet`                                 | required                   | `<TableHeaderCell>` elements, as in `Table`                                                                                                                                                                                                                                   |
-| `row`                  | `Snippet<[T, number]>`                    | required                   | `(item, index)`; renders exactly one `<tr>`                                                                                                                                                                                                                                   |
-| `rowKey`               | `(item: T, index: number) => unknown`     | index                      | Stable row identity: keys the rendered rows and the measured heights, so heights survive inserts, removals, reorders, and appends                                                                                                                                             |
-| `empty`                | `Snippet`                                 | —                          | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead                                                                                                                                                                                     |
-| `scroll`               | `"self" \| "page"`                        | `"self"`                   | What scrolls the rows, as on `Table`                                                                                                                                                                                                                                          |
-| `scrollElement`        | `() => HTMLElement \| null`               | nearest scrolling ancestor | With `scroll="page"`, the element that scrolls the table                                                                                                                                                                                                                      |
-| `estimateRowHeight`    | `number`                                  | `36`                       | Height in px of rows not yet rendered. Set it near the real row height: it sizes the scrollbar and places unmeasured rows. The window follows measured heights one frame later, so an estimate far above the real height, with little overscan, can show a gap for that frame |
-| `overscan`             | `number`                                  | `8`                        | Rows rendered beyond each edge of the visible area. They also cover the frame before the window follows newly measured heights                                                                                                                                                |
-| `stickyHeader`         | `boolean`                                 | `true`                     | As on `Table`                                                                                                                                                                                                                                                                 |
-| `zebra`                | `boolean`                                 | `true`                     | As on `Table`; stripes follow the row index, not the rendered position                                                                                                                                                                                                        |
-| `ariaLabel`            | `string`                                  | —                          |                                                                                                                                                                                                                                                                               |
-| `unsorted`             | `boolean`                                 | `false`                    | As on `Table`; kit-ui-check reads it on `VirtualTable` too                                                                                                                                                                                                                    |
-| `fitColumn`            | `(column: number) => number \| undefined` | —                          | Content width in px for fitting a column; undefined measures sampled rows                                                                                                                                                                                                     |
-| `oncolumnwidthschange` | `(widths: number[]) => void`              | —                          | Every column's width, in order, after a resize or fit                                                                                                                                                                                                                         |
-| `class`                | `string`                                  | `""`                       | Applied to the scroll wrapper                                                                                                                                                                                                                                                 |
+| Prop                | Type                                      | Default                    | Notes                                                                                                                                                                                                                                                                         |
+| ------------------- | ----------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`             | `T[]`                                     | required                   | Every row's data, in display order                                                                                                                                                                                                                                            |
+| `header`            | `Snippet`                                 | required                   | `<TableHeaderCell>` elements, as in `Table`                                                                                                                                                                                                                                   |
+| `row`               | `Snippet<[T, number]>`                    | required                   | `(item, index)`; renders exactly one `<tr>`                                                                                                                                                                                                                                   |
+| `rowKey`            | `(item: T, index: number) => unknown`     | index                      | Stable row identity: keys the rendered rows and the measured heights, so heights survive inserts, removals, reorders, and appends                                                                                                                                             |
+| `empty`             | `Snippet`                                 | —                          | A `<tr>` shown when `items` is empty; a window scrolled out of view shows no rows instead                                                                                                                                                                                     |
+| `scroll`            | `"self" \| "page"`                        | `"self"`                   | What scrolls the rows, as on `Table`                                                                                                                                                                                                                                          |
+| `scrollElement`     | `() => HTMLElement \| null`               | nearest scrolling ancestor | With `scroll="page"`, the element that scrolls the table                                                                                                                                                                                                                      |
+| `estimateRowHeight` | `number`                                  | `36`                       | Height in px of rows not yet rendered. Set it near the real row height: it sizes the scrollbar and places unmeasured rows. The window follows measured heights one frame later, so an estimate far above the real height, with little overscan, can show a gap for that frame |
+| `overscan`          | `number`                                  | `8`                        | Rows rendered beyond each edge of the visible area. They also cover the frame before the window follows newly measured heights                                                                                                                                                |
+| `stickyHeader`      | `boolean`                                 | `true`                     | As on `Table`                                                                                                                                                                                                                                                                 |
+| `zebra`             | `boolean`                                 | `true`                     | As on `Table`; stripes follow the row index, not the rendered position                                                                                                                                                                                                        |
+| `ariaLabel`         | `string`                                  | —                          |                                                                                                                                                                                                                                                                               |
+| `unsorted`          | `boolean`                                 | `false`                    | As on `Table`; kit-ui-check reads it on `VirtualTable` too                                                                                                                                                                                                                    |
+| `fitColumn`         | `(column: number) => number \| undefined` | —                          | Content width in px for fitting a column; undefined measures sampled rows                                                                                                                                                                                                     |
+| `oncolumnresize`    | `(change: ColumnResize) => void`          | —                          | A person set a column's width (drag or arrow key that changed it, or a fit): `{ column, index, width }`. Automatic sizing never calls it                                                                                                                                      |
+| `class`             | `string`                                  | `""`                       | Applied to the scroll wrapper                                                                                                                                                                                                                                                 |
 
 ## Scrolling
 
@@ -108,10 +108,17 @@ table: each column has a width, kept while the rows scroll and change, and
 people resize it or fit it to its content.
 
 - **Starting width.** A `TableHeaderCell` with `width` starts at that width.
-  The others are measured once, in a hidden copy of the table holding the
-  rows on screen and up to 50 rows sampled evenly across the list (first and
-  last included). The copy sits in its own `<form>` and is removed before
-  paint, so its copied form fields never join the app's form or radio groups.
+  The others are measured in a hidden copy of the table holding the rows on
+  screen and up to 50 rows sampled evenly across the list (first and last
+  included). The copy sits in its own `<form>` and is removed before paint,
+  so its copied form fields never join the app's form or radio groups.
+- **Following the table's width.** When the table's box changes width (the
+  window or a panel resizing), every column nobody resized or fitted is
+  sized again for the new width: a header's `width` is read again, and the
+  others are measured again. Columns a person resized or fitted keep their
+  widths. Nothing is rebuilt, so measured row heights and the scroll
+  position stay. A column nobody resized also follows its header's `width`
+  when the app changes it.
 - **Resizing.** Each header cell's right edge has a 1px resize handle
   ([SplitResizeHandle](split-resize-handle.md) with `variant="column"`):
   drag it, or focus it and press the arrow keys. `resizable={false}` removes
@@ -124,8 +131,21 @@ people resize it or fit it to its content.
   from what the app knows about its data. The header cell's padding is added.
 - **Limits.** `minWidth` (default 20) and `maxWidth` (default 1200) bound
   resizing and fitting, and a measured starting width.
-- **Saving.** After a resize or fit, `oncolumnwidthschange(widths)` reports
-  every column's width in order; pass them back as `width` to restore them.
+- **Saving.** When a person sets a column's width, `oncolumnresize` reports
+  `{ column, index, width }`: `column` is the header's `column` (or its
+  label), `width` the new border-box width in px. It fires for a drag or
+  arrow key that changed the width and for a fit; a click or drag that ends
+  where it started, an arrow key at a limit, and automatic sizing report
+  nothing. Keep just that column and pass it back as `width` to restore it:
+
+  ```svelte
+  <VirtualTable oncolumnresize={({ column, width }) => (kept[column] = width)} …>
+    {#snippet header()}
+      <TableHeaderCell label="File" column="file" width={kept.file} />
+    {/snippet}
+  </VirtualTable>
+  ```
+
 - **Filling.** When the widths add up to less than the table's box, the last
   column takes the rest. When they add up to more, the table scrolls
   sideways.

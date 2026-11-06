@@ -8,6 +8,7 @@
     TableHeaderCell,
     TableSort,
     VirtualTable,
+    type ColumnResize,
   } from "../../lib/index.js";
   import { SvelteSet } from "svelte/reactivity";
   import DemoSection from "../DemoSection.svelte";
@@ -101,9 +102,10 @@
   const sortedNotes = $derived(noteSorter.sort(notes));
   const expanded = new SvelteSet<number>();
   const toggle = (id: number) => (expanded.has(id) ? expanded.delete(id) : expanded.add(id));
-  let savedWidths = $state<number[]>([]);
+  let noteResize = $state<ColumnResize>();
   let favorite = $state(0);
   let showLines = $state(false);
+  let wideId = $state(false);
   // The app knows its IDs: at most "#1999", about 40px of digits.
   const fitNoteColumn = (column: number) => (column === 0 ? 40 : undefined);
   let showBranch = $state(true);
@@ -114,6 +116,53 @@
     { key: "id" },
   );
   const pageRows = $derived(pageSorter.sort(reviews.slice(0, 2000)));
+
+  interface EditedFile {
+    id: number;
+    project: string;
+    path: string;
+    edits: { tool: string; session: string; ago: string }[];
+  }
+
+  const tools = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
+  const folders = ["src/lib/components", "frontend/src/routes", "internal/server", "docs"];
+  function editedFile(id: number): EditedFile {
+    return {
+      id,
+      project: projects[id % projects.length]!,
+      // Every ninth path is long enough to wrap in a narrow File column.
+      path:
+        id % 9 === 0
+          ? `${folders[id % 4]}/a/deeply/nested/folder/that/keeps/going/for/a/while/file-${id}.ts`
+          : `${folders[id % 4]}/file-${id}.ts`,
+      // One to eight edits, so open files differ in height.
+      edits: Array.from({ length: ((id * 5) % 8) + 1 }, (_, j) => ({
+        tool: tools[(id + j) % tools.length]!,
+        session: `session-${((id * 31 + j * 7) % 9000) + 1000}`,
+        ago: `${(id % 50) + j + 1}m ago`,
+      })),
+    };
+  }
+
+  let files = $state(Array.from({ length: 200 }, (_, i) => editedFile(i)));
+  let nextFile = 200;
+  const openFiles = new SvelteSet<number>();
+  const toggleFile = (id: number) => (openFiles.has(id) ? openFiles.delete(id) : openFiles.add(id));
+  // An open file's edits are a full-width row of their own right below it.
+  type FileRow = { kind: "file" | "edits"; file: EditedFile };
+  const fileRows = $derived(
+    files.flatMap((file): FileRow[] =>
+      openFiles.has(file.id)
+        ? [
+            { kind: "file", file },
+            { kind: "edits", file },
+          ]
+        : [{ kind: "file", file }],
+    ),
+  );
+  let lastResize = $state<ColumnResize>();
+  // How many times the table reported a resize, for the browser tests.
+  let resizeReports = $state(0);
 </script>
 
 <DemoSection
@@ -177,7 +226,7 @@
 
 <DemoSection
   title="Rows of different heights"
-  description="Each note runs from one to five lines, and Details opens a row in place. Every rendered row is measured when it renders and again whenever it changes height, so the rows below it move down and the scrollbar stays accurate. The ID column starts 90px wide and fits to a width the app supplies; resized widths are reported back to the app."
+  description="Each note runs from one to five lines, and Details opens a row in place. Every rendered row is measured when it renders and again whenever it changes height, so the rows below it move down and the scrollbar stays accurate. The ID column starts at the header's width (90px) and follows it when the app changes it, until someone resizes the column; it fits to a width the app supplies. The column a person resizes is reported back to the app."
   code={`<VirtualTable items={notes} rowKey={(n) => n.id} estimateRowHeight={60} ariaLabel="Review notes">
   {#snippet row(note)}
     <tr>
@@ -188,6 +237,7 @@
 </VirtualTable>`}
 >
   <Checkbox bind:checked={showLines} label="Show the Lines column" />
+  <Checkbox bind:checked={wideId} label="Start the ID column at 120px" />
   <div class="host">
     <VirtualTable
       items={sortedNotes}
@@ -195,10 +245,16 @@
       estimateRowHeight={60}
       ariaLabel="Review notes"
       fitColumn={fitNoteColumn}
-      oncolumnwidthschange={(widths) => (savedWidths = widths)}
+      oncolumnresize={(change) => (noteResize = change)}
     >
       {#snippet header()}
-        <TableHeaderCell label="ID" numeric sort={noteSorter} column="id" width={90} />
+        <TableHeaderCell
+          label="ID"
+          numeric
+          sort={noteSorter}
+          column="id"
+          width={wideId ? 120 : 90}
+        />
         <TableHeaderCell label="Project" sort={noteSorter} column="project" minWidth={80} />
         <TableHeaderCell label="Note" sort={noteSorter} column="lines" />
         {#if showLines}
@@ -243,11 +299,7 @@
       {/snippet}
     </VirtualTable>
   </div>
-  <p class="saved-widths" aria-live="polite">
-    Saved widths: {savedWidths.length
-      ? savedWidths.map((w) => Math.round(w)).join(", ")
-      : "none yet"}
-  </p>
+  {@render resizeReadout(noteResize, "note-resize")}
 </DemoSection>
 
 <DemoSection
@@ -341,6 +393,106 @@ table.refresh();`}
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Expandable rows"
+  description="Open a file to show its edits in a full-width row below it. Measured heights are kept by rowKey, so opening, closing, adding, or loading rows never sends the rows already measured back to the estimate, and the rows on screen stay put. Resize the window: columns nobody resized refit to the new width, while a column you dragged or fitted keeps its width, without rebuilding the table. oncolumnresize names the column a person changed."
+  code={`<VirtualTable
+  items={rows}
+  rowKey={(row) => \`\${row.kind}:\${row.file.id}\`}
+  scroll="page"
+  estimateRowHeight={33}
+  oncolumnresize={({ column, width }) => keep(column, width)}
+  …
+>`}
+>
+  <div class="file-actions">
+    <Button
+      label="Add a file at the top"
+      size="sm"
+      onclick={() => (files = [editedFile(nextFile++), ...files])}
+    />
+    <Button
+      label="Load 100 more"
+      size="sm"
+      onclick={() => {
+        files = [...files, ...Array.from({ length: 100 }, () => editedFile(nextFile++))];
+      }}
+    />
+    <span class="filter-count">{files.length.toLocaleString()} files</span>
+  </div>
+  <div class="flow">
+    <VirtualTable
+      items={fileRows}
+      rowKey={(row) => `${row.kind}:${row.file.id}`}
+      scroll="page"
+      estimateRowHeight={33}
+      zebra={false}
+      unsorted
+      ariaLabel="Recently edited files"
+      oncolumnresize={(change) => {
+        lastResize = change;
+        resizeReports += 1;
+      }}
+    >
+      {#snippet header()}
+        <TableHeaderCell label="Project" minWidth={80} />
+        <TableHeaderCell label="File" minWidth={120} />
+        <TableHeaderCell label="Edits" numeric minWidth={48} />
+        <TableHeaderCell label="Last edit" numeric minWidth={64} />
+      {/snippet}
+      {#snippet row(item)}
+        {@const file = item.file}
+        {#if item.kind === "file"}
+          {@const open = openFiles.has(file.id)}
+          <tr class="file-row" class:file-row--open={open} onclick={() => toggleFile(file.id)}>
+            <td>{file.project}</td>
+            <td>
+              <!-- The row toggles on click; the button gives keyboard and
+                   screen reader users the same toggle. -->
+              <button
+                type="button"
+                class="file-path"
+                aria-expanded={open}
+                onclick={(event) => {
+                  event.stopPropagation();
+                  toggleFile(file.id);
+                }}>{file.path}</button
+              >
+            </td>
+            <td class="num">{file.edits.length}</td>
+            <td class="num">{file.edits[0]!.ago}</td>
+          </tr>
+        {:else}
+          <tr class="edits-row">
+            <td colspan="4">
+              <ul class="edits">
+                {#each file.edits as edit, j (j)}
+                  <li>
+                    <span class="edit-tool">{edit.tool}</span>
+                    <span class="edit-session">{edit.session}</span>
+                    <span class="edit-ago">{edit.ago}</span>
+                  </li>
+                {/each}
+              </ul>
+            </td>
+          </tr>
+        {/if}
+      {/snippet}
+    </VirtualTable>
+  </div>
+  {@render resizeReadout(lastResize, "file-resize", resizeReports)}
+</DemoSection>
+
+{#snippet resizeReadout(change: ColumnResize | undefined, id: string, reports = 0)}
+  <p class="resize-readout" data-testid={id} data-reports={reports} aria-live="polite">
+    {#if change}
+      Last resized: {change.column} column, {Math.round(change.width)}px
+    {:else}
+      No column resized yet
+    {/if}
+  </p>
+{/snippet}
+
 <style>
   .flow {
     width: 100%;
@@ -370,10 +522,72 @@ table.refresh();`}
     font-size: var(--font-size-xs);
   }
 
-  .saved-widths {
+  .resize-readout {
     margin: 0;
     color: var(--text-muted);
     font-size: var(--font-size-xs);
+  }
+
+  .file-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .file-row {
+    cursor: pointer;
+  }
+
+  .file-row--open > td {
+    background: var(--bg-surface-hover);
+  }
+
+  .file-path {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--text-primary);
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  .edits-row > td {
+    background: var(--bg-inset);
+  }
+
+  .edits {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-2) 0 var(--space-2) var(--space-6);
+    list-style: none;
+  }
+
+  .edits li {
+    display: flex;
+    gap: var(--space-5);
+    font-size: var(--font-size-xs);
+  }
+
+  .edit-tool {
+    min-width: 88px;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--text-primary);
+  }
+
+  .edit-session {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+  }
+
+  .edit-ago {
+    margin-left: auto;
+    color: var(--text-muted);
   }
 
   .details {
