@@ -58,6 +58,16 @@ The quieter `--selected-bg` / `--selected-edge` pair marks a chosen control
 without lifting it, and `--selected-list-bg` fills the current row of a list
 that already sits on the surface (the SettingsLayout nav).
 
+## Icons
+
+theme.css sets each lucide icon's stroke by its rendered size (8px through
+36px), so every size draws about the same 1.1-1.2px line whatever
+`strokeWidth` the call site passed. The rules sit at the lowest
+specificity: an identity theme's `--icon-stroke` and any explicit app rule
+win. Size icons by context: 12px in chips, pills, and dense rows; 14px in
+toolbars, menus, and icon buttons; 16px in the top bar; 24px for empty
+states. Pass `strokeWidth={0}` for a filled mark.
+
 ## Typography
 
 One semantic scale for every form factor. Tokens are **rem** ("px-thinking,
@@ -174,7 +184,7 @@ and each call site keeps its own tuned default until a theme opts in.
 | `--label-transform`                            | `uppercase` (fallback)                                                             | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                                                                                                                                                                                                                |
 | `--color-label-fill` / `--color-label-ink-mix` | `100%` (fallback)                                                                  | ColorLabel solid vs tinted pill (see [ColorLabel](components/color-label.md#theming))                                                                                                                                                                                                                                                 |
 | `--line-height-prose`                          | `1.6` (fallback)                                                                   | comment/markdown body leading                                                                                                                                                                                                                                                                                                         |
-| `--icon-stroke`                                | `2` (fallback)                                                                     | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                                                                                                                                                                                                   |
+| `--icon-stroke`                                | `2` (fallback)                                                                     | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only; the default pair picks the stroke per icon size instead (see Icons)                                                                                                                                                                              |
 | `--radius-dot`                                 | `50%` (fallback)                                                                   | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities                                                                                                                                                                                    |
 | `--radius-toggle`                              | `999px` (fallback)                                                                 | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                                                                                                                                                                                                          |
 | `--overlay-filter`                             | `none` (fallback)                                                                  | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                                                                                                                                                                                                       |

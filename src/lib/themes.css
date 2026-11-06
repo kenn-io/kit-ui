@@ -767,8 +767,9 @@
 /* Icon line weight follows the theme's type: hairline strokes next to
  * Lora's serifs, thick marker strokes next to zine's poster weights. CSS
  * stroke-width beats the SVG presentation attribute, so under an identity
- * theme every lucide icon is unified to the theme's weight (per-icon
- * strokeWidth props apply only in the default pair). */
+ * theme every lucide icon is unified to the theme's weight. The default
+ * pair instead picks the stroke per icon size (theme.css), so every size
+ * draws the same line. */
 :root[data-kit-theme] svg.lucide {
   stroke-width: var(--icon-stroke, 2);
 }
