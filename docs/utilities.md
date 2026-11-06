@@ -267,7 +267,13 @@ and wraps focus to the other end, as Headless UI and Floating UI do.
 ## Formatters
 
 ```ts
-import { formatDuration, formatNumber, formatTokenCount, formatCost } from "@kenn-io/kit-ui";
+import {
+  formatCount,
+  formatDuration,
+  formatNumber,
+  formatTokenCount,
+  formatCost,
+} from "@kenn-io/kit-ui";
 
 formatDuration(450); // "450ms"
 formatDuration(4_000); // "4.0s"
@@ -276,6 +282,12 @@ formatDuration(4_500_000); // "1h 15m"
 formatDuration(-1); // "—" (also NaN/Infinity)
 
 formatNumber(1234567); // "1,234,567" (toLocaleString)
+
+formatCount(516); // "516"
+formatCount(7_912); // "7.9K"
+formatCount(18_000); // "18.0K" (always one decimal from 1,000)
+formatCount(32_600_000_000); // "32.6B"
+formatCount(18_000, "fr"); // "18,0 k" (locale-aware)
 
 formatTokenCount(850); // "850"
 formatTokenCount(1_234); // "1.2k"
@@ -286,7 +298,14 @@ formatCost(12.339); // "$12.34"
 formatCost(123.4); // "$123"
 ```
 
-Ported from agentsview without the i18n layer — output is plain English.
+`formatCount` is the one format for counts and token totals: plain below
+1,000, compact with exactly one decimal from 1,000, so a column of counts
+lines up and never mixes the two forms. Pass the app's `locale` so the
+separators and suffixes follow the app language. `formatTokenCount` is the
+older English-only shape; prefer `formatCount` for new UI.
+
+The other helpers were ported from agentsview without the i18n layer — their
+output is plain English.
 `formatDuration` floors sub-minute values to one decimal so 59,999ms can't
 read as "60.0s".
 
