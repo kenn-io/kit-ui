@@ -31,6 +31,7 @@
   import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
   import DisclosureDemo from "./pages/DisclosureDemo.svelte";
   import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
+  import MissingDataDemo from "./pages/MissingDataDemo.svelte";
   import FilterDropdownDemo from "./pages/FilterDropdownDemo.svelte";
   import FindBarDemo from "./pages/FindBarDemo.svelte";
   import FitStagesDemo from "./pages/FitStagesDemo.svelte";
@@ -141,6 +142,7 @@
     { id: "menu", label: "Menu", component: MenuDemo },
     { id: "mention-textarea", label: "MentionTextarea", component: MentionTextareaDemo },
     { id: "mermaid", label: "Mermaid", component: MermaidDemo },
+    { id: "missing-data", label: "MissingData", component: MissingDataDemo },
     { id: "modal", label: "Modal", component: ModalDemo },
     { id: "notice", label: "Notice", component: NoticeDemo },
     { id: "search-by-meaning", label: "Search by meaning", component: SearchByMeaningDemo },

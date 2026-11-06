@@ -24,6 +24,10 @@ filter misses, nothing-selected states. Replaces the hand-rolled
 It centers itself inside a flex parent (`margin: auto`) and centers its own
 content, so dropping it into any empty pane works without wrapper styles.
 
+For a whole page or panel with nothing to show, use
+[MissingData](missing-data.md), which sits a fixed step below the page header
+instead of centering in the pane.
+
 ## Props
 
 | Prop          | Type      | Default | Notes                                  |

@@ -576,6 +576,19 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(2);
   });
 
+  test("empty state: a hand-rolled missing-data block", () => {
+    const src = svelte(
+      `.missing-data { text-align: center; }`,
+      `<div class="missing-data"><p>No pins</p></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(2);
+  });
+
+  test("empty state: does not match kit-missing-data", () => {
+    const src = `<div class="kit-missing-data"><p class="kit-missing-data__title"></p></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
+  });
+
   test("empty state: does not match kit-empty-state or prose", () => {
     const src = `<script>// the empty-state pattern</script>\n<div class="kit-empty-state"></div>`;
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
