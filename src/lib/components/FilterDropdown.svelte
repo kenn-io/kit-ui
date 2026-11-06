@@ -166,11 +166,15 @@
 
   function positionDropdown(): void {
     if (!buttonRef || !dropdownRef) return;
-
+    // Fixed offsets and offsetWidth/Height use the panel's unzoomed CSS
+    // units, so bring the zoomed trigger rect and viewport into them, as
+    // SelectDropdown does. Engines without currentCSSZoom keep the old maths.
+    const zoom = dropdownRef.currentCSSZoom ?? 1;
+    const rect = buttonRef.getBoundingClientRect();
     dropdownStyle = floatingPopoverStyle({
-      trigger: buttonRef.getBoundingClientRect(),
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
+      trigger: new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom),
+      viewportWidth: window.innerWidth / zoom,
+      viewportHeight: window.innerHeight / zoom,
       popoverWidth: dropdownRef.offsetWidth,
       popoverHeight: dropdownRef.offsetHeight,
       align,

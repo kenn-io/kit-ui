@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
-type Component = "SelectDropdown" | "Typeahead" | "Menu";
+type Component = "SelectDropdown" | "Typeahead" | "Menu" | "FilterDropdown";
 
 // Mounts one control alone in a fixed, CSS-zoomed box at the bottom-right
 // of the viewport, where an unzoomed-coordinate bug pushes the menu off
@@ -19,9 +19,11 @@ async function mountZoomed(
       const { default: Control } =
         component === "SelectDropdown"
           ? await import("/src/lib/components/SelectDropdown.svelte")
-          : component === "Menu"
-            ? await import("/tests/browser/fixtures/ZoomedMenu.svelte")
-            : await import("/src/lib/components/Typeahead.svelte");
+          : component === "FilterDropdown"
+            ? await import("/src/lib/components/FilterDropdown.svelte")
+            : component === "Menu"
+              ? await import("/tests/browser/fixtures/ZoomedMenu.svelte")
+              : await import("/src/lib/components/Typeahead.svelte");
       document.body.replaceChildren();
       const target = document.createElement("div");
       target.id = "zoomed-control";
@@ -35,26 +37,41 @@ async function mountZoomed(
         props:
           component === "Menu"
             ? { onchange: select, extraModels }
-            : component === "SelectDropdown"
+            : component === "FilterDropdown"
               ? {
-                  title: "Model",
-                  value: "balanced",
-                  onchange: select,
-                  options: [
-                    { value: "balanced", label: "Balanced" },
-                    { value: "deep", label: "Deep" },
+                  label: "Model",
+                  sections: [
+                    {
+                      items: ["balanced", "deep"].map((value) => ({
+                        id: value,
+                        label: value === "deep" ? "Deep" : "Balanced",
+                        active: value === "balanced",
+                        closeOnSelect: true,
+                        onSelect: () => select(value),
+                      })),
+                    },
                   ],
                 }
-              : {
-                  value: "balanced",
-                  onselect: select,
-                  placeholder: "Model",
-                  triggerPrefix: "Model:",
-                  options: [
-                    { name: "balanced", label: "Balanced" },
-                    { name: "deep", label: "Deep" },
-                  ],
-                },
+              : component === "SelectDropdown"
+                ? {
+                    title: "Model",
+                    value: "balanced",
+                    onchange: select,
+                    options: [
+                      { value: "balanced", label: "Balanced" },
+                      { value: "deep", label: "Deep" },
+                    ],
+                  }
+                : {
+                    value: "balanced",
+                    onselect: select,
+                    placeholder: "Model",
+                    triggerPrefix: "Model:",
+                    options: [
+                      { name: "balanced", label: "Balanced" },
+                      { name: "deep", label: "Deep" },
+                    ],
+                  },
       });
     },
     { component, zoom, extraModels },
@@ -64,22 +81,26 @@ async function mountZoomed(
 function trigger(page: Page, component: Component) {
   if (component === "SelectDropdown") return page.getByRole("combobox");
   if (component === "Menu") return page.getByRole("button", { name: "Model: balanced" });
+  if (component === "FilterDropdown") return page.getByRole("button", { name: "Model" });
   return page.getByRole("button", { name: /Balanced/ });
 }
 
 function menu(page: Page, component: Component) {
   if (component === "Typeahead") return page.locator(".kit-typeahead__panel");
   if (component === "Menu") return page.getByRole("menu", { name: "Model" });
+  if (component === "FilterDropdown") return page.locator(".kit-filter-dropdown__panel");
   return page.getByRole("listbox");
 }
 
 function choice(page: Page, component: Component) {
+  if (component === "FilterDropdown")
+    return page.getByRole("button", { name: "Deep", exact: true });
   return component === "Menu"
     ? page.getByRole("menuitemradio", { name: "Deep", exact: true })
     : page.getByRole("option", { name: "Deep", exact: true });
 }
 
-for (const component of ["SelectDropdown", "Typeahead", "Menu"] as const) {
+for (const component of ["SelectDropdown", "Typeahead", "Menu", "FilterDropdown"] as const) {
   for (const zoom of [0.75, 1.3]) {
     test(`${component} stays aligned and selectable at CSS zoom ${zoom}`, async ({ page }) => {
       await mountZoomed(page, component, zoom);
