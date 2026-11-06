@@ -30,7 +30,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
-  import { flushSync, tick } from "svelte";
+  import { flushSync, tick, untrack } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
@@ -63,6 +63,9 @@
      * clips overflow or sets CSS containment cannot clip them. Tab then
      * cycles inside the panel or the flyout. */
     portal?: boolean;
+    /** Called when the panel opens or closes, for an app that suspends its
+     * own shortcuts while the panel is open. */
+    onOpenChange?: (open: boolean) => void;
   }
 
   let {
@@ -87,6 +90,7 @@
     align = "start",
     icon = "filter",
     portal = false,
+    onOpenChange,
   }: Props = $props();
 
   let isOpen = $state(false);
@@ -127,6 +131,14 @@
 
   $effect(() => {
     if (disabled && isOpen) closeDropdown();
+  });
+
+  let reportedOpen = false;
+  $effect(() => {
+    const open = isOpen;
+    if (open === reportedOpen) return;
+    reportedOpen = open;
+    untrack(() => onOpenChange?.(open));
   });
 
   $effect(() => {

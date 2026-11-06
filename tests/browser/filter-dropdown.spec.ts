@@ -144,7 +144,10 @@ test("a portaled dropdown escapes a host that clips and contains it", async ({ p
     hostStyle: "width:240px;height:28px;overflow:hidden;container-type:inline-size",
   });
   const trigger = page.getByRole("button", { name: "Fixture filters" });
+  const reportedOpen = () => page.evaluate(() => document.body.dataset.fixtureOpen);
+  expect(await reportedOpen()).toBeUndefined();
   await trigger.click();
+  await expect.poll(reportedOpen).toBe("true");
   const panel = page.locator(".kit-filter-dropdown__panel");
   // Tab from the trigger cannot reach a panel at the end of the body.
   await expect(panel.getByRole("searchbox")).toBeFocused();
@@ -169,6 +172,7 @@ test("a portaled dropdown escapes a host that clips and contains it", async ({ p
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
+  await expect.poll(reportedOpen).toBe("false");
 
   // A row that closes the menu puts focus back on the trigger, not on the body.
   await trigger.click();

@@ -59,6 +59,7 @@ otherwise.
 | `align`                               | `"start" \| "end"`             | `"start"`                         | Panel alignment relative to trigger        |
 | `icon`                                | `"filter" \| "sort" \| "more"` | `"filter"`                        | Trigger icon                               |
 | `portal`                              | `boolean`                      | `false`                           | Render panel and flyout in `document.body` |
+| `onOpenChange`                        | `(open: boolean) => void`      | —                                 | Called when the panel opens or closes      |
 
 ## Item shape
 
