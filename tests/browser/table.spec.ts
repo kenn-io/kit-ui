@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoPage } from "./helpers.js";
+import { contrastBetween, gotoPage, luminanceOf, setTheme } from "./helpers.js";
 
 test.beforeEach(async ({ page }) => {
   await gotoPage(page, "table");
@@ -62,4 +62,20 @@ test("a bare table renders only the table its rows describe", async ({ page }) =
   ).toBe(false);
   expect(await table.evaluate((element) => (element as HTMLTableElement).tBodies.length)).toBe(2);
   await expect(table.getByRole("rowheader", { name: "Frankfurt" })).toBeVisible();
+});
+
+// A neutral chip fills with the inset surface, so a stripe of that same color
+// hid it. Stripes now tint toward the text color: lighter than the rows in a
+// dark theme instead of sinking below them.
+test("striped rows tint toward the text and keep neutral chips visible", async ({ page }) => {
+  for (const dark of [false, true]) {
+    await setTheme(page, { dark });
+    const plain = await luminanceOf(jobs(page).getByRole("row", { name: /#412/ }));
+    const striped = await luminanceOf(jobs(page).getByRole("row", { name: /#413/ }));
+    const chip = await luminanceOf(jobs(page).getByText("queued", { exact: true }));
+
+    const towardText = Math.sign(plain.text - plain.background);
+    expect(Math.sign(striped.background - plain.background)).toBe(towardText);
+    expect(contrastBetween(chip.background, striped.background)).toBeGreaterThan(1.05);
+  }
 });
