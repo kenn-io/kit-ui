@@ -7,7 +7,7 @@
 </script>
 
 <DemoSection
-  title="Disclosure"
+  title="Card"
   description="A collapsible section on the native details element: keyboard support, and find-in-page that searches collapsed content and expands the match. Bind open to control it. An id makes it a deep-link target that opens when the URL hash matches."
   code={`<Disclosure title="How are seats counted?" id="seats">
   Each person with access to the workspace uses one seat.
@@ -48,7 +48,7 @@
 
 <DemoSection
   title="Accordion"
-  description="Groups disclosures in one frame. With exclusive, opening an item closes the others, through the native details name group."
+  description="Groups sections in one frame. With exclusive, opening one closes the others. A Disclosure inside an item is not part of the group."
   code={`<Accordion exclusive>
   <Disclosure title="Billing">...</Disclosure>
   <Disclosure title="Security">...</Disclosure>
@@ -60,6 +60,9 @@
       <Disclosure title="Security">
         Sessions expire after 30 days without use.
         {#snippet meta()}2 settings{/snippet}
+        <Disclosure variant="plain" title="Advanced">
+          Admins can shorten the expiry for every member.
+        </Disclosure>
       </Disclosure>
       <Disclosure title="Data export">Exports include every project and its history.</Disclosure>
     </Accordion>

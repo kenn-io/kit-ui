@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
-  import { getContext, type Snippet } from "svelte";
+  import { getContext, setContext, type Snippet } from "svelte";
   import { accordionContext, type AccordionContext } from "./accordion-context.js";
 
   interface Props {
@@ -46,6 +46,10 @@
   }: Props = $props();
 
   const accordion = getContext<AccordionContext | undefined>(accordionContext);
+  // The accordion owns only its direct items. A Disclosure nested in an
+  // item must not join the item's exclusive group, or opening it would
+  // close the item that contains it.
+  setContext(accordionContext, undefined);
   const groupName = $derived(name ?? accordion?.name);
   const look = $derived(accordion ? "grouped" : variant);
 
