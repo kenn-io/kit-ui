@@ -49,6 +49,27 @@ test("a matching URL hash opens the disclosure", async ({ page }) => {
   await expect(seats).toHaveAttribute("open");
 });
 
+test("a direct link to a disclosure opens its gallery page and the disclosure", async ({
+  page,
+}) => {
+  await page.goto("/#disclosure-seats");
+  await expect(page.locator(".content__heading")).toHaveText("Disclosure");
+  await expect(page.locator("#disclosure-seats")).toHaveAttribute("open");
+
+  await page.reload();
+  await expect(page.locator(".content__heading")).toHaveText("Disclosure");
+  await expect(page.locator("#disclosure-seats")).toHaveAttribute("open");
+});
+
+test("Back to a disclosure anchor returns to its gallery page", async ({ page }) => {
+  await page.evaluate(() => (location.hash = "disclosure-seats"));
+  await page.evaluate(() => (location.hash = "notice"));
+  await expect(page.locator(".content__heading")).toHaveText("Notice");
+  await page.goBack();
+  await expect(page.locator(".content__heading")).toHaveText("Disclosure");
+  await expect(page.locator("#disclosure-seats")).toHaveAttribute("open");
+});
+
 test("an exclusive accordion keeps one item open", async ({ page }) => {
   const items = page.getByTestId("accordion-exclusive").locator(".kit-accordion > details");
   await expect(items).toHaveCount(3);
