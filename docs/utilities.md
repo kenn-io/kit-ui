@@ -215,7 +215,9 @@ component (SelectDropdown, FilterDropdown, DateRangePicker, Tooltip,
 Typeahead). `dismissable` closes on `mousedown` outside the owners
 (mousedown, not click — the popover yields at press, and a
 press-inside-release-outside drag doesn't dismiss) or on Escape, optionally
-restoring focus to the trigger. `autoReposition` re-runs your positioning
+restoring focus to the trigger. When popovers nest, only the most recently
+opened one answers Escape, so each press closes the innermost first.
+`autoReposition` re-runs your positioning
 on window resize, any ancestor scroll (capture phase), and panel size
 changes (ResizeObserver), coalesced to one call per animation frame. Both
 return their cleanup function.

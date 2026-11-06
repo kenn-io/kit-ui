@@ -167,7 +167,7 @@
 
 <DemoSection
   title="Submenu row"
-  description="An item with a submenu snippet opens a flyout beside the panel instead of toggling. detail summarizes its value on the row. Escape or ArrowLeft closes the flyout and returns focus to the row."
+  description="Labels opens a side menu instead of toggling a selection. Escape or Left Arrow closes it and returns focus to Labels."
   code={`<FilterDropdown
   label="Filters"
   sections={[{

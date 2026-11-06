@@ -138,10 +138,25 @@
   $effect(() => {
     if (!submenuItem) return;
     const cleanups = [
+      // The flyout is the newer layer, so Escape closes it before the panel,
+      // and a popover opened inside it closes before the flyout. Clicks in
+      // the panel stay inside, so its rows can still toggle the flyout.
+      dismissable({
+        owners: () => [submenuRef, dropdownRef],
+        // closeSubmenu returns focus to the row.
+        dismiss: closeSubmenu,
+      }),
       // The flyout follows its row, so panel scrolls and resizes move it too.
       autoReposition(() => [dropdownRef, submenuRef], positionSubmenu),
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
+  });
+
+  $effect(() => {
+    // Search can remove rows above the open row without resizing the panel
+    // (it may sit at its height cap), so no observer sees the row move.
+    void visibleSections;
+    if (submenuId) void tick().then(positionSubmenu);
   });
 
   function positionDropdown(): void {
@@ -208,17 +223,14 @@
     if (id) submenuAnchor(id)?.focus();
   }
 
+  // Escape goes through the flyout's dismissable layer; ArrowLeft is
+  // handled here.
   function handleSubmenuKeydown(event: KeyboardEvent): void {
-    // Content that already handled the key (a field clearing itself) keeps it.
-    if (event.defaultPrevented) return;
+    if (event.key !== "ArrowLeft" || event.defaultPrevented) return;
     const target = event.target as HTMLElement;
-    const typing = target.matches("input, textarea") || target.isContentEditable;
-    if (event.key === "Escape" || (event.key === "ArrowLeft" && !typing)) {
-      // Claim Escape so the document-level dismiss leaves the panel open:
-      // one press closes one layer.
-      event.preventDefault();
-      closeSubmenu();
-    }
+    if (target.matches("input, textarea") || target.isContentEditable) return;
+    event.preventDefault();
+    closeSubmenu();
   }
 
   function handleItemKeydown(event: KeyboardEvent, item: FilterDropdownItem): void {
