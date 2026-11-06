@@ -54,4 +54,9 @@
   </div>
 {/snippet}
 
-<FilterDropdown label="Fixture filters" searchable {sections} />
+<FilterDropdown
+  label="Fixture filters"
+  searchable
+  {sections}
+  onOpenChange={(open) => (document.body.dataset.fixtureOpen = String(open))}
+/>

@@ -30,7 +30,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
-  import { flushSync, tick } from "svelte";
+  import { flushSync, onDestroy, tick, untrack } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
@@ -59,6 +59,9 @@
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";
+    /** Called when the panel opens or closes, for an app that suspends its
+     * own shortcuts while the panel is open. */
+    onOpenChange?: (open: boolean) => void;
   }
 
   let {
@@ -82,6 +85,7 @@
     minWidth = "200px",
     align = "start",
     icon = "filter",
+    onOpenChange,
   }: Props = $props();
 
   let isOpen = $state(false);
@@ -122,6 +126,19 @@
 
   $effect(() => {
     if (disabled && isOpen) closeDropdown();
+  });
+
+  // Report changes only, and a final close if the dropdown goes away open,
+  // so a consumer that suspended its shortcuts always gets them back.
+  let reportedOpen = false;
+  $effect(() => {
+    const open = isOpen;
+    if (open === reportedOpen) return;
+    reportedOpen = open;
+    untrack(() => onOpenChange?.(open));
+  });
+  onDestroy(() => {
+    if (reportedOpen) onOpenChange?.(false);
   });
 
   $effect(() => {
@@ -397,6 +414,7 @@
             disabled={disabled || item.disabled}
             title={item.description}
             aria-describedby={item.description ? itemDescriptionId(item) : undefined}
+            aria-pressed={item.submenu ? undefined : item.active}
             aria-haspopup={item.submenu ? "dialog" : undefined}
             aria-expanded={item.submenu ? submenuItem?.id === item.id : undefined}
             aria-controls={item.submenu && submenuItem?.id === item.id

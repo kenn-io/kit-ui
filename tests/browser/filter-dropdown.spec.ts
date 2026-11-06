@@ -11,6 +11,8 @@ test("a submenu row opens a flyout beside the panel and peels one layer per Esca
   await expect(row).toHaveAttribute("aria-haspopup", "dialog");
   await expect(row).toHaveAttribute("aria-expanded", "false");
   await expect(row).toContainText("Any");
+  // Option rows expose their state; a submenu row is navigation and has none.
+  await expect(row).not.toHaveAttribute("aria-pressed");
   // A submenu row is navigation, not an unselected option, so it is never dimmed.
   await expect(row).toHaveCSS("opacity", "1");
 
@@ -116,18 +118,41 @@ async function mountSubmenuFixture(page: Page, zoom = 1, flyoutRows = 0): Promis
   await gotoPage(page, "filter-dropdown");
   await page.evaluate(
     async ({ zoom, flyoutRows }) => {
-      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { mount, unmount } = await import("/node_modules/.vite/deps/svelte.js");
       const { default: Fixture } =
         await import("/tests/browser/fixtures/SubmenuFilterDropdown.svelte");
       document.body.replaceChildren();
       const target = document.createElement("div");
       target.style.cssText = `position:fixed;left:40px;top:40px;zoom:${zoom}`;
       document.body.append(target);
-      mount(Fixture, { target, props: { flyoutRows } });
+      const app = mount(Fixture, { target, props: { flyoutRows } });
+      (window as unknown as { unmountFixture: () => void }).unmountFixture = () => unmount(app);
     },
     { zoom, flyoutRows },
   );
 }
+
+test("reports open and close, including when removed while open", async ({ page }) => {
+  await mountSubmenuFixture(page);
+  const reportedOpen = () => page.evaluate(() => document.body.dataset.fixtureOpen);
+  // Mounting closed is not a change, so nothing is reported.
+  expect(await reportedOpen()).toBeUndefined();
+
+  const trigger = page.getByRole("button", { name: "Fixture filters" });
+  await trigger.click();
+  await expect.poll(reportedOpen).toBe("true");
+  await expect(page.getByRole("button", { name: "Alpha" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await page.keyboard.press("Escape");
+  await expect.poll(reportedOpen).toBe("false");
+
+  await trigger.click();
+  await expect.poll(reportedOpen).toBe("true");
+  await page.evaluate(() => (window as unknown as { unmountFixture: () => void }).unmountFixture());
+  await expect.poll(reportedOpen).toBe("false");
+});
 
 test("Escape closes a popover inside the flyout before the flyout, then the panel", async ({
   page,

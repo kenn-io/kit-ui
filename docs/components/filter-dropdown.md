@@ -58,6 +58,7 @@ otherwise.
 | `minWidth`                            | `string`                       | `"200px"`                         | Panel min-width                            |
 | `align`                               | `"start" \| "end"`             | `"start"`                         | Panel alignment relative to trigger        |
 | `icon`                                | `"filter" \| "sort" \| "more"` | `"filter"`                        | Trigger icon                               |
+| `onOpenChange`                        | `(open: boolean) => void`      | —                                 | Called when the panel opens or closes      |
 
 ## Item shape
 

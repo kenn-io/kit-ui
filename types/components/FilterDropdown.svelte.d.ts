@@ -42,6 +42,9 @@ interface Props {
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";
+    /** Called when the panel opens or closes, for an app that suspends its
+     * own shortcuts while the panel is open. */
+    onOpenChange?: (open: boolean) => void;
 }
 declare const FilterDropdown: import("svelte").Component<Props, {}, "">;
 type FilterDropdown = ReturnType<typeof FilterDropdown>;
