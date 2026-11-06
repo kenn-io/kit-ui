@@ -41,6 +41,11 @@ focus.
 Use SegmentedControl for 2–5 mutually exclusive views; for longer lists use
 `SelectDropdown`.
 
+The boxed variant's chosen segment is the shared selected pill
+(`--selected-strong-*`, see [theming.md](../theming.md#selected-state)).
+When the whole group is disabled, as in a read-only setting, the chosen
+segment keeps full strength so it still reads as chosen.
+
 ## Per-segment tones
 
 `option.tone` (`"info" | "success" | "warning" | "danger"`,

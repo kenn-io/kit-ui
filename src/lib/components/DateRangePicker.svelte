@@ -548,34 +548,43 @@
     margin-bottom: var(--space-4);
   }
 
+  /* The presets read as one segmented control, like the mode tabs above
+   * them: one inset track with flat options, so the chosen preset is the
+   * only raised shape (the shared selected idiom from theme.css). */
   .kit-date-range-picker__pills {
     display: flex;
-    gap: var(--space-2);
+    gap: var(--space-1);
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+    box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-date-range-picker__pill {
     flex: 1;
-    height: 30px;
+    height: 26px;
     border: 0;
-    border-radius: var(--radius-md);
-    background: var(--bg-inset);
-    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
     font-family: inherit;
     font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium, 500);
+    font-weight: 400;
     cursor: pointer;
     transition:
       background var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease);
   }
 
-  .kit-date-range-picker__pill:hover {
-    background: var(--bg-surface-hover);
+  .kit-date-range-picker__pill:hover:not(.active) {
+    color: var(--text-primary);
   }
 
   .kit-date-range-picker__pill.active {
-    background: var(--accent-blue);
-    color: var(--accent-blue-foreground, #fff);
+    background: var(--selected-strong-bg);
+    color: var(--text-primary);
+    font-weight: var(--selected-strong-weight);
+    box-shadow: var(--shadow-raised, var(--selected-strong-edge));
   }
 
   .kit-date-range-picker__calendar {

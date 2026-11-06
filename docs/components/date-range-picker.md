@@ -17,7 +17,9 @@ completing second click. Treat `selection` as replace-only (hold it in
 `$state.raw` as below and assign a new object in `onSelect`), never mutate it
 in place. `resolveRange()` turns any selection into concrete inclusive
 `{from, to}` bounds (local-timezone `YYYY-MM-DD` strings). Escape and outside
-clicks dismiss the popover.
+clicks dismiss the popover. The Relative presets sit on one inset track like the
+mode tabs above them, and the chosen preset is the shared selected pill
+(see [theming.md](../theming.md#selected-state)).
 
 **Mid-pick draft lifecycle**: between the two custom clicks the incomplete
 range is internal UI state — it is never emitted through `onSelect`. The

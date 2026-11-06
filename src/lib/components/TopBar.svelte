@@ -384,9 +384,9 @@
   }
 
   .kit-top-bar__tab.active {
-    background: var(--bg-surface);
+    background: var(--selected-strong-bg);
     color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-raised, var(--selected-strong-edge));
   }
 
   .kit-top-bar__tab:disabled {
