@@ -497,10 +497,15 @@ table.refresh();`}
 <DemoSection
   title="Localized resize handles"
   description="Each resize handle's accessible name defaults to the English &quot;Resize the &lbrace;label&rbrace; column&quot;. Pass a translated resizeLabel on the header cell so screen readers announce it in the app's language. Focus a header's right edge to hear it."
-  code={`<TableHeaderCell label="Projekt" resizeLabel="Breite der Spalte Projekt ändern" />`}
+  code={`<VirtualTable {items} unsorted ariaLabel="Prüfungen">
+  {#snippet header()}
+    <TableHeaderCell label="Projekt" resizeLabel="Breite der Spalte Projekt ändern" />
+  {/snippet}
+  …
+</VirtualTable>`}
 >
   <div class="host host--short" data-testid="virtual-table-localized">
-    <VirtualTable items={localizedReviews} rowKey={(r) => r.id} ariaLabel="Prüfungen">
+    <VirtualTable items={localizedReviews} rowKey={(r) => r.id} unsorted ariaLabel="Prüfungen">
       {#snippet header()}
         <TableHeaderCell label="ID" numeric resizeLabel="Breite der Spalte ID ändern" />
         <TableHeaderCell label="Projekt" resizeLabel="Breite der Spalte Projekt ändern" />
