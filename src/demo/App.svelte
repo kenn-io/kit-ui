@@ -29,6 +29,7 @@
   import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
   import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
+  import DisclosureDemo from "./pages/DisclosureDemo.svelte";
   import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
   import FilterDropdownDemo from "./pages/FilterDropdownDemo.svelte";
   import FindBarDemo from "./pages/FindBarDemo.svelte";
@@ -123,6 +124,7 @@
     { id: "command-palette", label: "CommandPalette", component: CommandPaletteDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },
     { id: "detail-drawer", label: "DetailDrawer", component: DetailDrawerDemo },
+    { id: "disclosure", label: "Disclosure", component: DisclosureDemo },
     { id: "empty-state", label: "EmptyState", component: EmptyStateDemo },
     { id: "filter-dropdown", label: "FilterDropdown", component: FilterDropdownDemo },
     { id: "find-bar", label: "FindBar", component: FindBarDemo },
@@ -199,7 +201,15 @@
   }
 </script>
 
-<svelte:window onhashchange={() => (activeId = location.hash.slice(1) || "theme")} />
+<!-- A hash that names no page is an in-page anchor (a Disclosure id, say):
+     keep the current page so the anchor can act on it. -->
+<svelte:window
+  onhashchange={() => {
+    const id = location.hash.slice(1);
+    if (!id) activeId = "theme";
+    else if (pages.some((p) => p.id === id)) activeId = id;
+  }}
+/>
 
 {#if isMobileFrame}
   <MobileFrame />

@@ -3,6 +3,7 @@
     Button,
     Checkbox,
     Chip,
+    Disclosure,
     SearchInput,
     TableHeaderCell,
     TableSort,
@@ -285,26 +286,27 @@ table.refresh();`}
 
 <DemoSection
   title="Hidden until opened"
-  description="A table inside a closed details element has no layout. Its columns are laid out when it opens."
-  code={`<details><summary>Show reviews</summary><VirtualTable …/></details>`}
+  description="A table inside a closed Disclosure has no layout. Its columns are laid out when it opens."
+  code={`<Disclosure title="Show reviews"><VirtualTable …/></Disclosure>`}
 >
-  <details class="flow">
-    <summary>Show 2,000 reviews</summary>
-    <VirtualTable scroll="page" items={pageRows} rowKey={(r) => r.id} ariaLabel="Hidden reviews">
-      {#snippet header()}
-        <TableHeaderCell label="ID" numeric sort={pageSorter} column="id" />
-        <TableHeaderCell label="Project" sort={pageSorter} column="project" />
-        <TableHeaderCell label="Branch" sort={pageSorter} column="branch" />
-      {/snippet}
-      {#snippet row(review)}
-        <tr>
-          <td class="num">#{review.id}</td>
-          <td><a href="#virtual-table">{review.project}</a></td>
-          <td class="branch">{review.branch}</td>
-        </tr>
-      {/snippet}
-    </VirtualTable>
-  </details>
+  <div class="flow">
+    <Disclosure title="Show 2,000 reviews">
+      <VirtualTable scroll="page" items={pageRows} rowKey={(r) => r.id} ariaLabel="Hidden reviews">
+        {#snippet header()}
+          <TableHeaderCell label="ID" numeric sort={pageSorter} column="id" />
+          <TableHeaderCell label="Project" sort={pageSorter} column="project" />
+          <TableHeaderCell label="Branch" sort={pageSorter} column="branch" />
+        {/snippet}
+        {#snippet row(review)}
+          <tr>
+            <td class="num">#{review.id}</td>
+            <td><a href="#virtual-table">{review.project}</a></td>
+            <td class="branch">{review.branch}</td>
+          </tr>
+        {/snippet}
+      </VirtualTable>
+    </Disclosure>
+  </div>
 </DemoSection>
 
 <DemoSection

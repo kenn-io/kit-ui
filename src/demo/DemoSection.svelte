@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { Card } from "../lib/index.js";
+  import { Card, Disclosure } from "../lib/index.js";
 
   interface Props {
     title: string;
@@ -23,12 +23,11 @@
     {/if}
   </Card>
   {#if code}
-    <details class="demo-section__code-disclosure">
-      <summary>Example code</summary>
+    <Disclosure variant="plain" title="Example code" class="demo-section__code-disclosure">
       <Card level="inset" padding="none" class="demo-section__code">
         <pre><code>{code}</code></pre>
       </Card>
-    </details>
+    </Disclosure>
   {/if}
 </section>
 
@@ -60,23 +59,13 @@
     gap: var(--space-5);
   }
 
-  .demo-section__code-disclosure {
-    margin-top: 8px;
-  }
-
-  .demo-section__code-disclosure summary {
-    width: max-content;
-    color: var(--text-muted);
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-  }
-
-  .demo-section__code-disclosure summary:hover {
-    color: var(--text-secondary);
-  }
-
-  .demo-section__code-disclosure[open] :global(.demo-section__code) {
+  .demo-section :global(.demo-section__code-disclosure) {
     margin-top: var(--space-3);
+  }
+
+  /* The code card spans the section, not the indented disclosure body. */
+  .demo-section :global(.demo-section__code-disclosure > .kit-disclosure__content) {
+    padding-left: 0;
   }
 
   .demo-section pre {

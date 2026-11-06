@@ -443,6 +443,23 @@ export function checkHandRolledTooltip(source) {
   return findings;
 }
 
+/** Hand-rolled `<details>` disclosures duplicate Disclosure, which adds
+ * the chevron, focus ring, deep-link anchors, and Accordion grouping on
+ * the same native element. Matches the opening tag only. */
+export function checkHandRolledDisclosure(source) {
+  const findings = [];
+  const re = /<details[\s>]/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-disclosure",
+      line: lineOfIndex(source, match.index),
+      message: "<details> markup — use Disclosure (or Accordion for a group) from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled bottom status bars duplicate StatusBar. Matches the class
  * name both apps converged on; kit-status-bar (the library's own class,
  * e.g. in retheming CSS) is exempt. */
@@ -1857,6 +1874,7 @@ export const ALL_RULES = {
   "hand-rolled-table-sort": checkHandRolledTableSort,
   "unsorted-table-header": checkUnsortedTableHeader,
   "hand-rolled-tooltip": checkHandRolledTooltip,
+  "hand-rolled-disclosure": checkHandRolledDisclosure,
   "hand-rolled-popover-card": checkHandRolledPopoverCard,
   "hand-rolled-card": checkHandRolledCard,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
