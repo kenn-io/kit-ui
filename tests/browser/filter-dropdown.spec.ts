@@ -114,75 +114,44 @@ test("a submenu flyout follows the panel when the trigger moves it", async ({ pa
   await expect.poll(gap).toBe(0);
 });
 
-async function mountSubmenuFixture(
-  page: Page,
-  zoom = 1,
-  flyoutRows = 0,
-  { portal = false, hostStyle = "" } = {},
-): Promise<void> {
+async function mountSubmenuFixture(page: Page, zoom = 1, flyoutRows = 0): Promise<void> {
   await gotoPage(page, "filter-dropdown");
   await page.evaluate(
-    async ({ zoom, flyoutRows, portal, hostStyle }) => {
-      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    async ({ zoom, flyoutRows }) => {
+      const { mount, unmount } = await import("/node_modules/.vite/deps/svelte.js");
       const { default: Fixture } =
         await import("/tests/browser/fixtures/SubmenuFilterDropdown.svelte");
       document.body.replaceChildren();
       const target = document.createElement("div");
-      target.style.cssText = `position:fixed;left:40px;top:40px;zoom:${zoom};${hostStyle}`;
+      target.style.cssText = `position:fixed;left:40px;top:40px;zoom:${zoom}`;
       document.body.append(target);
-      mount(Fixture, { target, props: { flyoutRows, portal } });
+      const app = mount(Fixture, { target, props: { flyoutRows } });
+      (window as unknown as { unmountFixture: () => void }).unmountFixture = () => unmount(app);
     },
-    { zoom, flyoutRows, portal, hostStyle },
+    { zoom, flyoutRows },
   );
 }
 
-test("a portaled dropdown escapes a host that clips and contains it", async ({ page }) => {
-  // Overflow clipping plus containment, as a container-query layout sets up:
-  // containment makes the host the containing block of fixed descendants.
-  await mountSubmenuFixture(page, 1, 0, {
-    portal: true,
-    hostStyle: "width:240px;height:28px;overflow:hidden;container-type:inline-size",
-  });
-  const trigger = page.getByRole("button", { name: "Fixture filters" });
+test("reports open and close, including when removed while open", async ({ page }) => {
+  await mountSubmenuFixture(page);
   const reportedOpen = () => page.evaluate(() => document.body.dataset.fixtureOpen);
+  // Mounting closed is not a change, so nothing is reported.
   expect(await reportedOpen()).toBeUndefined();
+
+  const trigger = page.getByRole("button", { name: "Fixture filters" });
   await trigger.click();
   await expect.poll(reportedOpen).toBe("true");
-  const panel = page.locator(".kit-filter-dropdown__panel");
-  // Tab from the trigger cannot reach a panel at the end of the body.
-  await expect(panel.getByRole("searchbox")).toBeFocused();
-  const hits = (selector: string) =>
-    page.evaluate((selector) => {
-      const element = document.querySelector(selector)!;
-      const rect = element.getBoundingClientRect();
-      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.bottom - 4);
-      return rect.height > 100 && element.contains(hit);
-    }, selector);
-  expect(await hits(".kit-filter-dropdown__panel")).toBe(true);
-
-  await page.getByRole("button", { name: /^Labels/ }).click();
-  const flyout = page.getByRole("dialog", { name: "Labels" });
-  await expect(flyout.getByRole("combobox", { name: /^Match/ })).toBeFocused();
-  // Tab wraps inside the flyout instead of leaving the page.
-  await page.keyboard.press("Tab");
-  await expect(flyout.getByRole("combobox", { name: /^Match/ })).toBeFocused();
-
-  await page.keyboard.press("Escape");
-  await expect(flyout).toBeHidden();
-  await page.keyboard.press("Escape");
-  await expect(panel).toBeHidden();
-  await expect(trigger).toBeFocused();
-  await expect.poll(reportedOpen).toBe("false");
-
-  // A row that closes the menu puts focus back on the trigger, not on the body.
-  await trigger.click();
-  await expect(panel.getByRole("button", { name: "Alpha" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Alpha" })).toHaveAttribute(
     "aria-pressed",
     "false",
   );
-  await panel.getByRole("button", { name: "Close menu" }).press("Enter");
-  await expect(panel).toBeHidden();
-  await expect(trigger).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect.poll(reportedOpen).toBe("false");
+
+  await trigger.click();
+  await expect.poll(reportedOpen).toBe("true");
+  await page.evaluate(() => (window as unknown as { unmountFixture: () => void }).unmountFixture());
+  await expect.poll(reportedOpen).toBe("false");
 });
 
 test("Escape closes a popover inside the flyout before the flyout, then the panel", async ({

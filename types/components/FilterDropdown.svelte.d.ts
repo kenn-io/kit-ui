@@ -42,10 +42,6 @@ interface Props {
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";
-    /** Render the panel and flyout in `document.body`, so an ancestor that
-     * clips overflow or sets CSS containment cannot clip them. Tab then
-     * cycles inside the panel or the flyout. */
-    portal?: boolean;
     /** Called when the panel opens or closes, for an app that suspends its
      * own shortcuts while the panel is open. */
     onOpenChange?: (open: boolean) => void;
