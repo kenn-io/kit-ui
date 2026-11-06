@@ -1,0 +1,95 @@
+<script lang="ts">
+  import FileIcon from "@lucide/svelte/icons/file";
+  import MessageSquareIcon from "@lucide/svelte/icons/message-square";
+  import { Tabs, type TabItem } from "../../lib/index.js";
+  import DemoSection from "../DemoSection.svelte";
+
+  const detailTabs: TabItem[] = [
+    { id: "conversation", label: "Conversation", count: 4 },
+    { id: "commits", label: "Commits", count: 12 },
+    { id: "files", label: "Files changed", count: 38 },
+    { id: "checks", label: "Checks", disabled: true },
+  ];
+  let detail = $state("conversation");
+  let changes = $state(0);
+
+  const viewTabs: TabItem[] = [
+    { id: "chat", label: "Chat" },
+    { id: "files", label: "Files" },
+  ];
+  let view = $state("chat");
+
+  let manual = $state("conversation");
+</script>
+
+<DemoSection
+  title="Tabs"
+  description="A tab list with roving focus: arrow keys move between enabled tabs and select them, Home and End jump to the ends. The children snippet renders the selected tab's panel, labelled by its tab."
+  code={`<Tabs tabs={tabs} bind:value ariaLabel="Pull request detail">
+  {#snippet children(id)}
+    {#if id === "files"}<FileList />{:else}<Conversation />{/if}
+  {/snippet}
+</Tabs>`}
+>
+  <div class="tabs-demo" data-testid="tabs-detail">
+    <Tabs
+      tabs={detailTabs}
+      bind:value={detail}
+      onchange={() => (changes += 1)}
+      ariaLabel="Pull request detail"
+    >
+      {#snippet children(id)}
+        <p>Showing the {detailTabs.find((t) => t.id === id)?.label.toLowerCase()} view.</p>
+      {/snippet}
+    </Tabs>
+    <p class="tabs-demo__readout">
+      value: <span data-testid="tabs-value">{detail}</span>, changes:
+      <span data-testid="tabs-changes">{changes}</span>
+    </p>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Custom tab content"
+  description="The tab snippet renders icons or badges in place of the label; the label stays the accessible name."
+  code={`<Tabs {tabs} bind:value ariaLabel="Workspace view">
+  {#snippet tab(item)}<Icon id={item.id} /> {item.label}{/snippet}
+</Tabs>`}
+>
+  <div class="tabs-demo" data-testid="tabs-icons">
+    <Tabs tabs={viewTabs} bind:value={view} ariaLabel="Workspace view">
+      {#snippet tab(item)}
+        {#if item.id === "chat"}<MessageSquareIcon size={14} />{:else}<FileIcon size={14} />{/if}
+        {item.label}
+      {/snippet}
+    </Tabs>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Manual activation"
+  description="With activation=&quot;manual&quot;, arrow keys only move focus; Enter or Space selects. Use it when showing a panel is slow. Without a children snippet, Tabs renders the tab list alone."
+  code={`<Tabs {tabs} bind:value activation="manual" ariaLabel="Detail" />`}
+>
+  <div class="tabs-demo" data-testid="tabs-manual">
+    <Tabs tabs={detailTabs} bind:value={manual} activation="manual" ariaLabel="Detail (manual)" />
+    <p class="tabs-demo__readout">value: <span data-testid="tabs-manual-value">{manual}</span></p>
+  </div>
+</DemoSection>
+
+<style>
+  .tabs-demo {
+    display: grid;
+    gap: var(--space-3);
+    width: min(100%, 640px);
+  }
+
+  .tabs-demo p {
+    margin: 0;
+  }
+
+  .tabs-demo__readout {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+  }
+</style>

@@ -42,6 +42,6 @@ interface Props {
     right?: Snippet;
     class?: string;
 }
-declare const TopBar: import("svelte").Component<Props, {}, "active" | "collapsed">;
+declare const TopBar: import("svelte").Component<Props, {}, "collapsed" | "active">;
 type TopBar = ReturnType<typeof TopBar>;
 export default TopBar;

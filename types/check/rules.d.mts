@@ -112,6 +112,13 @@ export function checkHandRolledDisclosure(source: any): {
     line: number;
     message: string;
 }[];
+/** Hand-rolled tab strips duplicate Tabs. role="tablist" is the reliable
+ * marker: a conformant custom tab strip must carry it. */
+export function checkHandRolledTabs(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Hand-rolled bottom status bars duplicate StatusBar. Matches the class
  * name both apps converged on; kit-status-bar (the library's own class,
  * e.g. in retheming CSS) is exempt. */
@@ -435,6 +442,7 @@ export const ALL_RULES: {
     "unsorted-table-header": typeof checkUnsortedTableHeader;
     "hand-rolled-tooltip": typeof checkHandRolledTooltip;
     "hand-rolled-disclosure": typeof checkHandRolledDisclosure;
+    "hand-rolled-tabs": typeof checkHandRolledTabs;
     "hand-rolled-popover-card": typeof checkHandRolledPopoverCard;
     "hand-rolled-card": typeof checkHandRolledCard;
     "hand-rolled-status-bar": typeof checkHandRolledStatusBar;

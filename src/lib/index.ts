@@ -148,6 +148,8 @@ export { default as StructuredList } from "./components/StructuredList.svelte";
 export type { StructuredListLevel } from "./components/StructuredList.svelte";
 export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
+export { default as Tabs } from "./components/Tabs.svelte";
+export type { TabItem, TabsActivation } from "./components/Tabs.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export { TableSort } from "./components/table-sort.svelte.js";
 export {
