@@ -23,10 +23,14 @@ export function formatDuration(ms: number): string {
  * Intl.NumberFormat per call and this runs per table cell. Lazy so
  * importing this module stays side-effect free. */
 let numberFormat: Intl.NumberFormat | undefined;
+let numberLocale: string | undefined;
 
 /** Formats a number with locale thousands separators (e.g. "1,234,567"). */
-export function formatNumber(n: number): string {
-  numberFormat ??= new Intl.NumberFormat(undefined);
+export function formatNumber(n: number, locale?: string): string {
+  if (!numberFormat || numberLocale !== locale) {
+    numberFormat = new Intl.NumberFormat(locale);
+    numberLocale = locale;
+  }
   return numberFormat.format(n);
 }
 

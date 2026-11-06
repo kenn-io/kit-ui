@@ -13,15 +13,25 @@
     /** Noun selected by the caller for itemCount or total, including plural rules. */
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
+    /** Locale for numbers, download sizes, and durations; defaults to the runtime locale. */
+    locale?: string;
     /** Show status only, with no button, for viewers who can't change it. */
     readonly?: boolean;
     onturnon: () => void;
     onusebuiltin: () => void;
   }
 
-  let { state, itemNoun, labels = {}, readonly = false, onturnon, onusebuiltin }: Props = $props();
+  let {
+    state,
+    itemNoun,
+    labels = {},
+    locale,
+    readonly = false,
+    onturnon,
+    onusebuiltin,
+  }: Props = $props();
   const words = $derived({ ...DEFAULT_SEARCH_BY_MEANING_LABELS, ...labels });
-  const description = $derived(describeSearchByMeaning(state, itemNoun, words));
+  const description = $derived(describeSearchByMeaning(state, itemNoun, words, locale));
   const action = $derived(readonly ? undefined : description.action);
   const percent = $derived(
     description.progress && description.progress.max > 0

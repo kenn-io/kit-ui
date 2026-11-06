@@ -2,9 +2,57 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_SEARCH_BY_MEANING_LABELS,
   describeSearchByMeaning,
+  formatSize,
 } from "../src/lib/components/search-by-meaning.js";
 
 describe("search by meaning descriptions", () => {
+  test("uses the selected French locale for counts, sizes, and durations", () => {
+    const labels = {
+      ...DEFAULT_SEARCH_BY_MEANING_LABELS,
+      indexing: "Indexation de {done} sur {total} {items}",
+      aboutTime: "environ {time}",
+      timeLeft: "{time} restantes",
+      meanwhile: "La recherche par mots-clés reste disponible",
+    };
+    expect(
+      describeSearchByMeaning(
+        { kind: "indexing", done: 12_000, total: 48_000, etaMs: 7_200_000 },
+        "messages",
+        labels,
+        "fr",
+      ).line,
+    ).toBe(
+      "Indexation de 12\u202f000 sur 48\u202f000 messages · environ 2\u00a0heures restantes · La recherche par mots-clés reste disponible",
+    );
+    expect(
+      describeSearchByMeaning(
+        { kind: "ollama-other", itemCount: 48_000, rebuildMs: 60_000 },
+        "messages",
+        labels,
+        "fr",
+      ).warning,
+    ).toBe("Switching rebuilds the index, environ 1 minute for 48\u202f000 messages");
+    expect(
+      describeSearchByMeaning(
+        { kind: "off", downloadBytes: 1_290_000_000 },
+        "messages",
+        labels,
+        "fr",
+      ).line,
+    ).toBe("Downloads 1\u202f290\u202fMo once, shared by all Kenn apps");
+    expect(
+      describeSearchByMeaning(
+        { kind: "downloading", doneBytes: 120_000_000, totalBytes: 290_000_000 },
+        "messages",
+        labels,
+        "fr",
+      ).line,
+    ).toBe("Downloading 120\u202fMo of 290\u202fMo · La recherche par mots-clés reste disponible");
+  });
+  test("exports the same size formatting for caller labels", () => {
+    expect(formatSize(1_290_000_000, "fr")).toBe("1\u202f290\u202fMo");
+    expect(formatSize(290_000_000, "en")).toBe("290 MB");
+  });
   test("offers one-time setup locally or on a host", () => {
     expect(
       describeSearchByMeaning({ kind: "off", downloadBytes: 289_000_000 }, "messages"),

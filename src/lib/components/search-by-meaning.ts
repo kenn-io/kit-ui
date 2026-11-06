@@ -47,8 +47,8 @@ function fill(template: string, values: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 }
 
-function formatSize(bytes: number): string {
-  return new Intl.NumberFormat(undefined, {
+export function formatSize(bytes: number, locale?: string): string {
+  return new Intl.NumberFormat(locale, {
     style: "unit",
     unit: "megabyte",
     unitDisplay: "short",
@@ -56,10 +56,10 @@ function formatSize(bytes: number): string {
   }).format(bytes / 1_000_000);
 }
 
-function formatRoughTime(ms: number, labels: SearchByMeaningLabels): string {
+function formatRoughTime(ms: number, labels: SearchByMeaningLabels, locale?: string): string {
   if (ms < 60_000) return labels.underMinute;
   const hours = ms >= 90 * 60_000;
-  const time = new Intl.NumberFormat(undefined, {
+  const time = new Intl.NumberFormat(locale, {
     style: "unit",
     unit: hours ? "hour" : "minute",
     unitDisplay: "long",
@@ -72,6 +72,7 @@ export function describeSearchByMeaning(
   state: SearchByMeaningState,
   itemNoun: string,
   labels: SearchByMeaningLabels = DEFAULT_SEARCH_BY_MEANING_LABELS,
+  locale?: string,
 ): Description {
   switch (state.kind) {
     case "off":
@@ -80,7 +81,7 @@ export function describeSearchByMeaning(
         tone: "muted",
         action: "turn-on",
         line: fill(state.host ? labels.downloadToHost : labels.download, {
-          size: formatSize(state.downloadBytes),
+          size: formatSize(state.downloadBytes, locale),
           host: state.host ?? "",
         }),
       };
@@ -98,8 +99,8 @@ export function describeSearchByMeaning(
         chip: labels.ollama,
         tone: "success",
         warning: fill(labels.rebuild, {
-          time: formatRoughTime(state.rebuildMs, labels),
-          count: formatNumber(state.itemCount),
+          time: formatRoughTime(state.rebuildMs, labels, locale),
+          count: formatNumber(state.itemCount, locale),
           items: itemNoun,
         }),
         action: "use-built-in",
@@ -110,19 +111,19 @@ export function describeSearchByMeaning(
       return {
         chip: labels.turningOn,
         tone: "info",
-        line: `${fill(labels.downloading, { done: formatSize(state.doneBytes), total: formatSize(state.totalBytes) })} · ${labels.meanwhile}`,
+        line: `${fill(labels.downloading, { done: formatSize(state.doneBytes, locale), total: formatSize(state.totalBytes, locale) })} · ${labels.meanwhile}`,
         progress: { value: state.doneBytes, max: state.totalBytes },
       };
     case "indexing": {
       const parts = [
         fill(labels.indexing, {
-          done: formatNumber(state.done),
-          total: formatNumber(state.total),
+          done: formatNumber(state.done, locale),
+          total: formatNumber(state.total, locale),
           items: itemNoun,
         }),
       ];
       if (state.etaMs !== undefined)
-        parts.push(fill(labels.timeLeft, { time: formatRoughTime(state.etaMs, labels) }));
+        parts.push(fill(labels.timeLeft, { time: formatRoughTime(state.etaMs, labels, locale) }));
       parts.push(labels.meanwhile);
       return {
         chip: labels.turningOn,

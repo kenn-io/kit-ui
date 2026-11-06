@@ -36,7 +36,9 @@ The Action column applies by default; `readonly` removes the action.
 
 Callers select `itemNoun` for `itemCount` in `ollama-other` or `total` in `indexing`, updating it as the state changes. For example, pass "message" for a count of 1 and "messages" for other counts. Apps supply the appropriate forms for their language.
 
-Sizes use decimal megabytes. Counts and units follow the runtime locale. Durations below one minute read "under a minute"; below 90 minutes use rounded minutes, and longer durations use rounded hours.
+Sizes use decimal megabytes. Pass `locale="fr"` to `SearchByMeaningRow` to format counts, sizes, and duration units in the app's selected language. Omitting `locale` uses the runtime locale. Translated labels and `itemNoun` remain the caller's responsibility. Durations below one minute read "under a minute"; below 90 minutes use rounded minutes, and longer durations use rounded hours.
+
+The exported `formatSize(bytes, locale?)` uses the same decimal megabyte formatting for caller labels, such as `formatSize(290_000_000, "fr")` returning `"290 Mo"`. The internal `describeSearchByMeaning(state, itemNoun, labels, locale?)` accepts the locale as its fourth argument.
 
 ## Labels
 

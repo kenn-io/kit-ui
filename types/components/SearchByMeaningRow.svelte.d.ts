@@ -4,6 +4,8 @@ interface Props {
     /** Noun selected by the caller for itemCount or total, including plural rules. */
     itemNoun: string;
     labels?: Partial<SearchByMeaningLabels>;
+    /** Locale for numbers, download sizes, and durations; defaults to the runtime locale. */
+    locale?: string;
     /** Show status only, with no button, for viewers who can't change it. */
     readonly?: boolean;
     onturnon: () => void;

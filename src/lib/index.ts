@@ -113,6 +113,7 @@ export { default as RefreshControl } from "./components/RefreshControl.svelte";
 export { default as ScrollBox } from "./components/ScrollBox.svelte";
 export { default as SearchByMeaningRow } from "./components/SearchByMeaningRow.svelte";
 export { default as SearchByMeaningHint } from "./components/SearchByMeaningHint.svelte";
+export { formatSize } from "./components/search-by-meaning.js";
 export type {
   SearchByMeaningState,
   SearchByMeaningLabels,
