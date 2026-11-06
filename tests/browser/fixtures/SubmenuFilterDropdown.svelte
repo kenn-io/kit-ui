@@ -6,12 +6,29 @@
   // SelectDropdown, for the nested-Escape and search-reposition specs.
   let match = $state("all");
   const noop = () => {};
-  const below = Array.from({ length: 20 }, (_, i) => ({
-    id: `labeled-${i + 1}`,
-    label: `Labeled item ${i + 1}`,
-    active: false,
-    onSelect: noop,
-  }));
+  // Bumping this rebuilds every item object, the way an app's derived
+  // sections do after any filter change. Specs call it through window.
+  let version = $state(0);
+  (window as unknown as { rebuildFixtureSections: () => void }).rebuildFixtureSections = () =>
+    (version += 1);
+  const sections = $derived.by(() => {
+    void version;
+    return [
+      {
+        items: [
+          { id: "alpha", label: "Alpha", active: false, onSelect: noop },
+          { id: "beta", label: "Beta", active: false, onSelect: noop },
+          { id: "labels", label: "Labels", active: false, submenu: labelsMenu, onSelect: noop },
+          ...Array.from({ length: 20 }, (_, i) => ({
+            id: `labeled-${i + 1}`,
+            label: `Labeled item ${i + 1}`,
+            active: false,
+            onSelect: noop,
+          })),
+        ],
+      },
+    ];
+  });
 </script>
 
 {#snippet labelsMenu()}
@@ -28,17 +45,4 @@
   </div>
 {/snippet}
 
-<FilterDropdown
-  label="Fixture filters"
-  searchable
-  sections={[
-    {
-      items: [
-        { id: "alpha", label: "Alpha", active: false, onSelect: noop },
-        { id: "beta", label: "Beta", active: false, onSelect: noop },
-        { id: "labels", label: "Labels", active: false, submenu: labelsMenu, onSelect: noop },
-        ...below,
-      ],
-    },
-  ]}
-/>
+<FilterDropdown label="Fixture filters" searchable {sections} />

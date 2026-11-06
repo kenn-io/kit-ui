@@ -112,15 +112,18 @@ test("a submenu flyout follows the panel when the trigger moves it", async ({ pa
   await expect.poll(gap).toBe(0);
 });
 
-async function mountSubmenuFixture(page: Page): Promise<void> {
+async function mountSubmenuFixture(page: Page, zoom = 1): Promise<void> {
   await gotoPage(page, "filter-dropdown");
-  await page.evaluate(async () => {
+  await page.evaluate(async (zoom) => {
     const { mount } = await import("/node_modules/.vite/deps/svelte.js");
     const { default: Fixture } =
       await import("/tests/browser/fixtures/SubmenuFilterDropdown.svelte");
     document.body.replaceChildren();
-    mount(Fixture, { target: document.body });
-  });
+    const target = document.createElement("div");
+    target.style.cssText = `position:fixed;left:40px;top:40px;zoom:${zoom}`;
+    document.body.append(target);
+    mount(Fixture, { target });
+  }, zoom);
 }
 
 test("Escape closes a popover inside the flyout before the flyout, then the panel", async ({
@@ -169,4 +172,49 @@ test("a submenu flyout follows its row when search removes rows above it", async
   await expect.poll(async () => (await row.boundingBox())!.y).toBeLessThan(rowTop);
   expect((await panel.boundingBox())!.height).toBe(panelHeight);
   await expect.poll(offset).toBe(0);
+});
+
+test("rebuilding the sections keeps a popover inside the flyout on top for Escape", async ({
+  page,
+}) => {
+  await mountSubmenuFixture(page);
+  await page.getByRole("button", { name: "Fixture filters" }).click();
+  await page.getByRole("button", { name: /^Labels/ }).click();
+  const flyout = page.getByRole("dialog", { name: "Labels" });
+  const select = flyout.getByRole("combobox", { name: /^Match/ });
+  await select.click();
+  await expect(select).toHaveAttribute("aria-expanded", "true");
+
+  // Apps hand over fresh item objects on every filter change.
+  await page.evaluate(() =>
+    (window as unknown as { rebuildFixtureSections: () => void }).rebuildFixtureSections(),
+  );
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+
+  await page.keyboard.press("Escape");
+  await expect(select).toHaveAttribute("aria-expanded", "false");
+  await expect(flyout).toBeVisible();
+});
+
+test("a submenu flyout stays attached to its panel under CSS zoom", async ({ page }) => {
+  const zoom = 1.5;
+  await mountSubmenuFixture(page, zoom);
+  await page.getByRole("button", { name: "Fixture filters" }).click();
+  const panel = page.locator(".kit-filter-dropdown__panel");
+  const row = page.getByRole("button", { name: /^Labels/ });
+  await row.click();
+  const flyout = page.getByRole("dialog", { name: "Labels" });
+  // Rendered pixels: the 1px border overlap and 4px row offset scale with zoom.
+  await expect
+    .poll(async () => {
+      const panelBox = (await panel.boundingBox())!;
+      const flyoutBox = (await flyout.boundingBox())!;
+      return Math.abs(flyoutBox.x - (panelBox.x + panelBox.width - zoom));
+    })
+    .toBeLessThan(1);
+  await expect
+    .poll(async () =>
+      Math.abs((await flyout.boundingBox())!.y - ((await row.boundingBox())!.y - 4 * zoom)),
+    )
+    .toBeLessThan(1);
 });

@@ -135,8 +135,13 @@
     return () => cleanups.forEach((cleanup) => cleanup());
   });
 
+  // Apps rebuild their sections (with fresh item objects) on every filter
+  // change, so the flyout's layer keys on open/closed, not the item. Keying
+  // on the item would re-register it above a popover opened inside it.
+  const submenuOpen = $derived(submenuItem !== undefined);
+
   $effect(() => {
-    if (!submenuItem) return;
+    if (!submenuOpen) return;
     const cleanups = [
       // The flyout is the newer layer, so Escape closes it before the panel,
       // and a popover opened inside it closes before the flyout. Clicks in
@@ -189,11 +194,17 @@
     if (!submenuId || !dropdownRef || !submenuRef) return;
     const anchor = submenuAnchor(submenuId);
     if (!anchor) return;
+    // Fixed offsets and offsetWidth/Height use the flyout's unzoomed CSS
+    // units, so bring the zoomed client rects and viewport into them, as
+    // SelectDropdown does. Engines without currentCSSZoom keep the old maths.
+    const zoom = submenuRef.currentCSSZoom ?? 1;
+    const unzoom = (rect: DOMRect) =>
+      new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom);
     submenuStyle = floatingFlyoutStyle({
-      anchor: anchor.getBoundingClientRect(),
-      panel: dropdownRef.getBoundingClientRect(),
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
+      anchor: unzoom(anchor.getBoundingClientRect()),
+      panel: unzoom(dropdownRef.getBoundingClientRect()),
+      viewportWidth: window.innerWidth / zoom,
+      viewportHeight: window.innerHeight / zoom,
       flyoutWidth: submenuRef.offsetWidth,
       flyoutHeight: submenuRef.offsetHeight,
     });
