@@ -7,9 +7,10 @@
   interface Props {
     /** Extra rows in the flyout, to make it taller than a small viewport. */
     flyoutRows?: number;
+    portal?: boolean;
   }
 
-  let { flyoutRows = 0 }: Props = $props();
+  let { flyoutRows = 0, portal = false }: Props = $props();
   let match = $state("all");
   const noop = () => {};
   // Bumping this rebuilds every item object, the way an app's derived
@@ -31,6 +32,7 @@
             active: false,
             onSelect: noop,
           })),
+          { id: "close", label: "Close menu", active: false, closeOnSelect: true, onSelect: noop },
         ],
       },
     ];
@@ -54,4 +56,4 @@
   </div>
 {/snippet}
 
-<FilterDropdown label="Fixture filters" searchable {sections} />
+<FilterDropdown label="Fixture filters" searchable {sections} {portal} />

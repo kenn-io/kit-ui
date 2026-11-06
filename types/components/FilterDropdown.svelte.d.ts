@@ -42,6 +42,10 @@ interface Props {
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";
+    /** Render the panel and flyout in `document.body`, so an ancestor that
+     * clips overflow or sets CSS containment cannot clip them. Tab then
+     * cycles inside the panel or the flyout. */
+    portal?: boolean;
 }
 declare const FilterDropdown: import("svelte").Component<Props, {}, "">;
 type FilterDropdown = ReturnType<typeof FilterDropdown>;

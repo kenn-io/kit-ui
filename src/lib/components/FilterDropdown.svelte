@@ -59,6 +59,10 @@
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";
+    /** Render the panel and flyout in `document.body`, so an ancestor that
+     * clips overflow or sets CSS containment cannot clip them. Tab then
+     * cycles inside the panel or the flyout. */
+    portal?: boolean;
   }
 
   let {
@@ -82,6 +86,7 @@
     minWidth = "200px",
     align = "start",
     icon = "filter",
+    portal = false,
   }: Props = $props();
 
   let isOpen = $state(false);
@@ -199,6 +204,11 @@
   }
 
   function closeDropdown(): void {
+    // A body-level panel takes focus with it when it closes; hand it back to
+    // the trigger, where the panel's place in the tab order is.
+    const active = document.activeElement;
+    if (portal && (dropdownRef?.contains(active) || submenuRef?.contains(active)))
+      buttonRef?.focus();
     isOpen = false;
     search = "";
     submenuId = null;
@@ -229,20 +239,23 @@
     });
   }
 
-  async function openSubmenu(item: FilterDropdownItem): Promise<void> {
-    submenuId = item.id;
-    await tick();
-    positionSubmenu();
-    if (!submenuRef) return;
-    // The selector also matches hidden inputs and controls in a disabled
-    // fieldset; take the first control the browser would actually tab to.
-    const first = Array.from(submenuRef.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).find(
+  // The selector also matches hidden inputs and controls in a disabled
+  // fieldset; keep the controls the browser would actually tab to.
+  function tabbableControls(surface: HTMLElement): HTMLElement[] {
+    return Array.from(surface.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
       (element) =>
         element.tabIndex >= 0 &&
         !element.matches(":disabled") &&
         element.getClientRects().length > 0,
     );
-    first?.focus();
+  }
+
+  async function openSubmenu(item: FilterDropdownItem): Promise<void> {
+    submenuId = item.id;
+    await tick();
+    positionSubmenu();
+    if (!submenuRef) return;
+    tabbableControls(submenuRef)[0]?.focus();
     // Focus must land in the flyout, or Escape would close the whole dropdown.
     if (!submenuRef.contains(document.activeElement)) submenuRef.focus();
   }
@@ -277,6 +290,8 @@
     isOpen = true;
     await tick();
     positionDropdown();
+    // Tab from the trigger cannot reach a panel at the end of the body.
+    if (portal && dropdownRef) (tabbableControls(dropdownRef)[0] ?? dropdownRef).focus();
   }
 
   async function toggleOpen(): Promise<void> {
@@ -312,16 +327,41 @@
     positionDropdown();
   }
 
+  // In the body, Tab past either end would leave the page, so it wraps.
+  function containTab(event: KeyboardEvent): void {
+    if (event.key !== "Tab" || event.defaultPrevented) return;
+    const surface = event.currentTarget as HTMLElement;
+    const controls = tabbableControls(surface);
+    const first = controls[0];
+    const last = controls.at(-1);
+    const current = document.activeElement;
+    if (!first || !last) {
+      event.preventDefault();
+      surface.focus();
+    } else if (event.shiftKey && (current === first || current === surface)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && current === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function portalToBody(node: HTMLElement): () => void {
+    document.body.appendChild(node);
+    node.addEventListener("keydown", containTab);
+    return () => {
+      node.removeEventListener("keydown", containTab);
+      node.remove();
+    };
+  }
+
   function itemDescriptionId(item: FilterDropdownItem): string {
     return `kit-filter-item-description-${item.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
   }
 </script>
 
-<div
-  class="kit-filter-dropdown"
-  style:--kit-filter-dropdown-max-width={viewportLimits ? `${viewportLimits.width}px` : undefined}
-  style:--kit-filter-dropdown-max-height={viewportLimits ? `${viewportLimits.height}px` : undefined}
->
+<div class="kit-filter-dropdown">
   <button
     class="kit-filter-dropdown__btn kit-control-states"
     class:kit-filter-dropdown__btn--active={isActive}
@@ -354,6 +394,14 @@
       class="kit-filter-dropdown__panel kit-popover-card"
       bind:this={dropdownRef}
       style={dropdownStyle}
+      style:--kit-filter-dropdown-max-width={viewportLimits
+        ? `${viewportLimits.width}px`
+        : undefined}
+      style:--kit-filter-dropdown-max-height={viewportLimits
+        ? `${viewportLimits.height}px`
+        : undefined}
+      tabindex={portal ? -1 : undefined}
+      {@attach portal && portalToBody}
       style:min-width={`min(${minWidth}, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)))`}
     >
       {#if searchable}
@@ -459,7 +507,14 @@
         aria-label={submenuItem.label}
         tabindex="-1"
         style={submenuStyle}
+        style:--kit-filter-dropdown-max-width={viewportLimits
+          ? `${viewportLimits.width}px`
+          : undefined}
+        style:--kit-filter-dropdown-max-height={viewportLimits
+          ? `${viewportLimits.height}px`
+          : undefined}
         onkeydown={handleSubmenuKeydown}
+        {@attach portal && portalToBody}
       >
         {@render submenuItem.submenu()}
       </div>
