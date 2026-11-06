@@ -46,9 +46,9 @@ test("click reports manual immediately and resets the automatic refresh deadline
 
   await page.getByRole("button", { name: "Refresh usage data", exact: true }).click();
   await expect(reason).toHaveText("manual");
-  await page.clock.runFor(240_000);
+  await page.clock.runFor(270_000);
   await expect(reason).toHaveText("manual");
-  await page.clock.runFor(60_000);
+  await page.clock.runFor(30_000);
   await expect(reason).toHaveText("auto");
 });
 
