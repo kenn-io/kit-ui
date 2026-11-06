@@ -548,27 +548,29 @@
     margin-bottom: var(--space-4);
   }
 
-  /* The presets read as one segmented control, like the mode tabs above
-   * them: one inset track with flat options, so the chosen preset is the
-   * only raised shape (the shared selected idiom from theme.css). */
+  /* The presets are a second segmented control under the mode tabs, built
+   * like SegmentedControl: the same inset track, radius, flat options, and
+   * shared selected pill (theme.css). The row is a little shorter and in
+   * regular weight, so the mode switch stays the first choice. */
   .kit-date-range-picker__pills {
+    --kit-date-range-picker-presets-radius: var(--kit-control-radius, var(--radius-sm));
     display: flex;
-    gap: var(--space-1);
+    gap: 1px;
     padding: var(--space-1);
-    border-radius: var(--radius-md);
+    border-radius: var(--kit-date-range-picker-presets-radius);
     background: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
   }
 
   .kit-date-range-picker__pill {
     flex: 1;
-    height: 26px;
+    height: 20px;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: max(0px, calc(var(--kit-date-range-picker-presets-radius) - 1px));
     background: transparent;
     color: var(--text-muted);
     font-family: inherit;
-    font-size: var(--font-size-sm);
+    font-size: var(--kit-control-font-size, var(--font-size-xs));
     font-weight: 400;
     cursor: pointer;
     transition:
@@ -607,8 +609,7 @@
     width: 100%;
   }
 
-  /* Sized like the pill rows above so the tabs read as one family; the
-   * accent border marks the endpoint the next calendar click sets. */
+  /* The accent border marks the endpoint the next calendar click sets. */
   .kit-date-range-picker__endpoint {
     flex: 1;
     box-sizing: border-box;
