@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from "@playwright/test";
-import { gotoPage, setTheme } from "./helpers";
+import { gotoPage, resolvedStyle, setTheme } from "./helpers";
 
 const actionSystemProperties = [
   "height",
@@ -164,5 +164,8 @@ test("configured image failure and public surface variables remain functional", 
   const customDisabled = page.getByRole("button", { name: "Styled unavailable provider" });
   await expect(customDisabled).toHaveCSS("background-color", "rgb(245, 246, 248)");
   await expect(customDisabled).toHaveCSS("border-color", "rgb(228, 230, 236)");
-  await expect(customDisabled).toHaveCSS("color", "rgb(135, 142, 160)");
+  await expect(customDisabled).toHaveCSS(
+    "color",
+    await resolvedStyle(page, "color", "var(--text-muted)"),
+  );
 });
