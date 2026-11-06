@@ -23,7 +23,7 @@
 
   const panels: Record<string, string> = {
     conversation: "Ana: The retry loop now backs off after the third failure.",
-    commits: "a41c9e2 fix(sync): back off after repeated failures",
+    commits: "Back off after repeated failures",
     files: "src/sync/retry.ts  +42 −7",
   };
 </script>
@@ -49,7 +49,7 @@
       {/snippet}
     </Tabs>
     <p class="tabs-demo__readout">
-      onchange calls: <span data-testid="tabs-changes">{changes}</span>
+      Selection changes: <span data-testid="tabs-changes">{changes}</span>
     </p>
     <span class="tabs-demo__hidden" data-testid="tabs-value">{detail}</span>
   </div>
