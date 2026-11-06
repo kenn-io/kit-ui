@@ -20,10 +20,16 @@
   let view = $state("chat");
 
   let manual = $state("conversation");
+
+  const panels: Record<string, string> = {
+    conversation: "Ana: The retry loop now backs off after the third failure.",
+    commits: "a41c9e2 fix(sync): back off after repeated failures",
+    files: "src/sync/retry.ts  +42 −7",
+  };
 </script>
 
 <DemoSection
-  title="Tabs"
+  title="With a panel"
   description="A tab list with roving focus: arrow keys move between enabled tabs and select them, Home and End jump to the ends. The children snippet renders the selected tab's panel, labelled by its tab."
   code={`<Tabs tabs={tabs} bind:value ariaLabel="Pull request detail">
   {#snippet children(id)}
@@ -39,28 +45,27 @@
       ariaLabel="Pull request detail"
     >
       {#snippet children(id)}
-        <p>Showing the {detailTabs.find((t) => t.id === id)?.label.toLowerCase()} view.</p>
+        <p class="tabs-demo__panel">{panels[id]}</p>
       {/snippet}
     </Tabs>
     <p class="tabs-demo__readout">
-      value: <span data-testid="tabs-value">{detail}</span>, changes:
-      <span data-testid="tabs-changes">{changes}</span>
+      onchange calls: <span data-testid="tabs-changes">{changes}</span>
     </p>
+    <span class="tabs-demo__hidden" data-testid="tabs-value">{detail}</span>
   </div>
 </DemoSection>
 
 <DemoSection
-  title="Custom tab content"
-  description="The tab snippet renders icons or badges in place of the label; the label stays the accessible name."
+  title="Icon-only tabs"
+  description="The tab snippet renders custom content, such as an icon, in place of the label. The label stays the accessible name."
   code={`<Tabs {tabs} bind:value ariaLabel="Workspace view">
-  {#snippet tab(item)}<Icon id={item.id} /> {item.label}{/snippet}
+  {#snippet tab(item)}<Icon id={item.id} />{/snippet}
 </Tabs>`}
 >
   <div class="tabs-demo" data-testid="tabs-icons">
     <Tabs tabs={viewTabs} bind:value={view} ariaLabel="Workspace view">
       {#snippet tab(item)}
-        {#if item.id === "chat"}<MessageSquareIcon size={14} />{:else}<FileIcon size={14} />{/if}
-        {item.label}
+        {#if item.id === "chat"}<MessageSquareIcon size={16} />{:else}<FileIcon size={16} />{/if}
       {/snippet}
     </Tabs>
   </div>
@@ -73,7 +78,7 @@
 >
   <div class="tabs-demo" data-testid="tabs-manual">
     <Tabs tabs={detailTabs} bind:value={manual} activation="manual" ariaLabel="Detail (manual)" />
-    <p class="tabs-demo__readout">value: <span data-testid="tabs-manual-value">{manual}</span></p>
+    <span class="tabs-demo__hidden" data-testid="tabs-manual-value">{manual}</span>
   </div>
 </DemoSection>
 
@@ -86,6 +91,15 @@
 
   .tabs-demo p {
     margin: 0;
+  }
+
+  .tabs-demo__panel {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+  }
+
+  .tabs-demo__hidden {
+    display: none;
   }
 
   .tabs-demo__readout {

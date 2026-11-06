@@ -20,7 +20,7 @@ test("a click selects a tab and swaps the panel", async ({ page }) => {
   const root = page.getByTestId("tabs-detail");
   await root.getByRole("tab", { name: /Files changed/ }).click();
   await expect(root.getByRole("tab", { selected: true })).toHaveAccessibleName("Files changed 38");
-  await expect(root.getByRole("tabpanel")).toHaveText("Showing the files changed view.");
+  await expect(root.getByRole("tabpanel")).toHaveText("src/sync/retry.ts  +42 −7");
   await expect(page.getByTestId("tabs-value")).toHaveText("files");
   await expect(page.getByTestId("tabs-changes")).toHaveText("1");
 
@@ -76,10 +76,37 @@ test("manual activation moves focus without selecting", async ({ page }) => {
   await expect(tab(/Commits/)).toHaveAttribute("aria-selected", "true");
 });
 
-test("custom tab content keeps the label as the accessible name", async ({ page }) => {
+test("after arrowing without selecting, Tab and Shift+Tab leave the list", async ({ page }) => {
+  const root = page.getByTestId("tabs-manual");
+  const tab = (name: RegExp) => root.getByRole("tab", { name });
+  const focusedIsTab = () =>
+    page.evaluate(() => document.activeElement?.getAttribute("role") === "tab");
+
+  await tab(/Conversation/).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(tab(/Commits/)).toHaveAttribute("tabindex", "0");
+  await expect(tab(/Conversation/)).toHaveAttribute("tabindex", "-1");
+  await page.keyboard.press("Shift+Tab");
+  expect(await focusedIsTab()).toBe(false);
+
+  // Coming back lands on the selected tab, which never changed.
+  await page.keyboard.press("Tab");
+  await expect(tab(/Conversation/)).toBeFocused();
+
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Tab");
+  expect(await focusedIsTab()).toBe(false);
+});
+
+test("icon-only tabs take their accessible name from the label", async ({ page }) => {
   const root = page.getByTestId("tabs-icons");
-  await expect(root.getByRole("tab", { name: "Chat", exact: true })).toBeVisible();
-  await expect(root.getByRole("tab", { name: "Files", exact: true }).locator("svg")).toBeVisible();
+  for (const name of ["Chat", "Files"]) {
+    const tab = root.getByRole("tab", { name, exact: true });
+    // The visible content is only an icon, so the name must come from aria-label.
+    await expect(tab).toHaveText("");
+    await expect(tab.locator("svg")).toBeVisible();
+    await expect(tab).toHaveAccessibleName(name);
+  }
 });
 
 test("the selected tab draws an accent bar on the list rule", async ({ page }) => {

@@ -49,11 +49,25 @@
   const panelId = `${uid}-panel`;
   const tabId = (id: string) => `${uid}-tab-${id}`;
 
-  // The tab that takes focus on Tab: the selected one, or the first enabled
-  // tab when the value names no enabled tab.
+  // The tab arrow keys last moved focus to while focus is in the list. In
+  // manual mode it differs from the selection, and it must hold the roving
+  // tabindex so Tab and Shift+Tab leave the list instead of stepping back
+  // to the selected tab.
+  let rovingId = $state<string | undefined>(undefined);
+
+  const enabledId = (id: string | undefined) => tabs.find((t) => t.id === id && !t.disabled)?.id;
+
+  // The one tab in the Tab order: the roving one while focus is in the
+  // list, else the selected one, else the first enabled tab.
   const focusId = $derived(
-    tabs.find((t) => t.id === value && !t.disabled)?.id ?? tabs.find((t) => !t.disabled)?.id,
+    enabledId(rovingId) ?? enabledId(value) ?? tabs.find((t) => !t.disabled)?.id,
   );
+
+  // Coming back into the list should land on the selected tab.
+  function handleFocusout(event: FocusEvent): void {
+    const list = event.currentTarget as HTMLElement;
+    if (!list.contains(event.relatedTarget as Node | null)) rovingId = undefined;
+  }
 
   function select(item: TabItem): void {
     if (item.disabled || item.id === value) return;
@@ -85,6 +99,7 @@
     }
     if (!next) return;
     event.preventDefault();
+    rovingId = next.id;
     (event.currentTarget as HTMLElement)
       .querySelector<HTMLButtonElement>(`[data-tab-id="${CSS.escape(next.id)}"]`)
       ?.focus();
@@ -100,6 +115,7 @@
     aria-orientation="horizontal"
     tabindex="-1"
     onkeydown={handleKeydown}
+    onfocusout={handleFocusout}
   >
     {#each tabs as item (item.id)}
       {@const selected = item.id === value}
@@ -115,7 +131,10 @@
         aria-label={tab ? item.label : undefined}
         tabindex={item.id === focusId ? 0 : -1}
         disabled={item.disabled}
-        onclick={() => select(item)}
+        onclick={() => {
+          rovingId = item.id;
+          select(item);
+        }}
       >
         {#if tab}
           {@render tab(item, selected)}
