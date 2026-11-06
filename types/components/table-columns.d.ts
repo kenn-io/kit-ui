@@ -18,10 +18,21 @@ export interface ColumnSizing {
     resizeStart(cell: HTMLTableCellElement): void;
     /** Size the column to its width at the start plus `delta`. */
     resize(cell: HTMLTableCellElement, delta: number): void;
-    /** The resize is done; report the widths. */
+    /** The resize is done; report it when it changed the width. */
     resizeEnd(cell: HTMLTableCellElement): void;
     /** Fit the column to its content. */
     fit(cell: HTMLTableCellElement): void;
+}
+/** A column width a person set, as VirtualTable's `oncolumnresize` reports
+ * it. */
+export interface ColumnResize {
+    /** The column's key: its header's `column`, else its `label`, else its
+     * position as a string. */
+    column: string;
+    /** The column's position among the shown columns. */
+    index: number;
+    /** Its new width in px, border-box. */
+    width: number;
 }
 export declare const columnSizingContext: unique symbol;
 /** Default resize limits, as in gpui-kit's columns. */

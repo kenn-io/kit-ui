@@ -147,6 +147,7 @@ export type { StructuredListLevel } from "./components/StructuredList.svelte";
 export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
+export type { ColumnResize } from "./components/table-columns.js";
 export { TableSort } from "./components/table-sort.svelte.js";
 export {
   compareSortValues,
