@@ -130,7 +130,7 @@ test("keeps notice actions readable in every base theme", async ({ page }) => {
 
   for (const dark of [false, true]) {
     await setTheme(page, { dark });
-    for (const tone of ["info", "success", "warning", "error"]) {
+    for (const tone of ["info", "success", "warning", "error", "note", "tip", "important"]) {
       await notice.evaluate((element, value) => element.setAttribute("data-tone", value), tone);
       expect(await contrastOf(action)).toBeGreaterThanOrEqual(4.5);
     }

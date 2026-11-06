@@ -51,7 +51,40 @@ export interface FieldState {
 
 ## Notice
 
-`Notice` accepts `info`, `success`, `warning`, or `error`, plus a message and
-optional title and action callback. It shows a plain tone label so meaning does
-not depend on color; `toneLabel` can localize that text. Error notices use an
-alert role; other tones use a status role.
+`Notice` takes a tone: `info`, `success`, `warning`, or `error` for status,
+plus `note`, `tip`, and `important` for documentation callouts. It shows a plain
+tone label so meaning does not depend on color; `toneLabel` can localize that
+text.
+
+The body is `message` (plain text) or the `children` snippet for rich content
+such as links, code, and lists. `children` wins when both are passed. An `icon`
+snippet replaces the tone dot; it is decorative, because the tone label carries
+the meaning.
+
+By default a notice is live: error notices use an alert role and other tones a
+status role, so assistive tech announces them when they appear. A callout that
+is part of the page content should pass `live={false}`, which renders it as a
+`note` without `aria-live`.
+
+```svelte
+<Notice tone="tip" live={false} title="Faster reviews">
+  {#snippet icon()}<LightbulbIcon />{/snippet}
+  Run <code>bun run check</code> before pushing.
+</Notice>
+```
+
+| Prop          | Type         | Default   | Notes                                                             |
+| ------------- | ------------ | --------- | ----------------------------------------------------------------- |
+| `tone`        | `NoticeTone` | `"info"`  | `info \| success \| warning \| error \| note \| tip \| important` |
+| `toneLabel`   | `string`     | tone name | Visible tone label, for localization                              |
+| `title`       | `string`     | —         |                                                                   |
+| `message`     | `string`     | —         | Plain-text body                                                   |
+| `children`    | `Snippet`    | —         | Rich body; wins over `message`                                    |
+| `icon`        | `Snippet`    | —         | Replaces the tone dot                                             |
+| `live`        | `boolean`    | `true`    | `false` renders a static `note` callout                           |
+| `actionLabel` | `string`     | —         | Shown with `onaction`                                             |
+| `onaction`    | `() => void` | —         |                                                                   |
+| `class`       | `string`     | `""`      |                                                                   |
+
+Markdown renders GitHub alert blockquotes (`> [!NOTE]`) with the same tone
+colors; see [CodeBlock + Markdown](code-block.md#alerts).
