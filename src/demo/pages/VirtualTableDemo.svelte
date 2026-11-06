@@ -37,6 +37,9 @@
     tokens: (i * 7919) % 50000,
   }));
 
+  // A short list for the localized resize handles.
+  const localizedReviews = reviews.slice(0, 40);
+
   const sorter = new TableSort<Review>(
     {
       id: (r) => r.id,
@@ -493,7 +496,34 @@ table.refresh();`}
   </p>
 {/snippet}
 
+<DemoSection
+  title="Localized resize handles"
+  description="Each resize handle's accessible name defaults to the English &quot;Resize the &lbrace;label&rbrace; column&quot;. Pass a translated resizeLabel on the header cell so screen readers announce it in the app's language. Focus a header's right edge to hear it."
+  code={`<TableHeaderCell label="Projekt" resizeLabel="Breite der Spalte Projekt ändern" />`}
+>
+  <div class="host host--short" data-testid="virtual-table-localized">
+    <VirtualTable items={localizedReviews} rowKey={(r) => r.id} ariaLabel="Prüfungen">
+      {#snippet header()}
+        <TableHeaderCell label="ID" numeric resizeLabel="Breite der Spalte ID ändern" />
+        <TableHeaderCell label="Projekt" resizeLabel="Breite der Spalte Projekt ändern" />
+        <TableHeaderCell label="Branch" resizeLabel="Breite der Spalte Branch ändern" />
+      {/snippet}
+      {#snippet row(review)}
+        <tr>
+          <td class="num">#{review.id}</td>
+          <td>{review.project}</td>
+          <td class="branch">{review.branch}</td>
+        </tr>
+      {/snippet}
+    </VirtualTable>
+  </div>
+</DemoSection>
+
 <style>
+  .host--short {
+    height: 220px;
+  }
+
   .flow {
     width: 100%;
   }
