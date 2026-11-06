@@ -113,7 +113,8 @@
 
   let query = $state("");
   let open = $state(false);
-  let highlightIndex = $state(0);
+  // -1 follows the default row as options change.
+  let highlightIndex = $state(-1);
   let inputEl = $state<HTMLInputElement>();
   // The built-in trigger, or the caller's button when `trigger` is set.
   let triggerEl = $state<HTMLButtonElement>();
@@ -267,7 +268,12 @@
   // rendering, aria-activedescendant, and selection all read this clamped
   // view — it always names a rendered row (with zero rows the descendant is
   // dropped instead).
-  const activeIndex = $derived(Math.min(highlightIndex, Math.max(rowCount - 1, 0)));
+  const activeIndex = $derived(
+    Math.min(
+      highlightIndex < 0 ? clearOffset + firstOptionIndex : highlightIndex,
+      Math.max(rowCount - 1, 0),
+    ),
+  );
 
   function findByName(opts: TypeaheadOption[], name: string): TypeaheadOption | undefined {
     for (const option of opts) {
@@ -339,7 +345,7 @@
     // <body> and would fire focusout on the container. Suppress dismissal
     // until we've handed focus to the input.
     opening = true;
-    highlightIndex = !remote && customValue !== "" ? customOffset : clearOffset + firstOptionIndex;
+    highlightIndex = !remote && customValue !== "" ? customOffset : -1;
     await tick();
     positionPanel();
     inputEl?.focus();
@@ -595,13 +601,7 @@
     value={query}
     oninput={(event) => {
       updateQuery(event.currentTarget.value);
-      highlightIndex = remote
-        ? clearOffset
-        : customValue !== ""
-          ? customOffset
-          : rows.length > 0
-            ? clearOffset + firstOptionIndex
-            : 0;
+      highlightIndex = !remote && customValue !== "" ? customOffset : -1;
     }}
     onkeydown={handleKeydown}
     {placeholder}

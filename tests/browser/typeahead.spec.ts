@@ -711,6 +711,29 @@ test("grouped options can start and filter on the first choice", async ({ page }
   await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
 });
 
+for (const remote of [false, true]) {
+  test(`grouped ${remote ? "remote" : "local"} options arriving after opening start on the first choice`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "typeahead");
+    const fixture = await page.evaluateHandle(async (remote) => {
+      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: Fixture } =
+        await import("/tests/browser/fixtures/LoadingGroupedTypeahead.svelte");
+      document.body.replaceChildren();
+      return mount(Fixture, { target: document.body, props: { remote } });
+    }, remote);
+    await page.getByRole("button", { name: "Grouped choices" }).click();
+    const input = page.getByRole("combobox", { name: "Grouped choices" });
+    await expect(page.getByText("Loading…", { exact: true })).toBeVisible();
+    if (remote) await input.fill("alpha");
+    await fixture.evaluate((component) => component.supplyOptions());
+    await expect(page.getByRole("treeitem", { name: "Alpha", exact: true })).toBeVisible();
+    await input.press("Enter");
+    await expect(page.locator('[data-fixture="selected-value"]')).toHaveText("alpha");
+  });
+}
+
 test("the panel aligns with a wider anchor and follows its resize", async ({ page }) => {
   await gotoPage(page, "typeahead");
   await page.evaluate(async () => {
