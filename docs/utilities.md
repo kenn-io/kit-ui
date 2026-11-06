@@ -267,7 +267,13 @@ and wraps focus to the other end, as Headless UI and Floating UI do.
 ## Formatters
 
 ```ts
-import { formatDuration, formatNumber, formatTokenCount, formatCost } from "@kenn-io/kit-ui";
+import {
+  formatDuration,
+  formatNumber,
+  formatTokenCount,
+  formatCost,
+  formatSize,
+} from "@kenn-io/kit-ui";
 
 formatDuration(450); // "450ms"
 formatDuration(4_000); // "4.0s"
@@ -284,9 +290,13 @@ formatTokenCount(3_500_000); // "3.5M"
 formatCost(0.004); // "<$0.01"
 formatCost(12.339); // "$12.34"
 formatCost(123.4); // "$123"
+
+formatSize(290_000_000, "fr");
 ```
 
-Ported from agentsview without the i18n layer — output is plain English.
+`formatSize(bytes, locale?)` always displays decimal megabytes, rounded to a whole number: one megabyte is 1,000,000 bytes. `Intl.NumberFormat` supplies the unit and spacing for the locale; omitting it uses the runtime locale.
+
+The compact duration, token, and cost formats use plain English.
 `formatDuration` floors sub-minute values to one decimal so 59,999ms can't
 read as "60.0s".
 
