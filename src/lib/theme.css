@@ -143,6 +143,17 @@
     0 1px 2px color-mix(in srgb, #000 40%, transparent);
 }
 
+/* The default Card's edge. In light the white surface sits close to the
+ * page color, so the card takes the default border to keep a visible but
+ * calm edge; dark keeps the muted one. */
+:root {
+  --card-border: var(--border-default);
+}
+
+:root.dark {
+  --card-border: var(--border-muted);
+}
+
 /* Icon line weight. Lucide scales its stroke with the icon, so one
  * strokeWidth draws thin on a 12px icon and heavy on a 24px one. These
  * rules pick the stroke per rendered size so every icon draws at about the

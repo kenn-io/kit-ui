@@ -26,6 +26,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`                                                     |
 | Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                           |
 | Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                 |
+| Cards       | `--card-border` (the default Card edge: `--border-default` in light, `--border-muted` in dark)                                                              |
 | Popovers    | `--bg-popover`, `--border-popover` (the `.kit-popover-card` surface and edge; lighter than the surface in dark)                                             |
 | Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                     |
 | Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                               |
