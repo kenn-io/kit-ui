@@ -8,6 +8,10 @@ interval is armed at mount without an immediate fetch, a manual click refreshes
 now and resets the timer, and the age label ticks forward once a minute without
 refetching.
 
+`onRefresh` receives `"manual"` for a button click and `"auto"` for an interval
+tick. Use the reason when automatic refreshes need a different policy, such as
+waiting for pending edits. Callbacks that ignore the argument still work.
+
 ```svelte
 <script lang="ts">
   import { RefreshControl } from "@kenn-io/kit-ui";
@@ -31,7 +35,7 @@ refetching.
 | Prop              | Type                                                     | Default            | Notes                                                 |
 | ----------------- | -------------------------------------------------------- | ------------------ | ----------------------------------------------------- |
 | `lastUpdatedAt`   | `number \| null`                                         | required           | Epoch ms of last successful fetch                     |
-| `onRefresh`       | `() => void`                                             | required           | Called on click and on the interval                   |
+| `onRefresh`       | `(reason: "manual" \| "auto") => void`                   | required           | Click passes `"manual"`; interval passes `"auto"`     |
 | `busy`            | `boolean`                                                | `false`            | Spins the icon, disables the button                   |
 | `label`           | `string`                                                 | `"Refresh"`        | aria-label                                            |
 | `title`           | `string`                                                 | `label`            | Tooltip                                               |
