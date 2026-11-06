@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { clipboardReader, gotoPage, setTheme } from "./helpers.js";
+import { clipboardReader, contrastOf, gotoPage, setTheme } from "./helpers.js";
 
 // Markdown pipeline security + rendering acceptance
 // (docs/components/code-block.md). The sanitizer runs against real
@@ -294,6 +294,60 @@ test.describe("sanitization", () => {
     const html = await render(page, 'x: <a href="https://x.com" target="_blank">x</a>');
     expect(html).toContain('rel="noopener noreferrer"');
   });
+});
+
+test("GitHub alerts render as titled notes without the marker", async ({ page }) => {
+  await gotoPage(page, "markdown");
+  const html = await render(page, "> [!WARNING]\n> Rotate **keys** first.\n\n> plain quote");
+  const doc = await page.evaluate((markup) => {
+    const root = document.createElement("div");
+    root.innerHTML = markup;
+    const alert = root.querySelector(".kit-markdown-alert");
+    return {
+      className: alert?.className,
+      role: alert?.getAttribute("role"),
+      title: alert?.querySelector(".kit-markdown-alert__title")?.textContent,
+      strong: alert?.querySelector("strong")?.textContent,
+      text: alert?.textContent,
+      quotes: root.querySelectorAll("blockquote").length,
+    };
+  }, html);
+  expect(doc.className).toBe("kit-markdown-alert kit-markdown-alert--warning");
+  expect(doc.role).toBe("note");
+  expect(doc.title).toBe("Warning");
+  expect(doc.strong).toBe("keys");
+  expect(doc.text).not.toContain("[!WARNING]");
+  expect(doc.quotes).toBe(1);
+});
+
+test("alert options localize titles or turn alerts off", async ({ page }) => {
+  await gotoPage(page, "markdown");
+  const result = await page.evaluate(async () => {
+    const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+    const source = "> [!TIP]\n> body";
+    return {
+      localized: await createMarkdownRenderer({ alertLabels: { tip: "Astuce" } }).render(source),
+      off: await createMarkdownRenderer({ alerts: false }).render(source),
+    };
+  });
+  expect(result.localized).toContain('<p class="kit-markdown-alert__title">Astuce</p>');
+  expect(result.off).toContain("<blockquote>");
+  expect(result.off).toContain("[!TIP]");
+});
+
+test("gallery alerts keep readable text in both themes", async ({ page }) => {
+  await gotoPage(page, "markdown");
+  const alerts = page.getByTestId("markdown-alerts").locator(".kit-markdown-alert");
+  await expect(alerts).toHaveCount(5);
+  for (const dark of [false, true]) {
+    await setTheme(page, { dark });
+    for (const alert of await alerts.all()) {
+      expect(await contrastOf(alert.locator(".kit-markdown-alert__title"))).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(await contrastOf(alert.locator("p").nth(1))).toBeGreaterThanOrEqual(4.5);
+    }
+  }
 });
 
 test("gallery markdown switches code colors with the theme", async ({ page }) => {

@@ -295,6 +295,8 @@ export {
   highlightCode,
   renderMarkdown,
   renderMarkdownSync,
+  DEFAULT_MARKDOWN_ALERT_LABELS,
+  type MarkdownAlertKind,
   type MarkdownRenderer,
   type MarkdownRendererOptions,
 } from "./utils/markdown.js";

@@ -62,6 +62,15 @@ export declare function codeHighlightPlan(marked: Marked, tokens: Tokens.Generic
  * output is safe for `{@html}` without a DOMPurify pass.
  */
 export declare function highlightCode(code: string, lang: string): Promise<string | null>;
+/** GitHub alert kinds: a blockquote whose first line is `[!NOTE]`,
+ * `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`. */
+export type MarkdownAlertKind = "note" | "tip" | "important" | "warning" | "caution";
+export declare const DEFAULT_MARKDOWN_ALERT_LABELS: Record<MarkdownAlertKind, string>;
+/** Turn top-level alert blockquotes into alert tokens: tag the kind and
+ * drop the marker line. GitHub renders alerts only at the top level, so
+ * quotes nested in lists or other quotes are left alone. Exported for
+ * tests. */
+export declare function applyMarkdownAlerts(marked: Marked, tokens: Tokens.Generic[]): void;
 export interface MarkdownRendererOptions {
     /** Turn source newlines into hard breaks (default true). Set false
      * for standard Markdown soft breaks in prose. */
@@ -87,6 +96,12 @@ export interface MarkdownRendererOptions {
     /** Extra attributes sanitization should keep (e.g. `data-*` attributes
      * your extensions emit). `target` is always allowed. */
     allowedAttributes?: string[];
+    /** Render GitHub alert blockquotes (`> [!NOTE]`) as toned callouts
+     * (default true). Set false to keep them as plain quotes. */
+    alerts?: boolean;
+    /** Visible alert titles, for localization. Missing kinds keep the
+     * English default. */
+    alertLabels?: Partial<Record<MarkdownAlertKind, string>>;
 }
 export interface MarkdownRenderer {
     /** Render with shiki-highlighted fences (loads grammars on demand). */
