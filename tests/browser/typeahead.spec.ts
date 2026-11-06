@@ -676,39 +676,30 @@ test("nested repository groups expose deep levels and parent navigation", async 
 });
 
 test("filtering nested repository groups keeps ancestry and selects the leaf", async ({ page }) => {
-  await mountNestedRepositoryTypeahead(page);
-  const fixture = page.locator("#nested-typeahead-fixture");
-  await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
-  const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
-  await input.fill("agentsview");
-  const rows = fixture.locator(".kit-typeahead__option");
-  await expect(rows).toHaveCount(3);
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
-});
-
-test("grouped options can start and filter on the first choice", async ({ page }) => {
-  await mountNestedRepositoryTypeahead(page, { highlightFirstOption: true });
-  const fixture = page.locator("#nested-typeahead-fixture");
-  await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
-  const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
-  await expect(input).toHaveAttribute(
-    "aria-activedescendant",
-    (await fixture
-      .getByRole("treeitem", { name: "Forge", exact: true })
-      .getAttribute("id")) as string,
-  );
-  await input.fill("a");
-  await expect(input).toHaveAttribute(
-    "aria-activedescendant",
-    (await fixture
-      .getByRole("treeitem", { name: "agentsview", exact: true })
-      .getAttribute("id")) as string,
-  );
-  await page.keyboard.press("Enter");
-  await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
+  for (const highlightFirstOption of [false, true]) {
+    await page.goto("about:blank");
+    await mountNestedRepositoryTypeahead(page, { highlightFirstOption });
+    const fixture = page.locator("#nested-typeahead-fixture");
+    await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
+    const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
+    if (highlightFirstOption) {
+      await expect(fixture.getByRole("treeitem", { name: "Forge", exact: true })).toHaveClass(
+        /highlighted/,
+      );
+    }
+    await input.fill("a");
+    const rows = fixture.locator(".kit-typeahead__option");
+    await expect(rows).toHaveCount(3);
+    if (!highlightFirstOption) {
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(fixture.getByRole("treeitem", { name: "agentsview", exact: true })).toHaveClass(
+      /highlighted/,
+    );
+    await page.keyboard.press("Enter");
+    await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
+  }
 });
 
 for (const { remote, expanded, query, selected } of [
@@ -778,7 +769,7 @@ test("the panel aligns with a wider anchor and follows its resize", async ({ pag
     const anchor = document.createElement("div");
     anchor.id = "panel-anchor-fixture";
     anchor.style.cssText =
-      "position: fixed; left: 40px; top: 40px; width: 480px; height: 80px; display: flex; justify-content: flex-end; align-items: flex-end;";
+      "position: fixed; left: 40px; top: 40px; width: 480px; height: 80px; display: flex; justify-content: flex-end; align-items: flex-start;";
     document.body.append(anchor);
     mount(Typeahead, {
       target: anchor,
@@ -802,7 +793,7 @@ test("the panel aligns with a wider anchor and follows its resize", async ({ pag
   const panelBox = (await panel.boundingBox())!;
   expect(Math.abs(panelBox.x - anchorBox.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(panelBox.width - anchorBox.width)).toBeLessThanOrEqual(1);
-  expect(panelBox.y).toBeGreaterThanOrEqual(triggerBox.y + triggerBox.height);
+  expect(panelBox.y).toBeCloseTo(triggerBox.y + triggerBox.height + 2, 0);
   await anchor.evaluate((element) => {
     element.style.width = "600px";
   });
