@@ -36,6 +36,10 @@
     /** Center the tab group between the side regions (Forge style)
      * instead of packing it after the left region. */
     centerTabs?: boolean;
+    /** Quieter, tighter tabs for a bar with many destinations: smaller
+     * regular-weight labels in muted ink, so the tabs sit below the page
+     * content and leave the search region its width. */
+    compact?: boolean;
     /** aria-label for the tab nav / collapsed dropdown. */
     ariaLabel?: string;
     /** Collapsed dropdown text while no tab is current. */
@@ -62,6 +66,7 @@
     onchange = undefined,
     collapsed = $bindable(false),
     centerTabs = false,
+    compact = false,
     ariaLabel = "Primary",
     noCurrentLabel = "—",
     left = undefined,
@@ -146,6 +151,10 @@
       // absorbed — charging that would collapse the tabs unconditionally.
       // Charge its declared minimum instead: the width it must keep.
       used += searchMin ?? searchEl.offsetWidth;
+      // The flexible region keeps a fixed gap from the tabs; charge it too.
+      if (searchMin != null) {
+        used += Number.parseFloat(getComputedStyle(searchEl).marginInlineStart) || 0;
+      }
       regions += 1;
     }
     used += gap * (regions - 1);
@@ -190,7 +199,7 @@
   ></span>
 {/snippet}
 
-<header class={["kit-top-bar", className]} bind:this={barEl}>
+<header class={["kit-top-bar", compact && "kit-top-bar--compact", className]} bind:this={barEl}>
   {#if left}
     <div class="kit-top-bar__left" bind:this={leftEl}>
       {@render left()}
@@ -349,6 +358,12 @@
     margin-inline: 0;
   }
 
+  /* The bar's 8px gap made the tab strip and a search field beside it read
+   * as one control; the flexible search keeps a wider gap from the tabs. */
+  .kit-top-bar__nav + .kit-top-bar__search--flexible {
+    margin-inline-start: var(--space-6);
+  }
+
   .kit-top-bar__tabs {
     display: flex;
     align-items: center;
@@ -387,6 +402,18 @@
     background: var(--selected-strong-bg);
     color: var(--text-primary);
     box-shadow: var(--shadow-raised, var(--selected-strong-edge));
+  }
+
+  .kit-top-bar--compact .kit-top-bar__tab {
+    padding: 3px 9px;
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .kit-top-bar--compact .kit-top-bar__tab:hover:not(:disabled),
+  .kit-top-bar--compact .kit-top-bar__tab.active {
+    color: var(--text-primary);
   }
 
   .kit-top-bar__tab:disabled {

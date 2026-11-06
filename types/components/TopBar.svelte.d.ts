@@ -27,6 +27,10 @@ interface Props {
     /** Center the tab group between the side regions (Forge style)
      * instead of packing it after the left region. */
     centerTabs?: boolean;
+    /** Quieter, tighter tabs for a bar with many destinations: smaller
+     * regular-weight labels in muted ink, so the tabs sit below the page
+     * content and leave the search region its width. */
+    compact?: boolean;
     /** aria-label for the tab nav / collapsed dropdown. */
     ariaLabel?: string;
     /** Collapsed dropdown text while no tab is current. */
