@@ -45,6 +45,23 @@
     { id: "insights", label: "Insights" },
   ];
 
+  // Ten destinations, as in agentsview's bar.
+  const manyTabs: TopBarTab[] = [
+    { id: "sessions", label: "Sessions" },
+    { id: "pinned", label: "Pinned" },
+    { id: "edits", label: "Recent edits" },
+    { id: "usage", label: "Usage" },
+    { id: "activity", label: "Activity" },
+    { id: "quality", label: "Quality" },
+    { id: "trends", label: "Trends" },
+    { id: "insights", label: "Insights" },
+    { id: "friction", label: "Friction" },
+    { id: "trash", label: "Trash" },
+  ];
+  let manyActive = $state("usage");
+  let manyCollapsed = $state(false);
+  let manyWidth = $state(1180);
+
   let forgeActive = $state("activity");
   let forgeCollapsed = $state(false);
   let forgeWidth = $state(920);
@@ -205,6 +222,52 @@ const TABS: TopBarTab[] = [
           <MoonIcon size="14" strokeWidth="2" aria-hidden="true" />
         </IconButton>
         <IconButton ariaLabel="Settings">
+          <SettingsIcon size="14" strokeWidth="2" aria-hidden="true" />
+        </IconButton>
+      {/snippet}
+    </TopBar>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Many destinations: compact"
+  description="compact gives a bar with many tabs quieter, tighter labels: smaller regular-weight text in muted ink, so the tabs sit below the page content and every tab keeps its width when the current one changes. The current tab is the shared raised pill. The flexible search keeps a clear gap from the tabs. Settings is a page with no tab: open it and no tab is current."
+  code={`<TopBar tabs={TABS} bind:active compact searchMinWidth={collapsed ? 48 : 220}>
+  {#snippet search()}…{/snippet}
+  {#snippet right()}
+    <IconButton ariaLabel="Settings" onclick={() => (active = "settings")}>…</IconButton>
+  {/snippet}
+</TopBar>`}
+>
+  <div class="controls">
+    <label class="control">
+      Width {manyWidth}px
+      <input type="range" min="360" max="1400" bind:value={manyWidth} />
+    </label>
+    <span class="control-note"
+      >active: <code data-testid="top-bar-many-active">{manyActive}</code></span
+    >
+  </div>
+  <div class="bar-host bar-host--many" style:width="{manyWidth}px">
+    <TopBar
+      tabs={manyTabs}
+      bind:active={manyActive}
+      bind:collapsed={manyCollapsed}
+      compact
+      searchMinWidth={manyCollapsed ? 48 : 180}
+      ariaLabel="Pages"
+    >
+      {#snippet left()}
+        <span class="brand">
+          <span class="brand-dot brand-dot--blue"></span>
+          AgentsView
+        </span>
+      {/snippet}
+      {#snippet search()}
+        <FitStages class="search-fit" stages={[searchFull, searchCompact]} />
+      {/snippet}
+      {#snippet right()}
+        <IconButton ariaLabel="Settings" onclick={() => (manyActive = "settings")}>
           <SettingsIcon size="14" strokeWidth="2" aria-hidden="true" />
         </IconButton>
       {/snippet}

@@ -53,6 +53,7 @@ centered ⌘ K search trigger, icon-button cluster on the right).
 | `onchange`       | `(id: string) => void`           | —           | Fires on tab/dropdown selection                                                                                                                                                                                                                                                                                                                 |
 | `collapsed`      | `boolean` (bindable)             | `false`     | True while tabs are collapsed — read it to adapt snippets (e.g. hide the search label)                                                                                                                                                                                                                                                          |
 | `centerTabs`     | `boolean`                        | `false`     | Center the expanded tab group **in the free space between the reserved regions** (Forge style; not viewport-centered). Ignored when a `search` snippet is present — search owns the flexible middle. The collapsed dropdown always packs after `left`                                                                                           |
+| `compact`        | `boolean`                        | `false`     | Quieter, tighter tabs for a bar with many destinations: `--font-size-sm` regular-weight labels in muted ink, primary ink on hover and on the current tab. Every tab keeps its width when the current one changes                                                                                                                                |
 | `ariaLabel`      | `string`                         | `"Primary"` | Label for the nav / collapsed dropdown                                                                                                                                                                                                                                                                                                          |
 | `noCurrentLabel` | `string`                         | `"—"`       | Collapsed dropdown text while no tab is current; it appears as a disabled first option                                                                                                                                                                                                                                                          |
 | `left`           | `Snippet`                        | —           | Reserved leading region: brand, sidebar toggle, context pickers                                                                                                                                                                                                                                                                                 |
@@ -128,6 +129,9 @@ multi-breakpoint header, where the search control itself degrades:
   collapse the tabs unconditionally).
 - Set it to the narrowest width your search content can take, and lower it
   when `collapsed` flips to sequence the breakpoints.
+- The region keeps a 24px gap from the tab strip (16px of margin on top of
+  the bar's gap), so the tabs and the search field do not read as one
+  control. The collapse math charges that margin too.
 
 The canonical pairing is a [FitStages](fit-stages.md) inside the slot
 (styled `width: 100%`): tabs collapse first (TopBar's breakpoint, with
