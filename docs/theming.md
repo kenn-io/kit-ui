@@ -47,8 +47,8 @@ off-limits outside `theme.css`.
 ## Selected state
 
 One idiom marks the chosen option of a choice group: a raised pill. The
-`--selected-strong-*` tokens draw it. SegmentedControl, TopBar tabs, and
-DateRangePicker presets use them, and apps reuse them for their own choice
+`--selected-strong-*` tokens draw it. SegmentedControl (including
+DateRangePicker's mode tabs) and TopBar tabs use them, and apps reuse them for their own choice
 groups (chart toggles, sort pickers) so selection looks the same
 everywhere. In light the pill is the white surface lifted off the grey track
 by a hairline and a soft shadow. In dark it is a lighter fill with a faint

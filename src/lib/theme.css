@@ -35,7 +35,7 @@
 }
 
 /* Selected state. One idiom marks the chosen option of a choice group
- * (SegmentedControl, TopBar tabs, DateRangePicker presets): a raised pill.
+ * (SegmentedControl, DateRangePicker's mode tabs, TopBar tabs): a raised pill.
  * In light it is the white surface lifted off the grey track by a hairline
  * and a soft shadow; in dark it is a lighter surface with a faint edge,
  * because the plain dark surface barely differs from the dark track.
