@@ -439,6 +439,21 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-disclosure"])).toHaveLength(0);
   });
 
+  test("tabs: role=tablist markup", () => {
+    const src = svelte(
+      ``,
+      `<div class="detail-tabs" role="tablist">\n  <button role="tab" aria-selected="true">Files</button>\n</div>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-tabs"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain("Tabs");
+  });
+
+  test("tabs: does not match the component", () => {
+    const src = svelte(``, `<Tabs tabs={items} bind:value ariaLabel="Detail" />`);
+    expect(checkSource(src, "A.svelte", ["hand-rolled-tabs"])).toHaveLength(0);
+  });
+
   test("popover card: all three chrome declarations in one rule", () => {
     const src = svelte(
       `.menu {

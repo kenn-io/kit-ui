@@ -42,60 +42,61 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 
 ## Components
 
-| Component                                                     | Origin                             | Purpose                                                                                       |
-| ------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
-| [Accordion](docs/components/disclosure.md)                    | new                                | Framed group of Disclosures; `exclusive` keeps one open                                       |
-| [AdaptiveActionGrid](docs/components/adaptive-action-grid.md) | new (agentsview toolbar patterns)  | Container-aware row, grid, and inline disclosure for mixed controls                           |
-| [AppSidebar](docs/components/app-sidebar.md)                  | new                                | Responsive application sidebar: narrow drawer, icon rail with flyouts and pin, full panel     |
-| [BottomDock](docs/components/bottom-dock.md)                  | consumer app                       | Inline resizable bottom panel with composable regions                                         |
-| [Button](docs/components/button.md)                           | consumer app `ActionButton`        | Action button with tone × surface × size variants                                             |
-| [Calendar](docs/components/calendar.md)                       | new (DateRangePicker's month grid) | Single-month date grid with range highlight and month paging                                  |
-| [Chip](docs/components/chip.md)                               | consumer app `Chip`                | Status/label badge, optionally interactive                                                    |
-| [ChipStack](docs/components/chip-stack.md)                    | new (consumer mobile-view pattern) | Collapsing chip/button row with "+N" expansion                                                |
-| [CodeBlock](docs/components/code-block.md)                    | both (consolidated)                | Standalone code card: shiki dual-theme highlighting, line numbers, wrap toggle, copy          |
-| [CollapsibleSidebar](docs/components/collapsible-sidebar.md)  | consumer app                       | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`)                       |
-| [ColorInput](docs/components/color-input.md)                  | new (agentsview message colors)    | Color picker well, hex field, and quick-pick swatches                                         |
-| [ColorLabel](docs/components/color-label.md)                  | consumer app `GitHubLabels`        | Hex-colored pill with WCAG contrast-picked text                                               |
-| [CommandPalette](docs/components/command-palette.md)          | new                                | ⌘K overlay: filtered commands, sections, recents; pairs with the shortcut system              |
-| [CopyButton](docs/components/copy-button.md)                  | agentsview                         | Copy-to-clipboard icon button with success feedback                                           |
-| [DetailDrawer](docs/components/detail-drawer.md)              | consumer app                       | Right-side slide-in detail panel over an overlay                                              |
-| [Disclosure](docs/components/disclosure.md)                   | both (hand-rolled `<details>`)     | Collapsible section on native `<details>`: card or plain toggle, deep-link anchor             |
-| [DiffStats](docs/components/diff-stats.md)                    | consumer app                       | `+added −removed` diff counters with compact formatting                                       |
-| [EmptyState](docs/components/empty-state.md)                  | both (hand-rolled)                 | Centered muted placeholder: icon, title, description, action                                  |
-| [FilterDropdown](docs/components/filter-dropdown.md)          | both (consolidated)                | Sectioned multi-select filter menu with search, counts, bulk actions                          |
-| [FindBar](docs/components/find-bar.md)                        | agentsview `SessionFindBar`        | In-content find bar with N-of-M counter and match navigation                                  |
-| [FitStages](docs/components/fit-stages.md)                    | new (TopBar collapse pattern)      | Multi-breakpoint wrapper: renders the richest of N stage snippets that fits, by measurement   |
-| [FlashBanner](docs/components/flash-banner.md)                | consumer app                       | Transient toast banner driven by the `showFlash` store                                        |
-| [HarnessIcon](docs/components/harness-icon.md)                | agentsview docs site               | Coding-agent harness glyphs (Claude, OpenAI, Gemini, …), square and monochrome                |
-| [IconButton](docs/components/icon-button.md)                  | both (hand-rolled `.icon-btn`)     | Square ghost button for a lone icon, required aria-label                                      |
-| [KbdBadge](docs/components/kbd-badge.md)                      | consumer app                       | Keyboard-shortcut badge, hidden on touch devices                                              |
-| [Markdown](docs/components/code-block.md)                     | both (consolidated)                | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
-| [Menu](docs/components/menu.md)                               | consumer app action menus          | Compositional action and single-choice menus with APG keyboard behavior                       |
-| [Modal](docs/components/modal.md)                             | both (consolidated)                | Dialog primitive: overlay, header, body, footer snippet                                       |
-| [NumberInput](docs/components/number-input.md)                | new (TextInput preset)             | Numeric field: min/max/step, arrow-key stepping, number-or-null value                         |
-| [PageHeader](docs/components/page-header.md)                  | new                                | Page title block: back link, title and status, description, actions; no rule under the title  |
-| [DateRangePicker](docs/components/date-range-picker.md)       | agentsview                         | Relative / calendar / custom date-range popover with `resolveRange()`                         |
-| [RadioGroup](docs/components/radio-group.md)                  | new                                | Labelled list of 2–4 exclusive choices, drawn to the Checkbox recipe                          |
-| [RefreshControl](docs/components/refresh-control.md)          | agentsview                         | Refresh button + "Updated Xm ago" label with auto-refresh                                     |
-| [ScrollBox](docs/components/scroll-box.md)                    | consumer app `ScrollBox`           | Labelled keyboard-accessible vertical scroller with the native scrollbar                      |
-| [Search by meaning](docs/components/search-by-meaning.md)     | new                                | Search setup row and keyword-only results hint                                                |
-| [SearchInput](docs/components/text-input.md)                  | new (TextInput preset)             | Filter field: search icon, clear button, optional ⌘K hint                                     |
-| [SegmentedControl](docs/components/segmented-control.md)      | consumer app (inline pattern)      | "All / PRs / Issues" style value selector                                                     |
-| [SelectDropdown](docs/components/select-dropdown.md)          | consumer app                       | Accessible single-select combobox                                                             |
-| [SettingsLayout](docs/components/settings-layout.md)          | consumer app `SettingsPage`        | Categorized settings shell: category sidebar + panel + pinned footer                          |
-| [SettingsSection](docs/components/settings-layout.md)         | consumer app                       | Bordered settings card: title, optional description, rows                                     |
-| [Spinner](docs/components/spinner.md)                         | agentsview                         | Loading spinner                                                                               |
-| [SplitResizeHandle](docs/components/split-resize-handle.md)   | consumer app                       | Keyboard-accessible pane divider                                                              |
-| [StatusBar](docs/components/status-bar.md)                    | both (consolidated)                | Fixed-height bottom bar with left/center/right regions                                        |
-| [StatusDot](docs/components/status-dot.md)                    | agentsview                         | Session/presence indicator (working/waiting/stale/…)                                          |
-| [Table](docs/components/table.md)                             | both (consolidated)                | Table shell + sortable `TableHeaderCell` with aria-sort                                       |
-| [TextInput](docs/components/text-input.md)                    | both (hand-rolled)                 | Bordered field primitive: sizes, invalid state, prefix/suffix snippets                        |
-| [ThemeToggle](docs/components/theme-toggle.md)                | new (theme store control)          | Light/dark/system control: cycle icon-button or segmented variants                            |
-| [Tooltip](docs/components/tooltip.md)                         | consumer `DiffSummaryChip` popover | Hover/focus tooltip with arrow, delays, viewport-aware flipping                               |
-| [TopBar](docs/components/top-bar.md)                          | both `AppHeader` (consolidated)    | App header: reserved left/right regions, search slot, tabs that auto-collapse into a dropdown |
-| [Typeahead](docs/components/typeahead.md)                     | agentsview `OptionTypeahead`       | Filterable select with match highlighting                                                     |
-| [VirtualList](docs/components/virtual-list.md)                | new                                | Windowed list for long datasets: fixed/measured row heights, container-owned keyboard nav     |
-| [VirtualTable](docs/components/virtual-table.md)              | new                                | Table that renders only the rows on screen, scrolled by its own wrapper or the page           |
+| Component                                                     | Origin                              | Purpose                                                                                       |
+| ------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| [Accordion](docs/components/disclosure.md)                    | new                                 | Framed group of Disclosures; `exclusive` keeps one open                                       |
+| [AdaptiveActionGrid](docs/components/adaptive-action-grid.md) | new (agentsview toolbar patterns)   | Container-aware row, grid, and inline disclosure for mixed controls                           |
+| [AppSidebar](docs/components/app-sidebar.md)                  | new                                 | Responsive application sidebar: narrow drawer, icon rail with flyouts and pin, full panel     |
+| [BottomDock](docs/components/bottom-dock.md)                  | consumer app                        | Inline resizable bottom panel with composable regions                                         |
+| [Button](docs/components/button.md)                           | consumer app `ActionButton`         | Action button with tone × surface × size variants                                             |
+| [Calendar](docs/components/calendar.md)                       | new (DateRangePicker's month grid)  | Single-month date grid with range highlight and month paging                                  |
+| [Chip](docs/components/chip.md)                               | consumer app `Chip`                 | Status/label badge, optionally interactive                                                    |
+| [ChipStack](docs/components/chip-stack.md)                    | new (consumer mobile-view pattern)  | Collapsing chip/button row with "+N" expansion                                                |
+| [CodeBlock](docs/components/code-block.md)                    | both (consolidated)                 | Standalone code card: shiki dual-theme highlighting, line numbers, wrap toggle, copy          |
+| [CollapsibleSidebar](docs/components/collapsible-sidebar.md)  | consumer app                        | Resizable, collapsible sidebar + main layout (includes `SidebarToggle`)                       |
+| [ColorInput](docs/components/color-input.md)                  | new (agentsview message colors)     | Color picker well, hex field, and quick-pick swatches                                         |
+| [ColorLabel](docs/components/color-label.md)                  | consumer app `GitHubLabels`         | Hex-colored pill with WCAG contrast-picked text                                               |
+| [CommandPalette](docs/components/command-palette.md)          | new                                 | ⌘K overlay: filtered commands, sections, recents; pairs with the shortcut system              |
+| [CopyButton](docs/components/copy-button.md)                  | agentsview                          | Copy-to-clipboard icon button with success feedback                                           |
+| [DetailDrawer](docs/components/detail-drawer.md)              | consumer app                        | Right-side slide-in detail panel over an overlay                                              |
+| [Disclosure](docs/components/disclosure.md)                   | both (hand-rolled `<details>`)      | Collapsible section on native `<details>`: card or plain toggle, deep-link anchor             |
+| [DiffStats](docs/components/diff-stats.md)                    | consumer app                        | `+added −removed` diff counters with compact formatting                                       |
+| [EmptyState](docs/components/empty-state.md)                  | both (hand-rolled)                  | Centered muted placeholder: icon, title, description, action                                  |
+| [FilterDropdown](docs/components/filter-dropdown.md)          | both (consolidated)                 | Sectioned multi-select filter menu with search, counts, bulk actions                          |
+| [FindBar](docs/components/find-bar.md)                        | agentsview `SessionFindBar`         | In-content find bar with N-of-M counter and match navigation                                  |
+| [FitStages](docs/components/fit-stages.md)                    | new (TopBar collapse pattern)       | Multi-breakpoint wrapper: renders the richest of N stage snippets that fits, by measurement   |
+| [FlashBanner](docs/components/flash-banner.md)                | consumer app                        | Transient toast banner driven by the `showFlash` store                                        |
+| [HarnessIcon](docs/components/harness-icon.md)                | agentsview docs site                | Coding-agent harness glyphs (Claude, OpenAI, Gemini, …), square and monochrome                |
+| [IconButton](docs/components/icon-button.md)                  | both (hand-rolled `.icon-btn`)      | Square ghost button for a lone icon, required aria-label                                      |
+| [KbdBadge](docs/components/kbd-badge.md)                      | consumer app                        | Keyboard-shortcut badge, hidden on touch devices                                              |
+| [Markdown](docs/components/code-block.md)                     | both (consolidated)                 | Sanitized GFM rendering with highlighted fences and app-extension hooks                       |
+| [Menu](docs/components/menu.md)                               | consumer app action menus           | Compositional action and single-choice menus with APG keyboard behavior                       |
+| [Modal](docs/components/modal.md)                             | both (consolidated)                 | Dialog primitive: overlay, header, body, footer snippet                                       |
+| [NumberInput](docs/components/number-input.md)                | new (TextInput preset)              | Numeric field: min/max/step, arrow-key stepping, number-or-null value                         |
+| [PageHeader](docs/components/page-header.md)                  | new                                 | Page title block: back link, title and status, description, actions; no rule under the title  |
+| [DateRangePicker](docs/components/date-range-picker.md)       | agentsview                          | Relative / calendar / custom date-range popover with `resolveRange()`                         |
+| [RadioGroup](docs/components/radio-group.md)                  | new                                 | Labelled list of 2–4 exclusive choices, drawn to the Checkbox recipe                          |
+| [RefreshControl](docs/components/refresh-control.md)          | agentsview                          | Refresh button + "Updated Xm ago" label with auto-refresh                                     |
+| [ScrollBox](docs/components/scroll-box.md)                    | consumer app `ScrollBox`            | Labelled keyboard-accessible vertical scroller with the native scrollbar                      |
+| [Search by meaning](docs/components/search-by-meaning.md)     | new                                 | Search setup row and keyword-only results hint                                                |
+| [SearchInput](docs/components/text-input.md)                  | new (TextInput preset)              | Filter field: search icon, clear button, optional ⌘K hint                                     |
+| [SegmentedControl](docs/components/segmented-control.md)      | consumer app (inline pattern)       | "All / PRs / Issues" style value selector                                                     |
+| [SelectDropdown](docs/components/select-dropdown.md)          | consumer app                        | Accessible single-select combobox                                                             |
+| [SettingsLayout](docs/components/settings-layout.md)          | consumer app `SettingsPage`         | Categorized settings shell: category sidebar + panel + pinned footer                          |
+| [SettingsSection](docs/components/settings-layout.md)         | consumer app                        | Bordered settings card: title, optional description, rows                                     |
+| [Spinner](docs/components/spinner.md)                         | agentsview                          | Loading spinner                                                                               |
+| [SplitResizeHandle](docs/components/split-resize-handle.md)   | consumer app                        | Keyboard-accessible pane divider                                                              |
+| [StatusBar](docs/components/status-bar.md)                    | both (consolidated)                 | Fixed-height bottom bar with left/center/right regions                                        |
+| [StatusDot](docs/components/status-dot.md)                    | agentsview                          | Session/presence indicator (working/waiting/stale/…)                                          |
+| [Table](docs/components/table.md)                             | both (consolidated)                 | Table shell + sortable `TableHeaderCell` with aria-sort                                       |
+| [Tabs](docs/components/tabs.md)                               | both (hand-rolled `role="tablist"`) | Tab list with roving focus, counts, and an optional labelled panel                            |
+| [TextInput](docs/components/text-input.md)                    | both (hand-rolled)                  | Bordered field primitive: sizes, invalid state, prefix/suffix snippets                        |
+| [ThemeToggle](docs/components/theme-toggle.md)                | new (theme store control)           | Light/dark/system control: cycle icon-button or segmented variants                            |
+| [Tooltip](docs/components/tooltip.md)                         | consumer `DiffSummaryChip` popover  | Hover/focus tooltip with arrow, delays, viewport-aware flipping                               |
+| [TopBar](docs/components/top-bar.md)                          | both `AppHeader` (consolidated)     | App header: reserved left/right regions, search slot, tabs that auto-collapse into a dropdown |
+| [Typeahead](docs/components/typeahead.md)                     | agentsview `OptionTypeahead`        | Filterable select with match highlighting                                                     |
+| [VirtualList](docs/components/virtual-list.md)                | new                                 | Windowed list for long datasets: fixed/measured row heights, container-owned keyboard nav     |
+| [VirtualTable](docs/components/virtual-table.md)              | new                                 | Table that renders only the rows on screen, scrolled by its own wrapper or the page           |
 
 Also exported: the [keyboard shortcut system](docs/components/command-palette.md#shortcut-system-utilsshortcuts)
 (`appShortcuts`/`initShortcuts`/`formatShortcutKeys` — combo parsing,

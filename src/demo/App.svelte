@@ -71,6 +71,7 @@
   import StatusDotDemo from "./pages/StatusDotDemo.svelte";
   import StructuredListDemo from "./pages/StructuredListDemo.svelte";
   import TableDemo from "./pages/TableDemo.svelte";
+  import TabsDemo from "./pages/TabsDemo.svelte";
   import TextInputDemo from "./pages/TextInputDemo.svelte";
   import TimelineDemo from "./pages/TimelineDemo.svelte";
   import ThemeDemo from "./pages/ThemeDemo.svelte";
@@ -164,6 +165,7 @@
     { id: "status-dot", label: "StatusDot", component: StatusDotDemo },
     { id: "structured-list", label: "StructuredList", component: StructuredListDemo },
     { id: "table", label: "Table", component: TableDemo },
+    { id: "tabs", label: "Tabs", component: TabsDemo },
     { id: "text-input", label: "TextInput", component: TextInputDemo },
     { id: "timeline", label: "Timeline", component: TimelineDemo },
     { id: "toggle", label: "Toggle", component: ToggleDemo },

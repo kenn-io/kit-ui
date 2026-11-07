@@ -460,6 +460,22 @@ export function checkHandRolledDisclosure(source) {
   return findings;
 }
 
+/** Hand-rolled tab strips duplicate Tabs. role="tablist" is the reliable
+ * marker: a conformant custom tab strip must carry it. */
+export function checkHandRolledTabs(source) {
+  const findings = [];
+  const re = /role="tablist"/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-tabs",
+      line: lineOfIndex(source, match.index),
+      message: 'role="tablist" markup — use Tabs from @kenn-io/kit-ui',
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled bottom status bars duplicate StatusBar. Matches the class
  * name both apps converged on; kit-status-bar (the library's own class,
  * e.g. in retheming CSS) is exempt. */
@@ -1875,6 +1891,7 @@ export const ALL_RULES = {
   "unsorted-table-header": checkUnsortedTableHeader,
   "hand-rolled-tooltip": checkHandRolledTooltip,
   "hand-rolled-disclosure": checkHandRolledDisclosure,
+  "hand-rolled-tabs": checkHandRolledTabs,
   "hand-rolled-popover-card": checkHandRolledPopoverCard,
   "hand-rolled-card": checkHandRolledCard,
   "hand-rolled-status-bar": checkHandRolledStatusBar,
