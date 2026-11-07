@@ -271,6 +271,7 @@ export {
   createRefreshScheduler,
   DEFAULT_REFRESH_INTERVAL_MS,
   formatRefreshAge,
+  type RefreshReason,
   type RefreshScheduler,
 } from "./utils/refresh.js";
 export {

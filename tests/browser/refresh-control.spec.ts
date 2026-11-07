@@ -35,12 +35,16 @@ function fixedWidthControl(page: Page) {
   };
 }
 
-test("click reaches onRefresh with the manual reason", async ({ page }) => {
+test("onRefresh receives manual clicks and automatic ticks", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-01-15T08:00:00Z") });
   await gotoPage(page, "refresh-control");
+  await page.clock.pauseAt(new Date("2026-01-15T08:01:00Z"));
   const reason = page.getByTestId("refresh-reason");
 
   await page.getByRole("button", { name: "Refresh usage data", exact: true }).click();
   await expect(reason).toHaveText("manual");
+  await page.clock.fastForward(300_000);
+  await expect(reason).toHaveText("auto");
 });
 
 test("age box keeps one width across the narrowest, widest, and overlong labels", async ({

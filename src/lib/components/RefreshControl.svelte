@@ -7,6 +7,7 @@
     createRefreshScheduler,
     DEFAULT_REFRESH_INTERVAL_MS,
     formatRefreshAge,
+    type RefreshReason,
   } from "../utils/refresh.js";
 
   // Re-evaluate the relative age label this often so it advances without a
@@ -19,7 +20,7 @@
     /** Spins the icon and disables the button while a refresh is in flight. */
     busy?: boolean;
     /** Refetches the data; identifies a button click or an automatic tick. */
-    onRefresh: (reason: "manual" | "auto") => void;
+    onRefresh: (reason: RefreshReason) => void;
     /** Accessible name for the button (aria-label). */
     label?: string;
     /** Tooltip text; defaults to `label` when omitted. */

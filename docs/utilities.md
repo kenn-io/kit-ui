@@ -170,6 +170,7 @@ formatRefreshAge(lastUpdatedAt, Date.now()); // "Updated 3m ago" / "—"
 ```
 
 `refreshNow(reason)` forwards its required reason; the timer passes `"auto"`.
+This replaces `refreshNow()`; existing callers must now supply a reason.
 Pass `"auto"` for immediate refreshes triggered by focus, reconnect, or new data.
 This is what `RefreshControl` uses internally.
 

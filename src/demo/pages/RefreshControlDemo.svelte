@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Button, RefreshControl } from "../../lib/index.js";
+  import { Button, RefreshControl, type RefreshReason } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let lastUpdatedAt = $state<number | null>(Date.now());
   let busy = $state(false);
-  let lastReason = $state<"manual" | "auto" | null>(null);
+  let lastReason = $state<RefreshReason | null>(null);
 
-  function refresh(reason: "manual" | "auto") {
+  function refresh(reason: RefreshReason) {
     lastReason = reason;
     busy = true;
     setTimeout(() => {

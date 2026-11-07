@@ -11,6 +11,7 @@ refetching.
 `onRefresh` receives `"manual"` for a button click and `"auto"` for an interval
 tick. Use the reason when automatic refreshes need a different policy, such as
 waiting for pending edits. Callbacks that ignore the argument still work.
+Import `RefreshReason` to annotate handlers with the shared reason type.
 
 ```svelte
 <script lang="ts">
@@ -35,7 +36,7 @@ waiting for pending edits. Callbacks that ignore the argument still work.
 | Prop              | Type                                                     | Default            | Notes                                                 |
 | ----------------- | -------------------------------------------------------- | ------------------ | ----------------------------------------------------- |
 | `lastUpdatedAt`   | `number \| null`                                         | required           | Epoch ms of last successful fetch                     |
-| `onRefresh`       | `(reason: "manual" \| "auto") => void`                   | required           | Click passes `"manual"`; interval passes `"auto"`     |
+| `onRefresh`       | `(reason: RefreshReason) => void`                        | required           | Click passes `"manual"`; interval passes `"auto"`     |
 | `busy`            | `boolean`                                                | `false`            | Spins the icon, disables the button                   |
 | `label`           | `string`                                                 | `"Refresh"`        | aria-label                                            |
 | `title`           | `string`                                                 | `label`            | Tooltip                                               |
