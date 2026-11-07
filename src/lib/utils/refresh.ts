@@ -3,8 +3,8 @@ export const DEFAULT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 export interface RefreshScheduler {
   /** Arm the interval without an immediate refresh. */
   scheduleNext: () => void;
-  /** Refresh immediately and reset the interval. */
-  refreshNow: () => void;
+  /** Refresh immediately for the given reason and reset the interval. */
+  refreshNow: (reason: "manual" | "auto") => void;
   stop: () => void;
 }
 
@@ -27,8 +27,8 @@ export function createRefreshScheduler(
     }, intervalMs);
   }
 
-  function refreshNow(): void {
-    refresh("manual");
+  function refreshNow(reason: "manual" | "auto"): void {
+    refresh(reason);
     scheduleNext();
   }
 

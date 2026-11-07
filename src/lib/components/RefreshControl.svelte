@@ -106,7 +106,7 @@
 <div class="kit-refresh-control">
   <IconButton
     class={busy ? "kit-refresh-control__btn querying" : "kit-refresh-control__btn"}
-    onclick={() => scheduler.refreshNow()}
+    onclick={() => scheduler.refreshNow("manual")}
     disabled={busy}
     title={title ?? label}
     ariaLabel={label}

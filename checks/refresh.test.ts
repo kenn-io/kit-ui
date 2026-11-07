@@ -1,10 +1,32 @@
-import { describe, expect, test } from "bun:test";
-import { formatRefreshAge } from "../src/lib/utils/refresh.js";
+import { describe, expect, jest, test } from "bun:test";
+import { createRefreshScheduler, formatRefreshAge } from "../src/lib/utils/refresh.js";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 const NOW = 1_750_000_000_000;
+
+test("refresh scheduler forwards immediate reasons and resets automatic ticks", () => {
+  jest.useFakeTimers();
+  const reasons: string[] = [];
+  const scheduler = createRefreshScheduler((reason) => reasons.push(reason), 1000);
+  try {
+    scheduler.scheduleNext();
+    expect(reasons).toEqual([]);
+    jest.advanceTimersByTime(100);
+    scheduler.refreshNow("manual");
+    expect(reasons).toEqual(["manual"]);
+    jest.advanceTimersByTime(900);
+    expect(reasons).toEqual(["manual"]);
+    jest.advanceTimersByTime(100);
+    expect(reasons).toEqual(["manual", "auto"]);
+    scheduler.refreshNow("auto");
+    expect(reasons).toEqual(["manual", "auto", "auto"]);
+  } finally {
+    scheduler.stop();
+    jest.useRealTimers();
+  }
+});
 
 // formatRefreshAge is RefreshControl's default `formatAge`; consumers swap in
 // their own formatter to localize, so the default English strings are the

@@ -2,8 +2,8 @@ export declare const DEFAULT_REFRESH_INTERVAL_MS: number;
 export interface RefreshScheduler {
     /** Arm the interval without an immediate refresh. */
     scheduleNext: () => void;
-    /** Refresh immediately and reset the interval. */
-    refreshNow: () => void;
+    /** Refresh immediately for the given reason and reset the interval. */
+    refreshNow: (reason: "manual" | "auto") => void;
     stop: () => void;
 }
 /**
