@@ -40,6 +40,22 @@ export function greet(name: string): string {
         : undefined,
   });
 
+  const alertSample = `> [!NOTE]
+> Drafts are only visible to their authors.
+
+> [!TIP]
+> Run \`bun run check\` before pushing.
+
+> [!IMPORTANT]
+> Breaking changes ship without a deprecation window.
+
+> [!WARNING]
+> Rotating the key signs out every session.
+
+> [!CAUTION]
+> Deleting a workspace also deletes its history.
+`;
+
   const calloutSample = `Fences an app claims never reach the highlighter:
 
 \`\`\`callout
@@ -56,6 +72,17 @@ Deploys freeze Friday 5pm — see the runbook.
 <Markdown source={text} />`}
 >
   <Markdown source={sample} />
+</DemoSection>
+
+<DemoSection
+  title="Alerts"
+  description="GitHub alert blockquotes render as toned callouts that match Notice. Pass alerts: false to createMarkdownRenderer to keep them as quotes, or alertLabels to localize the titles."
+  code={`> [!TIP]
+> Run \`bun run check\` before pushing.`}
+>
+  <div data-testid="markdown-alerts">
+    <Markdown source={alertSample} />
+  </div>
 </DemoSection>
 
 <DemoSection

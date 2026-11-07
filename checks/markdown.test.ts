@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Marked, type Tokens } from "marked";
 import {
+  applyMarkdownAlerts,
   codeFenceLanguage,
   codeHighlightPlan,
   allowedShikiStyle,
@@ -111,5 +112,67 @@ describe("codeHighlightPlan", () => {
     const { languages, plannedCount } = plan([fence(""), fence("text")].join("\n\n"));
     expect(languages).toEqual([]);
     expect(plannedCount).toBe(2);
+  });
+});
+
+describe("applyMarkdownAlerts", () => {
+  const marked = new Marked({ gfm: true, breaks: true });
+  const lex = (src: string, breaks = true) => {
+    const tokens = new Marked({ gfm: true, breaks }).lexer(src) as Tokens.Generic[];
+    applyMarkdownAlerts(tokens);
+    return tokens.filter((t) => t.type === "blockquote") as (Tokens.Blockquote & {
+      kitAlert?: string;
+    })[];
+  };
+  // Blank lines lex as `space` tokens, which render nothing.
+  const blockTypes = (quote: Tokens.Blockquote) =>
+    quote.tokens.map((t) => t.type).filter((type) => type !== "space");
+
+  test("tags each alert kind, case-insensitively", () => {
+    const kinds = ["NOTE", "tip", "Important", "WARNING", "CAUTION"].map(
+      (kind) => lex(`> [!${kind}]\n> body`)[0]!.kitAlert,
+    );
+    expect(kinds).toEqual(["note", "tip", "important", "warning", "caution"]);
+  });
+
+  test("drops the marker line and keeps inline markup", () => {
+    for (const breaks of [true, false]) {
+      const [quote] = lex("> [!TIP]\n> Run **check** first\n>\n> - one\n> - two", breaks);
+      expect(blockTypes(quote!)).toEqual(["paragraph", "list"]);
+      const paragraph = quote!.tokens[0] as Tokens.Paragraph;
+      expect(paragraph.tokens[0]).toMatchObject({ type: "text", text: "Run " });
+      expect(paragraph.tokens.some((t) => t.type === "strong")).toBe(true);
+    }
+  });
+
+  test("keeps reference links and images resolved against the document", () => {
+    const [quote] = lex("> [!NOTE]\n> See [docs][1] and ![logo][1].\n\n[1]: https://example.com\n");
+    const inline = (quote!.tokens[0] as Tokens.Paragraph).tokens;
+    expect(inline.find((t) => t.type === "link")).toMatchObject({ href: "https://example.com" });
+    expect(inline.find((t) => t.type === "image")).toMatchObject({ href: "https://example.com" });
+  });
+
+  test("keeps the rest of the alert when the marker has its own paragraph", () => {
+    const [quote] = lex("> [!NOTE]\n>\n> body");
+    expect(quote!.kitAlert).toBe("note");
+    expect(blockTypes(quote!)).toEqual(["paragraph"]);
+    expect(quote!.tokens.find((t) => t.type === "paragraph")!.text).toBe("body");
+  });
+
+  test("leaves ordinary quotes alone", () => {
+    expect(lex("> plain quote")[0]!.kitAlert).toBeUndefined();
+    // Text after the marker on the same line is not an alert on GitHub.
+    expect(lex("> [!NOTE] inline\n> body")[0]!.kitAlert).toBeUndefined();
+    expect(lex("> [!DANGER]\n> body")[0]!.kitAlert).toBeUndefined();
+  });
+
+  test("ignores alerts nested in other blocks", () => {
+    const tokens = marked.lexer("- item\n\n  > [!NOTE]\n  > nested") as Tokens.Generic[];
+    applyMarkdownAlerts(tokens);
+    let tagged = false;
+    marked.walkTokens(tokens, (t) => {
+      if ((t as { kitAlert?: string }).kitAlert) tagged = true;
+    });
+    expect(tagged).toBe(false);
   });
 });

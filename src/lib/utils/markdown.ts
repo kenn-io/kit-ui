@@ -265,6 +265,87 @@ export async function highlightCode(code: string, lang: string): Promise<string 
   }
 }
 
+/** GitHub alert kinds: a blockquote whose first line is `[!NOTE]`,
+ * `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`. */
+export type MarkdownAlertKind = "note" | "tip" | "important" | "warning" | "caution";
+
+export const DEFAULT_MARKDOWN_ALERT_LABELS: Record<MarkdownAlertKind, string> = {
+  note: "Note",
+  tip: "Tip",
+  important: "Important",
+  warning: "Warning",
+  caution: "Caution",
+};
+
+// The marker must sit alone on the blockquote's first line, as on GitHub;
+// `> [!NOTE] text` stays an ordinary quote.
+const MARKDOWN_ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(?:\n|$)/i;
+
+type AlertBlockquote = Tokens.Blockquote & { kitAlert?: MarkdownAlertKind };
+
+/** Turn top-level alert blockquotes into alert tokens: tag the kind and
+ * drop the marker. GitHub renders alerts only at the top level, so quotes
+ * nested in lists or other quotes are left alone. The marker is cut from
+ * the already-lexed inline tokens rather than re-lexing the paragraph, so
+ * reference links resolved against the whole document keep working.
+ * Exported for tests. */
+export function applyMarkdownAlerts(tokens: Tokens.Generic[]): void {
+  for (const token of tokens) {
+    if (token.type !== "blockquote") continue;
+    const quote = token as AlertBlockquote;
+    const first = quote.tokens[0];
+    if (first?.type !== "paragraph") continue;
+    const match = MARKDOWN_ALERT_MARKER.exec(first.raw);
+    if (!match) continue;
+    const paragraph = first as Tokens.Paragraph;
+    const lead = paragraph.tokens[0];
+    const marker = `[!${match[1]}]`;
+    if (
+      lead?.type !== "text" ||
+      lead.raw.slice(0, marker.length).toUpperCase() !== marker.toUpperCase()
+    ) {
+      continue;
+    }
+    quote.kitAlert = match[1]!.toLowerCase() as MarkdownAlertKind;
+    // With `breaks`, the marker line ends in its own `br` token; without,
+    // the newline is part of the lead text.
+    const rest = lead.raw.slice(marker.length).replace(/^[ \t]*\n?/, "");
+    if (rest) {
+      lead.raw = rest;
+      (lead as Tokens.Text).text = rest;
+    } else {
+      paragraph.tokens.shift();
+      if (paragraph.tokens[0]?.type === "br") paragraph.tokens.shift();
+    }
+    paragraph.raw = paragraph.raw.slice(match[0].length);
+    paragraph.text = paragraph.text.replace(MARKDOWN_ALERT_MARKER, "");
+    if (paragraph.tokens.length === 0) quote.tokens.shift();
+  }
+}
+
+// A missing, undefined, or blank override keeps the English default, so a
+// partial label map can never leave an alert without a title.
+function alertLabel(
+  labels: MarkdownRendererOptions["alertLabels"],
+  kind: MarkdownAlertKind,
+): string {
+  return labels?.[kind]?.trim() || DEFAULT_MARKDOWN_ALERT_LABELS[kind];
+}
+
+function alertRenderer(labels: MarkdownRendererOptions["alertLabels"]): RendererObject {
+  return {
+    blockquote(token) {
+      const kind = (token as AlertBlockquote).kitAlert;
+      if (!kind) return false;
+      return (
+        `<div class="kit-markdown-alert kit-markdown-alert--${kind}" role="note">` +
+        `<p class="kit-markdown-alert__title">${escapeHtml(alertLabel(labels, kind))}</p>` +
+        `${this.parser.parse(token.tokens)}</div>\n`
+      );
+    },
+  };
+}
+
 export interface MarkdownRendererOptions {
   /** Turn source newlines into hard breaks (default true). Set false
    * for standard Markdown soft breaks in prose. */
@@ -290,6 +371,12 @@ export interface MarkdownRendererOptions {
   /** Extra attributes sanitization should keep (e.g. `data-*` attributes
    * your extensions emit). `target` is always allowed. */
   allowedAttributes?: string[];
+  /** Render GitHub alert blockquotes (`> [!NOTE]`) as toned callouts
+   * (default true). Set false to keep them as plain quotes. */
+  alerts?: boolean;
+  /** Visible alert titles, for localization. Missing kinds keep the
+   * English default. */
+  alertLabels?: Partial<Record<MarkdownAlertKind, string>>;
 }
 
 export interface MarkdownRenderer {
@@ -390,6 +477,12 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
     marked.use({ extensions: options.extensions });
   }
   marked.use({ tokenizer: options.tokenizer, renderer: codeRenderer });
+  const alerts = options.alerts ?? true;
+  if (alerts) {
+    marked.use({
+      renderer: alertRenderer(options.alertLabels),
+    });
+  }
   // Enforce the documented constraint: only inert data-* attributes may
   // widen the sanitizer. URL-bearing or style attributes here would
   // reopen exactly the holes sanitization exists to close.
@@ -433,6 +526,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
       }
       const html = (async () => {
         const tokens = marked.lexer(raw) as Tokens.Generic[];
+        if (alerts) applyMarkdownAlerts(tokens);
         const skip = options.codeFence
           ? (code: string, lang: string) => options.codeFence!(code, lang) !== undefined
           : undefined;
@@ -465,6 +559,7 @@ export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): M
     renderSync(raw: string): string {
       if (!raw) return "";
       const tokens = marked.lexer(raw) as Tokens.Generic[];
+      if (alerts) applyMarkdownAlerts(tokens);
       const skip = options.codeFence
         ? (code: string, lang: string) => options.codeFence!(code, lang) !== undefined
         : undefined;

@@ -66,6 +66,32 @@ stays visible during a re-render, and a stale async render never
 overwrites a newer one. Pass `renderer` (below) for app syntax. Prose
 styles are namespaced under `.kit-markdown` and use theme tokens.
 
+## Alerts
+
+GitHub alert blockquotes render as toned callouts that match
+[Notice](auth-surfaces.md#notice):
+
+```markdown
+> [!TIP]
+> Run `bun run check` before pushing.
+```
+
+The kinds are `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, and `CAUTION`, in any
+case. As on GitHub, the marker must be alone on the quote's first line,
+and only top-level quotes become alerts. A quote inside a list stays a
+quote. The output is a `div.kit-markdown-alert.kit-markdown-alert--<kind>`
+with `role="note"` and a visible title.
+
+`createMarkdownRenderer({ alerts: false })` keeps alerts as plain quotes.
+`alertLabels` localizes the titles; missing kinds keep the English
+defaults from `DEFAULT_MARKDOWN_ALERT_LABELS`:
+
+```ts
+createMarkdownRenderer({ alertLabels: { tip: "Astuce", warning: "Attention" } });
+```
+
+A missing, undefined, or blank title falls back to the default.
+
 ## Pipeline (`utils/markdown`)
 
 ```ts
