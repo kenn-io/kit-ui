@@ -1,7 +1,7 @@
 # Typeahead
 
 Filterable select: the closed state is a trigger button. Typing while it has focus
-opens the search with the typed character. Clicking, Enter, or Space opens an empty
+opens the search with the typed character. Clicking, Enter, Space, Arrow Down, or Arrow Up opens an empty
 search input with a match-highlighted option list. Arrow keys navigate, Enter
 selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
 extended with Forge's `TypeaheadTrigger` features (clear row, custom
@@ -31,34 +31,36 @@ values, veto, meta text) and grouped options.
 
 ## Props
 
-| Prop              | Type                                                            | Default              | Notes                                                                                                                                      |
-| ----------------- | --------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `options`         | `TypeaheadOption[]`                                             | required             |                                                                                                                                            |
-| `value`           | `string`                                                        | `""`                 | Matches `option.name`; unmatched shows `fallbackLabel`. Unused with `multiple`                                                             |
-| `multiple`        | `boolean`                                                       | `false`              | Several choices; see [Several choices](#several-choices)                                                                                   |
-| `values`          | `readonly string[]`                                             | `[]`                 | The chosen option names with `multiple`                                                                                                    |
-| `multipleLabel`   | `string`                                                        | `"{count} selected"` | Closed-trigger text for more than one choice; `{count}` is replaced with the number chosen                                                 |
-| `fallbackLabel`   | `string`                                                        | required             | Trigger text when nothing is selected                                                                                                      |
-| `placeholder`     | `string`                                                        | required             | Search input placeholder + aria-label; the closed trigger is named `"<placeholder>: <selected label>"`                                     |
-| `inputAttributes` | `TypeaheadInputAttributes`                                      | `{}`                 | Native attributes for the open search input; excludes Typeahead-owned behavior and ARIA attributes                                         |
-| `onselect`        | `(name: string) => void \| boolean \| Promise<void \| boolean>` | required             | Return `false` (or throw) to veto: the list stays open                                                                                     |
-| `title`           | `string`                                                        | —                    | Trigger tooltip                                                                                                                            |
-| `emptyLabel`      | `string`                                                        | `"No matches"`       |                                                                                                                                            |
-| `disabled`        | `boolean`                                                       | `false`              |                                                                                                                                            |
-| `allowClear`      | `boolean`                                                       | `false`              | Prepends a row that selects `""`                                                                                                           |
-| `clearLabel`      | `string`                                                        | `"None"`             | Label of the clear row                                                                                                                     |
-| `allowCustom`     | `boolean`                                                       | `false`              | Offers a trimmed non-empty query that is not an exact option name, including when partial matches exist                                    |
-| `customLabel`     | `string`                                                        | `Use "{query}"`      | Label of the custom-value row; `{query}` is replaced with the trimmed query                                                                |
-| `placement`       | `"auto" \| "top" \| "bottom"`                                   | `"auto"`             | Force the list above/below; auto flips near the viewport bottom                                                                            |
-| `triggerPrefix`   | `string`                                                        | —                    | Dim text before the value on the closed trigger                                                                                            |
-| `loading`         | `boolean`                                                       | `false`              | Replaces option rows with `loadingLabel` (async sources)                                                                                   |
-| `loadingLabel`    | `string`                                                        | `"Loading…"`         |                                                                                                                                            |
-| `remote`          | `boolean`                                                       | `false`              | Disables local option filtering for caller-supplied remote results                                                                         |
-| `onquery`         | `(query: string) => void`                                       | —                    | Reports input changes, the initial query on open, and `""` on close                                                                        |
-| `error`           | `string`                                                        | —                    | Error row above the options, which stay selectable (clear it in `onselect`)                                                                |
-| `icon`            | `Snippet<[TypeaheadOption]>`                                    | —                    | Optional decorative icon before each option and the selected trigger label. Omitted for unmatched, clear, and custom values.               |
-| `header`          | `Snippet`                                                       | —                    | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher)                                                          |
-| `trigger`         | `Snippet<[TypeaheadTriggerProps]>`                              | —                    | Replaces the built-in trigger with a button the app renders; see [Open from a button the app renders](#open-from-a-button-the-app-renders) |
+| Prop                   | Type                                                            | Default              | Notes                                                                                                                                      |
+| ---------------------- | --------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `options`              | `TypeaheadOption[]`                                             | required             |                                                                                                                                            |
+| `value`                | `string`                                                        | `""`                 | Matches `option.name`; unmatched shows `fallbackLabel`. Unused with `multiple`                                                             |
+| `multiple`             | `boolean`                                                       | `false`              | Several choices; see [Several choices](#several-choices)                                                                                   |
+| `values`               | `readonly string[]`                                             | `[]`                 | The chosen option names with `multiple`                                                                                                    |
+| `multipleLabel`        | `string`                                                        | `"{count} selected"` | Closed-trigger text for more than one choice; `{count}` is replaced with the number chosen                                                 |
+| `fallbackLabel`        | `string`                                                        | required             | Trigger text when nothing is selected                                                                                                      |
+| `placeholder`          | `string`                                                        | required             | Search input placeholder + aria-label; the closed trigger is named `"<placeholder>: <selected label>"`                                     |
+| `inputAttributes`      | `TypeaheadInputAttributes`                                      | `{}`                 | Native attributes for the open search input; excludes Typeahead-owned behavior and ARIA attributes                                         |
+| `onselect`             | `(name: string) => void \| boolean \| Promise<void \| boolean>` | required             | Return `false` (or throw) to veto: the list stays open                                                                                     |
+| `title`                | `string`                                                        | —                    | Trigger tooltip                                                                                                                            |
+| `emptyLabel`           | `string`                                                        | `"No matches"`       |                                                                                                                                            |
+| `disabled`             | `boolean`                                                       | `false`              |                                                                                                                                            |
+| `allowClear`           | `boolean`                                                       | `false`              | Prepends a row that selects `""`                                                                                                           |
+| `clearLabel`           | `string`                                                        | `"None"`             | Label of the clear row                                                                                                                     |
+| `highlightFirstOption` | `boolean`                                                       | `false`              | Start on the first visible choice instead of a group row                                                                                   |
+| `allowCustom`          | `boolean`                                                       | `false`              | Offers a trimmed non-empty query that is not an exact option name, including when partial matches exist                                    |
+| `customLabel`          | `string`                                                        | `Use "{query}"`      | Label of the custom-value row; `{query}` is replaced with the trimmed query                                                                |
+| `placement`            | `"auto" \| "top" \| "bottom"`                                   | `"auto"`             | Force the list above/below; auto flips near the viewport bottom                                                                            |
+| `panelAnchor`          | `HTMLElement`                                                   | —                    | Element whose left edge and width align the panel                                                                                          |
+| `triggerPrefix`        | `string`                                                        | —                    | Dim text before the value on the closed trigger                                                                                            |
+| `loading`              | `boolean`                                                       | `false`              | Replaces option rows with `loadingLabel` (async sources)                                                                                   |
+| `loadingLabel`         | `string`                                                        | `"Loading…"`         |                                                                                                                                            |
+| `remote`               | `boolean`                                                       | `false`              | Disables local option filtering for caller-supplied remote results                                                                         |
+| `onquery`              | `(query: string) => void`                                       | —                    | Reports input changes, the initial query on open, and `""` on close                                                                        |
+| `error`                | `string`                                                        | —                    | Error row above the options, which stay selectable (clear it in `onselect`)                                                                |
+| `icon`                 | `Snippet<[TypeaheadOption]>`                                    | —                    | Optional decorative icon before each option and the selected trigger label. Omitted for unmatched, clear, and custom values.               |
+| `header`               | `Snippet`                                                       | —                    | Rendered inside the popover above the options (e.g. a Branches/Tags tab switcher)                                                          |
+| `trigger`              | `Snippet<[TypeaheadTriggerProps]>`                              | —                    | Replaces the built-in trigger with a button the app renders; see [Open from a button the app renders](#open-from-a-button-the-app-renders) |
 
 ## Option shape
 
@@ -118,6 +120,8 @@ advertises the matching popup type through `aria-haspopup`, and visible tree
 rows expose their position and sibling count through `aria-posinset` and
 `aria-setsize`. Filtering recalculates that metadata for the visible result
 tree while retaining the path to a deep match.
+
+Set `highlightFirstOption` to highlight the first visible choice, so Enter selects a choice instead of toggling a group.
 
 ## Password managers
 
@@ -226,3 +230,5 @@ component; the list then opens at least that wide, positioned with its real
 width so it slides left to stay inside the viewport rather than hanging past
 the right edge. The list is never wider than the viewport minus the edge gaps,
 including inside an ancestor with CSS `zoom`.
+
+Pass `panelAnchor` to align the panel's left edge and width with a wider element while keeping its vertical position relative to the trigger; the panel follows the element when it resizes or scrolls.

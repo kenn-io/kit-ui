@@ -40,6 +40,8 @@
      * `fallbackLabel` when nothing matches the value. */
     allowClear?: boolean;
     clearLabel?: string;
+    /** Start on the first visible choice instead of a group row. */
+    highlightFirstOption?: boolean;
     /** Offer any non-empty trimmed query that is not an exact option name as
      * a row that selects the query verbatim. */
     allowCustom?: boolean;
@@ -49,6 +51,8 @@
     /** Force the list above/below the trigger; "auto" (default) flips near
      * the viewport bottom. */
     placement?: "auto" | "top" | "bottom";
+    /** Align the panel's left edge and width with this element. */
+    panelAnchor?: HTMLElement;
     /** Dim text rendered before the value on the closed trigger. */
     triggerPrefix?: string;
     /** Replace the option rows with a loading row (async option sources). */
@@ -90,9 +94,11 @@
     disabled = false,
     allowClear = false,
     clearLabel = "None",
+    highlightFirstOption = false,
     allowCustom = false,
     customLabel = 'Use "{query}"',
     placement = "auto",
+    panelAnchor,
     triggerPrefix = "",
     loading = false,
     loadingLabel = "Loading…",
@@ -107,7 +113,8 @@
 
   let query = $state("");
   let open = $state(false);
-  let highlightIndex = $state(0);
+  // -1 follows the default row as options change.
+  let highlightIndex = $state(-1);
   let inputEl = $state<HTMLInputElement>();
   // The built-in trigger, or the caller's button when `trigger` is set.
   let triggerEl = $state<HTMLButtonElement>();
@@ -153,7 +160,13 @@
     const zoom = panelEl.currentCSSZoom ?? 1;
     // A caller's button stays visible while open, so the list hangs off it.
     const rect = (trigger && triggerEl ? triggerEl : containerEl).getBoundingClientRect();
-    const anchor = new DOMRect(rect.x / zoom, rect.y / zoom, rect.width / zoom, rect.height / zoom);
+    const horizontalRect = panelAnchor?.getBoundingClientRect() ?? rect;
+    const anchor = new DOMRect(
+      horizontalRect.left / zoom,
+      rect.top / zoom,
+      horizontalRect.width / zoom,
+      rect.height / zoom,
+    );
     const viewportWidth = window.innerWidth / zoom;
     // CSS vw ignores ancestor zoom, so the stylesheet's width cap reads this
     // instead. Set it before measuring so min-width resolves against it.
@@ -178,7 +191,7 @@
   // current. No dismissable() here: the typeahead closes on blur instead.
   $effect(() => {
     if (!open) return;
-    return autoReposition(() => [panelEl, triggerEl, containerEl], positionPanel);
+    return autoReposition(() => [panelEl, triggerEl, containerEl, panelAnchor], positionPanel);
   });
 
   function matches(option: TypeaheadOption, q: string): boolean {
@@ -227,6 +240,11 @@
 
   const filterQuery = $derived(remote ? "" : query.trim().toLowerCase());
   const rows = $derived(buildRows(options, 0, filterQuery, false));
+  const firstOptionIndex = $derived.by(() => {
+    if (!highlightFirstOption) return 0;
+    const index = rows.findIndex((row) => !row.group);
+    return index === -1 ? (customValue !== "" ? rows.length : 0) : index;
+  });
   const grouped = $derived(options.some((o) => o.children));
   const clearOffset = $derived(allowClear ? 1 : 0);
   const exactOption = $derived(findByName(options, query.trim()));
@@ -247,7 +265,12 @@
   // rendering, aria-activedescendant, and selection all read this clamped
   // view — it always names a rendered row (with zero rows the descendant is
   // dropped instead).
-  const activeIndex = $derived(Math.min(highlightIndex, Math.max(rowCount - 1, 0)));
+  const activeIndex = $derived(
+    Math.min(
+      highlightIndex < 0 ? clearOffset + firstOptionIndex : highlightIndex,
+      Math.max(rowCount - 1, 0),
+    ),
+  );
 
   function findByName(opts: TypeaheadOption[], name: string): TypeaheadOption | undefined {
     for (const option of opts) {
@@ -319,7 +342,7 @@
     // <body> and would fire focusout on the container. Suppress dismissal
     // until we've handed focus to the input.
     opening = true;
-    highlightIndex = !remote && customValue !== "" ? customOffset : clearOffset;
+    highlightIndex = !remote && customValue !== "" ? customOffset : -1;
     await tick();
     positionPanel();
     inputEl?.focus();
@@ -343,6 +366,11 @@
   }
 
   function handleTriggerKeydown(event: KeyboardEvent): void {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      void openDropdown();
+      return;
+    }
     if (
       event.key.length !== 1 ||
       event.key === " " ||
@@ -384,11 +412,6 @@
       // Shift+Tab from the input lands here with the list still open.
       if (open && handleEscape(event)) return;
       if (unavailable()) return;
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault();
-        void openDropdown();
-        return;
-      }
       handleTriggerKeydown(event);
     };
 
@@ -575,13 +598,7 @@
     value={query}
     oninput={(event) => {
       updateQuery(event.currentTarget.value);
-      highlightIndex = remote
-        ? clearOffset
-        : customValue !== ""
-          ? customOffset
-          : rows.length > 0
-            ? clearOffset
-            : 0;
+      highlightIndex = !remote && customValue !== "" ? customOffset : -1;
     }}
     onkeydown={handleKeydown}
     {placeholder}

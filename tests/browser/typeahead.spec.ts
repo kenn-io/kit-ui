@@ -5,9 +5,12 @@ import { gotoPage } from "./helpers.js";
 // (clear row, custom values, meta search, veto/error, header snippet,
 // loading row, forced placement) and the t662 grouped-option tree.
 
-async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
+async function mountNestedRepositoryTypeahead(
+  page: Page,
+  overrides: { highlightFirstOption?: boolean } = {},
+): Promise<void> {
   await gotoPage(page, "typeahead");
-  await page.evaluate(async () => {
+  await page.evaluate(async (overrides) => {
     const [{ mount }, { default: Typeahead }] = await Promise.all([
       import("/node_modules/.vite/deps/svelte.js"),
       import("/src/lib/components/Typeahead.svelte"),
@@ -40,9 +43,10 @@ async function mountNestedRepositoryTypeahead(page: Page): Promise<void> {
         onselect: (value: string) => {
           target.dataset.value = value;
         },
+        ...overrides,
       },
     });
-  });
+  }, overrides);
 }
 
 // If the component's preferred desktop width becomes a hard minimum again,
@@ -146,7 +150,7 @@ test("typing one character can select a custom value alongside matching options"
   await expect(page.locator('[data-demo="owner-value"]')).toHaveText("p");
 });
 
-for (const key of ["Enter", "Space"]) {
+for (const key of ["Enter", "Space", "ArrowDown", "ArrowUp"]) {
   test(`${key} opens the focused trigger with an empty search`, async ({ page }) => {
     await gotoPage(page, "typeahead");
     await page.getByRole("button", { name: "Filter repositories…" }).focus();
@@ -672,17 +676,129 @@ test("nested repository groups expose deep levels and parent navigation", async 
 });
 
 test("filtering nested repository groups keeps ancestry and selects the leaf", async ({ page }) => {
-  await mountNestedRepositoryTypeahead(page);
-  const fixture = page.locator("#nested-typeahead-fixture");
-  await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
-  const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
-  await input.fill("agentsview");
-  const rows = fixture.locator(".kit-typeahead__option");
-  await expect(rows).toHaveCount(3);
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
+  for (const highlightFirstOption of [false, true]) {
+    await page.goto("about:blank");
+    await mountNestedRepositoryTypeahead(page, { highlightFirstOption });
+    const fixture = page.locator("#nested-typeahead-fixture");
+    await fixture.getByRole("button", { name: "Filter nested repositories…" }).click();
+    const input = fixture.getByRole("combobox", { name: "Filter nested repositories…" });
+    if (highlightFirstOption) {
+      await expect(fixture.getByRole("treeitem", { name: "Forge", exact: true })).toHaveClass(
+        /highlighted/,
+      );
+    }
+    await input.fill("a");
+    const rows = fixture.locator(".kit-typeahead__option");
+    await expect(rows).toHaveCount(3);
+    if (!highlightFirstOption) {
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(fixture.getByRole("treeitem", { name: "agentsview", exact: true })).toHaveClass(
+      /highlighted/,
+    );
+    await page.keyboard.press("Enter");
+    await expect(fixture).toHaveAttribute("data-value", "github.com/kenn-io/agentsview");
+  }
+});
+
+for (const { remote, expanded, query, selected } of [
+  { remote: false, expanded: true, query: "", selected: "alpha" },
+  { remote: true, expanded: true, query: "alpha", selected: "alpha" },
+  { remote: true, expanded: false, query: "unmatched", selected: "unmatched" },
+]) {
+  test(`grouped ${remote ? "remote" : "local"} ${expanded ? "expanded" : "collapsed"} options arriving after opening start on the first choice`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "typeahead");
+    const fixture = await page.evaluateHandle(async (remote) => {
+      const [{ mountReactive }, { default: Typeahead }] = await Promise.all([
+        import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+        import("/src/lib/components/Typeahead.svelte"),
+      ]);
+      document.body.replaceChildren();
+      return mountReactive(Typeahead, document.body, {
+        options: [],
+        loading: true,
+        remote,
+        highlightFirstOption: true,
+        allowCustom: true,
+        allowClear: true,
+        fallbackLabel: "Choose an option",
+        placeholder: "Grouped choices",
+        onselect: (name: string) => {
+          document.body.dataset.value = name;
+        },
+      });
+    }, remote);
+    await page.getByRole("button", { name: "Grouped choices" }).click();
+    const input = page.getByRole("combobox", { name: "Grouped choices" });
+    await expect(page.getByText("Loading…", { exact: true })).toBeVisible();
+    if (query) await input.fill(query);
+    await fixture.evaluate(
+      (component, expanded) =>
+        component.update({
+          options: [
+            {
+              name: "group",
+              label: "Group",
+              expanded,
+              children: [{ name: "alpha", label: "Alpha" }],
+            },
+          ],
+          loading: false,
+        }),
+      expanded,
+    );
+    await expect(
+      page.getByRole("treeitem", { name: expanded ? "Alpha" : 'Use "unmatched"', exact: true }),
+    ).toBeVisible();
+    await input.press("Enter");
+    await expect(page.locator("body")).toHaveAttribute("data-value", selected);
+  });
+}
+
+test("the panel aligns with a wider anchor and follows its resize", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: Typeahead }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/Typeahead.svelte"),
+    ]);
+    document.body.replaceChildren();
+    const anchor = document.createElement("div");
+    anchor.id = "panel-anchor-fixture";
+    anchor.style.cssText =
+      "position: fixed; left: 40px; top: 40px; width: 480px; height: 80px; display: flex; justify-content: flex-end; align-items: flex-start;";
+    document.body.append(anchor);
+    mount(Typeahead, {
+      target: anchor,
+      props: {
+        options: [{ name: "forge", label: "Forge" }],
+        fallbackLabel: "All repositories",
+        placeholder: "Filter anchored repositories…",
+        panelAnchor: anchor,
+        onselect: () => undefined,
+      },
+    });
+  });
+  const anchor = page.locator("#panel-anchor-fixture");
+  const trigger = anchor.getByRole("button");
+  const triggerBox = (await trigger.boundingBox())!;
+  const anchorBox = (await anchor.boundingBox())!;
+  expect(triggerBox.x).toBeGreaterThan(anchorBox.x);
+  await trigger.click();
+  const panel = page.locator(".kit-typeahead__panel");
+  await expect(panel).toBeVisible();
+  const panelBox = (await panel.boundingBox())!;
+  expect(Math.abs(panelBox.x - anchorBox.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(panelBox.width - anchorBox.width)).toBeLessThanOrEqual(1);
+  expect(panelBox.y).toBeCloseTo(triggerBox.y + triggerBox.height + 2, 0);
+  await anchor.evaluate((element) => {
+    element.style.width = "600px";
+  });
+  await expect.poll(async () => (await panel.boundingBox())!.width).toBeCloseTo(600, 0);
+  expect(Math.abs((await panel.boundingBox())!.x - anchorBox.x)).toBeLessThanOrEqual(1);
 });
 
 test("header snippet drives the option source through the loading row", async ({ page }) => {
