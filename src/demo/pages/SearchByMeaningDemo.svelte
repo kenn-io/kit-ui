@@ -32,6 +32,7 @@
       title: "Indexing",
       state: { kind: "indexing", done: 12_000, total: 48_000, etaMs: 7_200_000 },
     },
+    { id: "scanning", title: "Counting work", state: { kind: "indexing", done: 0, total: 0 } },
   ];
   let turnOnClicks = $state<Record<string, number>>({});
   let builtInClicks = $state<Record<string, number>>({});

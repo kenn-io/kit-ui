@@ -34,6 +34,8 @@ The Action column applies by default; `readonly` removes the action.
 | `downloading`  | `doneBytes`, `totalBytes`         | Turning on  | Downloading 120 MB of 290 MB · Keyword search works meanwhile                                      |                      |
 | `indexing`     | `done`, `total`, optional `etaMs` | Turning on  | Indexing 12,000 of 48,000 messages · about 15 minutes left · Keyword search works meanwhile        |                      |
 
+A `total` or `totalBytes` of 0 means the total is unknown: the line drops the count and a spinner replaces the progress bar.
+
 Callers select `itemNoun` for `itemCount` in `ollama-other` or `total` in `indexing`, updating it as the state changes. For example, pass "message" for a count of 1 and "messages" for other counts. Apps supply the appropriate forms for their language.
 
 Sizes use decimal megabytes. Pass `locale="fr"` to `SearchByMeaningRow` to format counts, sizes, and duration units in the app's selected language. Use a BCP 47 language tag, such as `fr` or `fr-FR`; `Intl.NumberFormat` throws for malformed tags. Omitting `locale` uses the runtime locale. Translated labels and `itemNoun` remain the caller's responsibility. Durations below one minute read "under a minute"; below 90 minutes use rounded minutes, and longer durations use rounded hours.

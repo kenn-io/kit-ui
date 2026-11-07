@@ -111,17 +111,24 @@ export function describeSearchByMeaning(
       return {
         chip: labels.turningOn,
         tone: "info",
-        line: `${fill(labels.downloading, { done: formatSize(state.doneBytes, locale), total: formatSize(state.totalBytes, locale) })} · ${labels.meanwhile}`,
+        // A total of 0 is unknown and shows no count.
+        line:
+          state.totalBytes > 0
+            ? `${fill(labels.downloading, { done: formatSize(state.doneBytes, locale), total: formatSize(state.totalBytes, locale) })} · ${labels.meanwhile}`
+            : labels.meanwhile,
         progress: { value: state.doneBytes, max: state.totalBytes },
       };
     case "indexing": {
-      const parts = [
-        fill(labels.indexing, {
-          done: formatCount(state.done, locale),
-          total: formatCount(state.total, locale),
-          items: itemNoun,
-        }),
-      ];
+      const parts: string[] =
+        state.total > 0
+          ? [
+              fill(labels.indexing, {
+                done: formatCount(state.done, locale),
+                total: formatCount(state.total, locale),
+                items: itemNoun,
+              }),
+            ]
+          : [];
       if (state.etaMs !== undefined)
         parts.push(fill(labels.timeLeft, { time: formatRoughTime(state.etaMs, labels, locale) }));
       parts.push(labels.meanwhile);

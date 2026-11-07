@@ -48,6 +48,14 @@ describe("search by meaning descriptions", () => {
       ).line,
     ).toBe("Downloading 120\u202fMo of 290\u202fMo · La recherche par mots-clés reste disponible");
   });
+  test("shows no count while a total is unknown", () => {
+    expect(
+      describeSearchByMeaning({ kind: "indexing", done: 0, total: 0 }, "messages").line,
+    ).toBe("Keyword search works meanwhile");
+    expect(
+      describeSearchByMeaning({ kind: "downloading", doneBytes: 0, totalBytes: 0 }, "messages").line,
+    ).toBe("Keyword search works meanwhile");
+  });
   test("offers one-time setup locally or on a host", () => {
     expect(
       describeSearchByMeaning({ kind: "off", downloadBytes: 289_000_000 }, "messages"),

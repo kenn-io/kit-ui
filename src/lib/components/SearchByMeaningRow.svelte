@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from "./Button.svelte";
   import Chip from "./Chip.svelte";
+  import Spinner from "./Spinner.svelte";
   import {
     DEFAULT_SEARCH_BY_MEANING_LABELS,
     describeSearchByMeaning,
@@ -33,11 +34,9 @@
   const words = $derived({ ...DEFAULT_SEARCH_BY_MEANING_LABELS, ...labels });
   const description = $derived(describeSearchByMeaning(state, itemNoun, words, locale));
   const action = $derived(readonly ? undefined : description.action);
-  const percent = $derived(
-    description.progress && description.progress.max > 0
-      ? Math.min(100, (description.progress.value / description.progress.max) * 100)
-      : 0,
-  );
+  // A total of 0 is unknown: the line shows a spinner, not an empty bar.
+  const bar = $derived(description.progress && description.progress.max > 0 ? description.progress : undefined);
+  const percent = $derived(bar ? Math.min(100, (bar.value / bar.max) * 100) : 0);
 </script>
 
 <div class="kit-search-by-meaning" class:kit-search-by-meaning--no-action={!action}>
@@ -46,21 +45,21 @@
   {#if description.warning}
     <p class="kit-search-by-meaning__warning">{description.warning}</p>
   {/if}
-  {#if description.progress}
+  {#if bar}
     <div
       class="kit-search-by-meaning__progress"
       role="progressbar"
       aria-label={words.progress}
       aria-valuemin="0"
-      aria-valuenow={description.progress.value}
-      aria-valuemax={description.progress.max}
+      aria-valuenow={bar.value}
+      aria-valuemax={bar.max}
       aria-valuetext={description.line}
     >
       <div class="kit-search-by-meaning__fill" style:width={`${percent}%`}></div>
     </div>
   {/if}
   {#if description.line}
-    <p class="kit-search-by-meaning__line">{description.line}</p>
+    <p class="kit-search-by-meaning__line">{#if description.progress && !bar}<span class="kit-search-by-meaning__spinner"><Spinner size={10} label={words.progress} /></span>{/if}{description.line}</p>
   {/if}
   {#if action}
     <div class="kit-search-by-meaning__action">
@@ -108,6 +107,11 @@
   }
   .kit-search-by-meaning__warning {
     color: color-mix(in srgb, var(--accent-amber) 65%, var(--text-primary));
+  }
+  .kit-search-by-meaning__spinner {
+    display: inline-flex;
+    margin-inline-end: var(--space-2);
+    vertical-align: -1px;
   }
   .kit-search-by-meaning__progress {
     grid-column: 1 / -1;
