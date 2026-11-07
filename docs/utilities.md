@@ -163,12 +163,14 @@ import { createRefreshScheduler, formatRefreshAge } from "@kenn-io/kit-ui";
 
 const scheduler = createRefreshScheduler(() => refetch(), 60_000);
 scheduler.scheduleNext(); // arm without an immediate refresh
-scheduler.refreshNow(); // refresh + reset the timer
+scheduler.refreshNow("manual"); // refresh + reset the timer
 scheduler.stop();
 
 formatRefreshAge(lastUpdatedAt, Date.now()); // "Updated 3m ago" / "—"
 ```
 
+`refreshNow(reason)` forwards its required reason; the timer passes `"auto"`.
+Pass `"auto"` for immediate refreshes triggered by focus, reconnect, or new data.
 This is what `RefreshControl` uses internally.
 
 ## Floating positioning

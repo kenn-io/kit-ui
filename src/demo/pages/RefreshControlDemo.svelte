@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { Button, RefreshControl } from "../../lib/index.js";
+  import { Button, RefreshControl, type RefreshReason } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let lastUpdatedAt = $state<number | null>(Date.now());
   let busy = $state(false);
+  let lastReason = $state<RefreshReason | null>(null);
 
-  function refresh() {
+  function refresh(reason: RefreshReason) {
+    lastReason = reason;
     busy = true;
     setTimeout(() => {
       lastUpdatedAt = Date.now();
@@ -58,11 +60,12 @@
   code={`<RefreshControl
   {lastUpdatedAt}
   {busy}
-  onRefresh={refresh}
+  onRefresh={(reason) => refresh(reason)}
   label="Refresh usage data"
 />`}
 >
   <RefreshControl {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh usage data" />
+  <output data-testid="refresh-reason">{lastReason ?? "No refresh yet"}</output>
 </DemoSection>
 
 <DemoSection
