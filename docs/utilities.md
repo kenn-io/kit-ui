@@ -291,7 +291,7 @@ formatCost(0.004); // "<$0.01"
 formatCost(12.339); // "$12.34"
 formatCost(123.4); // "$123"
 
-formatSize(290_000_000, "fr");
+formatSize(290_000_000, "fr"); // "290 Mo"
 ```
 
 `formatSize(bytes, locale?)` always displays decimal megabytes, rounded to a whole number: one megabyte is 1,000,000 bytes. `Intl.NumberFormat` supplies the unit and spacing for the locale; omitting it uses the runtime locale.

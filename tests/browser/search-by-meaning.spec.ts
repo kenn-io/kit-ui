@@ -95,7 +95,9 @@ test("shows a spinner and no count until the total is known", async ({ page }) =
   const row = page.getByTestId("meaning-scanning");
   await expect(row.getByRole("progressbar")).toHaveCount(0);
   await expect(row.getByRole("status", { name: "Search by meaning setup" })).toBeVisible();
-  await expect(row.locator(".kit-search-by-meaning__line")).toHaveText("Keyword search works meanwhile");
+  await expect(row.locator(".kit-search-by-meaning__line")).toHaveText(
+    "Keyword search works meanwhile",
+  );
 });
 
 test("wraps actions within the row at the mobile breakpoint", async ({ page }) => {

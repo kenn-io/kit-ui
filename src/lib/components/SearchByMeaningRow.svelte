@@ -35,7 +35,9 @@
   const description = $derived(describeSearchByMeaning(state, itemNoun, words, locale));
   const action = $derived(readonly ? undefined : description.action);
   // A total of 0 is unknown: the line shows a spinner, not an empty bar.
-  const bar = $derived(description.progress && description.progress.max > 0 ? description.progress : undefined);
+  const bar = $derived(
+    description.progress && description.progress.max > 0 ? description.progress : undefined,
+  );
   const percent = $derived(bar ? Math.min(100, (bar.value / bar.max) * 100) : 0);
 </script>
 
@@ -59,7 +61,11 @@
     </div>
   {/if}
   {#if description.line}
-    <p class="kit-search-by-meaning__line">{#if description.progress && !bar}<span class="kit-search-by-meaning__spinner"><Spinner size={10} label={words.progress} /></span>{/if}{description.line}</p>
+    <p class="kit-search-by-meaning__line">
+      {#if description.progress && !bar}<span class="kit-search-by-meaning__spinner"
+          ><Spinner size={10} label={words.progress} /></span
+        >{/if}{description.line}
+    </p>
   {/if}
   {#if action}
     <div class="kit-search-by-meaning__action">
