@@ -47,18 +47,52 @@ for (const dark of [false, true]) {
     );
   });
 
-  test(`date range presets use the shared selected pill · ${mode}`, async ({ page }) => {
+  test(`date presets hang from the mode tabs as a narrower tray · ${mode}`, async ({ page }) => {
     await gotoPage(page, "date-range-picker");
     await setTheme(page, { dark, highContrast: false });
     await page.locator(".kit-date-range-picker__trigger").first().click();
-    const pill = page.locator(".kit-date-range-picker__pill.active");
-    await expect(pill).toBeVisible();
-    await expectSelectedPill(pill);
-    // Unselected presets sit flat on the shared inset track.
-    const flat = page.locator(".kit-date-range-picker__pill:not(.active)").first();
-    expect(await flat.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
-      "rgba(0, 0, 0, 0)",
-    );
+    const panel = page.locator(".kit-date-range-picker__panel");
+    await expect(panel.locator(".kit-date-range-picker__pills")).toBeVisible();
+
+    // Relative, then Calendar: both option rows hang from the mode tabs.
+    for (const tab of [0, 1]) {
+      await panel.locator(".kit-segmented__btn").nth(tab).click();
+      const geometry = await panel.evaluate((el) => {
+        for (const animation of el.getAnimations({ subtree: true })) animation.finish();
+        const track = el.querySelector(".kit-date-range-picker__tabs .kit-segmented")!;
+        const tray = el.querySelector(".kit-date-range-picker__pills")!;
+        const chosenMode = track.querySelector(".kit-segmented__btn.active")!;
+        const chosenOption = tray.querySelector(".kit-date-range-picker__pill.active");
+        const t = track.getBoundingClientRect();
+        const r = tray.getBoundingClientRect();
+        const style = (node: Element) => getComputedStyle(node);
+        return {
+          gap: r.top - t.bottom,
+          insetLeft: r.left - t.left,
+          insetRight: t.right - r.right,
+          trayTopCorners: [style(tray).borderTopLeftRadius, style(tray).borderTopRightRadius],
+          trayBottomCorner: style(tray).borderBottomLeftRadius,
+          trayFill: style(tray).backgroundColor,
+          trackFill: style(track).backgroundColor,
+          modeShadow: style(chosenMode).boxShadow,
+          optionShadow: chosenOption ? style(chosenOption).boxShadow : "none",
+          optionHeight: chosenOption?.getBoundingClientRect().height ?? 0,
+          modeHeight: chosenMode.getBoundingClientRect().height,
+        };
+      });
+      const info = JSON.stringify(geometry);
+      // Joined to the track's bottom edge, inset from both ends, square on
+      // top and rounded below, in the track's fill: one shape.
+      expect(Math.abs(geometry.gap), info).toBeLessThanOrEqual(0.5);
+      expect(geometry.insetLeft, info).toBeGreaterThanOrEqual(8);
+      expect(geometry.insetRight, info).toBeGreaterThanOrEqual(8);
+      expect(geometry.trayTopCorners, info).toEqual(["0px", "0px"]);
+      expect(geometry.trayBottomCorner, info).not.toBe("0px");
+      expect(geometry.trayFill, info).toBe(geometry.trackFill);
+      // Only the chosen mode is raised; the chosen option is a flat tint.
+      expect(geometry.modeShadow, info).not.toBe("none");
+      expect(geometry.optionShadow, info).toBe("none");
+    }
   });
 
   test(`top bar current tab uses the shared selected pill · ${mode}`, async ({ page }) => {
