@@ -104,6 +104,14 @@ export function checkHandRolledTooltip(source: any): {
     line: number;
     message: string;
 }[];
+/** Hand-rolled `<details>` disclosures duplicate Disclosure, which adds
+ * the chevron, focus ring, deep-link anchors, and Accordion grouping on
+ * the same native element. Matches the opening tag only. */
+export function checkHandRolledDisclosure(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Hand-rolled bottom status bars duplicate StatusBar. Matches the class
  * name both apps converged on; kit-status-bar (the library's own class,
  * e.g. in retheming CSS) is exempt. */
@@ -426,6 +434,7 @@ export const ALL_RULES: {
     "hand-rolled-table-sort": typeof checkHandRolledTableSort;
     "unsorted-table-header": typeof checkUnsortedTableHeader;
     "hand-rolled-tooltip": typeof checkHandRolledTooltip;
+    "hand-rolled-disclosure": typeof checkHandRolledDisclosure;
     "hand-rolled-popover-card": typeof checkHandRolledPopoverCard;
     "hand-rolled-card": typeof checkHandRolledCard;
     "hand-rolled-status-bar": typeof checkHandRolledStatusBar;

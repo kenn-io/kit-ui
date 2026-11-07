@@ -44,6 +44,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 
 | Component                                                     | Origin                             | Purpose                                                                                       |
 | ------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| [Accordion](docs/components/disclosure.md)                    | new                                | Framed group of Disclosures; `exclusive` keeps one open                                       |
 | [AdaptiveActionGrid](docs/components/adaptive-action-grid.md) | new (agentsview toolbar patterns)  | Container-aware row, grid, and inline disclosure for mixed controls                           |
 | [AppSidebar](docs/components/app-sidebar.md)                  | new                                | Responsive application sidebar: narrow drawer, icon rail with flyouts and pin, full panel     |
 | [BottomDock](docs/components/bottom-dock.md)                  | consumer app                       | Inline resizable bottom panel with composable regions                                         |
@@ -58,6 +59,7 @@ Dark mode: add the `dark` class to `<html>` (`document.documentElement.classList
 | [CommandPalette](docs/components/command-palette.md)          | new                                | ⌘K overlay: filtered commands, sections, recents; pairs with the shortcut system              |
 | [CopyButton](docs/components/copy-button.md)                  | agentsview                         | Copy-to-clipboard icon button with success feedback                                           |
 | [DetailDrawer](docs/components/detail-drawer.md)              | consumer app                       | Right-side slide-in detail panel over an overlay                                              |
+| [Disclosure](docs/components/disclosure.md)                   | both (hand-rolled `<details>`)     | Collapsible section on native `<details>`: card or plain toggle, deep-link anchor             |
 | [DiffStats](docs/components/diff-stats.md)                    | consumer app                       | `+added −removed` diff counters with compact formatting                                       |
 | [EmptyState](docs/components/empty-state.md)                  | both (hand-rolled)                 | Centered muted placeholder: icon, title, description, action                                  |
 | [FilterDropdown](docs/components/filter-dropdown.md)          | both (consolidated)                | Sectioned multi-select filter menu with search, counts, bulk actions                          |

@@ -29,6 +29,7 @@
   import CommandPaletteDemo from "./pages/CommandPaletteDemo.svelte";
   import CopyButtonDemo from "./pages/CopyButtonDemo.svelte";
   import DetailDrawerDemo from "./pages/DetailDrawerDemo.svelte";
+  import DisclosureDemo from "./pages/DisclosureDemo.svelte";
   import EmptyStateDemo from "./pages/EmptyStateDemo.svelte";
   import FilterDropdownDemo from "./pages/FilterDropdownDemo.svelte";
   import FindBarDemo from "./pages/FindBarDemo.svelte";
@@ -123,6 +124,7 @@
     { id: "command-palette", label: "CommandPalette", component: CommandPaletteDemo },
     { id: "copy-button", label: "CopyButton", component: CopyButtonDemo },
     { id: "detail-drawer", label: "DetailDrawer", component: DetailDrawerDemo },
+    { id: "disclosure", label: "Disclosure", component: DisclosureDemo },
     { id: "empty-state", label: "EmptyState", component: EmptyStateDemo },
     { id: "filter-dropdown", label: "FilterDropdown", component: FilterDropdownDemo },
     { id: "find-bar", label: "FindBar", component: FindBarDemo },
@@ -176,7 +178,17 @@
 
   const pages: Page[] = [...metaPages, ...componentPages];
 
-  let activeId = $state((typeof location !== "undefined" && location.hash.slice(1)) || "theme");
+  // In-page anchors (a Disclosure id, say) start with their page id, as in
+  // `disclosure-seats`. Resolving them to the page with the longest matching
+  // prefix keeps direct links, reloads, and Back on the page that owns them.
+  function pageForHash(hash: string): string {
+    if (!hash) return "theme";
+    if (pages.some((p) => p.id === hash)) return hash;
+    const owners = pages.filter((p) => hash.startsWith(`${p.id}-`));
+    return owners.sort((a, b) => b.id.length - a.id.length)[0]?.id ?? hash;
+  }
+
+  let activeId = $state(pageForHash(typeof location !== "undefined" ? location.hash.slice(1) : ""));
   let filter = $state("");
 
   initTheme();
@@ -199,7 +211,7 @@
   }
 </script>
 
-<svelte:window onhashchange={() => (activeId = location.hash.slice(1) || "theme")} />
+<svelte:window onhashchange={() => (activeId = pageForHash(location.hash.slice(1)))} />
 
 {#if isMobileFrame}
   <MobileFrame />

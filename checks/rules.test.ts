@@ -421,6 +421,24 @@ describe("hand-rolled components", () => {
     expect(findings[0]!.message).toContain("Tooltip");
   });
 
+  test("disclosure: native details markup", () => {
+    const src = svelte(
+      ``,
+      `<details class="faq">\n  <summary>More</summary>\n  Body\n</details>\n<details open><summary>x</summary></details>`,
+    );
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-disclosure"]);
+    expect(findings.map((f) => f.line)).toEqual([2, 6]);
+    expect(findings[0]!.message).toContain("Disclosure");
+  });
+
+  test("disclosure: does not match the component or similar tags", () => {
+    const src = svelte(
+      ``,
+      `<Disclosure title="More">Body</Disclosure>\n<details-panel></details-panel>\n<p>open the details</p>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-disclosure"])).toHaveLength(0);
+  });
+
   test("popover card: all three chrome declarations in one rule", () => {
     const src = svelte(
       `.menu {
