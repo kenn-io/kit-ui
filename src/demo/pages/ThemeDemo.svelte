@@ -1,7 +1,19 @@
 <script lang="ts">
   import { MediaQuery } from "svelte/reactivity";
   import { BREAKPOINTS, MEDIA, Table, TableHeaderCell } from "../../lib/index.js";
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import InboxIcon from "@lucide/svelte/icons/inbox";
+  import SettingsIcon from "@lucide/svelte/icons/settings";
   import DemoSection from "../DemoSection.svelte";
+
+  // The icon sizes the line-weight rules cover, by where each size is used.
+  const iconSizes = [
+    { size: 12, use: "chips, pills, dense rows" },
+    { size: 14, use: "toolbars, menus, icon buttons" },
+    { size: 16, use: "top bar" },
+    { size: 24, use: "empty states" },
+  ];
 
   const compact = new MediaQuery(MEDIA.compact);
   const medium = new MediaQuery(MEDIA.medium);
@@ -115,6 +127,28 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Icon line weight"
+  description="Lucide scales its stroke with the icon, so one strokeWidth draws thin small icons and heavy large ones. theme.css picks the stroke per rendered size, so every row below draws about the same 1.1-1.2px line, whatever strokeWidth each call site passes (all of these pass 2). Identity themes set their own --icon-stroke instead. Pick the size by context."
+  code={`<SettingsIcon size="14" aria-hidden="true" />  /* stroke 2 */
+<SettingsIcon size="24" aria-hidden="true" />  /* stroke 1.5 — same rendered line */`}
+>
+  <div class="icon-weights" data-testid="icon-weights">
+    {#each iconSizes as row (row.size)}
+      <div class="icon-weight-row">
+        <span class="icon-weight-glyphs" style:color="var(--text-primary)">
+          <SettingsIcon size={row.size} strokeWidth={2} aria-hidden="true" />
+          <CheckIcon size={row.size} strokeWidth={2} aria-hidden="true" />
+          <InboxIcon size={row.size} strokeWidth={2} aria-hidden="true" />
+          <EllipsisIcon size={row.size} strokeWidth={2} aria-hidden="true" />
+        </span>
+        <code>{row.size}px</code>
+        <span class="type-values">{row.use}</span>
+      </div>
+    {/each}
+  </div>
+</DemoSection>
+
 <style>
   .bp-table {
     display: flex;
@@ -131,6 +165,26 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
     display: flex;
     align-items: baseline;
     gap: 16px;
+  }
+
+  .icon-weights {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: 100%;
+  }
+
+  .icon-weight-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  .icon-weight-glyphs {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-5);
+    min-width: 160px;
   }
 
   .type-sample {

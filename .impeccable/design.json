@@ -163,7 +163,7 @@
       "refersTo": "input",
       "description": "Wrapper-focus text field; border shifts to Action Blue on focus-within.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Filter sessions…\" />",
-      "css": ".ds-input { background: var(--bg-surface, #fff); color: var(--text-primary, #181b24); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; transition: border-color 0.12s ease; } .ds-input::placeholder { color: var(--text-muted, #878ea0); } .ds-input:focus { outline: none; border-color: var(--accent-blue, #2563eb); }"
+      "css": ".ds-input { background: var(--bg-surface, #fff); color: var(--text-primary, #181b24); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; transition: border-color 0.12s ease; } .ds-input::placeholder { color: var(--text-muted, #5c6274); } .ds-input:focus { outline: none; border-color: var(--accent-blue, #2563eb); }"
     },
     {
       "name": "Toned Chip",

@@ -532,16 +532,18 @@ export function checkHandRolledCodeBlock(source) {
   return findings;
 }
 
-/** Hand-rolled empty/placeholder states duplicate EmptyState. */
+/** Hand-rolled empty/placeholder states duplicate EmptyState or MissingData. */
 export function checkHandRolledEmptyState(source) {
   const findings = [];
-  const re = /class="[^"]*(?<!kit-)\bempty-state\b|\.(?<!kit-)empty-state\b/g;
+  const re =
+    /class="[^"]*(?<!kit-)\b(empty-state|missing-data)\b|\.(?<!kit-)(empty-state|missing-data)\b/g;
   let match;
   while ((match = re.exec(source)) !== null) {
     findings.push({
       rule: "hand-rolled-empty-state",
       line: lineOfIndex(source, match.index),
-      message: "empty-state markup — use EmptyState from @kenn-io/kit-ui",
+      message:
+        "empty-state markup — use MissingData (a page or panel with nothing to show) or EmptyState (a placeholder in a smaller pane) from @kenn-io/kit-ui",
     });
   }
   return findings;
@@ -1307,7 +1309,11 @@ export function checkLocalDebounce(source) {
 export function checkPinnedRootFontSize(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
-    const re = /(?:^|[\s,}])(?:html|:root)\b[^{}]*\{[^}]*?font-size:\s*([^;}]+)/gm;
+    // html or :root itself, optionally qualified (:root.dark, html[lang]),
+    // anywhere in a selector list. `:root .kit-tab` styles a descendant,
+    // not the root, so a combinator after it does not count.
+    const re =
+      /(?:^|[\s,}])(?:html|:root)\b[^\s{},>+~]*\s*(?:,[^{}]*)?\{[^}]*?font-size:\s*([^;}]+)/gm;
     let match;
     while ((match = re.exec(css)) !== null) {
       const value = match[1].trim();

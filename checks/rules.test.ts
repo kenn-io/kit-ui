@@ -543,6 +543,19 @@ describe("hand-rolled components", () => {
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(2);
   });
 
+  test("empty state: a hand-rolled missing-data block", () => {
+    const src = svelte(
+      `.missing-data { text-align: center; }`,
+      `<div class="missing-data"><p>No pins</p></div>`,
+    );
+    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(2);
+  });
+
+  test("empty state: does not match kit-missing-data", () => {
+    const src = `<div class="kit-missing-data"><p class="kit-missing-data__title"></p></div>`;
+    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
+  });
+
   test("empty state: does not match kit-empty-state or prose", () => {
     const src = `<script>// the empty-state pattern</script>\n<div class="kit-empty-state"></div>`;
     expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
@@ -934,6 +947,16 @@ describe("typography rules", () => {
     ]);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain("var(--font-size-root)");
+  });
+
+  test("pinned root: flags a qualified root and a root later in a list", () => {
+    const src = `:root.dark { font-size: 14px; }\n.a, html { font-size: 12px; }`;
+    expect(checkSource(src, "app.css", ["pinned-root-font-size"])).toHaveLength(2);
+  });
+
+  test("pinned root: ignores descendants styled under :root", () => {
+    const ok = `:root .kit-top-bar .kit-top-bar__tab { padding: 3px; font-size: 12.5px; }\nhtml.dark > .x { font-size: 12px; }`;
+    expect(checkSource(ok, "app.css", ["pinned-root-font-size"])).toHaveLength(0);
   });
 
   test("pinned root: does not match class names containing html", () => {

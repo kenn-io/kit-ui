@@ -126,3 +126,90 @@ test("the hidden measurement probe adds no sideways scroll to a narrow container
   const expanded = await overflow();
   expect(expanded.scrollWidth).toBeLessThanOrEqual(expanded.clientWidth);
 });
+
+test("a page outside the tab set leaves every tab inactive in both modes", async ({ page }) => {
+  await gotoPage(page, "top-bar");
+
+  const host = page.locator(".bar-host").first();
+  const bar = host.locator(".kit-top-bar");
+  const tabs = bar.locator(".kit-top-bar__tabs");
+  const dropdown = bar.locator(".kit-top-bar__nav-select");
+  const slider = page.locator('input[type="range"]').first();
+
+  await expect(tabs.locator('[aria-current="page"]')).toHaveText("Activity");
+
+  // The demo's Settings button sets active to an id no tab has.
+  await bar.getByRole("button", { name: "Settings" }).click();
+  await expect(bar.locator('[aria-current="page"]')).toHaveCount(0);
+  await expect(tabs.locator(".kit-top-bar__tab.active")).toHaveCount(0);
+
+  for (const width of [800, 680, 560, 440, 360]) {
+    await setSlider(slider, width);
+  }
+  const trigger = dropdown.locator(".kit-select-dropdown__trigger");
+  await expect(trigger).toHaveText("—");
+  await expect(trigger).not.toContainText("Activity");
+
+  // The placeholder cannot be picked; a real tab still can.
+  await trigger.click();
+  await expect(page.getByRole("option", { name: "—" })).toBeDisabled();
+  await page.getByRole("option", { name: "Pulls" }).click();
+  await expect(trigger).toHaveText("Pulls");
+
+  for (const width of [440, 560, 680, 800, 920]) {
+    await setSlider(slider, width);
+  }
+  await expect(tabs.locator('[aria-current="page"]')).toHaveText("Pulls");
+});
+
+test("an unset active starts on the first enabled tab", async ({ page }) => {
+  await gotoPage(page, "top-bar");
+
+  // The agentsview demo bar never sets active.
+  const bar = page.locator(".bar-host").nth(1).locator(".kit-top-bar");
+  await expect(bar.locator('[aria-current="page"]')).toHaveText("Sessions");
+  await expect(bar.locator(".kit-top-bar__tab.active")).toHaveText("Sessions");
+});
+
+test("compact tabs are quieter and the current one is the shared raised pill", async ({ page }) => {
+  // Ten tabs need a wide page to stay expanded.
+  await page.setViewportSize({ width: 1700, height: 900 });
+  await gotoPage(page, "top-bar");
+  const bar = page.locator(".bar-host--many .kit-top-bar");
+  const current = bar.locator('.kit-top-bar__tabs [aria-current="page"]');
+  await expect(current).toHaveText("Usage");
+
+  const style = (el: Element) => {
+    const s = getComputedStyle(el);
+    return { size: s.fontSize, weight: s.fontWeight, color: s.color, bg: s.backgroundColor };
+  };
+  const other = await bar.getByRole("button", { name: "Pinned" }).evaluate(style);
+  const active = await current.evaluate(style);
+  const tokens = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.fontSize = "var(--font-size-sm)";
+    probe.style.color = "var(--text-muted)";
+    probe.style.backgroundColor = "var(--selected-strong-bg)";
+    document.body.append(probe);
+    const s = getComputedStyle(probe);
+    const out = { size: s.fontSize, muted: s.color, selected: s.backgroundColor };
+    probe.remove();
+    return out;
+  });
+  expect(other.size).toBe(tokens.size);
+  expect(other.weight).toBe("400");
+  expect(active.weight).toBe("400");
+  expect(other.color).toBe(tokens.muted);
+  expect(active.bg).toBe(tokens.selected);
+
+  // The flexible search sits a clear 24px from the tab strip.
+  const gap = await bar.evaluate((el) => {
+    const nav = el.querySelector(".kit-top-bar__nav")!.getBoundingClientRect();
+    const search = el.querySelector(".kit-top-bar__search")!.getBoundingClientRect();
+    return search.left - nav.right;
+  });
+  expect(gap).toBeGreaterThanOrEqual(23.5);
+
+  await bar.getByRole("button", { name: "Settings" }).click();
+  await expect(bar.locator('[aria-current="page"]')).toHaveCount(0);
+});

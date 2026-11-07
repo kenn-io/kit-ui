@@ -11,7 +11,7 @@ colors:
   edge-muted: "#e4e6ec"
   ink-primary: "#181b24"
   ink-secondary: "#555b6e"
-  ink-muted: "#878ea0"
+  ink-muted: "#5c6274"
   signal-amber: "#d97706"
   workflow-violet: "#7c3aed"
   confirm-green: "#059669"
@@ -123,7 +123,7 @@ Tinted cool-grey neutrals with a restrained six-accent semantic vocabulary; the 
 - **Hover Wash** (#f0f1f4): the universal hover tint (`--bg-surface-hover`).
 - **Inset Well** (#ecedf2): recessed regions — wells, secondary button fills (`--bg-inset`).
 - **Edge Default / Edge Muted** (#d8dae2 / #e4e6ec): structural 1px borders and quieter dividers.
-- **Ink Primary / Secondary / Muted** (#181b24 / #555b6e / #878ea0): three-step text hierarchy.
+- **Ink Primary / Secondary / Muted** (#181b24 / #555b6e / #5c6274): three-step text hierarchy. Muted still carries text (placeholders, metadata), so it clears 4.5:1 on every neutral fill in both themes.
 
 ### Secondary
 
@@ -181,11 +181,11 @@ its resting surfaces keep today's look.
 
 - **shadow-sm** (`0 1px 2px rgba(0,0,0,0.05)`): resting cards that genuinely need lift.
 - **shadow-md** (`0 2px 8px rgba(0,0,0,0.08)`): sticky chrome, drag states.
-- **shadow-lg** (`0 4px 16px rgba(0,0,0,0.1)`): the popover card, modals — every transient floating surface.
+- **shadow-lg** (`0 12px 32px` + `0 2px 6px`, cool-tinted at 14% / 8%): the popover card, modals — every transient floating surface. It is soft and wide so a popover lifts off white cards without a hard edge. In dark the shadow barely shows on the near-black page, so popovers also step up to a lighter surface (`--bg-popover`) and edge (`--border-popover`).
 
 ### Named Rules
 
-**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (surface bg, 1px default border, md radius, lg shadow). Hand-rolled copies are flagged by `kit-ui-check`.
+**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (`--bg-popover` fill, 1px `--border-popover` edge, md radius, lg shadow; the popover tokens equal the surface and default border in light and step lighter in dark). Hand-rolled copies are flagged by `kit-ui-check`.
 
 ## 5. Components
 
@@ -197,6 +197,12 @@ its resting surfaces keep today's look.
 - **Hover / Focus:** 0.12s background/border/color transitions; keyboard focus is the global 2px Action Blue outline ring, 1px offset; press nudges `translateY(1px)`.
 - **Tones × surfaces:** neutral/success/danger/info/workflow × outline/soft/solid, all derived from accent tokens through the shared tone mixes.
 - **Structural controls:** Keep the native element in the owning component and add `kit-control-states` for shared disabled and pressed behavior. Consumers own the control's geometry and use theme tokens for resting and hover styles.
+
+### Selected state
+
+- **Choice groups** (SegmentedControl, DateRangePicker's mode tabs, TopBar tabs): the chosen option is one raised pill from the `--selected-strong-*` tokens: the white surface lifted by a hairline and a soft shadow in light, and a lighter fill with a faint edge in dark. Selected text is primary ink at medium weight. Inside a dark popover the pill steps up again so it still stands out on the lighter popover surface.
+- **Sub-choices** (DateRangePicker's presets under its mode tabs): a narrower tray hangs from the tabs' bottom edge, and the chosen option is a flat 8% primary-ink tint, so only the chosen mode is raised.
+- **Navigation rows** (SettingsLayout, AppSidebar) keep Action Blue ink for the current row; `--selected-list-bg` fills it.
 
 ### Chips
 

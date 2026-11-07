@@ -30,6 +30,41 @@ export function formatNumber(n: number): string {
   return numberFormat.format(n);
 }
 
+const COMPACT_COUNT_THRESHOLD = 1_000;
+
+interface CountFormats {
+  standard: Intl.NumberFormat;
+  compact: Intl.NumberFormat;
+}
+
+/* One pair of formatters per locale, built on first use; counts render per
+ * table cell, and building an Intl.NumberFormat is the expensive part. */
+const countFormats = new Map<string, CountFormats>();
+
+/** Formats a count or token total in one shape for a whole app: below 1,000
+ * the plain number ("516"), from 1,000 the compact form with exactly one
+ * decimal ("7.9K", "18.0K", "1.0M"). The fixed decimal keeps a column of
+ * counts aligned, and a column never mixes full and compact forms.
+ * `locale` defaults to the browser's; pass the app language to follow it. */
+export function formatCount(value: number, locale?: string): string {
+  const key = locale ?? "";
+  let formats = countFormats.get(key);
+  if (!formats) {
+    formats = {
+      standard: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }),
+      compact: new Intl.NumberFormat(locale, {
+        notation: "compact",
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+    };
+    countFormats.set(key, formats);
+  }
+  return Math.abs(value) < COMPACT_COUNT_THRESHOLD
+    ? formats.standard.format(value)
+    : formats.compact.format(value);
+}
+
 /** Formats a token count as a compact string (e.g. "850", "1.2k", "3.5M"). */
 export function formatTokenCount(n: number): string {
   if (n < 1000) return String(n);

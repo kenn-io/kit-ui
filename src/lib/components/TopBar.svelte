@@ -25,7 +25,9 @@
   interface Props {
     /** Primary navigation tabs. Omit (or pass []) for a bar with no tabs. */
     tabs?: TopBarTab[];
-    /** Active tab id (bindable). */
+    /** Active tab id (bindable). Leave it unset to start on the first
+     * enabled tab. Any set value that names no enabled tab, including "",
+     * means no tab is current, e.g. on a settings page that has no tab. */
     active?: string;
     onchange?: (id: string) => void;
     /** True while the tabs are collapsed into the dropdown (bindable,
@@ -34,8 +36,14 @@
     /** Center the tab group between the side regions (Forge style)
      * instead of packing it after the left region. */
     centerTabs?: boolean;
+    /** Quieter, tighter tabs for a bar with many destinations: smaller
+     * regular-weight labels in muted ink, so the tabs sit below the page
+     * content and leave the search region its width. */
+    compact?: boolean;
     /** aria-label for the tab nav / collapsed dropdown. */
     ariaLabel?: string;
+    /** Collapsed dropdown text while no tab is current. */
+    noCurrentLabel?: string;
     /** Reserved leading region: brand, sidebar toggle, context pickers. */
     left?: Snippet;
     /** Optional search slot, centered in the remaining space. */
@@ -54,11 +62,13 @@
 
   let {
     tabs = [],
-    active = $bindable(""),
+    active = $bindable(),
     onchange = undefined,
     collapsed = $bindable(false),
     centerTabs = false,
+    compact = false,
     ariaLabel = "Primary",
+    noCurrentLabel = "—",
     left = undefined,
     search = undefined,
     searchMinWidth = undefined,
@@ -82,9 +92,18 @@
 
   const allDisabled = $derived(tabs.length > 0 && tabs.every((tab) => tab.disabled));
 
-  // With every tab disabled the collapsed dropdown gets a synthetic empty
+  // Rendered active id, "" when no tab is current. A disabled tab is never
+  // presented as current. Only an unset `active` falls back to the first
+  // enabled tab; a set value that names no enabled tab (a page outside the
+  // tab set) leaves every tab inactive in both modes.
+  const effectiveActive = $derived.by(() => {
+    if (active === undefined) return tabs.find((tab) => !tab.disabled)?.id ?? "";
+    return tabs.some((tab) => tab.id === active && !tab.disabled) ? active : "";
+  });
+
+  // With no current tab the collapsed dropdown gets a synthetic disabled
   // option: SelectDropdown displays options[0] for unmatched values, which
-  // would otherwise present the first disabled tab as the current page.
+  // would otherwise present the first tab as the current page.
   const options = $derived.by(() => {
     const opts: SelectDropdownOption[] = tabs.map((tab) => ({
       value: tab.id,
@@ -92,18 +111,8 @@
       disabled: tab.disabled,
       indicator: tab.indicator,
     }));
-    if (allDisabled) opts.unshift({ value: "", label: "—", disabled: true });
+    if (effectiveActive === "") opts.unshift({ value: "", label: noCurrentLabel, disabled: true });
     return opts;
-  });
-
-  // Rendered active id: a disabled tab is never presented as current, even
-  // when `active` explicitly names one. Unset/unknown/disabled values fall
-  // back to the first enabled tab in BOTH modes; if every tab is disabled
-  // there is no current tab ("").
-  const effectiveActive = $derived.by(() => {
-    const match = tabs.find((tab) => tab.id === active);
-    if (match && !match.disabled) return active;
-    return tabs.find((tab) => !tab.disabled)?.id ?? "";
   });
 
   function select(id: string): void {
@@ -142,6 +151,10 @@
       // absorbed — charging that would collapse the tabs unconditionally.
       // Charge its declared minimum instead: the width it must keep.
       used += searchMin ?? searchEl.offsetWidth;
+      // The flexible region keeps a fixed gap from the tabs; charge it too.
+      if (searchMin != null) {
+        used += Number.parseFloat(getComputedStyle(searchEl).marginInlineStart) || 0;
+      }
       regions += 1;
     }
     used += gap * (regions - 1);
@@ -186,7 +199,7 @@
   ></span>
 {/snippet}
 
-<header class={["kit-top-bar", className]} bind:this={barEl}>
+<header class={["kit-top-bar", compact && "kit-top-bar--compact", className]} bind:this={barEl}>
   {#if left}
     <div class="kit-top-bar__left" bind:this={leftEl}>
       {@render left()}
@@ -345,6 +358,12 @@
     margin-inline: 0;
   }
 
+  /* The bar's 8px gap made the tab strip and a search field beside it read
+   * as one control; the flexible search keeps a wider gap from the tabs. */
+  .kit-top-bar__nav + .kit-top-bar__search--flexible {
+    margin-inline-start: var(--space-6);
+  }
+
   .kit-top-bar__tabs {
     display: flex;
     align-items: center;
@@ -380,9 +399,21 @@
   }
 
   .kit-top-bar__tab.active {
-    background: var(--bg-surface);
+    background: var(--selected-strong-bg);
     color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-raised, var(--selected-strong-edge));
+  }
+
+  .kit-top-bar--compact .kit-top-bar__tab {
+    padding: 3px 9px;
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .kit-top-bar--compact .kit-top-bar__tab:hover:not(:disabled),
+  .kit-top-bar--compact .kit-top-bar__tab.active {
+    color: var(--text-primary);
   }
 
   .kit-top-bar__tab:disabled {

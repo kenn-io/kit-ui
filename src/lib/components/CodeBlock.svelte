@@ -21,6 +21,8 @@
     /** Cap the body height (scrolls beyond), e.g. "320px". */
     maxHeight?: string;
     copyLabel?: string;
+    /** Copy button label and tooltip once the code is copied. */
+    copiedLabel?: string;
     wrapLabel?: string;
     class?: string;
   }
@@ -35,6 +37,7 @@
     copyable = true,
     maxHeight = undefined,
     copyLabel = "Copy code",
+    copiedLabel = "Copied",
     wrapLabel = "Toggle line wrap",
     class: className = "",
   }: Props = $props();
@@ -97,7 +100,13 @@
           </IconButton>
         {/if}
         {#if copyable}
-          <CopyButton text={code} ariaLabel={copyLabel} title={copyLabel} />
+          <CopyButton
+            text={code}
+            ariaLabel={copyLabel}
+            title={copyLabel}
+            copiedAriaLabel={copiedLabel}
+            copiedTitle={copiedLabel}
+          />
         {/if}
       </div>
     </div>

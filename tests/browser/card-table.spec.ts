@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from "@playwright/test";
-import { gotoPage } from "./helpers.js";
+import { gotoPage, resolvedStyle, setTheme } from "./helpers.js";
 
 const bottomRule = (cell: Locator) =>
   cell.evaluate((element) => getComputedStyle(element).borderBottomWidth);
@@ -24,3 +24,19 @@ test.describe("Card with a table", () => {
     });
   }
 });
+
+for (const dark of [false, true]) {
+  test(`a default card's edge stays visible on the page · ${dark ? "dark" : "light"}`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "card");
+    await setTheme(page, { dark });
+    const card = page.locator(".kit-card--default").first();
+    const want = await resolvedStyle(
+      page,
+      "border-top-color",
+      dark ? "var(--border-muted)" : "var(--border-default)",
+    );
+    await expect(card).toHaveCSS("border-top-color", want);
+  });
+}

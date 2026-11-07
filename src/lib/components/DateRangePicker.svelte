@@ -548,34 +548,86 @@
     margin-bottom: var(--space-4);
   }
 
+  /* Two levels of one choice: the mode tabs on top, and the chosen mode's
+   * options in a narrower tray that hangs from their bottom edge. The tray
+   * shares the track's fill, is inset from both ends, and joins the track
+   * with concave corners, so it reads as coming out of the mode control
+   * rather than as a second copy of it. Its options are smaller and flat;
+   * the chosen one is a quiet tint, so the raised pill marks only the
+   * chosen mode. */
+  .kit-date-range-picker__tabs:has(+ .kit-date-range-picker__pills) {
+    margin-bottom: 0;
+  }
+
   .kit-date-range-picker__pills {
+    --kit-date-range-picker-fillet: 6px;
+    position: relative;
     display: flex;
-    gap: var(--space-2);
+    gap: var(--space-1);
+    margin: 0 var(--space-5);
+    padding: 3px var(--space-2) var(--space-2);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    background: var(--bg-inset);
+    box-shadow: var(--shadow-sunken, none);
+  }
+
+  /* Concave corners where the tray meets the track. The hard-stop radial
+   * gradient is a shape mask (a filled corner with a quarter circle cut
+   * out), not a color gradient. */
+  .kit-date-range-picker__pills::before,
+  .kit-date-range-picker__pills::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: var(--kit-date-range-picker-fillet);
+    height: var(--kit-date-range-picker-fillet);
+    pointer-events: none;
+  }
+
+  .kit-date-range-picker__pills::before {
+    right: 100%;
+    background: radial-gradient(
+      circle at 0 100%,
+      transparent calc(var(--kit-date-range-picker-fillet) - 0.5px),
+      var(--bg-inset) var(--kit-date-range-picker-fillet)
+    );
+  }
+
+  .kit-date-range-picker__pills::after {
+    left: 100%;
+    background: radial-gradient(
+      circle at 100% 100%,
+      transparent calc(var(--kit-date-range-picker-fillet) - 0.5px),
+      var(--bg-inset) var(--kit-date-range-picker-fillet)
+    );
   }
 
   .kit-date-range-picker__pill {
     flex: 1;
-    height: 30px;
+    height: 24px;
     border: 0;
-    border-radius: var(--radius-md);
-    background: var(--bg-inset);
-    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
     font-family: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium, 500);
+    font-size: var(--font-size-xs);
+    font-weight: 400;
     cursor: pointer;
     transition:
       background var(--transition-fast) var(--transition-ease, ease),
       color var(--transition-fast) var(--transition-ease, ease);
   }
 
-  .kit-date-range-picker__pill:hover {
-    background: var(--bg-surface-hover);
+  .kit-date-range-picker__pill:hover:not(.active) {
+    color: var(--text-primary);
   }
 
+  /* A flat tint with primary ink: clearly picked, but quieter than the
+   * raised mode pill above it. */
   .kit-date-range-picker__pill.active {
-    background: var(--accent-blue);
-    color: var(--accent-blue-foreground, #fff);
+    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium, 500);
   }
 
   .kit-date-range-picker__calendar {
@@ -598,8 +650,7 @@
     width: 100%;
   }
 
-  /* Sized like the pill rows above so the tabs read as one family; the
-   * accent border marks the endpoint the next calendar click sets. */
+  /* The accent border marks the endpoint the next calendar click sets. */
   .kit-date-range-picker__endpoint {
     flex: 1;
     box-sizing: border-box;

@@ -19,6 +19,13 @@ in place. `resolveRange()` turns any selection into concrete inclusive
 `{from, to}` bounds (local-timezone `YYYY-MM-DD` strings). Escape and outside
 clicks dismiss the popover.
 
+The mode tabs (Relative / Calendar / Custom) are a normal SegmentedControl.
+The chosen mode's options (7d … All, or Day / Week / Month) sit in a narrower
+tray that hangs from the tabs' bottom edge: the same fill, inset from both
+ends, square on top and rounded below, joined to the tabs with concave
+corners. The options are smaller and flat, and the chosen one is a quiet
+tint, so the raised pill marks only the chosen mode.
+
 **Mid-pick draft lifecycle**: between the two custom clicks the incomplete
 range is internal UI state — it is never emitted through `onSelect`. The
 draft survives switching tabs and dismissing/reopening the popover, so an

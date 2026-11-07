@@ -16,7 +16,9 @@ import { type Snippet } from "svelte";
 interface Props {
     /** Primary navigation tabs. Omit (or pass []) for a bar with no tabs. */
     tabs?: TopBarTab[];
-    /** Active tab id (bindable). */
+    /** Active tab id (bindable). Leave it unset to start on the first
+     * enabled tab. Any set value that names no enabled tab, including "",
+     * means no tab is current, e.g. on a settings page that has no tab. */
     active?: string;
     onchange?: (id: string) => void;
     /** True while the tabs are collapsed into the dropdown (bindable,
@@ -25,8 +27,14 @@ interface Props {
     /** Center the tab group between the side regions (Forge style)
      * instead of packing it after the left region. */
     centerTabs?: boolean;
+    /** Quieter, tighter tabs for a bar with many destinations: smaller
+     * regular-weight labels in muted ink, so the tabs sit below the page
+     * content and leave the search region its width. */
+    compact?: boolean;
     /** aria-label for the tab nav / collapsed dropdown. */
     ariaLabel?: string;
+    /** Collapsed dropdown text while no tab is current. */
+    noCurrentLabel?: string;
     /** Reserved leading region: brand, sidebar toggle, context pickers. */
     left?: Snippet;
     /** Optional search slot, centered in the remaining space. */

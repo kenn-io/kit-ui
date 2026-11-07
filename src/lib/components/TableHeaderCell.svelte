@@ -37,6 +37,9 @@
     /** VirtualTable: show a handle to resize the column, or double-click it
      * to fit the column to its content. */
     resizable?: boolean;
+    /** VirtualTable: the resize handle's accessible name. Defaults to
+     * "Resize the {label} column" in English; pass a translated string. */
+    resizeLabel?: string;
     class?: string;
   }
 
@@ -65,6 +68,7 @@
     minWidth = DEFAULT_MIN_COLUMN_WIDTH,
     maxWidth = DEFAULT_MAX_COLUMN_WIDTH,
     resizable = true,
+    resizeLabel = undefined,
     class: className = "",
   }: Props = $props();
 
@@ -143,7 +147,7 @@
     <span class="kit-th__resize" ondblclick={() => cell && sizing.fit(cell)} onkeydown={fitOnEnter}>
       <SplitResizeHandle
         variant="column"
-        ariaLabel={`Resize the ${label ?? "column"} column`}
+        ariaLabel={resizeLabel ?? `Resize the ${label ?? "column"} column`}
         ariaValueMin={bounds.min}
         ariaValueMax={bounds.max}
         ariaValueNow={Math.round(shownWidth)}

@@ -44,6 +44,7 @@ export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
 export { default as EmptyState } from "./components/EmptyState.svelte";
+export { default as MissingData } from "./components/MissingData.svelte";
 export { default as FilterDropdown } from "./components/FilterDropdown.svelte";
 export type { FilterDropdownItem, FilterDropdownSection } from "./components/FilterDropdown.svelte";
 export { default as FindBar } from "./components/FindBar.svelte";
@@ -146,6 +147,7 @@ export type { StructuredListLevel } from "./components/StructuredList.svelte";
 export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
+export type { ColumnResize } from "./components/table-columns.js";
 export { TableSort } from "./components/table-sort.svelte.js";
 export {
   compareSortValues,
@@ -266,7 +268,13 @@ export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { backdropCloses, escapeCloses } from "./utils/overlay.js";
-export { formatCost, formatDuration, formatNumber, formatTokenCount } from "./utils/format.js";
+export {
+  formatCost,
+  formatCount,
+  formatDuration,
+  formatNumber,
+  formatTokenCount,
+} from "./utils/format.js";
 export {
   createRefreshScheduler,
   DEFAULT_REFRESH_INTERVAL_MS,

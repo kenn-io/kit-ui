@@ -1,4 +1,5 @@
 import type { Snippet } from "svelte";
+import { type ColumnResize } from "./table-columns.js";
 declare function $$render<T>(): {
     props: {
         /** Every row's data; only the rows on screen are rendered. */
@@ -9,7 +10,9 @@ declare function $$render<T>(): {
         row: Snippet<[T, number]>;
         /** A `<tr>` shown in the body when `items` is empty. */
         empty?: Snippet;
-        /** Stable identity of a row, for keyed rendering. Defaults to the index. */
+        /** Stable identity of a row, for keyed rendering and for keeping its
+         * measured height when rows are inserted, removed, or reordered around
+         * it. Defaults to the index, whose heights a new `items` array drops. */
         rowKey?: (item: T, index: number) => unknown;
         /** What scrolls the rows: the table's own wrapper (give it a bounded
          * height), or the page or panel the table sits in. */
@@ -37,9 +40,11 @@ declare function $$render<T>(): {
          * column's rows sampled across the list. The table adds the header
          * cell's padding and clamps to the column's limits. */
         fitColumn?: (column: number) => number | undefined;
-        /** Called with every column's width, in order, after a resize or fit,
-         * for an app to keep them. */
-        oncolumnwidthschange?: (widths: number[]) => void;
+        /** Called when a person sets a column's width: a drag or arrow key that
+         * changed it, or a fit (Enter or double-click on the handle). Names the
+         * column, for an app to keep its width. Automatic sizing, including
+         * refitting to a new table width, never calls it. */
+        oncolumnresize?: (change: ColumnResize) => void;
         class?: string;
     };
     exports: {
