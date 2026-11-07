@@ -30,23 +30,55 @@
     {
       id: "indexing",
       title: "Indexing",
-      state: { kind: "indexing", done: 12_000, total: 48_000, etaMs: 900_000 },
+      state: { kind: "indexing", done: 12_000, total: 48_000, etaMs: 7_200_000 },
     },
+    { id: "scanning", title: "Counting work", state: { kind: "indexing", done: 0, total: 0 } },
   ];
   let turnOnClicks = $state<Record<string, number>>({});
   let builtInClicks = $state<Record<string, number>>({});
   let readonly = $state(false);
+  let french = $state(false);
+  const locale = $derived(french ? "fr" : "en");
+  const labels = $derived(
+    french
+      ? {
+          name: "Recherche par sens",
+          off: "Désactivée",
+          on: "Activée",
+          ollama: "Activée · Ollama",
+          turningOn: "Activation",
+          useBuiltIn: "Utiliser le serveur intégré",
+          downloaded: "Déjà sur cet ordinateur",
+          keepsIndex: "Le changement conserve votre index",
+          underMinute: "moins d’une minute",
+          progress: "Configuration de la recherche par sens",
+          indexing: "Indexation de {done} sur {total} {items}",
+          aboutTime: "environ {time}",
+          timeLeft: "{time} restantes",
+          download: "Télécharge {size} une fois pour toutes les applications Kenn",
+          downloadToHost: "Télécharge {size} une fois sur {host}",
+          downloading: "Téléchargement de {done} sur {total}",
+          meanwhile: "La recherche par mots-clés reste disponible",
+          rebuild: "Reconstruit l’index, {time} pour {count} {items}",
+          hint: "La recherche par sens est désactivée",
+          turnOn: "Activer",
+        }
+      : {},
+  );
 </script>
 
 <div class="meaning-demo">
   <div data-testid="meaning-readonly">
     <Checkbox bind:checked={readonly} label="Status only" />
   </div>
+  <Checkbox bind:checked={french} label="French" />
   {#each examples as example (example.id)}
     <DemoSection title={example.title}>
       <div class="example" data-testid={`meaning-${example.id}`}>
         <SearchByMeaningRow
           state={example.state}
+          {locale}
+          {labels}
           {readonly}
           itemNoun="messages"
           onturnon={() => (turnOnClicks[example.id] = (turnOnClicks[example.id] ?? 0) + 1)}
@@ -72,6 +104,7 @@
         <li>Project update</li>
       </ul>
       <SearchByMeaningHint
+        {labels}
         onturnon={() => (turnOnClicks["hint"] = (turnOnClicks["hint"] ?? 0) + 1)}
       />
       <p

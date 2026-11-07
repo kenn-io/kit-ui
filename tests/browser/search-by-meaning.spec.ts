@@ -5,6 +5,18 @@ test.beforeEach(async ({ page }) => {
   await gotoPage(page, "search-by-meaning");
 });
 
+test.describe("selected locale", () => {
+  test.use({ locale: "en-US" });
+
+  test("forwards the selected French locale in an English browser", async ({ page }) => {
+    expect(await page.evaluate(() => navigator.language)).toBe("en-US");
+    await page.getByRole("checkbox", { name: "French", exact: true }).check();
+    await expect(
+      page.getByTestId("meaning-indexing").locator(".kit-search-by-meaning__line"),
+    ).toContainText("heures");
+  });
+});
+
 test("shows setup states and keyword-only hint", async ({ page }) => {
   for (const [id, chip, text] of [
     [
@@ -77,6 +89,12 @@ test("exposes progress values and text with status aligned to the bar", async ({
     }));
     expect(edges.chip).toBeCloseTo(edges.bar, 0);
   }
+});
+
+test("shows a spinner and no count until the total is known", async ({ page }) => {
+  const row = page.getByTestId("meaning-scanning");
+  await expect(row.getByRole("progressbar")).toHaveCount(0);
+  await expect(row.getByRole("status", { name: "Search by meaning setup" })).toBeVisible();
 });
 
 test("wraps actions within the row at the mobile breakpoint", async ({ page }) => {

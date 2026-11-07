@@ -56,5 +56,6 @@ type Description = {
         max: number;
     };
 };
-export declare function describeSearchByMeaning(state: SearchByMeaningState, itemNoun: string, labels?: SearchByMeaningLabels): Description;
+export declare function formatSize(bytes: number, locale?: string): string;
+export declare function describeSearchByMeaning(state: SearchByMeaningState, itemNoun: string, labels?: SearchByMeaningLabels, locale?: string): Description;
 export {};
