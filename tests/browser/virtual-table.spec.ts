@@ -935,6 +935,38 @@ test("the other columns keep their content's width when they fit beside the fill
   await expect.poll(async () => (await columnWidths(table))[0]).toBe(wide[0]);
 });
 
+test("a column that stops filling is measured for the box it is in now", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const fill = page.getByRole("checkbox", { name: "Let Kind take the spare width" });
+  const table = filesTable(page);
+  await table.scrollIntoViewIfNeeded();
+  await expect(dataRows(table).first()).toContainText("docs/guides/");
+  const setInner = (inner: number | undefined) =>
+    table.evaluate((el, width) => {
+      const box = el.closest(".host") as HTMLElement;
+      if (width === undefined) return void box.style.removeProperty("width");
+      const wrapper = el.parentElement!;
+      const style = getComputedStyle(wrapper);
+      const now =
+        wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      box.style.width = `${box.offsetWidth - now + width}px`;
+    }, inner);
+  const total = async () => (await columnWidths(table)).reduce((a, b) => a + b, 0);
+  // In a narrow box, Name stops filling and takes only its minimum share.
+  await setInner(300);
+  await expect.poll(total).toBeLessThan(600);
+  await fill.check();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(160);
+  // Name fills again while the box widens, then gives the spare width back.
+  await fill.uncheck();
+  await setInner(undefined);
+  await expect.poll(total).toBeGreaterThan(600);
+  await fill.check();
+  // Name takes its content's width in the wide box, capped at its 240px
+  // maxWidth, not the share it had in the narrow one.
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(240);
+});
+
 test("a table whose only column fills keeps that column at its minWidth", async ({ page }) => {
   await gotoPage(page, "virtual-table");
   const table = page.locator('table[aria-label="Paths"]');

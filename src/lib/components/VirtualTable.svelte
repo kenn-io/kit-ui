@@ -367,6 +367,10 @@
     if (!table || !wrapper || cells.length === 0) return;
     const available = innerWidth(wrapper);
     const filler = fillerOf(cells);
+    // A filling column needs no width of its own. One nobody chose drops the
+    // automatic width it had, which no refit keeps current, so it is
+    // measured afresh if it stops filling.
+    if (filler !== -1 && !chosen.has(keyOf(cells[filler]!))) widths.delete(keyOf(cells[filler]!));
     shown = cells.map((cell, i) =>
       i === filler ? 0 : (widths.get(keyOf(cell)) ?? clampTo(cell, 100)),
     );
