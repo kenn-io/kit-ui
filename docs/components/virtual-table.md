@@ -148,7 +148,50 @@ people resize it or fit it to its content.
 
 - **Filling.** When the widths add up to less than the table's box, the last
   column takes the rest. When they add up to more, the table scrolls
-  sideways.
+  sideways. To give the spare width to another column, such as a leading
+  Name column, set `fill` on its `TableHeaderCell`; see
+  [Filling column](#filling-column).
+
+### Filling column
+
+A `TableHeaderCell` with `fill` takes whatever width the other columns leave
+in the table's box:
+
+```svelte
+<VirtualTable items={sorter.sort(files)} rowKey={(f) => f.id} ariaLabel="Files">
+  {#snippet header()}
+    <TableHeaderCell label="Name" sort={sorter} column="name" fill minWidth={160} />
+    <TableHeaderCell label="Size" numeric sort={sorter} column="size" />
+    <TableHeaderCell label="Modified" sort={sorter} column="modified" />
+  {/snippet}
+  {#snippet row(file)}
+    <tr><td>{file.name}</td><td>{file.size}</td><td>{file.modified}</td></tr>
+  {/snippet}
+</VirtualTable>
+```
+
+- **Width.** The filling column is as wide as the box minus the other
+  columns, and never narrower than its `minWidth`. Its `width` and `maxWidth`
+  do not apply. When the other columns leave less than `minWidth`, the table
+  is wider than its box and scrolls sideways.
+- **The other columns.** They start at their content's width, measured as
+  above, so the spare width goes to the filling column instead of being
+  spread over every column. When those widths, each within the column's
+  `minWidth` and `maxWidth`, are too wide for the box with the filling
+  column at its `minWidth`, every column takes its share of the box
+  instead, as without `fill`. A `width` on them still sets their
+  starting width.
+- **Resizing.** The filling column has no resize handle, so it cannot be
+  resized or fitted. Resizing another column gives width to it or takes
+  width from it, and a resize of the box widens or narrows it.
+- **Changing it.** Setting `fill` on another column moves the spare width to
+  that column right away. The column that gave it up starts at its content's
+  width.
+- **Saving.** `oncolumnresize` never names the filling column, since nobody
+  resizes it. Keep the other columns' widths; the filling column follows.
+- **One column.** Set `fill` on one header cell. When several have it, the
+  first fills and the others act as ordinary columns without a resize
+  handle.
 
 Widths are kept by the header's `column` (or its label), so hiding one
 column keeps the others' widths. Text wider than its column wraps, breaking

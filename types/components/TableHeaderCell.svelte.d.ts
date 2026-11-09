@@ -25,6 +25,11 @@ interface BaseProps {
     /** VirtualTable: the resize handle's accessible name. Defaults to
      * "Resize the {label} column" in English; pass a translated string. */
     resizeLabel?: string;
+    /** VirtualTable: the column takes the width the other columns leave in
+     * the table's box, and at least `minWidth`. It has no resize handle, and
+     * `width` and `maxWidth` do not apply to it. Without a filling column,
+     * the last column takes the spare width. */
+    fill?: boolean;
     class?: string;
 }
 type Props = BaseProps & ({

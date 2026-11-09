@@ -40,6 +40,11 @@
     /** VirtualTable: the resize handle's accessible name. Defaults to
      * "Resize the {label} column" in English; pass a translated string. */
     resizeLabel?: string;
+    /** VirtualTable: the column takes the width the other columns leave in
+     * the table's box, and at least `minWidth`. It has no resize handle, and
+     * `width` and `maxWidth` do not apply to it. Without a filling column,
+     * the last column takes the spare width. */
+    fill?: boolean;
     class?: string;
   }
 
@@ -69,6 +74,7 @@
     maxWidth = DEFAULT_MAX_COLUMN_WIDTH,
     resizable = true,
     resizeLabel = undefined,
+    fill = false,
     class: className = "",
   }: Props = $props();
 
@@ -119,6 +125,7 @@
   data-kit-width={width}
   data-kit-min-width={minWidth}
   data-kit-max-width={maxWidth}
+  data-kit-fill={fill ? "" : undefined}
 >
   {#if isSortable}
     <button class="kit-th__sort-btn kit-control-states" type="button" {onclick}>
@@ -140,7 +147,7 @@
       {#if children}{@render children()}{/if}
     </span>
   {/if}
-  {#if sizing && resizable && shownWidth !== undefined}
+  {#if sizing && resizable && !fill && shownWidth !== undefined}
     <!-- Double-click or Enter fits the column to its content; the handle
          itself drags and steps with the arrow keys. -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->

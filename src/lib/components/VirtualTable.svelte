@@ -238,6 +238,24 @@
     const { min, max } = limitsOf(cell);
     return Math.min(max, Math.max(min, width));
   };
+  const sum = (values: number[]): number => values.reduce((total, value) => total + value, 0);
+  // The column that takes the spare width: the first header cell with
+  // `fill`, or -1 when none has it and the last column takes it.
+  const fillerOf = (cells: HTMLTableCellElement[]): number =>
+    cells.findIndex((cell) => cell.dataset["kitFill"] !== undefined);
+  // Whether the table still needs sizing: it was never sized, which a table
+  // whose only column fills needs too, or a column other than the filling
+  // one, which needs no width of its own, still has no width.
+  const unsized = (cells: HTMLTableCellElement[]): boolean => {
+    if (cells.length === 0) return false;
+    const filler = fillerOf(cells);
+    return !sized || cells.some((cell, i) => i !== filler && !widths.has(keyOf(cell)));
+  };
+  // The width a table has inside its wrapper's padding.
+  const innerWidth = (wrapper: HTMLElement): number => {
+    const style = getComputedStyle(wrapper);
+    return wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  };
 
   const copyTable = () => measureForm?.querySelector("table") ?? undefined;
   const copyCells = (): HTMLTableCellElement[] =>
@@ -249,28 +267,55 @@
   // Give every column without a width one: the header's `width`, or its
   // share of the copy's width under automatic layout, the columns with
   // widths keeping theirs. A refit, for a new table width, sizes every
-  // column a person did not choose again. Measured widths include padding
-  // and borders; pinned cells use border-box sizing, so they become the
-  // final widths.
+  // column a person did not choose again. With a filling column, which
+  // stands at its minimum here, the other columns take their content's width
+  // when that leaves the filling column room, so all the spare width goes to
+  // it. Measured widths include padding and borders; pinned cells use
+  // border-box sizing, so they become the final widths.
   function sizeColumns(refit: boolean): void {
     const cells = copyCells();
+    const table = copyTable();
     // A hidden table (a closed <details>, an inactive tab) has no width to
     // measure against yet; the resize when it appears sizes it. An empty
     // list waits for rows.
-    if (cells.length === 0 || items.length === 0 || measureWidth === 0) return;
+    if (!table || cells.length === 0 || items.length === 0 || measureWidth === 0) return;
     columns = headerCells().length;
+    const filler = fillerOf(cells);
     const resize = (key: string) => !widths.has(key) || (refit && !chosen.has(key));
-    for (const cell of cells) {
-      const key = keyOf(cell);
-      const known = resize(key) ? explicit(cell) : widths.get(key);
-      if (known === undefined) continue;
-      cell.style.boxSizing = "border-box";
-      cell.style.width = `${known}px`;
-    }
-    const measured = cells.map((cell) => cell.getBoundingClientRect().width);
     cells.forEach((cell, i) => {
       const key = keyOf(cell);
-      if (resize(key)) widths.set(key, clampTo(cell, explicit(cell) ?? measured[i]!));
+      const known =
+        i === filler ? limitsOf(cell).min : resize(key) ? explicit(cell) : widths.get(key);
+      if (known === undefined) return;
+      cell.style.boxSizing = "border-box";
+      cell.style.width = `${known}px`;
+    });
+    const measure = () => cells.map((cell) => cell.getBoundingClientRect().width);
+    let measured: number[] | undefined;
+    if (filler !== -1) {
+      table.style.width = "max-content";
+      const natural = measure();
+      table.style.width = "";
+      // Each column needs the width it will get, not its content's: the
+      // filling column its minimum, the others their stored or set width,
+      // or their content's width within their limits. Their text breaks to
+      // fit in the live table.
+      const needed = sum(
+        cells.map((cell, i) =>
+          i === filler
+            ? limitsOf(cell).min
+            : resize(keyOf(cell))
+              ? clampTo(cell, explicit(cell) ?? natural[i]!)
+              : widths.get(keyOf(cell))!,
+        ),
+      );
+      if (needed <= innerWidth(table.parentElement!)) measured = natural;
+    }
+    measured ??= measure();
+    cells.forEach((cell, i) => {
+      const key = keyOf(cell);
+      if (i !== filler && resize(key))
+        widths.set(key, clampTo(cell, explicit(cell) ?? measured[i]!));
     });
     sized = true;
     sizedFor = measureWidth;
@@ -278,12 +323,18 @@
   }
 
   // After the wrapper changes width, the columns nobody chose are sized
-  // again; otherwise the stored widths are shown again, the last column
-  // filling the rest. A hidden table (width 0) keeps its widths for when it
-  // shows again.
+  // again; otherwise the stored widths are shown again, the filling or last
+  // column taking the rest. A hidden table (width 0) keeps its widths for
+  // when it shows again.
   function followWidth(): void {
     const width = body?.parentElement?.parentElement?.offsetWidth ?? 0;
-    if (width > 0 && width !== sizedFor && headerCells().some((c) => !chosen.has(keyOf(c)))) {
+    const cells = headerCells();
+    const filler = fillerOf(cells);
+    if (
+      width > 0 &&
+      width !== sizedFor &&
+      cells.some((cell, i) => i !== filler && !chosen.has(keyOf(cell)))
+    ) {
       refitting = true;
       requestSizing();
     } else {
@@ -301,26 +352,30 @@
     else widths.set(key, clampTo(cell, width));
   }
 
-  // Show the stored widths in fixed layout. When they add up to less than
-  // the wrapper, the last column takes the rest, so the table still fills
-  // it; when they add up to more, the table is wider and scrolls sideways.
+  // Show the stored widths in fixed layout. A filling column takes what the
+  // others leave in the wrapper, and at least its minimum. Without one, the
+  // last column takes the rest when the widths add up to less than the
+  // wrapper, so the table still fills it. When the widths add up to more,
+  // the table is wider and scrolls sideways.
   function applyWidths(): void {
     const table = body?.parentElement;
     const wrapper = table?.parentElement;
     const cells = headerCells();
     if (!table || !wrapper || cells.length === 0) return;
-    const style = getComputedStyle(wrapper);
-    const available =
-      wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    shown = cells.map((cell) => widths.get(keyOf(cell)) ?? clampTo(cell, 100));
-    const total = shown.reduce((sum, width) => sum + width, 0);
-    if (total < available) shown[shown.length - 1]! += available - total;
+    const available = innerWidth(wrapper);
+    const filler = fillerOf(cells);
+    shown = cells.map((cell, i) =>
+      i === filler ? 0 : (widths.get(keyOf(cell)) ?? clampTo(cell, 100)),
+    );
+    const total = sum(shown);
+    if (filler !== -1) shown[filler] = Math.max(limitsOf(cells[filler]!).min, available - total);
+    else if (total < available) shown[shown.length - 1]! += available - total;
     cells.forEach((cell, i) => {
       cell.style.boxSizing = "border-box";
       cell.style.width = `${shown[i]}px`;
     });
     table.style.tableLayout = "fixed";
-    table.style.width = `${shown.reduce((sum, width) => sum + width, 0)}px`;
+    table.style.width = `${sum(shown)}px`;
     if (!table.classList.contains(PINNED)) table.classList.add(PINNED);
     sizingVersion += 1;
   }
@@ -457,7 +512,7 @@
     // Size any column still without a width, until it has one: a column
     // added while the list was empty or the table hidden is sized once rows
     // render or the table appears.
-    if (headerCells().some((cell) => !widths.has(keyOf(cell)))) requestSizing();
+    if (unsized(headerCells())) requestSizing();
   }
 
   // Read rendered row heights, from the gap between consecutive row tops so
@@ -533,31 +588,33 @@
     });
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
+    // So must the spare width when a column takes or gives up `fill`; a
+    // separate observer watches the cells' attributes, since watching the
+    // header's whole subtree would also report every sort icon and resize
+    // handle.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
     // A header's `width` changing after sizing is followed the same way.
-    // Watching `width` needs the subtree, which also reports changes inside
-    // header cells (a sort arrow appearing); those change no column.
-    const columnsChanged = new MutationObserver((records) => {
-      let changed = false;
+    const headerChanged = (records: MutationRecord[]) => {
       for (const record of records) {
-        if (record.type === "attributes" && record.target instanceof HTMLTableCellElement) {
+        if (
+          record.attributeName === "data-kit-width" &&
+          record.target instanceof HTMLTableCellElement
+        )
           followHeaderWidth(record.target);
-          changed = true;
-        } else if (record.target === headerRow) {
-          changed = true;
-        }
       }
-      if (!changed) return;
       columns = Math.max(1, headerRow?.cells.length ?? 1);
-      if (headerCells().every((cell) => widths.has(keyOf(cell)))) applyWidths();
+      if (!unsized(headerCells())) applyWidths();
       syncRows();
-    });
-    if (headerRow)
-      columnsChanged.observe(headerRow, {
-        childList: true,
+    };
+    const columnsChanged = new MutationObserver(headerChanged);
+    const cellsChanged = new MutationObserver(headerChanged);
+    if (headerRow) {
+      columnsChanged.observe(headerRow, { childList: true });
+      cellsChanged.observe(headerRow, {
         subtree: true,
-        attributeFilter: ["data-kit-width"],
+        attributeFilter: ["data-kit-width", "data-kit-fill"],
       });
+    }
     return () => {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(applyFrame);
@@ -566,6 +623,7 @@
       window.removeEventListener("resize", resized);
       sizes.disconnect();
       columnsChanged.disconnect();
+      cellsChanged.disconnect();
       rowObserver?.disconnect();
       rowObserver = undefined;
       watched = new Set();
