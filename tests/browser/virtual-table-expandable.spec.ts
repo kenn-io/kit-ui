@@ -249,13 +249,14 @@ test("dragging a stretched last column back where it started keeps its width", a
   const start = await columnWidths(table);
 
   // Narrowing the File column stretches the last column into the width it
-  // gives up.
+  // gives up, past its 120px maxWidth.
   const file = table.getByRole("separator", { name: "Resize the File column" });
   await file.focus();
   for (let i = 0; i < 3; i += 1) await page.keyboard.press("ArrowLeft");
   await expect(readout(page)).toHaveAttribute("data-reports", "3");
   const stretched = await columnWidths(table);
   expect(stretched[3]).toBe(start[3]! + 72);
+  expect(stretched[3]).toBeGreaterThan(120);
 
   // A drag out and back to where it started changes nothing.
   const box = (await table

@@ -525,7 +525,7 @@ table.refresh();`}
         <TableHeaderCell label="Project" minWidth={80} />
         <TableHeaderCell label="File" minWidth={120} />
         <TableHeaderCell label="Edits" numeric minWidth={48} />
-        <TableHeaderCell label="Last edit" numeric minWidth={64} />
+        <TableHeaderCell label="Last edit" numeric minWidth={64} maxWidth={120} />
       {/snippet}
       {#snippet row(item)}
         {@const file = item.file}

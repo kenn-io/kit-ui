@@ -411,6 +411,8 @@
   let resizeBase = 0;
   let resizeFrom: number | undefined;
   let resizeWasChosen = false;
+  // How far the drag or key press has moved, before any clamping.
+  let resizeDelta = 0;
   const sizingApi: ColumnSizing = {
     get version() {
       return sizingVersion;
@@ -421,10 +423,12 @@
       resizeBase = shown[cell.cellIndex] ?? 0;
       resizeFrom = widths.get(keyOf(cell));
       resizeWasChosen = chosen.has(keyOf(cell));
+      resizeDelta = 0;
     },
     resize: (cell, delta) => {
       // A drag in progress is a person's choice, which a refit keeps.
       chosen.add(keyOf(cell));
+      resizeDelta = delta;
       widths.set(keyOf(cell), clampTo(cell, resizeBase + delta));
       applyWidths();
     },
@@ -433,8 +437,14 @@
       const width = widths.get(key);
       // A drag back to where it started, or an arrow key at the column's
       // limit, changed nothing and reports nothing. The column keeps the
-      // width it had, not the wider one a stretched last column showed.
-      if (width === undefined || width === resizeFrom || width === resizeBase) {
+      // width it had, not the wider one a stretched last column showed,
+      // which may be past its maxWidth.
+      if (
+        width === undefined ||
+        resizeDelta === 0 ||
+        width === resizeFrom ||
+        width === resizeBase
+      ) {
         if (resizeFrom === undefined) widths.delete(key);
         else widths.set(key, resizeFrom);
         if (!resizeWasChosen) chosen.delete(key);
