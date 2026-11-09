@@ -114,6 +114,37 @@
     { key: "id" },
   );
   const pageRows = $derived(pageSorter.sort(reviews.slice(0, 2000)));
+
+  interface File {
+    id: number;
+    name: string;
+    kind: string;
+    size: string;
+    modified: string;
+  }
+
+  const folders = ["src/components", "src/routes/settings", "docs/guides", "tests/browser"];
+  const kinds = ["Svelte", "TypeScript", "Markdown"];
+  // Every size and date has the same number of digits, so each of those
+  // columns is as wide as any one of its values.
+  const files: File[] = Array.from({ length: 3000 }, (_, i) => ({
+    id: i,
+    name: `${folders[i % folders.length]}/${i % 5 === 0 ? "a-file-with-a-much-longer-name-" : "file-"}${i}`,
+    kind: kinds[i % kinds.length]!,
+    size: `${(100 + ((i * 37) % 900)).toString()}.${i % 10} KB`,
+    modified: `2026-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 28) + 1).padStart(2, "0")}`,
+  }));
+  const fileSorter = new TableSort<File>(
+    {
+      name: (f) => f.name,
+      kind: (f) => f.kind,
+      size: (f) => f.size,
+      modified: (f) => f.modified,
+    },
+    { key: "name" },
+  );
+  const sortedFiles = $derived(fileSorter.sort(files));
+  let kindFills = $state(false);
 </script>
 
 <DemoSection
@@ -251,6 +282,58 @@
 </DemoSection>
 
 <DemoSection
+  title="A column that takes the spare width"
+  description="Set fill on Name's TableHeaderCell. The other columns start at their content's width. Narrowing another column widens Name; in a narrow box, Name stops at minWidth and the table scrolls sideways. Without fill, the last column takes the spare width. Moving fill to another column moves the spare width with it, and Name's maxWidth of 240 applies once Kind fills. A table of one filling column keeps its minWidth too."
+  code={`<VirtualTable items={sorter.sort(files)} rowKey={(f) => f.id} ariaLabel="Files">
+  {#snippet header()}
+    <TableHeaderCell label="Name" sort={sorter} column="name" fill minWidth={160} />
+    <TableHeaderCell label="Size" numeric sort={sorter} column="size" />
+    <TableHeaderCell label="Modified" sort={sorter} column="modified" />
+  {/snippet}
+  {#snippet row(file)}
+    <tr><td>{file.name}</td><td>{file.size}</td><td>{file.modified}</td></tr>
+  {/snippet}
+</VirtualTable>`}
+>
+  <Checkbox bind:checked={kindFills} label="Let Kind take the spare width" />
+  <div class="host">
+    <VirtualTable items={sortedFiles} rowKey={(f) => f.id} ariaLabel="Files">
+      {#snippet header()}
+        <TableHeaderCell
+          label="Name"
+          sort={fileSorter}
+          column="name"
+          fill={!kindFills}
+          minWidth={160}
+          maxWidth={240}
+        />
+        <TableHeaderCell label="Kind" sort={fileSorter} column="kind" fill={kindFills} />
+        <TableHeaderCell label="Size" numeric sort={fileSorter} column="size" />
+        <TableHeaderCell label="Modified" sort={fileSorter} column="modified" />
+      {/snippet}
+      {#snippet row(file)}
+        <tr>
+          <td>{file.name}</td>
+          <td>{file.kind}</td>
+          <td class="num">{file.size}</td>
+          <td class="date">{file.modified}</td>
+        </tr>
+      {/snippet}
+    </VirtualTable>
+  </div>
+  <div class="host paths">
+    <VirtualTable items={sortedFiles} rowKey={(f) => f.id} ariaLabel="Paths" unsorted>
+      {#snippet header()}
+        <TableHeaderCell label="Path" fill minWidth={320} />
+      {/snippet}
+      {#snippet row(file)}
+        <tr><td>{file.name}</td></tr>
+      {/snippet}
+    </VirtualTable>
+  </div>
+</DemoSection>
+
+<DemoSection
   title="Scrolling with the page"
   description={`With scroll="page" the table grows to its full length, the page's scroll container decides which rows are on screen, and the header sticks to the page. The table follows scrolling and resizing; after a layout change with neither, such as content above it collapsing, call refresh().`}
   code={`<VirtualTable bind:this={table} scroll="page" items={reviews} ariaLabel="Reviews on the page">…</VirtualTable>
@@ -356,6 +439,12 @@ table.refresh();`}
     overflow: hidden;
   }
 
+  /* One column whose minWidth is wider than its box. */
+  .host.paths {
+    width: 240px;
+    height: 200px;
+  }
+
   .filter {
     display: flex;
     align-items: center;
@@ -384,6 +473,10 @@ table.refresh();`}
 
   .num {
     text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .date {
     font-variant-numeric: tabular-nums;
   }
 </style>
