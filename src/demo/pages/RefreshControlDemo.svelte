@@ -70,7 +70,7 @@
 
 <DemoSection
   title="Small, in a page toolbar"
-  description="size=&quot;sm&quot; sets a smaller, quiet glyph tight against the status text, so a page toolbar's refresh reads as part of its &quot;Updated ...&quot; label and not as a second copy of a top-bar Refresh button."
+  description="Use size=&quot;sm&quot; for a smaller, quieter refresh icon beside the update time in page toolbars."
   code={`<RefreshControl size="sm" {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh" />`}
 >
   <div data-testid="refresh-control-sm">

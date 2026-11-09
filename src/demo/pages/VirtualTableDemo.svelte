@@ -479,7 +479,7 @@ table.refresh();`}
 
 <DemoSection
   title="Expandable rows"
-  description="Open a file to show its edits in a full-width row below it. Measured heights are kept by rowKey, so opening, closing, adding, or loading rows never sends the rows already measured back to the estimate, and the rows on screen stay put. Resize the window: columns nobody resized refit to the new width, while a column you dragged or fitted keeps its width, without rebuilding the table. oncolumnresize names the column a person changed."
+  description="Open a file to see its edits below it. With rowKey, measured heights survive opening, closing, adding, and loading files, so the rows on screen stay put. Resize the window: unresized columns refit; dragged or fitted columns keep their widths. oncolumnresize reports the column a person changed."
   code={`<VirtualTable
   items={rows}
   rowKey={(row) => \`\${row.kind}:\${row.file.id}\`}

@@ -129,7 +129,7 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
 
 <DemoSection
   title="Icon line weight"
-  description="Lucide scales its stroke with the icon, so one strokeWidth draws thin small icons and heavy large ones. theme.css picks the stroke per rendered size, so every row below draws about the same 1.1-1.2px line, whatever strokeWidth each call site passes (all of these pass 2). Identity themes set their own --icon-stroke instead. Pick the size by context."
+  description="Icon strokes stay about 1.1–1.2px at every size, overriding strokeWidth (2 in these examples). Identity themes set --icon-stroke."
   code={`<SettingsIcon size="14" aria-hidden="true" />  /* stroke 2 */
 <SettingsIcon size="24" aria-hidden="true" />  /* stroke 1.5 — same rendered line */`}
 >

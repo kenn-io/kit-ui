@@ -173,7 +173,7 @@
 
 <DemoSection
   title="Selected state and read-only"
-  description="The chosen option is the shared raised pill (--selected-strong-bg, --selected-strong-edge), the same idiom TopBar tabs and DateRangePicker's mode tabs use. In dark it is a lighter fill with a faint edge, so it still separates from the track. When the whole control is disabled, as in a read-only setting, the chosen option keeps full strength so it still reads as chosen."
+  description="TopBar, DateRangePicker, and this control share --selected-strong-bg and --selected-strong-edge. Dark mode uses a lighter fill and faint border. The selected option stays fully visible when the whole control is disabled."
   code={`<SegmentedControl options={modes} value="normal" disabled ariaLabel="Mode (read-only)" />`}
 >
   <div class="snippet-row" data-testid="segmented-readonly">

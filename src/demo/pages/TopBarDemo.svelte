@@ -231,7 +231,7 @@ const TABS: TopBarTab[] = [
 
 <DemoSection
   title="Many destinations: compact"
-  description="compact gives a bar with many tabs quieter, tighter labels: smaller regular-weight text in muted ink, so the tabs sit below the page content and every tab keeps its width when the current one changes. The current tab is the shared raised pill. The flexible search keeps a clear gap from the tabs. Settings is a page with no tab: open it and no tab is current."
+  description="compact uses smaller, regular-weight, quieter labels. Tab widths stay fixed when the current tab changes. Open Settings to clear the current tab."
   code={`<TopBar tabs={TABS} bind:active compact searchMinWidth={collapsed ? 48 : 220}>
   {#snippet search()}…{/snippet}
   {#snippet right()}

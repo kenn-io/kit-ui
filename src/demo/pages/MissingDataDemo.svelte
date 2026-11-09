@@ -9,7 +9,7 @@
 
 <DemoSection
   title="Nothing saved yet"
-  description="The state for a page or panel with nothing to show. No frame or fill, so it never reads as an alert; it sits a fixed step below the page header, so every page shows it in the same place. Title in primary ink, the explanation in muted ink, the icon at 24px."
+  description="For empty pages and panels: no frame or background, a fixed step below the page header, a 24px icon, a prominent title, and a quieter explanation."
   code={`<PageHeader title="Pinned" />
 <MissingData
   title="No pinned messages"
@@ -33,7 +33,7 @@
 
 <DemoSection
   title="With an action"
-  description="The action snippet holds the controls that fill the gap, such as Build now or Retry."
+  description="Pass recovery buttons through action."
   code={`<MissingData
   title="Setup needed"
   description="Prepare past sessions for search by meaning."
@@ -64,7 +64,7 @@
 
 <DemoSection
   title="Unavailable and filtered out"
-  description="The same state covers a feature this server does not offer and a filter that matches nothing. Use role=&quot;status&quot; when it replaces content that was loading, so screen readers announce it."
+  description="Use role=&quot;status&quot; when it replaces loading content, so screen readers announce the result."
   code={`<MissingData role="status" title="No matches" description="Try a broader filter." />`}
 >
   <div class="pair">
