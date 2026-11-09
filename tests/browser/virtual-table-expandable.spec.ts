@@ -240,3 +240,39 @@ test("oncolumnresize names the column only when a person changes its width", asy
   await expect(readout(page)).toHaveText(/^Last resized: Last edit column, \d+px$/);
   expect(Number(await reports())).toBe(Number(atMinimum) + 2);
 });
+
+test("dragging a stretched last column back where it started keeps its width", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = filesTable(page);
+  await scrollToTable(page, 0);
+  await expect(table).toHaveClass(/kit-virtual-table--pinned/);
+  const start = await columnWidths(table);
+
+  // Narrowing the File column stretches the last column into the width it
+  // gives up.
+  const file = table.getByRole("separator", { name: "Resize the File column" });
+  await file.focus();
+  for (let i = 0; i < 3; i += 1) await page.keyboard.press("ArrowLeft");
+  await expect(readout(page)).toHaveAttribute("data-reports", "3");
+  const stretched = await columnWidths(table);
+  expect(stretched[3]).toBe(start[3]! + 72);
+
+  // A drag out and back to where it started changes nothing.
+  const box = (await table
+    .getByRole("separator", { name: "Resize the Last edit column" })
+    .boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width / 2, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 60, y, { steps: 5 });
+  await page.mouse.move(box.x + box.width / 2, y, { steps: 5 });
+  await page.mouse.up();
+  expect(await columnWidths(table)).toEqual(stretched);
+  await expect(readout(page)).toHaveAttribute("data-reports", "3");
+
+  // The last column kept its own width, so widening the File column again
+  // takes the stretch back instead of pushing the table past its box.
+  await file.focus();
+  for (let i = 0; i < 3; i += 1) await page.keyboard.press("ArrowRight");
+  await expect.poll(() => columnWidths(table)).toEqual(start);
+});

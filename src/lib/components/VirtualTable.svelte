@@ -432,9 +432,13 @@
       const key = keyOf(cell);
       const width = widths.get(key);
       // A drag back to where it started, or an arrow key at the column's
-      // limit, changed nothing and reports nothing.
-      if (width === undefined || width === resizeFrom) {
+      // limit, changed nothing and reports nothing. The column keeps the
+      // width it had, not the wider one a stretched last column showed.
+      if (width === undefined || width === resizeFrom || width === resizeBase) {
+        if (resizeFrom === undefined) widths.delete(key);
+        else widths.set(key, resizeFrom);
         if (!resizeWasChosen) chosen.delete(key);
+        applyWidths();
         return;
       }
       choose(cell, width);
