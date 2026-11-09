@@ -124,7 +124,7 @@
     id: number;
     project: string;
     path: string;
-    edits: { tool: string; session: string; ago: string }[];
+    edits: { tool: string; ago: string }[];
   }
 
   const tools = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
@@ -141,7 +141,6 @@
       // One to eight edits, so open files differ in height.
       edits: Array.from({ length: ((id * 5) % 8) + 1 }, (_, j) => ({
         tool: tools[(id + j) % tools.length]!,
-        session: `session-${((id * 31 + j * 7) % 9000) + 1000}`,
         ago: `${(id % 50) + j + 1}m ago`,
       })),
     };
@@ -557,7 +556,6 @@ table.refresh();`}
                 {#each file.edits as edit, j (j)}
                   <li>
                     <span class="edit-tool">{edit.tool}</span>
-                    <span class="edit-session">{edit.session}</span>
                     <span class="edit-ago">{edit.ago}</span>
                   </li>
                 {/each}
@@ -575,8 +573,6 @@ table.refresh();`}
   <p class="resize-readout" data-testid={id} data-reports={reports} aria-live="polite">
     {#if change}
       Last resized: {change.column} column, {Math.round(change.width)}px
-    {:else}
-      No column resized yet
     {/if}
   </p>
 {/snippet}
@@ -704,11 +700,6 @@ table.refresh();`}
     min-width: 88px;
     font-weight: var(--font-weight-semibold, 600);
     color: var(--text-primary);
-  }
-
-  .edit-session {
-    font-family: var(--font-mono);
-    color: var(--text-secondary);
   }
 
   .edit-ago {

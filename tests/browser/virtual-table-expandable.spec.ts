@@ -215,7 +215,7 @@ test("oncolumnresize names the column only when a person changes its width", asy
 
   // A click on a handle that does not move resizes nothing.
   await table.getByRole("separator", { name: "Resize the File column" }).click();
-  await expect(readout(page)).toHaveText("No column resized yet");
+  await expect(readout(page)).toHaveText("");
   expect(await reports()).toBe("0");
 
   // Each arrow key that changes the width is reported, by column.

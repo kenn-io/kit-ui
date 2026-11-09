@@ -35,8 +35,8 @@
   title="With an action"
   description="The action snippet holds the controls that fill the gap, such as Build now or Retry."
   code={`<MissingData
-  title="No corpus yet"
-  description="Build the corpus to search past sessions by meaning."
+  title="Setup needed"
+  description="Prepare past sessions for search by meaning."
 >
   {#snippet icon()}<BookOpenIcon size="24" aria-hidden="true" />{/snippet}
   {#snippet action()}
@@ -46,10 +46,7 @@
 >
   <div class="page-frame">
     <PageHeader title="Recall" />
-    <MissingData
-      title="No corpus yet"
-      description="Build the corpus to search past sessions by meaning."
-    >
+    <MissingData title="Setup needed" description="Prepare past sessions for search by meaning.">
       {#snippet icon()}
         <BookOpenIcon size="24" aria-hidden="true" />
       {/snippet}
@@ -58,7 +55,7 @@
           label="Build now"
           surface="solid"
           tone="info"
-          onclick={() => showFlash("Would build the corpus")}
+          onclick={() => showFlash("Would prepare search")}
         />
       {/snippet}
     </MissingData>
