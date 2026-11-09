@@ -104,8 +104,8 @@ export function offsetOfIndex(
   return offset;
 }
 
-/** Measured heights of a virtualized list's rows. With a key function they
- * are kept by row key, so a row keeps its height when rows are inserted,
+/** Measured heights of a virtualized list's rows. With row keys they are
+ * kept by key, so a row keeps its height when rows are inserted,
  * removed, reordered, or appended around it, and heights of rows no longer
  * in the list are dropped. Without one they are kept by index, and a new
  * items array drops them all, since an index may now name another row. */
@@ -113,20 +113,22 @@ export class RowHeights<T> {
   #heights = new Map<unknown, number>();
   #items: readonly T[] | undefined;
   // Every row's key, in order; undefined when rows are keyed by index.
-  #keys: unknown[] | undefined;
+  #keys: readonly unknown[] | undefined;
 
-  /** Follow the list's current items, taking every row's key once per new
-   * array (an app's inline `rowKey` may be a new function on every render,
-   * so only the array's identity counts). Returns whether every height was
-   * dropped, which happens for a new array of rows keyed by index. */
-  sync(items: readonly T[], rowKey?: (item: T, index: number) => unknown): boolean {
+  /** Follow the list's current items. `keys` holds every row's key in
+   * order, for rows that have keys; pass a new array whenever a key may have
+   * changed, including after `items` changed in place (a push or splice on a
+   * reactive array). Without `keys`, rows are keyed by index and only a new
+   * items array counts. Returns whether every height was dropped, which
+   * happens for a new array of rows keyed by index. */
+  sync(items: readonly T[], keys?: readonly unknown[]): boolean {
     const keyedBefore = this.#keys !== undefined;
-    if (items === this.#items && keyedBefore === (rowKey !== undefined)) return false;
+    if (keys ? keys === this.#keys : !keyedBefore && items === this.#items) return false;
     const before = this.#items;
     this.#items = items;
-    this.#keys = rowKey ? items.map((item, i) => rowKey(item, i)) : undefined;
-    if (this.#keys && keyedBefore) {
-      const live = new Set(this.#keys);
+    this.#keys = keys;
+    if (keys && keyedBefore) {
+      const live = new Set(keys);
       for (const key of this.#heights.keys()) if (!live.has(key)) this.#heights.delete(key);
       return false;
     }

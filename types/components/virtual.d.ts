@@ -35,18 +35,20 @@ export declare function virtualSlice({ scrollTop, viewport, count, overscan, hei
 /** Offset of a row's top edge from the top of the list. `fixedHeight`
  * carries the same uniform-height contract as in {@link VirtualSliceInput}. */
 export declare function offsetOfIndex(index: number, count: number, heightOf: (index: number) => number, fixedHeight?: number): number;
-/** Measured heights of a virtualized list's rows. With a key function they
- * are kept by row key, so a row keeps its height when rows are inserted,
+/** Measured heights of a virtualized list's rows. With row keys they are
+ * kept by key, so a row keeps its height when rows are inserted,
  * removed, reordered, or appended around it, and heights of rows no longer
  * in the list are dropped. Without one they are kept by index, and a new
  * items array drops them all, since an index may now name another row. */
 export declare class RowHeights<T> {
     #private;
-    /** Follow the list's current items, taking every row's key once per new
-     * array (an app's inline `rowKey` may be a new function on every render,
-     * so only the array's identity counts). Returns whether every height was
-     * dropped, which happens for a new array of rows keyed by index. */
-    sync(items: readonly T[], rowKey?: (item: T, index: number) => unknown): boolean;
+    /** Follow the list's current items. `keys` holds every row's key in
+     * order, for rows that have keys; pass a new array whenever a key may have
+     * changed, including after `items` changed in place (a push or splice on a
+     * reactive array). Without `keys`, rows are keyed by index and only a new
+     * items array counts. Returns whether every height was dropped, which
+     * happens for a new array of rows keyed by index. */
+    sync(items: readonly T[], keys?: readonly unknown[]): boolean;
     /** The key row `index` is measured under. */
     keyOf(index: number): unknown;
     /** Row `index`'s measured height, or undefined before it is measured. */

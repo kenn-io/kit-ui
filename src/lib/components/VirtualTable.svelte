@@ -113,6 +113,9 @@
   let measuredAt = new WeakMap<Element, unknown>();
 
   const rowKeyOf = (item: T, index: number): unknown => (rowKey ? rowKey(item, index) : index);
+  // Every row's key, taken again whenever `items` changes, in place too (a
+  // push or splice on a reactive array), so measured heights follow their rows.
+  const rowKeys = $derived(rowKey ? items.map((item, i) => rowKey(item, i)) : undefined);
 
   const heightOf = (index: number): number => {
     const h = measured.get(index) ?? estimateRowHeight;
@@ -130,7 +133,7 @@
 
   const slice = $derived.by(() => {
     void measureVersion;
-    if (measured.sync(items, rowKey)) measuredAt = new WeakMap();
+    if (measured.sync(items, rowKeys)) measuredAt = new WeakMap();
     return windowOf();
   });
 

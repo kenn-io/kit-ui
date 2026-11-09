@@ -62,6 +62,9 @@
   let measureVersion = $state(0);
 
   const rowKeyOf = (item: T, index: number): unknown => (rowKey ? rowKey(item, index) : index);
+  // Every row's key, taken again whenever `items` changes, in place too (a
+  // push or splice on a reactive array), so measured heights follow their rows.
+  const rowKeys = $derived(rowKey ? items.map((item, i) => rowKey(item, i)) : undefined);
 
   // Guard against nonsensical sizing props: zero/negative heights would
   // degenerate the windowing math, fractional/negative overscan the loops.
@@ -79,7 +82,7 @@
 
   const slice = $derived.by(() => {
     void measureVersion;
-    measured.sync(items, rowKey);
+    measured.sync(items, rowKeys);
     return virtualSlice({
       scrollTop,
       viewport,
