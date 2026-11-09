@@ -179,8 +179,9 @@ for (const mode of MODES) {
 }
 
 // Muted ink carries placeholders, metadata, and secondary labels, so it is
-// text and needs 4.5:1 on every neutral fill it sits on.
-for (const mode of MODES) {
+// text and needs 4.5:1 on every neutral fill it sits on. quiet-theme.spec.ts
+// covers the quiet theme.
+for (const mode of MODES.filter((m) => !("theme" in m))) {
   test(`muted ink reaches AA on the neutral fills · ${mode.name}`, async ({ page }) => {
     await gotoPage(page, "theme");
     await applyMode(page, mode);
