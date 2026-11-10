@@ -113,7 +113,9 @@ test("follows the page's scroll container when the table is unbounded", async ({
 
 test("lays out a table that was hidden when it rendered", async ({ page }) => {
   await gotoPage(page, "virtual-table");
-  await page.getByText("Show 2,000 reviews").click();
+  // Scrolling here measures rows in the table above and moves the summary.
+  // Activate by keyboard so that movement cannot send a click to the background.
+  await page.locator("summary", { hasText: "Show 2,000 reviews" }).press("Enter");
   const table = page.locator('table[aria-label="Hidden reviews"]');
   await expect(dataRows(table).first()).toBeVisible();
   const widths = await table
