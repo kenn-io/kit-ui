@@ -199,6 +199,15 @@
   ></span>
 {/snippet}
 
+<!-- Tab label. The current tab is set at the selected weight, which is
+     wider. The ::after copy of the label, from data-label, is laid out at
+     that weight with no height, so every tab is already as wide as it
+     would be when current and no tab moves when the current one changes.
+     The probe renders the same label, so it measures the same widths. -->
+{#snippet tabLabel(label: string)}
+  <span class="kit-top-bar__tab-label" data-label={label}>{label}</span>
+{/snippet}
+
 <header class={["kit-top-bar", compact && "kit-top-bar--compact", className]} bind:this={barEl}>
   {#if left}
     <div class="kit-top-bar__left" bind:this={leftEl}>
@@ -236,7 +245,7 @@
               aria-current={tab.id === effectiveActive ? "page" : undefined}
               onclick={() => select(tab.id)}
             >
-              {tab.label}
+              {@render tabLabel(tab.label)}
               {#if tab.indicator}
                 {@render indicatorDot(tab.indicator)}
               {/if}
@@ -253,7 +262,7 @@
         <div class="kit-top-bar__probe" bind:this={probeEl}>
           {#each tabs as tab (tab.id)}
             <span class="kit-top-bar__tab">
-              {tab.label}
+              {@render tabLabel(tab.label)}
               {#if tab.indicator}
                 {@render indicatorDot(tab.indicator)}
               {/if}
@@ -401,7 +410,29 @@
   .kit-top-bar__tab.active {
     background: var(--selected-strong-bg);
     color: var(--text-primary);
+    font-weight: var(--selected-strong-weight);
     box-shadow: var(--shadow-raised, var(--selected-strong-edge));
+  }
+
+  .kit-top-bar__tab-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* The hidden copy that reserves the selected-weight width. The second
+   * content declaration gives it empty alternative text, so it never
+   * joins the tab's accessible name; a browser without that syntax keeps
+   * the first, where visibility: hidden does the same job. */
+  .kit-top-bar__tab-label::after {
+    content: attr(data-label);
+    content: attr(data-label) / "";
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    font-weight: var(--selected-strong-weight);
+    user-select: none;
+    pointer-events: none;
   }
 
   .kit-top-bar--compact .kit-top-bar__tab {
@@ -414,6 +445,10 @@
   .kit-top-bar--compact .kit-top-bar__tab:hover:not(:disabled),
   .kit-top-bar--compact .kit-top-bar__tab.active {
     color: var(--text-primary);
+  }
+
+  .kit-top-bar--compact .kit-top-bar__tab.active {
+    font-weight: var(--selected-strong-weight);
   }
 
   .kit-top-bar__tab:disabled {

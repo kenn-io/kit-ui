@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { gotoPage, setSlider } from "./helpers.js";
 
 // TopBar collapses its tab group into a SelectDropdown by measurement
@@ -190,15 +190,22 @@ test("compact tabs are quieter and the current one is the shared raised pill", a
     probe.style.fontSize = "var(--font-size-sm)";
     probe.style.color = "var(--text-muted)";
     probe.style.backgroundColor = "var(--selected-strong-bg)";
+    probe.style.fontWeight = "var(--selected-strong-weight)";
     document.body.append(probe);
     const s = getComputedStyle(probe);
-    const out = { size: s.fontSize, muted: s.color, selected: s.backgroundColor };
+    const out = {
+      size: s.fontSize,
+      muted: s.color,
+      selected: s.backgroundColor,
+      weight: s.fontWeight,
+    };
     probe.remove();
     return out;
   });
   expect(other.size).toBe(tokens.size);
   expect(other.weight).toBe("400");
-  expect(active.weight).toBe("400");
+  expect(active.weight).toBe(tokens.weight);
+  expect(active.weight).toBe("500");
   expect(other.color).toBe(tokens.muted);
   expect(active.bg).toBe(tokens.selected);
 
@@ -212,4 +219,48 @@ test("compact tabs are quieter and the current one is the shared raised pill", a
 
   await bar.getByRole("button", { name: "Settings" }).click();
   await expect(bar.locator('[aria-current="page"]')).toHaveCount(0);
+});
+
+for (const host of [".bar-host--many", ".bar-host"] as const) {
+  test(`no tab moves when the current tab changes · ${
+    host === ".bar-host--many" ? "compact" : "regular"
+  }`, async ({ page }) => {
+    await page.setViewportSize({ width: 1700, height: 900 });
+    await gotoPage(page, "top-bar");
+    const bar = page.locator(host).first().locator(".kit-top-bar");
+    const tabs = bar.locator(".kit-top-bar__tabs .kit-top-bar__tab");
+    const boxes = () =>
+      tabs.evaluateAll((all) =>
+        all.map((tab) => {
+          const { left, width } = tab.getBoundingClientRect();
+          return { left, width };
+        }),
+      );
+    const weightOf = (tab: Locator) => tab.evaluate((el) => getComputedStyle(el).fontWeight);
+    await expect(tabs.first()).toBeVisible();
+    const count = await tabs.count();
+    expect(count).toBeGreaterThan(2);
+
+    const before = await boxes();
+    const last = tabs.nth(count - 1);
+    await last.click();
+    await expect(last).toHaveAttribute("aria-current", "page");
+    expect(await weightOf(last)).toBe("500");
+    expect(await boxes()).toEqual(before);
+
+    // The width-reserving copy of the label stays out of the name.
+    const label = (await last.locator(".kit-top-bar__tab-label").textContent())!;
+    await expect(bar.getByRole("button", { name: label, exact: true })).toHaveCount(1);
+  });
+}
+
+test("the collapse probe measures the same tab widths the bar renders", async ({ page }) => {
+  await page.setViewportSize({ width: 1700, height: 900 });
+  await gotoPage(page, "top-bar");
+  const bar = page.locator(".bar-host--many .kit-top-bar");
+  const widths = (selector: string) =>
+    bar.locator(selector).evaluateAll((all) => all.map((tab) => tab.getBoundingClientRect().width));
+  const rendered = await widths(".kit-top-bar__tabs .kit-top-bar__tab");
+  expect(rendered.length).toBeGreaterThan(0);
+  expect(await widths(".kit-top-bar__probe .kit-top-bar__tab")).toEqual(rendered);
 });
