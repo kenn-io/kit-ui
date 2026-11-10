@@ -62,13 +62,36 @@ that already sits on the surface (the SettingsLayout nav).
 
 ## Icons
 
-theme.css sets each lucide icon's stroke by its rendered size (8px through
-36px), so every size draws about the same 1.1-1.2px line whatever
-`strokeWidth` the call site passed. The rules sit at the lowest
-specificity: an identity theme's `--icon-stroke` and any explicit app rule
-win. Size icons by context: 12px in chips, pills, and dense rows; 14px in
+theme.css draws every lucide icon with the same 1.2px line at any rendered
+size, including a size set in CSS. The stroke does not scale with the icon
+(`vector-effect: non-scaling-stroke` on the icon's shapes), so there is no
+list of supported sizes.
+
+**`strokeWidth` has no effect in the default theme.** Whatever a call site
+passes, the icon draws the 1.2px line. The one exception is
+`strokeWidth={0}`, which marks a filled icon: it stays unstroked.
+
+The overflow icons (`ellipsis`, `ellipsis-vertical`) take a 1.6px stroke, so
+their dots match the weight of the glyphs beside them. A dot's diameter is
+the icon size / 12 plus 1.6px.
+
+The rules sit at the lowest specificity. An identity theme's `--icon-stroke`
+wins and is measured in lucide's 24-unit box, so under an identity theme the
+line scales with the icon. An app rule also wins; to set a stroke in viewBox
+units, it must turn the fixed line off on the shapes as well:
+
+```css
+.my-icon svg.lucide {
+  stroke-width: 2;
+}
+.my-icon svg.lucide > * {
+  vector-effect: none;
+}
+```
+
+Size icons by context: 12px in chips, pills, and dense rows; 14px in
 toolbars, menus, and icon buttons; 16px in the top bar; 24px for empty
-states. Pass `strokeWidth={0}` for a filled mark.
+states.
 
 ## Typography
 

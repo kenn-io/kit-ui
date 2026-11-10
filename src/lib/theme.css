@@ -169,56 +169,36 @@
 }
 
 /* Icon line weight. Lucide scales its stroke with the icon, so one
- * strokeWidth draws thin on a 12px icon and heavy on a 24px one. These
- * rules pick the stroke per rendered size so every icon draws at about the
- * same 1.1-1.2px line, whatever strokeWidth its call site passed. CSS
- * stroke-width beats the SVG attribute; :where() keeps them at the lowest
- * specificity, so an identity theme's --icon-stroke rule (themes.css) and
- * any explicit app rule still win. Filled marks (strokeWidth 0) keep their
- * fill only. Size icons by context: 12px in chips, pills and dense rows;
- * 14px in toolbars, menus and icon buttons; 16px in the top bar; 24px for
- * empty states. */
+ * strokeWidth draws thin on a 12px icon and heavy on a 24px one. Here the
+ * stroke does not scale: every icon draws the same 1.2px line at any
+ * rendered size, including a size set in CSS, whatever strokeWidth its
+ * call site passed. vector-effect is not inherited, so it goes on the
+ * icon's shapes. CSS stroke-width beats the SVG attribute; :where() keeps
+ * the rules at the lowest specificity, so an identity theme's --icon-stroke
+ * rule (themes.css) and any explicit app rule still win. An app rule that
+ * wants a stroke in viewBox units must also set vector-effect: none on the
+ * shapes. Filled marks (strokeWidth 0) keep their fill only. Size icons by
+ * context: 12px in chips, pills and dense rows; 14px in toolbars, menus and
+ * icon buttons; 16px in the top bar; 24px for empty states. */
 svg.lucide {
   flex-shrink: 0;
 }
 
-svg.lucide:where(:is([width="8"], [width="9"]):not([stroke-width="0"])) {
-  stroke-width: 2.75;
+svg.lucide:where(:not([stroke-width="0"])) {
+  stroke-width: 1.2px;
 }
 
-svg.lucide:where(:is([width="10"], [width="11"]):not([stroke-width="0"])) {
-  stroke-width: 2.5;
+svg.lucide:where(:not([stroke-width="0"])) > :where(*) {
+  vector-effect: non-scaling-stroke;
 }
 
-svg.lucide:where([width="12"]:not([stroke-width="0"])) {
-  stroke-width: 2.25;
-}
-
-svg.lucide:where([width="13"]:not([stroke-width="0"])) {
-  stroke-width: 2.1;
-}
-
-svg.lucide:where([width="14"]:not([stroke-width="0"])) {
-  stroke-width: 2;
-}
-
-svg.lucide:where(:is([width="16"], [width="18"]):not([stroke-width="0"])) {
-  stroke-width: 1.75;
-}
-
-svg.lucide:where(:is([width="20"], [width="24"]):not([stroke-width="0"])) {
-  stroke-width: 1.5;
-}
-
-svg.lucide:where(:is([width="28"], [width="32"], [width="36"]):not([stroke-width="0"])) {
-  stroke-width: 1.25;
-}
-
-/* Overflow dots are three 1-unit circles; at the shared line weight they
- * read smaller and fainter than the glyphs beside them. A heavier stroke
- * grows the dots to the same optical size. */
-svg.lucide:where(.lucide-ellipsis, .lucide-ellipsis-vertical) {
-  stroke-width: 2.75;
+/* Overflow dots are three circles of radius 1 in a 24-unit box. At the
+ * shared line weight they read smaller and fainter than the glyphs beside
+ * them, so they take a heavier stroke. A dot's diameter is then the
+ * icon's size / 12 plus 1.6px: 2.6px at 12px, 2.9px at 16px, 3.6px at
+ * 24px. The dot grows with the icon, but slower than a scaling stroke. */
+svg.lucide:where(.lucide-ellipsis, .lucide-ellipsis-vertical):where(:not([stroke-width="0"])) {
+  stroke-width: 1.6px;
 }
 
 /* Native form-control accents (range sliders, radios, progress bars, any

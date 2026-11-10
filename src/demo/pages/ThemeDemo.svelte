@@ -4,15 +4,19 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import InboxIcon from "@lucide/svelte/icons/inbox";
+  import CircleIcon from "@lucide/svelte/icons/circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import DemoSection from "../DemoSection.svelte";
 
-  // The icon sizes the line-weight rules cover, by where each size is used.
-  const iconSizes = [
+  // Sizes by where each is used, a size between the usual steps, and an
+  // icon whose rendered size comes from CSS instead of its size prop.
+  const iconSizes: { size: number; rendered?: number; use: string }[] = [
     { size: 12, use: "chips, pills, dense rows" },
     { size: 14, use: "toolbars, menus, icon buttons" },
+    { size: 15, use: "any size between the steps" },
     { size: 16, use: "top bar" },
     { size: 24, use: "empty states" },
+    { size: 24, rendered: 18, use: "resized in CSS" },
   ];
 
   const compact = new MediaQuery(MEDIA.compact);
@@ -129,20 +133,25 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
 
 <DemoSection
   title="Icon line weight"
-  description="Icon strokes stay about 1.1–1.2px at every size, overriding strokeWidth (2 in these examples). Identity themes set --icon-stroke."
-  code={`<SettingsIcon size="14" aria-hidden="true" />  /* stroke 2 */
-<SettingsIcon size="24" aria-hidden="true" />  /* stroke 1.5 — same rendered line */`}
+  description="Every icon draws a 1.2px line at any size, including a size set in CSS. strokeWidth has no effect in the default theme. Identity themes set --icon-stroke, which scales with the icon."
+  code={`<SettingsIcon size="14" aria-hidden="true" />
+<SettingsIcon size="24" aria-hidden="true" />  /* same 1.2px line */
+<StarIcon size="14" strokeWidth={0} fill="currentColor" />  /* filled mark, no stroke */`}
 >
   <div class="icon-weights" data-testid="icon-weights">
-    {#each iconSizes as row (row.size)}
-      <div class="icon-weight-row">
+    {#each iconSizes as row (`${row.size}-${row.rendered ?? row.size}`)}
+      {@const style = row.rendered
+        ? `width: ${row.rendered}px; height: ${row.rendered}px`
+        : undefined}
+      <div class="icon-weight-row" data-icon-size={row.rendered ?? row.size}>
         <span class="icon-weight-glyphs" style:color="var(--text-primary)">
-          <SettingsIcon size={row.size} strokeWidth={2} aria-hidden="true" />
-          <CheckIcon size={row.size} strokeWidth={2} aria-hidden="true" />
-          <InboxIcon size={row.size} strokeWidth={2} aria-hidden="true" />
-          <EllipsisIcon size={row.size} strokeWidth={2} aria-hidden="true" />
+          <SettingsIcon size={row.size} strokeWidth={2} {style} aria-hidden="true" />
+          <CheckIcon size={row.size} strokeWidth={2} {style} aria-hidden="true" />
+          <InboxIcon size={row.size} strokeWidth={2} {style} aria-hidden="true" />
+          <CircleIcon size={row.size} strokeWidth={2} {style} aria-hidden="true" />
+          <EllipsisIcon size={row.size} strokeWidth={2} {style} aria-hidden="true" />
         </span>
-        <code>{row.size}px</code>
+        <code>{row.rendered ? `${row.size}px → ${row.rendered}px` : `${row.size}px`}</code>
         <span class="type-values">{row.use}</span>
       </div>
     {/each}
@@ -184,7 +193,13 @@ const compact = new MediaQuery(MEDIA.compact); // compact.current is reactive
     display: inline-flex;
     align-items: center;
     gap: var(--space-5);
-    min-width: 160px;
+    min-width: 200px;
+  }
+
+  .icon-weight-row code {
+    min-width: 96px;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
   }
 
   .type-sample {
