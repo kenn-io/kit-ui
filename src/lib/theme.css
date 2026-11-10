@@ -155,10 +155,12 @@
 }
 
 /* The default Card's edge. In light the white surface sits close to the
- * page color, so the card takes the default border to keep a visible but
- * calm edge; dark keeps the muted one. */
+ * page color, and the muted border vanished there. The card takes an edge
+ * midway between the muted and default borders: visible, but a step under
+ * the raised card, which keeps the full default border. Dark keeps the
+ * muted one. */
 :root {
-  --card-border: var(--border-default);
+  --card-border: color-mix(in srgb, var(--border-default) 50%, var(--border-muted));
 }
 
 :root.dark {

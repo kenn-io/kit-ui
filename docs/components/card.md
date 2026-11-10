@@ -18,7 +18,7 @@ rule steers external projects to it.
 | `level`   | Recipe                                                                           | Use for                                  |
 | --------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
 | `inset`   | bg-inset + border-muted + radius-sm                                              | wells inside another surface             |
-| `default` | bg-surface + border-muted + radius-md                                            | list tiles, timeline cards (the default) |
+| `default` | bg-surface + `--card-border` + radius-md                                         | list tiles, timeline cards (the default) |
 | `raised`  | bg-surface + border-default + radius-lg + shadow-panel (falls back to shadow-sm) | page-level panels                        |
 
 Levels compose — an `inset` well inside a `raised` panel reads as

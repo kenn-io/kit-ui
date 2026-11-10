@@ -25,18 +25,42 @@ test.describe("Card with a table", () => {
   }
 });
 
-for (const dark of [false, true]) {
-  test(`a default card's edge stays visible on the page · ${dark ? "dark" : "light"}`, async ({
-    page,
-  }) => {
+/** Mean sRGB channel (0..1) of a computed color, in either form Chromium
+ * serializes: rgb() or, for a color-mix() result, color(srgb …). */
+function lightness(color: string): number {
+  const mixed = color.match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+  const channels = mixed
+    ? mixed.slice(1, 4).map(Number)
+    : (color.match(/[\d.]+/g) ?? []).slice(0, 3).map((value) => Number(value) / 255);
+  expect(channels).toHaveLength(3);
+  return (channels[0]! + channels[1]! + channels[2]!) / 3;
+}
+
+const edgeOf = (card: Locator) =>
+  card.evaluate((element) => getComputedStyle(element).borderTopColor);
+
+for (const highContrast of [false, true]) {
+  test(`a light default card's edge sits between the muted border and a raised card's${
+    highContrast ? " · high contrast" : ""
+  }`, async ({ page }) => {
     await gotoPage(page, "card");
-    await setTheme(page, { dark });
-    const card = page.locator(".kit-card--default").first();
-    const want = await resolvedStyle(
-      page,
-      "border-top-color",
-      dark ? "var(--border-muted)" : "var(--border-default)",
-    );
-    await expect(card).toHaveCSS("border-top-color", want);
+    await setTheme(page, { dark: false, highContrast });
+    const muted = lightness(await resolvedStyle(page, "border-top-color", "var(--border-muted)"));
+    const edge = lightness(await edgeOf(page.locator(".kit-card--default").first()));
+    const raised = lightness(await edgeOf(page.locator(".kit-card--raised").first()));
+
+    // Darker than the muted border, which vanished on the page; lighter
+    // than the raised card's, so the two levels stay apart.
+    expect(edge).toBeLessThan(muted);
+    expect(edge).toBeGreaterThan(raised);
   });
 }
+
+test("a dark default card keeps the muted edge", async ({ page }) => {
+  await gotoPage(page, "card");
+  await setTheme(page, { dark: true });
+  await expect(page.locator(".kit-card--default").first()).toHaveCSS(
+    "border-top-color",
+    await resolvedStyle(page, "border-top-color", "var(--border-muted)"),
+  );
+});
