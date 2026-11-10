@@ -118,7 +118,9 @@ people resize it or fit it to its content.
   others are measured again. Columns a person resized or fitted keep their
   widths. Nothing is rebuilt, so measured row heights and the scroll
   position stay. A column nobody resized also follows its header's `width`
-  when the app changes it.
+  when the app changes it. A table with no rows has nothing to measure: it
+  shows the widths it has in the new box, the filling or last column taking
+  the spare width, and sizes its columns for that box when rows return.
 - **Resizing.** Each header cell's right edge has a 1px resize handle
   ([SplitResizeHandle](split-resize-handle.md) with `variant="column"`):
   drag it, or focus it and press the arrow keys. `resizable={false}` removes

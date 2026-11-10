@@ -175,11 +175,14 @@
   // Size every column nobody resized again, for a new table width.
   let refitting = false;
 
-  function requestSizing(): void {
+  // Returns whether the columns will be measured: an empty list has no rows
+  // to measure.
+  function requestSizing(): boolean {
     const wrapper = body?.parentElement?.parentElement;
-    if (items.length === 0 || !wrapper) return;
+    if (items.length === 0 || !wrapper) return false;
     measureWidth = wrapper.offsetWidth;
     sampling = true;
+    return true;
   }
 
   $effect(() => {
@@ -328,21 +331,19 @@
   // After the wrapper changes width, the columns nobody chose are sized
   // again; otherwise the stored widths are shown again, the filling or last
   // column taking the rest. A hidden table (width 0) keeps its widths for
-  // when it shows again.
+  // when it shows again. An empty table has no rows to measure: it shows
+  // its stored widths in the new width, and the refit waits for rows
+  // (`syncRows`). A wrapper back at the width the columns were sized for
+  // needs no refit any more.
   function followWidth(): void {
     const width = body?.parentElement?.parentElement?.offsetWidth ?? 0;
     const cells = headerCells();
     const filler = fillerOf(cells);
-    if (
-      width > 0 &&
-      width !== sizedFor &&
-      cells.some((cell, i) => i !== filler && !chosen.has(keyOf(cell)))
-    ) {
-      refitting = true;
-      requestSizing();
-    } else {
-      applyWidths();
+    if (width > 0) {
+      refitting =
+        width !== sizedFor && cells.some((cell, i) => i !== filler && !chosen.has(keyOf(cell)));
     }
+    if (!refitting || !requestSizing()) applyWidths();
   }
 
   // A header's `width` changed after the columns were sized. A column nobody
@@ -532,8 +533,9 @@
     watchRows(rows, start);
     // Size any column still without a width, until it has one: a column
     // added while the list was empty or the table hidden is sized once rows
-    // render or the table appears.
-    if (unsized(headerCells())) requestSizing();
+    // render or the table appears. A refit that found the list empty runs
+    // now that rows are back.
+    if (refitting || unsized(headerCells())) requestSizing();
   }
 
   // Read rendered row heights, from the gap between consecutive row tops so
