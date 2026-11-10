@@ -172,8 +172,7 @@ test("an unset active starts on the first enabled tab", async ({ page }) => {
 });
 
 test("compact tabs are quieter and the current one is the shared raised pill", async ({ page }) => {
-  // Ten tabs need a wide page to stay expanded.
-  await page.setViewportSize({ width: 1700, height: 900 });
+  // The gallery's default window: all ten tabs open expanded in it.
   await gotoPage(page, "top-bar");
   const bar = page.locator(".bar-host--many .kit-top-bar");
   const current = bar.locator('.kit-top-bar__tabs [aria-current="page"]');
@@ -225,7 +224,6 @@ for (const host of [".bar-host--many", ".bar-host"] as const) {
   test(`no tab moves when the current tab changes · ${
     host === ".bar-host--many" ? "compact" : "regular"
   }`, async ({ page }) => {
-    await page.setViewportSize({ width: 1700, height: 900 });
     await gotoPage(page, "top-bar");
     const bar = page.locator(host).first().locator(".kit-top-bar");
     const tabs = bar.locator(".kit-top-bar__tabs .kit-top-bar__tab");
@@ -255,7 +253,6 @@ for (const host of [".bar-host--many", ".bar-host"] as const) {
 }
 
 test("the collapse probe measures the same tab widths the bar renders", async ({ page }) => {
-  await page.setViewportSize({ width: 1700, height: 900 });
   await gotoPage(page, "top-bar");
   const bar = page.locator(".bar-host--many .kit-top-bar");
   const widths = (selector: string) =>

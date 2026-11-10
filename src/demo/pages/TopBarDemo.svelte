@@ -231,8 +231,8 @@ const TABS: TopBarTab[] = [
 
 <DemoSection
   title="Many destinations: compact"
-  description="compact uses smaller, quieter labels in regular weight; the current tab is medium. No tab moves when the current tab changes. Open Settings to clear the current tab."
-  code={`<TopBar tabs={TABS} bind:active compact searchMinWidth={collapsed ? 48 : 220}>
+  description="compact uses smaller, quieter labels in regular weight; the current tab is medium. No tab moves when the current tab changes. Narrow the bar to collapse the tabs. Open Settings to clear the current tab."
+  code={`<TopBar tabs={TABS} bind:active compact searchMinWidth={collapsed ? 48 : 140}>
   {#snippet search()}…{/snippet}
   {#snippet right()}
     <IconButton ariaLabel="Settings" onclick={() => (active = "settings")}>…</IconButton>
@@ -254,7 +254,7 @@ const TABS: TopBarTab[] = [
       bind:active={manyActive}
       bind:collapsed={manyCollapsed}
       compact
-      searchMinWidth={manyCollapsed ? 48 : 180}
+      searchMinWidth={manyCollapsed ? 48 : 140}
       ariaLabel="Pages"
     >
       {#snippet left()}
