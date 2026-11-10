@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { gotoPage, setSlider } from "./helpers.js";
 
 // TopBar collapses its tab group into a SelectDropdown by measurement
@@ -171,10 +171,37 @@ test("an unset active starts on the first enabled tab", async ({ page }) => {
   await expect(bar.locator(".kit-top-bar__tab.active")).toHaveText("Sessions");
 });
 
+/** Inter ships as font-display: optional, so a cold load, like every test
+ * page, keeps the fallback font for the page's lifetime. This applies the
+ * loaded face, as a warm cache does, and waits for the bar to re-measure. */
+async function useBrandFont(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    for (const sheet of document.styleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (
+          rule instanceof CSSFontFaceRule &&
+          rule.style.getPropertyValue("font-family").includes("Inter")
+        ) {
+          rule.style.setProperty("font-display", "block");
+        }
+      }
+    }
+    await Promise.all([
+      document.fonts.load("400 13px Inter"),
+      document.fonts.load("500 13px Inter"),
+    ]);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+
 test("compact tabs are quieter and the current one is the shared raised pill", async ({ page }) => {
-  // The gallery's default window: all ten tabs open expanded in it.
+  // The gallery's default window: all ten tabs open expanded in it, in
+  // the brand font a returning visitor sees, which is wider than the
+  // fallback a first load uses.
   await gotoPage(page, "top-bar");
+  await useBrandFont(page);
   const bar = page.locator(".bar-host--many .kit-top-bar");
+  await expect(bar.locator(".kit-top-bar__tabs")).toBeVisible();
   const current = bar.locator('.kit-top-bar__tabs [aria-current="page"]');
   await expect(current).toHaveText("Usage");
 
@@ -224,7 +251,15 @@ for (const host of [".bar-host--many", ".bar-host"] as const) {
   test(`no tab moves when the current tab changes · ${
     host === ".bar-host--many" ? "compact" : "regular"
   }`, async ({ page }) => {
+    // Wide, so the ten compact tabs stay expanded at bold too.
+    await page.setViewportSize({ width: 1700, height: 900 });
     await gotoPage(page, "top-bar");
+    // A test machine's fallback font may draw medium as wide as regular,
+    // which would let this pass with nothing reserved. Bold is wider in
+    // every font, so select at bold.
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty("--selected-strong-weight", "700"),
+    );
     const bar = page.locator(host).first().locator(".kit-top-bar");
     const tabs = bar.locator(".kit-top-bar__tabs .kit-top-bar__tab");
     const boxes = () =>
@@ -241,9 +276,17 @@ for (const host of [".bar-host--many", ".bar-host"] as const) {
 
     const before = await boxes();
     const last = tabs.nth(count - 1);
+    // Not yet current: its label box is already wider than its text.
+    const slack = await last.locator(".kit-top-bar__tab-label").evaluate((label) => {
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      return label.getBoundingClientRect().width - range.getBoundingClientRect().width;
+    });
+    expect(slack).toBeGreaterThan(0.5);
+
     await last.click();
     await expect(last).toHaveAttribute("aria-current", "page");
-    expect(await weightOf(last)).toBe("500");
+    expect(await weightOf(last)).toBe("700");
     expect(await boxes()).toEqual(before);
 
     // The width-reserving copy of the label stays out of the name.
