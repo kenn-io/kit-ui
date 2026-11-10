@@ -41,6 +41,12 @@ focus.
 Use SegmentedControl for 2–5 mutually exclusive views; for longer lists use
 `SelectDropdown`.
 
+A boxed `block` control keeps its segments on one row while their labels
+fit. When enlarged text (the touch type scale plus a larger browser font)
+makes them too wide for the track, segments wrap to a second row and the
+track grows; no segment hangs out of the track. The borderless strip stays
+on one row.
+
 The boxed variant's chosen segment is the shared selected pill
 (`--selected-strong-*`, see [theming.md](../theming.md#selected-state)).
 When the whole group is disabled, as in a read-only setting, the chosen

@@ -611,7 +611,11 @@
 
   .kit-date-range-picker__pill {
     flex: 1;
-    height: 17px;
+    /* A floor, not a fixed height: the label is rem, so the touch scale or
+     * a larger browser font can outgrow 17px, and the option and its tier
+     * grow with it. No block padding, so the label alone decides when. */
+    min-height: 17px;
+    padding-block: 0;
     border: 0;
     border-radius: max(0px, calc(var(--kit-date-range-picker-presets-radius) - 1px));
     background: transparent;

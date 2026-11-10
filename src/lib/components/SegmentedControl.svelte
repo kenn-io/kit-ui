@@ -131,6 +131,15 @@
     width: 100%;
   }
 
+  /* A block track has a fixed width, and its labels are rem. When enlarged
+   * labels no longer fit one row, segments move to a second row and the
+   * track grows, instead of the last segment hanging out of the track.
+   * The borderless strip shares borders between neighbors, so it stays on
+   * one row. */
+  .kit-segmented--block:not(.kit-segmented--borderless) {
+    flex-wrap: wrap;
+  }
+
   .kit-segmented__btn {
     /* Flex so snippet content (icon + text) aligns and gaps cleanly;
      * inherited line-height keeps text-only segments unchanged. */

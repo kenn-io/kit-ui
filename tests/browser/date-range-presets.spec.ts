@@ -172,3 +172,112 @@ test("a picker that opens upward keeps the preset tier clear of its trigger", as
     expect(b.presetBottom, info).toBeLessThan(b.triggerTop);
   }
 });
+
+// Text is rem and grows with the touch scale and the reader's browser font
+// size; the tier's chrome is px. The tier keeps its short default row, and
+// only enlarged labels may grow it.
+test("enlarged touch labels fit their preset buttons and the tier", async ({ page }) => {
+  await gotoPage(page, "date-range-picker");
+  await page.evaluate(() => document.documentElement.classList.add("kit-type-touch"));
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  await page.locator(".kit-date-range-picker__trigger").first().click();
+  const panel = page.locator(".kit-date-range-picker__panel");
+  await expect(panel).toBeVisible();
+
+  for (const mode of [0, 1]) {
+    await panel.locator(".kit-segmented__btn").nth(mode).click();
+    const measured = await panel.evaluate((el) => {
+      // A label's own box: the text inside a button, not the button.
+      const textBox = (button: Element) => {
+        const range = document.createRange();
+        range.selectNodeContents(button);
+        return range.getBoundingClientRect();
+      };
+      const inside = (inner: DOMRect, outer: DOMRect) =>
+        inner.top >= outer.top - 0.5 &&
+        inner.bottom <= outer.bottom + 0.5 &&
+        inner.left >= outer.left - 0.5 &&
+        inner.right <= outer.right + 0.5;
+      const report = (buttons: Element[], container: Element) => {
+        const outer = container.getBoundingClientRect();
+        return buttons.map((button) => {
+          const box = button.getBoundingClientRect();
+          const text = textBox(button);
+          return {
+            label: button.textContent!.trim(),
+            fontSize: parseFloat(getComputedStyle(button).fontSize),
+            buttonHeight: box.height,
+            textHeight: text.height,
+            textWidth: text.width,
+            buttonWidth: box.width,
+            textFits: inside(text, box),
+            buttonFits: inside(box, outer),
+          };
+        });
+      };
+      const presets = el.querySelector(".kit-date-range-picker__pills")!;
+      const track = el.querySelector(".kit-date-range-picker__tabs .kit-segmented")!;
+      const panelBox = el.getBoundingClientRect();
+      return {
+        presetHeight: presets.getBoundingClientRect().height,
+        trackHeight: track.getBoundingClientRect().height,
+        presets: report([...presets.querySelectorAll(".kit-date-range-picker__pill")], presets),
+        modes: report([...track.querySelectorAll(".kit-segmented__btn")], track),
+        tierInsidePanel: inside(presets.getBoundingClientRect(), panelBox),
+        trackInsidePanel: inside(track.getBoundingClientRect(), panelBox),
+        gap: presets.getBoundingClientRect().top - track.getBoundingClientRect().bottom,
+      };
+    });
+    const info = JSON.stringify(measured);
+    // The labels really are enlarged: well past the 17px default row.
+    for (const preset of measured.presets) {
+      expect(preset.fontSize, info).toBeGreaterThan(20);
+      expect(preset.textFits, `${preset.label} label inside its button: ${info}`).toBe(true);
+      expect(preset.buttonFits, `${preset.label} button inside the tier: ${info}`).toBe(true);
+    }
+    // The mode tabs above face the same enlarged text.
+    for (const modeTab of measured.modes) {
+      expect(modeTab.textFits, `${modeTab.label} label inside its tab: ${info}`).toBe(true);
+      expect(modeTab.buttonFits, `${modeTab.label} tab inside the track: ${info}`).toBe(true);
+    }
+    expect(measured.tierInsidePanel, info).toBe(true);
+    expect(measured.trackInsidePanel, info).toBe(true);
+    // Still one tier hanging flush under the track.
+    expect(Math.abs(measured.gap), info).toBeLessThanOrEqual(1);
+  }
+});
+
+// The floor that enlarged text grows from: at the desktop base, and at the
+// touch scale on its own, the row keeps its short fixed size.
+for (const touch of [false, true]) {
+  test(`the preset row keeps its short default size · ${touch ? "touch scale" : "desktop scale"}`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "date-range-picker");
+    await page.evaluate(
+      (on) => document.documentElement.classList.toggle("kit-type-touch", on),
+      touch,
+    );
+    await page.locator(".kit-date-range-picker__trigger").first().click();
+    const panel = page.locator(".kit-date-range-picker__panel");
+    await expect(panel).toBeVisible();
+    for (const mode of [0, 1]) {
+      await panel.locator(".kit-segmented__btn").nth(mode).click();
+      const heights = await panel.evaluate((el) => ({
+        options: [...el.querySelectorAll(".kit-date-range-picker__pill")].map(
+          (option) => option.getBoundingClientRect().height,
+        ),
+        tier: el.querySelector(".kit-date-range-picker__pills")!.getBoundingClientRect().height,
+        tabRows: new Set(
+          [...el.querySelectorAll(".kit-segmented__btn")].map(
+            (tab) => tab.getBoundingClientRect().top,
+          ),
+        ).size,
+      }));
+      expect(new Set(heights.options), JSON.stringify(heights)).toEqual(new Set([17]));
+      expect(heights.tier, JSON.stringify(heights)).toBe(23);
+      // The mode tabs stay on one row while their labels fit.
+      expect(heights.tabRows, JSON.stringify(heights)).toBe(1);
+    }
+  });
+}
