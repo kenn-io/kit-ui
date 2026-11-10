@@ -20,11 +20,13 @@ in place. `resolveRange()` turns any selection into concrete inclusive
 clicks dismiss the popover.
 
 The mode tabs (Relative / Calendar / Custom) are a normal SegmentedControl.
-The chosen mode's options (7d … All, or Day / Week / Month) sit in a narrower
-tray that hangs from the tabs' bottom edge: the same fill, inset from both
-ends, square on top and rounded below, joined to the tabs with concave
-corners. The options are smaller and flat, and the chosen one is a quiet
-tint, so the raised pill marks only the chosen mode.
+The chosen mode's options (7d … All, or Day / Week / Month) are a lower tier
+tucked under the tabs: flush with their bottom edge, square on top and
+rounded below, inset 20px so the tabs overhang it on both sides. A contact
+line runs along its top over a quiet hairline ring, and its fill is a step
+quieter than the tabs' track. The options are shorter and in smaller type
+than the mode tabs, so the chosen preset can use the same selected pill and
+still read as the lesser choice.
 
 **Mid-pick draft lifecycle**: between the two custom clicks the incomplete
 range is internal UI state — it is never emitted through `onSelect`. The

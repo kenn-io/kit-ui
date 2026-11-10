@@ -201,7 +201,7 @@ its resting surfaces keep today's look.
 ### Selected state
 
 - **Choice groups** (SegmentedControl, DateRangePicker's mode tabs, TopBar tabs): the chosen option is one raised pill from the `--selected-strong-*` tokens: the white surface lifted by a hairline and a soft shadow in light, and a lighter fill with a faint edge in dark. Selected text is primary ink at medium weight. Inside a dark popover the pill steps up again so it still stands out on the lighter popover surface.
-- **Sub-choices** (DateRangePicker's presets under its mode tabs): a narrower tray hangs from the tabs' bottom edge, and the chosen option is a flat 8% primary-ink tint, so only the chosen mode is raised.
+- **Sub-choices** (DateRangePicker's presets under its mode tabs): a lower tier tucked flush under the tabs, square on top and inset so the tabs overhang it, with a contact line and a quieter fill. Its options use the same selected pill, and hierarchy comes from a step down in height, type, and inset.
 - **Navigation rows** (SettingsLayout, AppSidebar) keep Action Blue ink for the current row; `--selected-list-bg` fills it.
 
 ### Chips

@@ -548,69 +548,79 @@
     margin-bottom: var(--space-4);
   }
 
-  /* Two levels of one choice: the mode tabs on top, and the chosen mode's
-   * options in a narrower tray that hangs from their bottom edge. The tray
-   * shares the track's fill, is inset from both ends, and joins the track
-   * with concave corners, so it reads as coming out of the mode control
-   * rather than as a second copy of it. Its options are smaller and flat;
-   * the chosen one is a quiet tint, so the raised pill marks only the
-   * chosen mode. */
+  /* Two tiers of one choice. The mode tabs are the primary control; the
+   * chosen mode's options hang under them as a lower tier. The tier starts
+   * flush against the track's bottom edge with a straight, square top, and
+   * is inset so the track overhangs it on both sides. Its top row is one
+   * contact line across its full width, drawn over a quiet hairline ring so
+   * the top corners stay square (a border join would leave a blended corner
+   * pixel). Its fill, height, and type sit a step below the track; radii,
+   * flat options, and the shared selected pill match SegmentedControl. */
   .kit-date-range-picker__tabs:has(+ .kit-date-range-picker__pills) {
     margin-bottom: 0;
   }
 
   .kit-date-range-picker__pills {
-    --kit-date-range-picker-fillet: 6px;
-    position: relative;
+    --kit-date-range-picker-presets-radius: var(--kit-control-radius, var(--radius-sm));
+    --kit-date-range-picker-presets-fill: color-mix(
+      in srgb,
+      var(--bg-inset) 68%,
+      var(--bg-popover, var(--bg-surface))
+    );
+    --kit-date-range-picker-presets-edge: color-mix(
+      in srgb,
+      var(--border-default) 50%,
+      var(--border-muted)
+    );
+    --kit-date-range-picker-presets-contact: color-mix(
+      in srgb,
+      var(--border-default) 75%,
+      var(--border-muted)
+    );
     display: flex;
-    gap: var(--space-1);
-    margin: 0 var(--space-5);
-    padding: 3px var(--space-2) var(--space-2);
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    background: var(--bg-inset);
-    box-shadow: var(--shadow-sunken, none);
+    gap: 1px;
+    margin: 0 calc(var(--space-6) + 4px);
+    /* One pixel more above and below than the track, for the contact line
+     * and so tier fill shows around the chosen preset. */
+    padding: 3px;
+    border-radius: 0 0 var(--kit-date-range-picker-presets-radius)
+      var(--kit-date-range-picker-presets-radius);
+    background: var(--kit-date-range-picker-presets-fill);
+    /* The first shadow paints on top: the contact line covers the ring's
+     * top row, corners included. */
+    box-shadow:
+      inset 0 1px 0 var(--kit-date-range-picker-presets-contact),
+      inset 0 0 0 1px var(--kit-date-range-picker-presets-edge);
   }
 
-  /* Concave corners where the tray meets the track. The hard-stop radial
-   * gradient is a shape mask (a filled corner with a quarter circle cut
-   * out), not a color gradient. */
-  .kit-date-range-picker__pills::before,
-  .kit-date-range-picker__pills::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    width: var(--kit-date-range-picker-fillet);
-    height: var(--kit-date-range-picker-fillet);
-    pointer-events: none;
-  }
-
-  .kit-date-range-picker__pills::before {
-    right: 100%;
-    background: radial-gradient(
-      circle at 0 100%,
-      transparent calc(var(--kit-date-range-picker-fillet) - 0.5px),
-      var(--bg-inset) var(--kit-date-range-picker-fillet)
+  /* Dark: the tier sits a step above the near-black track with a quiet
+   * outline, and a near-black contact line shows the track resting on it. */
+  :global(:root.dark) .kit-date-range-picker__pills {
+    --kit-date-range-picker-presets-fill: color-mix(
+      in srgb,
+      var(--bg-inset) 35%,
+      var(--bg-popover, var(--bg-surface))
     );
-  }
-
-  .kit-date-range-picker__pills::after {
-    left: 100%;
-    background: radial-gradient(
-      circle at 100% 100%,
-      transparent calc(var(--kit-date-range-picker-fillet) - 0.5px),
-      var(--bg-inset) var(--kit-date-range-picker-fillet)
+    --kit-date-range-picker-presets-edge: color-mix(
+      in srgb,
+      var(--text-primary) 17%,
+      var(--bg-surface)
     );
+    --kit-date-range-picker-presets-contact: color-mix(in srgb, #000 55%, transparent);
   }
 
   .kit-date-range-picker__pill {
     flex: 1;
-    height: 24px;
+    height: 17px;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: max(0px, calc(var(--kit-date-range-picker-presets-radius) - 1px));
     background: transparent;
+    /* The same ink as the unselected mode tabs. */
     color: var(--text-muted);
     font-family: inherit;
-    font-size: var(--font-size-xs);
+    /* A step below the mode labels, so the shared selected pill on a
+     * preset still reads as the lesser choice. */
+    font-size: calc(var(--kit-control-font-size, var(--font-size-xs)) - 1px);
     font-weight: 400;
     cursor: pointer;
     transition:
@@ -622,12 +632,11 @@
     color: var(--text-primary);
   }
 
-  /* A flat tint with primary ink: clearly picked, but quieter than the
-   * raised mode pill above it. */
   .kit-date-range-picker__pill.active {
-    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+    background: var(--selected-strong-bg);
     color: var(--text-primary);
-    font-weight: var(--font-weight-medium, 500);
+    font-weight: var(--selected-strong-weight);
+    box-shadow: var(--shadow-raised, var(--selected-strong-edge));
   }
 
   .kit-date-range-picker__calendar {
