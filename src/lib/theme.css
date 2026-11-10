@@ -155,6 +155,22 @@
   --selected-list-bg: var(--bg-surface-hover);
 }
 
+/* Muted ink is tuned for the page surface. A dark popover is lighter than
+ * that, and its hovered row lighter again, which took muted text on a
+ * hovered or highlighted row (an option's detail, a count) to 3.7:1. Inside
+ * a dark popover muted ink steps toward the primary ink by a quarter: about
+ * the contrast it has on the page while the row rests, and above 4.5:1 on
+ * the hover fill. It stays quieter than secondary ink. The mix is resolved
+ * on the root, where --text-muted is still the theme's own value, because a
+ * property cannot be defined from itself. */
+:root.dark {
+  --text-muted-popover: color-mix(in srgb, var(--text-primary) 25%, var(--text-muted));
+}
+
+:root.dark :is(.kit-popover-card, .kit-modal-panel) {
+  --text-muted: var(--text-muted-popover);
+}
+
 /* The default Card's edge. In light the white surface sits close to the
  * page color, and the muted border vanished there. The card takes an edge
  * midway between the muted and default borders: visible, but a step under
