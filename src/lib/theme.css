@@ -143,6 +143,17 @@
     0 1px 2px color-mix(in srgb, #000 40%, transparent);
 }
 
+/* Hover lightens everywhere in dark. The page's hover fill is darker than
+ * the popover surface, so a row hovered inside a popover would read as a
+ * dent. Inside a popover the hover fill, and the quiet selected fills that
+ * follow it, step up from the popover surface instead. --bg-inset stays as
+ * it is: it is darker than the popover, so a well still reads as a well. */
+:root.dark .kit-popover-card {
+  --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-popover));
+  --selected-bg: var(--bg-surface-hover);
+  --selected-list-bg: var(--bg-surface-hover);
+}
+
 /* The default Card's edge. In light the white surface sits close to the
  * page color, so the card takes the default border to keep a visible but
  * calm edge; dark keeps the muted one. */

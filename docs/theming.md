@@ -239,10 +239,18 @@ custom active transforms rather than rejecting native buttons.
 **Popover chrome**: every transient floating surface (dropdown menus,
 typeahead lists, filter panels, the range-picker panel, tooltips, toasts,
 FindBar) uses the same card, shipped as the **`.kit-popover-card`** class
-in theme.css: `border: 1px solid var(--border-default); border-radius:
+in theme.css: `border: 1px solid var(--border-popover); border-radius:
 var(--radius-md); box-shadow: var(--shadow-lg); background:
-var(--bg-surface)`. Reuse the class for custom popovers — `kit-ui-check`
+var(--bg-popover)`. Reuse the class for custom popovers — `kit-ui-check`
 flags a hand-written copy of the recipe (`hand-rolled-popover-card`).
+
+In dark, the card also redefines `--bg-surface-hover` for everything inside
+it: 8% of `--text-primary` over `--bg-popover`. The page's hover fill is
+darker than the popover surface, so without this a hovered row would read as
+a dent. `--selected-bg` and `--selected-list-bg` follow the same fill.
+`--bg-inset` is unchanged, so a well inside a popover is still darker than
+the popover. Content in a custom popover gets this from the class; do not
+hard-code a hover color there.
 
 **Stacking**: three z tokens in theme.css order the layers —
 `--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`

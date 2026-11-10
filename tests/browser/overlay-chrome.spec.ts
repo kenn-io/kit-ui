@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoPage, resolvedStyle, setTheme } from "./helpers.js";
+import { gotoPage, luminanceOf, resolvedStyle, setTheme } from "./helpers.js";
 
 // Transient surfaces share one chrome: the --shadow-lg lift, and in dark a
 // lighter raised popover surface with a lighter edge, since a shadow alone
@@ -50,3 +50,35 @@ test("a modal lifts like a popover and its panel shows no focus ring", async ({ 
   await panel.focus();
   await expect(panel).toHaveCSS("outline-style", "none");
 });
+
+// The page's dark hover fill is darker than the popover surface, so a
+// popover takes its own hover fill. Hover lightens everywhere in dark.
+for (const highContrast of [false, true]) {
+  test(`a hovered row in a dark popover is lighter than the popover${
+    highContrast ? " in high contrast" : ""
+  }`, async ({ page }) => {
+    await gotoPage(page, "select-dropdown");
+    await setTheme(page, { dark: true, highContrast });
+    await page.locator(".kit-select-dropdown__trigger").first().click();
+    const panel = page.locator(".kit-popover-card").first();
+    await expect(panel).toBeVisible();
+    const row = panel.locator(".kit-select-dropdown__option:not(.selected)").first();
+    const resting = (await luminanceOf(row)).background;
+    expect(resting).toBe((await luminanceOf(panel)).background);
+
+    await row.hover();
+    await expect
+      .poll(async () => (await luminanceOf(row)).background)
+      .toBeGreaterThan(resting + 0.01);
+
+    // A well inside the popover stays darker than the popover.
+    await panel.evaluate((el) => {
+      const well = document.createElement("span");
+      well.dataset.testWellProbe = "";
+      well.style.background = "var(--bg-inset)";
+      el.append(well);
+    });
+    const well = (await luminanceOf(panel.locator("[data-test-well-probe]"))).background;
+    expect(well).toBeLessThan((await luminanceOf(panel)).background);
+  });
+}
