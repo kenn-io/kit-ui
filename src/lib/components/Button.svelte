@@ -350,6 +350,36 @@
     border-color: color-mix(in srgb, var(--accent-blue) 78%, #000);
   }
 
+  /* Disabled solid. Fading the whole button to half opacity left a pale
+   * accent block that read as enabled at a glance, with a label too faint
+   * to read. Instead a disabled solid keeps a faint fill and edge in its
+   * tone, so it still reads as the panel's main action, and takes the same
+   * --disabled-ink as a disabled secondary, so the two read as equally
+   * unavailable side by side. Busy buttons are not :disabled and keep
+   * their resting look. */
+  .kit-button--solid {
+    --kit-button-tone: var(--accent-blue);
+  }
+  .kit-button--solid.kit-button--danger {
+    --kit-button-tone: var(--accent-red);
+  }
+  .kit-button--solid.kit-button--success {
+    --kit-button-tone: var(--accent-green);
+  }
+  .kit-button--solid.kit-button--neutral {
+    --kit-button-tone: var(--text-primary);
+  }
+  .kit-button--solid.kit-button--workflow {
+    --kit-button-tone: var(--accent-purple);
+  }
+  .kit-button.kit-button--solid:disabled {
+    opacity: 1;
+    background: color-mix(in srgb, var(--kit-button-tone) 12%, var(--bg-surface));
+    border-color: color-mix(in srgb, var(--kit-button-tone) 24%, var(--disabled-edge));
+    color: color-mix(in srgb, var(--kit-button-tone) 18%, var(--disabled-ink));
+    box-shadow: none;
+  }
+
   /* Success soft — approve. Toned soft/outline ink mixes 72% toward
    * --text-primary (the shared band-ink recipe from theme.css): the raw
    * light-theme accents sit below AA for 13px text on white and tinted

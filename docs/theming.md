@@ -23,7 +23,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                                                       |
 | Borders     | `--border-default`, `--border-muted`                                                                                                                                                     |
 | Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                                                     |
-| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`                                                                                  |
+| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`, `--accent-orange`                                                               |
 | Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                                                        |
 | Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                              |
 | Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                       |
@@ -36,7 +36,13 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                              |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
-amber = warning, purple = merged/workflow, teal = workspace.
+amber = warning, orange = a warning that is not a failure (StatusDot
+`unclean`), purple = merged/workflow, teal = workspace. `--accent-orange`
+defaults to a mix of the theme's amber and red; set it to pin a color.
+
+Disabled controls read `--disabled-ink` and `--disabled-edge`. A disabled
+solid button keeps a faint fill and edge in its tone at full opacity, with
+`--disabled-ink` label text.
 
 One deliberate exception to "tokens only": pure `#000`/`#fff` **inside
 `color-mix()`** are permitted as shade math (darken-on-hover, derive an ink

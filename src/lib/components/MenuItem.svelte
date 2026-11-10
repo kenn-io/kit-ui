@@ -114,6 +114,16 @@
     cursor: pointer;
   }
 
+  /* A disabled item often carries its reason ("Import unavailable in
+     read-only mode"). Muted ink at full opacity keeps it clearly disabled
+     beside the secondary ink of enabled items while the reason stays
+     readable. The class repeats to beat the shared half-opacity dimming in
+     theme.css. */
+  .kit-menu__item.kit-menu__item[aria-disabled="true"] {
+    opacity: 1;
+    color: var(--text-muted);
+  }
+
   /* Moving the pointer over an item focuses it, so focus alone drives the
      fill. Filling on :hover too would leave two items lit when the pointer
      rests on one and the arrow keys move to another. */

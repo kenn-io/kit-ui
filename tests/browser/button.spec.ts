@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { gotoPage } from "./helpers";
+import { contrastOf, gotoPage, resolvedStyle, setTheme } from "./helpers";
 
 test("kit-control-states preserves native structural controls and shared interaction states", async ({
   page,
@@ -440,4 +440,34 @@ test("a busy button is named by busyLabel, falling back to its label", async ({ 
   await page.getByRole("switch", { name: "All busy" }).check();
   await expect(refresh).toHaveAccessibleName("Refreshing");
   await expect(save).toHaveAccessibleName("Save changes");
+});
+
+test("a disabled solid button keeps a faint tone fill and a readable label", async ({ page }) => {
+  await gotoPage(page, "button");
+  const enabled = page.getByRole("button", { name: "Save", exact: true }).last();
+  const disabled = page.getByRole("button", { name: "Save draft" });
+
+  for (const dark of [false, true]) {
+    await setTheme(page, { dark });
+    // The theme switch starts color transitions; read the settled styles.
+    await page.evaluate(() => {
+      for (const a of document.getAnimations()) if (a instanceof CSSTransition) a.finish();
+    });
+    const surface = await resolvedStyle(page, "background-color", "var(--bg-surface)");
+    const style = await disabled.evaluate((el) => ({
+      opacity: getComputedStyle(el).opacity,
+      background: getComputedStyle(el).backgroundColor,
+    }));
+    const enabledBackground = await enabled.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+    // Full opacity: no half-faded accent block.
+    expect(style.opacity).toBe("1");
+    // A faint fill of its own: neither the surface nor the enabled accent.
+    expect(style.background).not.toBe(surface);
+    expect(style.background).not.toBe(enabledBackground);
+    // The label stays legible on the fill, unlike the old half-opacity look.
+    expect(await contrastOf(disabled)).toBeGreaterThan(2);
+    // But it reads as disabled: well below the enabled button's contrast.
+    expect(await contrastOf(disabled)).toBeLessThan(await contrastOf(enabled));
+  }
 });

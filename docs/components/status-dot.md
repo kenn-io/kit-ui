@@ -7,7 +7,7 @@ agentsview and decoupled from its session store — you pass the computed status
 - `waiting` — Waiting Gold speech bubble ("your turn")
 - `idle` — smaller muted-green dot (recently active)
 - `stale` — amber
-- `unclean` — red
+- `unclean` — orange (`--accent-orange`): a warning, not a failure
 - `quiet` — invisible placeholder (keeps row alignment)
 
 ```svelte

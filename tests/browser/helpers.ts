@@ -122,6 +122,12 @@ export function contrastBetween(a: number, b: number): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** WCAG 2.x contrast between two computed colors, such as a status dot's
+ * fill and the surface under it. */
+export function colorContrast(a: string, b: string): number {
+  return contrastBetween(luminance(parseColor(a)), luminance(parseColor(b)));
+}
+
 /** Read what the page copies. Chromium grants real clipboard access;
  * Firefox and WebKit offer no clipboard permission to automation, so
  * there the page's writeText is recorded instead. Call before copying. */
