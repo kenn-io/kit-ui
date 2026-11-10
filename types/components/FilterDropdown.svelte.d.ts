@@ -4,6 +4,9 @@ export interface FilterDropdownItem {
     label: string;
     description?: string;
     active: boolean;
+    /** The row filters its option out. An excluded row shows a cross where
+     * an active row shows a tick; `active` should be false. */
+    excluded?: boolean;
     color?: string;
     count?: number;
     disabled?: boolean;
@@ -39,6 +42,8 @@ interface Props {
     selectAllLabel?: string;
     deselectAllLabel?: string;
     emptyLabel?: string;
+    /** Screen-reader text appended to an excluded row's name. */
+    excludedLabel?: string;
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";

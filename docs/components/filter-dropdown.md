@@ -55,6 +55,7 @@ otherwise.
 | `onSelectAll` / `onDeselectAll`       | `() => void`                   | —                                 | Bulk action row (either shows it)          |
 | `selectAllLabel` / `deselectAllLabel` | `string`                       | `"Select all"` / `"Deselect all"` |                                            |
 | `emptyLabel`                          | `string`                       | `"No matches"`                    | Shown when search filters everything out   |
+| `excludedLabel`                       | `string`                       | `"excluded"`                      | Screen-reader text on an excluded row      |
 | `minWidth`                            | `string`                       | `"200px"`                         | Panel min-width                            |
 | `align`                               | `"start" \| "end"`             | `"start"`                         | Panel alignment relative to trigger        |
 | `icon`                                | `"filter" \| "sort" \| "more"` | `"filter"`                        | Trigger icon                               |
@@ -67,6 +68,7 @@ interface FilterDropdownItem {
   id: string;
   label: string;
   active: boolean; // checked state — you own the selection model
+  excluded?: boolean; // filters the option out: a red cross instead of the tick
   onSelect: () => void; // toggle in your state
   description?: string; // tooltip + aria-describedby
   color?: string; // dot color when active
@@ -77,6 +79,15 @@ interface FilterDropdownItem {
   submenu?: Snippet; // flyout content; the row opens it instead of calling onSelect
 }
 ```
+
+## Excluded rows
+
+A row can filter its option out as well as in. Set `excluded` instead of
+`active` and the row shows a red cross where an active row shows a tick, stays
+undimmed, and appends `excludedLabel` to its accessible name. `aria-pressed` is
+`true` for both active and excluded rows. The component stores no state: cycle
+neutral, active, excluded in `onSelect`. Rows that never set `excluded` are
+plain on/off toggles.
 
 ## Submenu rows
 
