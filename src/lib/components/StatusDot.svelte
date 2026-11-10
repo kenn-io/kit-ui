@@ -100,8 +100,10 @@
     background: var(--accent-amber, #f59e0b);
   }
 
+  /* An unclean ending is a warning, not a failure: orange keeps it apart
+     from the amber stale dot and from red errors. */
   .kit-status-dot--unclean {
-    background: var(--accent-red, #ef4444);
+    background: var(--accent-orange);
   }
 
   .kit-status-dot--quiet {

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gotoPage } from "./helpers";
+import { gotoPage, resolvedStyle } from "./helpers";
 
 test("action menu manages focus, disabled items, selection, and dismissal", async ({ page }) => {
   await gotoPage(page, "menu");
@@ -270,4 +270,19 @@ test("only the focused item is filled when the pointer rests on another", async 
   await expect(remove).toBeFocused();
   await expect(remove).toHaveCSS("background-color", fill);
   await expect(move).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});
+
+test("a disabled menu item stays at full opacity in muted ink", async ({ page }) => {
+  await gotoPage(page, "menu");
+  await page.getByRole("button", { name: "Task actions" }).click();
+  const archive = page.getByRole("menuitem", { name: "Archive issue" });
+  const move = page.getByRole("menuitem", { name: "Move issue" });
+
+  await expect(archive).toHaveCSS("opacity", "1");
+  await expect(archive).toHaveCSS("color", await resolvedStyle(page, "color", "var(--text-muted)"));
+  // Still a step below an enabled item, so it reads as unavailable.
+  await page.mouse.move(0, 0);
+  await archive.focus();
+  const enabledInk = await move.evaluate((el) => getComputedStyle(el).color);
+  expect(enabledInk).not.toBe(await archive.evaluate((el) => getComputedStyle(el).color));
 });

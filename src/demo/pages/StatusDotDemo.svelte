@@ -14,7 +14,7 @@
 
 <DemoSection
   title="Session states"
-  description="Tiny presence indicator: solid green while working, a speech bubble when the agent is waiting on the user, amber for stale, red for unclean."
+  description="Tiny presence indicator: solid green while working, a speech bubble when the agent is waiting on the user, amber for stale, orange for an unclean ending."
   code={`<StatusDot status="working" label="Working" />
 <StatusDot status="waiting" label="Your turn" />
 <StatusDot status="stale" />`}

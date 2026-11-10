@@ -184,6 +184,31 @@
   --card-border: var(--border-muted);
 }
 
+/* Orange: a warning that is not an error, such as a session that ended
+ * without a clean shutdown. It sits between the theme's amber (stale,
+ * caution) and red (failure), so every theme gets an orange that matches
+ * its palette. An app can set --accent-orange to a fixed color instead.
+ * Declared on :root, the same element themes set their accents on, so the
+ * mix uses the active theme's amber and red. */
+:root {
+  --accent-orange: color-mix(in srgb, var(--accent-amber) 55%, var(--accent-red));
+}
+
+/* Disabled controls. A disabled secondary uses faded muted ink and a faint
+ * edge. A disabled primary keeps a faint accent fill and edge, so it still
+ * reads as the panel's main action, with the same ink as a disabled
+ * secondary, so the two read as equally unavailable side by side. Dark
+ * takes more muted ink so the label stays readable on the near-black
+ * surface. */
+:root {
+  --disabled-ink: color-mix(in srgb, var(--text-muted) 58%, var(--bg-surface));
+  --disabled-edge: var(--border-muted);
+}
+
+:root.dark {
+  --disabled-ink: color-mix(in srgb, var(--text-muted) 68%, var(--bg-surface));
+}
+
 /* Icon line weight. Lucide scales its stroke with the icon, so one
  * strokeWidth draws thin on a 12px icon and heavy on a 24px one. Here the
  * stroke does not scale: every icon draws the same 1.2px line at any

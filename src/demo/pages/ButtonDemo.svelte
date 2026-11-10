@@ -257,12 +257,16 @@
   code={`<Button label="Small" size="sm" />
 <Button label="Medium" size="md" />
 <Button label="Large" size="lg" />
-<Button label="Disabled" disabled />`}
+<Button label="Disabled" disabled />
+<Button label="Save" tone="info" surface="solid" />
+<Button label="Save draft" tone="info" surface="solid" disabled />`}
 >
   <Button label="Small" size="sm" />
   <Button label="Medium" size="md" />
   <Button label="Large" size="lg" />
   <Button label="Disabled" disabled />
+  <Button label="Save" tone="info" surface="solid" />
+  <Button label="Save draft" tone="info" surface="solid" disabled />
 </DemoSection>
 
 <DemoSection

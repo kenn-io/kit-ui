@@ -90,6 +90,12 @@
     cursor: pointer;
   }
 
+  /* Same disabled look as MenuItem: muted ink at full opacity. */
+  .kit-menu__item.kit-menu__item[aria-disabled="true"] {
+    opacity: 1;
+    color: var(--text-muted);
+  }
+
   .kit-menu__item:hover:not([aria-disabled="true"]),
   .kit-menu__item:focus-visible {
     background: var(--bg-surface-hover);

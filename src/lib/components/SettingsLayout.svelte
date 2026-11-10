@@ -244,13 +244,13 @@
 
   .kit-settings__nav-item--active {
     background: var(--selected-list-bg);
-    color: var(--accent-blue);
+    color: var(--text-primary);
     font-weight: 650;
   }
 
   .kit-settings__nav-item--active:hover {
     background: var(--selected-list-bg);
-    color: var(--accent-blue);
+    color: var(--text-primary);
   }
 
   .kit-settings__content {
