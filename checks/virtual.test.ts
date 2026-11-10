@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { offsetOfIndex, virtualSlice, visibleWindow } from "../src/lib/components/virtual.js";
+import {
+  offsetOfIndex,
+  RowHeights,
+  virtualSlice,
+  visibleWindow,
+} from "../src/lib/components/virtual.js";
 
 const fixed = (h: number) => () => h;
 
@@ -168,5 +173,72 @@ describe("visibleWindow", () => {
       scrollTop: 0,
       viewport: 0,
     });
+  });
+});
+
+describe("RowHeights", () => {
+  const idsOf = (list: { id: string }[]) => list.map((row) => row.id);
+  const rows = (...ids: string[]) => ids.map((id) => ({ id }));
+
+  test("keyed heights follow their rows through an insert above them", () => {
+    const heights = new RowHeights<{ id: string }>();
+    heights.sync(rows("a", "b", "c"), idsOf(rows("a", "b", "c")));
+    heights.set(0, 30);
+    heights.set(1, 120);
+    heights.set(2, 45);
+    // A detail row opens under "a", pushing "b" and "c" down one index.
+    expect(
+      heights.sync(rows("a", "a:detail", "b", "c"), idsOf(rows("a", "a:detail", "b", "c"))),
+    ).toBe(false);
+    expect([0, 1, 2, 3].map((i) => heights.get(i))).toEqual([30, undefined, 120, 45]);
+  });
+
+  test("keyed heights survive appends and reorders, and drop removed rows", () => {
+    const heights = new RowHeights<{ id: string }>();
+    heights.sync(rows("a", "b"), idsOf(rows("a", "b")));
+    heights.set(0, 30);
+    heights.set(1, 60);
+    heights.sync(rows("b", "a", "c"), idsOf(rows("b", "a", "c")));
+    expect([0, 1, 2].map((i) => heights.get(i))).toEqual([60, 30, undefined]);
+    heights.sync(rows("a"), idsOf(rows("a")));
+    // "b" was removed, so coming back it is measured afresh.
+    heights.sync(rows("a", "b"), idsOf(rows("a", "b")));
+    expect([0, 1].map((i) => heights.get(i))).toEqual([30, undefined]);
+  });
+
+  test("keyed heights follow rows appended and inserted into the same array", () => {
+    const heights = new RowHeights<{ id: string }>();
+    const list = rows("a", "b");
+    heights.sync(list, idsOf(list));
+    heights.set(0, 30);
+    heights.set(1, 120);
+    // A reactive array changed in place keeps its identity; its keys are new.
+    list.push({ id: "c" }, { id: "d" });
+    heights.sync(list, idsOf(list));
+    expect([0, 1, 2, 3].map((i) => heights.get(i))).toEqual([30, 120, undefined, undefined]);
+    heights.set(2, 45);
+    heights.set(3, 80);
+    list.splice(1, 0, { id: "a:detail" });
+    heights.sync(list, idsOf(list));
+    expect([0, 1, 2, 3, 4].map((i) => heights.get(i))).toEqual([30, undefined, 120, 45, 80]);
+  });
+
+  test("index heights are dropped for a new array, which may name other rows", () => {
+    const heights = new RowHeights<{ id: string }>();
+    const first = rows("a", "b");
+    expect(heights.sync(first)).toBe(false);
+    heights.set(0, 30);
+    expect(heights.sync(first)).toBe(false);
+    expect(heights.get(0)).toBe(30);
+    expect(heights.sync(rows("b", "a"))).toBe(true);
+    expect(heights.get(0)).toBeUndefined();
+  });
+
+  test("set reports only a changed height", () => {
+    const heights = new RowHeights<{ id: string }>();
+    heights.sync(rows("a"), idsOf(rows("a")));
+    expect(heights.set(0, 30)).toBe(true);
+    expect(heights.set(0, 30)).toBe(false);
+    expect(heights.set(0, 31)).toBe(true);
   });
 });

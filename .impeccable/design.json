@@ -155,7 +155,7 @@
       "refersTo": "button-secondary",
       "description": "Neutral outline — cancel and secondary actions.",
       "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
-      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; min-height: 28px; background: var(--bg-inset, #ecedf2); color: var(--text-secondary, #555b6e); border: 1px solid var(--border-default, #d8dae2); border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: 500; line-height: 1; cursor: pointer; transition: background-color 0.12s ease, color 0.12s ease; } .ds-btn-secondary:hover { background: var(--bg-surface-hover, #f0f1f4); color: var(--text-primary, #181b24); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--accent-blue, #2563eb); outline-offset: 1px; }"
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; min-height: 28px; background: var(--bg-inset, #ecedf2); color: var(--text-secondary, #474d5f); border: 1px solid var(--border-default, #d8dae2); border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: 500; line-height: 1; cursor: pointer; transition: background-color 0.12s ease, color 0.12s ease; } .ds-btn-secondary:hover { background: var(--bg-surface-hover, #f0f1f4); color: var(--text-primary, #181b24); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--accent-blue, #2563eb); outline-offset: 1px; }"
     },
     {
       "name": "Text Input",
@@ -163,7 +163,7 @@
       "refersTo": "input",
       "description": "Wrapper-focus text field; border shifts to Action Blue on focus-within.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Filter sessions…\" />",
-      "css": ".ds-input { background: var(--bg-surface, #fff); color: var(--text-primary, #181b24); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; transition: border-color 0.12s ease; } .ds-input::placeholder { color: var(--text-muted, #878ea0); } .ds-input:focus { outline: none; border-color: var(--accent-blue, #2563eb); }"
+      "css": ".ds-input { background: var(--bg-surface, #fff); color: var(--text-primary, #181b24); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; transition: border-color 0.12s ease; } .ds-input::placeholder { color: var(--text-muted, #62687c); } .ds-input:focus { outline: none; border-color: var(--accent-blue, #2563eb); }"
     },
     {
       "name": "Toned Chip",
@@ -179,7 +179,7 @@
       "refersTo": "popover-card",
       "description": "The one chrome for every transient floating surface.",
       "html": "<div class=\"ds-popover\"><div class=\"ds-popover__item ds-popover__item--active\">Open session</div><div class=\"ds-popover__item\">Copy id</div><div class=\"ds-popover__item\">Archive</div></div>",
-      "css": ".ds-popover { background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: 4px; width: 200px; font-size: 13px; } .ds-popover__item { padding: 5px 8px; border-radius: 4px; color: var(--text-secondary, #555b6e); cursor: pointer; } .ds-popover__item:hover { background: var(--bg-surface-hover, #f0f1f4); color: var(--text-primary, #181b24); } .ds-popover__item--active { background: color-mix(in srgb, var(--accent-blue, #2563eb) 12%, transparent); color: var(--accent-blue, #2563eb); font-weight: 600; }"
+      "css": ".ds-popover { background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #d8dae2); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: 4px; width: 200px; font-size: 13px; } .ds-popover__item { padding: 5px 8px; border-radius: 4px; color: var(--text-secondary, #474d5f); cursor: pointer; } .ds-popover__item:hover { background: var(--bg-surface-hover, #f0f1f4); color: var(--text-primary, #181b24); } .ds-popover__item--active { background: color-mix(in srgb, var(--accent-blue, #2563eb) 12%, transparent); color: var(--accent-blue, #2563eb); font-weight: 600; }"
     },
     {
       "name": "Status Dot",
@@ -187,7 +187,7 @@
       "refersTo": "button-primary",
       "description": "Signature session-state indicator with the waiting-gold pulse.",
       "html": "<span class=\"ds-status\"><span class=\"ds-status__dot\"></span> waiting for you</span>",
-      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary, #555b6e); } .ds-status__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-waiting, #a48a55); box-shadow: 0 0 0 0 rgba(164,138,85,0.5); animation: ds-pulse 2s infinite; } @keyframes ds-pulse { 0% { box-shadow: 0 0 0 0 rgba(164,138,85,0.4); } 70% { box-shadow: 0 0 0 6px rgba(164,138,85,0); } 100% { box-shadow: 0 0 0 0 rgba(164,138,85,0); } }"
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary, #474d5f); } .ds-status__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-waiting, #a48a55); box-shadow: 0 0 0 0 rgba(164,138,85,0.5); animation: ds-pulse 2s infinite; } @keyframes ds-pulse { 0% { box-shadow: 0 0 0 0 rgba(164,138,85,0.4); } 70% { box-shadow: 0 0 0 6px rgba(164,138,85,0); } 100% { box-shadow: 0 0 0 0 rgba(164,138,85,0); } }"
     }
   ],
   "narrative": {

@@ -152,9 +152,12 @@
     --kit-card-shadow: none;
   }
 
+  /* --card-border (theme.css) sits midway between the muted and default
+   * borders in light, where the surface sits close to the page and a muted
+   * edge vanished. It is the muted border in dark. */
   .kit-card--default {
     --kit-card-bg: var(--bg-surface);
-    --kit-card-border: var(--border-muted);
+    --kit-card-border: var(--card-border);
     --kit-card-radius: var(--radius-md);
     --kit-card-shadow: none;
   }

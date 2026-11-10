@@ -767,10 +767,16 @@
 /* Icon line weight follows the theme's type: hairline strokes next to
  * Lora's serifs, thick marker strokes next to zine's poster weights. CSS
  * stroke-width beats the SVG presentation attribute, so under an identity
- * theme every lucide icon is unified to the theme's weight (per-icon
- * strokeWidth props apply only in the default pair). */
+ * theme every lucide icon is unified to the theme's weight, in lucide's
+ * own 24-unit box, so the line scales with the icon. The default pair
+ * instead draws one fixed line at every size (theme.css); the second rule
+ * turns that off here. */
 :root[data-kit-theme] svg.lucide {
   stroke-width: var(--icon-stroke, 2);
+}
+
+:root[data-kit-theme] svg.lucide > * {
+  vector-effect: none;
 }
 
 /* Control Room — engineering grid; dark adds the console's cyan cast. */

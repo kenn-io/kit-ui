@@ -69,6 +69,16 @@
 </DemoSection>
 
 <DemoSection
+  title="Small, in a page toolbar"
+  description="Use size=&quot;sm&quot; for a smaller, quieter refresh icon beside the update time in page toolbars."
+  code={`<RefreshControl size="sm" {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh" />`}
+>
+  <div data-testid="refresh-control-sm">
+    <RefreshControl size="sm" {lastUpdatedAt} {busy} onRefresh={refresh} label="Refresh" />
+  </div>
+</DemoSection>
+
+<DemoSection
   title="Fixed-width age label"
   description="ageWidthSamples reserves the widest string the label can show, so swapping variants never shifts the element after the control. Text longer than every sample clips with an ellipsis instead of growing the box."
   code={`<RefreshControl

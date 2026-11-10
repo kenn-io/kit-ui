@@ -33,17 +33,18 @@ Import `RefreshReason` to annotate handlers with the shared reason type.
 
 ## Props
 
-| Prop              | Type                                                     | Default            | Notes                                                 |
-| ----------------- | -------------------------------------------------------- | ------------------ | ----------------------------------------------------- |
-| `lastUpdatedAt`   | `number \| null`                                         | required           | Epoch ms of last successful fetch                     |
-| `onRefresh`       | `(reason: RefreshReason) => void`                        | required           | Click passes `"manual"`; interval passes `"auto"`     |
-| `busy`            | `boolean`                                                | `false`            | Spins the icon, disables the button                   |
-| `label`           | `string`                                                 | `"Refresh"`        | aria-label                                            |
-| `title`           | `string`                                                 | `label`            | Tooltip                                               |
-| `intervalMs`      | `number`                                                 | `300000` (5 min)   | Read once at mount                                    |
-| `formatAge`       | `(lastUpdatedAt: number \| null, now: number) => string` | `formatRefreshAge` | Renders the age label; see below                      |
-| `locale`          | `string`                                                 | browser locale     | BCP 47 tag for the timestamp tooltip on the age label |
-| `ageWidthSamples` | `readonly string[]`                                      | content width      | Reserves the age box width; see below                 |
+| Prop              | Type                                                     | Default            | Notes                                                                                  |
+| ----------------- | -------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------- |
+| `lastUpdatedAt`   | `number \| null`                                         | required           | Epoch ms of last successful fetch                                                      |
+| `onRefresh`       | `(reason: RefreshReason) => void`                        | required           | Click passes `"manual"`; interval passes `"auto"`                                      |
+| `busy`            | `boolean`                                                | `false`            | Spins the icon, disables the button                                                    |
+| `label`           | `string`                                                 | `"Refresh"`        | aria-label                                                                             |
+| `title`           | `string`                                                 | `label`            | Tooltip                                                                                |
+| `intervalMs`      | `number`                                                 | `300000` (5 min)   | Read once at mount                                                                     |
+| `formatAge`       | `(lastUpdatedAt: number \| null, now: number) => string` | `formatRefreshAge` | Renders the age label; see below                                                       |
+| `locale`          | `string`                                                 | browser locale     | BCP 47 tag for the timestamp tooltip on the age label                                  |
+| `ageWidthSamples` | `readonly string[]`                                      | content width      | Reserves the age box width; see below                                                  |
+| `size`            | `"sm" \| "md"`                                           | `"md"`             | `sm`: a 24px button with a 12px muted glyph set 2px from the status, for page toolbars |
 
 ## Localization
 

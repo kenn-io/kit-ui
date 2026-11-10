@@ -119,11 +119,14 @@
     z-index: var(--z-overlay);
   }
 
+  /* A modal is a transient floating surface, so it takes the popover
+   * surface and edge: the plain surface in light, a lighter one in dark,
+   * where it would otherwise sit dimmer than a menu behind the scrim. */
   .kit-modal-panel {
-    background: var(--bg-surface);
-    border: var(--border-width) solid var(--border-default);
+    background: var(--bg-popover);
+    border: var(--border-width) solid var(--border-popover);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     /* No overflow: hidden — the header must be able to overlay the
      * panel's border (see the band comment below); children clip their
      * own corners instead. */
@@ -161,7 +164,7 @@
      * as a bug (the tone applies to the toned region's whole border
      * area, same principle as the borderless SegmentedControl). */
     margin: calc(-1 * var(--border-width)) calc(-1 * var(--border-width)) 0;
-    border: var(--border-width) solid var(--border-default);
+    border: var(--border-width) solid var(--border-popover);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     flex-shrink: 0;
   }
@@ -173,6 +176,13 @@
     color: var(--text-primary);
   }
 
+  /* The panel takes focus only so keyboard focus starts inside the dialog;
+   * it is not a control, so it keeps its border instead of a focus ring.
+   * Controls inside keep theirs. */
+  .kit-modal-panel:focus-visible {
+    outline: none;
+  }
+
   /* Tinted header bands for semantic tones: the panel's data-kit-tone
    * opts into the shared tone map + band recipe in theme.css (9% band,
    * 30% border, 72% AA-safe ink — rationale documented there), and the
@@ -181,6 +191,15 @@
    * Tone reaches the band's full border area (top, sides, and the
    * divider below) via the header's own border. Headerless toned modals
    * render no header element, so no stray colored edge. */
+  .kit-modal-panel[data-kit-tone] {
+    /* The shared recipe mixes over the plain surface and default border.
+     * The panel is the popover surface, so the band mixes over that; a
+     * band mixed over the plain surface would sit darker than a dark
+     * panel. Same 9% and 30% ratios. */
+    --kit-tone-band-bg: color-mix(in srgb, var(--kit-tone) 9%, var(--bg-popover));
+    --kit-tone-border: color-mix(in srgb, var(--kit-tone) 30%, var(--border-popover));
+  }
+
   .kit-modal-panel[data-kit-tone] .kit-modal-header {
     background: var(--kit-tone-band-bg);
     border-color: var(--kit-tone-border);
@@ -243,7 +262,7 @@
     justify-content: flex-end;
     gap: 8px;
     padding: 12px 16px;
-    border-top: 1px solid var(--border-default);
+    border-top: 1px solid var(--border-popover);
     flex-shrink: 0;
   }
 </style>

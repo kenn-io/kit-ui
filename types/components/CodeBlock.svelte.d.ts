@@ -15,6 +15,8 @@ interface Props {
     /** Cap the body height (scrolls beyond), e.g. "320px". */
     maxHeight?: string;
     copyLabel?: string;
+    /** Copy button label and tooltip once the code is copied. */
+    copiedLabel?: string;
     wrapLabel?: string;
     class?: string;
 }

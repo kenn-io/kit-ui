@@ -171,6 +171,26 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Selected state and read-only"
+  description="TopBar, DateRangePicker, and this control share --selected-strong-bg and --selected-strong-edge. Dark mode uses a lighter fill and faint border. The selected option stays fully visible when the whole control is disabled."
+  code={`<SegmentedControl options={modes} value="normal" disabled ariaLabel="Mode (read-only)" />`}
+>
+  <div class="snippet-row" data-testid="segmented-readonly">
+    <SegmentedControl
+      options={[
+        { value: "normal", label: "Normal" },
+        { value: "compact", label: "Compact" },
+        { value: "stream", label: "Stream" },
+      ]}
+      value="normal"
+      disabled
+      onchange={() => {}}
+      ariaLabel="Mode (read-only)"
+    />
+  </div>
+</DemoSection>
+
 <style>
   .snippet-row {
     display: flex;

@@ -51,6 +51,15 @@ The panel is `role="dialog"` + `aria-modal="true"`, named by `ariaLabel`
 The overlay does not use `inert` on the rest of the page; screen-reader
 virtual cursors rely on `aria-modal` support (all evergreen browsers).
 
+## Surface
+
+The panel is a transient floating surface, like a popover: `--bg-popover`
+fill, `--border-popover` edge, `--shadow-lg`. In light these equal the plain
+surface and default border. In dark the panel is a step lighter than the
+page surface, so it reads above the scrim, and `--bg-surface-hover` inside
+it steps up from the panel so hover still lightens. A toned header band
+mixes its tint over the panel's fill.
+
 ## Props
 
 | Prop                  | Type                                                        | Default                            | Notes                                                                                                                                                                                                                                                                                                                     |

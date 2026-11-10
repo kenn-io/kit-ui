@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { gotoPage } from "./helpers.js";
+import { gotoPage, resolvedStyle } from "./helpers.js";
 
 // Width reservation only exists under real layout: the box must measure the
 // same across every variant while the visible text inside it does not.
@@ -104,4 +104,14 @@ test("age label opens its tooltip on hover and keeps the reserved layout", async
 
   await page.mouse.move(0, 0);
   await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("the small size sets a quiet glyph tight against the status", async ({ page }) => {
+  await gotoPage(page, "refresh-control");
+  const control = page.getByTestId("refresh-control-sm").locator(".kit-refresh-control");
+  const button = control.locator(".kit-refresh-control__btn");
+  await expect(button).toHaveCSS("width", "24px");
+  await expect(button.locator("svg")).toHaveAttribute("width", "12");
+  await expect(control).toHaveCSS("column-gap", "2px");
+  await expect(button).toHaveCSS("color", await resolvedStyle(page, "color", "var(--text-muted)"));
 });

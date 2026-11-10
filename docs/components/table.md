@@ -195,6 +195,7 @@ header must sort.
 | `minWidth`      | `number`                  | `20`    | VirtualTable: the narrowest a resize or fit makes the column                                       |
 | `maxWidth`      | `number`                  | `1200`  | VirtualTable: the widest a resize or fit makes the column                                          |
 | `resizable`     | `boolean`                 | `true`  | VirtualTable: show the resize handle on the cell's right edge                                      |
+| `resizeLabel`   | `string`                  | —       | VirtualTable: the resize handle's accessible name; defaults to English "Resize the {label} column" |
 | `fill`          | `boolean`                 | `false` | VirtualTable: the column takes the spare width ([Filling column](virtual-table.md#filling-column)) |
 | `class`         | `string`                  | `""`    |                                                                                                    |
 

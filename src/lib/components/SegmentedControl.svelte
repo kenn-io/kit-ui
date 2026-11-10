@@ -131,6 +131,15 @@
     width: 100%;
   }
 
+  /* A block track has a fixed width, and its labels are rem. When enlarged
+   * labels no longer fit one row, segments move to a second row and the
+   * track grows, instead of the last segment hanging out of the track.
+   * The borderless strip shares borders between neighbors, so it stays on
+   * one row. */
+  .kit-segmented--block:not(.kit-segmented--borderless) {
+    flex-wrap: wrap;
+  }
+
   .kit-segmented__btn {
     /* Flex so snippet content (icon + text) aligns and gaps cleanly;
      * inherited line-height keeps text-only segments unchanged. */
@@ -169,14 +178,18 @@
     padding-inline: 6px;
   }
 
+  /* The shared selected idiom (theme.css). It stays at full strength when
+   * the whole control is disabled, so a read-only setting still shows
+   * which option is chosen. */
   .kit-segmented__btn.active {
-    background: var(--bg-surface);
+    background: var(--selected-strong-bg);
     color: var(--text-primary);
-    box-shadow: var(--shadow-raised, var(--shadow-sm));
+    font-weight: var(--selected-strong-weight);
+    box-shadow: var(--shadow-raised, var(--selected-strong-edge));
   }
 
   .kit-segmented__btn:hover:not(.active):not(:disabled) {
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   .kit-segmented__btn:focus-visible {
@@ -187,6 +200,10 @@
   .kit-segmented__btn:disabled {
     opacity: var(--opacity-disabled);
     cursor: not-allowed;
+  }
+
+  .kit-segmented__btn.active:disabled {
+    opacity: 1;
   }
 
   /* Borderless (flat strip) variant: flush segments sharing hairline

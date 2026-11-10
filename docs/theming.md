@@ -18,19 +18,22 @@ document.documentElement.classList.toggle("dark", prefersDark);
 
 ## Tokens
 
-| Group       | Variables                                                                                               |
-| ----------- | ------------------------------------------------------------------------------------------------------- |
-| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                      |
-| Borders     | `--border-default`, `--border-muted`                                                                    |
-| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                    |
-| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal` |
-| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                       |
-| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                             |
-| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                 |
-| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                           |
-| Fonts       | `--font-sans`, `--font-mono`                                                                            |
-| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                        |
-| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)  |
+| Group       | Variables                                                                                                                                                                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                                                       |
+| Borders     | `--border-default`, `--border-muted`                                                                                                                                                     |
+| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                                                     |
+| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`                                                                                  |
+| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                                                        |
+| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                              |
+| Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                       |
+| Popovers    | `--bg-popover`, `--border-popover` (the `.kit-popover-card` and Modal surface and edge; lighter than the surface in dark), `--text-muted-popover` (dark only: the muted ink inside them) |
+| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                  |
+| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                            |
+| Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                             |
+| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                                                         |
+| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                                                                                   |
+| Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                              |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, purple = merged/workflow, teal = workspace.
@@ -40,6 +43,55 @@ One deliberate exception to "tokens only": pure `#000`/`#fff` **inside
 from an accent) — they are arithmetic constants, not palette entries, and the
 `raw-color` checker rule allows them. Standalone hex palette colors are still
 off-limits outside `theme.css`.
+
+## Selected state
+
+One idiom marks the chosen option of a choice group: a raised pill. The
+`--selected-strong-*` tokens draw it. SegmentedControl (including
+DateRangePicker's mode tabs) and TopBar tabs use them, and apps reuse them for their own choice
+groups (chart toggles, sort pickers) so selection looks the same
+everywhere. In light the pill is the white surface lifted off the grey track
+by a hairline and a soft shadow. In dark it is a lighter fill with a faint
+edge, because the plain dark surface barely differs from the dark track.
+Selected text is primary ink at `--selected-strong-weight`. Themes that set
+`--shadow-raised` keep their own edge on the pill.
+
+The quieter `--selected-bg` / `--selected-edge` pair marks a chosen control
+without lifting it, and `--selected-list-bg` fills the current row of a list
+that already sits on the surface (the SettingsLayout nav).
+
+## Icons
+
+theme.css draws every lucide icon with the same 1.2px line at any rendered
+size, including a size set in CSS. The stroke does not scale with the icon
+(`vector-effect: non-scaling-stroke` on the icon's shapes), so there is no
+list of supported sizes.
+
+**`strokeWidth` has no effect in the default theme.** Whatever a call site
+passes, the icon draws the 1.2px line. The one exception is
+`strokeWidth={0}`, which marks a filled icon: it stays unstroked.
+
+The overflow icons (`ellipsis`, `ellipsis-vertical`) take a 1.6px stroke, so
+their dots match the weight of the glyphs beside them. A dot's diameter is
+the icon size / 12 plus 1.6px.
+
+The rules sit at the lowest specificity. An identity theme's `--icon-stroke`
+wins and is measured in lucide's 24-unit box, so under an identity theme the
+line scales with the icon. An app rule also wins; to set a stroke in viewBox
+units, it must turn the fixed line off on the shapes as well:
+
+```css
+.my-icon svg.lucide {
+  stroke-width: 2;
+}
+.my-icon svg.lucide > * {
+  vector-effect: none;
+}
+```
+
+Size icons by context: 12px in chips, pills, and dense rows; 14px in
+toolbars, menus, and icon buttons; 16px in the top bar; 24px for empty
+states.
 
 ## Typography
 
@@ -157,7 +209,7 @@ and each call site keeps its own tuned default until a theme opts in.
 | `--label-transform`                            | `uppercase` (fallback)                                                             | label/eyebrow letter case (Chip, Card eyebrow, section and group labels); `none` renders sentence case                                                                                                                                                                                                                                |
 | `--color-label-fill` / `--color-label-ink-mix` | `100%` (fallback)                                                                  | ColorLabel solid vs tinted pill (see [ColorLabel](components/color-label.md#theming))                                                                                                                                                                                                                                                 |
 | `--line-height-prose`                          | `1.6` (fallback)                                                                   | comment/markdown body leading                                                                                                                                                                                                                                                                                                         |
-| `--icon-stroke`                                | `2` (fallback)                                                                     | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only                                                                                                                                                                                                                                                   |
+| `--icon-stroke`                                | `2` (fallback)                                                                     | lucide `stroke-width`, applied by a `themes.css` rule under `[data-kit-theme]` only; the default pair picks the stroke per icon size instead (see Icons)                                                                                                                                                                              |
 | `--radius-dot`                                 | `50%` (fallback)                                                                   | the small indicator dots (StatusDot, Chip/FilterDropdown dots, Timeline dots) and the Toggle knob — square pixels in the print/teletype identities                                                                                                                                                                                    |
 | `--radius-toggle`                              | `999px` (fallback)                                                                 | the Toggle track — pill by default, square in terminal/zine, 2px in graphite                                                                                                                                                                                                                                                          |
 | `--overlay-filter`                             | `none` (fallback)                                                                  | `backdrop-filter` on Modal / drawer / lightbox / palette scrims                                                                                                                                                                                                                                                                       |
@@ -210,10 +262,30 @@ custom active transforms rather than rejecting native buttons.
 **Popover chrome**: every transient floating surface (dropdown menus,
 typeahead lists, filter panels, the range-picker panel, tooltips, toasts,
 FindBar) uses the same card, shipped as the **`.kit-popover-card`** class
-in theme.css: `border: 1px solid var(--border-default); border-radius:
+in theme.css: `border: 1px solid var(--border-popover); border-radius:
 var(--radius-md); box-shadow: var(--shadow-lg); background:
-var(--bg-surface)`. Reuse the class for custom popovers — `kit-ui-check`
+var(--bg-popover)`. Reuse the class for custom popovers — `kit-ui-check`
 flags a hand-written copy of the recipe (`hand-rolled-popover-card`).
+
+In dark, the card also redefines `--bg-surface-hover` for everything inside
+it: 8% of `--text-primary` over `--bg-popover`. The page's hover fill is
+darker than the popover surface, so without this a hovered row would read as
+a dent. `--selected-bg` and `--selected-list-bg` follow the same fill.
+`--bg-inset` is unchanged, so a well inside a popover is still darker than
+the popover. Content in a custom popover gets this from the class; do not
+hard-code a hover color there.
+
+The dark card redefines `--text-muted` too, to `--text-muted-popover`: the
+theme's muted ink mixed 25% toward `--text-primary`. Muted ink is tuned for
+the page surface, and on a hovered row in the lighter popover it fell to
+3.7:1. With the mix, muted text has about the contrast it has on the page
+while a row rests, and at least 4.5:1 on the hover fill. A theme that wants
+a different muted ink in popovers sets `--text-muted-popover` in its
+`:root.dark` block.
+
+The Modal panel is the same kind of surface. It keeps its own radius, takes
+`--bg-popover` and `--border-popover`, and gets the same dark hover fill and
+muted ink.
 
 **Stacking**: three z tokens in theme.css order the layers —
 `--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`

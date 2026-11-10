@@ -9,8 +9,8 @@
       "borderDefault": "#d8dae2",
       "borderMuted": "#e4e6ec",
       "textPrimary": "#181b24",
-      "textSecondary": "#555b6e",
-      "textMuted": "#878ea0",
+      "textSecondary": "#474d5f",
+      "textMuted": "#62687c",
       "action": "#2563eb",
       "warning": "#d97706",
       "purple": "#7c3aed",
@@ -107,14 +107,14 @@
     "light": {
       "shadowSm": "0 1px 2px rgba(0, 0, 0, 0.05)",
       "shadowMd": "0 2px 8px rgba(0, 0, 0, 0.08)",
-      "shadowLg": "0 4px 16px rgba(0, 0, 0, 0.1)",
-      "overlay": "rgba(0, 0, 0, 0.3)"
+      "shadowLg": "0 12px 32px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.08)",
+      "overlay": "rgba(0, 0, 0, 0.42)"
     },
     "dark": {
       "shadowSm": "0 1px 2px rgba(0, 0, 0, 0.25)",
       "shadowMd": "0 2px 8px rgba(0, 0, 0, 0.35)",
-      "shadowLg": "0 4px 16px rgba(0, 0, 0, 0.4)",
-      "overlay": "rgba(0, 0, 0, 0.6)"
+      "shadowLg": "0 14px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.45)",
+      "overlay": "rgba(0, 0, 0, 0.7)"
     }
   },
   "interaction": {

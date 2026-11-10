@@ -34,6 +34,35 @@
   --edge-highlight: transparent;
 }
 
+/* Selected state. One idiom marks the chosen option of a choice group
+ * (SegmentedControl, DateRangePicker's mode tabs, TopBar tabs): a raised pill.
+ * In light it is the white surface lifted off the grey track by a hairline
+ * and a soft shadow; in dark it is a lighter surface with a faint edge,
+ * because the plain dark surface barely differs from the dark track.
+ * Selected text is primary ink at medium weight. The quieter pair marks
+ * the current row of a list that already sits on the surface (the
+ * SettingsLayout nav). Themes that set --shadow-raised keep their own
+ * edge on the pill. */
+:root {
+  --selected-strong-bg: var(--bg-surface);
+  --selected-strong-edge:
+    0 0 0 1px color-mix(in srgb, var(--text-primary) 9%, transparent),
+    0 1px 2px color-mix(in srgb, var(--text-primary) 14%, transparent);
+  --selected-strong-weight: var(--font-weight-medium, 500);
+  --selected-bg: var(--bg-surface);
+  --selected-edge: inset 0 0 0 1px var(--border-default);
+  --selected-list-bg: var(--bg-inset);
+}
+
+:root.dark {
+  --selected-strong-bg: color-mix(in srgb, var(--text-primary) 15%, var(--bg-surface));
+  --selected-strong-edge:
+    inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 12%, transparent),
+    0 1px 2px color-mix(in srgb, #000 35%, transparent);
+  --selected-bg: var(--bg-surface-hover);
+  --selected-list-bg: var(--bg-surface-hover);
+}
+
 :root.high-contrast :focus-visible {
   outline-width: 3px;
   outline-offset: 2px;
@@ -81,10 +110,111 @@
  * comes from the --z-* tokens above. Consumers building a custom popover
  * should reuse this class so the surface reads as one family. */
 .kit-popover-card {
-  background: var(--bg-surface);
-  border: var(--border-width) solid var(--border-default);
+  background: var(--bg-popover);
+  border: var(--border-width) solid var(--border-popover);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
+}
+
+/* In light a popover is the white surface; its shadow lifts it. In dark a
+ * shadow barely shows on the near-black page, so a popover takes a lighter
+ * raised surface and a lighter edge. That surface narrows the gap to the
+ * ordinary selected fill, so the chosen option inside a popover (a date
+ * preset, a mode tab) takes a stronger fill and edge. High contrast keeps
+ * its strong default edge. A modal panel is the same kind of surface, so
+ * the rules scoped to the popover card below cover it too. */
+:root {
+  --bg-popover: var(--bg-surface);
+  --border-popover: var(--border-default);
+}
+
+:root.dark {
+  --bg-popover: color-mix(in srgb, var(--text-primary) 9%, var(--bg-surface));
+  --border-popover: color-mix(in srgb, var(--text-primary) 20%, var(--bg-surface));
+}
+
+:root.dark.high-contrast {
+  --border-popover: var(--border-default);
+}
+
+:root.dark :is(.kit-popover-card, .kit-modal-panel) {
+  --selected-strong-bg: color-mix(in srgb, var(--text-primary) 24%, var(--bg-surface));
+  --selected-strong-edge:
+    inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 20%, transparent),
+    0 1px 2px color-mix(in srgb, #000 40%, transparent);
+}
+
+/* Hover lightens everywhere in dark. The page's hover fill is darker than
+ * the popover surface, so a row hovered inside a popover would read as a
+ * dent. Inside a popover the hover fill, and the quiet selected fills that
+ * follow it, step up from the popover surface instead. --bg-inset stays as
+ * it is: it is darker than the popover, so a well still reads as a well. */
+:root.dark :is(.kit-popover-card, .kit-modal-panel) {
+  --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-popover));
+  --selected-bg: var(--bg-surface-hover);
+  --selected-list-bg: var(--bg-surface-hover);
+}
+
+/* Muted ink is tuned for the page surface. A dark popover is lighter than
+ * that, and its hovered row lighter again, which took muted text on a
+ * hovered or highlighted row (an option's detail, a count) to 3.7:1. Inside
+ * a dark popover muted ink steps toward the primary ink by a quarter: about
+ * the contrast it has on the page while the row rests, and above 4.5:1 on
+ * the hover fill. It stays quieter than secondary ink. The mix is resolved
+ * on the root, where --text-muted is still the theme's own value, because a
+ * property cannot be defined from itself. */
+:root.dark {
+  --text-muted-popover: color-mix(in srgb, var(--text-primary) 25%, var(--text-muted));
+}
+
+:root.dark :is(.kit-popover-card, .kit-modal-panel) {
+  --text-muted: var(--text-muted-popover);
+}
+
+/* The default Card's edge. In light the white surface sits close to the
+ * page color, and the muted border vanished there. The card takes an edge
+ * midway between the muted and default borders: visible, but a step under
+ * the raised card, which keeps the full default border. Dark keeps the
+ * muted one. */
+:root {
+  --card-border: color-mix(in srgb, var(--border-default) 50%, var(--border-muted));
+}
+
+:root.dark {
+  --card-border: var(--border-muted);
+}
+
+/* Icon line weight. Lucide scales its stroke with the icon, so one
+ * strokeWidth draws thin on a 12px icon and heavy on a 24px one. Here the
+ * stroke does not scale: every icon draws the same 1.2px line at any
+ * rendered size, including a size set in CSS, whatever strokeWidth its
+ * call site passed. vector-effect is not inherited, so it goes on the
+ * icon's shapes. CSS stroke-width beats the SVG attribute; :where() keeps
+ * the rules at the lowest specificity, so an identity theme's --icon-stroke
+ * rule (themes.css) and any explicit app rule still win. An app rule that
+ * wants a stroke in viewBox units must also set vector-effect: none on the
+ * shapes. Filled marks (strokeWidth 0) keep their fill only. Size icons by
+ * context: 12px in chips, pills and dense rows; 14px in toolbars, menus and
+ * icon buttons; 16px in the top bar; 24px for empty states. */
+svg.lucide {
+  flex-shrink: 0;
+}
+
+svg.lucide:where(:not([stroke-width="0"])) {
+  stroke-width: 1.2px;
+}
+
+svg.lucide:where(:not([stroke-width="0"])) > :where(*) {
+  vector-effect: non-scaling-stroke;
+}
+
+/* Overflow dots are three circles of radius 1 in a 24-unit box. At the
+ * shared line weight they read smaller and fainter than the glyphs beside
+ * them, so they take a heavier stroke. A dot's diameter is then the
+ * icon's size / 12 plus 1.6px: 2.6px at 12px, 2.9px at 16px, 3.6px at
+ * 24px. The dot grows with the icon, but slower than a scaling stroke. */
+svg.lucide:where(.lucide-ellipsis, .lucide-ellipsis-vertical):where(:not([stroke-width="0"])) {
+  stroke-width: 1.6px;
 }
 
 /* Native form-control accents (range sliders, radios, progress bars, any

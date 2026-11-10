@@ -6,9 +6,10 @@
     columnSizingContext,
     DEFAULT_MAX_COLUMN_WIDTH,
     DEFAULT_MIN_COLUMN_WIDTH,
+    type ColumnResize,
     type ColumnSizing,
   } from "./table-columns.js";
-  import { scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
+  import { RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
     /** Every row's data; only the rows on screen are rendered. */
@@ -19,7 +20,9 @@
     row: Snippet<[T, number]>;
     /** A `<tr>` shown in the body when `items` is empty. */
     empty?: Snippet;
-    /** Stable identity of a row, for keyed rendering. Defaults to the index. */
+    /** Stable identity of a row, for keyed rendering and for keeping its
+     * measured height when rows are inserted, removed, or reordered around
+     * it. Defaults to the index, whose heights a new `items` array drops. */
     rowKey?: (item: T, index: number) => unknown;
     /** What scrolls the rows: the table's own wrapper (give it a bounded
      * height), or the page or panel the table sits in. */
@@ -47,9 +50,11 @@
      * column's rows sampled across the list. The table adds the header
      * cell's padding and clamps to the column's limits. */
     fitColumn?: (column: number) => number | undefined;
-    /** Called with every column's width, in order, after a resize or fit,
-     * for an app to keep them. */
-    oncolumnwidthschange?: (widths: number[]) => void;
+    /** Called when a person sets a column's width: a drag or arrow key that
+     * changed it, or a fit (Enter or double-click on the handle). Names the
+     * column, for an app to keep its width. Automatic sizing, including
+     * refitting to a new table width, never calls it. */
+    oncolumnresize?: (change: ColumnResize) => void;
     class?: string;
   }
 
@@ -58,7 +63,7 @@
     header,
     row,
     empty = undefined,
-    rowKey = (_item: T, index: number) => index,
+    rowKey = undefined,
     scroll = "self",
     scrollElement = undefined,
     estimateRowHeight = 36,
@@ -68,7 +73,7 @@
     ariaLabel = undefined,
     unsorted = false,
     fitColumn = undefined,
-    oncolumnwidthschange = undefined,
+    oncolumnresize = undefined,
     class: className = "",
   }: Props = $props();
 
@@ -93,18 +98,24 @@
   let viewport = $state(0);
   let columns = $state(1);
 
-  // Row heights by index, valid only for the `items` array they were taken
-  // from (sorting or filtering reuses indexes for other rows). The Map is not
-  // reactive; `measureVersion` signals that it changed. Rows not yet
-  // measured use the fixed estimate, so measuring one row never moves the
-  // estimated rows around it.
-  const measured = new Map<number, number>();
+  // Row heights by row key, so a row keeps its height when rows are
+  // inserted, removed, or reordered around it; without `rowKey`, by index for
+  // the current `items` array only. The cache is not reactive;
+  // `measureVersion` signals that it changed. Rows not yet measured use the
+  // fixed estimate, so measuring one row never moves the estimated rows
+  // around it.
+  const measured = new RowHeights<T>();
   let measureVersion = $state(0);
-  let measuredFor: T[] | undefined;
-  // The index each row element was last measured at, for the current
-  // `items`. A row not yet measured at its index is observed afresh, which
-  // makes the observer report it once more after the next layout.
-  let measuredAt = new WeakMap<Element, number>();
+  // The key each row element was last measured under. A row not yet
+  // measured under its key (an index-keyed row after `items` changed) is
+  // observed afresh, which makes the observer report it once more after the
+  // next layout.
+  let measuredAt = new WeakMap<Element, unknown>();
+
+  const rowKeyOf = (item: T, index: number): unknown => (rowKey ? rowKey(item, index) : index);
+  // Every row's key, taken again whenever `items` changes, in place too (a
+  // push or splice on a reactive array), so measured heights follow their rows.
+  const rowKeys = $derived(rowKey ? items.map((item, i) => rowKey(item, i)) : undefined);
 
   const heightOf = (index: number): number => {
     const h = measured.get(index) ?? estimateRowHeight;
@@ -122,11 +133,7 @@
 
   const slice = $derived.by(() => {
     void measureVersion;
-    if (measuredFor !== items) {
-      measured.clear();
-      measuredAt = new WeakMap();
-      measuredFor = items;
-    }
+    if (measured.sync(items, rowKeys)) measuredAt = new WeakMap();
     return windowOf();
   });
 
@@ -165,12 +172,17 @@
   let measureWidth = $state(0);
   // The column a fit measures, or undefined to size unsized columns.
   let fitting: number | undefined;
+  // Size every column nobody resized again, for a new table width.
+  let refitting = false;
 
-  function requestSizing(): void {
+  // Returns whether the columns will be measured: an empty list has no rows
+  // to measure.
+  function requestSizing(): boolean {
     const wrapper = body?.parentElement?.parentElement;
-    if (items.length === 0 || !wrapper) return;
+    if (items.length === 0 || !wrapper) return false;
     measureWidth = wrapper.offsetWidth;
     sampling = true;
+    return true;
   }
 
   $effect(() => {
@@ -178,8 +190,11 @@
     untrack(() => {
       const column = fitting;
       fitting = undefined;
-      if (column === undefined) sizeColumns();
-      else measureFit(column);
+      // A refit asked for alongside a fit waits for the next width change.
+      if (column !== undefined) return measureFit(column);
+      const refit = refitting;
+      refitting = false;
+      sizeColumns(refit);
     });
     sampling = false;
   });
@@ -203,12 +218,18 @@
   }
 
   // Column widths, as in gpui-kit: each column has a width, set on its
-  // TableHeaderCell or measured once from the visible and sampled rows, kept
-  // until someone resizes or fits the column. Widths are stored by column key
-  // (the header's `column` or label), so hiding a column keeps the others'.
+  // TableHeaderCell or measured from the visible and sampled rows. A column a
+  // person resized or fitted keeps its width; the others follow their
+  // header's `width` and are sized again when the table's width changes.
+  // Widths are stored by column key (the header's `column` or label), so
+  // hiding a column keeps the others'.
   const widths = new Map<string, number>();
+  // Keys of the columns a person resized or fitted.
+  const chosen = new Set<string>();
   let shown: number[] = [];
   let sized = false;
+  // The wrapper width the columns were last sized for.
+  let sizedFor = 0;
   let sizingVersion = $state(0);
 
   const headerCells = (): HTMLTableCellElement[] =>
@@ -246,14 +267,18 @@
   const copyCells = (): HTMLTableCellElement[] =>
     Array.from(copyTable()?.tHead?.rows[0]?.cells ?? []);
 
+  const explicit = (cell: HTMLTableCellElement): number | undefined =>
+    cell.dataset["kitWidth"] ? Number(cell.dataset["kitWidth"]) : undefined;
+
   // Give every column without a width one: the header's `width`, or its
   // share of the copy's width under automatic layout, the columns with
-  // widths keeping theirs. With a filling column, which stands at its
-  // minimum here, the other columns take their content's width when that
-  // leaves the filling column room, so all the spare width goes to it.
-  // Measured widths include padding and borders; pinned cells use
+  // widths keeping theirs. A refit, for a new table width, sizes every
+  // column a person did not choose again. With a filling column, which
+  // stands at its minimum here, the other columns take their content's width
+  // when that leaves the filling column room, so all the spare width goes to
+  // it. Measured widths include padding and borders; pinned cells use
   // border-box sizing, so they become the final widths.
-  function sizeColumns(): void {
+  function sizeColumns(refit: boolean): void {
     const cells = copyCells();
     const table = copyTable();
     // A hidden table (a closed <details>, an inactive tab) has no width to
@@ -262,10 +287,11 @@
     if (!table || cells.length === 0 || items.length === 0 || measureWidth === 0) return;
     columns = headerCells().length;
     const filler = fillerOf(cells);
-    const explicit = (cell: HTMLTableCellElement) =>
-      cell.dataset["kitWidth"] ? Number(cell.dataset["kitWidth"]) : undefined;
+    const resize = (key: string) => !widths.has(key) || (refit && !chosen.has(key));
     cells.forEach((cell, i) => {
-      const known = i === filler ? limitsOf(cell).min : (widths.get(keyOf(cell)) ?? explicit(cell));
+      const key = keyOf(cell);
+      const known =
+        i === filler ? limitsOf(cell).min : resize(key) ? explicit(cell) : widths.get(key);
       if (known === undefined) return;
       cell.style.boxSizing = "border-box";
       cell.style.width = `${known}px`;
@@ -284,18 +310,50 @@
         cells.map((cell, i) =>
           i === filler
             ? limitsOf(cell).min
-            : (widths.get(keyOf(cell)) ?? clampTo(cell, explicit(cell) ?? natural[i]!)),
+            : resize(keyOf(cell))
+              ? clampTo(cell, explicit(cell) ?? natural[i]!)
+              : widths.get(keyOf(cell))!,
         ),
       );
       if (needed <= innerWidth(table.parentElement!)) measured = natural;
     }
     measured ??= measure();
     cells.forEach((cell, i) => {
-      if (i !== filler && !widths.has(keyOf(cell)))
-        widths.set(keyOf(cell), clampTo(cell, explicit(cell) ?? measured[i]!));
+      const key = keyOf(cell);
+      if (i !== filler && resize(key))
+        widths.set(key, clampTo(cell, explicit(cell) ?? measured[i]!));
     });
     sized = true;
+    sizedFor = measureWidth;
     applyWidths();
+  }
+
+  // After the wrapper changes width, the columns nobody chose are sized
+  // again; otherwise the stored widths are shown again, the filling or last
+  // column taking the rest. A hidden table (width 0) keeps its widths for
+  // when it shows again. An empty table has no rows to measure: it shows
+  // its stored widths in the new width, and the refit waits for rows
+  // (`syncRows`). A wrapper back at the width the columns were sized for
+  // needs no refit any more.
+  function followWidth(): void {
+    const width = body?.parentElement?.parentElement?.offsetWidth ?? 0;
+    const cells = headerCells();
+    const filler = fillerOf(cells);
+    if (width > 0) {
+      refitting =
+        width !== sizedFor && cells.some((cell, i) => i !== filler && !chosen.has(keyOf(cell)));
+    }
+    if (!refitting || !requestSizing()) applyWidths();
+  }
+
+  // A header's `width` changed after the columns were sized. A column nobody
+  // chose takes the new width; one left without a width is measured again.
+  function followHeaderWidth(cell: HTMLTableCellElement): void {
+    const key = keyOf(cell);
+    if (chosen.has(key)) return;
+    const width = explicit(cell);
+    if (width === undefined) widths.delete(key);
+    else widths.set(key, clampTo(cell, width));
   }
 
   // Show the stored widths in fixed layout. A filling column takes what the
@@ -310,6 +368,10 @@
     if (!table || !wrapper || cells.length === 0) return;
     const available = innerWidth(wrapper);
     const filler = fillerOf(cells);
+    // A filling column needs no width of its own. One nobody chose drops the
+    // automatic width it had, which no refit keeps current, so it is
+    // measured afresh if it stops filling.
+    if (filler !== -1 && !chosen.has(keyOf(cells[filler]!))) widths.delete(keyOf(cells[filler]!));
     shown = cells.map((cell, i) =>
       i === filler ? 0 : (widths.get(keyOf(cell)) ?? clampTo(cell, 100)),
     );
@@ -326,13 +388,14 @@
     sizingVersion += 1;
   }
 
-  // A filling column reports the width it is shown at.
-  function reportWidths(): void {
-    const cells = headerCells();
-    const filler = fillerOf(cells);
-    oncolumnwidthschange?.(
-      cells.map((cell, i) => (i === filler ? undefined : widths.get(keyOf(cell))) ?? shown[i] ?? 0),
-    );
+  // A person set a column's width: it keeps that width through refits, and
+  // the app hears which column it was.
+  function choose(cell: HTMLTableCellElement, width: number): void {
+    const column = keyOf(cell);
+    chosen.add(column);
+    widths.set(column, width);
+    applyWidths();
+    oncolumnresize?.({ column, index: cell.cellIndex, width });
   }
 
   // Fit a column to its widest content among the copy's rows: laid out at
@@ -341,14 +404,20 @@
   function measureFit(column: number): void {
     const table = copyTable();
     const cell = copyCells()[column];
-    if (!table || !cell) return;
+    const live = headerCells()[column];
+    if (!table || !cell || !live) return;
     table.style.width = "max-content";
-    widths.set(keyOf(cell), clampTo(cell, cell.getBoundingClientRect().width));
-    applyWidths();
-    reportWidths();
+    choose(live, clampTo(cell, cell.getBoundingClientRect().width));
   }
 
+  // Where a drag or key press started: the shown width it adds to, the
+  // stored width it is compared with, and whether a person had already
+  // chosen the column's width.
   let resizeBase = 0;
+  let resizeFrom: number | undefined;
+  let resizeWasChosen = false;
+  // How far the drag or key press has moved, before any clamping.
+  let resizeDelta = 0;
   const sizingApi: ColumnSizing = {
     get version() {
       return sizingVersion;
@@ -357,12 +426,38 @@
     limits: limitsOf,
     resizeStart: (cell) => {
       resizeBase = shown[cell.cellIndex] ?? 0;
+      resizeFrom = widths.get(keyOf(cell));
+      resizeWasChosen = chosen.has(keyOf(cell));
+      resizeDelta = 0;
     },
     resize: (cell, delta) => {
+      // A drag in progress is a person's choice, which a refit keeps.
+      chosen.add(keyOf(cell));
+      resizeDelta = delta;
       widths.set(keyOf(cell), clampTo(cell, resizeBase + delta));
       applyWidths();
     },
-    resizeEnd: () => reportWidths(),
+    resizeEnd: (cell) => {
+      const key = keyOf(cell);
+      const width = widths.get(key);
+      // A drag back to where it started, or an arrow key at the column's
+      // limit, changed nothing and reports nothing. The column keeps the
+      // width it had, not the wider one a stretched last column showed,
+      // which may be past its maxWidth.
+      if (
+        width === undefined ||
+        resizeDelta === 0 ||
+        width === resizeFrom ||
+        width === resizeBase
+      ) {
+        if (resizeFrom === undefined) widths.delete(key);
+        else widths.set(key, resizeFrom);
+        if (!resizeWasChosen) chosen.delete(key);
+        applyWidths();
+        return;
+      }
+      choose(cell, width);
+    },
     fit: (cell) => {
       const content = fitColumn?.(cell.cellIndex);
       if (content !== undefined) {
@@ -372,9 +467,7 @@
           parseFloat(style.paddingRight) +
           parseFloat(style.borderLeftWidth) +
           parseFloat(style.borderRightWidth);
-        widths.set(keyOf(cell), clampTo(cell, content + frame));
-        applyWidths();
-        reportWidths();
+        choose(cell, clampTo(cell, content + frame));
         return;
       }
       fitting = cell.cellIndex;
@@ -399,7 +492,7 @@
     rows.forEach((tr, i) => {
       // A row this observer watches at the index it was measured at needs
       // nothing. A new observer, after the scroller changes, watches none.
-      if (watched.has(tr) && measuredAt.get(tr) === start + i) return;
+      if (watched.has(tr) && measuredAt.get(tr) === measured.keyOf(start + i)) return;
       // observe() ignores a row that is already observed.
       if (watched.has(tr)) rowObserver!.unobserve(tr);
       rowObserver!.observe(tr);
@@ -440,8 +533,9 @@
     watchRows(rows, start);
     // Size any column still without a width, until it has one: a column
     // added while the list was empty or the table hidden is sized once rows
-    // render or the table appears.
-    if (unsized(headerCells())) requestSizing();
+    // render or the table appears. A refit that found the list empty runs
+    // now that rows are back.
+    if (refitting || unsized(headerCells())) requestSizing();
   }
 
   // Read rendered row heights, from the gap between consecutive row tops so
@@ -455,13 +549,10 @@
     let changed = false;
     rows.forEach((tr, i) => {
       const index = start + i;
-      measuredAt.set(tr, index);
+      measuredAt.set(tr, measured.keyOf(index));
       const next = tops[i + 1];
       const h = next === undefined ? tr.getBoundingClientRect().height : next - tops[i]!;
-      if (h > 0 && measured.get(index) !== h) {
-        measured.set(index, h);
-        changed = true;
-      }
+      if (h > 0 && measured.set(index, h)) changed = true;
     });
     return changed;
   }
@@ -488,7 +579,7 @@
     scroller = element;
     const target: HTMLElement | Window = element === document.scrollingElement ? window : element;
     const resized = () => {
-      if (sized) applyWidths();
+      if (sized) followWidth();
       refresh();
     };
     untrack(updateWindow);
@@ -521,19 +612,31 @@
     // Adding or removing a column changes neither the rows nor the sizes
     // observed above, but the pinned widths and spacer colspans must follow.
     // So must the spare width when a column takes or gives up `fill`; a
-    // separate observer watches that attribute, since watching the header's
-    // whole subtree would also report every sort icon and resize handle.
+    // separate observer watches the cells' attributes, since watching the
+    // header's whole subtree would also report every sort icon and resize
+    // handle.
     const headerRow = (body.parentElement as HTMLTableElement).tHead?.rows[0];
-    const headerChanged = () => {
+    // A header's `width` changing after sizing is followed the same way.
+    const headerChanged = (records: MutationRecord[]) => {
+      for (const record of records) {
+        if (
+          record.attributeName === "data-kit-width" &&
+          record.target instanceof HTMLTableCellElement
+        )
+          followHeaderWidth(record.target);
+      }
       columns = Math.max(1, headerRow?.cells.length ?? 1);
       if (!unsized(headerCells())) applyWidths();
       syncRows();
     };
     const columnsChanged = new MutationObserver(headerChanged);
-    const fillChanged = new MutationObserver(headerChanged);
+    const cellsChanged = new MutationObserver(headerChanged);
     if (headerRow) {
       columnsChanged.observe(headerRow, { childList: true });
-      fillChanged.observe(headerRow, { subtree: true, attributeFilter: ["data-kit-fill"] });
+      cellsChanged.observe(headerRow, {
+        subtree: true,
+        attributeFilter: ["data-kit-width", "data-kit-fill"],
+      });
     }
     return () => {
       cancelAnimationFrame(frame);
@@ -543,7 +646,7 @@
       window.removeEventListener("resize", resized);
       sizes.disconnect();
       columnsChanged.disconnect();
-      fillChanged.disconnect();
+      cellsChanged.disconnect();
       rowObserver?.disconnect();
       rowObserver = undefined;
       watched = new Set();
@@ -563,7 +666,7 @@
   {#if parityPad}
     <tr class={SPACER} aria-hidden="true" style={SPACER_ROW}></tr>
   {/if}
-  {#each items.slice(slice.start, slice.end) as item, i (rowKey(item, slice.start + i))}
+  {#each items.slice(slice.start, slice.end) as item, i (rowKeyOf(item, slice.start + i))}
     {@render row(item, slice.start + i)}
   {/each}
   <!-- Only a table with no items is empty; a window scrolled out of view
@@ -584,7 +687,7 @@
     style:width="{measureWidth}px"
   >
     <Table {header} {zebra} {unsorted} stickyHeader={false} class={className}>
-      {#each measuredRows as index (rowKey(items[index]!, index))}
+      {#each measuredRows as index (rowKeyOf(items[index]!, index))}
         {@render row(items[index]!, index)}
       {/each}
     </Table>

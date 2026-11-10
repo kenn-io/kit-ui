@@ -1,10 +1,14 @@
 <script lang="ts" generics="T">
   import type { Snippet } from "svelte";
   import { tick, untrack } from "svelte";
-  import { offsetOfIndex, virtualSlice } from "./virtual.js";
+  import { offsetOfIndex, RowHeights, virtualSlice } from "./virtual.js";
 
   interface Props {
     items: T[];
+    /** Stable identity of a row, for keyed rendering and for keeping its
+     * measured height when rows are inserted, removed, or reordered around
+     * it. Defaults to the index, whose heights a new `items` array drops. */
+    rowKey?: (item: T, index: number) => unknown;
     /** Fixed row height in px — the fast path. Omit for variable-height
      * rows (measured as they render, `estimateHeight` until then). */
     itemHeight?: number;
@@ -30,6 +34,7 @@
 
   let {
     items,
+    rowKey = undefined,
     itemHeight = undefined,
     estimateHeight = 32,
     overscan = 4,
@@ -48,24 +53,18 @@
   let scrollTop = $state(0);
   let viewport = $state(0);
 
-  // Measured heights for variable mode. The Map itself is non-reactive
-  // (rows write during ResizeObserver callbacks); `measureVersion` is the
-  // reactive signal that a measurement changed.
-  const measured = new Map<number, number>();
+  // Measured heights for variable mode, by row key, or by index for the
+  // current array when there is no `rowKey` (a new array then drops them,
+  // and rows re-measure as they render). The cache is non-reactive (rows
+  // write during ResizeObserver callbacks); `measureVersion` is the reactive
+  // signal that a measurement changed.
+  const measured = new RowHeights<T>();
   let measureVersion = $state(0);
-  let measuredFor: T[] | undefined;
 
-  // Index-keyed measurements are only valid for the array they were taken
-  // from — filtering/sorting/replacing items reuses indexes for different
-  // rows, so a new array identity invalidates the cache (rows re-measure
-  // as they render).
-  $effect(() => {
-    if (measuredFor !== undefined && items !== measuredFor) {
-      measured.clear();
-      measureVersion += 1;
-    }
-    measuredFor = items;
-  });
+  const rowKeyOf = (item: T, index: number): unknown => (rowKey ? rowKey(item, index) : index);
+  // Every row's key, taken again whenever `items` changes, in place too (a
+  // push or splice on a reactive array), so measured heights follow their rows.
+  const rowKeys = $derived(rowKey ? items.map((item, i) => rowKey(item, i)) : undefined);
 
   // Guard against nonsensical sizing props: zero/negative heights would
   // degenerate the windowing math, fractional/negative overscan the loops.
@@ -83,7 +82,7 @@
 
   const slice = $derived.by(() => {
     void measureVersion;
-    void items.length;
+    measured.sync(items, rowKeys);
     return virtualSlice({
       scrollTop,
       viewport,
@@ -142,10 +141,7 @@
       if (itemHeight !== undefined) return;
       const observer = new ResizeObserver(() => {
         const h = node.offsetHeight;
-        if (h > 0 && measured.get(index) !== h) {
-          measured.set(index, h);
-          measureVersion += 1;
-        }
+        if (h > 0 && measured.set(index, h)) measureVersion += 1;
       });
       observer.observe(node);
       return () => observer.disconnect();
@@ -228,7 +224,7 @@
   >
     <div class="kit-virtual-list__spacer" style:height="{slice.totalHeight}px">
       <div class="kit-virtual-list__window" style:transform="translateY({slice.topPad}px)">
-        {#each items.slice(slice.start, slice.end) as item, i (slice.start + i)}
+        {#each items.slice(slice.start, slice.end) as item, i (rowKeyOf(item, slice.start + i))}
           {@const index = slice.start + i}
           <!-- Pointer shortcuts only — Enter on the focused container is the
                accessible activation path. -->

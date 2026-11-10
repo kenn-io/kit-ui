@@ -735,8 +735,29 @@ test("a header's width and limits size its column", async ({ page }) => {
   await page.mouse.move(box.x - 400, box.y + box.height / 2, { steps: 5 });
   await page.mouse.up();
   expect((await columnWidths(table))[1]).toBe(80);
-  // The app is told the widths after a resize.
-  await expect(page.locator(".saved-widths")).toContainText(/Saved widths: 90, 80, /);
+  // The app is told which column a person resized, by the header's
+  // `column`, and its width.
+  await expect(page.getByTestId("note-resize")).toHaveText("Last resized: project column, 80px");
+});
+
+test("a column nobody resized follows its header's width; a resized one keeps its own", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = notesTable(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const wider = page.getByRole("checkbox", { name: "Start the ID column at 120px" });
+  await wider.check();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(120);
+  await wider.uncheck();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(90);
+  // Once a person resizes it, the header's width no longer moves it.
+  await table.getByRole("separator", { name: "Resize the ID column" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByTestId("note-resize")).toHaveText("Last resized: id column, 114px");
+  await wider.check();
+  await page.waitForTimeout(100);
+  expect((await columnWidths(table))[0]).toBe(114);
 });
 
 test("fitColumn supplies the content width for a fit", async ({ page }) => {
@@ -892,19 +913,60 @@ test("the other columns keep their content's width when they fit beside the fill
   table = filesTable(page);
   await table.scrollIntoViewIfNeeded();
   await expect(dataRows(table).first()).toContainText("docs/guides/");
-  await table.evaluate(
-    (el, others) => {
-      const host = el.closest(".host") as HTMLElement;
+  // Set the box so the table has `inner` px, and wait for the columns to
+  // fill it. Columns nobody resized are measured again for a new box width,
+  // in whatever face the text now has, so Size and Modified are read after
+  // a first narrowing that leaves every column its content's width.
+  const narrowTo = async (inner: number) => {
+    await table.evaluate((el, width) => {
+      const box = el.closest(".host") as HTMLElement;
       const wrapper = el.parentElement!;
       const style = getComputedStyle(wrapper);
-      const inner =
+      const now =
         wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      host.style.width = `${host.offsetWidth - inner + others + 40}px`;
-    },
-    wide[0]! + wide[2]! + wide[3]!,
-  );
+      box.style.width = `${box.offsetWidth - now + width}px`;
+    }, inner);
+    await expect
+      .poll(async () => (await columnWidths(table)).reduce((a, b) => a + b, 0))
+      .toBeLessThanOrEqual(inner + 2);
+    return columnWidths(table);
+  };
+  const content = await narrowTo(600);
+  await narrowTo(wide[0]! + content[2]! + content[3]! + 40);
   await fill.check();
   await expect.poll(async () => (await columnWidths(table))[0]).toBe(wide[0]);
+});
+
+test("a column that stops filling is measured for the box it is in now", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const fill = page.getByRole("checkbox", { name: "Let Kind take the spare width" });
+  const table = filesTable(page);
+  await table.scrollIntoViewIfNeeded();
+  await expect(dataRows(table).first()).toContainText("docs/guides/");
+  const setInner = (inner: number | undefined) =>
+    table.evaluate((el, width) => {
+      const box = el.closest(".host") as HTMLElement;
+      if (width === undefined) return void box.style.removeProperty("width");
+      const wrapper = el.parentElement!;
+      const style = getComputedStyle(wrapper);
+      const now =
+        wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      box.style.width = `${box.offsetWidth - now + width}px`;
+    }, inner);
+  const total = async () => (await columnWidths(table)).reduce((a, b) => a + b, 0);
+  // In a narrow box, Name stops filling and takes only its minimum share.
+  await setInner(300);
+  await expect.poll(total).toBeLessThan(600);
+  await fill.check();
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(160);
+  // Name fills again while the box widens, then gives the spare width back.
+  await fill.uncheck();
+  await setInner(undefined);
+  await expect.poll(total).toBeGreaterThan(600);
+  await fill.check();
+  // Name takes its content's width in the wide box, capped at its 240px
+  // maxWidth, not the share it had in the narrow one.
+  await expect.poll(async () => (await columnWidths(table))[0]).toBe(240);
 });
 
 test("a table whose only column fills keeps that column at its minWidth", async ({ page }) => {
@@ -1100,4 +1162,148 @@ test("an update reads no layout while it renders the table", async ({
     .filter((frame) => frame.url.includes("VirtualTable.svelte"))
     .map((frame) => frame.functionName);
   expect(forced).toEqual([]);
+});
+
+test("resize handles announce the translated resizeLabel", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = page.getByTestId("virtual-table-localized");
+  await expect(
+    table.getByRole("separator", { name: "Breite der Spalte Projekt ändern" }),
+  ).toBeAttached();
+  await expect(table.getByRole("separator", { name: /^Resize the/ })).toHaveCount(0);
+});
+
+// Emptying a sized table, narrowing its box, then restoring the rows must
+// end where narrowing a table that kept its rows ends. An empty table has no
+// rows to measure, so the refit waits for them.
+async function setHostWidth(table: Locator, width: string): Promise<void> {
+  await table.evaluate((el, value) => {
+    (el.closest(".host") as HTMLElement).style.width = value;
+  }, width);
+}
+
+const boxFit = (table: Locator) =>
+  table.evaluate((el) => {
+    const wrapper = el.parentElement!;
+    return {
+      table: Math.round(el.getBoundingClientRect().width),
+      box: wrapper.clientWidth,
+      sideways: wrapper.scrollWidth - wrapper.clientWidth,
+    };
+  });
+
+async function filterReviews(page: Page, query: string): Promise<void> {
+  await page.getByRole("searchbox", { name: "Filter reviews" }).fill(query);
+}
+
+// Narrow the box with the rows in place and report the widths that gives,
+// then put the box back.
+async function widthsWhenNarrowedWithRows(table: Locator, width: string): Promise<number[]> {
+  const wide = await columnWidths(table);
+  const wideTable = (await boxFit(table)).table;
+  await setHostWidth(table, width);
+  await expect.poll(async () => (await boxFit(table)).sideways).toBe(0);
+  await expect.poll(() => columnWidths(table)).not.toEqual(wide);
+  const narrow = await columnWidths(table);
+  await setHostWidth(table, "");
+  await expect.poll(async () => (await boxFit(table)).table).toBe(wideTable);
+  return narrow;
+}
+
+test("columns refit to a box narrowed while the table was empty, once rows return", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const wide = await columnWidths(table);
+  const expected = await widthsWhenNarrowedWithRows(table, "420px");
+
+  await filterReviews(page, "no review matches this");
+  await expect(dataRows(table)).toHaveCount(0);
+  await setHostWidth(table, "420px");
+  // With no rows to measure, the header keeps the stored widths.
+  await page.waitForTimeout(100);
+  expect(await columnWidths(table)).toEqual(wide);
+
+  await filterReviews(page, "");
+  await expect(dataRows(table).first()).toContainText("#0");
+  await expect.poll(() => columnWidths(table)).toEqual(expected);
+  const fit = await boxFit(table);
+  expect(fit.sideways, JSON.stringify(fit)).toBe(0);
+  expect(fit.table, JSON.stringify(fit)).toBeLessThanOrEqual(fit.box);
+});
+
+test("a column a person resized keeps its width through an empty, narrowed table", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  // Narrow the Verdict column by keyboard: a person's choice.
+  await table.getByRole("separator", { name: "Resize the Verdict column" }).focus();
+  await page.keyboard.press("ArrowLeft");
+  const chosen = (await columnWidths(table))[1]!;
+  const expected = await widthsWhenNarrowedWithRows(table, "420px");
+  expect(expected[1]).toBe(chosen);
+
+  await filterReviews(page, "no review matches this");
+  await expect(dataRows(table)).toHaveCount(0);
+  await setHostWidth(table, "420px");
+  await page.waitForTimeout(100);
+  await filterReviews(page, "");
+  await expect(dataRows(table).first()).toContainText("#0");
+  await expect.poll(() => columnWidths(table)).toEqual(expected);
+  expect((await columnWidths(table))[1]).toBe(chosen);
+  expect((await boxFit(table)).sideways).toBe(0);
+});
+
+test("a box put back to its old width while the table was empty causes no refit", async ({
+  page,
+}) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const wide = await columnWidths(table);
+  await filterReviews(page, "no review matches this");
+  await expect(dataRows(table)).toHaveCount(0);
+  await setHostWidth(table, "420px");
+  await page.waitForTimeout(100);
+  await setHostWidth(table, "");
+  await page.waitForTimeout(100);
+  expect(await columnWidths(table)).toEqual(wide);
+  // Rows with longer names return: the columns keep their widths, as they
+  // do for any new items at an unchanged table width.
+  await page.getByRole("checkbox", { name: "Use longer project names" }).check();
+  await filterReviews(page, "");
+  await expect(dataRows(table).first()).toContainText("with-a-longer-name");
+  await page.waitForTimeout(100);
+  expect(await columnWidths(table)).toEqual(wide);
+});
+
+test("an empty table's header fills a box widened while it was empty", async ({ page }) => {
+  await gotoPage(page, "virtual-table");
+  const table = bounded(page);
+  await expect(dataRows(table).first()).toContainText("#0");
+  const wide = await columnWidths(table);
+  await setHostWidth(table, "420px");
+  await expect.poll(async () => (await boxFit(table)).table).toBeLessThanOrEqual(420);
+  const narrow = await columnWidths(table);
+
+  await filterReviews(page, "no review matches this");
+  await expect(dataRows(table)).toHaveCount(0);
+  await setHostWidth(table, "");
+  // The stored widths stay, and the last column takes the spare width, so
+  // the header spans the box as it does with rows.
+  await expect
+    .poll(async () => {
+      const fit = await boxFit(table);
+      return fit.box - fit.table;
+    })
+    .toBe(0);
+  expect((await columnWidths(table)).slice(0, -1)).toEqual(narrow.slice(0, -1));
+
+  await filterReviews(page, "");
+  await expect(dataRows(table).first()).toContainText("#0");
+  await expect.poll(() => columnWidths(table)).toEqual(wide);
 });

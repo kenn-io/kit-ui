@@ -36,6 +36,7 @@ use [VirtualTable](virtual-table.md).
 | Prop             | Type                                   | Default  | Notes                                                                                                                                                                                                                     |
 | ---------------- | -------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `items`          | `T[]`                                  | required |                                                                                                                                                                                                                           |
+| `rowKey`         | `(item: T, index: number) => unknown`  | index    | Stable row identity: keys the rendered rows and the measured heights, so heights survive inserts, removals, reorders, and appends                                                                                         |
 | `itemHeight`     | `number`                               | —        | Fixed row height in px (fast path, no measuring). The windowing math trusts it: rendered rows must actually be this tall (border-box), or offsets drift over long lists — use measured mode if content decides the height |
 | `estimateHeight` | `number`                               | `32`     | Height guess for unmeasured variable rows                                                                                                                                                                                 |
 | `overscan`       | `number`                               | `4`      | Rows rendered beyond each viewport edge                                                                                                                                                                                   |
@@ -107,11 +108,12 @@ no keyboard errors.
   transformed, so `position: sticky` inside rows won't stick.
 - Row snippets in variable mode may wrap/resize freely — each rendered row
   is observed and the window recomputes on real heights.
-- Measurements are keyed by index **for the current `items` array** — a new
-  array identity (filter/sort/replace) drops the cache and rows re-measure
-  as they render. Appending by replacing the array therefore re-estimates
-  scrolled-away rows; mutate-and-reassign the same array only if you know
-  indexes are stable.
+- With `rowKey`, measurements are kept by row key: a row keeps its height
+  when rows are inserted, removed, reordered, or appended around it, and
+  scrolled-away rows never fall back to the estimate. Without it they are
+  keyed by index **for the current `items` array** — a new array identity
+  (filter/sort/replace/append) drops the cache and rows re-measure as they
+  render.
 
 ## Low-level API
 
