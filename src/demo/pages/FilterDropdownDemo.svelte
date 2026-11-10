@@ -28,6 +28,21 @@
     { id: "sonnet-5", count: 96 },
   ];
 
+  type Tri = "include" | "exclude";
+  let conditions = $state<Record<string, Tri | undefined>>({});
+  const conditionOptions = [
+    { id: "approved", label: "Approved" },
+    { id: "unassigned", label: "Unassigned" },
+  ];
+
+  function cycleCondition(id: string) {
+    const current = conditions[id];
+    conditions = {
+      ...conditions,
+      [id]: current === undefined ? "include" : current === "include" ? "exclude" : undefined,
+    };
+  }
+
   let pickedLabels = $state(new Set<string>());
   const labelOptions = ["bug", "docs", "enhancement"];
 
@@ -87,6 +102,40 @@
     onReset={() => (states = new Set())}
   />
   <span>active: <code>{[...states].join(", ") || "none"}</code></span>
+</DemoSection>
+
+<DemoSection
+  title="Excluded rows"
+  description="A row can also be excluded: set excluded instead of active and it shows a cross. The app owns the cycle; here each click moves neutral, included, excluded."
+  code={`<FilterDropdown
+  label="Conditions"
+  sections={[{
+    items: options.map((o) => ({
+      ...o,
+      active: state[o.id] === "include",
+      excluded: state[o.id] === "exclude",
+      onSelect: () => cycle(o.id),
+    })),
+  }]}
+/>`}
+>
+  <FilterDropdown
+    label="Conditions"
+    badgeCount={Object.values(conditions).filter(Boolean).length}
+    sections={[
+      {
+        items: conditionOptions.map((o) => ({
+          ...o,
+          active: conditions[o.id] === "include",
+          excluded: conditions[o.id] === "exclude",
+          onSelect: () => cycleCondition(o.id),
+        })),
+      },
+    ]}
+  />
+  <span data-testid="filter-conditions"
+    >{conditionOptions.map((o) => `${o.id}: ${conditions[o.id] ?? "any"}`).join(", ")}</span
+  >
 </DemoSection>
 
 <DemoSection

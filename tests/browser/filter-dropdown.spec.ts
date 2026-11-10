@@ -273,3 +273,31 @@ test("a zoomed panel and a tall flyout both fit a small window", async ({ page }
   await last.scrollIntoViewIfNeeded();
   await expect.poll(() => inside(last)).toBe(true);
 });
+
+test("an excluded row shows a cross, is named as excluded, and is not dimmed", async ({ page }) => {
+  await gotoPage(page, "filter-dropdown");
+  await page.getByRole("button", { name: "Conditions" }).click();
+
+  const row = page.getByRole("button", { name: /^Approved/ });
+  await expect(row).toHaveAttribute("aria-pressed", "false");
+  await expect(row).toHaveCSS("opacity", "0.5");
+  await expect(row.locator("svg")).toHaveCount(0);
+
+  await row.click();
+  await expect(row).toHaveAttribute("aria-pressed", "true");
+  await expect(row).toHaveAccessibleName("Approved");
+  await expect(row.locator("svg.lucide-check")).toBeVisible();
+
+  await row.click();
+  await expect(row).toHaveAttribute("aria-pressed", "true");
+  await expect(row).toHaveAccessibleName("Approved , excluded");
+  await expect(row.locator("svg.lucide-x")).toBeVisible();
+  await expect(row.locator("svg.lucide-check")).toHaveCount(0);
+  await expect(row).toHaveCSS("opacity", "1");
+  await expect(page.getByTestId("filter-conditions")).toContainText("approved: exclude");
+
+  await row.click();
+  await expect(row).toHaveAttribute("aria-pressed", "false");
+  await expect(row.locator("svg")).toHaveCount(0);
+  await expect(page.getByTestId("filter-conditions")).toContainText("approved: any");
+});

@@ -6,6 +6,9 @@
     label: string;
     description?: string;
     active: boolean;
+    /** The row filters its option out. An excluded row shows a cross where
+     * an active row shows a tick; `active` should be false. */
+    excluded?: boolean;
     color?: string;
     count?: number;
     disabled?: boolean;
@@ -27,6 +30,7 @@
 <script lang="ts">
   import ArrowUpDownIcon from "@lucide/svelte/icons/arrow-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
+  import XIcon from "@lucide/svelte/icons/x";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import FunnelIcon from "@lucide/svelte/icons/funnel";
@@ -56,6 +60,8 @@
     selectAllLabel?: string;
     deselectAllLabel?: string;
     emptyLabel?: string;
+    /** Screen-reader text appended to an excluded row's name. */
+    excludedLabel?: string;
     minWidth?: string;
     align?: "start" | "end";
     icon?: "filter" | "sort" | "more";
@@ -82,6 +88,7 @@
     selectAllLabel = "Select all",
     deselectAllLabel = "Deselect all",
     emptyLabel = "No matches",
+    excludedLabel = "excluded",
     minWidth = "200px",
     align = "start",
     icon = "filter",
@@ -407,6 +414,7 @@
           <button
             class="kit-filter-dropdown__item kit-control-states"
             class:active={item.active}
+            class:excluded={item.excluded}
             class:submenu={item.submenu !== undefined}
             class:open={submenuItem?.id === item.id}
             onclick={() => handleSelect(item)}
@@ -414,7 +422,7 @@
             disabled={disabled || item.disabled}
             title={item.description}
             aria-describedby={item.description ? itemDescriptionId(item) : undefined}
-            aria-pressed={item.submenu ? undefined : item.active}
+            aria-pressed={item.submenu ? undefined : item.active || item.excluded === true}
             aria-haspopup={item.submenu ? "dialog" : undefined}
             aria-expanded={item.submenu ? submenuItem?.id === item.id : undefined}
             aria-controls={item.submenu && submenuItem?.id === item.id
@@ -425,11 +433,16 @@
           >
             <span
               class="kit-filter-dropdown__dot"
-              style:background={item.active
-                ? (item.color ?? "var(--accent-blue)")
-                : "var(--border-muted)"}
+              style:background={item.excluded
+                ? "var(--accent-red)"
+                : item.active
+                  ? (item.color ?? "var(--accent-blue)")
+                  : "var(--border-muted)"}
             ></span>
             <span class="kit-filter-dropdown__label">{item.label}</span>
+            {#if item.excluded}
+              <span class="kit-sr-only">, {excludedLabel}</span>
+            {/if}
             {#if item.count !== undefined}
               <span class="kit-filter-dropdown__count">{item.count}</span>
             {/if}
@@ -442,7 +455,9 @@
               </span>
             {:else}
               <span class="kit-filter-dropdown__check" class:on={item.active}>
-                {#if item.active}
+                {#if item.excluded}
+                  <XIcon size="10" strokeWidth="2.2" aria-hidden="true" />
+                {:else if item.active}
                   <CheckIcon size="10" strokeWidth="2.2" aria-hidden="true" />
                 {/if}
               </span>
@@ -633,7 +648,7 @@
     background: var(--bg-surface-hover);
   }
 
-  .kit-filter-dropdown__item:not(.active) {
+  .kit-filter-dropdown__item:not(.active, .excluded) {
     opacity: 0.5;
   }
 
@@ -712,6 +727,10 @@
     justify-content: center;
     color: var(--accent-green);
     flex-shrink: 0;
+  }
+
+  .kit-filter-dropdown__item.excluded .kit-filter-dropdown__check {
+    color: var(--accent-red);
   }
 
   .kit-filter-dropdown__empty {
