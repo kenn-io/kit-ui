@@ -13,8 +13,8 @@ const html = String.raw`<!doctype html>
 
       :root {
         --ink: #181b24;
-        --text-secondary: #555b6e;
-        --text-muted: #5c6274;
+        --text-secondary: #474d5f;
+        --text-muted: #62687c;
         --blue: #2563eb;
         --blue-soft: #eff6ff;
         --line: #d8dae2;

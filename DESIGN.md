@@ -10,8 +10,8 @@ colors:
   edge-default: "#d8dae2"
   edge-muted: "#e4e6ec"
   ink-primary: "#181b24"
-  ink-secondary: "#555b6e"
-  ink-muted: "#5c6274"
+  ink-secondary: "#474d5f"
+  ink-muted: "#62687c"
   signal-amber: "#d97706"
   workflow-violet: "#7c3aed"
   confirm-green: "#059669"
@@ -123,7 +123,7 @@ Tinted cool-grey neutrals with a restrained six-accent semantic vocabulary; the 
 - **Hover Wash** (#f0f1f4): the universal hover tint (`--bg-surface-hover`).
 - **Inset Well** (#ecedf2): recessed regions — wells, secondary button fills (`--bg-inset`).
 - **Edge Default / Edge Muted** (#d8dae2 / #e4e6ec): structural 1px borders and quieter dividers.
-- **Ink Primary / Secondary / Muted** (#181b24 / #555b6e / #5c6274): three-step text hierarchy. Muted still carries text (placeholders, metadata), so it clears 4.5:1 on every neutral fill in both themes.
+- **Ink Primary / Secondary / Muted** (#181b24 / #474d5f / #62687c): three-step text hierarchy. Muted still carries text (placeholders, metadata), so it clears 4.5:1 on every neutral fill in both themes.
 
 ### Secondary
 

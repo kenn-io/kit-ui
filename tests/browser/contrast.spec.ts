@@ -59,7 +59,7 @@ function keyOf(className: string): string {
 // every theme. Any other entry appearing here is a regression.
 const KNOWN_FAILURES: Record<string, Record<string, number>> = {
   light: {
-    "kit-chip--tone-muted": 3.16,
+    "kit-chip--tone-muted": 2.97,
   },
   "light-hc": {
     "kit-chip--tone-muted": 4.1,
