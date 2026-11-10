@@ -581,12 +581,11 @@ describe("hand-rolled components", () => {
       `.missing-data { text-align: center; }`,
       `<div class="missing-data"><p>No pins</p></div>`,
     );
-    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(2);
-  });
-
-  test("empty state: does not match kit-missing-data", () => {
-    const src = `<div class="kit-missing-data"><p class="kit-missing-data__title"></p></div>`;
-    expect(checkSource(src, "A.svelte", ["hand-rolled-empty-state"])).toHaveLength(0);
+    const findings = checkSource(src, "A.svelte", ["hand-rolled-empty-state"]);
+    expect(findings).toHaveLength(2);
+    // One component replaces both names.
+    expect(findings[0]!.message).toContain("EmptyState");
+    expect(findings[0]!.message).not.toContain("MissingData");
   });
 
   test("empty state: does not match kit-empty-state or prose", () => {

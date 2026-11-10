@@ -159,7 +159,8 @@ export function checkHandRolledCodeBlock(source: any): {
     line: number;
     message: string;
 }[];
-/** Hand-rolled empty/placeholder states duplicate EmptyState or MissingData. */
+/** Hand-rolled empty/placeholder states duplicate EmptyState. `missing-data`
+ * is the name such a block often has for a whole page. */
 export function checkHandRolledEmptyState(source: any): {
     rule: string;
     line: number;
