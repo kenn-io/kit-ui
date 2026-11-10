@@ -121,7 +121,8 @@
  * raised surface and a lighter edge. That surface narrows the gap to the
  * ordinary selected fill, so the chosen option inside a popover (a date
  * preset, a mode tab) takes a stronger fill and edge. High contrast keeps
- * its strong default edge. */
+ * its strong default edge. A modal panel is the same kind of surface, so
+ * the rules scoped to the popover card below cover it too. */
 :root {
   --bg-popover: var(--bg-surface);
   --border-popover: var(--border-default);
@@ -136,7 +137,7 @@
   --border-popover: var(--border-default);
 }
 
-:root.dark .kit-popover-card {
+:root.dark :is(.kit-popover-card, .kit-modal-panel) {
   --selected-strong-bg: color-mix(in srgb, var(--text-primary) 24%, var(--bg-surface));
   --selected-strong-edge:
     inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 20%, transparent),
@@ -148,7 +149,7 @@
  * dent. Inside a popover the hover fill, and the quiet selected fills that
  * follow it, step up from the popover surface instead. --bg-inset stays as
  * it is: it is darker than the popover, so a well still reads as a well. */
-:root.dark .kit-popover-card {
+:root.dark :is(.kit-popover-card, .kit-modal-panel) {
   --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-popover));
   --selected-bg: var(--bg-surface-hover);
   --selected-list-bg: var(--bg-surface-hover);

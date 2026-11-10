@@ -82,3 +82,47 @@ for (const highContrast of [false, true]) {
     expect(well).toBeLessThan((await luminanceOf(panel)).background);
   });
 }
+
+test("a dark modal sits on the popover surface with the popover edge", async ({ page }) => {
+  await gotoPage(page, "modal");
+  await setTheme(page, { dark: true });
+  await page.getByRole("button", { name: "Open modal", exact: true }).click();
+  const panel = page.locator(".kit-modal-panel");
+  await expect(panel).toBeVisible();
+
+  const popover = await resolvedStyle(page, "background-color", "var(--bg-popover)");
+  expect(popover).not.toBe(await resolvedStyle(page, "background-color", "var(--bg-surface)"));
+  await expect(panel).toHaveCSS("background-color", popover);
+  const edge = await resolvedStyle(page, "border-top-color", "var(--border-popover)");
+  await expect(panel).toHaveCSS("border-top-color", edge);
+  // The header band draws over the panel's border, so it carries the same edge.
+  await expect(panel.locator(".kit-modal-header")).toHaveCSS("border-top-color", edge);
+});
+
+test("a toned header band tints a dark modal's surface, not the darker page surface", async ({
+  page,
+}) => {
+  await gotoPage(page, "modal");
+  await setTheme(page, { dark: true });
+  await page.getByRole("button", { name: "Delete…", exact: true }).click();
+  const panel = page.locator(".kit-modal-panel");
+  await expect(panel).toBeVisible();
+  const band = (await luminanceOf(panel.locator(".kit-modal-header"))).background;
+  expect(band).toBeGreaterThan((await luminanceOf(panel)).background);
+});
+
+test("a hovered control in a dark modal is lighter than the modal", async ({ page }) => {
+  await gotoPage(page, "modal");
+  await setTheme(page, { dark: true });
+  await page.getByRole("button", { name: "Open modal", exact: true }).click();
+  const panel = page.locator(".kit-modal-panel");
+  await expect(panel).toBeVisible();
+  await panel.evaluate((el) => {
+    const hover = document.createElement("span");
+    hover.dataset.testHoverProbe = "";
+    hover.style.background = "var(--bg-surface-hover)";
+    el.append(hover);
+  });
+  const hover = (await luminanceOf(panel.locator("[data-test-hover-probe]"))).background;
+  expect(hover).toBeGreaterThan((await luminanceOf(panel)).background);
+});

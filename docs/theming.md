@@ -27,7 +27,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                           |
 | Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                 |
 | Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                          |
-| Popovers    | `--bg-popover`, `--border-popover` (the `.kit-popover-card` surface and edge; lighter than the surface in dark)                                             |
+| Popovers    | `--bg-popover`, `--border-popover` (the `.kit-popover-card` and Modal surface and edge; lighter than the surface in dark)                                   |
 | Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                     |
 | Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                               |
 | Fonts       | `--font-sans`, `--font-mono`                                                                                                                                |
@@ -251,6 +251,9 @@ a dent. `--selected-bg` and `--selected-list-bg` follow the same fill.
 `--bg-inset` is unchanged, so a well inside a popover is still darker than
 the popover. Content in a custom popover gets this from the class; do not
 hard-code a hover color there.
+
+The Modal panel is the same kind of surface. It keeps its own radius, takes
+`--bg-popover` and `--border-popover`, and gets the same dark hover fill.
 
 **Stacking**: three z tokens in theme.css order the layers —
 `--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`

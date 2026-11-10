@@ -185,7 +185,7 @@ its resting surfaces keep today's look.
 
 ### Named Rules
 
-**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (`--bg-popover` fill, 1px `--border-popover` edge, md radius, lg shadow; the popover tokens equal the surface and default border in light and step lighter in dark). Hand-rolled copies are flagged by `kit-ui-check`.
+**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (`--bg-popover` fill, 1px `--border-popover` edge, md radius, lg shadow; the popover tokens equal the surface and default border in light and step lighter in dark). Hand-rolled copies are flagged by `kit-ui-check`. The Modal panel keeps its own larger radius but takes the same fill and edge. Inside either surface in dark, `--bg-surface-hover` steps up from `--bg-popover`, so hover still lightens.
 
 ## 5. Components
 
