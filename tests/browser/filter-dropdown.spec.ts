@@ -308,7 +308,7 @@ test("an excluded row shows a cross, is named as excluded, and is not dimmed", a
 
   await row.click();
   await expect(row).toHaveAttribute("aria-pressed", "true");
-  await expect(row).toHaveAccessibleName("Approved , excluded");
+  await expect(row).toHaveAccessibleName("Approved , left out of results");
   await expect(row.locator("svg.lucide-x")).toBeVisible();
   await expect(row.locator("svg.lucide-check")).toHaveCount(0);
   await expect(row).toHaveCSS("opacity", "1");

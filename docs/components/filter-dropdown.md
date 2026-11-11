@@ -55,7 +55,7 @@ otherwise.
 | `onSelectAll` / `onDeselectAll`       | `() => void`                   | —                                 | Bulk action row (either shows it)          |
 | `selectAllLabel` / `deselectAllLabel` | `string`                       | `"Select all"` / `"Deselect all"` |                                            |
 | `emptyLabel`                          | `string`                       | `"No matches"`                    | Shown when search filters everything out   |
-| `excludedLabel`                       | `string`                       | `"excluded"`                      | Screen-reader text on an excluded row      |
+| `excludedLabel`                       | `string`                       | `"left out of results"`           | Screen-reader text on an excluded row      |
 | `minWidth`                            | `string`                       | `"200px"`                         | Panel min-width                            |
 | `align`                               | `"start" \| "end"`             | `"start"`                         | Panel alignment relative to trigger        |
 | `icon`                                | `"filter" \| "sort" \| "more"` | `"filter"`                        | Trigger icon                               |

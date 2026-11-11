@@ -91,7 +91,7 @@
     selectAllLabel = "Select all",
     deselectAllLabel = "Deselect all",
     emptyLabel = "No matches",
-    excludedLabel = "excluded",
+    excludedLabel = "left out of results",
     minWidth = "200px",
     align = "start",
     icon = "filter",
