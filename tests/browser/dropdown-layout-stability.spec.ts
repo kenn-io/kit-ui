@@ -1,10 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
-// Opening a dropdown must not move anything on the page. Each control sits in
-// a shrink-to-fit flex row, as apps place them beside a button, so a control
-// whose open state measures differently from its closed state resizes itself
-// and shoves the button next to it.
+// Opening a dropdown or choosing in it must not move anything on the page.
+// Each control sits in a shrink-to-fit flex row, as apps place them beside a
+// button, so a control whose size follows its state or its chosen label
+// resizes itself and shoves the button next to it.
 
 type Case = {
   name: string;
@@ -20,6 +20,11 @@ const CASES: Case[] = [
   },
   {
     name: "Typeahead with prefix",
+    trigger: (page) => page.getByRole("button", { name: /Claude/ }),
+    popup: (page) => page.locator(".kit-typeahead__panel"),
+  },
+  {
+    name: "Typeahead multiple",
     trigger: (page) => page.getByRole("button", { name: /Claude/ }),
     popup: (page) => page.locator(".kit-typeahead__panel"),
   },
@@ -53,10 +58,12 @@ const CASES: Case[] = [
 async function mountInRow(page: Page, name: string): Promise<void> {
   await gotoPage(page, "typeahead");
   await page.evaluate(async (name) => {
-    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { mountReactive } = await import("/tests/browser/fixtures/mount-reactive.svelte.ts");
     const load = {
       Typeahead: () => import("/src/lib/components/Typeahead.svelte"),
       "Typeahead with prefix": () => import("/src/lib/components/Typeahead.svelte"),
+      "Typeahead multiple": () => import("/src/lib/components/Typeahead.svelte"),
+      "Typeahead remote multiple": () => import("/src/lib/components/Typeahead.svelte"),
       SelectDropdown: () => import("/src/lib/components/SelectDropdown.svelte"),
       FilterDropdown: () => import("/src/lib/components/FilterDropdown.svelte"),
       Menu: () => import("/tests/browser/fixtures/ZoomedMenu.svelte"),
@@ -65,17 +72,26 @@ async function mountInRow(page: Page, name: string): Promise<void> {
     }[name]!;
     const { default: Control } = await load();
     const noop = () => {};
+    // Callers own the choice: each control's select handler writes it back.
+    let control: { update: (next: Record<string, unknown>) => void } | undefined;
+    let values = name === "Typeahead remote multiple" ? ["claude", "codex"] : ["claude"];
+    const setValue = (value: string) => control?.update({ value });
+    const toggleValue = (name: string) => {
+      values = values.includes(name) ? values.filter((v) => v !== name) : [...values, name];
+      control?.update({ values });
+    };
     const agents = ["claude", "codex", "gemini", "copilot"].map((n) => ({
       name: n,
       label: n[0]!.toUpperCase() + n.slice(1),
     }));
+    agents.push({ name: "copilot-cli", label: "GitHub Copilot command line" });
     const props = {
       Typeahead: {
         options: agents,
         value: "claude",
         fallbackLabel: "claude",
         placeholder: "Insight agent",
-        onselect: noop,
+        onselect: setValue,
       },
       "Typeahead with prefix": {
         options: agents,
@@ -83,12 +99,31 @@ async function mountInRow(page: Page, name: string): Promise<void> {
         triggerPrefix: "Agent:",
         fallbackLabel: "claude",
         placeholder: "Search agents",
-        onselect: noop,
+        onselect: setValue,
+      },
+      "Typeahead multiple": {
+        options: agents,
+        multiple: true,
+        values,
+        fallbackLabel: "All agents",
+        placeholder: "Agents",
+        onselect: toggleValue,
+      },
+      // A remote list cannot reserve its labels ahead of time; the field
+      // holds its width while open instead.
+      "Typeahead remote multiple": {
+        options: agents,
+        multiple: true,
+        remote: true,
+        values,
+        fallbackLabel: "All agents",
+        placeholder: "Agents",
+        onselect: toggleValue,
       },
       SelectDropdown: {
         value: "claude",
         options: agents.map((a) => ({ value: a.name, label: a.label })),
-        onchange: noop,
+        onchange: setValue,
       },
       FilterDropdown: {
         label: "Agent",
@@ -120,7 +155,7 @@ async function mountInRow(page: Page, name: string): Promise<void> {
     after.textContent = "Generate";
     row.append(target, after);
     document.body.append(row);
-    mount(Control, { target, props });
+    control = mountReactive(Control, target, props);
   }, name);
 }
 
@@ -152,6 +187,30 @@ for (const c of CASES) {
 
     await page.keyboard.press("Escape");
     await expect(c.popup(page)).toBeHidden();
+    expect(await layout(page)).toEqual(closed);
+  });
+}
+
+// A longer choice must not widen the control, as it would not widen a
+// native select. A multiple Typeahead stays open across choices, so its
+// label changes while the list is under the pointer.
+for (const c of CASES.filter((c) => /Typeahead|SelectDropdown/.test(c.name))) {
+  test(`${c.name} keeps its size when a longer option is chosen`, async ({ page }) => {
+    await mountInRow(page, c.name);
+    const closed = await layout(page);
+
+    await c.trigger(page).click();
+    await expect(c.popup(page)).toBeVisible();
+    await page.getByRole("option", { name: "Copilot", exact: true }).click();
+    if (c.name === "Typeahead multiple") {
+      await expect(c.popup(page)).toBeVisible();
+      expect(await layout(page)).toEqual(closed);
+      await page.keyboard.press("Escape");
+    }
+    await expect(c.popup(page)).toBeHidden();
+    await expect(page.locator("#control button").first()).toHaveAccessibleName(
+      c.name === "Typeahead multiple" ? /2 selected/ : /Copilot/,
+    );
     expect(await layout(page)).toEqual(closed);
   });
 }
@@ -195,3 +254,20 @@ for (const variant of ["boxed", "borderless"] as const) {
     expect(await boxesWithChoice("month")).toEqual(await boxesWithChoice("day"));
   });
 }
+
+test("Typeahead remote multiple keeps its size while choices change under it", async ({ page }) => {
+  await mountInRow(page, "Typeahead remote multiple");
+  const closed = await layout(page);
+  await page.getByRole("button", { name: /2 selected/ }).click();
+  await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+  await page.getByRole("option", { name: "Codex", exact: true }).click();
+  await page.getByRole("option", { name: "GitHub Copilot command line", exact: true }).click();
+  await page.getByRole("option", { name: "Claude", exact: true }).click();
+  // One choice left, so the hidden trigger now names a long label the
+  // remote list could not reserve.
+  await expect(page.locator("#control button").first()).toHaveAttribute(
+    "aria-label",
+    /GitHub Copilot command line/,
+  );
+  expect(await layout(page)).toEqual(closed);
+});

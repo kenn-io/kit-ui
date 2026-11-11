@@ -119,6 +119,7 @@
   // The built-in trigger, or the caller's button when `trigger` is set.
   let triggerEl = $state<HTMLButtonElement>();
   let containerEl = $state<HTMLDivElement>();
+  let openWidth = $state<number>();
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
   // Guards the focusout dismissal during the trigger→input focus handoff.
@@ -299,6 +300,28 @@
           (remote ? selectedLabelCache.get(shownValue)?.label : undefined) ??
           (allowCustom && shownValue !== "" ? shownValue : fallbackLabel)),
   );
+  // Every other label the built-in trigger can show, laid out invisibly
+  // under the current one so the trigger is as wide as its widest choice,
+  // as a native select is. Choosing an option then never resizes it. A
+  // remote list changes with every query, so only the fixed labels count
+  // there; the open-width freeze below covers the rest.
+  const reservedLabels = $derived.by(() => {
+    if (trigger) return [];
+    const labels = new Set<string>([fallbackLabel]);
+    let count = 0;
+    const walk = (opts: TypeaheadOption[]) => {
+      for (const option of opts) {
+        count += 1;
+        if (!remote) labels.add(option.displayLabel ?? option.label);
+        if (option.children) walk(option.children);
+      }
+    };
+    walk(options);
+    if (multiple) labels.add(multipleLabel.replace("{count}", String(Math.max(count, 2))));
+    labels.delete(displayValue);
+    return [...labels];
+  });
+
   // The closed trigger's accessible name carries the current selection, so a
   // screen reader hears "Time zone: UTC" rather than only the placeholder.
   const triggerName = $derived(
@@ -337,6 +360,12 @@
   async function openDropdown(initialQuery = "") {
     if (disabled) return;
     updateQuery(initialQuery);
+    // Hold the built-in trigger's width while open: a choice in `multiple`
+    // mode, a custom value, or a remote label must not resize the field
+    // under the pointer. Zoom-corrected, as the panel maths is.
+    if (!trigger && containerEl) {
+      openWidth = containerEl.getBoundingClientRect().width / (containerEl.currentCSSZoom ?? 1);
+    }
     open = true;
     // The trigger button hides as the input mounts over it; focus briefly
     // lands on <body> and would fire focusout on the container. Suppress
@@ -355,6 +384,7 @@
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
     open = false;
+    openWidth = undefined;
     updateQuery("");
     // Invalidate in-flight selections: a slow onselect from this (or an
     // earlier) open instance must not close a menu the user reopens later.
@@ -622,6 +652,7 @@
   class="kit-typeahead"
   class:kit-typeahead--custom-trigger={trigger !== undefined}
   bind:this={containerEl}
+  style:width={open && openWidth !== undefined ? `${openWidth}px` : undefined}
   onfocusout={handleFocusOut}
 >
   {#if trigger}
@@ -647,7 +678,12 @@
             {#if selectedOption}{@render icon(selectedOption)}{/if}
           </span>
         {/if}
-        <span class="kit-typeahead__value-text">{displayValue}</span>
+        <span class="kit-typeahead__value-text">
+          <span class="kit-typeahead__value-label">{displayValue}</span>
+          {#each reservedLabels as label (label)}
+            <span class="kit-typeahead__value-reserve" aria-hidden="true">{label}</span>
+          {/each}
+        </span>
       </span>
       <ChevronDownIcon
         class="kit-typeahead__chevron"
@@ -862,10 +898,26 @@
     flex: 0 0 auto;
   }
 
+  /* One grid cell holds the label and the reserved labels, so the column
+     takes the widest; minmax(0, …) still lets a capped trigger ellipsize. */
   .kit-typeahead__value-text {
+    display: grid;
+    grid-template-columns: minmax(0, auto);
+    min-width: 0;
+  }
+
+  .kit-typeahead__value-label,
+  .kit-typeahead__value-reserve {
+    grid-area: 1 / 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .kit-typeahead__value-reserve {
+    height: 0;
+    visibility: hidden;
   }
 
   .kit-typeahead__prefix {
