@@ -4,10 +4,14 @@ Filterable select: the closed state is a trigger button. Typing while it has foc
 opens the search with the typed character. Clicking, Enter, Space, Arrow Down, or Arrow Up opens an empty
 search input with a match-highlighted option list. The input covers the
 trigger and takes its exact size, so opening never moves anything beside the
-control. Like a native select, the built-in trigger is as wide as its widest
-option label, so choosing never resizes it either. A `remote` list changes
-with each query, so it cannot reserve its labels; the trigger holds its width
-while open and can change size after a choice closes it. Arrow keys navigate, Enter selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
+control. Like a native select, the built-in trigger reserves room for its
+longest option label, counted in M's (the widest letter) plus a little
+padding, so choosing never resizes it either. `--typeahead-max-width` still
+caps it; a longer label ellipsizes, and the open list can be wider than the
+field. A `remote` list changes with each query, so it cannot reserve its
+labels; the trigger holds its width while open and can change size after a
+choice closes it. An app rule that sets the open field's width outranks that
+hold. Arrow keys navigate, Enter selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
 extended with Forge's `TypeaheadTrigger` features (clear row, custom
 values, veto, meta text) and grouped options.
 

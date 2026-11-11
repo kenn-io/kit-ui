@@ -300,26 +300,30 @@
           (remote ? selectedLabelCache.get(shownValue)?.label : undefined) ??
           (allowCustom && shownValue !== "" ? shownValue : fallbackLabel)),
   );
-  // Every other label the built-in trigger can show, laid out invisibly
-  // under the current one so the trigger is as wide as its widest choice,
-  // as a native select is. Choosing an option then never resizes it. A
-  // remote list changes with every query, so only the fixed labels count
-  // there; the open-width freeze below covers the rest.
-  const reservedLabels = $derived.by(() => {
-    if (trigger) return [];
-    const labels = new Set<string>([fallbackLabel]);
+  // A row of M's, the widest letter, as long as the longest label the
+  // built-in trigger can show. It sits invisibly under the current label, so
+  // the trigger is as wide as its longest choice, as a native select is, and
+  // choosing an option never resizes it. A remote list changes with every
+  // query, so only the fixed labels count there; the open-width freeze below
+  // covers the rest.
+  const reservedWidth = $derived.by(() => {
+    if (trigger) return "";
+    // fallbackLabel is typed as required, but some callers leave it out.
+    let longest = Math.max(fallbackLabel?.length ?? 0, displayValue?.length ?? 0);
     let count = 0;
     const walk = (opts: TypeaheadOption[]) => {
       for (const option of opts) {
         count += 1;
-        if (!remote) labels.add(option.displayLabel ?? option.label);
+        if (!remote) longest = Math.max(longest, (option.displayLabel ?? option.label).length);
         if (option.children) walk(option.children);
       }
     };
     walk(options);
-    if (multiple) labels.add(multipleLabel.replace("{count}", String(Math.max(count, 2))));
-    labels.delete(displayValue);
-    return [...labels];
+    if (multiple) {
+      const label = multipleLabel.replace("{count}", String(Math.max(count, 2)));
+      longest = Math.max(longest, label.length);
+    }
+    return "M".repeat(longest);
   });
 
   // The closed trigger's accessible name carries the current selection, so a
@@ -652,7 +656,8 @@
   class="kit-typeahead"
   class:kit-typeahead--custom-trigger={trigger !== undefined}
   bind:this={containerEl}
-  style:width={open && openWidth !== undefined ? `${openWidth}px` : undefined}
+  class:kit-typeahead--holding-width={open && openWidth !== undefined}
+  style:--kit-typeahead-open-width={openWidth === undefined ? undefined : `${openWidth}px`}
   onfocusout={handleFocusOut}
 >
   {#if trigger}
@@ -680,9 +685,9 @@
         {/if}
         <span class="kit-typeahead__value-text">
           <span class="kit-typeahead__value-label">{displayValue}</span>
-          {#each reservedLabels as label (label)}
-            <span class="kit-typeahead__value-reserve" aria-hidden="true">{label}</span>
-          {/each}
+          {#if reservedWidth}
+            <span class="kit-typeahead__value-reserve" aria-hidden="true">{reservedWidth}</span>
+          {/if}
         </span>
       </span>
       <ChevronDownIcon
@@ -834,6 +839,13 @@
     max-width: var(--typeahead-max-width, 300px);
   }
 
+  /* Holds the closed width while open. A plain class rule, so an app that
+     deliberately widens the open field (an overlay over its neighbours)
+     outranks it. */
+  .kit-typeahead--holding-width {
+    width: var(--kit-typeahead-open-width);
+  }
+
   .kit-typeahead__trigger {
     height: var(--typeahead-control-height, 26px);
     width: 100%;
@@ -898,8 +910,8 @@
     flex: 0 0 auto;
   }
 
-  /* One grid cell holds the label and the reserved labels, so the column
-     takes the widest; minmax(0, …) still lets a capped trigger ellipsize. */
+  /* One grid cell holds the label and the reserved row of M's, so the
+     column takes the wider; minmax(0, …) still lets a capped trigger ellipsize. */
   .kit-typeahead__value-text {
     display: grid;
     grid-template-columns: minmax(0, auto);
@@ -915,8 +927,11 @@
     white-space: nowrap;
   }
 
+  /* A little slack past the M's, so the longest label never sits tight
+     against the chevron. */
   .kit-typeahead__value-reserve {
     height: 0;
+    padding-inline-end: var(--space-2);
     visibility: hidden;
   }
 

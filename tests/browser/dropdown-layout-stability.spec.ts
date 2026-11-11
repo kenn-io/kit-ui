@@ -271,3 +271,53 @@ test("Typeahead remote multiple keeps its size while choices change under it", a
   );
   expect(await layout(page)).toEqual(closed);
 });
+
+// The reserved width stops at --typeahead-max-width: a long label ellipsizes
+// in the field, and the open list can still be wider than the field.
+test("Typeahead stays within its max width and lets the list run wider", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async () => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: Typeahead } = await import("/src/lib/components/Typeahead.svelte");
+    document.body.replaceChildren();
+    const target = document.createElement("div");
+    target.id = "control";
+    target.style.cssText =
+      "position:absolute;left:40px;top:40px;display:flex;--typeahead-max-width:140px;--typeahead-panel-min-width:320px";
+    document.body.append(target);
+    mount(Typeahead, {
+      target,
+      props: {
+        options: [
+          { name: "short", label: "Short" },
+          { name: "long", label: "A very long agent name that cannot fit" },
+        ],
+        value: "short",
+        fallbackLabel: "Any",
+        placeholder: "Agent",
+        onselect: () => {},
+      },
+    });
+  });
+  const field = page.locator(".kit-typeahead");
+  expect((await field.boundingBox())!.width).toBe(140);
+  await page.getByRole("button", { name: "Agent: Short" }).click();
+  const panel = page.locator(".kit-typeahead__panel");
+  await expect(panel).toBeVisible();
+  expect((await panel.boundingBox())!.width).toBeGreaterThanOrEqual(320);
+  expect((await field.boundingBox())!.width).toBe(140);
+});
+
+// An app may widen the open field on purpose, lifted over its neighbours as
+// agentsview's header project picker is. Its own open-state rule must win
+// over the width the Typeahead holds while open.
+test("Typeahead lets an app's open-state width rule win", async ({ page }) => {
+  await mountInRow(page, "Typeahead");
+  await page.addStyleTag({
+    content:
+      "#control:has(.kit-typeahead__input) .kit-typeahead { position: absolute; width: 260px; }",
+  });
+  await page.getByRole("button", { name: /Claude/ }).click();
+  await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+  expect((await page.locator(".kit-typeahead").boundingBox())!.width).toBe(260);
+});
