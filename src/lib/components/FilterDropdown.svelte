@@ -198,7 +198,13 @@
    * the panel or flyout, as MenuContent does for its height cap. */
   function fitToViewport(zoom: number): void {
     const width = Math.max(0, Math.floor(window.innerWidth / zoom) - 16);
-    const height = Math.max(0, Math.min(420, Math.floor(window.innerHeight / zoom) - 16));
+    // At least 420px or half the viewport, whichever is taller, never past
+    // the viewport's own edge margin.
+    const viewportHeight = Math.floor(window.innerHeight / zoom);
+    const height = Math.max(
+      0,
+      Math.min(Math.max(420, Math.floor(viewportHeight / 2)), viewportHeight - 16),
+    );
     if (viewportLimits?.width === width && viewportLimits.height === height) return;
     viewportLimits = { width, height };
     flushSync();
@@ -585,7 +591,7 @@
        entries) must scroll instead of growing past the viewport. The script
        sets the limits in unzoomed units; the fallbacks cover first paint. */
     max-width: var(--kit-filter-dropdown-max-width, calc(100vw - 16px));
-    max-height: var(--kit-filter-dropdown-max-height, min(420px, calc(100vh - 16px)));
+    max-height: var(--kit-filter-dropdown-max-height, min(max(420px, 50vh), calc(100vh - 16px)));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -724,7 +730,7 @@
     box-sizing: border-box;
     min-width: min(220px, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)));
     max-width: min(320px, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)));
-    max-height: var(--kit-filter-dropdown-max-height, min(420px, calc(100vh - 16px)));
+    max-height: var(--kit-filter-dropdown-max-height, min(max(420px, 50vh), calc(100vh - 16px)));
     padding: 4px 0;
     overflow-y: auto;
     overscroll-behavior: contain;

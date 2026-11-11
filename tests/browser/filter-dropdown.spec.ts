@@ -274,6 +274,21 @@ test("a zoomed panel and a tall flyout both fit a small window", async ({ page }
   await expect.poll(() => inside(last)).toBe(true);
 });
 
+for (const { height, cap } of [
+  { height: 600, cap: 420 },
+  { height: 1400, cap: 700 },
+]) {
+  test(`a long flyout in a ${height}px window grows to ${cap}px`, async ({ page }) => {
+    await page.setViewportSize({ width: 800, height });
+    await mountSubmenuFixture(page, 1, 80);
+    await page.getByRole("button", { name: "Fixture filters" }).click();
+    await page.getByRole("button", { name: /^Labels/ }).click();
+    const flyout = page.getByRole("dialog", { name: "Labels" });
+    // The taller of 420px and half the window, so tall windows show more rows.
+    await expect.poll(async () => (await flyout.boundingBox())!.height).toBe(cap);
+  });
+}
+
 test("an excluded row shows a cross, is named as excluded, and is not dimmed", async ({ page }) => {
   await gotoPage(page, "filter-dropdown");
   await page.getByRole("button", { name: "Conditions" }).click();
