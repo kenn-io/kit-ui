@@ -282,9 +282,9 @@ test("an excluded row shows a cross, is named as excluded, and is not dimmed", a
   await expect(row).toHaveAttribute("aria-pressed", "false");
   await expect(row).toHaveCSS("opacity", "0.5");
   await expect(row.locator("svg")).toHaveCount(0);
-  // A row without a category color has no dot in any state; the tick or cross marks it.
+  // A row without a category color shows no dot in any state; the tick or cross marks it.
   const dot = row.locator(".kit-filter-dropdown__dot");
-  await expect(dot).toHaveCount(0);
+  await expect(dot).toBeHidden();
 
   await row.click();
   await expect(row).toHaveAttribute("aria-pressed", "true");
@@ -297,7 +297,7 @@ test("an excluded row shows a cross, is named as excluded, and is not dimmed", a
   await expect(row.locator("svg.lucide-x")).toBeVisible();
   await expect(row.locator("svg.lucide-check")).toHaveCount(0);
   await expect(row).toHaveCSS("opacity", "1");
-  await expect(dot).toHaveCount(0);
+  await expect(dot).toBeHidden();
   await expect(page.getByTestId("filter-conditions")).toContainText("approved: exclude");
 
   await row.click();
@@ -306,7 +306,9 @@ test("an excluded row shows a cross, is named as excluded, and is not dimmed", a
   await expect(page.getByTestId("filter-conditions")).toContainText("approved: any");
 });
 
-test("only a row with a category color shows a dot", async ({ page }) => {
+test("only a row with a category color shows a dot, and the others align with it", async ({
+  page,
+}) => {
   await gotoPage(page, "filter-dropdown");
   await page.getByRole("button", { name: "State", exact: true }).click();
 
@@ -316,18 +318,32 @@ test("only a row with a category color shows a dot", async ({ page }) => {
   // The demo's states are categories with their own colors: lit while active, muted otherwise.
   const openDot = open.locator(".kit-filter-dropdown__dot");
   const draftDot = draft.locator(".kit-filter-dropdown__dot");
-  await expect(openDot).toBeVisible();
-  await expect(draftDot).toBeVisible();
   const lit = await openDot.evaluate((el) => getComputedStyle(el).backgroundColor);
   const muted = await draftDot.evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(lit).not.toBe(muted);
 
+  // A row without a color paints no dot in either state but keeps the slot,
+  // so its label starts where the dotted rows' labels start.
+  const hideBots = panel.getByRole("button", { name: "Hide bots" });
+  const slot = hideBots.locator(".kit-filter-dropdown__dot");
+  const labelLeft = (row: Locator) =>
+    row.locator(".kit-filter-dropdown__label").evaluate((el) => el.getBoundingClientRect().left);
+  for (const pressed of ["false", "true"]) {
+    await expect(hideBots).toHaveAttribute("aria-pressed", pressed);
+    await expect(slot).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    expect(await labelLeft(hideBots)).toBe(await labelLeft(open));
+    await hideBots.click();
+  }
+
+  // A panel where no row has a color has no slot, so labels sit at the row's edge.
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Sort", exact: true }).click();
-  await expect(
-    page.locator(".kit-filter-dropdown__panel .kit-filter-dropdown__item").first(),
-  ).toBeVisible();
-  await expect(page.locator(".kit-filter-dropdown__panel .kit-filter-dropdown__dot")).toHaveCount(
-    0,
+  await page.getByRole("button", { name: "Conditions" }).click();
+  const approved = page
+    .locator(".kit-filter-dropdown__panel")
+    .getByRole("button", { name: /^Approved/ });
+  await expect(approved.locator(".kit-filter-dropdown__dot")).toBeHidden();
+  const rowLeft = await approved.evaluate(
+    (el) => el.getBoundingClientRect().left + parseFloat(getComputedStyle(el).paddingLeft),
   );
+  expect(await labelLeft(approved)).toBe(rowLeft);
 });

@@ -80,6 +80,15 @@ interface FilterDropdownItem {
 }
 ```
 
+## Dots
+
+A row shows a leading dot only when it sets `color`, which suits categories
+such as event types that each have a color. The dot takes the color while the
+row is active and is muted otherwise. A row without `color` shows no dot: the
+tick or cross at the row's end marks it. When any row in the panel has a dot,
+every row keeps the dot's space so labels share one left edge, as menu items
+do for icons. A panel where no row has a color has no dot column.
+
 ## Excluded rows
 
 A row can filter its option out as well as in. Set `excluded` instead of

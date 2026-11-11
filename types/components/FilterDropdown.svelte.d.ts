@@ -8,7 +8,8 @@ export interface FilterDropdownItem {
      * an active row shows a tick; `active` should be false. */
     excluded?: boolean;
     /** Category color. A row with a color shows a dot in it while active;
-     * a row without one shows no dot, since the tick already marks it. */
+     * a row without one shows no dot, since the tick already marks it. When
+     * any row has a color, the others keep the dot's space so labels align. */
     color?: string;
     count?: number;
     disabled?: boolean;
