@@ -321,3 +321,16 @@ test("Typeahead lets an app's open-state width rule win", async ({ page }) => {
   await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
   expect((await page.locator(".kit-typeahead").boundingBox())!.width).toBe(260);
 });
+
+// Rows fill the list with the same inset on both sides, as SelectDropdown,
+// Menu, and CommandPalette rows do; the highlight never stops short of the
+// right edge to leave room for a scrollbar that is not there.
+test("Typeahead rows span the list with an even inset", async ({ page }) => {
+  await mountInRow(page, "Typeahead");
+  await page.getByRole("button", { name: /Claude/ }).click();
+  const panel = (await page.locator(".kit-typeahead__panel").boundingBox())!;
+  const row = (await page.getByRole("option", { name: "Claude", exact: true }).boundingBox())!;
+  const left = row.x - panel.x;
+  const right = panel.x + panel.width - (row.x + row.width);
+  expect(right).toBeCloseTo(left, 1);
+});

@@ -1020,8 +1020,6 @@
   .kit-typeahead__body {
     min-height: 0;
     overflow-y: auto;
-    scrollbar-gutter: stable;
-    padding-right: var(--space-3);
   }
 
   .kit-typeahead__list {
