@@ -20,6 +20,12 @@
      * visual hint is left out of the item's name.
      */
     keyshortcuts?: string | undefined;
+    /**
+     * Makes the item a checkbox (`menuitemcheckbox`) with this checked state, for
+     * options that toggle on and off. Leave unset for a plain action. The item does
+     * not draw a check mark; pass one in `icon`.
+     */
+    checked?: boolean | undefined;
     children: Snippet;
   }
 
@@ -33,6 +39,7 @@
     icon,
     trailing,
     keyshortcuts,
+    checked,
     children,
   }: Props = $props();
 
@@ -57,7 +64,8 @@
   bind:this={element}
   class={["kit-menu__item", "kit-control-states", `kit-menu__item--${tone}`, className]}
   type="button"
-  role="menuitem"
+  role={checked === undefined ? "menuitem" : "menuitemcheckbox"}
+  aria-checked={checked}
   tabindex="-1"
   aria-disabled={disabled || undefined}
   aria-keyshortcuts={keyshortcuts}
