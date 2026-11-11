@@ -246,3 +246,4 @@ Session-state at a glance: a colored dot plus a distinct "waiting for user" bubb
 - **Don't** write type media queries in components or pin the root font size in apps.
 - **Don't** draw keyboard focus with `box-shadow`; it must be a real `outline` so high-contrast can widen it.
 - **Don't** hard-code z-indexes; use `--z-popover`, `--z-overlay`, `--z-tooltip`.
+- **Don't** let a control change size when it opens or when its choice changes. A dropdown trigger keeps its closed box while its list is open, and a bolder selected label reserves its width in every state, as TopBar tabs and SegmentedControl labels do. `tests/browser/dropdown-layout-stability.spec.ts` checks this; add every new popover or choice control to it.

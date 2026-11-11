@@ -4,6 +4,11 @@ Accessible single-select combobox (ARIA `combobox` + `listbox`) with full
 keyboard navigation: arrows move the highlight, Enter/Space selects, Escape
 closes and refocuses the trigger. Extracted from Forge.
 
+Like a native select, the trigger reserves room for its longest option label,
+counted in M's (the widest letter) plus a little padding, so choosing an
+option never resizes it. `--kit-select-dropdown-max-width` (300px) caps it; a
+longer label ellipsizes, and the open list can be wider than the trigger.
+
 ```svelte
 <script lang="ts">
   import { SelectDropdown, type SelectDropdownOption } from "@kenn-io/kit-ui";
