@@ -2,8 +2,9 @@
 
 Filterable select: the closed state is a trigger button. Typing while it has focus
 opens the search with the typed character. Clicking, Enter, Space, Arrow Down, or Arrow Up opens an empty
-search input with a match-highlighted option list. Arrow keys navigate, Enter
-selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
+search input with a match-highlighted option list. The input covers the
+trigger and takes its exact size, so opening never moves anything beside the
+control. Arrow keys navigate, Enter selects, Escape closes. Extracted from agentsview's `OptionTypeahead`;
 extended with Forge's `TypeaheadTrigger` features (clear row, custom
 values, veto, meta text) and grouped options.
 

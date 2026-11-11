@@ -1,0 +1,197 @@
+import { expect, test, type Page } from "@playwright/test";
+import { gotoPage } from "./helpers.js";
+
+// Opening a dropdown must not move anything on the page. Each control sits in
+// a shrink-to-fit flex row, as apps place them beside a button, so a control
+// whose open state measures differently from its closed state resizes itself
+// and shoves the button next to it.
+
+type Case = {
+  name: string;
+  trigger: (page: Page) => ReturnType<Page["getByRole"]>;
+  popup: (page: Page) => ReturnType<Page["locator"]>;
+};
+
+const CASES: Case[] = [
+  {
+    name: "Typeahead",
+    trigger: (page) => page.getByRole("button", { name: /Claude/ }),
+    popup: (page) => page.locator(".kit-typeahead__panel"),
+  },
+  {
+    name: "Typeahead with prefix",
+    trigger: (page) => page.getByRole("button", { name: /Claude/ }),
+    popup: (page) => page.locator(".kit-typeahead__panel"),
+  },
+  {
+    name: "SelectDropdown",
+    trigger: (page) => page.getByRole("combobox"),
+    popup: (page) => page.getByRole("listbox"),
+  },
+  {
+    name: "FilterDropdown",
+    trigger: (page) => page.getByRole("button", { name: "Agent" }),
+    popup: (page) => page.locator(".kit-filter-dropdown__panel"),
+  },
+  {
+    name: "Menu",
+    trigger: (page) => page.getByRole("button", { name: "Model: balanced" }),
+    popup: (page) => page.getByRole("menu", { name: "Model" }),
+  },
+  {
+    name: "DatePicker",
+    trigger: (page) => page.locator("#row button").first(),
+    popup: (page) => page.getByRole("dialog"),
+  },
+  {
+    name: "DateRangePicker",
+    trigger: (page) => page.locator("#row button").first(),
+    popup: (page) => page.getByRole("dialog"),
+  },
+];
+
+async function mountInRow(page: Page, name: string): Promise<void> {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(async (name) => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const load = {
+      Typeahead: () => import("/src/lib/components/Typeahead.svelte"),
+      "Typeahead with prefix": () => import("/src/lib/components/Typeahead.svelte"),
+      SelectDropdown: () => import("/src/lib/components/SelectDropdown.svelte"),
+      FilterDropdown: () => import("/src/lib/components/FilterDropdown.svelte"),
+      Menu: () => import("/tests/browser/fixtures/ZoomedMenu.svelte"),
+      DatePicker: () => import("/src/lib/components/DatePicker.svelte"),
+      DateRangePicker: () => import("/src/lib/components/DateRangePicker.svelte"),
+    }[name]!;
+    const { default: Control } = await load();
+    const noop = () => {};
+    const agents = ["claude", "codex", "gemini", "copilot"].map((n) => ({
+      name: n,
+      label: n[0]!.toUpperCase() + n.slice(1),
+    }));
+    const props = {
+      Typeahead: {
+        options: agents,
+        value: "claude",
+        fallbackLabel: "claude",
+        placeholder: "Insight agent",
+        onselect: noop,
+      },
+      "Typeahead with prefix": {
+        options: agents,
+        value: "claude",
+        triggerPrefix: "Agent:",
+        fallbackLabel: "claude",
+        placeholder: "Search agents",
+        onselect: noop,
+      },
+      SelectDropdown: {
+        value: "claude",
+        options: agents.map((a) => ({ value: a.name, label: a.label })),
+        onchange: noop,
+      },
+      FilterDropdown: {
+        label: "Agent",
+        sections: [
+          {
+            items: agents.map((a) => ({
+              id: a.name,
+              label: a.label,
+              active: a.name === "claude",
+              onSelect: noop,
+            })),
+          },
+        ],
+      },
+      Menu: { onchange: noop },
+      DatePicker: { value: "2026-03-04", onchange: noop },
+      DateRangePicker: { selection: { mode: "relative", days: 7 }, onSelect: noop },
+    }[name]!;
+
+    document.body.replaceChildren();
+    const row = document.createElement("div");
+    row.id = "row";
+    row.style.cssText =
+      "position:absolute;left:40px;top:40px;display:flex;align-items:center;gap:8px";
+    const target = document.createElement("div");
+    target.id = "control";
+    const after = document.createElement("button");
+    after.id = "after";
+    after.textContent = "Generate";
+    row.append(target, after);
+    document.body.append(row);
+    mount(Control, { target, props });
+  }, name);
+}
+
+async function layout(page: Page) {
+  return page.evaluate(() => {
+    const box = (id: string) => {
+      const r = document.getElementById(id)!.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height };
+    };
+    return { control: box("control"), after: box("after") };
+  });
+}
+
+for (const c of CASES) {
+  test(`${c.name} keeps its size when opened and closed`, async ({ page }) => {
+    await mountInRow(page, c.name);
+    const closed = await layout(page);
+    expect(closed.control.width).toBeGreaterThan(0);
+
+    await c.trigger(page).click();
+    await expect(c.popup(page)).toBeVisible();
+    expect(await layout(page)).toEqual(closed);
+
+    // Typing a long query must not stretch the field either.
+    if (c.name.startsWith("Typeahead")) {
+      await page.keyboard.type("a much longer query than the label");
+      expect(await layout(page)).toEqual(closed);
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(c.popup(page)).toBeHidden();
+    expect(await layout(page)).toEqual(closed);
+  });
+}
+
+// Choosing an option must not resize the options either: a bolder selected
+// label that is not reserved shifts every segment after it.
+for (const variant of ["boxed", "borderless"] as const) {
+  test(`SegmentedControl ${variant} keeps segment sizes when the choice changes`, async ({
+    page,
+  }) => {
+    await gotoPage(page, "typeahead");
+    const boxesWithChoice = (value: string) =>
+      page.evaluate(
+        async ({ variant, value }) => {
+          const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+          const { default: SegmentedControl } =
+            await import("/src/lib/components/SegmentedControl.svelte");
+          document.body.replaceChildren();
+          const target = document.createElement("div");
+          target.style.cssText = "position:absolute;left:40px;top:40px;display:flex";
+          document.body.append(target);
+          mount(SegmentedControl, {
+            target,
+            props: {
+              variant,
+              value,
+              onchange: () => {},
+              options: ["Day", "Week", "Month", "Quarter"].map((label) => ({
+                value: label.toLowerCase(),
+                label,
+              })),
+            },
+          });
+          await new Promise(requestAnimationFrame);
+          // Right edges only: a chosen borderless segment draws its left
+          // border over its neighbour's, so its own left edge moves 1px.
+          return [...target.querySelectorAll("button")].map((b) => b.getBoundingClientRect().right);
+        },
+        { variant, value },
+      );
+    expect(await boxesWithChoice("month")).toEqual(await boxesWithChoice("day"));
+  });
+}

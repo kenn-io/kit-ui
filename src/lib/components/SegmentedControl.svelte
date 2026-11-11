@@ -106,7 +106,7 @@
       {#if segment}
         {@render segment(option, option.value === value)}
       {:else}
-        {option.label}
+        <span class="kit-segmented__label" data-label={option.label}>{option.label}</span>
       {/if}
     </button>
   {/each}
@@ -215,6 +215,7 @@
    * (segments after the first drop their left border, so nothing
    * overlaps by default). */
   .kit-segmented--borderless {
+    --kit-segmented-selected-weight: var(--font-weight-semibold, 600);
     gap: 0;
     padding: 0;
     background: transparent;
@@ -263,13 +264,35 @@
     color: color-mix(in srgb, var(--kit-tone) 72%, var(--text-secondary));
   }
 
+  /* The label stacks over a hidden copy at the selected weight, so a segment
+   * is as wide chosen as not and choosing one never shifts its neighbours.
+   * The second content declaration keeps the copy out of the accessible
+   * name; a browser without that syntax keeps the first, and visibility
+   * hidden does the same job. */
+  .kit-segmented__label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .kit-segmented__label::after {
+    content: attr(data-label);
+    content: attr(data-label) / "";
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    font-weight: var(--kit-segmented-selected-weight, var(--selected-strong-weight));
+    user-select: none;
+    pointer-events: none;
+  }
+
   /* Active fill is 12% toward transparent (not the 9%-toward-surface band
    * recipe): segments sit on arbitrary surfaces, so the tint must let the
    * underlying background through. */
   .kit-segmented--borderless .kit-segmented__btn.active {
     background: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 12%, transparent);
     color: color-mix(in srgb, var(--kit-tone, var(--accent-blue)) 72%, var(--text-primary));
-    font-weight: var(--font-weight-semibold, 600);
+    font-weight: var(--kit-segmented-selected-weight);
     border-color: color-mix(
       in srgb,
       var(--kit-tone, var(--accent-blue)) 30%,

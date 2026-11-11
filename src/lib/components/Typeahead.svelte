@@ -338,9 +338,9 @@
     if (disabled) return;
     updateQuery(initialQuery);
     open = true;
-    // The trigger button unmounts as the input mounts; focus briefly lands on
-    // <body> and would fire focusout on the container. Suppress dismissal
-    // until we've handed focus to the input.
+    // The trigger button hides as the input mounts over it; focus briefly
+    // lands on <body> and would fire focusout on the container. Suppress
+    // dismissal until we've handed focus to the input.
     opening = true;
     highlightIndex = !remote && customValue !== "" ? customOffset : -1;
     await tick();
@@ -349,8 +349,8 @@
     opening = false;
   }
 
-  // `refocus` moves focus to the (re-mounted) trigger — pass it whenever the
-  // close is keyboard-driven (Escape, Enter-select), where unmounting the
+  // `refocus` moves focus back to the (re-shown) trigger — pass it whenever
+  // the close is keyboard-driven (Escape, Enter-select), where unmounting the
   // input would otherwise drop focus on <body>. Focusout-driven closes must
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
@@ -593,6 +593,7 @@
     {...inputAttributes}
     bind:this={inputEl}
     class="kit-typeahead__input"
+    class:kit-typeahead__input--over-trigger={!trigger}
     type="text"
     role="combobox"
     value={query}
@@ -623,7 +624,39 @@
   bind:this={containerEl}
   onfocusout={handleFocusOut}
 >
-  {#if trigger}{@render trigger({ attachment: triggerAttachment })}{/if}
+  {#if trigger}
+    {@render trigger({ attachment: triggerAttachment })}
+  {:else}
+    <!-- Stays laid out while open, hidden under the search input, so the
+         control keeps the closed trigger's size and nothing beside it moves. -->
+    <button
+      bind:this={triggerEl}
+      class="kit-typeahead__trigger kit-control-states"
+      class:kit-typeahead__trigger--holding={open}
+      type="button"
+      onclick={() => void openDropdown()}
+      onkeydown={handleTriggerKeydown}
+      {title}
+      {disabled}
+      aria-label={triggerName}
+    >
+      <span class="kit-typeahead__value">
+        {#if triggerPrefix}<span class="kit-typeahead__prefix">{triggerPrefix}</span>{/if}
+        {#if icon}
+          <span class="kit-typeahead__icon" aria-hidden="true">
+            {#if selectedOption}{@render icon(selectedOption)}{/if}
+          </span>
+        {/if}
+        <span class="kit-typeahead__value-text">{displayValue}</span>
+      </span>
+      <ChevronDownIcon
+        class="kit-typeahead__chevron"
+        size="12"
+        strokeWidth="2"
+        aria-hidden="true"
+      />
+    </button>
+  {/if}
   {#if open}
     {#if !trigger}{@render searchInput()}{/if}
     <div
@@ -755,33 +788,6 @@
         {/if}
       </div>
     </div>
-  {:else if !trigger}
-    <button
-      bind:this={triggerEl}
-      class="kit-typeahead__trigger kit-control-states"
-      type="button"
-      onclick={() => void openDropdown()}
-      onkeydown={handleTriggerKeydown}
-      {title}
-      {disabled}
-      aria-label={triggerName}
-    >
-      <span class="kit-typeahead__value">
-        {#if triggerPrefix}<span class="kit-typeahead__prefix">{triggerPrefix}</span>{/if}
-        {#if icon}
-          <span class="kit-typeahead__icon" aria-hidden="true">
-            {#if selectedOption}{@render icon(selectedOption)}{/if}
-          </span>
-        {/if}
-        <span class="kit-typeahead__value-text">{displayValue}</span>
-      </span>
-      <ChevronDownIcon
-        class="kit-typeahead__chevron"
-        size="12"
-        strokeWidth="2"
-        aria-hidden="true"
-      />
-    </button>
   {/if}
 </div>
 
@@ -823,10 +829,16 @@
     border-color: var(--accent-blue);
   }
 
-  /* A press only: while open, the input replaces the trigger and sinks as a field. */
+  /* A press only: while open, the input covers the trigger and sinks as a field. */
   .kit-typeahead__trigger:where(:active:not(:disabled)) {
     background: var(--bg-inset);
     box-shadow: var(--shadow-sunken, none);
+  }
+
+  /* Open: the trigger keeps its box so the control never resizes, but the
+     search input covers it and it leaves the focus order and a11y tree. */
+  .kit-typeahead__trigger--holding {
+    visibility: hidden;
   }
 
   .kit-typeahead__trigger:disabled {
@@ -879,6 +891,12 @@
     color: var(--text-primary);
     outline: none;
     box-sizing: border-box;
+  }
+
+  .kit-typeahead__input--over-trigger {
+    position: absolute;
+    inset: 0;
+    height: 100%;
   }
 
   .kit-typeahead__input::placeholder {
