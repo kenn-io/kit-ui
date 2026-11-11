@@ -1,5 +1,6 @@
 <script lang="ts">
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+  import CheckIcon from "@lucide/svelte/icons/check";
   import MoreHorizontalIcon from "@lucide/svelte/icons/ellipsis";
   import PencilIcon from "@lucide/svelte/icons/pencil";
   import CopyIcon from "@lucide/svelte/icons/copy";
@@ -16,6 +17,7 @@
   import DemoSection from "../DemoSection.svelte";
 
   let lastAction = $state("none");
+  let visibleColumns = $state({ author: true, labels: false });
   let daemon = $state("local");
   let contextMenuOpen = $state(false);
   let contextMenuAnchor = $state<{ x: number; y: number }>();
@@ -81,6 +83,35 @@
     </Menu>
     <span data-testid="menu-last-action">last action: {lastAction}</span>
   </div>
+</DemoSection>
+
+<DemoSection
+  title="Checkbox items"
+  description="Pass checked to make an item a toggle. It becomes a menuitemcheckbox with aria-checked, so screen readers announce its state. Draw the check mark in icon."
+  code={`<MenuItem
+  checked={showAuthor}
+  closeOnSelect={false}
+  onselect={() => (showAuthor = !showAuthor)}
+>
+  {#snippet icon()}{#if showAuthor}<CheckIcon size={14} />{/if}{/snippet}
+  Author
+</MenuItem>`}
+>
+  <Menu>
+    <MenuTrigger ariaLabel="Columns">Columns</MenuTrigger>
+    <MenuContent ariaLabel="Columns">
+      {#each [["author", "Author"], ["labels", "Labels"]] as const as [key, label] (key)}
+        <MenuItem
+          checked={visibleColumns[key]}
+          closeOnSelect={false}
+          onselect={() => (visibleColumns[key] = !visibleColumns[key])}
+        >
+          {#snippet icon()}{#if visibleColumns[key]}<CheckIcon size={14} />{/if}{/snippet}
+          {label}
+        </MenuItem>
+      {/each}
+    </MenuContent>
+  </Menu>
 </DemoSection>
 
 <DemoSection

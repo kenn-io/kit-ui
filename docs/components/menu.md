@@ -109,15 +109,15 @@ buttons. Those need normal Tab navigation and belong in a popover or dialog.
 
 ## Interface
 
-| Part             | Main props                                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `Menu`           | `bind:open`, `align="start" \| "end"`, `anchor`, `returnFocus`, `onopenchange`, `class`, `children`                         |
-| `MenuTrigger`    | `ariaLabel`, `title`, `disabled`, `class`, `children`, `child`                                                              |
-| `MenuContent`    | `ariaLabel`, `class`, `children`                                                                                            |
-| `MenuItem`       | `onselect`, `disabled`, `closeOnSelect=true`, `tone="neutral" \| "danger"`, `textValue`, `icon`, `trailing`, `keyshortcuts` |
-| `MenuRadioGroup` | `value`, `onchange`, `ariaLabel`, `children`                                                                                |
-| `MenuRadioItem`  | `value`, `disabled`, `closeOnSelect=false`, `textValue`, `class`, `children`                                                |
-| `MenuSeparator`  | none                                                                                                                        |
+| Part             | Main props                                                                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `Menu`           | `bind:open`, `align="start" \| "end"`, `anchor`, `returnFocus`, `onopenchange`, `class`, `children`                                    |
+| `MenuTrigger`    | `ariaLabel`, `title`, `disabled`, `class`, `children`, `child`                                                                         |
+| `MenuContent`    | `ariaLabel`, `class`, `children`                                                                                                       |
+| `MenuItem`       | `onselect`, `disabled`, `closeOnSelect=true`, `tone="neutral" \| "danger"`, `textValue`, `icon`, `trailing`, `keyshortcuts`, `checked` |
+| `MenuRadioGroup` | `value`, `onchange`, `ariaLabel`, `children`                                                                                           |
+| `MenuRadioItem`  | `value`, `disabled`, `closeOnSelect=false`, `textValue`, `class`, `children`                                                           |
+| `MenuSeparator`  | none                                                                                                                                   |
 
 ## Icon alignment
 

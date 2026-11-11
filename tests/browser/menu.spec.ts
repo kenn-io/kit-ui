@@ -286,3 +286,24 @@ test("a disabled menu item stays at full opacity in muted ink", async ({ page })
   const enabledInk = await move.evaluate((el) => getComputedStyle(el).color);
   expect(enabledInk).not.toBe(await archive.evaluate((el) => getComputedStyle(el).color));
 });
+
+test("a checked item is a menuitemcheckbox that toggles its state and stays open", async ({
+  page,
+}) => {
+  await gotoPage(page, "menu");
+  await page.getByRole("button", { name: "Columns" }).click();
+  const author = page.getByRole("menuitemcheckbox", { name: "Author" });
+  const labels = page.getByRole("menuitemcheckbox", { name: "Labels" });
+  await expect(author).toHaveAttribute("aria-checked", "true");
+  await expect(labels).toHaveAttribute("aria-checked", "false");
+
+  await labels.click();
+  await expect(labels).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("menu", { name: "Columns" })).toBeVisible();
+
+  // Plain items keep the menuitem role.
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Task actions" }).click();
+  await expect(page.getByRole("menuitem", { name: "Move issue" })).toBeVisible();
+  await expect(page.getByRole("menuitemcheckbox")).toHaveCount(0);
+});
