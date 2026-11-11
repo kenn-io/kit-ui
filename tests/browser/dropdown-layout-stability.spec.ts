@@ -334,3 +334,69 @@ test("Typeahead rows span the list with an even inset", async ({ page }) => {
   const right = panel.x + panel.width - (row.x + row.width);
   expect(right).toBeCloseTo(left, 1);
 });
+
+async function mountTypeaheads(page: Page, rowStyle: string, count: number): Promise<void> {
+  await gotoPage(page, "typeahead");
+  await page.evaluate(
+    async ({ rowStyle, count }) => {
+      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: Typeahead } = await import("/src/lib/components/Typeahead.svelte");
+      document.body.replaceChildren();
+      const row = document.createElement("div");
+      row.id = "row";
+      row.style.cssText = `position:absolute;left:40px;top:40px;${rowStyle}`;
+      document.body.append(row);
+      for (let i = 0; i < count; i++) {
+        // Mounted straight into the row, so each .kit-typeahead is itself
+        // the flex item.
+        mount(Typeahead, {
+          target: row,
+          props: {
+            options: [
+              { name: "alpha", label: "Alpha project" },
+              { name: "beta", label: "Beta project with a long name" },
+            ],
+            value: "alpha",
+            fallbackLabel: "All projects",
+            placeholder: `Project ${i + 1}`,
+            onselect: () => {},
+          },
+        });
+      }
+    },
+    { rowStyle, count },
+  );
+}
+
+const typeaheadBoxes = (page: Page) =>
+  page.locator(".kit-typeahead").evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.x, width: r.width };
+    }),
+  );
+
+// Two controls that are themselves the items of a row too narrow for both:
+// opening either must not shrink it again and hand its space to the other.
+for (const which of [0, 1]) {
+  test(`opening Typeahead ${which + 1} of two in a crowded row moves neither`, async ({ page }) => {
+    await mountTypeaheads(page, "display:flex;gap:8px;width:260px;--typeahead-min-width:40px", 2);
+    const closed = await typeaheadBoxes(page);
+    expect(closed[0]!.width + closed[1]!.width).toBeLessThan(260);
+    await page.getByRole("button", { name: new RegExp(`^Project ${which + 1}:`) }).click();
+    await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+    expect(await typeaheadBoxes(page)).toEqual(closed);
+  });
+}
+
+// An open field follows its container as a closed one does: narrowing the
+// container while the list is open must not leave the field overflowing.
+test("an open Typeahead narrows with its container", async ({ page }) => {
+  await mountTypeaheads(page, "width:148px;--typeahead-max-width:none", 1);
+  const narrow = (await typeaheadBoxes(page))[0]!.width;
+  await page.locator("#row").evaluate((el) => (el.style.width = "400px"));
+  await page.getByRole("button", { name: /^Project 1:/ }).click();
+  await expect(page.locator(".kit-typeahead__panel")).toBeVisible();
+  await page.locator("#row").evaluate((el) => (el.style.width = "148px"));
+  expect((await typeaheadBoxes(page))[0]!.width).toBe(narrow);
+});

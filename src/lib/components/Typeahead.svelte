@@ -119,7 +119,11 @@
   // The built-in trigger, or the caller's button when `trigger` is set.
   let triggerEl = $state<HTMLButtonElement>();
   let containerEl = $state<HTMLDivElement>();
-  let openWidth = $state<number>();
+  // What the hidden trigger showed when the list opened. It keeps showing it
+  // while open, so a choice in `multiple` mode, a custom value, or a remote
+  // label never resizes the field under the pointer. No width is pinned, so
+  // the field still follows its container and app CSS.
+  let openLabel = $state<string>();
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
   // Guards the focusout dismissal during the trigger→input focus handoff.
@@ -304,12 +308,13 @@
   // built-in trigger can show. It sits invisibly under the current label, so
   // the trigger is as wide as its longest choice, as a native select is, and
   // choosing an option never resizes it. A remote list changes with every
-  // query, so only the fixed labels count there; the open-width freeze below
+  // query, so only the fixed labels count there; the frozen open label
   // covers the rest.
+  const triggerLabel = $derived(open && openLabel !== undefined ? openLabel : displayValue);
   const reservedWidth = $derived.by(() => {
     if (trigger) return "";
     // fallbackLabel is typed as required, but some callers leave it out.
-    let longest = Math.max(fallbackLabel?.length ?? 0, displayValue?.length ?? 0);
+    let longest = Math.max(fallbackLabel?.length ?? 0, triggerLabel?.length ?? 0);
     let count = 0;
     const walk = (opts: TypeaheadOption[]) => {
       for (const option of opts) {
@@ -364,12 +369,7 @@
   async function openDropdown(initialQuery = "") {
     if (disabled) return;
     updateQuery(initialQuery);
-    // Hold the built-in trigger's width while open: a choice in `multiple`
-    // mode, a custom value, or a remote label must not resize the field
-    // under the pointer. Zoom-corrected, as the panel maths is.
-    if (!trigger && containerEl) {
-      openWidth = containerEl.getBoundingClientRect().width / (containerEl.currentCSSZoom ?? 1);
-    }
+    openLabel = displayValue;
     open = true;
     // The trigger button hides as the input mounts over it; focus briefly
     // lands on <body> and would fire focusout on the container. Suppress
@@ -388,7 +388,7 @@
   // NOT refocus: the user is deliberately leaving.
   async function closeDropdown(refocus = false) {
     open = false;
-    openWidth = undefined;
+    openLabel = undefined;
     updateQuery("");
     // Invalidate in-flight selections: a slow onselect from this (or an
     // earlier) open instance must not close a menu the user reopens later.
@@ -656,8 +656,6 @@
   class="kit-typeahead"
   class:kit-typeahead--custom-trigger={trigger !== undefined}
   bind:this={containerEl}
-  class:kit-typeahead--holding-width={open && openWidth !== undefined}
-  style:--kit-typeahead-open-width={openWidth === undefined ? undefined : `${openWidth}px`}
   onfocusout={handleFocusOut}
 >
   {#if trigger}
@@ -684,7 +682,7 @@
           </span>
         {/if}
         <span class="kit-typeahead__value-text">
-          <span class="kit-typeahead__value-label">{displayValue}</span>
+          <span class="kit-typeahead__value-label">{triggerLabel}</span>
           {#if reservedWidth}
             <span class="kit-typeahead__value-reserve" aria-hidden="true">{reservedWidth}</span>
           {/if}
@@ -837,13 +835,6 @@
     position: relative;
     min-width: min(100%, var(--typeahead-min-width, 180px));
     max-width: var(--typeahead-max-width, 300px);
-  }
-
-  /* Holds the closed width while open. A plain class rule, so an app that
-     deliberately widens the open field (an overlay over its neighbours)
-     outranks it. */
-  .kit-typeahead--holding-width {
-    width: var(--kit-typeahead-open-width);
   }
 
   .kit-typeahead__trigger {
