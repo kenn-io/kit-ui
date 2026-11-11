@@ -9,6 +9,8 @@
     /** The row filters its option out. An excluded row shows a cross where
      * an active row shows a tick; `active` should be false. */
     excluded?: boolean;
+    /** Category color. A row with a color shows a dot in it while active;
+     * a row without one shows no dot, since the tick already marks it. */
     color?: string;
     count?: number;
     disabled?: boolean;
@@ -431,14 +433,12 @@
             data-submenu-id={item.submenu ? item.id : undefined}
             type="button"
           >
-            <span
-              class="kit-filter-dropdown__dot"
-              style:background={item.excluded
-                ? "var(--accent-red)"
-                : item.active
-                  ? (item.color ?? "var(--accent-blue)")
-                  : "var(--border-muted)"}
-            ></span>
+            {#if item.color}
+              <span
+                class="kit-filter-dropdown__dot"
+                style:background={item.active ? item.color : "var(--border-muted)"}
+              ></span>
+            {/if}
             <span class="kit-filter-dropdown__label">{item.label}</span>
             {#if item.excluded}
               <span class="kit-sr-only">, {excludedLabel}</span>

@@ -282,6 +282,9 @@ test("an excluded row shows a cross, is named as excluded, and is not dimmed", a
   await expect(row).toHaveAttribute("aria-pressed", "false");
   await expect(row).toHaveCSS("opacity", "0.5");
   await expect(row.locator("svg")).toHaveCount(0);
+  // A row without a category color has no dot in any state; the tick or cross marks it.
+  const dot = row.locator(".kit-filter-dropdown__dot");
+  await expect(dot).toHaveCount(0);
 
   await row.click();
   await expect(row).toHaveAttribute("aria-pressed", "true");
@@ -294,10 +297,37 @@ test("an excluded row shows a cross, is named as excluded, and is not dimmed", a
   await expect(row.locator("svg.lucide-x")).toBeVisible();
   await expect(row.locator("svg.lucide-check")).toHaveCount(0);
   await expect(row).toHaveCSS("opacity", "1");
+  await expect(dot).toHaveCount(0);
   await expect(page.getByTestId("filter-conditions")).toContainText("approved: exclude");
 
   await row.click();
   await expect(row).toHaveAttribute("aria-pressed", "false");
   await expect(row.locator("svg")).toHaveCount(0);
   await expect(page.getByTestId("filter-conditions")).toContainText("approved: any");
+});
+
+test("only a row with a category color shows a dot", async ({ page }) => {
+  await gotoPage(page, "filter-dropdown");
+  await page.getByRole("button", { name: "State", exact: true }).click();
+
+  const panel = page.locator(".kit-filter-dropdown__panel");
+  const open = panel.getByRole("button", { name: "Open" });
+  const draft = panel.getByRole("button", { name: "Draft" });
+  // The demo's states are categories with their own colors: lit while active, muted otherwise.
+  const openDot = open.locator(".kit-filter-dropdown__dot");
+  const draftDot = draft.locator(".kit-filter-dropdown__dot");
+  await expect(openDot).toBeVisible();
+  await expect(draftDot).toBeVisible();
+  const lit = await openDot.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const muted = await draftDot.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(lit).not.toBe(muted);
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Sort", exact: true }).click();
+  await expect(
+    page.locator(".kit-filter-dropdown__panel .kit-filter-dropdown__item").first(),
+  ).toBeVisible();
+  await expect(page.locator(".kit-filter-dropdown__panel .kit-filter-dropdown__dot")).toHaveCount(
+    0,
+  );
 });

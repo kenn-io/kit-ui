@@ -71,7 +71,7 @@ interface FilterDropdownItem {
   excluded?: boolean; // filters the option out: a red cross instead of the tick
   onSelect: () => void; // toggle in your state
   description?: string; // tooltip + aria-describedby
-  color?: string; // dot color when active
+  color?: string; // category color: shows a dot in it while active; no color, no dot
   count?: number; // right-aligned count
   disabled?: boolean;
   closeOnSelect?: boolean; // e.g. sort menus
