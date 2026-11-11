@@ -681,11 +681,8 @@
             {#if selectedOption}{@render icon(selectedOption)}{/if}
           </span>
         {/if}
-        <span class="kit-typeahead__value-text">
+        <span class="kit-typeahead__value-text" data-reserve={reservedWidth}>
           <span class="kit-typeahead__value-label">{triggerLabel}</span>
-          {#if reservedWidth}
-            <span class="kit-typeahead__value-reserve" aria-hidden="true">{reservedWidth}</span>
-          {/if}
         </span>
       </span>
       <ChevronDownIcon
@@ -910,7 +907,7 @@
   }
 
   .kit-typeahead__value-label,
-  .kit-typeahead__value-reserve {
+  .kit-typeahead__value-text::after {
     grid-area: 1 / 1;
     min-width: 0;
     overflow: hidden;
@@ -918,9 +915,13 @@
     white-space: nowrap;
   }
 
-  /* A little slack past the M's, so the longest label never sits tight
-     against the chevron. */
-  .kit-typeahead__value-reserve {
+  /* The reserved M's, plus a little slack so the longest label never sits
+     tight against the chevron. Generated content, so they never join the
+     trigger's text or accessible name; the second declaration gives them
+     empty alternative text, as TopBar's reserved labels do. */
+  .kit-typeahead__value-text::after {
+    content: attr(data-reserve);
+    content: attr(data-reserve) / "";
     height: 0;
     padding-inline-end: var(--space-2);
     visibility: hidden;

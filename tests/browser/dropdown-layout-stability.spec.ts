@@ -201,7 +201,9 @@ for (const c of CASES.filter((c) => /Typeahead|SelectDropdown/.test(c.name))) {
 
     await c.trigger(page).click();
     await expect(c.popup(page)).toBeVisible();
-    await page.getByRole("option", { name: "Copilot", exact: true }).click();
+    // Much longer than "Claude" in any font, so a trigger that tracks its
+    // label fails by a wide margin rather than a fraction of a pixel.
+    await page.getByRole("option", { name: "GitHub Copilot command line", exact: true }).click();
     if (c.name === "Typeahead multiple") {
       await expect(c.popup(page)).toBeVisible();
       expect(await layout(page)).toEqual(closed);
@@ -209,7 +211,7 @@ for (const c of CASES.filter((c) => /Typeahead|SelectDropdown/.test(c.name))) {
     }
     await expect(c.popup(page)).toBeHidden();
     await expect(page.locator("#control button").first()).toHaveAccessibleName(
-      c.name === "Typeahead multiple" ? /2 selected/ : /Copilot/,
+      c.name === "Typeahead multiple" ? /2 selected/ : /GitHub Copilot command line/,
     );
     expect(await layout(page)).toEqual(closed);
   });

@@ -45,6 +45,18 @@
   // otherwise the trigger can show one option while submit acts on a stale value.
   const selectedOption = $derived(options.find((option) => option.value === value) ?? options[0]);
   const triggerText = $derived(selectedOption?.triggerLabel ?? selectedOption?.label ?? value);
+  // A row of M's, the widest letter, as long as the longest trigger text any
+  // option can show. It sits invisibly under the current text, so the
+  // trigger is as wide as its longest choice, as a native select is, and
+  // choosing an option never resizes it.
+  const reservedWidth = $derived(
+    "M".repeat(
+      Math.max(
+        triggerText.length,
+        ...options.map((option) => (option.triggerLabel ?? option.label).length),
+      ),
+    ),
+  );
   // aria-label on the trigger overrides its contents for assistive tech, so
   // the selected option's indicator title must be folded in here — the dot's
   // own label never reaches the accessible name.
@@ -202,7 +214,9 @@
     {title}
     {disabled}
   >
-    <span class="kit-select-dropdown__value">{triggerText}</span>
+    <span class="kit-select-dropdown__value-box" data-reserve={reservedWidth}>
+      <span class="kit-select-dropdown__value">{triggerText}</span>
+    </span>
     {#if selectedOption?.indicator}
       {@render indicatorDot(selectedOption.indicator)}
     {/if}
@@ -259,6 +273,7 @@
   .kit-select-dropdown {
     position: relative;
     min-width: 150px;
+    max-width: var(--kit-select-dropdown-max-width, 300px);
   }
 
   .kit-select-dropdown__trigger {
@@ -302,12 +317,34 @@
     opacity: var(--opacity-disabled);
   }
 
-  .kit-select-dropdown__value {
+  /* One grid cell holds the text and the reserved row of M's, so the
+     column takes the wider; minmax(0, …) still lets a capped trigger
+     ellipsize. The M's are generated content, so they never join the
+     trigger's text or accessible name; the second content declaration
+     gives them empty alternative text, as TopBar's reserved labels do. */
+  .kit-select-dropdown__value-box {
     flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, auto);
+  }
+
+  .kit-select-dropdown__value,
+  .kit-select-dropdown__value-box::after {
+    grid-area: 1 / 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* A little slack past the M's, matching Typeahead. */
+  .kit-select-dropdown__value-box::after {
+    content: attr(data-reserve);
+    content: attr(data-reserve) / "";
+    height: 0;
+    padding-inline-end: var(--space-2);
+    visibility: hidden;
   }
 
   :global(.kit-select-dropdown__chevron) {
