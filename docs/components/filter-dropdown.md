@@ -71,7 +71,7 @@ interface FilterDropdownItem {
   excluded?: boolean; // filters the option out: a red cross instead of the tick
   onSelect: () => void; // toggle in your state
   description?: string; // tooltip + aria-describedby
-  color?: string; // dot color when active
+  color?: string; // category color: shows a dot in it while active; no color, no dot
   count?: number; // right-aligned count
   disabled?: boolean;
   closeOnSelect?: boolean; // e.g. sort menus
@@ -79,6 +79,15 @@ interface FilterDropdownItem {
   submenu?: Snippet; // flyout content; the row opens it instead of calling onSelect
 }
 ```
+
+## Dots
+
+A row shows a leading dot only when it sets `color`, which suits categories
+such as event types that each have a color. The dot takes the color while the
+row is active and is muted otherwise. A row without `color` shows no dot: the
+tick or cross at the row's end marks it. When any row in the panel has a dot,
+every row keeps the dot's space so labels share one left edge, as menu items
+do for icons. A panel where no row has a color has no dot column.
 
 ## Excluded rows
 

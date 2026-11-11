@@ -10,6 +10,8 @@
     { id: "closed", label: "Closed", color: "var(--accent-red)" },
   ];
 
+  let hideBots = $state(false);
+
   function toggleState(id: string) {
     const next = new Set(states);
     if (next.has(id)) {
@@ -69,7 +71,7 @@
 
 <DemoSection
   title="Multi-select filter"
-  description="Sectioned filter menu with a badge showing the active count and an optional reset row. Items expose active + onSelect, so any selection model works."
+  description="Sectioned filter menu with a badge showing the active count and an optional reset row. Items expose active + onSelect, so any selection model works. A row with a color shows a dot; a row without one keeps the dot's space so labels align."
   code={`<FilterDropdown
   label="State"
   badgeCount={states.size}
@@ -96,6 +98,17 @@
           active: states.has(o.id),
           onSelect: () => toggleState(o.id),
         })),
+      },
+      {
+        title: "View",
+        items: [
+          {
+            id: "hide-bots",
+            label: "Hide bots",
+            active: hideBots,
+            onSelect: () => (hideBots = !hideBots),
+          },
+        ],
       },
     ]}
     resetLabel="Clear filters"
