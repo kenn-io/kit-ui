@@ -48,9 +48,7 @@ function parseArgs(argv) {
       const disabled = new Set((argv[++i] ?? "").split(","));
       const locked = [...disabled].filter((r) => UNSUPPRESSIBLE_RULES.has(r));
       if (locked.length > 0) {
-        console.error(
-          `cannot disable ${locked.join(", ")}: it guards a single design-system value`,
-        );
+        console.error(`cannot disable ${locked.join(", ")}: kit-ui requires these checks`);
         process.exit(2);
       }
       opts.rules = opts.rules.filter((r) => !disabled.has(r));
