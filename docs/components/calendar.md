@@ -159,7 +159,8 @@ above a list.
   to, so the weekend marking and labels follow it.
 - Weekday letters are the locale's narrow names
   (`weekdayLabels(locale, weekStart, "narrow")`) in the day's ink; Saturday
-  and Sunday letters use the quieter `--text-muted`.
+  and Sunday letters are that ink mixed 5% toward `--bg-surface`, slightly
+  quieter while following the shade, selection and hover ink.
 - The header is the arrows and a static month label: the strip pages by
   month, with `maxDate` blocking later months, and has no month/year
   drill-down. Paging the strip also ends any drill-down left open in the
