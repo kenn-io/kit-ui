@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  activityStep,
   formatDayLabel,
   formatMonthLabel,
   formatShortDate,
@@ -98,4 +99,23 @@ test("Sunday-start calendar weeks and grid", () => {
     "Sat",
   ]);
   expect(weekdayLabels("en-US")[0]).toBe("Mon");
+});
+
+describe("activityStep", () => {
+  test("quarters of the busiest day, with any activity at least step 1", () => {
+    expect([0, 1, 3, 5, 6, 8, 12].map((count) => activityStep(count, 12))).toEqual([
+      0, 1, 1, 2, 2, 3, 4,
+    ]);
+  });
+
+  test("no activity or no maximum gives step 0", () => {
+    expect(activityStep(0, 0)).toBe(0);
+    expect(activityStep(3, 0)).toBe(0);
+    expect(activityStep(-2, 10)).toBe(0);
+    expect(activityStep(Number.NaN, 10)).toBe(0);
+  });
+
+  test("a count above the maximum stays at step 4", () => {
+    expect(activityStep(20, 10)).toBe(4);
+  });
 });

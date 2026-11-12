@@ -302,3 +302,11 @@ export function formatDayLabel(anchor: string, locale?: string): string {
 export function formatMonthLabel(anchor: string, locale?: string): string {
   return formatter({ year: "numeric", month: "long" }, locale).format(parseLocal(anchor));
 }
+
+/** Shade step for a day's activity count, from 0 (none) to 4 (busiest),
+ * relative to `max`, the busiest count in view: each step covers a quarter
+ * of `max`, and any count above zero gets at least step 1. */
+export function activityStep(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
+  if (!(count > 0) || !(max > 0)) return 0;
+  return Math.min(4, Math.ceil((count / max) * 4)) as 1 | 2 | 3 | 4;
+}

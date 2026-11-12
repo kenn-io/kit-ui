@@ -2,6 +2,7 @@
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import {
+    activityStep,
     formatDayLabel,
     formatMonthLabel,
     monthGridDates,
@@ -31,6 +32,15 @@
      * (`| undefined` keeps forwarding consumers with
      * exactOptionalPropertyTypes happy.) */
     locale?: string | undefined;
+    /** Activity per day, keyed by `YYYY-MM-DD`: a count such as messages or
+     * documents. Days with a count are shaded in four steps and their
+     * accessible label includes it. */
+    activity?: Readonly<Record<string, number>> | null;
+    /** Shade step (0–4) for a day's count, for apps with their own scale.
+     * Defaults to quarters of the busiest day in view. */
+    activityScale?: ((count: number, date: string) => number) | undefined;
+    /** Text for a day's count in its accessible label, after the date. */
+    activityLabel?: (count: number) => string;
     class?: string;
   }
 
@@ -49,6 +59,9 @@
     chooseYearLabel = "Choose year",
     locale = undefined,
     weekStart = "monday",
+    activity = null,
+    activityScale = undefined,
+    activityLabel = (count: number) => (count === 1 ? "1 item" : `${count} items`),
     class: className = "",
   }: Props = $props();
 
@@ -173,6 +186,26 @@
     };
   });
 
+  // The busiest day among the visible cells, so the default steps use the
+  // whole range of shades in every month.
+  const activityMax = $derived.by(() => {
+    if (activity == null) return 0;
+    let max = 0;
+    for (const date of cells) max = Math.max(max, activity[date] ?? 0);
+    return max;
+  });
+
+  function activityStepOf(date: string, count: number): number {
+    if (activityScale == null) return activityStep(count, activityMax);
+    const step = Math.round(activityScale(count, date));
+    return Number.isFinite(step) ? Math.min(4, Math.max(0, step)) : 0;
+  }
+
+  function dayLabel(date: string, count: number | undefined): string {
+    const label = formatDayLabel(date, locale);
+    return count == null ? label : `${label}, ${activityLabel(count)}`;
+  }
+
   function inRange(date: string): boolean {
     return selected != null && date >= selected.from && date <= selected.to;
   }
@@ -225,6 +258,8 @@
     <div class="kit-calendar__grid">
       {#each cells as date, i (date)}
         {@const selectedDay = inRange(date)}
+        {@const count = activity?.[date]}
+        {@const step = count == null ? 0 : activityStepOf(date, count)}
         <button
           class="kit-calendar__day kit-control-states"
           class:outside={!date.startsWith(monthPrefix)}
@@ -234,8 +269,9 @@
           class:range-end={selectedDay && date === selected?.to}
           class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
           type="button"
+          data-activity={step > 0 ? step : undefined}
           disabled={maxDate != null && date > maxDate}
-          aria-label={formatDayLabel(date, locale)}
+          aria-label={dayLabel(date, count)}
           aria-pressed={selectedDay}
           onclick={() => onpick?.(date)}
         >
@@ -393,6 +429,32 @@
   .kit-calendar__day.range-end:hover:not(:disabled) {
     background: var(--accent-blue);
     color: var(--bg-surface);
+  }
+
+  /* Activity shading: four tints of one accent, mixed toward transparent so
+   * the calendar reads the same on a page or inside a popover. Selection
+   * and hover rules come later and take over the background. Set
+   * --kit-calendar-activity-color to shade in another accent. */
+  .kit-calendar__day[data-activity] {
+    --kit-calendar-activity: var(--kit-calendar-activity-color, var(--accent-green));
+  }
+
+  .kit-calendar__day[data-activity="1"] {
+    background: color-mix(in srgb, var(--kit-calendar-activity) 12%, transparent);
+  }
+
+  .kit-calendar__day[data-activity="2"] {
+    background: color-mix(in srgb, var(--kit-calendar-activity) 22%, transparent);
+  }
+
+  .kit-calendar__day[data-activity="3"] {
+    background: color-mix(in srgb, var(--kit-calendar-activity) 33%, transparent);
+    color: var(--text-primary);
+  }
+
+  .kit-calendar__day[data-activity="4"] {
+    background: color-mix(in srgb, var(--kit-calendar-activity) 44%, transparent);
+    color: var(--text-primary);
   }
 
   .kit-calendar__day.outside {

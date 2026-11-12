@@ -99,6 +99,7 @@ export {
   stepAnchor,
   todayStr,
   weekdayLabels,
+  activityStep,
   type CalendarNavLabels,
   type CalendarSelection,
   type CalendarUnit,

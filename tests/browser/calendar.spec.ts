@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoPage } from "./helpers.js";
+import { contrastOf, gotoPage, setTheme } from "./helpers.js";
 
 // Calendar month/year drill-down (kata j9cr): the header label zooms out
 // days → months → years; picking an entry drills back down. Assertions
@@ -135,4 +135,85 @@ test("zooming out and back preserves the selected range highlight", async ({ pag
   await cal.locator(".kit-calendar__month--button").click();
   await cal.locator(".kit-calendar__unit.current").click();
   await expect(cal.locator(".kit-calendar__day.selected")).toHaveCount(selectedBefore);
+});
+
+test.describe("activity", () => {
+  test("shades days with a count and adds the count to their label", async ({ page }) => {
+    const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
+    const shaded = calendar.locator(".kit-calendar__day[data-activity]");
+    expect(await shaded.count()).toBeGreaterThan(0);
+    const steps = await shaded.evaluateAll((nodes) =>
+      nodes.map((node) => Number((node as HTMLElement).dataset.activity)),
+    );
+    expect(Math.max(...steps)).toBe(4);
+    expect(Math.min(...steps)).toBeGreaterThanOrEqual(1);
+    await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
+
+    // Shaded and plain days have different fills.
+    const plain = calendar.locator(".kit-calendar__day:not([data-activity]):not(:disabled)");
+    const background = (locator: import("@playwright/test").Locator) =>
+      locator.evaluate((node) => getComputedStyle(node).backgroundColor);
+    expect(await background(shaded.first())).not.toBe(await background(plain.first()));
+    await expect(plain.first()).not.toHaveAttribute("aria-label", /items?$/);
+  });
+
+  test("an app scale and label replace the defaults", async ({ page }) => {
+    const calendar = page.getByTestId("calendar-activity-scale").locator(".kit-calendar");
+    const days = calendar.locator(".kit-calendar__day");
+    // The demo's counts are (index * 5) % 13; its scale maps 1–2, 3–5, 6–9, 10+.
+    const facts = await days.evaluateAll((nodes) =>
+      nodes.map((node) => [
+        (node as HTMLElement).dataset.activity ?? null,
+        node.getAttribute("aria-label"),
+      ]),
+    );
+    const expected = (count: number) =>
+      count <= 0 ? null : count <= 2 ? "1" : count <= 5 ? "2" : count <= 9 ? "3" : "4";
+    facts.forEach(([step, label], i) => {
+      const count = (i * 5) % 13;
+      expect(step).toBe(expected(count));
+      expect(label).toMatch(count === 1 ? /, 1 message$/ : new RegExp(`, ${count} messages$`));
+    });
+  });
+
+  test("selection draws over the shade", async ({ page }) => {
+    const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
+    const day = calendar.locator(".kit-calendar__day[data-activity]:not(:disabled)").first();
+    await day.click();
+    await expect(day).toHaveAttribute("aria-pressed", "true");
+    await page.mouse.move(0, 0);
+    const accent = await day.evaluate((node) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--accent-blue)";
+      node.appendChild(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    // A one-day selection is a solid accent pill; poll past the fill transition.
+    await expect
+      .poll(() => day.evaluate((node) => getComputedStyle(node).backgroundColor))
+      .toBe(accent);
+  });
+
+  test("calendars without activity stay unshaded", async ({ page }) => {
+    const plain = page.locator(".kit-calendar").first();
+    await expect(plain.locator(".kit-calendar__day[data-activity]")).toHaveCount(0);
+  });
+
+  for (const dark of [false, true]) {
+    test(`shaded day numbers meet AA contrast in ${dark ? "dark" : "light"}`, async ({ page }) => {
+      await setTheme(page, { dark });
+      for (const id of ["calendar-activity", "calendar-activity-scale"]) {
+        const days = page
+          .getByTestId(id)
+          .locator(".kit-calendar__day[data-activity]:not(.outside):not(:disabled)");
+        const count = await days.count();
+        expect(count).toBeGreaterThan(0);
+        for (let i = 0; i < count; i++) {
+          expect(await contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+  }
 });

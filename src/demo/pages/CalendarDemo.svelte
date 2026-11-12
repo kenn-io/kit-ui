@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     Calendar,
+    monthGridDates,
     periodBounds,
     SegmentedControl,
     todayStr,
@@ -40,6 +41,31 @@
   let localeChoice = $state("browser");
   let localeMonth = $state(todayStr());
   const demoLocale = $derived(localeChoice === "browser" ? undefined : localeChoice);
+
+  // Made-up daily counts across the visible month and its neighbors, the
+  // same every load. Weekends are quieter.
+  let activityMonth = $state(todayStr());
+  let activityDay = $state<string | null>(null);
+  const activity = $derived.by(() => {
+    const counts: Record<string, number> = {};
+    for (const date of monthGridDates(activityMonth)) {
+      const day = Number.parseInt(date.slice(8), 10);
+      const weekday = new Date(`${date}T12:00:00`).getDay();
+      const count = ((day * 7 + 3) % 11) - (weekday === 0 || weekday === 6 ? 6 : 1);
+      if (count > 0) counts[date] = count;
+    }
+    return counts;
+  });
+
+  let scaleMonth = $state(todayStr());
+  // An app's own fixed thresholds instead of quarters of the busiest day.
+  function messageScale(count: number): number {
+    if (count <= 0) return 0;
+    if (count <= 2) return 1;
+    if (count <= 5) return 2;
+    if (count <= 9) return 3;
+    return 4;
+  }
 </script>
 
 <DemoSection
@@ -134,7 +160,53 @@ function pickRangeDay(d: string) {
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Activity"
+  description="Pass activity, a count per day, to shade days in four steps of one accent. By default the steps are quarters of the busiest day in view; activityScale sets an app's own thresholds, and --kit-calendar-activity-color picks the accent. Each day's accessible label adds its count, worded by activityLabel. Selection, today, and maxDate work as before."
+  code={`<Calendar
+  bind:month
+  {activity}
+  selected={day ? { from: day, to: day } : null}
+  onpick={(d) => (day = d)}
+/>
+
+<div style="--kit-calendar-activity-color: var(--accent-amber)">
+  <Calendar
+    bind:month
+    {activity}
+    activityScale={(count) => (count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
+    activityLabel={(count) => (count === 1 ? "1 message" : \`\${count} messages\`)}
+  />
+</div>`}
+>
+  <div class="calendar-demo">
+    <div data-testid="calendar-activity">
+      <Calendar
+        bind:month={activityMonth}
+        {activity}
+        selected={activityDay ? { from: activityDay, to: activityDay } : null}
+        onpick={(d) => (activityDay = d)}
+        maxDate={todayStr()}
+      />
+    </div>
+    <div data-testid="calendar-activity-scale" class="amber">
+      <Calendar
+        bind:month={scaleMonth}
+        activity={Object.fromEntries(
+          monthGridDates(scaleMonth).map((date, i) => [date, (i * 5) % 13]),
+        )}
+        activityScale={messageScale}
+        activityLabel={(count) => (count === 1 ? "1 message" : `${count} messages`)}
+      />
+    </div>
+  </div>
+</DemoSection>
+
 <style>
+  .amber {
+    --kit-calendar-activity-color: var(--accent-amber);
+  }
+
   .locale-controls {
     display: flex;
     flex-direction: column;

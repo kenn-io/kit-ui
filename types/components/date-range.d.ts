@@ -115,3 +115,7 @@ export declare function formatDayLabel(anchor: string, locale?: string): string;
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatMonthLabel(anchor: string, locale?: string): string;
+/** Shade step for a day's activity count, from 0 (none) to 4 (busiest),
+ * relative to `max`, the busiest count in view: each step covers a quarter
+ * of `max`, and any count above zero gets at least step 1. */
+export declare function activityStep(count: number, max: number): 0 | 1 | 2 | 3 | 4;

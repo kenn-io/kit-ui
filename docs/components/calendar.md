@@ -23,18 +23,21 @@ pick-a-date UI.
 
 ## Props
 
-| Prop                                    | Type                     | Default                             | Notes                                                                                                                                                                                     |
-| --------------------------------------- | ------------------------ | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `month`                                 | `string` (bindable)      | today                               | Any `YYYY-MM-DD` inside the visible month                                                                                                                                                 |
-| `selected`                              | `DateRange \| null`      | `null`                              | Inclusive range to highlight; a single day is `{ from: d, to: d }`                                                                                                                        |
-| `onpick`                                | `(date: string) => void` | —                                   | Clicked date (`YYYY-MM-DD`); leading/trailing days of adjacent months are pickable                                                                                                        |
-| `maxDate`                               | `string \| null`         | `null`                              | Later dates disabled; paging into fully-later months blocked                                                                                                                              |
-| `previousMonthLabel` / `nextMonthLabel` | `string`                 | `"Previous month"` / `"Next month"` | Arrow `aria-label`s in the day view                                                                                                                                                       |
-| `previousYearLabel` / `nextYearLabel`   | `string`                 | `"Previous year"` / `"Next year"`   | Arrow `aria-label`s in the month grid                                                                                                                                                     |
-| `previousYearsLabel` / `nextYearsLabel` | `string`                 | `"Previous years"` / `"Next years"` | Arrow `aria-label`s in the year grid                                                                                                                                                      |
-| `chooseMonthLabel` / `chooseYearLabel`  | `string`                 | `"Choose month"` / `"Choose year"`  | Appended to the header button's accessible name to hint at the drill-down                                                                                                                 |
-| `locale`                                | `string`                 | browser locale                      | BCP 47 tag for month/weekday/day names, for apps whose language setting can diverge from the browser locale. Trusted input: `Intl` throws on malformed tags, so validate persisted values |
-| `class`                                 | `string`                 | `""`                                |                                                                                                                                                                                           |
+| Prop                                    | Type                             | Default                             | Notes                                                                                                                                                                                     |
+| --------------------------------------- | -------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `month`                                 | `string` (bindable)              | today                               | Any `YYYY-MM-DD` inside the visible month                                                                                                                                                 |
+| `selected`                              | `DateRange \| null`              | `null`                              | Inclusive range to highlight; a single day is `{ from: d, to: d }`                                                                                                                        |
+| `onpick`                                | `(date: string) => void`         | —                                   | Clicked date (`YYYY-MM-DD`); leading/trailing days of adjacent months are pickable                                                                                                        |
+| `maxDate`                               | `string \| null`                 | `null`                              | Later dates disabled; paging into fully-later months blocked                                                                                                                              |
+| `previousMonthLabel` / `nextMonthLabel` | `string`                         | `"Previous month"` / `"Next month"` | Arrow `aria-label`s in the day view                                                                                                                                                       |
+| `previousYearLabel` / `nextYearLabel`   | `string`                         | `"Previous year"` / `"Next year"`   | Arrow `aria-label`s in the month grid                                                                                                                                                     |
+| `previousYearsLabel` / `nextYearsLabel` | `string`                         | `"Previous years"` / `"Next years"` | Arrow `aria-label`s in the year grid                                                                                                                                                      |
+| `chooseMonthLabel` / `chooseYearLabel`  | `string`                         | `"Choose month"` / `"Choose year"`  | Appended to the header button's accessible name to hint at the drill-down                                                                                                                 |
+| `locale`                                | `string`                         | browser locale                      | BCP 47 tag for month/weekday/day names, for apps whose language setting can diverge from the browser locale. Trusted input: `Intl` throws on malformed tags, so validate persisted values |
+| `activity`                              | `Record<string, number> \| null` | `null`                              | Count per `YYYY-MM-DD` day; shaded days and their labels follow it. See Activity                                                                                                          |
+| `activityScale`                         | `(count, date) => number`        | quarters of the busiest day         | Shade step 0–4 for a count, for an app's own thresholds                                                                                                                                   |
+| `activityLabel`                         | `(count) => string`              | `"1 item"` / `"N items"`            | Wording of the count appended to a day's `aria-label`                                                                                                                                     |
+| `class`                                 | `string`                         | `""`                                |                                                                                                                                                                                           |
 
 ## Behavior
 
@@ -55,6 +58,35 @@ pick-a-date UI.
   forwards them verbatim.
 - Day cells are plain focusable buttons with full-date `aria-label`s (no
   roving-tabindex grid navigation yet).
+
+## Activity
+
+Pass `activity`, a count per day, to shade days by how much happened on them,
+such as messages, documents, or events. The calendar draws four tints of one
+accent; days without a count, or with zero, stay plain.
+
+```svelte
+<Calendar
+  bind:month
+  activity={{ "2026-11-03": 4, "2026-11-04": 12, "2026-11-10": 1 }}
+  activityLabel={(count) => (count === 1 ? "1 message" : `${count} messages`)}
+  onpick={openDay}
+/>
+```
+
+- By default the steps are quarters of the busiest day in the visible grid,
+  so each month uses the whole range of shades. `activityStep(count, max)` is
+  that rule, exported for a legend. An app with its own scale passes
+  `activityScale`, which returns a step from 0 to 4 for a count and its date.
+- A day with a count gets it in its accessible label: "Nov 4, 2026, 12
+  messages". `activityLabel` words the count; the default is "N items".
+- The accent is `--accent-green`. Set `--kit-calendar-activity-color` on the
+  calendar or an ancestor for another one.
+- The selected range, the hover fill, and the outside-month dimming draw over
+  the shade, and today's ring and `maxDate` work as before. Without
+  `activity` the calendar renders exactly as it did.
+- The data is the app's to load. Pass counts for the visible month and its
+  leading and trailing days; when `month` changes, fetch the next month.
 
 ## Month / year drill-down
 
