@@ -89,3 +89,16 @@ test("keyboard focus follows a fold as it opens and closes", async ({ page }) =>
   await page.keyboard.press("Enter");
   await expect(fold).toBeFocused();
 });
+
+test("by person: lanes are named groups and focus clears the pinned headers", async ({ page }) => {
+  const lanes = page.getByTestId("day-lane-lanes");
+  const dev = lanes.getByRole("group", { name: "Dev Rao" });
+  await expect(dev.getByRole("button", { name: /Dock schedule week 11/ })).toHaveCount(1);
+  const scroller = lanes.locator(".kit-day-lane");
+  const card = dev.getByRole("button", { name: /Call: Jory and Dev/ });
+  await scroller.evaluate((el) => (el.scrollTop = el.scrollHeight));
+  await card.focus();
+  const heads = await lanes.locator(".kit-day-lane__lane-heads").boundingBox();
+  const box = await card.boundingBox();
+  expect(box!.y).toBeGreaterThanOrEqual(heads!.y + heads!.height);
+});

@@ -100,6 +100,8 @@
   let activeKey = $state<string | null>(null);
   let scroller = $state<HTMLDivElement>();
   let scrolledFor: string | number | null = null;
+  /** Height of the pinned lane headers, so scrolling never hides a card under them. */
+  let headsHeight = $state(0);
 
   // A fixed UTC date turns a minute into a clock time without reading any zone.
   const clock = (minute: number) => new Date(Date.UTC(2000, 0, 1, 0, minute));
@@ -255,11 +257,11 @@
     );
     if (!el) return;
     const top = scroller.getBoundingClientRect().top - scroller.scrollTop;
-    const offset = el.getBoundingClientRect().top - top - hourHeight / 4;
+    const offset = el.getBoundingClientRect().top - top - headsHeight - hourHeight / 4;
     // Near the top already: keep the date-only strip whole rather than half scrolled away.
     const axis = scroller.querySelector<HTMLElement>(".kit-day-lane__axis");
     const axisTop = axis ? axis.getBoundingClientRect().top - top : 0;
-    scroller.scrollTop = offset <= axisTop ? 0 : offset;
+    scroller.scrollTop = offset <= axisTop - headsHeight ? 0 : offset;
   });
 </script>
 
@@ -318,6 +320,7 @@
   class={["kit-day-lane", lanes && "kit-day-lane--lanes", className]}
   style:--kit-day-lane-count={layout.lanes.length}
   style:--kit-day-lane-min="{laneMinWidth}px"
+  style:--kit-day-lane-heads="{headsHeight}px"
   role="group"
   aria-label={ariaLabel}
   {onkeydown}
@@ -352,7 +355,7 @@
   {/if}
 
   {#if lanes}
-    <div class="kit-day-lane__lane-heads">
+    <div class="kit-day-lane__lane-heads" bind:clientHeight={headsHeight}>
       {#each lanes as lane, index (lane.key)}
         {@const count =
           layout.lanes[index]?.entries.reduce(
@@ -429,8 +432,13 @@
     {/if}
 
     <div class="kit-day-lane__lanes">
-      {#each layout.lanes as lane (lane.key)}
-        <div class="kit-day-lane__lane">
+      {#each layout.lanes as lane, index (lane.key)}
+        <!-- Each lane is a named group, so a screen reader says whose lane a card is in. -->
+        <div
+          class="kit-day-lane__lane"
+          role={lanes ? "group" : undefined}
+          aria-label={lanes?.[index]?.label}
+        >
           {#each lane.entries as entry (keyOf(entry, lane.key))}
             {@render card(entry, keyOf(entry, lane.key))}
           {/each}
@@ -587,6 +595,11 @@
   .kit-day-lane--lanes .kit-day-lane__fold {
     justify-content: flex-start;
     padding-inline: var(--space-5);
+  }
+
+  /* Keyboard focus scrolls a card clear of the pinned headers. */
+  .kit-day-lane--lanes .kit-day-lane__item {
+    scroll-margin-top: calc(var(--kit-day-lane-heads) + var(--space-4));
   }
 
   .kit-day-lane--lanes .kit-day-lane__lane + .kit-day-lane__lane {
