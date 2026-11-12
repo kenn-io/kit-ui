@@ -41,6 +41,21 @@ interface Props extends CalendarNavLabels {
      * locale. (`| undefined` keeps forwarding consumers with
      * exactOptionalPropertyTypes happy.) */
     locale?: string | undefined;
+    /** Show the text field for typing dates ("last 30 days", "Sep 10 to
+     * Oct 20", "since March") above the tabs. */
+    textEntry?: boolean;
+    /** Placeholder of the text field. */
+    textEntryPlaceholder?: string;
+    /** Accessible name of the text field. */
+    textEntryLabel?: string;
+    /** The text field's clear button label. */
+    textEntryClearLabel?: string;
+    /** The line under the text field while nothing is typed. */
+    textEntryHint?: string;
+    /** Shown when Enter is pressed on text that isn't a date or range. */
+    noMatchLabel?: string;
+    /** Day count after a typed range's dates in the summary line. */
+    dayCountLabel?: (count: number) => string;
 }
 declare const DateRangePicker: import("svelte").Component<Props, {}, "">;
 type DateRangePicker = ReturnType<typeof DateRangePicker>;

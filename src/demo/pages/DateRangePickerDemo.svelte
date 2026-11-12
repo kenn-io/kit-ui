@@ -33,6 +33,10 @@
   });
   const sundayRange = $derived(resolveRange(sundaySelection, undefined, "sunday"));
 
+  let typedSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
+  const typedRange = $derived(resolveRange(typedSelection));
+  let plainSelection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
+
   let blockSelection = $state.raw<RangeSelection>({
     mode: "custom",
     from: "2025-07-11",
@@ -139,7 +143,45 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Type the dates"
+  description="Every picker has a text field at the top of its popover: type “last 30 days”, “Sep 10 to Oct 20”, “since March” or “this month”. Ghost text finishes the word (Tab or → takes it), the Custom tab previews the range with a summary and day count, and Enter commits it as a custom range. Text that isn't a date or range shows a hint and changes nothing."
+  code={`<DateRangePicker {selection} onSelect={(sel) => (selection = sel)} locale="en-US" />`}
+>
+  <div data-testid="typed-range-picker" class="typed-demo">
+    <DateRangePicker
+      selection={typedSelection}
+      onSelect={(sel) => (typedSelection = sel)}
+      locale="en-US"
+    />
+    <output data-testid="typed-range-selection">{JSON.stringify(typedSelection)}</output>
+    <output data-testid="typed-range-bounds">{typedRange.from} → {typedRange.to}</output>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Without text entry"
+  description="textEntry={false} leaves out the text field, for popovers with no room for it."
+  code={`<DateRangePicker {selection} onSelect={...} textEntry={false} />`}
+>
+  <div data-testid="no-text-entry-picker">
+    <DateRangePicker
+      selection={plainSelection}
+      onSelect={(sel) => (plainSelection = sel)}
+      textEntry={false}
+    />
+  </div>
+</DemoSection>
+
 <style>
+  .typed-demo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+    font-size: var(--font-size-sm);
+  }
+
   .readout {
     display: flex;
     flex-direction: column;
