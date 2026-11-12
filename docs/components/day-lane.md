@@ -80,6 +80,29 @@ a `startMinute`, are not drawn.
 `tone` takes the Chip tone vocabulary and colors the card's accent bar and
 the tick of a point item.
 
+## By person: several lanes
+
+Pass `lanes` (`{ key, label }[]`) and give each item `lane`: one key, or
+several when the item belongs to several people. The lanes share one axis,
+so 9 AM lines up across them, and a quiet stretch folds only when every
+lane is quiet. Each lane applies `maxColumns` on its own (the Docbank
+design uses 2). Lanes keep `laneMinWidth` (190px) and the view scrolls
+sideways when they do not fit; the lane headers stay pinned while the
+hours scroll. `laneHeader` renders a header from the lane and its timed
+item count, for an avatar or a link; without it the header shows the label
+and count. Timed items whose lanes are all missing are not drawn. A card
+that sits in several lanes keeps one id, so `onselect` and `selected` work
+the same as in a single lane.
+
+```svelte
+<DayLane {items} lanes={people} maxColumns={2} onselect={select}>
+  {#snippet laneHeader(lane, count)}<PersonChip id={lane.key} /> {count}{/snippet}
+  {#snippet item({ item })}…{/snippet}
+</DayLane>
+```
+
+`layoutDayLanes(items, laneKeys, options)` is the pure layout behind it.
+
 ## Layout rules
 
 - An item's top is its start; its height is its length, never less than

@@ -6,11 +6,13 @@
     DAY_LANE_DEFAULTS,
     hourTicks,
     layoutDayLane,
+    layoutDayLanes,
     minuteToY,
     placeTicks,
     type DayLaneEntry,
     type DayLaneItem,
     type DayLaneItemContext,
+    type DayLaneLane,
     type DayLaneOverflow,
     type DayLaneSegment,
     type DayLaneTick,
@@ -25,6 +27,12 @@
     ticks?: DayLaneTick[] | undefined;
     /** Renders the inside of one card: title, icons, avatars, badges. */
     item: Snippet<[DayLaneItemContext]>;
+    /** Lanes side by side on one axis ("By person"); items pick theirs with `lane`. */
+    lanes?: DayLaneLane[] | undefined;
+    /** Lane header content; gets the lane and its timed item count. Defaults to the label. */
+    laneHeader?: Snippet<[DayLaneLane, number]> | undefined;
+    /** Narrowest a lane gets before the view scrolls sideways, in pixels. */
+    laneMinWidth?: number;
     /** Pixels per hour. */
     hourHeight?: number;
     /** Smallest card height in pixels; point items get exactly this. */
@@ -65,6 +73,9 @@
     dayMinutes = 1440,
     ticks = undefined,
     item,
+    lanes = undefined,
+    laneHeader = undefined,
+    laneMinWidth = 190,
     hourHeight = DAY_LANE_DEFAULTS.hourHeight,
     minItemHeight = DAY_LANE_DEFAULTS.minItemHeight,
     maxColumns = DAY_LANE_DEFAULTS.maxColumns,
@@ -104,36 +115,54 @@
   );
 
   const expandedFolds = $derived(expanded.day === dayKey ? expanded.keys : []);
-  const layout = $derived(
-    layoutDayLane(items, {
+  const layout = $derived.by(() => {
+    const options = {
       dayMinutes,
       hourHeight,
       minItemHeight,
       maxColumns,
       foldQuietMinutes,
       expandedFolds,
-    }),
-  );
+    };
+    if (lanes) {
+      return layoutDayLanes(
+        items,
+        lanes.map((l) => l.key),
+        options,
+      );
+    }
+    const single = layoutDayLane(items, options);
+    return { ...single, lanes: [{ key: "", entries: single.entries }], unassigned: [] };
+  });
   const placedTicks = $derived(placeTicks(tickList, layout.segments, hourHeight));
 
-  const keyOf = (entry: DayLaneEntry) =>
-    entry.kind === "item" ? `item:${entry.item.id}` : `more:${entry.key}`;
+  // Keys carry the lane, since one item can sit in several lanes.
+  const keyOf = (entry: DayLaneEntry, lane: string) =>
+    entry.kind === "item" ? `${lane}|item:${entry.item.id}` : `${lane}|more:${entry.key}`;
+  const dateOnlyKey = (i: DayLaneItem) => `|date:${i.id}`;
+
+  /** Every card on the axis, in reading order: top, then lane, then column. */
+  const axisCards = $derived(
+    layout.lanes
+      .flatMap((lane, laneIndex) =>
+        lane.entries.map((entry) => ({ entry, laneIndex, key: keyOf(entry, lane.key) })),
+      )
+      .sort(
+        (a, b) =>
+          a.entry.top - b.entry.top || a.laneIndex - b.laneIndex || a.entry.column - b.entry.column,
+      ),
+  );
 
   /** Focus order: the date-only strip, then the axis in time order. */
-  const order = $derived([
-    ...layout.dateOnly.map((i) => `item:${i.id}`),
-    ...layout.entries.map(keyOf),
-  ]);
+  const order = $derived([...layout.dateOnly.map(dateOnlyKey), ...axisCards.map((c) => c.key)]);
   const tabKey = $derived.by(() => {
     if (activeKey && order.includes(activeKey)) return activeKey;
-    const selected = items.find((i) => i.selected);
-    const selectedKey = selected ? `item:${selected.id}` : null;
-    if (selectedKey && order.includes(selectedKey)) return selectedKey;
-    const hidden = layout.entries.find(
-      (e) => e.kind === "overflow" && e.items.some((i) => i.selected),
+    const selectedDateOnly = layout.dateOnly.find((i) => i.selected);
+    if (selectedDateOnly) return dateOnlyKey(selectedDateOnly);
+    const selected = axisCards.find(({ entry }) =>
+      entry.kind === "item" ? entry.item.selected : entry.items.some((i) => i.selected),
     );
-    if (hidden) return keyOf(hidden);
-    return order[0] ?? null;
+    return selected?.key ?? order[0] ?? null;
   });
 
   const nowY = $derived(
@@ -213,12 +242,12 @@
 
   // Bring the first timed item into view once per day, as soon as there is one.
   $effect(() => {
-    const first = layout.entries[0];
+    const first = axisCards[0];
     const day = dayKey;
     if (!scrollToFirst || !scroller || !first || scrolledFor === day) return;
     scrolledFor = day;
     const el = scroller.querySelector<HTMLElement>(
-      `[data-day-lane-key="${CSS.escape(keyOf(first))}"]`,
+      `[data-day-lane-key="${CSS.escape(first.key)}"]`,
     );
     if (!el) return;
     const top = scroller.getBoundingClientRect().top - scroller.scrollTop;
@@ -230,11 +259,61 @@
   });
 </script>
 
+{#snippet card(entry: DayLaneEntry, key: string)}
+  {#if entry.kind === "item"}
+    <button
+      type="button"
+      class={[
+        "kit-day-lane__item",
+        entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
+        entry.item.dimmed && "kit-day-lane__item--dimmed",
+        entry.height < 40 && "kit-day-lane__item--compact",
+        entry.clippedStart && "kit-day-lane__item--clipped-start",
+        entry.clippedEnd && "kit-day-lane__item--clipped-end",
+      ]}
+      style:top="{entry.top + 1}px"
+      style:height="{entry.height - 2}px"
+      style:left="calc({entry.column} * 100% / {entry.columns})"
+      style:width="calc(100% / {entry.columns} - 4px)"
+      aria-pressed={!!entry.item.selected}
+      tabindex={tabKey === key ? 0 : -1}
+      data-day-lane-key={key}
+      onfocus={() => (activeKey = key)}
+      onclick={() => onselect?.(entry.item.id)}
+    >
+      {@render item(context(entry.item, entry.height - 2, entry.columns, entry.point))}
+      <span class="kit-sr-only">, {timeLabel(entry.item)}</span>
+    </button>
+  {:else}
+    <button
+      type="button"
+      class={[
+        "kit-day-lane__item",
+        "kit-day-lane__more",
+        entry.items.every((i) => i.dimmed) && "kit-day-lane__item--dimmed",
+      ]}
+      style:top="{entry.top + 1}px"
+      style:height="{entry.height - 2}px"
+      style:left="calc({entry.column} * 100% / {entry.columns})"
+      style:width="calc(100% / {entry.columns} - 4px)"
+      aria-pressed={entry.items.some((i) => i.selected)}
+      tabindex={tabKey === key ? 0 : -1}
+      data-day-lane-key={key}
+      onfocus={() => (activeKey = key)}
+      onclick={() => chooseOverflow(entry)}
+    >
+      {overflowLabel(entry.items.length, timeText(entry.startMinute))}
+    </button>
+  {/if}
+{/snippet}
+
 <!-- The group only routes arrow keys between its card buttons (roving focus). -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   bind:this={scroller}
-  class={["kit-day-lane", className]}
+  class={["kit-day-lane", lanes && "kit-day-lane--lanes", className]}
+  style:--kit-day-lane-count={layout.lanes.length}
+  style:--kit-day-lane-min="{laneMinWidth}px"
   role="group"
   aria-label={ariaLabel}
   {onkeydown}
@@ -244,7 +323,7 @@
       <span class="kit-day-lane__gutter-label">{dateOnlyLabel}</span>
       <div class="kit-day-lane__strip">
         {#each layout.dateOnly as i (i.id)}
-          {@const key = `item:${i.id}`}
+          {@const key = dateOnlyKey(i)}
           <button
             type="button"
             class={[
@@ -265,6 +344,26 @@
           </button>
         {/each}
       </div>
+    </div>
+  {/if}
+
+  {#if lanes}
+    <div class="kit-day-lane__lane-heads">
+      {#each lanes as lane, index (lane.key)}
+        {@const count =
+          layout.lanes[index]?.entries.reduce(
+            (n, e) => n + (e.kind === "item" ? 1 : e.items.length),
+            0,
+          ) ?? 0}
+        <div class="kit-day-lane__lane-head">
+          {#if laneHeader}
+            {@render laneHeader(lane, count)}
+          {:else}
+            <span class="kit-day-lane__lane-label">{lane.label}</span>
+            <span class="kit-day-lane__lane-count">{count}</span>
+          {/if}
+        </div>
+      {/each}
     </div>
   {/if}
 
@@ -312,67 +411,28 @@
       {/if}
     {/each}
 
-    {#each layout.entries as entry (keyOf(entry))}
-      {#if entry.kind === "item" && entry.point}
-        <i
-          class={[
-            "kit-day-lane__tick",
-            entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
-          ]}
-          style:top="{entry.top}px"
-          aria-hidden="true"
-        ></i>
-      {/if}
-    {/each}
-
-    <div class="kit-day-lane__lane">
-      {#each layout.entries as entry (keyOf(entry))}
-        {@const key = keyOf(entry)}
-        {#if entry.kind === "item"}
-          <button
-            type="button"
+    {#if !lanes}
+      {#each layout.lanes[0]?.entries ?? [] as entry, index (index)}
+        {#if entry.kind === "item" && entry.point}
+          <i
             class={[
-              "kit-day-lane__item",
+              "kit-day-lane__tick",
               entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
-              entry.item.dimmed && "kit-day-lane__item--dimmed",
-              entry.height < 40 && "kit-day-lane__item--compact",
-              entry.clippedStart && "kit-day-lane__item--clipped-start",
-              entry.clippedEnd && "kit-day-lane__item--clipped-end",
             ]}
-            style:top="{entry.top + 1}px"
-            style:height="{entry.height - 2}px"
-            style:left="calc({entry.column} * 100% / {entry.columns})"
-            style:width="calc(100% / {entry.columns} - 4px)"
-            aria-pressed={!!entry.item.selected}
-            tabindex={tabKey === key ? 0 : -1}
-            data-day-lane-key={key}
-            onfocus={() => (activeKey = key)}
-            onclick={() => onselect?.(entry.item.id)}
-          >
-            {@render item(context(entry.item, entry.height - 2, entry.columns, entry.point))}
-            <span class="kit-sr-only">, {timeLabel(entry.item)}</span>
-          </button>
-        {:else}
-          <button
-            type="button"
-            class={[
-              "kit-day-lane__item",
-              "kit-day-lane__more",
-              entry.items.every((i) => i.dimmed) && "kit-day-lane__item--dimmed",
-            ]}
-            style:top="{entry.top + 1}px"
-            style:height="{entry.height - 2}px"
-            style:left="calc({entry.column} * 100% / {entry.columns})"
-            style:width="calc(100% / {entry.columns} - 4px)"
-            aria-pressed={entry.items.some((i) => i.selected)}
-            tabindex={tabKey === key ? 0 : -1}
-            data-day-lane-key={key}
-            onfocus={() => (activeKey = key)}
-            onclick={() => chooseOverflow(entry)}
-          >
-            {overflowLabel(entry.items.length, timeText(entry.startMinute))}
-          </button>
+            style:top="{entry.top}px"
+            aria-hidden="true"
+          ></i>
         {/if}
+      {/each}
+    {/if}
+
+    <div class="kit-day-lane__lanes">
+      {#each layout.lanes as lane (lane.key)}
+        <div class="kit-day-lane__lane">
+          {#each lane.entries as entry (keyOf(entry, lane.key))}
+            {@render card(entry, keyOf(entry, lane.key))}
+          {/each}
+        </div>
       {/each}
     </div>
 
@@ -498,11 +558,76 @@
     pointer-events: none;
   }
 
-  .kit-day-lane__lane {
+  .kit-day-lane__lanes {
     position: absolute;
     inset: 0 var(--space-4) 0 var(--kit-day-lane-gutter);
+    display: grid;
+    grid-template-columns: repeat(var(--kit-day-lane-count), minmax(0, 1fr));
     /* Empty lane space lets clicks through to the fold bands underneath. */
     pointer-events: none;
+  }
+
+  .kit-day-lane__lane {
+    position: relative;
+    min-width: 0;
+  }
+
+  /* Several lanes: each keeps a minimum width and the view scrolls sideways. */
+  .kit-day-lane--lanes .kit-day-lane__axis,
+  .kit-day-lane--lanes .kit-day-lane__lane-heads {
+    min-width: calc(
+      var(--kit-day-lane-gutter) + var(--kit-day-lane-count) * var(--kit-day-lane-min) +
+        var(--space-4)
+    );
+  }
+
+  /* The band can be wider than the view; keep its text where it can be read. */
+  .kit-day-lane--lanes .kit-day-lane__fold {
+    justify-content: flex-start;
+    padding-inline: var(--space-5);
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__lane + .kit-day-lane__lane {
+    border-left: 1px solid var(--border-muted);
+  }
+
+  .kit-day-lane__lane-heads {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(var(--kit-day-lane-count), minmax(0, 1fr));
+    padding: 0 var(--space-4) 0 var(--kit-day-lane-gutter);
+    border-bottom: 1px solid var(--border-muted);
+    background: var(--bg-primary);
+  }
+
+  .kit-day-lane__lane-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-4) var(--space-4);
+    font-size: var(--font-size-sm);
+  }
+
+  .kit-day-lane__lane-head + .kit-day-lane__lane-head {
+    border-left: 1px solid var(--border-muted);
+  }
+
+  .kit-day-lane__lane-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .kit-day-lane__lane-count {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
   }
 
   .kit-day-lane__lane > .kit-day-lane__item {

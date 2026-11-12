@@ -8,6 +8,8 @@ import {
   hourTicks,
   isInDay,
   layoutDayLane,
+  layoutDayLanes,
+  lanesOf,
   minuteToY,
   placeColumns,
   placeTicks,
@@ -353,6 +355,67 @@ describe("placing items", () => {
       "b",
       "late",
     ]);
+  });
+});
+
+describe("lanes", () => {
+  const withLane = (item: DayLaneItem, lane: DayLaneItem["lane"]): DayLaneItem => ({
+    ...item,
+    lane,
+  });
+
+  test("each lane gets its own columns on shared rows", () => {
+    const items = [
+      withLane(span("a", 9, 0, 10, 0), "mara"),
+      withLane(span("b", 9, 0, 10, 0), "dev"),
+      withLane(span("c", 9, 15, 10, 0), "mara"),
+    ];
+    const layout = layoutDayLanes(items, ["mara", "dev"], base);
+    const [mara, dev] = layout.lanes;
+    expect(mara!.key).toBe("mara");
+    expect(placed(mara!.entries).map((e) => [e.item.id, e.column, e.columns])).toEqual([
+      ["a", 0, 2],
+      ["c", 1, 2],
+    ]);
+    expect(placed(dev!.entries).map((e) => [e.item.id, e.column, e.columns])).toEqual([
+      ["b", 0, 1],
+    ]);
+    // Same rows in every lane, so 9 AM lines up.
+    expect(byId(mara!.entries, "a").top).toBe(byId(dev!.entries, "b").top);
+  });
+
+  test("an item with several lanes appears in each", () => {
+    const item = withLane(point("thread", 10), ["mara", "dev"]);
+    const layout = layoutDayLanes([item], ["mara", "dev", "ines"], base);
+    expect(layout.lanes.map((l) => l.entries.length)).toEqual([1, 1, 0]);
+    expect(lanesOf(item)).toEqual(["mara", "dev"]);
+  });
+
+  test("a quiet hour folds only when every lane is quiet", () => {
+    const items = [withLane(point("a", 9), "mara"), withLane(point("b", 12), "dev")];
+    const layout = layoutDayLanes(items, ["mara", "dev"], base);
+    expect(rows(layout.segments)).toEqual(["fold:0", "hour:9", "fold:10", "hour:12", "fold:13"]);
+  });
+
+  test("items in no listed lane are reported and do not open hours", () => {
+    const items = [
+      withLane(point("a", 9), "mara"),
+      withLane(point("b", 15), "gone"),
+      point("c", 18),
+      { id: "d", dateOnly: true, lane: "mara" },
+    ];
+    const layout = layoutDayLanes(items, ["mara"], base);
+    expect(layout.unassigned).toEqual(["b", "c"]);
+    expect(layout.dateOnly.map((i) => i.id)).toEqual(["d"]);
+    expect(rows(layout.segments)).toEqual(["fold:0", "hour:9", "fold:10"]);
+  });
+
+  test("the column limit applies per lane", () => {
+    const items = ["p1", "p2", "p3"].map((id) => withLane(point(id, 9), "mara"));
+    const layout = layoutDayLanes(items, ["mara"], { ...base, maxColumns: 2 });
+    const entries = layout.lanes[0]!.entries;
+    expect(placed(entries)).toHaveLength(1);
+    expect(overflows(entries)[0]!.items.map((i) => i.id)).toEqual(["p2", "p3"]);
   });
 });
 

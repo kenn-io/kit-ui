@@ -60,3 +60,18 @@ test("a 23-hour day labels its hours from the app's ticks", async ({ page }) => 
   expect(labels).toHaveLength(23);
   expect(labels.slice(0, 3)).toEqual(["12 AM", "1 AM", "3 AM"]);
 });
+
+test("by person: one card per lane, shared rows, sideways scroll", async ({ page }) => {
+  const lanes = page.getByTestId("day-lane-lanes");
+  const standup = lanes.getByRole("button", { name: /Shipment status standup/ });
+  await expect(standup).toHaveCount(4);
+  const tops = await Promise.all([0, 1].map(async (i) => (await standup.nth(i).boundingBox())!.y));
+  expect(tops[0]).toBe(tops[1]);
+  const [scrollWidth, clientWidth] = await lanes
+    .locator(".kit-day-lane")
+    .evaluate((el) => [el.scrollWidth, el.clientWidth]);
+  expect(scrollWidth).toBeGreaterThan(clientWidth);
+  await standup.first().click();
+  await expect(page.getByTestId("day-lane-lanes-event")).toHaveText("select standup");
+  for (let i = 0; i < 4; i++) await expect(standup.nth(i)).toHaveAttribute("aria-pressed", "true");
+});

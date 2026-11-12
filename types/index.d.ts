@@ -68,7 +68,7 @@ export { default as DatePicker } from "./components/DatePicker.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export { allFromDate, daysAgo, DEFAULT_RANGE_PRESETS, localDateStr, monthGridDates, monthLabels, periodBounds, presetRange, resolveRange, stepAnchor, todayStr, weekdayLabels, type CalendarNavLabels, type CalendarSelection, type CalendarUnit, type WeekStart, type CustomSelection, type DateRange, type RangeMode, type RangePreset, type RangeSelection, type RelativeSelection, } from "./components/date-range.js";
 export { default as DayLane } from "./components/DayLane.svelte";
-export { buildDayLaneSegments, DAY_LANE_DEFAULTS, hourTicks, layoutDayLane, minuteToY, placeColumns, placeDayLaneItems, placeTicks, type DayLaneEntry, type DayLaneItem, type DayLaneItemContext, type DayLaneLayout, type DayLaneLayoutOptions, type DayLaneOverflow, type DayLanePlacedItem, type DayLanePlacedTick, type DayLaneSegment, type DayLaneTick, } from "./components/day-lane.js";
+export { buildDayLaneSegments, DAY_LANE_DEFAULTS, hourTicks, lanesOf, layoutDayLane, layoutDayLanes, minuteToY, placeColumns, placeDayLaneItems, placeTicks, type DayLaneEntry, type DayLaneItem, type DayLaneItemContext, type DayLaneLane, type DayLaneLanesLayout, type DayLaneLayout, type DayLaneLayoutOptions, type DayLaneOverflow, type DayLanePlacedItem, type DayLanePlacedTick, type DayLaneSegment, type DayLaneTick, } from "./components/day-lane.js";
 export { default as RadioGroup } from "./components/RadioGroup.svelte";
 export type { RadioGroupOption } from "./components/RadioGroup.svelte";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";

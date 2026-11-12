@@ -18,6 +18,8 @@ export interface DayLaneItem {
   startMinute?: number | undefined;
   /** Omit (or pass `startMinute`) for a point item, such as a document or a message. */
   endMinute?: number | undefined;
+  /** Lane key, or several, for the multi-lane layout. Ignored in a single lane. */
+  lane?: string | readonly string[] | undefined;
   selected?: boolean | undefined;
   /** De-emphasized (for example by a filter); never hidden. */
   dimmed?: boolean | undefined;
@@ -403,6 +405,65 @@ export function layoutDayLane(
     entries: placeDayLaneItems(items, segments, options),
     dateOnly: items.filter((i) => i.dateOnly),
     outside: items.filter((i) => !i.dateOnly && !isInDay(i, options.dayMinutes)).map((i) => i.id),
+  };
+}
+
+/** One column of a multi-lane day, such as a person. */
+export interface DayLaneLane {
+  key: string;
+  label: string;
+}
+
+export interface DayLaneLanesLayout extends Omit<DayLaneLayout, "entries"> {
+  /** Entries per lane, in the order of `laneKeys`. */
+  lanes: Array<{ key: string; entries: DayLaneEntry[] }>;
+  /** Ids of timed items in the day whose lanes are all missing from `laneKeys`. */
+  unassigned: string[];
+}
+
+/** The lane keys an item belongs to. */
+export function lanesOf(item: DayLaneItem): readonly string[] {
+  if (item.lane === undefined) return [];
+  return typeof item.lane === "string" ? [item.lane] : item.lane;
+}
+
+/**
+ * Several lanes on one axis ("By person"). Rows are shared, so the hours
+ * line up across lanes; a fold needs every lane to be empty. Each lane then
+ * gets the same column and overflow rules as a single lane. An item with
+ * several lane keys appears in each of those lanes.
+ */
+export function layoutDayLanes(
+  items: readonly DayLaneItem[],
+  laneKeys: readonly string[],
+  options: DayLaneLayoutOptions,
+): DayLaneLanesLayout {
+  const buckets = new Map<string, DayLaneItem[]>(laneKeys.map((key) => [key, []]));
+  const assigned: DayLaneItem[] = [];
+  const unassigned: string[] = [];
+  for (const item of items) {
+    if (!isInDay(item, options.dayMinutes)) continue;
+    let placed = false;
+    for (const key of lanesOf(item)) {
+      const bucket = buckets.get(key);
+      if (!bucket) continue;
+      bucket.push(item);
+      placed = true;
+    }
+    if (placed) assigned.push(item);
+    else unassigned.push(item.id);
+  }
+  const segments = buildDayLaneSegments(assigned, options);
+  return {
+    segments,
+    height: segmentsHeight(segments),
+    lanes: laneKeys.map((key) => ({
+      key,
+      entries: placeDayLaneItems(buckets.get(key) ?? [], segments, options),
+    })),
+    dateOnly: items.filter((i) => i.dateOnly),
+    outside: items.filter((i) => !i.dateOnly && !isInDay(i, options.dayMinutes)).map((i) => i.id),
+    unassigned,
   };
 }
 

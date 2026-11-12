@@ -233,6 +233,40 @@
     };
   });
   let stressSelected = $state<string | null>(null);
+
+  // By person: one lane per person, busiest first; an item sits in the lane
+  // of everyone in it.
+  const PEOPLE: Record<string, string> = {
+    MO: "Mara Okafor",
+    DR: "Dev Rao",
+    IA: "Ines Alba",
+    CF: "Callum Fenn",
+    TV: "Teodor Vask",
+    JP: "Jory Pell",
+    SK: "Sunniva Kraal",
+    LB: "Lotte Beer",
+  };
+  const personLanes = Object.keys(PEOPLE)
+    .map((key) => ({
+      key,
+      label: PEOPLE[key]!,
+      count: busyDay.filter((e) => !e.dateOnly && e.people.includes(key)).length,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .map(({ key, label }) => ({ key, label }));
+  let laneSelected = $state<string | null>("standup");
+  let laneEvent = $state("none yet");
+  const laneItems = $derived<DayLaneItem[]>(
+    busyDay.map((e) => ({
+      id: e.id,
+      dateOnly: e.dateOnly,
+      startMinute: e.start,
+      endMinute: e.end,
+      lane: e.people,
+      tone: KIND_TONE[e.kind],
+      selected: e.id === laneSelected,
+    })),
+  );
 </script>
 
 <DemoSection
@@ -346,6 +380,56 @@
 </DemoSection>
 
 <DemoSection
+  title="By person"
+  description="Pass lanes and give each item the lane keys it belongs to. Rows are shared, so hours line up; each lane applies its own column limit, and lanes keep a minimum width and scroll sideways when they do not fit."
+  code={`<DayLane
+  {items}
+  lanes={people.map((p) => ({ key: p.id, label: p.name }))}
+  maxColumns={2}
+  onselect={(id) => (selected = id)}
+>
+  {#snippet laneHeader(lane, count)}<Avatar … /> {lane.label} {count}{/snippet}
+  {#snippet item({ item })}…{/snippet}
+</DayLane>`}
+>
+  <p class="readout lane-readout">
+    last event: <code data-testid="day-lane-lanes-event">{laneEvent}</code>
+  </p>
+  <div class="frame" data-testid="day-lane-lanes">
+    <DayLane
+      items={laneItems}
+      lanes={personLanes}
+      maxColumns={2}
+      formatMinute={wallClock}
+      dayKey="lanes"
+      ariaLabel="Tuesday, March 10, by person"
+      onselect={(id) => {
+        laneSelected = id;
+        laneEvent = `select ${id}`;
+      }}
+      onoverflow={({ ids }) => (laneEvent = `overflow ${ids.join(", ")}`)}
+    >
+      {#snippet laneHeader(lane, count)}
+        <span class="initials" aria-hidden="true">{lane.key}</span>
+        <span class="card-title">{lane.label}</span>
+        <span class="card-count">{count}</span>
+      {/snippet}
+      {#snippet item({ item, compact })}
+        {@const e = byId.get(item.id)!}
+        {@const Icon = KIND_ICON[e.kind]}
+        <span class="card-line">
+          <Icon size={14} aria-hidden="true" />
+          <span class="card-title">{e.title}</span>
+        </span>
+        {#if !compact}
+          <span class="card-line card-meta"><span aria-hidden="true">{timeOf(e)}</span></span>
+        {/if}
+      {/snippet}
+    </DayLane>
+  </div>
+</DemoSection>
+
+<DemoSection
   title="400 items"
   description="A stress day of generated items. Layout runs once per change and is linear apart from the column search inside a cluster."
   code={`<DayLane items={fourHundred} maxColumns={3} onselect={...}>…</DayLane>`}
@@ -369,9 +453,11 @@
 <style>
   .controls,
   .layout,
-  .frame {
+  .frame,
+  .lane-readout {
     flex: 1 1 100%;
     min-width: 0;
+    margin: 0;
   }
 
   .controls {
@@ -462,6 +548,19 @@
     color: var(--text-secondary);
     font-size: var(--font-size-xs);
     white-space: nowrap;
+  }
+
+  .initials {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-semibold);
   }
 
   .card-people {
