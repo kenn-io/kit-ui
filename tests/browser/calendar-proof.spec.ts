@@ -7,10 +7,10 @@ import path from "node:path";
 import { gotoPage, setTheme } from "./helpers.js";
 
 // Temporary CI-only bridge. Remove after the declarations and captures are reviewed.
-const source = "f55d3830b8b24f57c1e4f0ddf313ea32988108ce";
+const source = "148d6fc0dd41b0ea3301f38fbd04e419f2baf5a8";
 const upstreamBase = "b2ac6ae3910659b9c75476737034f8c305c3a714";
 const expected: Record<string, string> = {
-  "src/lib/components/Calendar.svelte": "959b54ea060863b971d210f6f119dd52cb29d21f6609662ef6e185b3c007397c",
+  "src/lib/components/Calendar.svelte": "762beca06cc557c4e71b4be46e8f78f1b07c5e55e9190be30d27d9179fc8f5e0",
   "src/lib/components/date-range.ts": "af5770dbb4d3ed035edd16dbf527cc007ccd668a9cbed61e525995484cba503b",
   "scripts/declarations.mjs": "cd3f7ae39da877357cd189dbf0251307103d047331126494b50b39d67c787c82",
   "tsconfig.json": "498701fb4db8276d5f1b57f4444f7e563f2ecc986254d8812daf9acc4fdfad10",
@@ -64,7 +64,7 @@ test("calendar strip proof and isolated declaration patch", async ({ page }, tes
     receipt.attestation.proofDiffSha256 = sha(receipt.attestation.proofDiff);
     receipt.attestation.mergeDriftSha256 = sha(receipt.attestation.mergeDrift);
     expect(receipt.attestation.proofParents).toEqual([source]);
-    expect(receipt.attestation.proofPaths).toBe("A\ttests/browser/calendar-proof.spec.ts\n");
+    expect(receipt.attestation.proofPaths).toBe("M\ttests/browser/calendar-proof.spec.ts\n");
     expect(receipt.attestation.mergeParents).toEqual([upstreamBase, receipt.event.head]);
     receipt.checkout = { head: run(root, "git", ["rev-parse", "HEAD"]).trim(), tree: run(root, "git", ["rev-parse", "HEAD^{tree}"]).trim(), sourceTree: run(root, "git", ["rev-parse", "HEAD:src/lib"]).trim(), sourceFiles: run(root, "git", ["ls-tree", "-r", "HEAD", "src/lib"]), packageHash: fileHash(path.join(root, "package.json")), statusBefore: status(root), specHash: fileHash(path.join(root, "tests/browser/calendar-proof.spec.ts")), retryIndex: testInfo.retry };
     expect(receipt.checkout.head).toBe(receipt.event.merge);
