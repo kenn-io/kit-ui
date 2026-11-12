@@ -1,4 +1,7 @@
 import { type DateRange, type WeekStart } from "./date-range.js";
+/** Longest text the parser and completer look at. Typed dates are short;
+ * the cap keeps a pasted wall of text from stalling every keystroke. */
+export declare const DATE_PHRASE_MAX_LENGTH = 200;
 export interface DatePhraseOptions {
     /** "Today" as YYYY-MM-DD; injected so results are deterministic.
      * Defaults to the local current date. */
@@ -26,8 +29,6 @@ export type DatePhraseResult = {
 } | {
     kind: "none";
 };
-/** Inclusive number of days from `from` to `to` (both YYYY-MM-DD). */
-export declare function daysInRange(from: string, to: string): number;
 /**
  * Parse typed text into a single date, an inclusive range, or no match.
  * Dates are local-timezone YYYY-MM-DD strings.
@@ -36,7 +37,8 @@ export declare function daysInRange(from: string, to: string): number;
  * fine, English names always accepted alongside the locale's):
  * - single dates: today, yesterday, tomorrow; Friday, this/last/next
  *   Friday (that weekday in the current/previous/next week); Sep 10,
- *   10 Sep, Sep 10 2026, 10th September; 2026-09-10; 10/9, 10/9/26 in the
+ *   10 Sep, Sep 10 2026, Sep 10 '26, 10th September, Fri Sep 11 (the
+ *   weekday must agree); 2026-09-10; 10/9, 10/9/26 in the
  *   locale's day/month order (`-` and `.` work as separators too);
  *   3 days ago, in 2 weeks.
  * - ranges: X to/until/through/- Y (also "from X to Y", "between X and
@@ -46,7 +48,9 @@ export declare function daysInRange(from: string, to: string): number;
  *
  * A missing year is the current year (the other end's year inside a range;
  * last year for "since <month>" that would otherwise start after today).
+ * When only the end names a year, the start takes it ("Jan to Mar 2025").
  * Two-digit years slide around today. A range typed backwards is swapped.
+ * Years before 1000 or more than 100 past today's are no match.
  * A single date outside maxDate/earliestDate is no match; a range is
  * clamped to them, and is no match when nothing is left.
  */
@@ -63,6 +67,3 @@ export declare function datePhraseRange(result: DatePhraseResult): DateRange | n
 export declare function completeDatePhrase(text: string, options?: {
     locale?: string | undefined;
 }): string;
-/** "Sep 10 – Oct 20, 2026" (or "Sep 10, 2026" for one day) in the
- * locale's own range format. `locale` omitted = the browser locale. */
-export declare function formatDateRangeLabel(from: string, to: string, locale?: string): string;

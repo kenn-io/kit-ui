@@ -70,7 +70,7 @@ export { default as DatePicker } from "./components/DatePicker.svelte";
 export { default as DatePhraseInput } from "./components/DatePhraseInput.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export { allFromDate, daysAgo, DEFAULT_RANGE_PRESETS, localDateStr, monthGridDates, monthLabels, periodBounds, presetRange, resolveRange, stepAnchor, todayStr, weekdayLabels, type CalendarNavLabels, type CalendarSelection, type CalendarUnit, type WeekStart, type CustomSelection, type DateRange, type RangeMode, type RangePreset, type RangeSelection, type RelativeSelection, } from "./components/date-range.js";
-export { completeDatePhrase, datePhraseRange, daysInRange, formatDateRangeLabel, parseDatePhrase, type DatePhraseOptions, type DatePhraseResult, } from "./components/date-phrase.js";
+export { completeDatePhrase, DATE_PHRASE_MAX_LENGTH, datePhraseRange, parseDatePhrase, type DatePhraseOptions, type DatePhraseResult, } from "./components/date-phrase.js";
 export { default as RadioGroup } from "./components/RadioGroup.svelte";
 export type { RadioGroupOption } from "./components/RadioGroup.svelte";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";

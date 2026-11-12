@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   completeDatePhrase,
+  DATE_PHRASE_MAX_LENGTH,
   datePhraseRange,
-  daysInRange,
-  formatDateRangeLabel,
   parseDatePhrase,
   type DatePhraseOptions,
 } from "../src/lib/components/date-phrase.js";
+import { daysInRange, formatDateRangeLabel } from "../src/lib/components/date-range.js";
 
 // "Today" is injected: Thursday 2026-11-12. Nothing here reads the clock.
 const base: DatePhraseOptions = { today: "2026-11-12", locale: "en-US" };
@@ -62,7 +62,9 @@ describe("single dates", () => {
     ["the 1st of March", "2026-03-01"],
     ["September 10, 2025", "2025-09-10"],
     ["10 Sep 2027", "2027-09-10"],
-    ["Sep 10 26", "2026-09-10"],
+    ["Sep 10 '26", "2026-09-10"],
+    ["Sep 10 ’25", "2025-09-10"],
+    ["10 Sep '27", "2027-09-10"],
     ["Fri Sep 11", "2026-09-11"],
     ["sep    10", "2026-09-10"],
   ])("month names: %p", (text, expected) => {
@@ -124,10 +126,10 @@ describe("numeric dates follow the locale's day/month order", () => {
 
 describe("two-digit years slide around today", () => {
   test.each([
-    ["Sep 10 26", "2026-09-10"],
-    ["Sep 10 46", "2046-09-10"],
-    ["Sep 10 47", "1947-09-10"],
-    ["Sep 10 99", "1999-09-10"],
+    ["Sep 10 '26", "2026-09-10"],
+    ["Sep 10 '46", "2046-09-10"],
+    ["Sep 10 '47", "1947-09-10"],
+    ["Sep 10 '99", "1999-09-10"],
     ["9/10/05", "2005-09-10"],
   ])("%p", (text, expected) => {
     expect(parse(text)).toEqual(date(expected));
@@ -183,8 +185,18 @@ describe("ranges", () => {
   test("an end with no year crosses into the next year when that is the shorter range", () => {
     expect(parse("Dec 20 to Jan 5")).toEqual(range("2026-12-20", "2027-01-05"));
     expect(parse("Dec 20 2025 to Jan 5")).toEqual(range("2025-12-20", "2026-01-05"));
-    // An explicit year is taken literally, so this one swaps instead.
-    expect(parse("Dec 20 to Jan 5 2026")).toEqual(range("2026-01-05", "2026-12-20"));
+    expect(parse("Dec 20 to Jan 5 2026")).toEqual(range("2025-12-20", "2026-01-05"));
+  });
+
+  test("when only the end names a year, the start takes it", () => {
+    const june = { today: "2026-06-15" };
+    expect(parse("sep 10 - oct 20 2025", june)).toEqual(range("2025-09-10", "2025-10-20"));
+    expect(parse("jan to mar 2025", june)).toEqual(range("2025-01-01", "2025-03-31"));
+    expect(parse("Sep 10 to 2025-10-20", june)).toEqual(range("2025-09-10", "2025-10-20"));
+    // ... or the year before, when that keeps the start before the end.
+    expect(parse("dec 20 - jan 5 2027", { today: "2027-03-01" })).toEqual(
+      range("2026-12-20", "2027-01-05"),
+    );
   });
 
   test("the start's year carries to an end without one", () => {
@@ -373,6 +385,8 @@ describe("formatDateRangeLabel", () => {
     expect(formatDateRangeLabel("2026-12-20", "2027-01-05", "en-US")).toBe(
       "Dec 20, 2026 – Jan 5, 2027",
     );
+    // Years before 100 aren't read as the 1900s.
+    expect(formatDateRangeLabel("1001-01-01", "1001-01-01", "en-US")).toBe("Jan 1, 1001");
     // Day first; the exact month abbreviation varies across ICU versions.
     expect(formatDateRangeLabel("2026-09-10", "2026-10-20", "en-GB")).toMatch(
       /^10 Sept? – 20 Oct 2026$/,
@@ -416,5 +430,87 @@ describe("completeDatePhrase", () => {
     expect(complete("Okt", "de-DE")).toBe("ober");
     expect(complete("Fre", "de-DE")).toBe("itag");
     expect(complete("Sep", "de-DE")).toBe("tember");
+  });
+});
+
+describe("review regressions", () => {
+  const june = { today: "2026-06-15" };
+
+  test("two-digit years after a month name need an apostrophe; a bare one is a time", () => {
+    expect(parse("sep 10 15", june)).toEqual(none);
+    expect(parse("10 sep 15", june)).toEqual(none);
+    expect(parse("Sep 10 '15", june)).toEqual(date("2015-09-10"));
+    // Numeric dates keep bare two-digit years.
+    expect(parse("9/10/15", june)).toEqual(date("2015-09-10"));
+  });
+
+  test("a leading weekday must agree with the date", () => {
+    expect(parse("mon sep 10", june)).toEqual(none); // a Thursday in 2026
+    expect(parse("thu sep 10", june)).toEqual(date("2026-09-10"));
+    expect(parse("Fri Sep 11", june)).toEqual(date("2026-09-11"));
+    expect(parse("sat yesterday", june)).toEqual(none); // Jun 14 is a Sunday
+    expect(parse("thu 3 days ago", june)).toEqual(none); // Jun 12 is a Friday
+    expect(parse("fri 3 days ago", { today: "2026-11-12" })).toEqual(none); // Nov 9 is a Monday
+    expect(parse("sun mon", june)).toEqual(none);
+    expect(parse("fri fri fri sep 10", june)).toEqual(none);
+    expect(parse("fri fri sep 11", june)).toEqual(none);
+  });
+
+  test("dates stay well-formed: years from 1000 to 100 past today", () => {
+    expect(parse("0001-01-01", june)).toEqual(none);
+    expect(parse("0999-12-31", june)).toEqual(none);
+    expect(parse("1000-01-01", june)).toEqual(date("1000-01-01"));
+    expect(parse("9999 years ago", june)).toEqual(none);
+    expect(parse("in 9999 years", june)).toEqual(none);
+    expect(parse("last 9999 years", june)).toEqual(none);
+    expect(parse("since 0001", june)).toEqual(none);
+    expect(parse("in 100 years", june)).toEqual(date("2126-06-15"));
+    expect(parse("in 101 years", june)).toEqual(none);
+    expect(parse("999999999 days ago", june)).toEqual(none);
+    for (const text of ["300 years ago", "last 500 years", "in 2 years", "since 1066"]) {
+      const result = datePhraseRange(parse(text, june));
+      if (result) {
+        expect(result.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(result.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
+    }
+  });
+
+  test("Gregorian month names whatever the locale's default calendar", () => {
+    // Persian "دی" is a Solar Hijri month, not a Gregorian one.
+    expect(parse("دی 5", { ...june, locale: "fa" })).toEqual(none);
+    expect(parse("5 ژانویه", { ...june, locale: "fa" })).toEqual(date("2026-01-05"));
+    expect(parse("September 10", { ...june, locale: "ar-SA" })).toEqual(date("2026-09-10"));
+    expect(parse("10 سبتمبر", { ...june, locale: "ar-SA" })).toEqual(date("2026-09-10"));
+    expect(parse("10 سبتمبر", { ...june, locale: "ar-SA-u-ca-islamic" })).toEqual(
+      date("2026-09-10"),
+    );
+  });
+
+  test("Buddhist-era years are not read as Gregorian", () => {
+    expect(parse("10/9/2569", { ...june, locale: "th-TH" })).toEqual(none);
+    expect(parse("10/9/2026", { ...june, locale: "th-TH" })).toEqual(date("2026-09-10"));
+  });
+
+  test("names with combining marks match and complete", () => {
+    expect(parse("กันยายน 10", { ...june, locale: "th-TH" })).toEqual(date("2026-09-10"));
+    expect(parse("10 सितंबर", { ...june, locale: "hi-IN" })).toEqual(date("2026-09-10"));
+    expect(completeDatePhrase("กันย", { locale: "th-TH" })).toBe("ายน");
+  });
+
+  test("long input is no match without work", () => {
+    const long = "fri ".repeat(8000);
+    expect(parse(long, june)).toEqual(none);
+    expect(completeDatePhrase(long + "fr")).toBe("");
+    expect(parse("x".repeat(DATE_PHRASE_MAX_LENGTH + 1), june)).toEqual(none);
+    const started = performance.now();
+    parse("fri ".repeat(50), june);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  test("empty text and malformed locales never throw", () => {
+    expect(parseDatePhrase("", { locale: "not a locale!" })).toEqual(none);
+    expect(parse("tomorrow", { ...june, locale: "not a locale!" })).toEqual(date("2026-06-16"));
+    expect(completeDatePhrase("Se", { locale: "not a locale!" })).toBe("ptember");
   });
 });

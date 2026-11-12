@@ -6,15 +6,12 @@
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
   import DatePhraseInput from "./DatePhraseInput.svelte";
-  import {
-    datePhraseRange,
-    daysInRange,
-    formatDateRangeLabel,
-    parseDatePhrase,
-  } from "./date-phrase.js";
+  import { datePhraseRange, parseDatePhrase } from "./date-phrase.js";
   import SegmentedControl, { type SegmentedControlOption } from "./SegmentedControl.svelte";
   import {
     DEFAULT_RANGE_PRESETS,
+    daysInRange,
+    formatDateRangeLabel,
     formatDayLabel,
     formatMonthLabel,
     formatShortDate,

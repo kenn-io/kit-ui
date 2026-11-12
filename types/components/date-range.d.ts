@@ -92,6 +92,9 @@ export declare function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 |
  * adjacent months.
  */
 export declare function monthGridDates(anchor: string, weekStart?: WeekStart): string[];
+/** Store `value` under `key` in a size-capped cache (FIFO eviction) and
+ * return it. Shared with date-phrase.ts's locale word tables. */
+export declare function capped<V>(cache: Map<string, V>, key: string, value: V): V;
 /** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
  * omitted = the browser locale. */
 export declare function weekdayLabels(locale?: string, weekStart?: WeekStart): string[];
@@ -115,3 +118,8 @@ export declare function formatDayLabel(anchor: string, locale?: string): string;
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatMonthLabel(anchor: string, locale?: string): string;
+/** Inclusive number of days from `from` to `to` (both YYYY-MM-DD). */
+export declare function daysInRange(from: string, to: string): number;
+/** "Sep 10 – Oct 20, 2026" (or "Sep 10, 2026" for one day) in the locale's
+ * own range format. `locale` omitted = the browser locale. */
+export declare function formatDateRangeLabel(from: string, to: string, locale?: string): string;

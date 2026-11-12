@@ -11,20 +11,24 @@ commit.
 While you type, light ghost text after the caret finishes the word you are
 typing ("Se" → "ptember", "s" → "ince"). Tab, or → with the caret at the
 end, takes it. With no ghost text, Tab moves focus as usual. Enter calls
-`onsubmit`. Escape is left alone, so a surrounding popover still closes on
-it. A clear button appears while the field has text. The `summary` line under
-the field is a polite live region, so screen readers hear what the text
-resolves to.
+`onsubmit`. Keys that confirm an IME composition (Japanese, Chinese, Korean
+input) are left to the input method, so they never submit or take the ghost
+text. Escape is left alone, so a surrounding popover still closes on it. A
+clear button appears while the field has text, and the field takes at most
+200 characters (`DATE_PHRASE_MAX_LENGTH`).
+
+Under the field sits `summary` (what the text resolves to, or a no-match
+message), or `hint` while `summary` is empty. Screen readers hear `summary`
+through a polite live region when it changes, never the hint on each
+keystroke. `invalid` marks the field `aria-invalid` and colors the line.
+
+DatePicker and DateRangePicker focus the field when their popover opens,
+except on touch-first devices (`MEDIA.touch`), where focus would raise the
+on-screen keyboard over the calendar.
 
 ```svelte
 <script lang="ts">
-  import {
-    Calendar,
-    DatePhraseInput,
-    datePhraseRange,
-    formatDateRangeLabel,
-    parseDatePhrase,
-  } from "@kenn-io/kit-ui";
+  import { Calendar, DatePhraseInput, datePhraseRange, parseDatePhrase } from "@kenn-io/kit-ui";
 
   let text = $state("");
   let month = $state("2026-09-01");
@@ -33,7 +37,8 @@ resolves to.
 
 <DatePhraseInput
   bind:value={text}
-  summary={range ? formatDateRangeLabel(range.from, range.to) : "Type or select dates."}
+  summary={range ? `${range.from} → ${range.to}` : ""}
+  hint="Type or select dates."
   oninput={() => range && (month = range.from)}
   onsubmit={() => range && apply(range)}
 />
@@ -48,8 +53,9 @@ resolves to.
 | `placeholder` | `string`                  | `"What dates are you looking for?"` |                                                       |
 | `ariaLabel`   | `string`                  | `"Type dates"`                      | Accessible name of the field                          |
 | `clearLabel`  | `string`                  | `"Clear"`                           | Clear button label                                    |
-| `summary`     | `string`                  | `""`                                | Line under the field; a polite live region            |
-| `invalid`     | `boolean`                 | `false`                             | Styles the summary as a no-match message              |
+| `summary`     | `string`                  | `""`                                | What the text resolves to; announced when it changes  |
+| `hint`        | `string`                  | `""`                                | Shown while `summary` is empty; never announced       |
+| `invalid`     | `boolean`                 | `false`                             | `summary` is a no-match message: `aria-invalid`, red  |
 | `locale`      | `string`                  | browser                             | Month and weekday names offered as completions        |
 | `autofocus`   | `boolean`                 | `false`                             | Focus the field when it mounts                        |
 | `oninput`     | `(value: string) => void` | —                                   | Every edit, including a taken completion and clear    |
@@ -75,8 +81,7 @@ parseDatePhrase(text: string, options?: {
 
 completeDatePhrase(text: string, options?: { locale?: string }): string;
 datePhraseRange(result: DatePhraseResult): DateRange | null; // a date is a one-day range
-daysInRange(from: string, to: string): number;               // inclusive
-formatDateRangeLabel(from: string, to: string, locale?: string): string;
+DATE_PHRASE_MAX_LENGTH; // 200: longer text is no match / no suggestion
 ```
 
 Dates are local-timezone `YYYY-MM-DD` strings, like the rest of
@@ -87,7 +92,8 @@ abbreviations ("Sept.", "thurs") don't matter.
 | ------------------------------------------------------ | ----------------------------------------------------------- |
 | `today`, `yesterday`, `tomorrow`                       | That day                                                    |
 | `Friday`, `this Friday`, `last Friday`, `next Friday`  | Friday of the current, previous or next week (`weekStart`)  |
-| `Sep 10`, `10 Sep`, `September 10, 2025`, `Fri Sep 11` | That day                                                    |
+| `Sep 10`, `10 Sep`, `September 10, 2025`, `Sep 10 '25` | That day                                                    |
+| `Fri Sep 11`                                           | That day, if it is a Friday; otherwise no match             |
 | `2026-09-10`, `2026/9/10`                              | That day                                                    |
 | `10/9`, `10-9-26`, `10.09.`                            | Day and month in the locale's order (US: Oct 9; UK: Sep 10) |
 | `3 days ago`, `a week ago`, `in 2 weeks`, `in a month` | That day                                                    |
@@ -100,23 +106,32 @@ abbreviations ("Sept.", "thurs") don't matter.
 | `September`, `Sep 2026`, `2025`                        | The whole month or year                                     |
 
 - A missing year is the current year. Inside a range the end takes the
-  start's year ("Sep 10 2025 to Oct 20"). An end with no year that falls
+  start's year ("Sep 10 2025 to Oct 20"), and when only the end names one,
+  the start takes it ("Jan to Mar 2025"), or the year before when that keeps
+  it first ("Dec 20 - Jan 5 2027"). An end with no year that falls
   before the start reads as the next year when that gives the shorter range
   ("Dec 20 to Jan 5"), and otherwise as a range typed backwards, which is
   swapped ("Oct 20 to Sep 10"). "since October" typed in February means last
   October.
 - Two-digit years slide around today: up to 20 years ahead, otherwise the
-  past century (in 2026, "46" is 2046 and "47" is 1947).
+  past century (in 2026, "46" is 2046 and "47" is 1947). They work bare in
+  numeric dates ("10/9/26"); after a month name they need an apostrophe
+  ("Sep 10 '26"), because "Sep 10 15" is more likely a time.
+- Years run from 1000 to 100 years past today; anything outside ("in 9999
+  years", "0001-01-01") is no match.
 - Month and weekday names come from `Intl` for `locale` (both the standalone
   and in-date forms, so Russian "сентября" works), with or without accents.
-  English names always work too. Relative words (`today`, `last`, `since`,
+  English names always work too. Names are always Gregorian, whatever the
+  locale's default calendar. Relative words (`today`, `last`, `since`,
   `ago`, `to`, ...) are English only for now.
 - A single date outside `earliestDate`/`maxDate` is no match. A range is
   clamped to them, and is no match when nothing is left.
 - Not supported, and always no match rather than a wrong range: sets of days
   that aren't one contiguous span ("last 3 Fridays", "weekends since
   October"), because the pickers only hold one date or one from–to range,
-  and times of day ("tomorrow at 5pm").
+  times of day ("tomorrow at 5pm"); non-Gregorian calendars and era years
+  (Buddhist-era "2569", Persian or Islamic month names); and CJK numeric month
+  forms ("9月10日").
 
 `completeDatePhrase()` returns the rest of the word being typed, or `""`:
 nothing after a space or digits, or once the word is complete. It suggests by

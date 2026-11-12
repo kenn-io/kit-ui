@@ -16,16 +16,24 @@
  * take their day/month order from the locale, never a hard-coded US order.
  *
  * Out of scope: sets of non-contiguous days ("last 3 Fridays", "weekends
- * since October") and times of day. They are no match, never a wrong range.
+ * since October"), times of day, non-Gregorian calendars and era years
+ * (Buddhist-era 2569, Islamic or Persian months), and CJK numeric month
+ * forms ("9月"). They are no match, never a wrong range.
  */
 
 import {
+  capped,
+  daysInRange,
   localDateStr,
   periodBounds,
   todayStr,
   type DateRange,
   type WeekStart,
 } from "./date-range.js";
+
+/** Longest text the parser and completer look at. Typed dates are short;
+ * the cap keeps a pasted wall of text from stalling every keystroke. */
+export const DATE_PHRASE_MAX_LENGTH = 200;
 
 export interface DatePhraseOptions {
   /** "Today" as YYYY-MM-DD; injected so results are deterministic.
@@ -116,13 +124,6 @@ function monthSpan(year: number, month: number, explicitYear: boolean): Span {
   return { from, to: addDays(addMonths(from, 1), -1), single: false, explicitYear };
 }
 
-/** Inclusive number of days from `from` to `to` (both YYYY-MM-DD). */
-export function daysInRange(from: string, to: string): number {
-  const [fy, fm, fd] = parts(from);
-  const [ty, tm, td] = parts(to);
-  return Math.round((Date.UTC(ty, tm, td) - Date.UTC(fy, fm, fd)) / 86_400_000) + 1;
-}
-
 /* ---------- locale word tables ---------- */
 
 interface LocaleWords {
@@ -183,11 +184,24 @@ function nameKey(s: string): string {
 
 const wordCache = new Map<string, LocaleWords>();
 
+/** Letters plus combining marks, so Thai and Devanagari names count as words. */
+const WORD = /^[\p{L}\p{M}]+$/u;
+
 function localeWords(locale: string | undefined): LocaleWords {
   const key = locale ?? "";
   const cached = wordCache.get(key);
   if (cached) return cached;
+  let words: LocaleWords;
+  try {
+    words = buildLocaleWords(locale);
+  } catch {
+    // A malformed tag (Intl throws RangeError) falls back to the default.
+    words = locale === undefined ? buildLocaleWords("en") : localeWords(undefined);
+  }
+  return capped(wordCache, key, words);
+}
 
+function buildLocaleWords(locale: string | undefined): LocaleWords {
   const months = new Map<string, number>();
   const weekdays = new Map<string, number>();
   const monthNames: string[] = [];
@@ -195,28 +209,34 @@ function localeWords(locale: string | undefined): LocaleWords {
   const add = <T>(map: Map<string, T>, name: string, value: T) => {
     const k = nameKey(name);
     // Only words: a locale whose "month name" is a number ("9月") adds nothing.
-    if (/^\p{L}+$/u.test(k) && !map.has(k)) map.set(k, value);
+    if (WORD.test(k) && !map.has(k)) map.set(k, value);
   };
 
   for (const loc of [locale, "en"]) {
     for (const style of ["long", "short"] as const) {
-      const standalone = new Intl.DateTimeFormat(loc, { month: style });
+      // Always Gregorian month names: a Persian or Islamic default calendar
+      // would otherwise map its own months onto Gregorian indexes.
+      const standalone = new Intl.DateTimeFormat(loc, { month: style, calendar: "gregory" });
       // Format-context forms differ in some languages (Russian "сентября").
-      const inDate = new Intl.DateTimeFormat(loc, { month: style, day: "numeric" });
+      const inDate = new Intl.DateTimeFormat(loc, {
+        month: style,
+        day: "numeric",
+        calendar: "gregory",
+      });
       for (let m = 0; m < 12; m++) {
         const date = new Date(2024, m, 1);
         const name = standalone.format(date);
         add(months, name, m);
-        if (style === "long" && /^\p{L}+$/u.test(nameKey(name))) monthNames.push(name);
+        if (style === "long" && WORD.test(nameKey(name))) monthNames.push(name);
         const part = inDate.formatToParts(date).find((p) => p.type === "month")?.value;
         if (part) add(months, part, m);
       }
-      const weekday = new Intl.DateTimeFormat(loc, { weekday: style });
+      const weekday = new Intl.DateTimeFormat(loc, { weekday: style, calendar: "gregory" });
       for (let w = 0; w < 7; w++) {
         // 2024-01-07 is a Sunday.
         const name = weekday.format(new Date(2024, 0, 7 + w));
         add(weekdays, name, w);
-        if (style === "long" && /^\p{L}+$/u.test(nameKey(name))) weekdayNames.push(name);
+        if (style === "long" && WORD.test(nameKey(name))) weekdayNames.push(name);
       }
     }
   }
@@ -229,22 +249,20 @@ function localeWords(locale: string | undefined): LocaleWords {
     year: "numeric",
     month: "numeric",
     day: "numeric",
+    calendar: "gregory",
+    numberingSystem: "latn",
   })
     .formatToParts(new Date(2026, 10, 23))
     .map((p) => p.type)
     .filter((t) => t === "day" || t === "month");
 
-  const words: LocaleWords = {
+  return {
     months,
     weekdays,
     dayFirst: order[0] === "day",
     monthNames: [...new Set([...monthNames, ...ENGLISH_MONTHS])],
     weekdayNames: [...new Set([...weekdayNames, ...ENGLISH_WEEKDAYS])],
   };
-  // Same bounded-cache policy as date-range.ts's formatters.
-  if (wordCache.size >= 64) wordCache.delete(wordCache.keys().next().value as string);
-  wordCache.set(key, words);
-  return words;
 }
 
 /* ---------- tokens ---------- */
@@ -283,11 +301,12 @@ const NUMBER_WORDS: Record<string, number> = {
   twelve: 12,
 };
 
+/** A positive count: digits (up to 1000 years' worth of days) or a word. */
 function count(token: string | undefined): number | null {
   if (token === undefined) return null;
-  if (/^\d{1,4}$/.test(token)) {
+  if (/^\d{1,6}$/.test(token)) {
     const n = Number(token);
-    return n > 0 ? n : null;
+    return n > 0 && n <= 366_000 ? n : null;
   }
   return NUMBER_WORDS[token] ?? null;
 }
@@ -298,13 +317,20 @@ function dayNumber(token: string | undefined): number | null {
   return n >= 1 && n <= 31 ? n : null;
 }
 
-/** A 2- or 4-digit year. Two digits slide around today: within 20 years
- * ahead, otherwise the past century ("26" → 2026, "99" → 1999). */
-function yearNumber(token: string | undefined, thisYear: number): number | null {
+/** A 4-digit year, or a 2-digit one: bare in numeric dates ("10/9/26"),
+ * with an apostrophe after a month name ("Sep 10 '26"), so "Sep 10 15" (a
+ * time, most likely) is no match. Two digits slide around today: within 20
+ * years ahead, otherwise the past century ("26" → 2026, "99" → 1999). */
+function yearNumber(
+  token: string | undefined,
+  thisYear: number,
+  bareTwoDigits: boolean,
+): number | null {
   if (token === undefined) return null;
   if (/^\d{4}$/.test(token)) return Number(token);
-  if (!/^\d{2}$/.test(token)) return null;
-  const yy = Number(token);
+  const two = bareTwoDigits ? /^(\d{2})$/.exec(token) : /^'(\d{2})$/.exec(token);
+  if (!two) return null;
+  const yy = Number(two[1]);
   let year = thisYear - (thisYear % 100) + yy;
   if (year > thisYear + 20) year -= 100;
   else if (year < thisYear - 79) year += 100;
@@ -316,6 +342,7 @@ function yearNumber(token: string | undefined, thisYear: number): number | null 
 function normalizePhrase(text: string): string {
   return (
     fold(text)
+      .replace(/[‘’]/g, "'")
       .replace(/[–—]/g, " - ")
       .replace(/[,?!]/g, " ")
       .replace(/\b(\d{1,2})(st|nd|rd|th)\b/g, "$1")
@@ -323,7 +350,7 @@ function normalizePhrase(text: string): string {
       .split(/\s+/)
       .filter((t) => t !== "" && t !== "the" && t !== "of")
       // Abbreviation periods: "Sept." / "févr." → "sept" / "fevr".
-      .map((t) => (/^\p{L}+\.$/u.test(t) ? t.slice(0, -1) : t))
+      .map((t) => (/^[\p{L}\p{M}]+\.$/u.test(t) ? t.slice(0, -1) : t))
       .join(" ")
   );
 }
@@ -350,17 +377,36 @@ function monthDay(
   yearToken: string | undefined,
   ctx: Ctx,
   yearHint?: number,
+  numeric = false,
 ): Span | null {
   if (yearToken !== undefined) {
-    const year = yearNumber(yearToken, ctx.year);
+    const year = yearNumber(yearToken, ctx.year, numeric);
     return year === null ? null : single(makeDate(year, month, day), true);
   }
   return single(makeDate(yearHint ?? ctx.year, month, day));
 }
 
 /** One date or one period, without range separators. `yearHint` is the
- * year to assume when the text names none (the other end of a range). */
+ * year to assume when the text names none (the other end of a range). One
+ * leading weekday is allowed when it agrees with the date ("Fri Sep 11");
+ * one that contradicts it ("Mon Sep 10" in 2026) is no match. */
 function parseSpan(text: string, ctx: Ctx, yearHint?: number): Span | null {
+  const space = text.indexOf(" ");
+  const head = space > 0 ? text.slice(0, space) : "";
+  const { months, weekdays } = ctx.words;
+  if (head && weekdays.has(head) && !months.has(head)) {
+    const rest = parseCore(text.slice(space + 1), ctx, yearHint);
+    if (!rest?.single) return null;
+    const [y, m, d] = parts(rest.from);
+    const date = new Date(2000, 0, 1);
+    date.setFullYear(y, m, d);
+    return date.getDay() === weekdays.get(head) ? rest : null;
+  }
+  return parseCore(text, ctx, yearHint);
+}
+
+/** parseSpan without the leading weekday. */
+function parseCore(text: string, ctx: Ctx, yearHint?: number): Span | null {
   const toks = text.split(" ");
   const [a, b, c] = toks;
   const n = toks.length;
@@ -381,7 +427,7 @@ function parseSpan(text: string, ctx: Ctx, yearHint?: number): Span | null {
   if (m) {
     const [first, second] = [Number(m[1]), Number(m[3])];
     const [day, month] = ctx.words.dayFirst ? [first, second] : [second, first];
-    if (m[4] !== undefined) return monthDay(month - 1, day, m[4], ctx);
+    if (m[4] !== undefined) return monthDay(month - 1, day, m[4], ctx, undefined, true);
     return monthDay(month - 1, day, undefined, ctx, yearHint);
   }
 
@@ -391,11 +437,6 @@ function parseSpan(text: string, ctx: Ctx, yearHint?: number): Span | null {
   }
 
   // Month names: "September", "Sep 2026", "Sep 10", "10 Sep", "Sep 10 2026".
-  // A leading weekday is allowed and ignored ("Fri Sep 10").
-  if (n >= 2 && weekdays.has(a!) && !months.has(a!)) {
-    const rest = parseSpan(toks.slice(1).join(" "), ctx, yearHint);
-    if (rest?.single) return rest;
-  }
   if (months.has(a!)) {
     const month = months.get(a!)!;
     if (n === 1) return monthSpan(yearHint ?? ctx.year, month, false);
@@ -468,8 +509,26 @@ function splits(text: string, sep: string): [string, string][] {
   return out;
 }
 
+/** Join "<left> to <right>" into one range. */
+function joinPair(leftText: string, rightText: string, ctx: Ctx): Span | null {
+  let left = parseSpan(leftText, ctx);
+  if (!left || rightText === "") return null;
+  if (!left.explicitYear) {
+    // Only the right end names a year ("Sep 10 - Oct 20 2025", "Jan to Mar
+    // 2025"): the left end takes it, or the year before when that would put
+    // it after the right end ("Dec 20 - Jan 5 2027").
+    const right = parseSpan(rightText, ctx);
+    if (right?.explicitYear) {
+      const year = Number(right.from.slice(0, 4));
+      let hinted = parseSpan(leftText, ctx, year);
+      if (hinted && hinted.from > right.to) hinted = parseSpan(leftText, ctx, year - 1);
+      if (hinted) left = hinted;
+    }
+  }
+  return joinRange(left, rightText, ctx);
+}
+
 function joinRange(left: Span, rightText: string, ctx: Ctx): Span | null {
-  if (rightText === "") return null;
   const hint = left.explicitYear ? Number(left.to.slice(0, 4)) : undefined;
   let right = parseSpan(rightText, ctx, hint);
   // "Sep 10 to 20": a bare day continues the left end's month.
@@ -520,8 +579,7 @@ function parseExpr(text: string, ctx: Ctx): Span | null {
   }
   for (const sep of seps) {
     for (const [l, r] of splits(body, sep)) {
-      const left = parseSpan(l, ctx);
-      const joined = left && joinRange(left, r, ctx);
+      const joined = joinPair(l, r, ctx);
       if (joined) return joined;
     }
   }
@@ -530,11 +588,18 @@ function parseExpr(text: string, ctx: Ctx): Span | null {
   // a year and a different date.
   if (!/\p{L}/u.test(body)) return null;
   for (const [l, r] of splits(body, "-")) {
-    const left = parseSpan(l, ctx);
-    const joined = left && joinRange(left, r, ctx);
+    const joined = joinPair(l, r, ctx);
     if (joined) return joined;
   }
   return null;
+}
+
+/** A well-formed YYYY-MM-DD from year 1000 to 100 years past today. Huge
+ * counts ("9999 years ago") and era years (Buddhist 2569) land outside. */
+function inYears(date: string, ctx: Ctx): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const year = Number(date.slice(0, 4));
+  return year >= 1000 && year <= ctx.year + 100;
 }
 
 function bound(date: string | null | undefined): string | null {
@@ -549,7 +614,8 @@ function bound(date: string | null | undefined): string | null {
  * fine, English names always accepted alongside the locale's):
  * - single dates: today, yesterday, tomorrow; Friday, this/last/next
  *   Friday (that weekday in the current/previous/next week); Sep 10,
- *   10 Sep, Sep 10 2026, 10th September; 2026-09-10; 10/9, 10/9/26 in the
+ *   10 Sep, Sep 10 2026, Sep 10 '26, 10th September, Fri Sep 11 (the
+ *   weekday must agree); 2026-09-10; 10/9, 10/9/26 in the
  *   locale's day/month order (`-` and `.` work as separators too);
  *   3 days ago, in 2 weeks.
  * - ranges: X to/until/through/- Y (also "from X to Y", "between X and
@@ -559,11 +625,16 @@ function bound(date: string | null | undefined): string | null {
  *
  * A missing year is the current year (the other end's year inside a range;
  * last year for "since <month>" that would otherwise start after today).
+ * When only the end names a year, the start takes it ("Jan to Mar 2025").
  * Two-digit years slide around today. A range typed backwards is swapped.
+ * Years before 1000 or more than 100 past today's are no match.
  * A single date outside maxDate/earliestDate is no match; a range is
  * clamped to them, and is no match when nothing is left.
  */
 export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): DatePhraseResult {
+  if (text.length > DATE_PHRASE_MAX_LENGTH) return NONE;
+  const normalized = normalizePhrase(text);
+  if (normalized === "") return NONE;
   const today = options.today ?? todayStr();
   const ctx: Ctx = {
     today,
@@ -571,10 +642,8 @@ export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): 
     weekStart: options.weekStart ?? "monday",
     words: localeWords(options.locale),
   };
-  const normalized = normalizePhrase(text);
-  if (normalized === "") return NONE;
   const span = parseExpr(normalized, ctx);
-  if (!span) return NONE;
+  if (!span || !inYears(span.from, ctx) || !inYears(span.to, ctx)) return NONE;
 
   const lo = bound(options.earliestDate);
   const hi = bound(options.maxDate);
@@ -625,7 +694,8 @@ export function completeDatePhrase(
   text: string,
   options: { locale?: string | undefined } = {},
 ): string {
-  const match = /(?:^|\s)(\p{L}+)$/u.exec(text);
+  if (text.length > DATE_PHRASE_MAX_LENGTH) return "";
+  const match = /(?:^|\s)([\p{L}\p{M}]+)$/u.exec(text);
   if (!match) return "";
   const typed = match[1]!;
   const before = text
@@ -671,26 +741,4 @@ export function completeDatePhrase(
     }
   }
   return "";
-}
-
-/* ---------- display ---------- */
-
-const rangeFormatters = new Map<string, Intl.DateTimeFormat>();
-
-/** "Sep 10 – Oct 20, 2026" (or "Sep 10, 2026" for one day) in the
- * locale's own range format. `locale` omitted = the browser locale. */
-export function formatDateRangeLabel(from: string, to: string, locale?: string): string {
-  const key = locale ?? "";
-  let fmt = rangeFormatters.get(key);
-  if (!fmt) {
-    fmt = new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" });
-    if (rangeFormatters.size >= 64)
-      rangeFormatters.delete(rangeFormatters.keys().next().value as string);
-    rangeFormatters.set(key, fmt);
-  }
-  const [fy, fm, fd] = parts(from);
-  const [ty, tm, td] = parts(to);
-  const a = new Date(fy, fm, fd);
-  if (from === to) return fmt.format(a);
-  return fmt.formatRange(a, new Date(ty, tm, td));
 }

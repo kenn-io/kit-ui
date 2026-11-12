@@ -1,13 +1,8 @@
 <script lang="ts">
   import Calendar from "../../lib/components/Calendar.svelte";
   import DatePhraseInput from "../../lib/components/DatePhraseInput.svelte";
-  import {
-    datePhraseRange,
-    daysInRange,
-    formatDateRangeLabel,
-    parseDatePhrase,
-  } from "../../lib/components/date-phrase.js";
-  import { todayStr } from "../../lib/components/date-range.js";
+  import { datePhraseRange, parseDatePhrase } from "../../lib/components/date-phrase.js";
+  import { daysInRange, formatDateRangeLabel, todayStr } from "../../lib/components/date-range.js";
   import DemoSection from "../DemoSection.svelte";
 
   let text = $state("");
@@ -37,7 +32,7 @@
     <DatePhraseInput
       bind:value={text}
       {summary}
-      locale="en-US"
+          locale="en-US"
       oninput={() => {
         if (range) month = range.from;
       }}

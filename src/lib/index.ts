@@ -115,9 +115,8 @@ export {
 } from "./components/date-range.js";
 export {
   completeDatePhrase,
+  DATE_PHRASE_MAX_LENGTH,
   datePhraseRange,
-  daysInRange,
-  formatDateRangeLabel,
   parseDatePhrase,
   type DatePhraseOptions,
   type DatePhraseResult,

@@ -214,7 +214,9 @@ export function monthGridDates(anchor: string, weekStart: WeekStart = "monday"):
  * happens client-side. */
 const CACHE_MAX = 64;
 
-function capped<V>(cache: Map<string, V>, key: string, value: V): V {
+/** Store `value` under `key` in a size-capped cache (FIFO eviction) and
+ * return it. Shared with date-phrase.ts's locale word tables. */
+export function capped<V>(cache: Map<string, V>, key: string, value: V): V {
   if (cache.size >= CACHE_MAX) {
     cache.delete(cache.keys().next().value as string);
   }
@@ -301,4 +303,27 @@ export function formatDayLabel(anchor: string, locale?: string): string {
  * browser locale. */
 export function formatMonthLabel(anchor: string, locale?: string): string {
   return formatter({ year: "numeric", month: "long" }, locale).format(parseLocal(anchor));
+}
+
+/** A YYYY-MM-DD string as a local-midnight Date, for any year (setFullYear
+ * avoids Date's 0–99 → 1900s mapping). */
+function localMidnight(date: string): Date {
+  const d = new Date(2000, 0, 1);
+  d.setFullYear(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+  return d;
+}
+
+/** Inclusive number of days from `from` to `to` (both YYYY-MM-DD). */
+export function daysInRange(from: string, to: string): number {
+  const utc = (date: string) =>
+    Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+  return Math.round((utc(to) - utc(from)) / 86_400_000) + 1;
+}
+
+/** "Sep 10 – Oct 20, 2026" (or "Sep 10, 2026" for one day) in the locale's
+ * own range format. `locale` omitted = the browser locale. */
+export function formatDateRangeLabel(from: string, to: string, locale?: string): string {
+  const fmt = formatter({ year: "numeric", month: "short", day: "numeric" }, locale);
+  if (from === to) return fmt.format(localMidnight(from));
+  return fmt.formatRange(localMidnight(from), localMidnight(to));
 }
