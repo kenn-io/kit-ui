@@ -75,3 +75,12 @@ test("by person: one card per lane, shared rows, sideways scroll", async ({ page
   await expect(page.getByTestId("day-lane-lanes-event")).toHaveText("select standup");
   for (let i = 0; i < 4; i++) await expect(standup.nth(i)).toHaveAttribute("aria-pressed", "true");
 });
+
+test("keyboard focus follows a fold as it opens and closes", async ({ page }) => {
+  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
+  await fold.focus();
+  await page.keyboard.press("Enter");
+  await expect(lane(page).getByRole("button", { name: "Fold 3 quiet hours" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(fold).toBeFocused();
+});

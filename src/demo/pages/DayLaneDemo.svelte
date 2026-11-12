@@ -444,7 +444,9 @@
     >
       {#snippet item({ item, compact })}
         <span class="card-line"><span class="card-title">Item {item.id.slice(1)}</span></span>
-        {#if !compact}<span class="card-meta">{wallClock(item.startMinute ?? 0)}</span>{/if}
+        {#if !compact}<span class="card-meta" aria-hidden="true"
+            >{wallClock(item.startMinute ?? 0)}</span
+          >{/if}
       {/snippet}
     </DayLane>
   </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import ChevronsDownUpIcon from "@lucide/svelte/icons/chevrons-down-up";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
-  import type { Snippet } from "svelte";
+  import { tick, type Snippet } from "svelte";
   import {
     DAY_LANE_DEFAULTS,
     hourTicks,
@@ -200,6 +200,10 @@
     expanded = { day: dayKey, keys };
     const [startMinute, endMinute] = key.split("-").map(Number) as [number, number];
     onfoldchange?.({ startMinute, endMinute, expanded: open });
+    // The band and its "Fold" button swap places; keep focus on the one that replaced it.
+    void tick().then(() =>
+      scroller?.querySelector<HTMLElement>(`[data-fold-key="${CSS.escape(key)}"]`)?.focus(),
+    );
   }
 
   function chooseOverflow(entry: DayLaneOverflow) {
@@ -388,6 +392,7 @@
           style:top="{segment.top + 3}px"
           style:height="{segment.height - 6}px"
           aria-expanded="false"
+          data-fold-key={segment.key}
           onclick={() => toggleFold(segment, true)}
         >
           <ChevronsUpDownIcon size={13} aria-hidden="true" />
@@ -403,6 +408,7 @@
           class="kit-day-lane__refold"
           style:top="{segment.top + 4}px"
           aria-expanded="true"
+          data-fold-key={segment.key}
           onclick={() => toggleFold(segment, false)}
         >
           <ChevronsDownUpIcon size={12} aria-hidden="true" />

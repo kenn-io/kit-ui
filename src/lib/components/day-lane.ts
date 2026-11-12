@@ -146,8 +146,9 @@ export function isInDay(item: DayLaneItem, dayMinutes: number): boolean {
 }
 
 /** End of the time an item takes up on screen: its real end, or as far as
- * its minimum height reaches, whichever is later. Overlap and folding use
- * this, so two point items ten minutes apart still sit side by side. */
+ * its minimum height reaches from where it is drawn (its start, clipped to
+ * the day), whichever is later. Folding uses this, so the hours a card
+ * covers stay open. */
 export function renderedEndMinute(
   item: DayLaneItem,
   hourHeight: number,
@@ -155,7 +156,7 @@ export function renderedEndMinute(
 ): number {
   const start = item.startMinute ?? 0;
   const end = isPointItem(item) ? start : (item.endMinute as number);
-  return Math.max(end, start + (minItemHeight / hourHeight) * HOUR_MINUTES);
+  return Math.max(end, Math.max(start, 0) + (minItemHeight / hourHeight) * HOUR_MINUTES);
 }
 
 /**
@@ -356,13 +357,18 @@ export function placeDayLaneItems(
   options: DayLaneLayoutOptions,
 ): DayLaneEntry[] {
   const o = resolve(options);
+  // Cards end at the day's end even when that leaves less than the minimum height.
+  const dayBottom = segmentsHeight(segments);
   const spans: Array<ColumnInput & { item: DayLaneItem }> = [];
   for (const item of items) {
     if (!isInDay(item, o.dayMinutes)) continue;
     const start = item.startMinute as number;
     const top = minuteToY(segments, start, o.hourHeight);
     const end = isPointItem(item) ? start : (item.endMinute as number);
-    const bottom = Math.max(minuteToY(segments, end, o.hourHeight), top + o.minItemHeight);
+    const bottom = Math.min(
+      Math.max(minuteToY(segments, end, o.hourHeight), top + o.minItemHeight),
+      dayBottom,
+    );
     spans.push({ item, top, bottom });
   }
   const { placed, overflows } = placeColumns(spans, o.maxColumns, o.minItemHeight);
@@ -381,11 +387,11 @@ export function placeDayLaneItems(
     const hidden = overflow.entries.map((e) => e.item);
     entries.push({
       kind: "overflow",
-      key: hidden.map((i) => i.id).join(" "),
+      key: JSON.stringify(hidden.map((i) => i.id)),
       items: hidden,
       startMinute: Math.min(...hidden.map((i) => i.startMinute as number)),
       top: overflow.top,
-      height: o.minItemHeight,
+      height: Math.min(o.minItemHeight, dayBottom - overflow.top),
       column: overflow.column,
       columns: overflow.columns,
     });

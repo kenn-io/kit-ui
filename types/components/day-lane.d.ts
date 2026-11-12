@@ -101,8 +101,9 @@ export declare function isPointItem(item: DayLaneItem): boolean;
 /** True when a timed item has any part inside [0, dayMinutes). */
 export declare function isInDay(item: DayLaneItem, dayMinutes: number): boolean;
 /** End of the time an item takes up on screen: its real end, or as far as
- * its minimum height reaches, whichever is later. Overlap and folding use
- * this, so two point items ten minutes apart still sit side by side. */
+ * its minimum height reaches from where it is drawn (its start, clipped to
+ * the day), whichever is later. Folding uses this, so the hours a card
+ * covers stay open. */
 export declare function renderedEndMinute(item: DayLaneItem, hourHeight: number, minItemHeight: number): number;
 /**
  * Rows of the axis. An hour is busy when any item's rendered span touches

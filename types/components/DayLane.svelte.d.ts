@@ -1,4 +1,4 @@
-import type { Snippet } from "svelte";
+import { type Snippet } from "svelte";
 import { type DayLaneItem, type DayLaneItemContext, type DayLaneLane, type DayLaneTick } from "./day-lane.js";
 interface Props {
     /** The day's items, placed in minutes from the start of the day. */
