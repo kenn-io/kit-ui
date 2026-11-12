@@ -706,7 +706,7 @@
   }
 
   .kit-calendar__day.weekend .kit-calendar__day-weekday {
-    color: var(--text-muted);
+    color: color-mix(in srgb, currentColor 95%, var(--bg-surface));
   }
 
   .kit-calendar__day-number {
