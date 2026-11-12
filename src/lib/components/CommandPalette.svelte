@@ -24,6 +24,7 @@
   import { highlightSegments } from "../utils/highlight.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
   import { appShortcuts } from "../utils/shortcuts.js";
   import { formatShortcutKeys } from "../utils/shortcuts.js";
   import KbdBadge from "./KbdBadge.svelte";
@@ -309,6 +310,7 @@
         role="listbox"
         id="{uid}-listbox"
         aria-label={parent?.label ?? ariaLabel}
+        {@attach scrollFade}
       >
         {#if flat.length === 0}
           <div class="kit-command-palette__empty">{emptyLabel}</div>

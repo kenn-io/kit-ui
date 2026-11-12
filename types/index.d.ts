@@ -128,6 +128,7 @@ export { createPalette, PALETTES, seriesDashArray, seriesPattern, seriesSwatchBa
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
+export { scrollFade } from "./utils/scroll-fade.js";
 export { backdropCloses, escapeCloses } from "./utils/overlay.js";
 export { formatCost, formatCount, formatDuration, formatNumber, formatTokenCount, } from "./utils/format.js";
 export { createRefreshScheduler, DEFAULT_REFRESH_INTERVAL_MS, formatRefreshAge, type RefreshReason, type RefreshScheduler, } from "./utils/refresh.js";
