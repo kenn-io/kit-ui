@@ -53,7 +53,7 @@ test.describe("Avatar", () => {
       const count = await avatars.count();
       expect(count).toBeGreaterThan(0);
       for (let i = 0; i < count; i++) {
-        expect(await contrastOf(avatars.nth(i))).toBeGreaterThanOrEqual(4.5);
+        await expect.poll(() => contrastOf(avatars.nth(i))).toBeGreaterThanOrEqual(4.5);
       }
     });
   }
