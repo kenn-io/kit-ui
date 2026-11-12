@@ -1,3 +1,7 @@
+/** Whether a picker should focus the field when its popover opens: not on
+ * touch-first devices, where focus raises the on-screen keyboard over the
+ * calendar. */
+export declare function focusOnOpen(): boolean;
 interface Props {
     /** The typed text (bindable). */
     value?: string;
@@ -5,10 +9,13 @@ interface Props {
     /** Accessible name of the text field. */
     ariaLabel?: string;
     clearLabel?: string;
-    /** The line under the field: what the text resolves to, a hint, or a
-     * no-match message. Announced politely to screen readers. */
+    /** What the text resolves to, or a no-match message. Shown under the
+     * field and announced politely to screen readers when it changes. */
     summary?: string;
-    /** Style the summary as a no-match message. */
+    /** Shown under the field while `summary` is empty; never announced. */
+    hint?: string;
+    /** The summary is a no-match message: styles it and marks the field
+     * aria-invalid. */
     invalid?: boolean;
     /** BCP 47 tag for month and weekday names offered as completions.
      * Omitted = browser locale. */

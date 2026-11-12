@@ -5,7 +5,7 @@
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
-  import DatePhraseInput from "./DatePhraseInput.svelte";
+  import DatePhraseInput, { focusOnOpen } from "./DatePhraseInput.svelte";
   import { datePhraseRange, parseDatePhrase } from "./date-phrase.js";
   import SegmentedControl, { type SegmentedControlOption } from "./SegmentedControl.svelte";
   import {
@@ -163,11 +163,14 @@
     datePhraseRange(parseDatePhrase(phrase, { locale, weekStart, maxDate, earliestDate })),
   );
 
+  // Describes what the calendar shows: the current parse, or the preview
+  // held while the text is incomplete, so the line and the grid agree.
   const phraseSummary = $derived.by(() => {
     if (noMatch) return noMatchLabel;
-    if (!typed) return textEntryHint;
-    return `${formatDateRangeLabel(typed.from, typed.to, locale)} · ${dayCountLabel(
-      daysInRange(typed.from, typed.to),
+    const shown = typed ?? typedPreview;
+    if (!shown) return "";
+    return `${formatDateRangeLabel(shown.from, shown.to, locale)} · ${dayCountLabel(
+      daysInRange(shown.from, shown.to),
     )}`;
   });
 
@@ -198,11 +201,12 @@
 
   function submitPhrase(): void {
     if (typed) {
-      clearTimeout(previewTimer);
-      typedPreview = null;
+      const { from, to } = typed;
+      // Clear the text too, so a second Enter doesn't emit again.
+      resetPhrase();
       tab = "custom";
-      customMonth = typed.from;
-      commitCustom(typed.from, typed.to);
+      customMonth = from;
+      commitCustom(from, to);
     } else if (phrase.trim() !== "") {
       noMatch = true;
     }
@@ -372,8 +376,12 @@
   // completes it (an earlier second click swaps the ends so consumers always
   // get ordered bounds), and only a complete range commits.
   function pickCustomDay(date: string): void {
-    // A click takes over from a typed preview: the two-click pick starts
-    // fresh from the clicked day.
+    // A click takes over from typed text: the two-click pick starts fresh
+    // from the clicked day, even if a click was pending before the typing.
+    if (typedPreview !== null || phrase.trim() !== "") {
+      customPending = false;
+      pendingFor = null;
+    }
     resetPhrase();
     const currentSelectionKey = selectionKey(selection);
     if (!customPending || currentSelectionKey !== pendingFor) {
@@ -486,9 +494,10 @@
           ariaLabel={textEntryLabel}
           clearLabel={textEntryClearLabel}
           summary={phraseSummary}
+          hint={textEntryHint}
           invalid={noMatch}
           {locale}
-          autofocus
+          autofocus={focusOnOpen()}
           oninput={handlePhraseInput}
           onsubmit={submitPhrase}
         />

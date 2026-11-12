@@ -1,8 +1,19 @@
+<script module lang="ts">
+  import { MEDIA } from "../breakpoints.js";
+
+  /** Whether a picker should focus the field when its popover opens: not on
+   * touch-first devices, where focus raises the on-screen keyboard over the
+   * calendar. */
+  export function focusOnOpen(): boolean {
+    return !(typeof window !== "undefined" && window.matchMedia?.(MEDIA.touch).matches);
+  }
+</script>
+
 <script lang="ts">
   import CalendarIcon from "@lucide/svelte/icons/calendar";
   import XIcon from "@lucide/svelte/icons/x";
   import { tick } from "svelte";
-  import { completeDatePhrase } from "./date-phrase.js";
+  import { completeDatePhrase, DATE_PHRASE_MAX_LENGTH } from "./date-phrase.js";
   import TextInput from "./TextInput.svelte";
 
   interface Props {
@@ -12,10 +23,13 @@
     /** Accessible name of the text field. */
     ariaLabel?: string;
     clearLabel?: string;
-    /** The line under the field: what the text resolves to, a hint, or a
-     * no-match message. Announced politely to screen readers. */
+    /** What the text resolves to, or a no-match message. Shown under the
+     * field and announced politely to screen readers when it changes. */
     summary?: string;
-    /** Style the summary as a no-match message. */
+    /** Shown under the field while `summary` is empty; never announced. */
+    hint?: string;
+    /** The summary is a no-match message: styles it and marks the field
+     * aria-invalid. */
     invalid?: boolean;
     /** BCP 47 tag for month and weekday names offered as completions.
      * Omitted = browser locale. */
@@ -39,6 +53,7 @@
     ariaLabel = "Type dates",
     clearLabel = "Clear",
     summary = "",
+    hint = "",
     invalid = false,
     locale = undefined,
     autofocus = false,
@@ -91,6 +106,9 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
+    // Keys that confirm an IME composition (Japanese, Chinese, Korean) belong
+    // to the input method, not to us.
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Enter") {
       event.preventDefault();
       onsubmit?.();
@@ -123,6 +141,8 @@
       {placeholder}
       {ariaLabel}
       {autofocus}
+      {invalid}
+      maxlength={DATE_PHRASE_MAX_LENGTH}
       autocomplete="off"
       ariaAutocomplete="inline"
       ariaDescribedby={summaryId}
@@ -165,10 +185,12 @@
     id={summaryId}
     class="kit-date-phrase-input__summary"
     class:kit-date-phrase-input__summary--invalid={invalid}
-    aria-live="polite"
   >
-    {summary}
+    {summary || hint}
   </p>
+  <!-- Announces a new result or a no-match message, not the hint on every
+       keystroke. -->
+  <span class="kit-sr-only" aria-live="polite">{summary}</span>
 </div>
 
 <!-- Selection changes without an edit (clicks, arrow keys) move the caret

@@ -10,7 +10,8 @@ Picking a day commits it and closes the popover. Escape and outside clicks
 dismiss without changing the value. Each time it opens, the calendar shows
 the chosen date's month, or today's month when no date is chosen.
 
-The popover opens with a text field focused, so you can type the date
+The popover opens with a text field, focused except on touch-first devices
+(where focus would raise the keyboard over the calendar), so you can type the date
 instead: "tomorrow", "Sep 10", "next Friday", "3 days ago". Ghost text
 finishes the word you are typing (Tab or → takes it). Once the text is a
 date, the calendar moves to it and shows it as the pending pick, and the line

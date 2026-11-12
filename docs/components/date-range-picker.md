@@ -19,15 +19,16 @@ in place. `resolveRange()` turns any selection into concrete inclusive
 `{from, to}` bounds (local-timezone `YYYY-MM-DD` strings). Escape and outside
 clicks dismiss the popover.
 
-**Typed dates**: above the tabs, the popover opens with a text field
-focused, so you can type the range instead: "last 30 days", "Sep 10 to Oct
+**Typed dates**: above the tabs, the popover opens with a text field,
+focused except on touch-first devices, so you can type the range instead: "last 30 days", "Sep 10 to Oct
 20", "since March", "this month", or one day ("yesterday"). Ghost text
 finishes the word you are typing (Tab or → takes it). Once the text parses,
 the picker switches to the Custom tab, moves the calendar to the start
 month, and shows the range as the draft, with a summary line under the field
 ("Sep 10 – Oct 20, 2026 · 41 days"). Nothing commits until Enter, which
 commits through the same path as the Custom tab's second click: `onSelect`
-receives a `custom` selection, and the popover stays open. Clicking a day
+receives a `custom` selection (also for "last 30 days": typed text never
+becomes a relative preset), the text clears, and the popover stays open. Clicking a day
 drops the typed preview and starts a normal two-click pick. Text that isn't
 a date or range leaves the selection alone and shows `noMatchLabel` on
 Enter. Phrases are clamped to `earliestDate` and `maxDate`. See

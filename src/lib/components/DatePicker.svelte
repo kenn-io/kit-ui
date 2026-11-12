@@ -5,7 +5,7 @@
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
-  import DatePhraseInput from "./DatePhraseInput.svelte";
+  import DatePhraseInput, { focusOnOpen } from "./DatePhraseInput.svelte";
   import { parseDatePhrase } from "./date-phrase.js";
   import { formatDayLabel, todayStr, type CalendarNavLabels } from "./date-range.js";
 
@@ -91,10 +91,12 @@
     return result.kind === "date" ? result.date : null;
   });
 
+  // Describes what the calendar shows: the current parse, or the preview
+  // held while the text is incomplete, so the line and the grid agree.
   const summary = $derived.by(() => {
     if (noMatch) return noMatchLabel;
-    if (typed) return formatDayLabel(typed, locale);
-    return textEntryHint;
+    const shown = typed ?? preview;
+    return shown ? formatDayLabel(shown, locale) : "";
   });
 
   function resetPhrase(): void {
@@ -219,9 +221,10 @@
           ariaLabel={textEntryLabel}
           clearLabel={textEntryClearLabel}
           {summary}
+          hint={textEntryHint}
           invalid={noMatch}
           {locale}
-          autofocus
+          autofocus={focusOnOpen()}
           oninput={handlePhraseInput}
           onsubmit={submitPhrase}
         />

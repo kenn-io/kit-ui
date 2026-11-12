@@ -13,7 +13,7 @@
   const summary = $derived(
     range
       ? `${formatDateRangeLabel(range.from, range.to, "en-US")} · ${daysInRange(range.from, range.to)} days`
-      : "Type or select dates.",
+      : "",
   );
 </script>
 
@@ -23,6 +23,7 @@
   code={`<DatePhraseInput
   bind:value={text}
   summary={summary}
+  hint="Type or select dates."
   oninput={() => range && (month = range.from)}
   onsubmit={() => range && apply(range)}
 />
@@ -32,7 +33,8 @@
     <DatePhraseInput
       bind:value={text}
       {summary}
-          locale="en-US"
+      hint="Type or select dates."
+      locale="en-US"
       oninput={() => {
         if (range) month = range.from;
       }}

@@ -27,6 +27,19 @@ function summary(page: Page) {
   return phrase(page).locator(".kit-date-phrase-input__summary");
 }
 
+function liveRegion(page: Page) {
+  return phrase(page).locator('[aria-live="polite"]');
+}
+
+/** A keydown the way an IME sends it while a composition is open. */
+async function composingKey(page: Page, key: string) {
+  await field(page).evaluate((input, k) => {
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: k, isComposing: true, bubbles: true, cancelable: true }),
+    );
+  }, key);
+}
+
 test.describe("DateRangePicker", () => {
   test.beforeEach(async ({ page }) => {
     await gotoPage(page, "date-range-picker");
@@ -45,7 +58,9 @@ test.describe("DateRangePicker", () => {
     await open(page);
     await expect(field(page)).toHaveAttribute("placeholder", "What dates are you looking for?");
     await expect(summary(page)).toHaveText("Type or select dates.");
-    await expect(summary(page)).toHaveAttribute("aria-live", "polite");
+    // The hint is shown but never announced.
+    await expect(liveRegion(page)).toHaveText("");
+    await expect(field(page)).toHaveAttribute("maxlength", "200");
     await expect(phrase(page).getByRole("button", { name: "Clear" })).toHaveCount(0);
   });
 
@@ -54,6 +69,7 @@ test.describe("DateRangePicker", () => {
     await field(page).pressSequentially("May 10 to May 20");
 
     await expect(summary(page)).toHaveText("May 10 – 20, 2026 · 11 days");
+    await expect(liveRegion(page)).toHaveText("May 10 – 20, 2026 · 11 days");
     await expect(panel(page).getByRole("radio", { name: "Custom" })).toBeChecked();
     await expect(panel(page).locator(".kit-calendar__month")).toHaveText(/May 2026/);
     await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(11);
@@ -69,6 +85,37 @@ test.describe("DateRangePicker", () => {
       '{"mode":"custom","from":"2026-05-10","to":"2026-05-20"}',
     );
     await expect(page.getByTestId("typed-range-bounds")).toHaveText("2026-05-10 → 2026-05-20");
+    // The text clears on commit, so a second Enter emits nothing.
+    await expect(field(page)).toHaveValue("");
+    await expect(summary(page)).toHaveText("Type or select dates.");
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(11);
+  });
+
+  test("the summary keeps describing a preview held through an incomplete edit", async ({
+    page,
+  }) => {
+    await open(page);
+    await field(page).pressSequentially("yesterday");
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveText("14");
+    await field(page).press("Backspace");
+    await field(page).press("Backspace");
+    // "yesterd" doesn't parse: the grid holds Jun 14, and so does the line.
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveText("14");
+    await expect(summary(page)).toHaveText("Jun 14, 2026 · 1 day");
+    // Clearing the field clears both.
+    await phrase(page).getByRole("button", { name: "Clear" }).click();
+    await expect(summary(page)).toHaveText("Type or select dates.");
+    // Back to the draft: the demo's "last 7 days", Jun 9 – 15.
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(7);
+  });
+
+  test("Enter while an IME composition is open does nothing", async ({ page }) => {
+    await open(page);
+    await field(page).pressSequentially("yesterday");
+    await expect(summary(page)).toHaveText("Jun 14, 2026 · 1 day");
+    await composingKey(page, "Enter");
+    await expect(readout(page)).toHaveText('{"mode":"relative","days":7}');
+    await expect(field(page)).toHaveValue("yesterday");
   });
 
   test("a single date is a one-day range", async ({ page }) => {
@@ -135,12 +182,17 @@ test.describe("DateRangePicker", () => {
     await expect(summary(page)).toHaveText(
       "No dates match that. Try “last 30 days” or “Sep 10 to Oct 20”.",
     );
+    await expect(liveRegion(page)).toHaveText(
+      "No dates match that. Try “last 30 days” or “Sep 10 to Oct 20”.",
+    );
+    await expect(field(page)).toHaveAttribute("aria-invalid", "true");
     await expect(panel(page)).toBeVisible();
     await expect(readout(page)).toHaveText('{"mode":"relative","days":7}');
 
     // Editing clears the hint.
     await field(page).press("Backspace");
     await expect(summary(page)).toHaveText("Type or select dates.");
+    await expect(field(page)).not.toHaveAttribute("aria-invalid", "true");
   });
 
   test("clicking days still picks a range after a typed preview", async ({ page }) => {
@@ -161,6 +213,27 @@ test.describe("DateRangePicker", () => {
     );
   });
 
+  test("a click after typing starts a fresh pick, even with a click pending", async ({ page }) => {
+    await open(page);
+    await panel(page).getByRole("radio", { name: "Custom" }).click();
+    const day = (n: number) =>
+      panel(page)
+        .locator(".kit-calendar__day:not(.outside)")
+        .filter({ hasText: new RegExp(`^${n}$`) });
+    await day(3).click(); // Jun 3, pending
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(1);
+
+    await field(page).pressSequentially("May 10 to May 20");
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(11);
+    await day(25).click(); // May 25 starts a new pick instead of completing Jun 3
+    await expect(readout(page)).toHaveText('{"mode":"relative","days":7}');
+    await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveText("25");
+    await day(28).click();
+    await expect(readout(page)).toHaveText(
+      '{"mode":"custom","from":"2026-05-25","to":"2026-05-28"}',
+    );
+  });
+
   test("Escape closes the popover without committing", async ({ page }) => {
     await open(page);
     await field(page).pressSequentially("last month");
@@ -176,6 +249,25 @@ test.describe("DateRangePicker", () => {
       .click();
     await expect(panel(page)).toBeVisible();
     await expect(panel(page).locator("input")).toHaveCount(0);
+  });
+});
+
+test.describe("touch devices", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+
+  test("opening a picker doesn't focus the field (no keyboard over the calendar)", async ({
+    page,
+  }) => {
+    await gotoPage(page, "date-range-picker");
+    await page.getByTestId("typed-range-picker").locator(".kit-date-range-picker__trigger").tap();
+    await expect(page.locator(".kit-date-range-picker__panel")).toBeVisible();
+    await expect(field(page)).toBeVisible();
+    await expect(field(page)).not.toBeFocused();
+
+    await gotoPage(page, "date-picker");
+    await page.getByRole("button", { name: "Typed date" }).tap();
+    await expect(page.getByRole("dialog", { name: "Select date" })).toBeVisible();
+    await expect(field(page)).not.toBeFocused();
   });
 });
 
@@ -232,6 +324,34 @@ test.describe("DatePicker", () => {
     await expect(field(page)).toHaveValue("");
     await expect(summary(page)).toHaveText("Type or select a date.");
     await expect(dialog(page)).toBeVisible();
+  });
+
+  test("the summary keeps describing a preview held through an incomplete edit", async ({
+    page,
+  }) => {
+    await open(page);
+    await field(page).pressSequentially("tomorrow");
+    await expect(dialog(page).locator(".kit-calendar__day.selected")).toHaveText("16");
+    await field(page).press("Backspace");
+    await field(page).press("Backspace");
+    await expect(dialog(page).locator(".kit-calendar__day.selected")).toHaveText("16");
+    await expect(summary(page)).toHaveText("Jun 16, 2026");
+    await phrase(page).getByRole("button", { name: "Clear" }).click();
+    await expect(summary(page)).toHaveText("Type or select a date.");
+    await expect(dialog(page).locator(".kit-calendar__day.selected")).toHaveCount(0);
+  });
+
+  test("keys that confirm an IME composition don't submit or take the ghost", async ({ page }) => {
+    await open(page);
+    await field(page).pressSequentially("next fr");
+    await expect(ghost(page)).toHaveText("iday");
+    await composingKey(page, "Tab");
+    await composingKey(page, "ArrowRight");
+    await expect(field(page)).toHaveValue("next fr");
+    await field(page).pressSequentially("iday");
+    await composingKey(page, "Enter");
+    await expect(dialog(page)).toBeVisible();
+    await expect(readout(page)).toHaveText("null");
   });
 
   test("a range is no match in the single-date picker", async ({ page }) => {

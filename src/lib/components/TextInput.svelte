@@ -40,6 +40,8 @@
     ariaValuenow?: number;
     ariaValuemin?: number;
     ariaValuemax?: number;
+    /** Longest value the field accepts. */
+    maxlength?: number;
     /** Virtual keyboard hint on touch devices, e.g. "decimal". */
     inputmode?: HTMLInputAttributes["inputmode"];
     /** Focus the input when it mounts. */
@@ -83,6 +85,7 @@
     ariaValuenow = undefined,
     ariaValuemin = undefined,
     ariaValuemax = undefined,
+    maxlength = undefined,
     inputmode = undefined,
     autofocus = false,
     autocomplete = undefined,
@@ -133,6 +136,7 @@
     {id}
     {name}
     {autocomplete}
+    {maxlength}
     {inputmode}
     aria-label={ariaLabel}
     aria-invalid={invalid ? "true" : undefined}
