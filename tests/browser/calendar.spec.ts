@@ -211,7 +211,8 @@ test.describe("activity", () => {
         const count = await days.count();
         expect(count).toBeGreaterThan(0);
         for (let i = 0; i < count; i++) {
-          expect(await contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
+          // Poll: day cells transition color, so a theme switch takes a moment to settle.
+          await expect.poll(() => contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
         }
       }
     });
