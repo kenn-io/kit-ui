@@ -83,3 +83,21 @@ export function formatCost(v: number): string {
   if (v >= 100) return `$${v.toFixed(0)}`;
   return `$${v.toFixed(2)}`;
 }
+
+/** One or two uppercase initials for a person or account name, for an avatar
+ * without a picture. Uses the first letter or digit of the first two words;
+ * an email address uses its local part, so "jane.doe@example.com" gives "JD".
+ * A name with no letters or digits gives its first character, and an empty
+ * name gives "?". */
+export function formatInitials(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed === "") return "?";
+  const at = trimmed.indexOf("@");
+  const base = at > 0 ? trimmed.slice(0, at) : trimmed;
+  const letters = base
+    .split(/[\s._-]+/)
+    .map((word) => word.match(/[\p{L}\p{N}]/u)?.[0])
+    .filter((char): char is string => char !== undefined);
+  if (letters.length === 0) return [...trimmed][0]!.toUpperCase();
+  return letters.slice(0, 2).join("").toUpperCase();
+}

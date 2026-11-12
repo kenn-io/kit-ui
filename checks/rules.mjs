@@ -1005,6 +1005,25 @@ export function checkHandRolledStatusDot(source) {
   return findings;
 }
 
+/** Hand-rolled avatars duplicate Avatar. Matches an avatar class name on its
+ * own or as the last part of a longer one (identity-avatar,
+ * user-picker__avatar); kit-avatar and suffixed names such as avatar-stack
+ * are exempt. The selector form skips member access like user.avatar. */
+export function checkHandRolledAvatar(source) {
+  const findings = [];
+  const re =
+    /class=["'][^"']*?(?<![\w-])(?!kit-)(?:[\w-]*[-_])?avatar(?![\w-])|(?<![\w$)\]?])\.(?!kit-)(?:[\w-]*[-_])?avatar(?![\w-])/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    findings.push({
+      rule: "hand-rolled-avatar",
+      line: lineOfIndex(source, match.index),
+      message: "avatar markup — use Avatar from @kenn-io/kit-ui",
+    });
+  }
+  return findings;
+}
+
 /** Hand-rolled sidebar toggles duplicate SidebarToggle; kit-sidebar-toggle
  * is exempt. */
 export function checkHandRolledSidebarToggle(source) {
@@ -1918,6 +1937,7 @@ export const ALL_RULES = {
   "hand-rolled-drawer": checkHandRolledDrawer,
   "hand-rolled-find-bar": checkHandRolledFindBar,
   "hand-rolled-status-dot": checkHandRolledStatusDot,
+  "hand-rolled-avatar": checkHandRolledAvatar,
   "hand-rolled-checkbox": checkHandRolledCheckbox,
   "hand-rolled-radio": checkHandRolledRadio,
   "hand-rolled-toggle": checkHandRolledToggle,

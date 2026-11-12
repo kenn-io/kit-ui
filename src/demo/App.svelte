@@ -15,6 +15,7 @@
   } from "../lib/index.js";
   import AdaptiveActionGridDemo from "./pages/AdaptiveActionGridDemo.svelte";
   import AppSidebarDemo from "./pages/AppSidebarDemo.svelte";
+  import AvatarDemo from "./pages/AvatarDemo.svelte";
   import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
@@ -112,6 +113,7 @@
       component: AdaptiveActionGridDemo,
     },
     { id: "app-sidebar", label: "AppSidebar", component: AppSidebarDemo },
+    { id: "avatar", label: "Avatar", component: AvatarDemo },
     { id: "bottom-dock", label: "BottomDock", component: BottomDockDemo },
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
