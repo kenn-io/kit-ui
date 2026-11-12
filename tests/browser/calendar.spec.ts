@@ -149,8 +149,9 @@ test.describe("activity", () => {
     expect(Math.min(...steps)).toBeGreaterThanOrEqual(1);
     await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
 
-    // Shaded and plain days have different fills.
-    const plain = calendar.locator(".kit-calendar__day:not([data-activity]):not(:disabled)");
+    // Shaded and plain days have different fills. Plain days may all be
+    // future, disabled ones early in a month; opacity leaves the fill alone.
+    const plain = calendar.locator(".kit-calendar__day:not([data-activity])");
     const background = (locator: import("@playwright/test").Locator) =>
       locator.evaluate((node) => getComputedStyle(node).backgroundColor);
     expect(await background(shaded.first())).not.toBe(await background(plain.first()));
