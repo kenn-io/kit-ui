@@ -427,6 +427,15 @@ describe("lanes", () => {
     expect(lanesOf(item)).toEqual(["mara", "dev"]);
   });
 
+  test("a repeated lane key places the card once in that lane", () => {
+    const layout = layoutDayLanes(
+      [withLane(point("a", 9), ["mara", "mara", "dev"])],
+      ["mara", "dev"],
+      base,
+    );
+    expect(layout.lanes.map((l) => l.entries.length)).toEqual([1, 1]);
+  });
+
   test("a quiet hour folds only when every lane is quiet", () => {
     const items = [withLane(point("a", 9), "mara"), withLane(point("b", 12), "dev")];
     const layout = layoutDayLanes(items, ["mara", "dev"], base);

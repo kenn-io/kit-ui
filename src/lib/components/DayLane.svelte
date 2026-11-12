@@ -607,6 +607,8 @@
   }
 
   .kit-day-lane__lane-heads {
+    /* Its padding is part of the min-width it shares with the axis. */
+    box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 4;

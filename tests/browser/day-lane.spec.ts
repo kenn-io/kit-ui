@@ -76,6 +76,11 @@ test("by person: one card per lane, shared rows, sideways scroll", async ({ page
     .locator(".kit-day-lane")
     .evaluate((el) => [el.scrollWidth, el.clientWidth]);
   expect(scrollWidth).toBeGreaterThan(clientWidth);
+  // Headers sit over their lanes even without a global border-box reset.
+  await page.addStyleTag({ content: "*, *::before, *::after { box-sizing: content-box; }" });
+  const head = await lanes.locator(".kit-day-lane__lane-head").nth(1).boundingBox();
+  const column = await lanes.getByRole("group", { name: "Dev Rao" }).boundingBox();
+  expect(Math.abs(head!.x - column!.x)).toBeLessThanOrEqual(1);
   await standup.first().click();
   await expect(page.getByTestId("day-lane-lanes-event")).toHaveText("select standup");
   for (let i = 0; i < 4; i++) await expect(standup.nth(i)).toHaveAttribute("aria-pressed", "true");

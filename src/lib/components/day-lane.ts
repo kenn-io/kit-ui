@@ -450,7 +450,8 @@ export function layoutDayLanes(
   for (const item of items) {
     if (!isInDay(item, options.dayMinutes)) continue;
     let placed = false;
-    for (const key of lanesOf(item)) {
+    // A repeated key would place the same card twice in one lane.
+    for (const key of new Set(lanesOf(item))) {
       const bucket = buckets.get(key);
       if (!bucket) continue;
       bucket.push(item);
