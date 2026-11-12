@@ -42,13 +42,14 @@
   let localeMonth = $state(todayStr());
   const demoLocale = $derived(localeChoice === "browser" ? undefined : localeChoice);
 
-  // Made-up daily counts across the visible month and its neighbors, the
-  // same every load. Weekends are quieter.
+  // Made-up daily counts up to today across the visible month and its
+  // neighbors, the same every load. Weekends are quieter.
   let activityMonth = $state(todayStr());
   let activityDay = $state<string | null>(null);
   const activity = $derived.by(() => {
     const counts: Record<string, number> = {};
     for (const date of monthGridDates(activityMonth)) {
+      if (date > todayStr()) break;
       const day = Number.parseInt(date.slice(8), 10);
       const weekday = new Date(`${date}T12:00:00`).getDay();
       const count = ((day * 7 + 3) % 11) - (weekday === 0 || weekday === 6 ? 6 : 1);
