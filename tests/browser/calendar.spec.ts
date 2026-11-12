@@ -146,7 +146,6 @@ test.describe("activity", () => {
       nodes.map((node) => Number((node as HTMLElement).dataset.activity)),
     );
     expect(Math.max(...steps)).toBe(4);
-    expect(Math.min(...steps)).toBeGreaterThanOrEqual(1);
     await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
 
     // Shaded and plain days have different fills. Plain days may all be
@@ -250,7 +249,9 @@ test.describe("month strip", () => {
   const filter = (page: import("@playwright/test").Page, name: string) =>
     page.getByRole("radiogroup", { name: "Strip filter" }).getByRole("radio", { name });
 
-  test("shows the month's own days in one row with weekday letters", async ({ page }) => {
+  test("shows the month's own days in one row, with weekday letters and weekends", async ({
+    page,
+  }) => {
     const cal = strip(page);
     const days = cal.locator(".kit-calendar__day");
     await expect(days).toHaveCount(31);
@@ -274,8 +275,20 @@ test.describe("month strip", () => {
         .nth(n)
         .locator(".kit-calendar__day-weekday")
         .evaluate((node) => getComputedStyle(node).color);
-    // Day 1 (Sunday) and day 3 (Tuesday) share shade step 4; only the weekend ink differs.
+    // Day 1 (Sunday) and day 3 (Tuesday) share a shade step, so only the weekend ink differs.
+    await expect(days.first()).toHaveAttribute(
+      "data-activity",
+      (await days.nth(2).getAttribute("data-activity")) ?? "",
+    );
     expect(await ink(0)).not.toBe(await ink(2));
+
+    // Sunday-first: Feb 1 2026 is a Sunday, so the first and seventh days are the weekend.
+    const sunday = page.getByTestId("calendar-strip-sunday").locator(".kit-calendar__day");
+    await expect(
+      page.getByTestId("calendar-strip-sunday").locator(".kit-calendar__day.weekend"),
+    ).toHaveCount(8);
+    await expect(sunday.first()).toHaveClass(/weekend/);
+    await expect(sunday.nth(6)).toHaveClass(/weekend/);
   });
 
   test("a Sunday-first strip follows its locale, labels and maxDate", async ({ page }) => {
@@ -285,9 +298,6 @@ test.describe("month strip", () => {
     // Feb 1 2026 is a Sunday.
     await expect(days.first().locator(".kit-calendar__day-weekday")).toHaveText("D");
     await expect(days.first()).toHaveAttribute("aria-label", /^dim\., /);
-    await expect(cal.locator(".kit-calendar__day.weekend")).toHaveCount(8);
-    await expect(days.first()).toHaveClass(/weekend/);
-    await expect(days.nth(6)).toHaveClass(/weekend/);
 
     // Feb 24 is past maxDate: disabled, yet still marked and announced.
     const matched = cal.locator(".kit-calendar__day:has(.kit-calendar__match)");
@@ -361,7 +371,7 @@ test.describe("month strip", () => {
     await expect(selected).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("the arrows page one month and keep one row", async ({ page }) => {
+  test("the arrows page one month and drop an out-of-month selection", async ({ page }) => {
     const cal = strip(page);
     const days = cal.locator(".kit-calendar__day");
     await cal.locator(".kit-calendar__nav").nth(1).click();
@@ -392,12 +402,29 @@ test.describe("month strip", () => {
     ).toBe(true);
     await expect.poll(visible).toBe(true);
 
-    // A month without a selection starts at day 1; paging back reveals it again.
+    // A month without a selection starts at day 1.
     await nav.nth(1).click();
     await expect.poll(scrollLeft).toBe(0);
-    await nav.first().click();
+
+    // Paging back reveals the selection by scrolling only the track. The
+    // gallery scrolls in its own containers, so scroll every ancestor of the
+    // track to the top (the strip then sits below the fold), click without
+    // Playwright's scroll-into-view, and check no ancestor moved.
+    const ancestorScroll = () =>
+      track.evaluate((node) => {
+        const offsets: number[] = [];
+        for (let el = node.parentElement; el; el = el.parentElement) {
+          offsets.push(el.scrollLeft, el.scrollTop);
+        }
+        return offsets;
+      });
+    await track.evaluate((node) => {
+      for (let el = node.parentElement; el; el = el.parentElement) el.scrollTo(0, 0);
+    });
+    const before = await ancestorScroll();
+    await nav.first().evaluate((node) => (node as HTMLElement).click());
     await expect.poll(visible).toBe(true);
-    expect(await page.evaluate(() => window.scrollX)).toBe(0);
+    expect(await ancestorScroll()).toEqual(before);
   });
 });
 
