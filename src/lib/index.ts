@@ -112,6 +112,15 @@ export {
   type RangeSelection,
   type RelativeSelection,
 } from "./components/date-range.js";
+export {
+  completeDatePhrase,
+  datePhraseRange,
+  daysInRange,
+  formatDateRangeLabel,
+  parseDatePhrase,
+  type DatePhraseOptions,
+  type DatePhraseResult,
+} from "./components/date-phrase.js";
 export { default as RadioGroup } from "./components/RadioGroup.svelte";
 export type { RadioGroupOption } from "./components/RadioGroup.svelte";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
