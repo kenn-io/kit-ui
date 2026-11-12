@@ -273,14 +273,10 @@
   {/if}
 
   <div class="kit-day-lane__axis" style:height="{layout.height}px">
+    <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
     {#each placedTicks as tick, index (index)}
-      <span
-        class="kit-day-lane__hour-label"
-        style:top="{tick.atFold ? tick.top + DAY_LANE_DEFAULTS.foldHeight / 2 : tick.top}px"
-      >
-        {tick.label}
-      </span>
       {#if !tick.atFold}
+        <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
         <i class="kit-day-lane__hour-line" style:top="{tick.top}px" aria-hidden="true"></i>
       {/if}
     {/each}

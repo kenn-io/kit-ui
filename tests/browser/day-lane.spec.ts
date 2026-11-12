@@ -58,6 +58,11 @@ test("a 23-hour day labels its hours from the app's ticks", async ({ page }) => 
     (s) => s.trim(),
   );
   expect(labels).toHaveLength(23);
+  await page.getByRole("checkbox", { name: "Fold quiet hours" }).check();
+  // The 1 AM to 7 AM band names its own start, so no "1 AM" label sits beside it.
+  await expect(
+    lane(page).locator(".kit-day-lane__hour-label", { hasText: /^\s*1 AM\s*$/ }),
+  ).toHaveCount(0);
   expect(labels.slice(0, 3)).toEqual(["12 AM", "1 AM", "3 AM"]);
 });
 
