@@ -316,6 +316,42 @@ describe("placing items", () => {
     expect(late.top + late.height).toBe(height);
   });
 
+  test("a card near the day's end stops at the end, below its minimum height", () => {
+    const { entries, height } = layoutDayLane(
+      [
+        span("late", 23, 50, 25, 0),
+        point("p1", 23, 55),
+        point("p2", 23, 55),
+        point("p3", 23, 55),
+        point("p4", 23, 55),
+      ],
+      { ...base, foldQuietMinutes: 0 },
+    );
+    for (const e of entries) expect(e.top + e.height).toBeLessThanOrEqual(height);
+    expect(byId(entries, "late").height).toBe(height - byId(entries, "late").top);
+    expect(overflows(entries)).toHaveLength(1);
+  });
+
+  test("overflow keys stay distinct when ids contain spaces", () => {
+    const a = layoutDayLane([point("x", 9), point("a b", 9), point("c", 9)], {
+      ...base,
+      maxColumns: 1,
+    });
+    const b = layoutDayLane([point("x", 9), point("a", 9), point("b c", 9)], {
+      ...base,
+      maxColumns: 1,
+    });
+    expect(overflows(a.entries)[0]!.key).not.toBe(overflows(b.entries)[0]!.key);
+  });
+
+  test("a carried-over card keeps open every hour it covers", () => {
+    // At 32px per hour a 44px card from minute 0 reaches 1:22, so hour 1 stays open.
+    const options = { ...base, hourHeight: 32 };
+    const segments = buildDayLaneSegments([span("night", -1, 0, 0, 5)], options);
+    expect(rows(segments)).toEqual(["hour:0", "hour:1", "fold:2"]);
+    expect(renderedEndMinute(span("night", -1, 0, 0, 5), 32, 44)).toBe(82.5);
+  });
+
   test("items outside the day are reported, not placed", () => {
     const items = [
       point("start", 0),
