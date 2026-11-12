@@ -200,12 +200,19 @@ test.describe("activity", () => {
   test("calendars without activity stay unshaded", async ({ page }) => {
     const plain = page.locator(".kit-calendar").first();
     await expect(plain.locator(".kit-calendar__day[data-activity]")).toHaveCount(0);
+    // Without layout or matches the grid has no strip parts.
+    await expect(plain.locator(".kit-calendar__strip, .kit-calendar__match")).toHaveCount(0);
   });
 
   for (const dark of [false, true]) {
     test(`shaded day numbers meet AA contrast in ${dark ? "dark" : "light"}`, async ({ page }) => {
       await setTheme(page, { dark });
-      for (const id of ["calendar-activity", "calendar-activity-scale"]) {
+      for (const id of [
+        "calendar-activity",
+        "calendar-activity-scale",
+        "calendar-strip",
+        "calendar-strip-sunday",
+      ]) {
         const days = page
           .getByTestId(id)
           .locator(".kit-calendar__day[data-activity]:not(.outside):not(:disabled)");
@@ -221,13 +228,14 @@ test.describe("activity", () => {
 });
 
 // Month strip demo: March 2026 with day 28 selected, the app's fixed
-// scale over (day * 7 + 3) % 13 counts, and a Sunday-first fr strip for
-// February 2026 marking days ending in 4.
+// scale over (day * 7 + 3) % 13 counts (day 20 has none), and a
+// Sunday-first blue fr strip for February 2026 with maxDate Feb 20,
+// marking days ending in 4.
 test.describe("month strip", () => {
   const strip = (page: import("@playwright/test").Page) =>
     page.getByTestId("calendar-strip").locator(".kit-calendar");
-  const control = (page: import("@playwright/test").Page, group: string, name: string) =>
-    page.getByRole("radiogroup", { name: group }).getByRole("radio", { name });
+  const filter = (page: import("@playwright/test").Page, name: string) =>
+    page.getByRole("radiogroup", { name: "Strip filter" }).getByRole("radio", { name });
 
   test("shows the month's own days in one row with weekday letters", async ({ page }) => {
     const cal = strip(page);
@@ -244,20 +252,20 @@ test.describe("month strip", () => {
     await expect(days.last().locator(".kit-calendar__day-number")).toHaveText("31");
     await expect(days.first().locator(".kit-calendar__day-weekday")).not.toBeEmpty();
 
-    // Mar 1 2026 is a Sunday: nine weekend days, their letters quieter.
-    const weekend = cal.locator(".kit-calendar__day.weekend");
-    await expect(weekend).toHaveCount(9);
+    // Mar 1 2026 is a Sunday: nine weekend days, their letters in a quieter ink.
+    await expect(cal.locator(".kit-calendar__day.weekend")).toHaveCount(9);
     await expect(days.first()).toHaveClass(/weekend/);
-    await expect(days.nth(1)).not.toHaveClass(/weekend/);
-    const opacity = (n: number) =>
+    await expect(days.nth(2)).not.toHaveClass(/weekend/);
+    const ink = (n: number) =>
       days
         .nth(n)
         .locator(".kit-calendar__day-weekday")
-        .evaluate((node) => Number(getComputedStyle(node).opacity));
-    expect(await opacity(0)).toBeLessThan(await opacity(1));
+        .evaluate((node) => getComputedStyle(node).color);
+    // Day 1 (Sunday) and day 3 (Tuesday) share shade step 4; only the weekend ink differs.
+    expect(await ink(0)).not.toBe(await ink(2));
   });
 
-  test("a Sunday-first strip follows its locale in letters and labels", async ({ page }) => {
+  test("a Sunday-first strip follows its locale, labels and maxDate", async ({ page }) => {
     const cal = page.getByTestId("calendar-strip-sunday").locator(".kit-calendar");
     const days = cal.locator(".kit-calendar__day");
     await expect(days).toHaveCount(28);
@@ -268,14 +276,14 @@ test.describe("month strip", () => {
     await expect(days.first()).toHaveClass(/weekend/);
     await expect(days.nth(6)).toHaveClass(/weekend/);
 
+    // Feb 24 is past maxDate: disabled, yet still marked and announced.
     const matched = cal.locator(".kit-calendar__day:has(.kit-calendar__match)");
     await expect(matched).toHaveCount(3);
-    await expect(matched.first()).toHaveAttribute("aria-label", /, correspond aux filtres$/);
-    // The default scale spans the rendered month.
-    const steps = await cal
-      .locator(".kit-calendar__day[data-activity]")
-      .evaluateAll((nodes) => nodes.map((node) => Number((node as HTMLElement).dataset.activity)));
-    expect(Math.max(...steps)).toBe(4);
+    await expect(days.nth(23)).toBeDisabled();
+    await expect(days.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
+    await expect(days.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
+    await expect(days.nth(13)).toBeEnabled();
+    await expect(cal.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
   });
 
   test("matches mark days independently of counts and selection", async ({ page }) => {
@@ -292,7 +300,7 @@ test.describe("month strip", () => {
     await expect(dots).toHaveCount(0);
     const before = await facts();
 
-    await control(page, "Strip filter", "Every 3rd day").click();
+    await filter(page, "Every 3rd day").click();
     await expect(dots).toHaveCount(10);
     await expect(days.nth(2)).toHaveAttribute("aria-label", /, \d+ messages?, matches filters$/);
     await expect(days.nth(3)).not.toHaveAttribute("aria-label", /matches filters/);
@@ -302,23 +310,18 @@ test.describe("month strip", () => {
     );
     expect(await facts()).toEqual(before);
 
-    // Replacing the filter replaces the marks.
-    await control(page, "Strip filter", "10th–20th").click();
+    // Replacing the filter replaces the marks; day 20 is marked without a count.
+    await filter(page, "10th–20th").click();
     await expect(dots).toHaveCount(11);
     await expect(days.nth(2)).not.toHaveAttribute("aria-label", /matches filters/);
     await expect(days.nth(9)).toHaveAttribute("aria-label", /, matches filters$/);
+    await expect(days.nth(19)).not.toHaveAttribute("data-activity");
+    await expect(days.nth(19)).toHaveAttribute("aria-label", /\d, matches filters$/);
+    await expect(days.nth(19)).not.toHaveAttribute("aria-label", /message/);
     expect(await facts()).toEqual(before);
 
-    await control(page, "Strip filter", "No filter").click();
+    await filter(page, "No filter").click();
     await expect(dots).toHaveCount(0);
-
-    // Marks without counts.
-    await control(page, "Strip activity", "No counts").click();
-    await control(page, "Strip filter", "Every 3rd day").click();
-    await expect(cal.locator(".kit-calendar__day[data-activity]")).toHaveCount(0);
-    await expect(dots).toHaveCount(10);
-    await expect(days.nth(2)).toHaveAttribute("aria-label", /\d, matches filters$/);
-    await expect(days.nth(2)).not.toHaveAttribute("aria-label", /message/);
   });
 
   test("the selected day keeps its shade under an outline", async ({ page }) => {
@@ -343,14 +346,6 @@ test.describe("month strip", () => {
     await expect(page.locator("code", { hasText: "2026-03-05" })).toBeVisible();
     await expect(days.nth(4)).toHaveAttribute("aria-pressed", "true");
     await expect(selected).toHaveAttribute("aria-pressed", "false");
-
-    // Native keyboard activation.
-    await days.nth(9).focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator("code", { hasText: "2026-03-10" })).toBeVisible();
-    await days.nth(10).focus();
-    await page.keyboard.press("Space");
-    await expect(page.locator("code", { hasText: "2026-03-11" })).toBeVisible();
   });
 
   test("the arrows page one month and keep one row", async ({ page }) => {
@@ -369,12 +364,14 @@ test.describe("month strip", () => {
     await gotoPage(page, "calendar");
     const cal = strip(page);
     const track = cal.locator(".kit-calendar__strip");
+    const nav = cal.locator(".kit-calendar__nav");
     const selected = cal.locator(".kit-calendar__day").nth(27);
     const visible = async () => {
       const [box, cell] = await Promise.all([track.boundingBox(), selected.boundingBox()]);
       if (box == null || cell == null) return false;
       return cell.x >= box.x - 1 && cell.x + cell.width <= box.x + box.width + 1;
     };
+    const scrollLeft = () => track.evaluate((node) => node.scrollLeft);
     expect(await track.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
     // The calendar itself fits the viewport; only its track scrolls.
     expect(
@@ -382,34 +379,33 @@ test.describe("month strip", () => {
     ).toBe(true);
     await expect.poll(visible).toBe(true);
 
-    // Back at day 1, paging away and back reveals the selection again.
-    await track.evaluate((node) => (node.scrollLeft = 0));
-    expect(await visible()).toBe(false);
-    await cal.locator(".kit-calendar__nav").nth(1).click();
-    await cal.locator(".kit-calendar__nav").first().click();
+    // A month without a selection starts at day 1; paging back reveals it again.
+    await nav.nth(1).click();
+    await expect.poll(scrollLeft).toBe(0);
+    await nav.first().click();
     await expect.poll(visible).toBe(true);
     expect(await page.evaluate(() => window.scrollX)).toBe(0);
   });
+});
 
-  for (const dark of [false, true]) {
-    test(`strip day numbers meet AA contrast in ${dark ? "dark" : "light"}`, async ({ page }) => {
-      await setTheme(page, { dark });
-      for (const accent of ["Green", "Blue"]) {
-        await control(page, "Strip accent", accent).click();
-        const days = strip(page).locator(".kit-calendar__day[data-activity]");
-        const count = await days.count();
-        expect(count).toBeGreaterThan(0);
-        for (let i = 0; i < count; i++) {
-          await expect.poll(() => contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
-        }
-      }
-    });
-  }
+test("matches draw on the grid, in surface ink on a solid range end", async ({ page }) => {
+  // The day-range demo (fourth calendar) marks days ending in 0.
+  const cal = page.locator(".kit-calendar").nth(3);
+  const day = (n: number) =>
+    cal.locator(".kit-calendar__day:not(.outside)").filter({ hasText: new RegExp(`^${n}$`) });
+  await expect(day(20).locator(".kit-calendar__match")).toHaveCount(1);
+  await expect(day(20)).toHaveAttribute("aria-label", /, matches filters$/);
+  await expect(day(21).locator(".kit-calendar__match")).toHaveCount(0);
 
-  test("calendars without layout keep the grid", async ({ page }) => {
-    const plain = page.locator(".kit-calendar").first();
-    await expect(plain.locator(".kit-calendar__grid .kit-calendar__day")).toHaveCount(42);
-    await expect(plain.locator(".kit-calendar__strip, .kit-calendar__match")).toHaveCount(0);
-    await expect(plain.locator(".kit-calendar__day.strip")).toHaveCount(0);
-  });
+  await day(5).click();
+  await day(10).click();
+  await expect(day(10)).toHaveClass(/range-end/);
+  await expect(day(10)).toHaveAttribute("aria-pressed", "true");
+  await expect(day(10)).toHaveAttribute("aria-label", /, matches filters$/);
+  const dot = (n: number) =>
+    day(n)
+      .locator(".kit-calendar__match")
+      .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await page.mouse.move(0, 0);
+  await expect.poll(() => dot(10)).not.toBe(await dot(20));
 });

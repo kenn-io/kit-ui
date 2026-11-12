@@ -172,6 +172,8 @@
   function navStep(delta: 1 | -1): void {
     if (dayView) {
       month = stepAnchor("month", month, delta);
+      // A strip that pages returns to the grid's days, not a stale zoom.
+      view = "days";
     } else if (view === "months") {
       zoomYear += delta;
     } else {
@@ -213,9 +215,16 @@
   const activityMax = $derived.by(() => {
     if (activity == null) return 0;
     let max = 0;
-    for (const { date } of days) max = Math.max(max, activity[date] ?? 0);
+    for (const { date } of days) max = Math.max(max, countOf(date) ?? 0);
     return max;
   });
+
+  // A non-finite count (NaN from a failed conversion, Infinity) is no data,
+  // so it can't blank the other days' shades or reach a label.
+  function countOf(date: string): number | undefined {
+    const count = activity?.[date];
+    return count !== undefined && Number.isFinite(count) ? count : undefined;
+  }
 
   function activityStepOf(date: string, count: number): number {
     if (activityScale == null) return activityStep(count, activityMax);
@@ -250,7 +259,11 @@
     void [monthPrefix, selected?.from, selected?.to];
     if (track == null) return;
     const cell = track.querySelector<HTMLElement>('[aria-pressed="true"]');
-    if (cell == null) return;
+    if (cell == null) {
+      // Nothing selected in this month: start it at day 1.
+      track.scrollLeft = 0;
+      return;
+    }
     const box = track.getBoundingClientRect();
     const rect = cell.getBoundingClientRect();
     if (rect.left < box.left) track.scrollLeft -= box.left - rect.left;
@@ -303,7 +316,7 @@
     {#each days as { date, index } (date)}
       {@const selectedDay = inRange(date)}
       {@const band = selectedDay && !strip}
-      {@const count = activity?.[date]}
+      {@const count = countOf(date)}
       {@const step = count == null ? 0 : activityStepOf(date, count)}
       {@const matched = matches?.(date) === true}
       {@const dayNumber = Number.parseInt(date.slice(8), 10)}
@@ -318,7 +331,6 @@
         class:strip
         class:outlined={selectedDay && strip}
         class:weekend={strip && isWeekend(index)}
-        class:matched
         type="button"
         data-activity={step > 0 ? step : undefined}
         disabled={maxDate != null && date > maxDate}
@@ -623,8 +635,9 @@
   }
 
   /* Filter-match dot: decorative (the label says it), below the number,
-   * and separate from the range seam pseudo-elements. */
-  .kit-calendar__day.matched {
+   * and separate from the range seam pseudo-elements. Only marked days are
+   * positioned, so other days keep their paint order under focus rings. */
+  .kit-calendar__day:has(> .kit-calendar__match) {
     position: relative;
   }
 
@@ -676,15 +689,10 @@
     min-width: 0;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
-
-  .kit-calendar__strip::-webkit-scrollbar {
-    display: none;
+    scrollbar-width: thin;
   }
 
   .kit-calendar__day.strip {
-    position: relative;
     flex-direction: column;
     gap: var(--space-1);
     width: auto;
@@ -695,11 +703,10 @@
   .kit-calendar__day-weekday {
     font-size: var(--font-size-2xs);
     line-height: 1;
-    color: var(--text-muted);
   }
 
   .kit-calendar__day.weekend .kit-calendar__day-weekday {
-    opacity: 0.6;
+    color: var(--text-muted);
   }
 
   .kit-calendar__day-number {

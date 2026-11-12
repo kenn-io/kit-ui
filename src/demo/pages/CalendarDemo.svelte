@@ -71,11 +71,9 @@
   // Month strip: a fixed month so the example is the same every load.
   let stripMonth = $state("2026-03-01");
   let stripDay = $state<string | null>("2026-03-28");
-  let stripData = $state("counts");
   let stripFilter = $state("off");
-  let stripAccent = $state("green");
+  // Day 20 has no count, so the 10th–20th filter also marks a day without one.
   const stripActivity = $derived.by(() => {
-    if (stripData === "none") return null;
     const counts: Record<string, number> = {};
     for (const date of monthGridDates(stripMonth)) {
       const count = (Number.parseInt(date.slice(8), 10) * 7 + 3) % 13;
@@ -139,8 +137,8 @@
 
 <DemoSection
   title="Day → day range"
-  description="The classic two-click range: the first pick starts the range, the second completes it (picking an earlier day swaps the ends), and a third pick starts a new one. The component stays controlled — the consumer owns this state machine and feeds the result back through selected."
-  code={`<Calendar bind:month selected={dayRange} onpick={pickRangeDay} />
+  description="The classic two-click range: the first pick starts the range, the second completes it (picking an earlier day swaps the ends), and a third pick starts a new one. The component stays controlled — the consumer owns this state machine and feeds the result back through selected. Days ending in 0 carry a matches dot, in surface ink on a solid range end."
+  code={`<Calendar bind:month selected={dayRange} onpick={pickRangeDay} matches={(d) => d.endsWith("0")} />
 
 function pickRangeDay(d: string) {
   if (!rangeFrom || rangeTo) { rangeFrom = d; rangeTo = null; }
@@ -149,7 +147,12 @@ function pickRangeDay(d: string) {
 }`}
 >
   <div class="calendar-demo">
-    <Calendar bind:month={rangeMonth} selected={dayRange} onpick={pickRangeDay} />
+    <Calendar
+      bind:month={rangeMonth}
+      selected={dayRange}
+      onpick={pickRangeDay}
+      matches={(d) => d.endsWith("0")}
+    />
     <span class="readout">
       {#if rangeFrom && rangeTo}
         range: <code>{rangeFrom} → {rangeTo}</code>
@@ -200,7 +203,7 @@ function pickRangeDay(d: string) {
   <Calendar
     bind:month
     {activity}
-    activityScale={(count) => (count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
+    activityScale={(count) => (count <= 0 ? 0 : count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
     activityLabel={(count) => (count === 1 ? "1 message" : \`\${count} messages\`)}
   />
 </div>`}
@@ -230,49 +233,31 @@ function pickRangeDay(d: string) {
 
 <DemoSection
   title="Month strip"
-  description="The strip layout shows the visible month as one row of weekday/number cells that scrolls inside itself when narrow. Weekend letters are quieter, the selected day keeps its shade under an outline, and matches marks days with a dot — independent of activity and selection — adding matchLabel to their accessible label. The legend is the app's, using the documented tint mixes."
+  description="The strip layout shows the visible month as one row of weekday/number cells that scrolls inside itself when narrow. Weekend letters are quieter, the selected day keeps its shade under an outline, and matches marks days with a dot — independent of activity, selection, and maxDate — adding matchLabel to their accessible label. The second strip is Sunday-first, in French, with a blue accent and maxDate."
   code={`<Calendar
   layout="strip"
   bind:month
   {activity}
-  activityScale={(count) => (count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
+  activityScale={(count) => (count <= 0 ? 0 : count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
   matches={(date) => matchingDays.has(date)}
   selected={day ? { from: day, to: day } : null}
   onpick={(d) => (day = d)}
 />`}
 >
   <div class="strip-demo">
-    <div data-testid="calendar-strip" class="strip-row" class:blue={stripAccent === "blue"}>
-      <div class="strip-calendar">
-        <Calendar
-          layout="strip"
-          bind:month={stripMonth}
-          activity={stripActivity}
-          activityScale={messageScale}
-          activityLabel={(count) => (count === 1 ? "1 message" : `${count} messages`)}
-          matches={stripMatches}
-          selected={stripDay ? { from: stripDay, to: stripDay } : null}
-          onpick={(d) => (stripDay = d)}
-        />
-      </div>
-      <span class="strip-legend" aria-hidden="true">
-        Fewer
-        {#each [12, 22, 33, 44] as mix (mix)}
-          <i style:--mix="{mix}%"></i>
-        {/each}
-        More
-      </span>
-    </div>
-    <div class="strip-controls">
-      <SegmentedControl
-        options={[
-          { value: "counts", label: "Counts" },
-          { value: "none", label: "No counts" },
-        ]}
-        value={stripData}
-        onchange={(v) => (stripData = v)}
-        ariaLabel="Strip activity"
+    <div data-testid="calendar-strip">
+      <Calendar
+        layout="strip"
+        bind:month={stripMonth}
+        activity={stripActivity}
+        activityScale={messageScale}
+        activityLabel={(count) => (count === 1 ? "1 message" : `${count} messages`)}
+        matches={stripMatches}
+        selected={stripDay ? { from: stripDay, to: stripDay } : null}
+        onpick={(d) => (stripDay = d)}
       />
+    </div>
+    <div class="calendar-demo">
       <SegmentedControl
         options={[
           { value: "off", label: "No filter" },
@@ -283,18 +268,9 @@ function pickRangeDay(d: string) {
         onchange={(v) => (stripFilter = v)}
         ariaLabel="Strip filter"
       />
-      <SegmentedControl
-        options={[
-          { value: "green", label: "Green" },
-          { value: "blue", label: "Blue" },
-        ]}
-        value={stripAccent}
-        onchange={(v) => (stripAccent = v)}
-        ariaLabel="Strip accent"
-      />
       <span class="readout">picked: <code>{stripDay ?? "none"}</code></span>
     </div>
-    <div data-testid="calendar-strip-sunday" class="strip-row">
+    <div data-testid="calendar-strip-sunday" class="blue">
       <Calendar
         layout="strip"
         bind:month={sundayMonth}
@@ -303,6 +279,7 @@ function pickRangeDay(d: string) {
         activity={Object.fromEntries(
           monthGridDates(sundayMonth).map((date, i) => [date, (i * 5) % 13]),
         )}
+        maxDate="2026-02-20"
         matches={(date) => date.endsWith("4")}
         matchLabel="correspond aux filtres"
       />
@@ -319,49 +296,8 @@ function pickRangeDay(d: string) {
     min-width: 0;
   }
 
-  .strip-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    min-width: 0;
-  }
-
-  /* The app sizes the strip; it fills this slot beside the legend. */
-  .strip-calendar {
-    flex: 1 1 320px;
-    min-width: 0;
-  }
-
   .blue {
     --kit-calendar-activity-color: var(--accent-blue);
-  }
-
-  .strip-legend {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    font-size: var(--font-size-2xs);
-    color: var(--text-muted);
-  }
-
-  /* The calendar's tint recipe: the same accent, mixed toward transparent. */
-  .strip-legend i {
-    width: 10px;
-    height: 10px;
-    border-radius: var(--radius-sm);
-    background: color-mix(
-      in srgb,
-      var(--kit-calendar-activity-color, var(--accent-green)) var(--mix),
-      transparent
-    );
-  }
-
-  .strip-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-4);
   }
 
   .amber {

@@ -68,7 +68,8 @@ pick-a-date UI.
 
 Pass `activity`, a count per day, to shade days by how much happened on them,
 such as messages, documents, or events. The calendar draws four tints of one
-accent; days without a count, or with zero, stay plain.
+accent; days without a count, or with zero, stay plain. A count that is not
+a finite number (`NaN`, `Infinity`) is treated as no count.
 
 ```svelte
 <Calendar
@@ -145,7 +146,7 @@ above a list.
   layout="strip"
   bind:month
   {activity}
-  activityScale={(count) => (count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
+  activityScale={(count) => (count <= 0 ? 0 : count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
   matches={(date) => matchingDays.has(date)}
   selected={day ? { from: day, to: day } : null}
   onpick={(date) => (day = date)}
@@ -156,23 +157,22 @@ above a list.
   the 1st falls on. `weekStart` still decides which column a weekday maps
   to, so the weekend marking and labels follow it.
 - Weekday letters are the locale's narrow names
-  (`weekdayLabels(locale, weekStart, "narrow")`). Saturday and Sunday letters
-  are quieter; numbers keep the same contrast as other days.
+  (`weekdayLabels(locale, weekStart, "narrow")`) in the day's ink; Saturday
+  and Sunday letters use the quieter `--text-muted`.
 - The header is the arrows and a static month label: the strip pages by
   month, with `maxDate` blocking later months, and has no month/year
-  drill-down.
+  drill-down. Paging the strip also ends any drill-down left open in the
+  grid layout.
 - The calendar fills its container's width. The header sits beside the
   days and wraps above them when narrow; the days then scroll sideways
-  inside the strip, never the page. When the month, the selection or the
-  layout changes, the strip scrolls itself to show the first selected day.
+  inside the strip, never the page, with a thin scrollbar. When the month,
+  the selection or the layout changes, the strip scrolls itself to show the
+  first selected day, or to day 1 when none is selected.
 - Selected days keep their activity shade under a 2px accent outline;
   hover and today are 1px rings. Ranges are outlined day by day, without
   the grid's joined band.
 - Each day's accessible label starts with its short weekday name: "Tue,
-  Mar 10, 2026, 8 messages". Days are plain buttons: Tab moves between
-  them and Enter or Space picks one, as in the grid.
-- The legend is the app's: place it outside the calendar and use the tint
-  recipe under Activity.
+  Mar 10, 2026, 8 messages".
 
 ## Matches
 
