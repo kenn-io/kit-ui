@@ -222,6 +222,19 @@ test.describe("activity", () => {
           // Poll: day cells transition color, so a theme switch takes a moment to settle.
           await expect.poll(() => contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
         }
+        // Strip weekend letters use the quieter ink; measure them on their shades
+        // too (green strip, blue Sunday strip).
+        if (!id.startsWith("calendar-strip")) continue;
+        const letters = page
+          .getByTestId(id)
+          .locator(
+            ".kit-calendar__day.weekend[data-activity]:not(:disabled) .kit-calendar__day-weekday",
+          );
+        const letterCount = await letters.count();
+        expect(letterCount).toBeGreaterThan(0);
+        for (let i = 0; i < letterCount; i++) {
+          await expect.poll(() => contrastOf(letters.nth(i))).toBeGreaterThanOrEqual(4.5);
+        }
       }
     });
   }
