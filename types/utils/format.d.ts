@@ -14,3 +14,9 @@ export declare function formatTokenCount(n: number): string;
 /** Formats a USD cost as a compact string
  * (e.g. "<$0.01", "$0.42", "$12.34", "$123"). */
 export declare function formatCost(v: number): string;
+/** One or two uppercase initials for a person or account name, for an avatar
+ * without a picture. Uses the first letter or digit of the first two words;
+ * an email address uses its local part, so "jane.doe@example.com" gives "JD".
+ * A name with no letters or digits gives its first character, and an empty
+ * name gives "?". */
+export declare function formatInitials(name: string): string;

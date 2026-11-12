@@ -8,6 +8,8 @@ export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.s
 export type { AdaptiveActionGridFrame, AdaptiveActionGridItem, AdaptiveActionGridLayout, AdaptiveActionGridMode, AdaptiveActionGridRadius, AdaptiveActionGridSpace, } from "./components/AdaptiveActionGrid.svelte";
 export { default as AppSidebar } from "./components/AppSidebar.svelte";
 export type { SidebarGroup, SidebarLocation, SidebarSection, SidebarView, SidebarViewRun, } from "./components/AppSidebar.svelte";
+export { default as Avatar } from "./components/Avatar.svelte";
+export type { AvatarShape, AvatarTone } from "./components/Avatar.svelte";
 export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
@@ -129,7 +131,7 @@ export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { backdropCloses, escapeCloses } from "./utils/overlay.js";
-export { formatCost, formatCount, formatDuration, formatNumber, formatTokenCount, } from "./utils/format.js";
+export { formatCost, formatCount, formatDuration, formatInitials, formatNumber, formatTokenCount, } from "./utils/format.js";
 export { createRefreshScheduler, DEFAULT_REFRESH_INTERVAL_MS, formatRefreshAge, type RefreshReason, type RefreshScheduler, } from "./utils/refresh.js";
 export { appShortcuts, createShortcutManager, formatShortcutKeys, initShortcuts, isMacPlatform, parseShortcut, ROOT_SCOPE, shortcutMatches, type ParsedShortcut, type RegisteredShortcut, type ShortcutManager, type ShortcutOptions, } from "./utils/shortcuts.js";
 export { applyShikiStyles, codeFenceLanguage, createMarkdownRenderer, escapeHtml, highlightCode, renderMarkdown, renderMarkdownSync, DEFAULT_MARKDOWN_ALERT_LABELS, type MarkdownAlertKind, type MarkdownRenderer, type MarkdownRendererOptions, } from "./utils/markdown.js";

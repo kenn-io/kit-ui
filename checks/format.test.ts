@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatCount } from "../src/lib/utils/format.ts";
+import { formatCount, formatInitials } from "../src/lib/utils/format.ts";
 
 describe("formatCount", () => {
   test("plain below 1,000", () => {
@@ -27,5 +27,29 @@ describe("formatCount", () => {
       }).format(18_000),
     );
     expect(formatCount(18_000, "de")).not.toBe(formatCount(18_000, "en"));
+  });
+});
+
+describe("formatInitials", () => {
+  test("first letters of the first two words", () => {
+    expect(formatInitials("Ada Lovelace")).toBe("AL");
+    expect(formatInitials("ada byron lovelace")).toBe("AB");
+    expect(formatInitials("Cher")).toBe("C");
+  });
+
+  test("an email address uses its local part", () => {
+    expect(formatInitials("jane.doe@example.com")).toBe("JD");
+    expect(formatInitials("ops@example.com")).toBe("O");
+  });
+
+  test("skips punctuation and keeps non-Latin letters", () => {
+    expect(formatInitials("  (Grace)  Hopper ")).toBe("GH");
+    expect(formatInitials("Élodie Ñúñez")).toBe("ÉÑ");
+    expect(formatInitials("李 小龙")).toBe("李小");
+  });
+
+  test("falls back to the first character, then to a question mark", () => {
+    expect(formatInitials("@@")).toBe("@");
+    expect(formatInitials("   ")).toBe("?");
   });
 });
