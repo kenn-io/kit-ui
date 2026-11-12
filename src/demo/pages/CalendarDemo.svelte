@@ -67,6 +67,31 @@
     if (count <= 9) return 3;
     return 4;
   }
+
+  // Month strip: a fixed month so the example is the same every load.
+  let stripMonth = $state("2026-03-01");
+  let stripDay = $state<string | null>("2026-03-28");
+  let stripData = $state("counts");
+  let stripFilter = $state("off");
+  let stripAccent = $state("green");
+  const stripActivity = $derived.by(() => {
+    if (stripData === "none") return null;
+    const counts: Record<string, number> = {};
+    for (const date of monthGridDates(stripMonth)) {
+      const count = (Number.parseInt(date.slice(8), 10) * 7 + 3) % 13;
+      if (count > 0) counts[date] = count;
+    }
+    return counts;
+  });
+  // Stand-ins for an app's filters, independent of the counts.
+  const stripMatches = $derived(
+    stripFilter === "third"
+      ? (date: string) => Number.parseInt(date.slice(8), 10) % 3 === 0
+      : stripFilter === "mid"
+        ? (date: string) => date.slice(8) >= "10" && date.slice(8) <= "20"
+        : undefined,
+  );
+  let sundayMonth = $state("2026-02-01");
 </script>
 
 <DemoSection
@@ -203,7 +228,142 @@ function pickRangeDay(d: string) {
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Month strip"
+  description="The strip layout shows the visible month as one row of weekday/number cells that scrolls inside itself when narrow. Weekend letters are quieter, the selected day keeps its shade under an outline, and matches marks days with a dot — independent of activity and selection — adding matchLabel to their accessible label. The legend is the app's, using the documented tint mixes."
+  code={`<Calendar
+  layout="strip"
+  bind:month
+  {activity}
+  activityScale={(count) => (count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4)}
+  matches={(date) => matchingDays.has(date)}
+  selected={day ? { from: day, to: day } : null}
+  onpick={(d) => (day = d)}
+/>`}
+>
+  <div class="strip-demo">
+    <div data-testid="calendar-strip" class="strip-row" class:blue={stripAccent === "blue"}>
+      <div class="strip-calendar">
+        <Calendar
+          layout="strip"
+          bind:month={stripMonth}
+          activity={stripActivity}
+          activityScale={messageScale}
+          activityLabel={(count) => (count === 1 ? "1 message" : `${count} messages`)}
+          matches={stripMatches}
+          selected={stripDay ? { from: stripDay, to: stripDay } : null}
+          onpick={(d) => (stripDay = d)}
+        />
+      </div>
+      <span class="strip-legend" aria-hidden="true">
+        Fewer
+        {#each [12, 22, 33, 44] as mix (mix)}
+          <i style:--mix="{mix}%"></i>
+        {/each}
+        More
+      </span>
+    </div>
+    <div class="strip-controls">
+      <SegmentedControl
+        options={[
+          { value: "counts", label: "Counts" },
+          { value: "none", label: "No counts" },
+        ]}
+        value={stripData}
+        onchange={(v) => (stripData = v)}
+        ariaLabel="Strip activity"
+      />
+      <SegmentedControl
+        options={[
+          { value: "off", label: "No filter" },
+          { value: "third", label: "Every 3rd day" },
+          { value: "mid", label: "10th–20th" },
+        ]}
+        value={stripFilter}
+        onchange={(v) => (stripFilter = v)}
+        ariaLabel="Strip filter"
+      />
+      <SegmentedControl
+        options={[
+          { value: "green", label: "Green" },
+          { value: "blue", label: "Blue" },
+        ]}
+        value={stripAccent}
+        onchange={(v) => (stripAccent = v)}
+        ariaLabel="Strip accent"
+      />
+      <span class="readout">picked: <code>{stripDay ?? "none"}</code></span>
+    </div>
+    <div data-testid="calendar-strip-sunday" class="strip-row">
+      <Calendar
+        layout="strip"
+        bind:month={sundayMonth}
+        weekStart="sunday"
+        locale="fr"
+        activity={Object.fromEntries(
+          monthGridDates(sundayMonth).map((date, i) => [date, (i * 5) % 13]),
+        )}
+        matches={(date) => date.endsWith("4")}
+        matchLabel="correspond aux filtres"
+      />
+    </div>
+  </div>
+</DemoSection>
+
 <style>
+  .strip-demo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .strip-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    min-width: 0;
+  }
+
+  /* The app sizes the strip; it fills this slot beside the legend. */
+  .strip-calendar {
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+
+  .blue {
+    --kit-calendar-activity-color: var(--accent-blue);
+  }
+
+  .strip-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-2xs);
+    color: var(--text-muted);
+  }
+
+  /* The calendar's tint recipe: the same accent, mixed toward transparent. */
+  .strip-legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-sm);
+    background: color-mix(
+      in srgb,
+      var(--kit-calendar-activity-color, var(--accent-green)) var(--mix),
+      transparent
+    );
+  }
+
+  .strip-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
   .amber {
     --kit-calendar-activity-color: var(--accent-amber);
   }

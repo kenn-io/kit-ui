@@ -119,3 +119,38 @@ describe("activityStep", () => {
     expect(activityStep(20, 10)).toBe(4);
   });
 });
+
+describe("month strip inputs", () => {
+  test("narrow weekday labels follow the week start and locale", () => {
+    expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
+    expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
+    expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
+  });
+
+  test("short and narrow labels are cached separately", () => {
+    expect(weekdayLabels("en-US", "monday", "narrow")[0]).toBe("M");
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    expect(weekdayLabels("en-US", "monday", "short")[0]).toBe("Mon");
+    expect(weekdayLabels("en-US", "monday", "narrow")[0]).toBe("M");
+  });
+
+  // The strip renders the month's own days out of the six-week grid.
+  test("the six-week grid holds every day of 28/29/30/31-day months in order", () => {
+    const cases: [string, number][] = [
+      ["2026-02-10", 28],
+      ["2028-02-10", 29],
+      ["2026-04-10", 30],
+      ["2026-03-10", 31],
+      ["2026-08-10", 31],
+    ];
+    for (const weekStart of ["monday", "sunday"] as const) {
+      for (const [anchor, length] of cases) {
+        const prefix = anchor.slice(0, 7);
+        const days = monthGridDates(anchor, weekStart).filter((d) => d.startsWith(prefix));
+        expect(days).toEqual(
+          Array.from({ length }, (_, i) => `${prefix}-${String(i + 1).padStart(2, "0")}`),
+        );
+      }
+    }
+  });
+});

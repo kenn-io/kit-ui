@@ -235,12 +235,16 @@ function labelTable(key: string, build: () => string[]): string[] {
   return labelTables.get(key) ?? capped(labelTables, key, build());
 }
 
-/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
- * omitted = the browser locale. */
-export function weekdayLabels(locale?: string, weekStart: WeekStart = "monday"): string[] {
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …, or
+ * "M", … with `style` "narrow"). `locale` is a BCP 47 tag; omitted = the browser locale. */
+export function weekdayLabels(
+  locale?: string,
+  weekStart: WeekStart = "monday",
+  style: "short" | "narrow" = "short",
+): string[] {
   // 2024-01-01 is a Monday. Sliced so callers can't mutate the shared cache.
-  return labelTable(`weekdays|${locale ?? ""}|${weekStart}`, () => {
-    const fmt = formatter({ weekday: "short" }, locale);
+  return labelTable(`weekdays-${style}|${locale ?? ""}|${weekStart}`, () => {
+    const fmt = formatter({ weekday: style }, locale);
     return Array.from({ length: 7 }, (_, i) =>
       fmt.format(new Date(2024, 0, (weekStart === "sunday" ? 7 : 1) + i)),
     );

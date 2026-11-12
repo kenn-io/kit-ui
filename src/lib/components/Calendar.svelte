@@ -41,6 +41,14 @@
     activityScale?: ((count: number, date: string) => number) | undefined;
     /** Text for a day's count in its accessible label, after the date. */
     activityLabel?: (count: number) => string;
+    /** "grid" is the six-week month grid; "strip" is the visible month as
+     * one horizontal row of weekday/number cells. */
+    layout?: "grid" | "strip" | undefined;
+    /** Days to mark with a dot, such as days matching the app's filters.
+     * Independent of activity, selection and pickability. */
+    matches?: ((date: string) => boolean) | undefined;
+    /** Text appended to a marked day's accessible label. */
+    matchLabel?: string | undefined;
     class?: string;
   }
 
@@ -62,6 +70,9 @@
     activity = null,
     activityScale = undefined,
     activityLabel = (count: number) => (count === 1 ? "1 item" : `${count} items`),
+    layout = "grid",
+    matches = undefined,
+    matchLabel = "matches filters",
     class: className = "",
   }: Props = $props();
 
@@ -75,11 +86,22 @@
   let view = $state<"days" | "months" | "years">("days");
   let zoomYear = $state(0);
 
+  const strip = $derived(layout === "strip");
+  // The strip has a static month label, so it always shows days.
+  const dayView = $derived(strip || view === "days");
   const weekdays = $derived(weekdayLabels(locale, weekStart));
+  const narrowWeekdays = $derived(strip ? weekdayLabels(locale, weekStart, "narrow") : []);
   const today = todayStr();
 
   const cells = $derived(monthGridDates(month, weekStart));
   const monthPrefix = $derived(month.slice(0, 7));
+  // The rendered days, each with its index in the six-week grid (its
+  // weekday column). The strip keeps only the visible month's own days.
+  const days = $derived(
+    cells
+      .map((date, index) => ({ date, index }))
+      .filter(({ date }) => !strip || date.startsWith(monthPrefix)),
+  );
   const nextMonthDisabled = $derived.by(() => {
     if (maxDate == null) return false;
     return periodBounds("month", stepAnchor("month", month, 1)).from > maxDate;
@@ -148,7 +170,7 @@
   }
 
   function navStep(delta: 1 | -1): void {
-    if (view === "days") {
+    if (dayView) {
       month = stepAnchor("month", month, delta);
     } else if (view === "months") {
       zoomYear += delta;
@@ -159,13 +181,13 @@
 
   // Per-view header/nav facts in one place instead of parallel ternaries.
   const nav = $derived.by(() => {
-    if (view === "days") {
+    if (dayView) {
       return {
         prevLabel: previousMonthLabel,
         nextLabel: nextMonthLabel,
         nextDisabled: nextMonthDisabled,
         headerLabel: formatMonthLabel(month, locale),
-        headerHint: chooseMonthLabel,
+        headerHint: strip ? null : chooseMonthLabel,
       };
     }
     if (view === "months") {
@@ -186,12 +208,12 @@
     };
   });
 
-  // The busiest day among the visible cells, so the default steps use the
+  // The busiest day among the rendered cells, so the default steps use the
   // whole range of shades in every month.
   const activityMax = $derived.by(() => {
     if (activity == null) return 0;
     let max = 0;
-    for (const date of cells) max = Math.max(max, activity[date] ?? 0);
+    for (const { date } of days) max = Math.max(max, activity[date] ?? 0);
     return max;
   });
 
@@ -201,17 +223,46 @@
     return Number.isFinite(step) ? Math.min(4, Math.max(0, step)) : 0;
   }
 
-  function dayLabel(date: string, count: number | undefined): string {
-    const label = formatDayLabel(date, locale);
-    return count == null ? label : `${label}, ${activityLabel(count)}`;
+  function dayLabel(
+    date: string,
+    index: number,
+    count: number | undefined,
+    matched: boolean,
+  ): string {
+    let label = formatDayLabel(date, locale);
+    // The strip shows the weekday, so its label names it too.
+    if (strip) label = `${weekdays[index % 7]}, ${label}`;
+    if (count != null) label += `, ${activityLabel(count)}`;
+    return matched ? `${label}, ${matchLabel}` : label;
   }
+
+  // Saturday and Sunday, from the day's weekday column.
+  function isWeekend(index: number): boolean {
+    const column = index % 7;
+    return weekStart === "sunday" ? column === 0 || column === 6 : column >= 5;
+  }
+
+  // The strip scrolls inside itself, so a selected day late in the month
+  // can start out of view. After the month, selection or layout changes,
+  // scroll the track (never the page or focus) to show the first selected day.
+  let track = $state<HTMLElement | null>(null);
+  $effect(() => {
+    void [monthPrefix, selected?.from, selected?.to];
+    if (track == null) return;
+    const cell = track.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (cell == null) return;
+    const box = track.getBoundingClientRect();
+    const rect = cell.getBoundingClientRect();
+    if (rect.left < box.left) track.scrollLeft -= box.left - rect.left;
+    else if (rect.right > box.right) track.scrollLeft += rect.right - box.right;
+  });
 
   function inRange(date: string): boolean {
     return selected != null && date >= selected.from && date <= selected.to;
   }
 </script>
 
-<div class={["kit-calendar", className]}>
+<div class={["kit-calendar", className]} class:kit-calendar--strip={strip}>
   <div class="kit-calendar__header">
     <button
       class="kit-calendar__nav kit-control-states"
@@ -248,7 +299,51 @@
     </button>
   </div>
 
-  {#if view === "days"}
+  {#snippet dayCells()}
+    {#each days as { date, index } (date)}
+      {@const selectedDay = inRange(date)}
+      {@const band = selectedDay && !strip}
+      {@const count = activity?.[date]}
+      {@const step = count == null ? 0 : activityStepOf(date, count)}
+      {@const matched = matches?.(date) === true}
+      {@const dayNumber = Number.parseInt(date.slice(8), 10)}
+      <button
+        class="kit-calendar__day kit-control-states"
+        class:outside={!date.startsWith(monthPrefix)}
+        class:today={date === today}
+        class:selected={band}
+        class:range-start={band && date === selected?.from}
+        class:range-end={band && date === selected?.to}
+        class:fill-above={band && index >= 7 && inRange(cells[index - 7]!)}
+        class:strip
+        class:outlined={selectedDay && strip}
+        class:weekend={strip && isWeekend(index)}
+        class:matched
+        type="button"
+        data-activity={step > 0 ? step : undefined}
+        disabled={maxDate != null && date > maxDate}
+        aria-label={dayLabel(date, index, count, matched)}
+        aria-pressed={selectedDay}
+        onclick={() => onpick?.(date)}
+      >
+        {#if strip}
+          <span class="kit-calendar__day-weekday">{narrowWeekdays[index % 7]}</span>
+          <span class="kit-calendar__day-number">{dayNumber}</span>
+        {:else}
+          {dayNumber}
+        {/if}
+        {#if matched}
+          <span class="kit-calendar__match" aria-hidden="true"></span>
+        {/if}
+      </button>
+    {/each}
+  {/snippet}
+
+  {#if strip}
+    <div class="kit-calendar__strip" bind:this={track}>
+      {@render dayCells()}
+    </div>
+  {:else if view === "days"}
     <div class="kit-calendar__weekdays" aria-hidden="true">
       {#each weekdays as day (day)}
         <span class="kit-calendar__weekday">{day}</span>
@@ -256,28 +351,7 @@
     </div>
 
     <div class="kit-calendar__grid">
-      {#each cells as date, i (date)}
-        {@const selectedDay = inRange(date)}
-        {@const count = activity?.[date]}
-        {@const step = count == null ? 0 : activityStepOf(date, count)}
-        <button
-          class="kit-calendar__day kit-control-states"
-          class:outside={!date.startsWith(monthPrefix)}
-          class:today={date === today}
-          class:selected={selectedDay}
-          class:range-start={selectedDay && date === selected?.from}
-          class:range-end={selectedDay && date === selected?.to}
-          class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
-          type="button"
-          data-activity={step > 0 ? step : undefined}
-          disabled={maxDate != null && date > maxDate}
-          aria-label={dayLabel(date, count)}
-          aria-pressed={selectedDay}
-          onclick={() => onpick?.(date)}
-        >
-          {Number.parseInt(date.slice(8), 10)}
-        </button>
-      {/each}
+      {@render dayCells()}
     </div>
   {:else}
     <div class="kit-calendar__unit-grid">
@@ -410,7 +484,7 @@
     height: 26px;
   }
 
-  .kit-calendar__day:hover:not(:disabled),
+  .kit-calendar__day:not(.strip):hover:not(:disabled),
   .kit-calendar__unit:hover:not(:disabled) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
@@ -546,6 +620,104 @@
   .kit-calendar__unit.current {
     box-shadow: inset 0 0 0 1px var(--border-default);
     color: var(--text-primary);
+  }
+
+  /* Filter-match dot: decorative (the label says it), below the number,
+   * and separate from the range seam pseudo-elements. */
+  .kit-calendar__day.matched {
+    position: relative;
+  }
+
+  .kit-calendar__match {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    margin-left: -2px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    pointer-events: none;
+  }
+
+  .kit-calendar__day.range-start .kit-calendar__match,
+  .kit-calendar__day.range-end .kit-calendar__match {
+    background: var(--bg-surface);
+  }
+
+  /* Strip layout: the month label and arrows, then the month's days in one
+   * row that wraps below the header when narrow and scrolls inside itself. */
+  .kit-calendar--strip {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .kit-calendar--strip .kit-calendar__header {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  /* Wide enough for long month names, so paging doesn't move the arrows. */
+  .kit-calendar--strip .kit-calendar__month {
+    min-width: 8.5em;
+  }
+
+  .kit-calendar__strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(20px, 1fr);
+    gap: var(--space-1);
+    flex: 1 1 280px;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .kit-calendar__strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kit-calendar__day.strip {
+    position: relative;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: auto;
+    height: auto;
+    padding: var(--space-2) 0 var(--space-4);
+  }
+
+  .kit-calendar__day-weekday {
+    font-size: var(--font-size-2xs);
+    line-height: 1;
+    color: var(--text-muted);
+  }
+
+  .kit-calendar__day.weekend .kit-calendar__day-weekday {
+    opacity: 0.6;
+  }
+
+  .kit-calendar__day-number {
+    line-height: 1.2;
+  }
+
+  /* Hover and today are 1px rings, so the activity fill stays visible. */
+  .kit-calendar__day.strip:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--border-default);
+    color: var(--text-primary);
+  }
+
+  /* Selected strip days keep their activity fill under a 2px outline. */
+  .kit-calendar__day.outlined,
+  .kit-calendar__day.outlined:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 2px var(--accent-blue);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold, 600);
   }
 
   /* Last so it outranks the equal-specificity .outside/.selected rules. */

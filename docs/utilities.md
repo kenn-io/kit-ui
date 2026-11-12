@@ -156,6 +156,23 @@ truncate("long string", 8); // "long st…"
 
 Both formatters accept `null`/`undefined` and return `"—"`.
 
+## Calendar labels
+
+```ts
+import { activityStep, monthLabels, weekdayLabels } from "@kenn-io/kit-ui";
+
+weekdayLabels("en-US"); // ["Mon", "Tue", …, "Sun"]
+weekdayLabels("en-US", "sunday"); // ["Sun", "Mon", …, "Sat"]
+weekdayLabels("en-US", "monday", "narrow"); // ["M", "T", "W", "T", "F", "S", "S"]
+monthLabels("short", "fr"); // ["janv.", "févr.", …]
+activityStep(6, 12); // 2: Calendar's default shade step, quarters of the busiest day
+```
+
+The labels Calendar draws, for headers and legends built beside it.
+`weekdayLabels` gives the short names by default; `"narrow"` gives the
+letters of Calendar's month strip (`layout="strip"`). The label tables are
+cached per locale, week start and style, and each call returns a copy.
+
 ## Refresh scheduling
 
 ```ts
