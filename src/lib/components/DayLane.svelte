@@ -343,6 +343,11 @@
     <div class="kit-day-lane__lane">
       {#each layout.entries as entry (keyOf(entry))}
         {@const key = keyOf(entry)}
+        {@const inset =
+          entry.kind === "item" &&
+          (entry.clippedStart || entry.clippedEnd || entry.height > minItemHeight + 0.001)
+            ? 1
+            : 0}
         {#if entry.kind === "item"}
           <button
             type="button"
@@ -354,8 +359,8 @@
               entry.clippedStart && "kit-day-lane__item--clipped-start",
               entry.clippedEnd && "kit-day-lane__item--clipped-end",
             ]}
-            style:top="{entry.top + 1}px"
-            style:height="{entry.height - 2}px"
+            style:top="{entry.top + inset}px"
+            style:height="{entry.height - 2 * inset}px"
             style:left="calc({entry.column} * 100% / {entry.columns})"
             style:width="calc(100% / {entry.columns} - 4px)"
             aria-pressed={!!entry.item.selected}
@@ -364,7 +369,9 @@
             onfocus={() => (activeKey = key)}
             onclick={() => onselect?.(entry.item.id)}
           >
-            {@render item(context(entry.item, entry.height - 2, entry.columns, entry.point))}
+            {@render item(
+              context(entry.item, entry.height - 2 * inset, entry.columns, entry.point),
+            )}
             <span class="kit-sr-only">, {timeLabel(entry.item)}</span>
           </button>
         {:else}
@@ -375,8 +382,8 @@
               "kit-day-lane__more",
               entry.items.every((i) => i.dimmed) && "kit-day-lane__item--dimmed",
             ]}
-            style:top="{entry.top + 1}px"
-            style:height="{entry.height - 2}px"
+            style:top="{entry.top + inset}px"
+            style:height="{entry.height - 2 * inset}px"
             style:left="calc({entry.column} * 100% / {entry.columns})"
             style:width="calc(100% / {entry.columns} - 4px)"
             aria-pressed={entry.items.some((i) => i.selected)}

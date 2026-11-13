@@ -15,6 +15,7 @@ test("overlapping items sit side by side and the rest go to +N more", async ({ p
   const [a, b, c] = await Promise.all([standup, call, more].map((l) => l.boundingBox()));
   expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x);
   expect(b!.x + b!.width).toBeLessThanOrEqual(c!.x);
+  expect(c!.height).toBe(44);
   await more.click();
   await expect(lastEvent(page)).toHaveText("overflow 3 from 9:30 AM");
 });
@@ -31,7 +32,16 @@ test("the selected card is the tab stop and arrows move in time order", async ({
   await page.keyboard.press("Home");
   await expect(lane(page).getByRole("button", { name: /Signed delivery receipt/ })).toBeFocused();
   await page.keyboard.press("End");
-  await expect(lane(page).getByRole("button", { name: /9:30 PM$/ })).toBeFocused();
+  await expect(lane(page).getByRole("button", { name: /Late note/ })).toBeFocused();
+});
+
+test("a point in the last minute renders at full height on 24-hour and 23-hour days", async ({
+  page,
+}) => {
+  const late = lane(page).getByRole("button", { name: /Late note/ });
+  expect((await late.boundingBox())!.height).toBe(44);
+  await page.getByText("23 h (spring)").click();
+  expect((await late.boundingBox())!.height).toBe(44);
 });
 
 test("a card's accessible name ends with its time range", async ({ page }) => {

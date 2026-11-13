@@ -168,8 +168,6 @@
     },
   ];
 
-  const byId = new Map(busyDay.map((e) => [e.id, e]));
-
   let selected = $state<string | null>("standup");
   let fold = $state(true);
   let showNow = $state(true);
@@ -180,6 +178,11 @@
   let lastEvent = $state("none yet");
 
   const dayMinutes = $derived(dst === "23" ? 1380 : dst === "25" ? 1500 : 1440);
+  const demoEntries = $derived<Entry[]>([
+    ...busyDay,
+    { id: "late", kind: "document", title: "Late note", start: dayMinutes - 1, people: [] },
+  ]);
+  const byId = $derived(new Map(demoEntries.map((e) => [e.id, e])));
   const hourLabel = (h: number) =>
     (h % 12 === 0 ? 12 : h % 12) + (h < 12 || h === 24 ? " AM" : " PM");
   // On a DST day the app labels each elapsed hour with its wall-clock time.
@@ -194,7 +197,7 @@
   });
 
   const items = $derived<DayLaneItem[]>(
-    busyDay.map((e) => ({
+    demoEntries.map((e) => ({
       id: e.id,
       dateOnly: e.dateOnly,
       startMinute: e.start,
