@@ -106,16 +106,16 @@ test("month grid includes the skipped civil date in Apia", () => {
     cmd: [
       process.execPath,
       "-e",
-      'import { monthGridDates } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify(monthGridDates("2011-12-01").slice(30, 34)))',
+      'import { monthGridDates, formatDayLabel, formatShortDate, formatMonthLabel } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify([monthGridDates("2011-12-01").slice(30, 34), formatDayLabel("2011-12-30", "en-US"), formatShortDate("2011-12-30", "en-US"), formatMonthLabel("2011-12-30", "en-US")]))',
     ],
     env: { ...process.env, TZ: "Pacific/Apia" },
   });
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout.toString())).toEqual([
-    "2011-12-28",
-    "2011-12-29",
-    "2011-12-30",
-    "2011-12-31",
+    ["2011-12-28", "2011-12-29", "2011-12-30", "2011-12-31"],
+    "Dec 30, 2011",
+    "Dec 30",
+    "December 2011",
   ]);
 });
 

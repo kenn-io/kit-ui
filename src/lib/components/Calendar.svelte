@@ -240,7 +240,7 @@
     let label = formatDayLabel(date, locale);
     // The strip shows the weekday, so its label names it too.
     if (strip) label = `${weekdays[index % 7]}, ${label}`;
-    if (count != null && count !== 0) label += `, ${activityLabel(count)}`;
+    if (count != null && count > 0) label += `, ${activityLabel(count)}`;
     return matched ? `${label}, ${matchLabel}` : label;
   }
 

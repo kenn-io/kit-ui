@@ -278,7 +278,9 @@ export function resolveRange(
 
 /** "Jun 29" style short label. `locale` omitted = the browser locale. */
 export function formatShortDate(date: string, locale?: string): string {
-  return formatter({ month: "short", day: "numeric" }, locale).format(parseLocal(date));
+  return formatter({ month: "short", day: "numeric", timeZone: "UTC" }, locale).format(
+    new Date(`${date}T00:00:00Z`),
+  );
 }
 
 /**
@@ -295,15 +297,18 @@ export function formatWeekOfLabel(template: string, dateLabel: string): string {
 /** "Jun 29, 2026" style label for a day anchor. `locale` omitted = the
  * browser locale. */
 export function formatDayLabel(anchor: string, locale?: string): string {
-  return formatter({ year: "numeric", month: "short", day: "numeric" }, locale).format(
-    parseLocal(anchor),
-  );
+  return formatter(
+    { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" },
+    locale,
+  ).format(new Date(`${anchor}T00:00:00Z`));
 }
 
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export function formatMonthLabel(anchor: string, locale?: string): string {
-  return formatter({ year: "numeric", month: "long" }, locale).format(parseLocal(anchor));
+  return formatter({ year: "numeric", month: "long", timeZone: "UTC" }, locale).format(
+    new Date(`${anchor}T00:00:00Z`),
+  );
 }
 
 /** Shade step for a day's activity count, from 0 (none) to 4 (busiest),
