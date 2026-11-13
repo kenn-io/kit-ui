@@ -31,3 +31,23 @@ test("selectedDates marks separate days, each on its own with no band", async ({
   await expect(selected).toHaveCount(3);
   await expect(calendar.locator(".kit-calendar__day.selected:not(.range-start)")).toHaveCount(2);
 });
+
+test("the documented single-date composition around a bare Calendar works", async ({ page }) => {
+  const host = page.getByTestId("own-calendar-host");
+  await host.getByRole("button", { name: "Pick a date" }).click();
+  const input = host.getByRole("textbox");
+  await expect(input).toBeFocused();
+  await input.pressSequentially("Jul 4");
+  await expect(host.locator(".kit-date-phrase-input__summary")).toHaveText("Jul 4, 2026");
+  await expect(host.locator(".kit-calendar__month")).toHaveText(/July 2026/);
+  await expect(host.locator(".kit-calendar__day.selected")).toHaveText("4");
+  await expect(host.getByTestId("own-calendar-value")).toHaveText("picked: none");
+  // A range isn't a date here: Enter does nothing.
+  await input.fill("next week");
+  await input.press("Enter");
+  await expect(host.getByTestId("own-calendar-value")).toHaveText("picked: none");
+  await input.fill("tomorrow");
+  await input.press("Enter");
+  await expect(host.getByTestId("own-calendar-value")).toHaveText("picked: 2026-06-16");
+  await expect(host.getByRole("button", { name: "Jun 16, 2026" })).toBeVisible();
+});

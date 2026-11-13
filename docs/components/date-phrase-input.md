@@ -45,6 +45,50 @@ on-screen keyboard over the calendar.
 <Calendar bind:month selected={range} />
 ```
 
+## Using the field with your own Calendar
+
+An app that wraps the bare Calendar in its own popover can add typed entry
+for one date with a few lines. Accept only `kind: "date"`, move `month` to
+it, show it as `selected`, and commit on Enter. `focusOnOpen()` focuses the
+field when the popover opens except on touch devices, and `formatDayLabel()`
+names the date. The gallery's DatePhraseInput page runs this example.
+
+```svelte
+<script lang="ts">
+  import {
+    Calendar,
+    DatePhraseInput,
+    focusOnOpen,
+    formatDayLabel,
+    parseDatePhrase,
+    todayStr,
+  } from "@kenn-io/kit-ui";
+
+  let { value = $bindable(null), open = $bindable(false) } = $props();
+  let text = $state("");
+  let month = $state(value ?? todayStr());
+  const parsed = $derived(parseDatePhrase(text));
+  const typed = $derived(parsed.kind === "date" ? parsed.date : null);
+  const shown = $derived(typed ?? value);
+
+  function pick(date: string) {
+    value = date;
+    text = "";
+    open = false;
+  }
+</script>
+
+<DatePhraseInput
+  bind:value={text}
+  summary={typed ? formatDayLabel(typed) : ""}
+  hint="Type or pick a date."
+  autofocus={focusOnOpen()}
+  oninput={() => typed && (month = typed)}
+  onsubmit={() => typed && pick(typed)}
+/>
+<Calendar bind:month selected={shown ? { from: shown, to: shown } : null} onpick={pick} />
+```
+
 ## Props
 
 | Prop          | Type                      | Default                             | Notes                                                                                |

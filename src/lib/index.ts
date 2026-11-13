@@ -87,7 +87,7 @@ export { default as ProviderBrandMark } from "./components/ProviderBrandMark.sve
 export { default as ProviderButton } from "./components/ProviderButton.svelte";
 export type { ProviderBrand } from "./components/provider-brand.js";
 export { default as DatePicker } from "./components/DatePicker.svelte";
-export { default as DatePhraseInput } from "./components/DatePhraseInput.svelte";
+export { default as DatePhraseInput, focusOnOpen } from "./components/DatePhraseInput.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export {
   allFromDate,
@@ -95,6 +95,7 @@ export {
   DEFAULT_RANGE_PRESETS,
   localDateStr,
   monthGridDates,
+  formatDayLabel,
   monthLabels,
   periodBounds,
   presetRange,
