@@ -8,6 +8,66 @@ test.beforeEach(async ({ page }) => {
 const lane = (page: import("@playwright/test").Page) => page.getByTestId("day-lane-busy");
 const lastEvent = (page: import("@playwright/test").Page) => page.getByTestId("day-lane-event");
 
+test("point cards mark their own exact start at the top edge", async ({ page }) => {
+  const dock = lane(page).getByRole("button", { name: /Dock schedule/ });
+  const pallet = lane(page).getByRole("button", { name: /Pallet count v3/ });
+  const interval = lane(page).getByRole("button", { name: /Container BRKU/ });
+  for (const point of [dock, pallet]) {
+    await expect(point).toHaveCSS("border-top-width", "2px");
+    const colors = await point.evaluate((el) => {
+      const sample = document.createElement("span");
+      sample.style.color = "var(--accent-red)";
+      el.appendChild(sample);
+      const result = [getComputedStyle(el).borderTopColor, getComputedStyle(sample).color];
+      sample.remove();
+      return result;
+    });
+    expect(colors[0]).toBe(colors[1]);
+  }
+  await expect(interval).toHaveCSS("border-top-width", "1px");
+  const hour = lane(page).locator(".kit-day-lane__hour-label", { hasText: /^\s*8 AM\s*$/ });
+  const [label, card] = await Promise.all([hour.boundingBox(), dock.boundingBox()]);
+  expect(card!.y - (label!.y + label!.height / 2)).toBeCloseTo(75.2, 0);
+});
+
+test("returning to a day after an empty day scrolls once to its first card", async ({ page }) => {
+  const fixture = await page.evaluateHandle(async () => {
+    const [{ mountReactive }, { default: DayLane }, { createRawSnippet }] = await Promise.all([
+      import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+      import("/src/lib/components/DayLane.svelte"),
+      import("/node_modules/.vite/deps/svelte.js"),
+    ]);
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    host.style.height = "300px";
+    document.body.appendChild(host);
+    return mountReactive(DayLane, host, {
+      items: [{ id: "first", startMinute: 540 }],
+      dayKey: "a",
+      foldQuietMinutes: 0,
+      item: createRawSnippet(() => ({ render: () => "<span>First</span>" })),
+    });
+  });
+  const scroller = page.locator(".kit-day-lane");
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await fixture.evaluate((component) => component.update({ items: [], dayKey: "b" }));
+  await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
+  await scroller.evaluate((el) => (el.scrollTop = 0));
+  await fixture.evaluate((component) =>
+    component.update({ items: [{ id: "first", startMinute: 540 }], dayKey: "a" }),
+  );
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: /First/ })).toBeInViewport();
+  await scroller.evaluate((el) => (el.scrollTop = 100));
+  await fixture.evaluate((component) =>
+    component.update({ items: [{ id: "first", startMinute: 540, tone: "info" }] }),
+  );
+  await expect(page.getByRole("button", { name: /First/ })).toHaveClass(
+    /kit-day-lane__item--tone-info/,
+  );
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
+});
+
 test("overlapping items sit side by side and the rest go to +N more", async ({ page }) => {
   const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
   const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });

@@ -234,6 +234,7 @@
   $effect(() => {
     const first = layout.entries[0];
     const day = dayKey;
+    if (!first) scrolledFor = null;
     if (!scrollToFirst || !scroller || !first || scrolledFor === day) return;
     scrolledFor = day;
     const el = scroller.querySelector<HTMLElement>(
@@ -334,19 +335,6 @@
       {/if}
     {/each}
 
-    {#each layout.entries as entry (keyOf(entry))}
-      {#if entry.kind === "item" && entry.point}
-        <i
-          class={[
-            "kit-day-lane__tick",
-            entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
-          ]}
-          style:top="{entry.top}px"
-          aria-hidden="true"
-        ></i>
-      {/if}
-    {/each}
-
     <div class="kit-day-lane__lane">
       {#each layout.entries as entry (keyOf(entry))}
         {@const key = keyOf(entry)}
@@ -361,6 +349,7 @@
             class={[
               "kit-day-lane__item",
               entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
+              entry.point && "kit-day-lane__item--point",
               entry.item.dimmed && "kit-day-lane__item--dimmed",
               entry.height < 40 && "kit-day-lane__item--compact",
               entry.clippedStart && "kit-day-lane__item--clipped-start",
@@ -534,17 +523,6 @@
     color: var(--text-primary);
   }
 
-  .kit-day-lane__tick {
-    position: absolute;
-    left: calc(var(--kit-day-lane-gutter) - var(--space-3));
-    width: var(--space-3);
-    height: 2px;
-    margin-top: -1px;
-    border-radius: 1px;
-    background: var(--kit-day-lane-accent);
-    pointer-events: none;
-  }
-
   .kit-day-lane__lane {
     position: absolute;
     inset: 0 var(--space-4) 0 var(--kit-day-lane-gutter);
@@ -583,6 +561,10 @@
     transition:
       opacity 150ms ease-out,
       box-shadow 150ms ease-out;
+  }
+
+  .kit-day-lane__item--point {
+    border-top: 2px solid var(--kit-day-lane-accent);
   }
 
   .kit-day-lane__lane .kit-day-lane__item {

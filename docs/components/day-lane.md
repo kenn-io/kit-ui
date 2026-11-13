@@ -78,13 +78,13 @@ a `startMinute`, are not drawn.
 | labels             | `ariaLabel`, `dateOnlyLabel`, `overflowLabel`, `foldLabel`, `refoldLabel` | English      | Strings and small functions for translation                                        |
 
 `tone` takes the Chip tone vocabulary and colors the card's accent bar and
-the tick of a point item.
+a point card's top edge.
 
 ## Layout rules
 
 - An item's top is its start; its height is its length, at least
-  `minItemHeight` unless it crosses the day boundary. A point item (no `endMinute`) is a compact card with a
-  tick on the hour gutter at its exact minute. A late card keeps its minimum
+  `minItemHeight` unless it crosses the day boundary. A point item (no `endMinute`) is a minimum-height
+  card (44px by default) whose accent top edge marks its exact start minute. A late card keeps its minimum
   height, extending the axis below the last hour; intervals crossing the day
   boundary are clipped at the end of the day.
 - Overlap uses the rendered span, so two point items ten minutes apart sit
