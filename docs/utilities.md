@@ -247,11 +247,15 @@ defaults to `--bg-popover`; set it when the list sits on another surface.
 
 ```svelte
 <script lang="ts">
-  import { backdropCloses, escapeCloses } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
+  import { backdropCloses, escapeLayer } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
 </script>
 
-<svelte:window onkeydown={escapeCloses(close)} />
-<div class="my-overlay" role="presentation" {@attach backdropCloses(close)}>
+<div
+  class="my-overlay"
+  role="presentation"
+  {@attach (overlay) => escapeLayer(close, overlay)}
+  {@attach backdropCloses(close)}
+>
 ```
 
 The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
@@ -260,10 +264,16 @@ and ends on the backdrop itself, so a drag between the panel and the
 backdrop, in either direction, doesn't dismiss. It closes on the click rather than the press: on touch, a tap's
 click arrives after the finger lifts, and closing earlier would let that
 click activate the page control under the backdrop.
-`escapeCloses` closes one layer at a time: inner surfaces that already
-handled Escape (a popover's `dismissable`, a clearing search field) call
-`preventDefault`, and it respects that. Pair with `trapFocus` below for a
-complete custom overlay.
+`escapeLayer` puts the overlay on the Escape stack it shares with every
+popover's `dismissable`, and returns the function that takes it off. Escape
+goes only to the layer opened last, one per press, so a dialog opened over a
+drawer or an open dropdown closes before them. Pass the overlay's outermost
+element: Svelte mounts a child before its parent, and the element lets a
+dialog that opens already holding another dialog stay beneath it. A handler
+nearer the focus that already used Escape (a clearing search field) calls
+`preventDefault`, and the stack leaves that press alone, as it does an
+Escape that cancels an input method's candidate list. Pair with `trapFocus`
+below for a complete custom overlay.
 
 ## Focus trap
 

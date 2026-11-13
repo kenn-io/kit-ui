@@ -131,7 +131,7 @@ export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { scrollFade } from "./utils/scroll-fade.js";
-export { backdropCloses, escapeCloses } from "./utils/overlay.js";
+export { backdropCloses, escapeLayer } from "./utils/overlay.js";
 export { formatCost, formatCount, formatDuration, formatInitials, formatNumber, formatTokenCount, } from "./utils/format.js";
 export { createRefreshScheduler, DEFAULT_REFRESH_INTERVAL_MS, formatRefreshAge, type RefreshReason, type RefreshScheduler, } from "./utils/refresh.js";
 export { appShortcuts, createShortcutManager, formatShortcutKeys, initShortcuts, isMacPlatform, parseShortcut, ROOT_SCOPE, shortcutMatches, type ParsedShortcut, type RegisteredShortcut, type ShortcutManager, type ShortcutOptions, } from "./utils/shortcuts.js";

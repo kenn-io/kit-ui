@@ -12,9 +12,14 @@
  */
 export declare function backdropCloses(close: () => void): (backdrop: HTMLElement) => () => void;
 /**
- * Escape closes one layer at a time: an inner surface that already handled
- * the key (a popover's dismissable(), a search field clearing itself)
- * calls preventDefault, and this respects it — so Escape peels the top
- * layer instead of collapsing the whole stack. Wire on `svelte:window`.
+ * Open a layer that Escape closes. Escape goes only to the layer opened
+ * last, one per press. Returns the function that removes the layer; call it
+ * from an `$effect` or an attachment so the layer lives while the surface
+ * is mounted: `{@attach (node) => escapeLayer(close, node)}`.
+ *
+ * `element` is the layer's outermost element. Svelte mounts a child before
+ * its parent, so a dialog that opens already holding an open dialog would
+ * otherwise land beneath it; a layer goes below any open layer inside its
+ * element instead.
  */
-export declare function escapeCloses(close: () => void): (event: KeyboardEvent) => void;
+export declare function escapeLayer(onEscape: () => void, element?: Element | null): () => void;
