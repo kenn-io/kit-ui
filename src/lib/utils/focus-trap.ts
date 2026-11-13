@@ -12,6 +12,9 @@
  * - restores focus to the previously focused element on teardown. Safari
  *   and Firefox on macOS do not focus a button on click, so when nothing
  *   is focused the trigger is the control last pressed with a pointer.
+ *   When the trigger is gone or can no longer take focus (a confirmed
+ *   delete removed its row), focus goes to the nearest tab stop left where
+ *   it was. Focus the app already moved somewhere else stays put.
  */
 
 export const TABBABLE_SELECTOR = [
@@ -53,11 +56,15 @@ if (typeof document !== "undefined") {
   );
 }
 
-function focusTrigger(): HTMLElement | null {
+// Focus already inside the surface is not the trigger: Svelte applies
+// autofocus before attachments run when focus was on the page.
+function focusTrigger(surface: HTMLElement): HTMLElement | null {
   const active = document.activeElement;
-  if (active instanceof HTMLElement && active !== document.body) return active;
+  if (active instanceof HTMLElement && active !== document.body && !surface.contains(active)) {
+    return active;
+  }
   const pressed = lastPressed?.deref();
-  return pressed?.isConnected ? pressed : null;
+  return pressed?.isConnected && !surface.contains(pressed) ? pressed : null;
 }
 
 let scrollLocks = 0;
@@ -150,8 +157,83 @@ function focusGuard(onFocus: () => void): HTMLSpanElement {
   return guard;
 }
 
+// Surfaces with a live trap, so a fallback stays inside an outer one.
+const openSurfaces = new Set<HTMLElement>();
+
+/** Focus is on nothing a person can use: the page itself, an element that
+ * left, or something inside the surface that is closing. */
+function focusIsLost(surface: HTMLElement): boolean {
+  const active = document.activeElement;
+  return (
+    !(active instanceof HTMLElement) ||
+    active === document.body ||
+    !active.isConnected ||
+    surface.contains(active)
+  );
+}
+
+/** Where the trigger was: each ancestor with its element siblings. Element
+ * siblings, since Svelte's anchor comments beside the trigger leave with it. */
+type Step = { node: Element; next: Element | null; previous: Element | null };
+
+function pathTo(el: HTMLElement | null): Step[] {
+  const path: Step[] = [];
+  for (let node: Element | null = el; node && node !== document.body; node = node.parentElement) {
+    path.push({ node, next: node.nextElementSibling, previous: node.previousElementSibling });
+  }
+  return path;
+}
+
+const follows = (a: Node, b: Node) =>
+  (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+/** The tab stop nearest where the trigger was: the first one after that
+ * spot, else the last one before it, searching outward from the closest
+ * ancestor still on the page. */
+function nearestStop(path: Step[], surface: HTMLElement): HTMLElement | null {
+  const trigger = path[0]?.node;
+  if (!trigger) return null;
+  let scope: Element | null;
+  let isAfter: (el: Element) => boolean;
+  if (trigger.isConnected) {
+    // Still on the page but disabled, hidden or inert.
+    scope = trigger.parentElement;
+    isAfter = (el) => follows(trigger, el) && !trigger.contains(el);
+  } else {
+    const kept = path.findIndex((step) => step.node.isConnected);
+    const parent = path[kept]?.node ?? document.body;
+    const { next = null, previous = null } = path[(kept === -1 ? path.length : kept) - 1] ?? {};
+    scope = parent;
+    if (next?.parentElement === parent) {
+      isAfter = (el) => el === next || follows(next, el);
+    } else if (previous?.parentElement === parent) {
+      isAfter = (el) => follows(previous, el) && !previous.contains(el);
+    } else {
+      isAfter = (el) => follows(parent, el);
+    }
+  }
+  for (; scope; scope = scope.parentElement) {
+    const stops = Array.from(scope.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
+      (el) => isTabStop(el) && !surface.contains(el) && !el.hasAttribute("data-kit-focus-guard"),
+    );
+    const found = stops.find(isAfter) ?? stops.filter((el) => !isAfter(el)).pop();
+    if (found) return found;
+    // An outer trap that has nothing else to focus takes focus itself.
+    if (scope instanceof HTMLElement && openSurfaces.has(scope)) return scope;
+  }
+  return null;
+}
+
+/** Focus the trigger, or the nearest tab stop when it cannot take focus. */
+function restoreFocus(previous: HTMLElement | null, path: Step[], surface: HTMLElement): void {
+  previous?.focus();
+  if (previous && document.activeElement === previous) return;
+  nearestStop(path, surface)?.focus();
+}
+
 export function trapFocus(surface: HTMLElement): () => void {
-  const previous = focusTrigger();
+  const previous = focusTrigger(surface);
+  const path = pathTo(previous);
 
   // Initial focus: the first [autofocus] descendant that can actually take
   // focus (visible, not disabled). Verify focus really moved into the
@@ -178,11 +260,21 @@ export function trapFocus(surface: HTMLElement): () => void {
   surface.before(startGuard);
   surface.after(endGuard);
   const unlockScroll = lockBodyScroll();
+  openSurfaces.add(surface);
 
   return () => {
     startGuard.remove();
     endGuard.remove();
     unlockScroll();
-    previous?.focus();
+    openSurfaces.delete(surface);
+    if (!focusIsLost(surface)) return;
+    restoreFocus(previous, path, surface);
+    // Svelte removes a block's DOM before it runs the block's teardowns, but
+    // the update that closed the surface can remove the trigger later on,
+    // such as a confirmed delete that drops the trigger's row. Look again
+    // once that update is done.
+    queueMicrotask(() => {
+      if (focusIsLost(surface)) restoreFocus(previous, path, surface);
+    });
   };
 }

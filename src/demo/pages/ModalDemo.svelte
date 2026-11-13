@@ -9,6 +9,10 @@
   let toneOpen = $state<ModalTone | null>(null);
   let tallOpen = $state(false);
 
+  const allRows = ["alpha", "beta", "gamma"];
+  let rows = $state([...allRows]);
+  let pendingDelete = $state<string | null>(null);
+
   const tones: { tone: ModalTone; title: string; body: string }[] = [
     {
       tone: "info",
@@ -109,6 +113,48 @@
 </DemoSection>
 
 <DemoSection
+  title="Confirm removes the trigger"
+  description="Deleting a row also removes the button that opened the dialog. Focus then goes to the next row's button, or the previous row's when the last row went, instead of dropping to the page."
+  code={`{#if pending}
+  <Modal title="Delete {pending}?" tone="danger" onclose={() => (pending = null)}>
+    {#snippet footer()}
+      <Button label="Cancel" onclick={() => (pending = null)} />
+      <Button label="Delete" tone="danger" surface="solid" onclick={remove} />
+    {/snippet}
+  </Modal>
+{/if}
+{#each rows as row (row)}
+  <Button label="Delete {row}" onclick={() => (pending = row)} />
+{/each}`}
+>
+  <!-- The dialog comes before the rows, so Svelte tears it down before it
+       removes the row: the restore has to wait for the whole update. -->
+  {#if pendingDelete}
+    {@const name = pendingDelete}
+    <Modal title={`Delete ${name}?`} tone="danger" onclose={() => (pendingDelete = null)}>
+      {#snippet footer()}
+        <Button label="Cancel" onclick={() => (pendingDelete = null)} />
+        <Button
+          label="Delete"
+          tone="danger"
+          surface="solid"
+          onclick={() => {
+            rows = rows.filter((row) => row !== name);
+            pendingDelete = null;
+          }}
+        />
+      {/snippet}
+    </Modal>
+  {/if}
+  <ul class="demo-rows">
+    {#each rows as row (row)}
+      <li><Button label={`Delete ${row}`} onclick={() => (pendingDelete = row)} /></li>
+    {/each}
+  </ul>
+  <Button label="Restore rows" onclick={() => (rows = [...allRows])} />
+</DemoSection>
+
+<DemoSection
   title="Title-only confirmation"
   description="When the title says it all, leave the body out. A body whose content is all conditional, such as an error that has not happened, renders no empty band either."
   code={`{#if open}
@@ -158,3 +204,14 @@
     </Modal>
   {/if}
 </DemoSection>
+
+<style>
+  .demo-rows {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+</style>

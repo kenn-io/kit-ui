@@ -44,6 +44,181 @@ test.describe("Modal focus trap", () => {
   });
 });
 
+test.describe("Focus restore when the trigger is gone", () => {
+  // Safari and Firefox on macOS leave focus on nothing when a button is
+  // pressed. Reproduce that default action unless the page prevented it.
+  const unfocusedPresses = (page: Page) =>
+    page.evaluate(() => {
+      window.addEventListener("mousedown", (event) => {
+        if (event.defaultPrevented) return;
+        event.preventDefault();
+        (document.activeElement as HTMLElement | null)?.blur();
+      });
+    });
+  const confirmDelete = async (page: Page, row: string) => {
+    await page.getByRole("button", { name: `Delete ${row}`, exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: `Delete ${row}?` });
+    await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(dialog).toBeHidden();
+  };
+
+  test("confirming focuses the next row's button", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await confirmDelete(page, "beta");
+    await expect(page.getByRole("button", { name: "Delete beta" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Delete gamma" })).toBeFocused();
+  });
+
+  test("removing the last row focuses the previous row's button", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await confirmDelete(page, "gamma");
+    await expect(page.getByRole("button", { name: "Delete beta" })).toBeFocused();
+  });
+
+  test("removing every row focuses the control after the list", async ({ page }) => {
+    await gotoPage(page, "modal");
+    for (const row of ["alpha", "beta", "gamma"]) await confirmDelete(page, row);
+    await expect(page.getByRole("button", { name: "Restore rows" })).toBeFocused();
+  });
+
+  test("the fallback works when a press does not focus the button", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await unfocusedPresses(page);
+    await confirmDelete(page, "alpha");
+    await expect(page.getByRole("button", { name: "Delete beta" })).toBeFocused();
+  });
+
+  test("a trigger that stays is still the one restored", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await unfocusedPresses(page);
+    const trigger = page.getByRole("button", { name: "Delete beta" });
+    await trigger.click();
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
+  test("a surface that focuses its own field still restores the pressed button", async ({
+    page,
+  }) => {
+    // Svelte applies autofocus when focus is on the page, which is where a
+    // press that does not focus its button leaves it.
+    await gotoPage(page, "command-palette");
+    await unfocusedPresses(page);
+    const trigger = page.getByRole("button", { name: /Open palette/ }).first();
+    await trigger.click();
+    await expect(page.locator(".kit-command-palette input")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".kit-command-palette")).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
+  // Raw trapFocus on a hand-built page. `close` runs after the surface left
+  // and decides when the trap releases and what else changes around it.
+  type Close = "disable-trigger" | "remove-row" | "app-focuses" | "app-focuses-after-removal";
+  async function openAndClose(page: Page, html: string, close: Close) {
+    const errors: Error[] = [];
+    page.on("pageerror", (error) => errors.push(error));
+    await gotoPage(page, "modal");
+    const result = await page.evaluate(
+      async ({ html, close }) => {
+        const { trapFocus } = await import("/src/lib/utils/focus-trap.ts");
+        document.body.innerHTML = html;
+        const $ = (selector: string) => document.querySelector<HTMLElement>(selector)!;
+        $("#trigger").focus();
+        const surface = document.createElement("div");
+        surface.tabIndex = -1;
+        surface.innerHTML = `<input aria-label="Inside">`;
+        document.body.append(surface);
+        const release = trapFocus(surface);
+        surface.remove();
+        if (close === "disable-trigger") {
+          ($("#trigger") as HTMLButtonElement).disabled = true;
+          release();
+        } else if (close === "remove-row") {
+          $("#row").remove();
+          release();
+        } else if (close === "app-focuses") {
+          $("#target").focus();
+          release();
+        } else {
+          // The trap releases first; the row and the app's own focus call
+          // come later in the same update.
+          release();
+          $("#row").remove();
+          $("#target").focus();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const active = document.activeElement;
+        return active === document.body ? "BODY" : (active?.getAttribute("aria-label") ?? null);
+      },
+      { html, close },
+    );
+    expect(errors).toEqual([]);
+    return result;
+  }
+
+  test("a trigger disabled while open hands focus to the next control", async ({ page }) => {
+    const focused = await openAndClose(
+      page,
+      `<input aria-label="Before"><button id="trigger" aria-label="Trigger">Go</button>
+       <input aria-label="After">`,
+      "disable-trigger",
+    );
+    expect(focused).toBe("After");
+  });
+
+  test("with nothing left to focus, closing does not throw", async ({ page }) => {
+    const focused = await openAndClose(
+      page,
+      `<div id="row"><button id="trigger" aria-label="Trigger">Go</button></div>`,
+      "remove-row",
+    );
+    expect(focused).toBe("BODY");
+  });
+
+  test("a fallback stays inside an outer trap with nothing else to focus", async ({ page }) => {
+    await gotoPage(page, "modal");
+    const focused = await page.evaluate(async () => {
+      const { trapFocus } = await import("/src/lib/utils/focus-trap.ts");
+      document.body.innerHTML = `<input aria-label="Page">
+        <div id="outer" tabindex="-1" aria-label="Outer"><button id="trigger">Go</button></div>`;
+      const outer = document.querySelector<HTMLElement>("#outer")!;
+      trapFocus(outer);
+      document.querySelector<HTMLElement>("#trigger")!.focus();
+      const inner = document.createElement("div");
+      inner.tabIndex = -1;
+      document.body.append(inner);
+      const release = trapFocus(inner);
+      inner.remove();
+      document.querySelector("#trigger")!.remove();
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return document.activeElement?.getAttribute("aria-label") ?? null;
+    });
+    expect(focused).toBe("Outer");
+  });
+
+  test("focus the app moved during close stays put", async ({ page }) => {
+    const focused = await openAndClose(
+      page,
+      `<button id="trigger" aria-label="Trigger">Go</button><input id="target" aria-label="Target">`,
+      "app-focuses",
+    );
+    expect(focused).toBe("Target");
+  });
+
+  test("focus the app moves after the trigger left stays put", async ({ page }) => {
+    const focused = await openAndClose(
+      page,
+      `<div id="row"><button id="trigger" aria-label="Trigger">Go</button></div>
+       <input aria-label="Neighbour"><input id="target" aria-label="Target">`,
+      "app-focuses-after-removal",
+    );
+    expect(focused).toBe("Target");
+  });
+});
+
 test.describe("DetailDrawer focus trap", () => {
   test("focus enters, stays trapped, Escape restores the trigger", async ({ page }) => {
     await gotoPage(page, "detail-drawer");
