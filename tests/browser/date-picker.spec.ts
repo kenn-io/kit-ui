@@ -18,7 +18,10 @@ test("opens on the chosen date's month and commits a picked day", async ({ page 
   await expect(dialog).toContainText("May 2026");
   await expect(dialog.locator(".kit-calendar__day.selected")).toHaveText("16");
 
-  await dialog.locator(".kit-calendar__day:not(.outside)").filter({ hasText: /^20$/ }).click();
+  await dialog
+    .locator(".kit-calendar__day:not(.outside)")
+    .filter({ hasText: /^\s*20\s*$/ })
+    .click();
   await expect(dialog).toBeHidden();
   await expect(page.getByTestId("date-picker-value")).toHaveText("2026-05-20");
   await expect(trigger).toBeFocused();
@@ -43,6 +46,6 @@ test("maxDate disables later days", async ({ page }) => {
   await page.getByRole("button", { name: "Last day" }).click();
   const dialog = page.getByRole("dialog", { name: "Select date" });
   await expect(
-    dialog.locator(".kit-calendar__day:not(.outside)").filter({ hasText: /^16$/ }),
+    dialog.locator(".kit-calendar__day:not(.outside)").filter({ hasText: /^\s*16\s*$/ }),
   ).toBeDisabled();
 });

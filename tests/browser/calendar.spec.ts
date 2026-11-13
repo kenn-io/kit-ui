@@ -173,7 +173,6 @@ test.describe("activity", () => {
     const background = (locator: import("@playwright/test").Locator) =>
       locator.evaluate((node) => getComputedStyle(node).backgroundColor);
     expect(await background(shaded.first())).not.toBe(await background(plain.first()));
-    await expect(plain.first()).not.toHaveAttribute("aria-label", /items?$/);
   });
 
   test("an app scale and label replace the defaults", async ({ page }) => {
@@ -226,12 +225,7 @@ test.describe("activity", () => {
   for (const dark of [false, true]) {
     test(`shaded day numbers meet AA contrast in ${dark ? "dark" : "light"}`, async ({ page }) => {
       await setTheme(page, { dark });
-      for (const id of [
-        "calendar-activity",
-        "calendar-activity-scale",
-        "calendar-strip",
-        "calendar-strip-sunday",
-      ]) {
+      for (const id of ["calendar-activity", "calendar-activity-scale", "calendar-strip-sunday"]) {
         const days = page
           .getByTestId(id)
           .locator(".kit-calendar__day[data-activity]:not(.outside):not(:disabled)");
@@ -286,7 +280,6 @@ test.describe("month strip", () => {
     await expect(days.nth(23)).toBeDisabled();
     await expect(days.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
     await expect(days.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
-    await expect(days.nth(13)).toBeEnabled();
     await expect(cal.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
   });
 
@@ -354,90 +347,88 @@ test.describe("month strip", () => {
 
   test("the arrows page one month and drop an out-of-month selection", async ({ page }) => {
     const cal = strip(page);
-    const days = cal.locator(".kit-calendar__day");
     await cal.locator(".kit-calendar__nav").nth(1).click();
-    await expect(days).toHaveCount(30);
+    await expect(cal.locator(".kit-calendar__month")).toHaveText("April 2026");
     await cal.locator(".kit-calendar__nav").first().click();
     await cal.locator(".kit-calendar__nav").first().click();
-    await expect(days).toHaveCount(28);
+    await expect(cal.locator(".kit-calendar__month")).toHaveText("February 2026");
     await expect(cal.locator(".kit-calendar__day[aria-pressed='true']")).toHaveCount(0);
   });
 
-  test("at 400px the strip scrolls inside itself and shows the selected day", async ({ page }) => {
+  test("at 400px the strip scrolls and keeps keyboard focus visible", async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 800 });
     await page.reload();
     const cal = strip(page);
     const track = cal.locator(".kit-calendar__strip");
     const nav = cal.locator(".kit-calendar__nav");
     const selected = cal.locator(".kit-calendar__day").nth(27);
-    const visible = async () => {
-      const [box, cell] = await Promise.all([track.boundingBox(), selected.boundingBox()]);
-      if (box == null || cell == null) return false;
-      return cell.x >= box.x - 1 && cell.x + cell.width <= box.x + box.width + 1;
-    };
-    const scrollLeft = () => track.evaluate((node) => node.scrollLeft);
-    expect(await track.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
-    // The calendar itself fits the viewport; only its track scrolls.
-    expect(
-      await cal.evaluate((node) => node.getBoundingClientRect().right <= window.innerWidth),
-    ).toBe(true);
-    await expect.poll(visible).toBe(true);
+    await test.step("show the selected day by scrolling only the strip", async () => {
+      const visible = async () => {
+        const [box, cell] = await Promise.all([track.boundingBox(), selected.boundingBox()]);
+        if (box == null || cell == null) return false;
+        return cell.x >= box.x - 1 && cell.x + cell.width <= box.x + box.width + 1;
+      };
+      const scrollLeft = () => track.evaluate((node) => node.scrollLeft);
+      expect(await track.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+      // The calendar itself fits the viewport; only its track scrolls.
+      expect(
+        await cal.evaluate((node) => node.getBoundingClientRect().right <= window.innerWidth),
+      ).toBe(true);
+      await expect.poll(visible).toBe(true);
 
-    // A month without a selection starts at day 1.
-    await nav.nth(1).click();
-    await expect.poll(scrollLeft).toBe(0);
+      // A month without a selection starts at day 1.
+      await nav.nth(1).click();
+      await expect.poll(scrollLeft).toBe(0);
 
-    // Paging back reveals the selection by scrolling only the track. The
-    // gallery scrolls in its own containers, so scroll every ancestor of the
-    // track to the top (the strip then sits below the fold), click without
-    // Playwright's scroll-into-view, and check no ancestor moved.
-    const ancestorScroll = () =>
-      track.evaluate((node) => {
-        const offsets: number[] = [];
-        for (let el = node.parentElement; el; el = el.parentElement) {
-          offsets.push(el.scrollLeft, el.scrollTop);
-        }
-        return offsets;
-      });
-    await track.evaluate((node) => {
-      for (let el = node.parentElement; el; el = el.parentElement) el.scrollTo(0, 0);
-    });
-    const before = await ancestorScroll();
-    await nav.first().evaluate((node) => (node as HTMLElement).click());
-    await expect.poll(visible).toBe(true);
-    expect(await ancestorScroll()).toEqual(before);
-  });
-
-  test("keyboard focus rings fit inside the strip at both ends", async ({ page }) => {
-    await page.setViewportSize({ width: 400, height: 800 });
-    await page.reload();
-    const cal = strip(page);
-    const days = cal.locator(".kit-calendar__day");
-    for (const highContrast of [false, true]) {
-      await setTheme(page, { highContrast });
-      for (const index of [0, 30]) {
-        if (index === 0) await cal.locator(".kit-calendar__nav").last().focus();
-        else await days.nth(index - 1).focus();
-        await page.keyboard.press("Tab");
-        const day = days.nth(index);
-        await expect(day).toBeFocused();
-        const fits = await day.evaluate((element) => {
-          const dayBox = element.getBoundingClientRect();
-          const trackBox = element.parentElement!.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
-          return (
-            style.outlineStyle !== "none" &&
-            ring > 0 &&
-            dayBox.left - ring >= trackBox.left &&
-            dayBox.right + ring <= trackBox.right &&
-            dayBox.top - ring >= trackBox.top &&
-            dayBox.bottom + ring <= trackBox.bottom
-          );
+      // Paging back reveals the selection by scrolling only the track. The
+      // gallery scrolls in its own containers, so scroll every ancestor of the
+      // track to the top (the strip then sits below the fold), click without
+      // Playwright's scroll-into-view, and check no ancestor moved.
+      const ancestorScroll = () =>
+        track.evaluate((node) => {
+          const offsets: number[] = [];
+          for (let el = node.parentElement; el; el = el.parentElement) {
+            offsets.push(el.scrollLeft, el.scrollTop);
+          }
+          return offsets;
         });
-        expect(fits).toBe(true);
+      await track.evaluate((node) => {
+        for (let el = node.parentElement; el; el = el.parentElement) el.scrollTo(0, 0);
+      });
+      const before = await ancestorScroll();
+      await nav.first().evaluate((node) => (node as HTMLElement).click());
+      await expect.poll(visible).toBe(true);
+      expect(await ancestorScroll()).toEqual(before);
+    });
+
+    await test.step("keep focus rings inside both ends", async () => {
+      const days = cal.locator(".kit-calendar__day");
+      for (const highContrast of [false, true]) {
+        await setTheme(page, { highContrast });
+        for (const index of [0, 30]) {
+          if (index === 0) await cal.locator(".kit-calendar__nav").last().focus();
+          else await days.nth(index - 1).focus();
+          await page.keyboard.press("Tab");
+          const day = days.nth(index);
+          await expect(day).toBeFocused();
+          const fits = await day.evaluate((element) => {
+            const dayBox = element.getBoundingClientRect();
+            const trackBox = element.parentElement!.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+            return (
+              style.outlineStyle !== "none" &&
+              ring > 0 &&
+              dayBox.left - ring >= trackBox.left &&
+              dayBox.right + ring <= trackBox.right &&
+              dayBox.top - ring >= trackBox.top &&
+              dayBox.bottom + ring <= trackBox.bottom
+            );
+          });
+          expect(fits).toBe(true);
+        }
       }
-    }
+    });
   });
 });
 

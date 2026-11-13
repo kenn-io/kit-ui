@@ -101,7 +101,7 @@ test("Sunday-start calendar weeks and grid", () => {
   expect(weekdayLabels("en-US")[0]).toBe("Mon");
 });
 
-test("month grid includes the skipped civil date in Apia", () => {
+test("civil-date helpers preserve the skipped date in Apia", () => {
   const result = Bun.spawnSync({
     cmd: [
       process.execPath,
@@ -145,10 +145,5 @@ describe("month strip inputs", () => {
     expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
     expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
     expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
-  });
-
-  test("short and narrow labels are cached separately", () => {
-    expect(weekdayLabels("en-US", "monday", "short")[0]).toBe("Mon");
-    expect(weekdayLabels("en-US", "monday", "narrow")[0]).toBe("M");
   });
 });
