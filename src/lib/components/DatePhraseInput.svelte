@@ -34,6 +34,9 @@
     /** BCP 47 tag for month and weekday names offered as completions.
      * Omitted = browser locale. */
     locale?: string | undefined;
+    /** Also complete set words ("Fridays", "weekends", "every"), for
+     * owners that parse sets. */
+    sets?: boolean;
     /** Focus the field when it mounts. */
     autofocus?: boolean;
     /** Called on every edit, including an accepted completion and clear. */
@@ -56,6 +59,7 @@
     hint = "",
     invalid = false,
     locale = undefined,
+    sets = false,
     autofocus = false,
     oninput = undefined,
     onsubmit = undefined,
@@ -74,7 +78,7 @@
   let overflowing = $state(false);
   let ghostLeft = $state(0);
 
-  const completion = $derived(completeDatePhrase(value, { locale }));
+  const completion = $derived(completeDatePhrase(value, { locale, sets }));
   const ghost = $derived(focused && caretAtEnd && !overflowing ? completion : "");
 
   function measure(): void {

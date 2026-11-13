@@ -252,6 +252,95 @@ test.describe("DateRangePicker", () => {
   });
 });
 
+test.describe("DateRangePicker with dateSets", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoPage(page, "date-range-picker");
+  });
+
+  const demo = (page: Page) => page.getByTestId("set-range-picker");
+  const panel = (page: Page) => page.locator(".kit-date-range-picker__panel");
+  const readout = (page: Page) => page.getByTestId("set-range-selection");
+  const trigger = (page: Page) => demo(page).locator(".kit-date-range-picker__trigger");
+  const selected = (page: Page) => panel(page).locator(".kit-calendar__day.selected");
+  const fridays = {
+    mode: "custom",
+    from: "2026-05-29",
+    to: "2026-06-12",
+    dates: ["2026-05-29", "2026-06-05", "2026-06-12"],
+    label: "Fridays",
+  };
+
+  test("a set previews as separate days, then Enter commits it", async ({ page }) => {
+    await trigger(page).click();
+    await field(page).pressSequentially("last 3 Fr");
+    await expect(ghost(page)).toHaveText("idays");
+    await field(page).press("Tab");
+    await expect(summary(page)).toHaveText("Fridays · May 29 – Jun 12, 2026 · 3 days");
+    await expect(panel(page).getByRole("radio", { name: "Custom" })).toBeChecked();
+    await expect(panel(page).locator(".kit-calendar__month")).toHaveText(/May 2026/);
+    // May's grid runs through Jun 7, so Jun 12 is off this page.
+    await expect(selected(page)).toHaveText(["29", "5"]);
+    // Separate pills, no band between them.
+    await expect(panel(page).locator(".kit-calendar__day.selected:not(.range-start)")).toHaveCount(
+      0,
+    );
+    await expect(readout(page)).toHaveText('{"mode":"relative","days":7}');
+
+    await field(page).press("Enter");
+    await expect(readout(page)).toHaveText(JSON.stringify(fridays));
+    await expect(trigger(page)).toHaveText("Fridays · 3 days");
+    await expect(selected(page)).toHaveText(["29", "5"]);
+  });
+
+  test("a set passed back in through selection shows again", async ({ page }) => {
+    await page.getByRole("button", { name: "External: saved Fridays" }).click();
+    await expect(trigger(page)).toHaveText("Fridays · 2 days");
+    await trigger(page).click();
+    await expect(panel(page).getByRole("radio", { name: "Custom" })).toBeChecked();
+    await expect(panel(page).locator(".kit-calendar__month")).toHaveText(/June 2026/);
+    await expect(selected(page)).toHaveText(["5", "12"]);
+    await expect(panel(page).locator(".kit-date-range-picker__endpoint-value")).toHaveText([
+      "2026-06-05",
+      "2026-06-12",
+    ]);
+    // The other tabs still work from a set.
+    await panel(page).getByRole("radio", { name: "Relative" }).click();
+    await panel(page).getByRole("button", { name: "30d" }).click();
+    await expect(readout(page)).toHaveText('{"mode":"relative","days":30}');
+  });
+
+  test("a click after a set starts a fresh two-click pick", async ({ page }) => {
+    await page.getByRole("button", { name: "External: saved Fridays" }).click();
+    await trigger(page).click();
+    const day = (n: number) =>
+      panel(page)
+        .locator(".kit-calendar__day:not(.outside)")
+        .filter({ hasText: new RegExp(`^${n}$`) });
+    await day(8).click();
+    await expect(selected(page)).toHaveText(["8"]);
+    await expect(readout(page)).toHaveText(/"dates"/);
+    await day(10).click();
+    await expect(readout(page)).toHaveText(
+      '{"mode":"custom","from":"2026-06-08","to":"2026-06-10"}',
+    );
+    await expect(trigger(page)).toHaveText("2026-06-08 - 2026-06-10");
+  });
+
+  test("without dateSets a set phrase is no match and gets no set completion", async ({ page }) => {
+    await page.getByTestId("typed-range-picker").locator(".kit-date-range-picker__trigger").click();
+    await field(page).pressSequentially("last 3 Fr");
+    await expect(ghost(page)).toHaveCount(0);
+    await field(page).pressSequentially("idays");
+    await field(page).press("Enter");
+    await expect(summary(page)).toHaveText(
+      "No dates match that. Try “last 30 days” or “Sep 10 to Oct 20”.",
+    );
+    await expect(page.getByTestId("typed-range-selection")).toHaveText(
+      '{"mode":"relative","days":7}',
+    );
+  });
+});
+
 test.describe("touch devices", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
 

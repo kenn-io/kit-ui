@@ -36,6 +36,15 @@
   let typedSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
   const typedRange = $derived(resolveRange(typedSelection));
   let plainSelection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
+  let setSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
+  // A set committed earlier, as an app would restore it from storage.
+  const savedSet: RangeSelection = {
+    mode: "custom",
+    from: "2026-06-05",
+    to: "2026-06-12",
+    dates: ["2026-06-05", "2026-06-12"],
+    label: "Fridays",
+  };
 
   let blockSelection = $state.raw<RangeSelection>({
     mode: "custom",
@@ -156,6 +165,29 @@
     />
     <output data-testid="typed-range-selection">{JSON.stringify(typedSelection)}</output>
     <output data-testid="typed-range-bounds">{typedRange.from} → {typedRange.to}</output>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Sets of separate days"
+  description="dateSets lets typed text pick separate days: “last 3 Fridays”, “weekends since October”, “weekdays this month”, “Mondays in March”. The calendar marks each day on its own, the summary names the set, and Enter commits a custom selection whose dates lists the days. Pass that selection back in and the picker shows the set again."
+  code={`<DateRangePicker {selection} onSelect={(sel) => (selection = sel)} dateSets />
+// sel.mode === "custom" && sel.dates → ["2026-10-30", "2026-11-06", ...], sel.label → "Fridays"`}
+>
+  <div data-testid="set-range-picker" class="typed-demo">
+    <DateRangePicker
+      selection={setSelection}
+      onSelect={(sel) => (setSelection = sel)}
+      locale="en-US"
+      dateSets
+    />
+    <output data-testid="set-range-selection">{JSON.stringify(setSelection)}</output>
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: saved Fridays"
+      onclick={() => (setSelection = savedSet)}
+    />
   </div>
 </DemoSection>
 

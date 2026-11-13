@@ -13,7 +13,8 @@
  * - relative: a rolling window ending today (last N days; days === 0 means
  *   "all", anchored to `earliestDate`).
  * - calendar: a single day/week/month period the user can step through.
- * - custom: an explicit from/to span.
+ * - custom: an explicit from/to span, or (with DateRangePicker's
+ *   `dateSets`) a set of separate days in `dates` that `from`/`to` bound.
  */
 export type RangeMode = "relative" | "calendar" | "custom";
 export type WeekStart = "monday" | "sunday";
@@ -35,6 +36,12 @@ export interface CustomSelection {
   mode: "custom";
   from: string;
   to: string;
+  /** Only from a DateRangePicker with `dateSets`: the separate days a set
+   * phrase picked ("last 3 Fridays"), ascending, from `from` to `to`.
+   * Absent for an ordinary span. */
+  dates?: string[] | undefined;
+  /** The set's name for display ("Fridays"), alongside `dates`. */
+  label?: string | undefined;
 }
 
 export type RangeSelection = RelativeSelection | CalendarSelection | CustomSelection;

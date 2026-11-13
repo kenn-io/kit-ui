@@ -20,6 +20,9 @@ interface Props {
     /** BCP 47 tag for month and weekday names offered as completions.
      * Omitted = browser locale. */
     locale?: string | undefined;
+    /** Also complete set words ("Fridays", "weekends", "every"), for
+     * owners that parse sets. */
+    sets?: boolean;
     /** Focus the field when it mounts. */
     autofocus?: boolean;
     /** Called on every edit, including an accepted completion and clear. */

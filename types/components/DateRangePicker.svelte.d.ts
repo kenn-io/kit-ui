@@ -56,6 +56,15 @@ interface Props extends CalendarNavLabels {
     noMatchLabel?: string;
     /** Day count after a typed range's dates in the summary line. */
     dayCountLabel?: (count: number) => string;
+    /** Let typed text pick a set of separate days ("last 3 Fridays",
+     * "weekends since October"). A set commits as a `custom` selection
+     * whose `dates` lists the days and `label` names them; `from`/`to` are
+     * its first and last day. Off by default. */
+    dateSets?: boolean;
+    /** Set names in the summary and trigger. One weekday is named from the
+     * locale ("Fridays"). */
+    weekendsLabel?: string;
+    weekdaysLabel?: string;
 }
 declare const DateRangePicker: import("svelte").Component<Props, {}, "">;
 type DateRangePicker = ReturnType<typeof DateRangePicker>;

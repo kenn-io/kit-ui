@@ -85,6 +85,15 @@
     noMatchLabel?: string;
     /** Day count after a typed range's dates in the summary line. */
     dayCountLabel?: (count: number) => string;
+    /** Let typed text pick a set of separate days ("last 3 Fridays",
+     * "weekends since October"). A set commits as a `custom` selection
+     * whose `dates` lists the days and `label` names them; `from`/`to` are
+     * its first and last day. Off by default. */
+    dateSets?: boolean;
+    /** Set names in the summary and trigger. One weekday is named from the
+     * locale ("Fridays"). */
+    weekendsLabel?: string;
+    weekdaysLabel?: string;
   }
 
   let {
@@ -119,6 +128,9 @@
     textEntryHint = "Type or select dates.",
     noMatchLabel = "No dates match that. Try “last 30 days” or “Sep 10 to Oct 20”.",
     dayCountLabel = (count: number) => (count === 1 ? "1 day" : `${count} days`),
+    dateSets = false,
+    weekendsLabel = "Weekends",
+    weekdaysLabel = "Weekdays",
     // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
     // own English defaults stay the single source.
     ...calendarLabels
@@ -139,6 +151,8 @@
   let calMonth = $state<string>(todayStr());
   let customFrom = $state<string>("");
   let customTo = $state<string>("");
+  // The committed set's days, when the selection is one.
+  let customDates = $state<string[] | null>(null);
   // Two-click range pick on the Custom tab: true after the first click,
   // meaning the next pick completes the range.
   let customPending = $state(false);
@@ -155,23 +169,41 @@
   // and holds while a phrase is incomplete, so the grid doesn't flicker on
   // every keystroke. Nothing commits until Enter.
   let phrase = $state("");
-  let typedPreview = $state<DateRange | null>(null);
+  // A typed range, or with `dateSets` a set: its days plus first and last.
+  type TypedPick = DateRange & { dates?: string[]; label?: string };
+  let typedPreview = $state<TypedPick | null>(null);
   let noMatch = $state(false);
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const typed = $derived(
-    datePhraseRange(parseDatePhrase(phrase, { locale, weekStart, maxDate, earliestDate })),
-  );
+  const typed = $derived.by((): TypedPick | null => {
+    const result = parseDatePhrase(phrase, {
+      locale,
+      weekStart,
+      maxDate,
+      earliestDate,
+      sets: dateSets,
+      weekendsLabel,
+      weekdaysLabel,
+    });
+    const span = datePhraseRange(result);
+    if (!span) return null;
+    return result.kind === "dates" ? { ...span, dates: result.dates, label: result.label } : span;
+  });
+
+  // "Fridays · Oct 30 – Nov 13, 2026 · 3 days" for a set; without the
+  // label for a range.
+  function describe(pick: TypedPick): string {
+    const days = dayCountLabel(pick.dates?.length ?? daysInRange(pick.from, pick.to));
+    const span = formatDateRangeLabel(pick.from, pick.to, locale);
+    return pick.label ? `${pick.label} · ${span} · ${days}` : `${span} · ${days}`;
+  }
 
   // Describes what the calendar shows: the current parse, or the preview
   // held while the text is incomplete, so the line and the grid agree.
   const phraseSummary = $derived.by(() => {
     if (noMatch) return noMatchLabel;
     const shown = typed ?? typedPreview;
-    if (!shown) return "";
-    return `${formatDateRangeLabel(shown.from, shown.to, locale)} · ${dayCountLabel(
-      daysInRange(shown.from, shown.to),
-    )}`;
+    return shown ? describe(shown) : "";
   });
 
   function resetPhrase(): void {
@@ -201,12 +233,12 @@
 
   function submitPhrase(): void {
     if (typed) {
-      const { from, to } = typed;
+      const { from, to, dates, label } = typed;
       // Clear the text too, so a second Enter doesn't emit again.
       resetPhrase();
       tab = "custom";
       customMonth = from;
-      commitCustom(from, to);
+      commitCustom(from, to, dates, label);
     } else if (phrase.trim() !== "") {
       noMatch = true;
     }
@@ -215,7 +247,7 @@
   function selectionKey(sel: RangeSelection): string {
     if (sel.mode === "relative") return `relative:${sel.days}`;
     if (sel.mode === "calendar") return `calendar:${sel.unit}:${sel.anchor}`;
-    return `custom:${sel.from}:${sel.to}`;
+    return `custom:${sel.from}:${sel.to}:${sel.dates?.join(",") ?? ""}`;
   }
 
   const tabs = $derived<SegmentedControlOption[]>([
@@ -249,6 +281,10 @@
     if (selection.mode === "calendar") {
       return calendarLabelFor(selection.unit, selection.anchor);
     }
+    if (selection.dates?.length) {
+      const days = dayCountLabel(selection.dates.length);
+      return selection.label ? `${selection.label} · ${days}` : days;
+    }
     if (!selection.from || !selection.to) return customRangeLabel;
     if (selection.from === selection.to) return selection.from;
     return `${selection.from} - ${selection.to}`;
@@ -261,9 +297,13 @@
   // While an end pick is pending only the start day highlights. A typed
   // phrase's preview shows in place of the draft until it commits or
   // the user clicks a day.
-  const calCustomSelected = $derived<DateRange | null>(
-    typedPreview ?? (customFrom ? { from: customFrom, to: customTo || customFrom } : null),
-  );
+  const calCustomSelected = $derived.by((): DateRange | null => {
+    if (typedPreview) return typedPreview.dates ? null : typedPreview;
+    if (customDates) return null;
+    return customFrom ? { from: customFrom, to: customTo || customFrom } : null;
+  });
+  // A set's separate days, typed or committed.
+  const calCustomDates = $derived(typedPreview ? (typedPreview.dates ?? null) : customDates);
 
   function seed(): void {
     // A mid-pick draft survives dismiss/reopen — an Escape between the two
@@ -293,6 +333,7 @@
     const resolved = resolveRange(selection, earliestDate, weekStart);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
+    customDates = selection.mode === "custom" && selection.dates?.length ? selection.dates : null;
     // A controlled selection with only `from` is a range mid-pick: stay
     // armed so the next click completes it instead of restarting. Re-key
     // the draft to THIS selection either way — a full reseed that leaves
@@ -349,6 +390,7 @@
     const resolved = resolveRange(sel, earliestDate, weekStart);
     customFrom = resolved.from;
     customTo = resolved.to;
+    customDates = null;
     customPending = false;
     pendingFor = null;
     customMonth = resolved.to;
@@ -378,9 +420,11 @@
   function pickCustomDay(date: string): void {
     // A click takes over from typed text: the two-click pick starts fresh
     // from the clicked day, even if a click was pending before the typing.
-    if (typedPreview !== null || phrase.trim() !== "") {
+    // A shown set gives way the same way.
+    if (typedPreview !== null || phrase.trim() !== "" || customDates) {
       customPending = false;
       pendingFor = null;
+      customDates = null;
     }
     resetPhrase();
     const currentSelectionKey = selectionKey(selection);
@@ -397,12 +441,13 @@
 
   // Both ways a custom range commits, the completing second click and Enter
   // on a typed phrase, end here: ordered bounds, draft cleared, one emit.
-  function commitCustom(from: string, to: string): void {
+  function commitCustom(from: string, to: string, dates?: string[], label?: string): void {
     customPending = false;
     pendingFor = null;
     customFrom = from;
     customTo = to;
-    onSelect({ mode: "custom", from, to });
+    customDates = dates ?? null;
+    onSelect(dates ? { mode: "custom", from, to, dates, label } : { mode: "custom", from, to });
   }
 
   // Invalidate while closed too: a selection A -> B -> A round trip before
@@ -497,6 +542,7 @@
           hint={textEntryHint}
           invalid={noMatch}
           {locale}
+          sets={dateSets}
           autofocus={focusOnOpen()}
           oninput={handlePhraseInput}
           onsubmit={submitPhrase}
@@ -568,6 +614,7 @@
           <Calendar
             bind:month={customMonth}
             selected={calCustomSelected}
+            selectedDates={calCustomDates}
             {maxDate}
             {...calendarLabels}
             {locale}

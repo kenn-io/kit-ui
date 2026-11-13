@@ -33,10 +33,21 @@ drops the typed preview and starts a normal two-click pick. Text that isn't
 a date or range leaves the selection alone and shows `noMatchLabel` on
 Enter. Phrases are clamped to `earliestDate` and `maxDate`. See
 [DatePhraseInput](date-phrase-input.md) for everything the field
-understands; sets of days such as "last 3 Fridays" are deliberately not
-supported. `textEntry={false}` leaves the field out. This field is the one
+understands. `textEntry={false}` leaves the field out. This field is the one
 `input` in the panel: the Custom tab's From/To stay readouts, and there are
 no native date inputs.
+
+**Sets** (`dateSets`, off by default): typed text can also pick separate
+days, such as "last 3 Fridays" or "weekends since October". The Custom tab
+marks each day on its own, the summary reads "Fridays · Oct 30 – Nov 13,
+2026 · 3 days", and Enter commits a `custom` selection with two extra
+fields: `dates`, the days in order, and `label`, their name. `from` and `to`
+are the first and last day, so `resolveRange()` and code that reads only
+`from`/`to` see the span the set covers. An app that turns on `dateSets`
+should check `selection.mode === "custom" && selection.dates` and filter by
+those days; passing that selection back in shows the set again (trigger
+"Fridays · 3 days"). Clicking a day starts a normal two-click pick. Without
+`dateSets` nothing emits `dates`, so existing apps see no change.
 
 The mode tabs (Relative / Calendar / Custom) are a normal SegmentedControl.
 The chosen mode's options (7d … All, or Day / Week / Month) are a lower tier
@@ -105,6 +116,8 @@ handling). Date strings are trusted input: feed the helpers valid
 | `textEntryLabel` / `textEntryClearLabel`                                                                                 | `string`                        | `"Type dates"` / `"Clear"`                                         | Text field accessible name and clear button label                                                                                                                                                                                                                              |
 | `textEntryHint`                                                                                                          | `string`                        | `"Type or select dates."`                                          | Line under the field while nothing parses                                                                                                                                                                                                                                      |
 | `noMatchLabel`                                                                                                           | `string`                        | `"No dates match that. Try “last 30 days” or “Sep 10 to Oct 20”."` | Shown on Enter when the text isn't a date or range                                                                                                                                                                                                                             |
+| `dateSets`                                                                                                               | `boolean`                       | `false`                                                            | Let typed text pick separate days ("last 3 Fridays"); see Sets below                                                                                                                                                                                                           |
+| `weekendsLabel` / `weekdaysLabel`                                                                                        | `string`                        | `"Weekends"` / `"Weekdays"`                                        | Set names in the summary and trigger                                                                                                                                                                                                                                           |
 | `dayCountLabel`                                                                                                          | `(count: number) => string`     | `"1 day"` / `"{n} days"`                                           | Day count after a typed range in the summary line                                                                                                                                                                                                                              |
 
 Calendar-mode trigger labels and the embedded Calendar format with the browser
@@ -125,7 +138,7 @@ handling.
 type RangeSelection =
   | { mode: "relative"; days: number } // rolling window; 0 = all
   | { mode: "calendar"; unit: "day" | "week" | "month"; anchor: string }
-  | { mode: "custom"; from: string; to: string };
+  | { mode: "custom"; from: string; to: string; dates?: string[]; label?: string };
 
 interface DateRange {
   from: string;
