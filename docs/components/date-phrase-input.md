@@ -47,21 +47,22 @@ on-screen keyboard over the calendar.
 
 ## Props
 
-| Prop          | Type                      | Default                             | Notes                                                 |
-| ------------- | ------------------------- | ----------------------------------- | ----------------------------------------------------- |
-| `value`       | `string` (bindable)       | `""`                                | The typed text                                        |
-| `placeholder` | `string`                  | `"What dates are you looking for?"` |                                                       |
-| `ariaLabel`   | `string`                  | `"Type dates"`                      | Accessible name of the field                          |
-| `clearLabel`  | `string`                  | `"Clear"`                           | Clear button label                                    |
-| `summary`     | `string`                  | `""`                                | What the text resolves to; announced when it changes  |
-| `hint`        | `string`                  | `""`                                | Shown while `summary` is empty; never announced       |
-| `invalid`     | `boolean`                 | `false`                             | `summary` is a no-match message: `aria-invalid`, red  |
-| `locale`      | `string`                  | browser                             | Month and weekday names offered as completions        |
-| `autofocus`   | `boolean`                 | `false`                             | Focus the field when it mounts                        |
-| `oninput`     | `(value: string) => void` | —                                   | Every edit, including a taken completion and clear    |
-| `onsubmit`    | `() => void`              | —                                   | Enter                                                 |
-| `onclear`     | `() => void`              | —                                   | After the clear button empties the field              |
-| `inputEl`     | `HTMLInputElement`        | —                                   | The underlying input (bindable), for focus management |
+| Prop          | Type                      | Default                             | Notes                                                                                |
+| ------------- | ------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `value`       | `string` (bindable)       | `""`                                | The typed text                                                                       |
+| `placeholder` | `string`                  | `"What dates are you looking for?"` |                                                                                      |
+| `ariaLabel`   | `string`                  | `"Type dates"`                      | Accessible name of the field                                                         |
+| `clearLabel`  | `string`                  | `"Clear"`                           | Clear button label                                                                   |
+| `summary`     | `string`                  | `""`                                | What the text resolves to; announced when it changes                                 |
+| `hint`        | `string`                  | `""`                                | Shown while `summary` is empty; never announced                                      |
+| `invalid`     | `boolean`                 | `false`                             | `summary` is a no-match message: `aria-invalid`, red                                 |
+| `locale`      | `string`                  | browser                             | Month and weekday names offered as completions                                       |
+| `sets`        | `boolean`                 | `false`                             | Also complete set words ("Fridays", "weekends", "every"), for owners that parse sets |
+| `autofocus`   | `boolean`                 | `false`                             | Focus the field when it mounts                                                       |
+| `oninput`     | `(value: string) => void` | —                                   | Every edit, including a taken completion and clear                                   |
+| `onsubmit`    | `() => void`              | —                                   | Enter                                                                                |
+| `onclear`     | `() => void`              | —                                   | After the clear button empties the field                                             |
+| `inputEl`     | `HTMLInputElement`        | —                                   | The underlying input (bindable), for focus management                                |
 
 ## Parsing (`date-phrase.ts`)
 
@@ -69,6 +70,7 @@ on-screen keyboard over the calendar.
 type DatePhraseResult =
   | { kind: "date"; date: string }
   | { kind: "range"; from: string; to: string }
+  | { kind: "dates"; dates: string[]; label: string } // only with `sets`
   | { kind: "none" };
 
 parseDatePhrase(text: string, options?: {
@@ -77,10 +79,14 @@ parseDatePhrase(text: string, options?: {
   weekStart?: "monday" | "sunday";
   maxDate?: string | null;
   earliestDate?: string | null;
+  sets?: boolean;          // read sets of separate days; off by default
+  weekendsLabel?: string;  // set labels; default "Weekends" / "Weekdays"
+  weekdaysLabel?: string;
 }): DatePhraseResult;
 
-completeDatePhrase(text: string, options?: { locale?: string }): string;
-datePhraseRange(result: DatePhraseResult): DateRange | null; // a date is a one-day range
+completeDatePhrase(text: string, options?: { locale?: string; sets?: boolean }): string;
+datePhraseRange(result: DatePhraseResult): DateRange | null; // a date is a one-day range; a set spans first to last
+DATE_SET_MAX_DAYS; // 366: a bigger set is no match
 DATE_PHRASE_MAX_LENGTH; // 200: longer text is no match / no suggestion
 ```
 
@@ -126,12 +132,34 @@ abbreviations ("Sept.", "thurs") don't matter.
   `ago`, `to`, ...) are English only for now.
 - A single date outside `earliestDate`/`maxDate` is no match. A range is
   clamped to them, and is no match when nothing is left.
-- Not supported, and always no match rather than a wrong range: sets of days
-  that aren't one contiguous span ("last 3 Fridays", "weekends since
-  October"), because the pickers only hold one date or one from–to range,
-  times of day ("tomorrow at 5pm"); non-Gregorian calendars and era years
+- Not supported, and always no match rather than a wrong range: times of day ("tomorrow at 5pm"); non-Gregorian calendars and era years
   (Buddhist-era "2569", Persian or Islamic month names); and CJK numeric month
   forms ("9月10日").
+
+## Sets of separate days (`sets: true`)
+
+With `sets`, phrases that pick separate days return `{ kind: "dates" }`:
+the days ascending and unique, and a `label` for a summary. Without it they
+stay no match.
+
+| You type                                                       | You get                                  |
+| -------------------------------------------------------------- | ---------------------------------------- |
+| `last 3 Fridays`, `past 2 weekends`, `last 5 weekdays`         | The N most recent, on or before today    |
+| `next 2 Mondays`, `next 1 weekends`                            | The N nearest after today                |
+| `Fridays in October`, `weekends in Feb 2028`                   | Those days in that month or year         |
+| `weekends since October`, `weekdays since Monday`              | Those days from then through today       |
+| `Sundays last month`, `weekdays this year`                     | Those days in that calendar period       |
+| `Mondays from Sep 1 to Sep 30`, `Mondays between Sep 1 and 14` | Those days in any range the parser reads |
+| `every Friday in October`, `all weekdays since Monday`         | `every`/`all` also take the singular     |
+
+- A weekday counts in plural ("Fridays", "fris") or after `every`/`all`.
+  Names come from the locale as in single dates; English adds an "s".
+- "Weekends" are Saturday and Sunday, "weekdays" Monday to Friday, whatever
+  `weekStart` is. `last N weekends` counts Saturday–Sunday pairs.
+- The label is the weekday's name in the locale ("Fridays" in English,
+  "Freitag" in German) or `weekendsLabel`/`weekdaysLabel`.
+- Days outside `earliestDate`/`maxDate` drop out; no days left is no
+  match. N and the set are capped at 366 days.
 
 `completeDatePhrase()` returns the rest of the word being typed, or `""`:
 nothing after a space or digits, or once the word is complete. It suggests by

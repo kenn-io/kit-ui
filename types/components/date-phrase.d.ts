@@ -17,8 +17,16 @@ export interface DatePhraseOptions {
     /** Earliest allowed date (YYYY-MM-DD). An earlier single date is no
      * match; a range is clamped to it. */
     earliestDate?: string | null | undefined;
+    /** Also read sets of separate days ("last 3 Fridays", "weekends since
+     * October") as `{ kind: "dates" }`. Off by default: without it those
+     * phrases are no match. */
+    sets?: boolean | undefined;
+    /** Summary labels for weekend and weekday sets. */
+    weekendsLabel?: string | undefined;
+    weekdaysLabel?: string | undefined;
 }
-/** What a typed phrase means: one day, an inclusive range, or nothing. */
+/** What a typed phrase means: one day, an inclusive range, a set of
+ * separate days (only with `sets`), or nothing. */
 export type DatePhraseResult = {
     kind: "date";
     date: string;
@@ -27,8 +35,16 @@ export type DatePhraseResult = {
     from: string;
     to: string;
 } | {
+    kind: "dates";
+    /** Ascending, unique YYYY-MM-DD days. */
+    dates: string[];
+    /** What the days are, for a summary: "Fridays", "Weekends". */
+    label: string;
+} | {
     kind: "none";
 };
+/** Most days a set may hold; a bigger one is no match. */
+export declare const DATE_SET_MAX_DAYS = 366;
 /**
  * Parse typed text into a single date, an inclusive range, or no match.
  * Dates are local-timezone YYYY-MM-DD strings.
@@ -56,7 +72,7 @@ export type DatePhraseResult = {
  */
 export declare function parseDatePhrase(text: string, options?: DatePhraseOptions): DatePhraseResult;
 /** A parse result as a {from, to} range (a single date is a one-day
- * range), or null for no match. */
+ * range, a set spans its first to last day), or null for no match. */
 export declare function datePhraseRange(result: DatePhraseResult): DateRange | null;
 /**
  * The rest of the word being typed, for inline ghost text: "Se" →
@@ -66,4 +82,5 @@ export declare function datePhraseRange(result: DatePhraseResult): DateRange | n
  */
 export declare function completeDatePhrase(text: string, options?: {
     locale?: string | undefined;
+    sets?: boolean | undefined;
 }): string;

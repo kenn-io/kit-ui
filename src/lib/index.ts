@@ -116,6 +116,7 @@ export {
 export {
   completeDatePhrase,
   DATE_PHRASE_MAX_LENGTH,
+  DATE_SET_MAX_DAYS,
   datePhraseRange,
   parseDatePhrase,
   type DatePhraseOptions,

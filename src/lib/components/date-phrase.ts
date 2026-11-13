@@ -50,13 +50,31 @@ export interface DatePhraseOptions {
   /** Earliest allowed date (YYYY-MM-DD). An earlier single date is no
    * match; a range is clamped to it. */
   earliestDate?: string | null | undefined;
+  /** Also read sets of separate days ("last 3 Fridays", "weekends since
+   * October") as `{ kind: "dates" }`. Off by default: without it those
+   * phrases are no match. */
+  sets?: boolean | undefined;
+  /** Summary labels for weekend and weekday sets. */
+  weekendsLabel?: string | undefined;
+  weekdaysLabel?: string | undefined;
 }
 
-/** What a typed phrase means: one day, an inclusive range, or nothing. */
+/** What a typed phrase means: one day, an inclusive range, a set of
+ * separate days (only with `sets`), or nothing. */
 export type DatePhraseResult =
   | { kind: "date"; date: string }
   | { kind: "range"; from: string; to: string }
+  | {
+      kind: "dates";
+      /** Ascending, unique YYYY-MM-DD days. */
+      dates: string[];
+      /** What the days are, for a summary: "Fridays", "Weekends". */
+      label: string;
+    }
   | { kind: "none" };
+
+/** Most days a set may hold; a bigger one is no match. */
+export const DATE_SET_MAX_DAYS = 366;
 
 const NONE: DatePhraseResult = { kind: "none" };
 
@@ -136,6 +154,8 @@ interface LocaleWords {
   /** Display names offered for completion, locale first then English. */
   monthNames: string[];
   weekdayNames: string[];
+  /** The locale's long weekday names, Sunday first, for set labels. */
+  weekdayLong: string[];
 }
 
 const ENGLISH_MONTHS = [
@@ -206,6 +226,7 @@ function buildLocaleWords(locale: string | undefined): LocaleWords {
   const weekdays = new Map<string, number>();
   const monthNames: string[] = [];
   const weekdayNames: string[] = [];
+  const weekdayLong: string[] = [];
   const add = <T>(map: Map<string, T>, name: string, value: T) => {
     const k = nameKey(name);
     // Only words: a locale whose "month name" is a number ("9月") adds nothing.
@@ -237,6 +258,7 @@ function buildLocaleWords(locale: string | undefined): LocaleWords {
         const name = weekday.format(new Date(2024, 0, 7 + w));
         add(weekdays, name, w);
         if (style === "long" && WORD.test(nameKey(name))) weekdayNames.push(name);
+        if (style === "long" && loc === locale) weekdayLong.push(name);
       }
     }
   }
@@ -262,6 +284,7 @@ function buildLocaleWords(locale: string | undefined): LocaleWords {
     dayFirst: order[0] === "day",
     monthNames: [...new Set([...monthNames, ...ENGLISH_MONTHS])],
     weekdayNames: [...new Set([...weekdayNames, ...ENGLISH_WEEKDAYS])],
+    weekdayLong,
   };
 }
 
@@ -594,6 +617,116 @@ function parseExpr(text: string, ctx: Ctx): Span | null {
   return null;
 }
 
+/* ---------- sets of separate days ---------- */
+
+const WEEKENDS = [0, 6];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+
+interface DayKind {
+  days: number[];
+  label: string;
+}
+
+/** "fridays", "fris", "weekends", "weekdays", or with `every`/`all` before
+ * it a singular "friday"/"weekend". */
+function dayKind(
+  token: string,
+  plural: boolean,
+  ctx: Ctx,
+  opts: DatePhraseOptions,
+): DayKind | null {
+  if (token === "weekends" || (!plural && token === "weekend")) {
+    return { days: WEEKENDS, label: opts.weekendsLabel ?? "Weekends" };
+  }
+  if (token === "weekdays" || (!plural && token === "weekday")) {
+    return { days: WEEKDAYS, label: opts.weekdaysLabel ?? "Weekdays" };
+  }
+  const { weekdays } = ctx.words;
+  const stem = token.endsWith("s") ? token.slice(0, -1) : null;
+  const day =
+    stem && weekdays.has(stem) ? weekdays.get(stem)! : !plural ? weekdays.get(token) : undefined;
+  if (day === undefined) return null;
+  const name = ctx.words.weekdayLong[day] ?? ENGLISH_WEEKDAYS[day]!;
+  const label = name.charAt(0).toLocaleUpperCase() + name.slice(1);
+  // English names pluralize with "s"; other languages keep the plain name.
+  return { days: [day], label: name === ENGLISH_WEEKDAYS[day] ? `${label}s` : label };
+}
+
+function dayOfWeek(iso: string): number {
+  const [y, m, d] = parts(iso);
+  const date = new Date(2000, 0, 1);
+  date.setFullYear(y, m, d);
+  return date.getDay();
+}
+
+/** The days of `kind` from `from` to `to`, or null past the size cap. */
+function daysBetween(from: string, to: string, kind: DayKind): string[] | null {
+  const out: string[] = [];
+  let date = from;
+  let dow = dayOfWeek(from);
+  while (date <= to) {
+    if (kind.days.includes(dow)) {
+      if (out.length === DATE_SET_MAX_DAYS) return null;
+      out.push(date);
+    }
+    date = addDays(date, 1);
+    dow = (dow + 1) % 7;
+  }
+  return out;
+}
+
+/** A set phrase: "[every|all] <kind> <range>" or "last|past|next N <kind>".
+ * Null when `text` isn't one. */
+function parseSet(
+  text: string,
+  ctx: Ctx,
+  opts: DatePhraseOptions,
+): { dates: string[]; label: string } | null {
+  let toks = text.split(" ");
+  const every = toks[0] === "every" || toks[0] === "all";
+  if (every) toks = toks.slice(1);
+
+  // "last 3 Fridays", "next 2 weekends": the N nearest, counted from today.
+  const dir = toks[0] === "last" || toks[0] === "past" ? -1 : toks[0] === "next" ? 1 : 0;
+  if (dir !== 0 && toks.length === 3 && !every) {
+    const n = count(toks[1]);
+    const kind = dayKind(toks[2]!, true, ctx, opts);
+    if (n === null || !kind || n > DATE_SET_MAX_DAYS) return null;
+    // Weekends count as Saturday–Sunday pairs; any other kind counts days.
+    const weekends = kind.days === WEEKENDS;
+    const out: string[] = [];
+    const groups = new Set<string>();
+    let date = dir < 0 ? ctx.today : addDays(ctx.today, 1);
+    let dow = dayOfWeek(date);
+    for (let step = 0; step < 7 * DATE_SET_MAX_DAYS; step++) {
+      if (kind.days.includes(dow)) {
+        const group = weekends ? (dow === 6 ? date : addDays(date, -1)) : date;
+        if (!groups.has(group)) {
+          if (groups.size === n) break;
+          groups.add(group);
+        }
+        out.push(date);
+      }
+      date = addDays(date, dir);
+      dow = (dow + dir + 7) % 7;
+    }
+    return { dates: out.sort(), label: kind.label };
+  }
+
+  // "Fridays in October", "weekends since October", "weekdays this month",
+  // "Mondays from Sep 1 to Oct 31".
+  if (toks.length < 2) return null;
+  const kind = dayKind(toks[0]!, !every, ctx, opts);
+  if (!kind) return null;
+  let rest = toks.slice(1).join(" ");
+  if (rest.startsWith("in ") || rest.startsWith("during "))
+    rest = rest.slice(rest.indexOf(" ") + 1);
+  const span = parseExpr(rest, ctx);
+  if (!span || !inYears(span.from, ctx) || !inYears(span.to, ctx)) return null;
+  const dates = daysBetween(span.from, span.to, kind);
+  return dates ? { dates, label: kind.label } : null;
+}
+
 /** A well-formed YYYY-MM-DD from year 1000 to 100 years past today. Huge
  * counts ("9999 years ago") and era years (Buddhist 2569) land outside. */
 function inYears(date: string, ctx: Ctx): boolean {
@@ -642,11 +775,18 @@ export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): 
     weekStart: options.weekStart ?? "monday",
     words: localeWords(options.locale),
   };
+  const lo = bound(options.earliestDate);
+  const hi = bound(options.maxDate);
+
+  const set = options.sets ? parseSet(normalized, ctx, options) : null;
+  if (set) {
+    const dates = set.dates.filter((d) => inYears(d, ctx) && !(lo && d < lo) && !(hi && d > hi));
+    return dates.length ? { kind: "dates", dates, label: set.label } : NONE;
+  }
+
   const span = parseExpr(normalized, ctx);
   if (!span || !inYears(span.from, ctx) || !inYears(span.to, ctx)) return NONE;
 
-  const lo = bound(options.earliestDate);
-  const hi = bound(options.maxDate);
   if (span.single) {
     if ((lo && span.from < lo) || (hi && span.from > hi)) return NONE;
     return { kind: "date", date: span.from };
@@ -658,10 +798,11 @@ export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): 
 }
 
 /** A parse result as a {from, to} range (a single date is a one-day
- * range), or null for no match. */
+ * range, a set spans its first to last day), or null for no match. */
 export function datePhraseRange(result: DatePhraseResult): DateRange | null {
   if (result.kind === "date") return { from: result.date, to: result.date };
   if (result.kind === "range") return { from: result.from, to: result.to };
+  if (result.kind === "dates") return { from: result.dates[0]!, to: result.dates.at(-1)! };
   return null;
 }
 
@@ -683,6 +824,7 @@ const LATE_KEYWORDS = ["from", "between"];
 const PERIODS = ["week", "month", "year"];
 const PLURAL_UNITS = ["days", "weeks", "months", "years"];
 const TRAILING_KEYWORDS = ["to", "through", "until", "ago", "and"];
+const SET_WORDS = ["weekends", "weekdays"];
 
 /**
  * The rest of the word being typed, for inline ghost text: "Se" →
@@ -692,7 +834,7 @@ const TRAILING_KEYWORDS = ["to", "through", "until", "ago", "and"];
  */
 export function completeDatePhrase(
   text: string,
-  options: { locale?: string | undefined } = {},
+  options: { locale?: string | undefined; sets?: boolean | undefined } = {},
 ): string {
   if (text.length > DATE_PHRASE_MAX_LENGTH) return "";
   const match = /(?:^|\s)([\p{L}\p{M}]+)$/u.exec(text);
@@ -705,22 +847,32 @@ export function completeDatePhrase(
     .filter(Boolean);
   const prev = before.length ? fold(before[before.length - 1]!) : null;
   const words = localeWords(options.locale);
+  // Set words only when the caller reads sets, so nothing suggested is
+  // a phrase that can't parse.
+  const plurals = options.sets ? [...ENGLISH_WEEKDAYS.map((name) => `${name}s`), ...SET_WORDS] : [];
 
   let candidates: string[];
   if (prev !== null && count(prev) !== null && before.length >= 1) {
-    // After a number: units ("3 days"), a range word ("Sep 10 to") or a
-    // month ("10 September").
+    // After a number: units ("3 days"), set days ("last 3 Fridays"), a
+    // range word ("Sep 10 to") or a month ("10 September").
     const units = count(prev) === 1 ? ["day", "week", "month", "year"] : PLURAL_UNITS;
-    candidates = [...units, ...TRAILING_KEYWORDS, ...words.monthNames];
+    candidates = [...units, ...plurals, ...TRAILING_KEYWORDS, ...words.monthNames];
   } else if (prev !== null && UNITS[prev]) {
     candidates = ["ago", ...TRAILING_KEYWORDS];
   } else if (prev === "last" || prev === "this" || prev === "next" || prev === "past") {
     candidates = [...PERIODS, ...words.weekdayNames];
+  } else if (options.sets && (prev === "every" || prev === "all")) {
+    candidates = [...words.weekdayNames, "weekend", "weekday", ...plurals];
+  } else if (options.sets && plurals.some((w) => w.toLowerCase() === prev)) {
+    // After the days of a set: what bounds them.
+    candidates = ["since", "in", "from", "this", "last", "next", "between"];
   } else if (prev === null) {
     candidates = [
       ...LEADING_KEYWORDS,
       ...words.monthNames,
       ...words.weekdayNames,
+      ...plurals,
+      ...(options.sets ? ["every"] : []),
       ...LATE_KEYWORDS,
     ];
   } else {

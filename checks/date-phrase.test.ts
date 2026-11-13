@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   completeDatePhrase,
   DATE_PHRASE_MAX_LENGTH,
+  DATE_SET_MAX_DAYS,
   datePhraseRange,
   parseDatePhrase,
   type DatePhraseOptions,
@@ -512,5 +513,201 @@ describe("review regressions", () => {
     expect(parseDatePhrase("", { locale: "not a locale!" })).toEqual(none);
     expect(parse("tomorrow", { ...june, locale: "not a locale!" })).toEqual(date("2026-06-16"));
     expect(completeDatePhrase("Se", { locale: "not a locale!" })).toBe("ptember");
+  });
+});
+
+describe("sets of separate days", () => {
+  // The video's today: Wednesday 2026-11-18.
+  const on: DatePhraseOptions = { today: "2026-11-18", locale: "en-US", sets: true };
+  const set = (text: string, options: DatePhraseOptions = {}) =>
+    parseDatePhrase(text, { ...on, ...options });
+  const dates = (label: string, ...days: string[]) => ({ kind: "dates", dates: days, label });
+
+  test("the video's two examples", () => {
+    expect(set("Last 3 Fridays")).toEqual(
+      dates("Fridays", "2026-10-30", "2026-11-06", "2026-11-13"),
+    );
+    const weekends = set("Weekends since October");
+    expect(weekends).toEqual(
+      dates(
+        "Weekends",
+        "2026-10-03",
+        "2026-10-04",
+        "2026-10-10",
+        "2026-10-11",
+        "2026-10-17",
+        "2026-10-18",
+        "2026-10-24",
+        "2026-10-25",
+        "2026-10-31",
+        "2026-11-01",
+        "2026-11-07",
+        "2026-11-08",
+        "2026-11-14",
+        "2026-11-15",
+      ),
+    );
+  });
+
+  test("off by default: set phrases stay no match", () => {
+    const off = { today: "2026-11-18", locale: "en-US" };
+    for (const text of ["Last 3 Fridays", "Weekends since October", "every Friday in October"]) {
+      expect(parseDatePhrase(text, off)).toEqual(none);
+      expect(parseDatePhrase(text, { ...off, sets: false })).toEqual(none);
+    }
+    // Ordinary phrases read the same with sets on.
+    expect(set("last friday")).toEqual(date("2026-11-13"));
+    expect(set("last 3 days")).toEqual(range("2026-11-16", "2026-11-18"));
+    expect(set("since October")).toEqual(range("2026-10-01", "2026-11-18"));
+  });
+
+  test("last/past N counts back from today, today included; next N counts from tomorrow", () => {
+    expect(set("past 2 wednesdays")).toEqual(dates("Wednesdays", "2026-11-11", "2026-11-18"));
+    expect(set("next 2 wednesdays")).toEqual(dates("Wednesdays", "2026-11-25", "2026-12-02"));
+    expect(set("next 2 fris")).toEqual(dates("Fridays", "2026-11-20", "2026-11-27"));
+    expect(set("last two mondays")).toEqual(dates("Mondays", "2026-11-09", "2026-11-16"));
+    // Weekends count as Saturday–Sunday pairs.
+    expect(set("last 2 weekends")).toEqual(
+      dates("Weekends", "2026-11-07", "2026-11-08", "2026-11-14", "2026-11-15"),
+    );
+    expect(set("next weekends")).toEqual(none);
+    expect(set("next 1 weekends")).toEqual(dates("Weekends", "2026-11-21", "2026-11-22"));
+    expect(set("last 3 weekdays")).toEqual(
+      dates("Weekdays", "2026-11-16", "2026-11-17", "2026-11-18"),
+    );
+  });
+
+  test("a kind bounded by any range the parser reads", () => {
+    expect(set("fridays in october")).toEqual(
+      dates("Fridays", "2026-10-02", "2026-10-09", "2026-10-16", "2026-10-23", "2026-10-30"),
+    );
+    expect(set("every friday in october")).toEqual(set("fridays in october"));
+    expect(set("all fridays during october")).toEqual(set("fridays in october"));
+    expect(set("weekends in feb 2028")).toEqual(
+      dates(
+        "Weekends",
+        "2028-02-05",
+        "2028-02-06",
+        "2028-02-12",
+        "2028-02-13",
+        "2028-02-19",
+        "2028-02-20",
+        "2028-02-26",
+        "2028-02-27",
+      ),
+    );
+    expect(set("mondays from sep 1 to sep 30")).toEqual(
+      dates("Mondays", "2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28"),
+    );
+    expect(set("mondays between sep 1 and sep 14")).toEqual(
+      dates("Mondays", "2026-09-07", "2026-09-14"),
+    );
+    expect(set("sundays last month")).toEqual(
+      dates("Sundays", "2026-10-04", "2026-10-11", "2026-10-18", "2026-10-25"),
+    );
+    expect((set("weekdays this month") as { dates: string[] }).dates).toHaveLength(21);
+    expect((set("weekends next year") as { dates: string[] }).dates).toHaveLength(104);
+    expect(set("all weekdays since monday")).toEqual(
+      dates("Weekdays", "2026-11-16", "2026-11-17", "2026-11-18"),
+    );
+  });
+
+  test("month and year rollover", () => {
+    expect(set("last 3 fridays", { today: "2027-01-12" })).toEqual(
+      dates("Fridays", "2026-12-25", "2027-01-01", "2027-01-08"),
+    );
+    expect(set("next 2 sundays", { today: "2026-12-30" })).toEqual(
+      dates("Sundays", "2027-01-03", "2027-01-10"),
+    );
+    expect(set("weekends since december", { today: "2027-01-04" })).toEqual(
+      dates(
+        "Weekends",
+        "2026-12-05",
+        "2026-12-06",
+        "2026-12-12",
+        "2026-12-13",
+        "2026-12-19",
+        "2026-12-20",
+        "2026-12-26",
+        "2026-12-27",
+        "2027-01-02",
+        "2027-01-03",
+      ),
+    );
+  });
+
+  test("weekends and weekdays don't depend on weekStart", () => {
+    expect(set("weekends in october", { weekStart: "sunday" })).toEqual(
+      set("weekends in october", { weekStart: "monday" }),
+    );
+    expect(set("last 2 weekends", { weekStart: "sunday" })).toEqual(set("last 2 weekends"));
+  });
+
+  test("clamped to the bounds; nothing left is no match", () => {
+    expect(
+      set("fridays in october", { earliestDate: "2026-10-10", maxDate: "2026-10-24" }),
+    ).toEqual(dates("Fridays", "2026-10-16", "2026-10-23"));
+    expect(set("last 3 fridays", { maxDate: "2026-11-01" })).toEqual(
+      dates("Fridays", "2026-10-30"),
+    );
+    expect(set("fridays next month", { maxDate: "2026-11-18" })).toEqual(none);
+  });
+
+  test("caps: N and the set size", () => {
+    expect(set(`last ${DATE_SET_MAX_DAYS} fridays`).kind).toBe("dates");
+    expect(set(`last ${DATE_SET_MAX_DAYS + 1} fridays`)).toEqual(none);
+    expect(set("weekdays since 2020")).toEqual(none); // over 366 days
+    expect(set("fridays since 2020")).toEqual(
+      expect.objectContaining({ kind: "dates", label: "Fridays" }),
+    );
+    expect(set("last 999999 fridays")).toEqual(none);
+    expect(set("fridays since 0001")).toEqual(none);
+    expect(set("fridays in 9999")).toEqual(none);
+  });
+
+  test("labels, abbreviations and locale weekday names", () => {
+    expect(set("last 2 thurs")).toEqual(dates("Thursdays", "2026-11-05", "2026-11-12"));
+    expect(set("weekends in october", { weekendsLabel: "Fins de semaine" })).toEqual(
+      expect.objectContaining({ label: "Fins de semaine" }),
+    );
+    expect(set("last 2 weekdays", { weekdaysLabel: "Workdays" })).toEqual(
+      dates("Workdays", "2026-11-17", "2026-11-18"),
+    );
+    // German: "Freitag" with an English plural s, labelled in German.
+    expect(set("last 2 freitags", { locale: "de-DE" })).toEqual(
+      dates("Freitag", "2026-11-06", "2026-11-13"),
+    );
+    expect(set("every freitag in october", { locale: "de-DE" })).toEqual(
+      expect.objectContaining({ label: "Freitag" }),
+    );
+  });
+
+  test("not a set: no match rather than a guess", () => {
+    for (const text of [
+      "fridays",
+      "every weekend",
+      "every",
+      "last 3",
+      "weekends since",
+      "fridays in banana",
+      "friday last week", // a singular weekday needs every/all to be a set
+      "last 0 fridays",
+      "every last 3 fridays",
+      "weekends weekends since october",
+      "fri ".repeat(60),
+    ]) {
+      expect(set(text)).toEqual(none);
+    }
+  });
+
+  test("completion offers set words only with sets", () => {
+    expect(completeDatePhrase("last 3 Fr", { sets: true })).toBe("idays");
+    expect(completeDatePhrase("last 3 Fr")).toBe("");
+    expect(completeDatePhrase("Weekends s", { sets: true })).toBe("ince");
+    expect(completeDatePhrase("weeke", { sets: true })).toBe("nds");
+    expect(completeDatePhrase("weeke")).toBe("");
+    expect(completeDatePhrase("ever", { sets: true })).toBe("y");
+    expect(completeDatePhrase("ever")).toBe("");
+    expect(completeDatePhrase("every f", { sets: true })).toBe("riday");
   });
 });
