@@ -112,6 +112,17 @@ test("the now line stays inside a fold and moves to its hour when opened", async
   const [band, line] = await Promise.all([fold.boundingBox(), now.boundingBox()]);
   expect(line!.y).toBeGreaterThan(band!.y);
   expect(line!.y).toBeLessThan(band!.y + band!.height);
+  expect(line!.x + line!.width).toBeCloseTo(band!.x + band!.width);
+  const markerRight = await now.evaluate((element) => {
+    const style = getComputedStyle(element, "::before");
+    return (
+      element.getBoundingClientRect().left +
+      parseFloat(style.left) +
+      new DOMMatrixReadOnly(style.transform).m41 +
+      parseFloat(style.width)
+    );
+  });
+  expect(markerRight).toBeLessThanOrEqual(band!.x);
   await fold.click();
   const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
   const [button, openedLine] = await Promise.all([refold.boundingBox(), now.boundingBox()]);

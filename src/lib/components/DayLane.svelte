@@ -138,16 +138,21 @@
     return order[0] ?? null;
   });
 
+  const nowFold = $derived(
+    nowMinute === undefined
+      ? undefined
+      : layout.segments.find(
+          (s) => s.kind === "fold" && nowMinute >= s.startMinute && nowMinute < s.endMinute,
+        ),
+  );
   const nowY = $derived.by(() => {
     if (nowMinute === undefined || !(nowMinute >= 0 && nowMinute < dayMinutes)) return null;
-    const fold = layout.segments.find(
-      (s) => s.kind === "fold" && nowMinute >= s.startMinute && nowMinute < s.endMinute,
-    );
-    if (fold)
+    if (nowFold)
       return (
-        fold.top +
+        nowFold.top +
         3 +
-        ((nowMinute - fold.startMinute) / (fold.endMinute - fold.startMinute)) * (fold.height - 6)
+        ((nowMinute - nowFold.startMinute) / (nowFold.endMinute - nowFold.startMinute)) *
+          (nowFold.height - 6)
       );
     return minuteToY(layout.segments, nowMinute, hourHeight);
   });
@@ -401,7 +406,11 @@
     </div>
 
     {#if nowY !== null}
-      <div class="kit-day-lane__now" style:top="{nowY}px" aria-hidden="true"></div>
+      <div
+        class={["kit-day-lane__now", nowFold && "kit-day-lane__now--fold"]}
+        style:top="{nowY}px"
+        aria-hidden="true"
+      ></div>
     {/if}
   </div>
 </div>
@@ -654,6 +663,14 @@
     height: 8px;
     border-radius: 50%;
     background: var(--accent-red);
+  }
+
+  .kit-day-lane__now--fold {
+    right: var(--space-4);
+  }
+
+  .kit-day-lane__now--fold::before {
+    transform: translateX(-50%);
   }
 
   .kit-day-lane__item--tone-info {
