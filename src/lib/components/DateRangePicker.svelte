@@ -357,7 +357,8 @@
     customPending = customFrom !== "" && customTo === "";
     pendingFor = customPending ? selectionKey(selection) : null;
     calMonth = calAnchor;
-    customMonth = customTo || customFrom || todayStr();
+    // A set with no usable bounds still opens on its first day's month.
+    customMonth = customTo || customFrom || customDates?.[0] || todayStr();
   }
 
   let panelEl = $state<HTMLDivElement>();

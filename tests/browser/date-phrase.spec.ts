@@ -370,6 +370,15 @@ test.describe("DateRangePicker with dateSets", () => {
     await expect(readout(page)).toHaveText('{"mode":"relative","days":30}');
   });
 
+  test("a set without usable bounds opens on its first day's month", async ({ page }) => {
+    await page.getByRole("button", { name: "External: Fridays without bounds" }).click();
+    await expect(trigger(page)).toHaveText("Fridays · 2 days");
+    await trigger(page).click();
+    await expect(panel(page).getByRole("radio", { name: "Custom" })).toBeChecked();
+    await expect(panel(page).locator(".kit-calendar__month")).toHaveText(/March 2026/);
+    await expect(selected(page)).toHaveText(["6", "13"]);
+  });
+
   test("a click after a set starts a fresh two-click pick", async ({ page }) => {
     await page.getByRole("button", { name: "External: saved Fridays" }).click();
     await trigger(page).click();

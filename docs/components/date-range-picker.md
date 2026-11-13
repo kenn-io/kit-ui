@@ -56,7 +56,9 @@ are the first and last day, so `resolveRange()` and code that reads only
 should check `selection.mode === "custom" && selection.dates` and filter by
 those days; passing that selection back in shows the set again (trigger
 "Fridays · 3 days"). Clicking a day starts a normal two-click pick. Without
-`dateSets` nothing emits `dates`, so existing apps see no change.
+`dateSets` nothing emits `dates`, so existing apps see no change. A
+`selection` that carries `dates` is still shown as a set even when
+`dateSets` is off.
 
 The mode tabs (Relative / Calendar / Custom) are a normal SegmentedControl.
 The chosen mode's options (7d … All, or Day / Week / Month) are a lower tier

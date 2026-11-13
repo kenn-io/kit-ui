@@ -55,6 +55,14 @@
     dates: ["2026-06-05", "2026-06-12"],
     label: "Fridays",
   };
+  // A stored set whose app kept only the days.
+  const unboundedSet: RangeSelection = {
+    mode: "custom",
+    from: "",
+    to: "",
+    dates: ["2026-03-06", "2026-03-13"],
+    label: "Fridays",
+  };
 
   let blockSelection = $state.raw<RangeSelection>({
     mode: "custom",
@@ -223,6 +231,12 @@
       surface="soft"
       label="External: saved Fridays"
       onclick={() => (setSelection = savedSet)}
+    />
+    <Button
+      size="sm"
+      surface="soft"
+      label="External: Fridays without bounds"
+      onclick={() => (setSelection = unboundedSet)}
     />
   </div>
 </DemoSection>

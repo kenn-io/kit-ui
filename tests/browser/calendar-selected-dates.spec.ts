@@ -41,13 +41,12 @@ test("the documented single-date composition around a bare Calendar works", asyn
   await expect(host.locator(".kit-date-phrase-input__summary")).toHaveText("Jul 4, 2026");
   await expect(host.locator(".kit-calendar__month")).toHaveText(/July 2026/);
   await expect(host.locator(".kit-calendar__day.selected")).toHaveText("4");
-  await expect(host.getByTestId("own-calendar-value")).toHaveText("picked: none");
   // A range isn't a date here: Enter does nothing.
   await input.fill("next week");
   await input.press("Enter");
-  await expect(host.getByTestId("own-calendar-value")).toHaveText("picked: none");
+  await expect(input).toBeVisible();
   await input.fill("tomorrow");
   await input.press("Enter");
-  await expect(host.getByTestId("own-calendar-value")).toHaveText("picked: 2026-06-16");
+  await expect(input).toHaveCount(0);
   await expect(host.getByRole("button", { name: "Jun 16, 2026" })).toBeVisible();
 });

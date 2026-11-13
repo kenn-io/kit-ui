@@ -51,7 +51,8 @@ An app that wraps the bare Calendar in its own popover can add typed entry
 for one date with a few lines. Accept only `kind: "date"`, move `month` to
 it, show it as `selected`, and commit on Enter. `focusOnOpen()` focuses the
 field when the popover opens except on touch devices, and `formatDayLabel()`
-names the date. The gallery's DatePhraseInput page runs this example.
+names the date. The gallery's DatePhraseInput page runs this exact file
+(`src/demo/pages/OwnCalendarDateField.svelte`).
 
 ```svelte
 <script lang="ts">
@@ -64,29 +65,45 @@ names the date. The gallery's DatePhraseInput page runs this example.
     todayStr,
   } from "@kenn-io/kit-ui";
 
-  let { value = $bindable(null), open = $bindable(false) } = $props();
+  // One typed date above a bare Calendar. This file is the example in
+  // docs/components/date-phrase-input.md ("Using the field with your own
+  // Calendar"); checks/date-phrase-docs.test.ts keeps the two identical.
+  let picked = $state<string | null>(null);
+  let open = $state(false);
   let text = $state("");
-  let month = $state(value ?? todayStr());
+  let month = $state(todayStr());
   const parsed = $derived(parseDatePhrase(text));
   const typed = $derived(parsed.kind === "date" ? parsed.date : null);
-  const shown = $derived(typed ?? value);
+  const shown = $derived(typed ?? picked);
 
-  function pick(date: string) {
-    value = date;
+  function toggle(): void {
+    open = !open;
+    if (open) month = picked ?? todayStr();
+  }
+
+  function pick(date: string): void {
+    picked = date;
     text = "";
     open = false;
   }
 </script>
 
-<DatePhraseInput
-  bind:value={text}
-  summary={typed ? formatDayLabel(typed) : ""}
-  hint="Type or pick a date."
-  autofocus={focusOnOpen()}
-  oninput={() => typed && (month = typed)}
-  onsubmit={() => typed && pick(typed)}
-/>
-<Calendar bind:month selected={shown ? { from: shown, to: shown } : null} onpick={pick} />
+<button type="button" onclick={toggle}>{picked ? formatDayLabel(picked) : "Pick a date"}</button>
+{#if open}
+  <DatePhraseInput
+    bind:value={text}
+    summary={typed ? formatDayLabel(typed) : ""}
+    hint="Type or pick a date."
+    autofocus={focusOnOpen()}
+    oninput={() => {
+      if (typed) month = typed;
+    }}
+    onsubmit={() => {
+      if (typed) pick(typed);
+    }}
+  />
+  <Calendar bind:month selected={shown ? { from: shown, to: shown } : null} onpick={pick} />
+{/if}
 ```
 
 ## Props
@@ -183,25 +200,40 @@ abbreviations ("Sept.", "thurs") don't matter.
 ## Sets of separate days (`sets: true`)
 
 With `sets`, phrases that pick separate days return `{ kind: "dates" }`:
-the days ascending and unique, and a `label` for a summary. Without it they
-stay no match.
+the days ascending and unique, and a `label` for a summary. `kind: "dates"`
+only ever comes back with `sets` on; without it these phrases stay no match.
+Sets are read only after the ordinary grammar finds nothing, so turning
+`sets` on never changes what a phrase that already parses means ("mars 2026"
+in French stays March).
 
 | You type                                                       | You get                                  |
 | -------------------------------------------------------------- | ---------------------------------------- |
 | `last 3 Fridays`, `past 2 weekends`, `last 5 weekdays`         | The N most recent, on or before today    |
 | `next 2 Mondays`, `next 1 weekends`                            | The N nearest after today                |
+| `this weekend`, `next weekend`, `last weekend`                 | That week's Saturday and Sunday          |
 | `Fridays in October`, `weekends in Feb 2028`                   | Those days in that month or year         |
 | `weekends since October`, `weekdays since Monday`              | Those days from then through today       |
 | `Sundays last month`, `weekdays this year`                     | Those days in that calendar period       |
 | `Mondays from Sep 1 to Sep 30`, `Mondays between Sep 1 and 14` | Those days in any range the parser reads |
 | `every Friday in October`, `all weekdays since Monday`         | `every`/`all` also take the singular     |
 
-- A weekday counts in plural ("Fridays", "fris") or after `every`/`all`.
-  Names come from the locale as in single dates; English adds an "s".
+- A plural weekday is an English name or abbreviation plus "s" ("Fridays",
+  "fris"), in any locale. In other languages, type the English plural or
+  `every`/`all` with the locale's singular name ("every Freitag in
+  October"); a locale name never takes the "s".
 - "Weekends" are Saturday and Sunday, "weekdays" Monday to Friday, whatever
-  `weekStart` is. `last N weekends` counts Saturday–Sunday pairs.
-- The label is the weekday's name in the locale ("Fridays" in English,
-  "Freitag" in German) or `weekendsLabel`/`weekdaysLabel`.
+  `weekStart` is. `next N weekends` counts whole weekends from the first
+  Saturday after today, while `last N weekends` takes the most recent
+  weekend days on or before today, so on a Saturday it starts with that
+  Saturday alone. On a Sunday, "this weekend" is the one that started the
+  day before.
+- `last Friday` is the Friday of the previous week (a single date), while
+  `last 1 Fridays` is the most recent Friday on or before today, which is
+  today on a Friday.
+- Bare `weekends`, `weekdays` or `Fridays` with no window stay no match.
+- The label is the weekday's singular name in the locale, with an English
+  plural "s" ("Fridays" in English, "Freitag" in German), or
+  `weekendsLabel`/`weekdaysLabel`.
 - Days outside `earliestDate`/`maxDate` drop out; no days left is no
   match. N and the set are capped at 366 days.
 
