@@ -252,6 +252,67 @@ test.describe("DateRangePicker", () => {
   });
 });
 
+test.describe("DateRangePicker typed windows and presets", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoPage(page, "date-range-picker");
+  });
+
+  const panel = (page: Page) => page.locator(".kit-date-range-picker__panel");
+
+  test("a typed window matching a preset commits that preset, as its pill does", async ({
+    page,
+  }) => {
+    const demo = page.getByTestId("typed-range-picker");
+    await demo.locator(".kit-date-range-picker__trigger").click();
+    await field(page).pressSequentially("past 30 days");
+    await expect(summary(page)).toHaveText("Last 30 days · May 17 – Jun 15, 2026 · 30 days");
+    // The preview lights the matching pill on the Relative tab.
+    await expect(panel(page).getByRole("radio", { name: "Relative" })).toBeChecked();
+    await expect(panel(page).getByRole("button", { name: "30d" })).toHaveClass(/active/);
+    await expect(panel(page).getByRole("button", { name: "7d" })).not.toHaveClass(/active/);
+    await field(page).press("Enter");
+    await expect(page.getByTestId("typed-range-selection")).toHaveText(
+      '{"mode":"relative","days":30}',
+    );
+    await expect(demo.locator(".kit-date-range-picker__trigger")).toHaveText("Last 30 days");
+    await expect(panel(page).getByRole("button", { name: "30d" })).toHaveClass(/active/);
+  });
+
+  test("a window no preset offers commits a custom range", async ({ page }) => {
+    await page.getByTestId("typed-range-picker").locator(".kit-date-range-picker__trigger").click();
+    await field(page).pressSequentially("last 10 days");
+    await expect(summary(page)).toHaveText("Jun 6 – 15, 2026 · 10 days");
+    await field(page).press("Enter");
+    await expect(page.getByTestId("typed-range-selection")).toHaveText(
+      '{"mode":"custom","from":"2026-06-06","to":"2026-06-15"}',
+    );
+  });
+
+  test("a localized preset label shows in the summary and trigger", async ({ page }) => {
+    const demo = page.getByTestId("fr-presets-picker");
+    await demo.locator(".kit-date-range-picker__trigger").click();
+    await field(page).pressSequentially("last 2 weeks");
+    await expect(summary(page)).toHaveText("Deux dernières semaines · Jun 2 – 15, 2026 · 14 days");
+    await field(page).press("Enter");
+    await expect(page.getByTestId("fr-presets-selection")).toHaveText(
+      '{"mode":"relative","days":14}',
+    );
+    await expect(demo.locator(".kit-date-range-picker__trigger")).toHaveText(
+      "Deux dernières semaines",
+    );
+  });
+
+  test("with presets={[]} a typed window commits a custom range", async ({ page }) => {
+    await page.getByTestId("no-presets-picker").locator(".kit-date-range-picker__trigger").click();
+    await field(page).pressSequentially("last 30 days");
+    await expect(summary(page)).toHaveText("May 17 – Jun 15, 2026 · 30 days");
+    await field(page).press("Enter");
+    await expect(page.getByTestId("no-presets-selection")).toHaveText(
+      '{"mode":"custom","from":"2026-05-17","to":"2026-06-15"}',
+    );
+  });
+});
+
 test.describe("DateRangePicker with dateSets", () => {
   test.beforeEach(async ({ page }) => {
     await gotoPage(page, "date-range-picker");

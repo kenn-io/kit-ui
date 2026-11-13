@@ -30,10 +30,17 @@ export interface DatePhraseOptions {
 export type DatePhraseResult = {
     kind: "date";
     date: string;
+    /** 1 when the text was "today": a rolling one-day window. */
+    rollingDays?: number;
 } | {
     kind: "range";
     from: string;
     to: string;
+    /** Set when the text was a rolling window ending today ("last 30
+     * days", "past 2 weeks"): its length in days, today included, so a
+     * picker can match it to a relative preset. Absent for anything
+     * else, including a window cut short by the bounds. */
+    rollingDays?: number;
 } | {
     kind: "dates";
     /** Ascending, unique YYYY-MM-DD days. */

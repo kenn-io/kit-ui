@@ -24,11 +24,19 @@ function range(from: string, to: string) {
   return { kind: "range", from, to };
 }
 
+/** A rolling window ending today, which a picker can match to a preset. */
+function rolling(from: string, to: string, days: number) {
+  return { kind: "range", from, to, rollingDays: days };
+}
+
 const none = { kind: "none" };
 
 describe("single dates", () => {
+  test("today is a rolling one-day window", () => {
+    expect(parse("today")).toEqual({ kind: "date", date: "2026-11-12", rollingDays: 1 });
+  });
+
   test.each([
-    ["today", "2026-11-12"],
     ["Yesterday", "2026-11-11"],
     ["  TOMORROW  ", "2026-11-13"],
   ])("%p", (text, expected) => {
@@ -232,13 +240,24 @@ describe("ranges", () => {
   });
 
   test("rolling windows end today, inclusive, like the relative presets", () => {
-    expect(parse("last 30 days")).toEqual(range("2026-10-14", "2026-11-12"));
-    expect(parse("past 7 days")).toEqual(range("2026-11-06", "2026-11-12"));
-    expect(parse("last 2 weeks")).toEqual(range("2026-10-30", "2026-11-12"));
-    expect(parse("last 3 months")).toEqual(range("2026-08-13", "2026-11-12"));
-    expect(parse("past week")).toEqual(range("2026-11-06", "2026-11-12"));
-    expect(parse("last 1 year")).toEqual(range("2025-11-13", "2026-11-12"));
+    expect(parse("last 30 days")).toEqual(rolling("2026-10-14", "2026-11-12", 30));
+    expect(parse("past 7 days")).toEqual(rolling("2026-11-06", "2026-11-12", 7));
+    expect(parse("last 2 weeks")).toEqual(rolling("2026-10-30", "2026-11-12", 14));
+    expect(parse("last 3 months")).toEqual(rolling("2026-08-13", "2026-11-12", 92));
+    expect(parse("past week")).toEqual(rolling("2026-11-06", "2026-11-12", 7));
+    expect(parse("last 1 year")).toEqual(rolling("2025-11-13", "2026-11-12", 365));
+    // Not rolling windows ending today: no rollingDays.
     expect(parse("next 10 days")).toEqual(range("2026-11-12", "2026-11-21"));
+    expect(parse("this week")).toEqual(range("2026-11-09", "2026-11-15"));
+    expect(parse("since November")).toEqual(range("2026-11-01", "2026-11-12"));
+    expect(parse("last 30 days to today")).toEqual(range("2026-10-14", "2026-11-12"));
+    // Cut short by a bound, a window no longer has its full length.
+    expect(parse("last 30 days", { earliestDate: "2026-11-01" })).toEqual(
+      range("2026-11-01", "2026-11-12"),
+    );
+    expect(parse("last 30 days", { maxDate: "2026-11-10" })).toEqual(
+      range("2026-10-14", "2026-11-10"),
+    );
   });
 
   test("a bare month or month and year is the whole month", () => {
@@ -257,7 +276,7 @@ describe("year rollover", () => {
     expect(parse("last month", { today: "2027-01-15" })).toEqual(range("2026-12-01", "2026-12-31"));
     expect(parse("last week", { today: "2027-01-02" })).toEqual(range("2026-12-21", "2026-12-27"));
     expect(parse("last 7 days", { today: "2027-01-03" })).toEqual(
-      range("2026-12-28", "2027-01-03"),
+      rolling("2026-12-28", "2027-01-03", 7),
     );
   });
 
@@ -293,7 +312,11 @@ describe("locale names", () => {
 describe("bounds", () => {
   test("a single date outside the bounds is no match", () => {
     expect(parse("tomorrow", { maxDate: "2026-11-12" })).toEqual(none);
-    expect(parse("today", { maxDate: "2026-11-12" })).toEqual(date("2026-11-12"));
+    expect(parse("today", { maxDate: "2026-11-12" })).toEqual({
+      kind: "date",
+      date: "2026-11-12",
+      rollingDays: 1,
+    });
     expect(parse("Jan 1", { earliestDate: "2026-02-01" })).toEqual(none);
   });
 
@@ -557,7 +580,7 @@ describe("sets of separate days", () => {
     }
     // Ordinary phrases read the same with sets on.
     expect(set("last friday")).toEqual(date("2026-11-13"));
-    expect(set("last 3 days")).toEqual(range("2026-11-16", "2026-11-18"));
+    expect(set("last 3 days")).toEqual(rolling("2026-11-16", "2026-11-18", 3));
     expect(set("since October")).toEqual(range("2026-10-01", "2026-11-18"));
   });
 

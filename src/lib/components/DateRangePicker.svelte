@@ -170,7 +170,8 @@
   // every keystroke. Nothing commits until Enter.
   let phrase = $state("");
   // A typed range, or with `dateSets` a set: its days plus first and last.
-  type TypedPick = DateRange & { dates?: string[]; label?: string };
+  // A rolling window that matches an offered preset carries it.
+  type TypedPick = DateRange & { dates?: string[]; label?: string; preset?: RangePreset };
   let typedPreview = $state<TypedPick | null>(null);
   let noMatch = $state(false);
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
@@ -187,7 +188,14 @@
     });
     const span = datePhraseRange(result);
     if (!span) return null;
-    return result.kind === "dates" ? { ...span, dates: result.dates, label: result.label } : span;
+    if (result.kind === "dates") return { ...span, dates: result.dates, label: result.label };
+    // "last 30 days" with a 30-day preset on offer commits that preset, so
+    // the app gets the rolling window its pill gives, not a frozen range.
+    const preset =
+      result.kind !== "none" && result.rollingDays
+        ? presets.find((p) => p.days > 0 && p.days === result.rollingDays)
+        : undefined;
+    return preset ? { ...span, preset } : span;
   });
 
   // "Fridays · Oct 30 – Nov 13, 2026 · 3 days" for a set; without the
@@ -195,7 +203,8 @@
   function describe(pick: TypedPick): string {
     const days = dayCountLabel(pick.dates?.length ?? daysInRange(pick.from, pick.to));
     const span = formatDateRangeLabel(pick.from, pick.to, locale);
-    return pick.label ? `${pick.label} · ${span} · ${days}` : `${span} · ${days}`;
+    const name = pick.preset?.longLabel ?? pick.label;
+    return name ? `${name} · ${span} · ${days}` : `${span} · ${days}`;
   }
 
   // Describes what the calendar shows: the current parse, or the preview
@@ -226,13 +235,19 @@
     if (!next) return;
     previewTimer = setTimeout(() => {
       typedPreview = next;
-      tab = "custom";
+      // A preset match previews as its pill; anything else on the calendar.
+      tab = next.preset ? "relative" : "custom";
       customMonth = next.from;
     }, 100);
   }
 
   function submitPhrase(): void {
-    if (typed) {
+    if (typed?.preset) {
+      // Exactly what clicking the pill does.
+      const { days } = typed.preset;
+      tab = "relative";
+      applyRelative(days);
+    } else if (typed) {
       const { from, to, dates, label } = typed;
       // Clear the text too, so a second Enter doesn't emit again.
       resetPhrase();
@@ -563,7 +578,10 @@
           presets.map((preset) => ({
             key: preset.days,
             label: preset.label,
-            active: isRelativeActive(preset.days),
+            // While a typed preset match previews, its pill is the one lit.
+            active: typedPreview?.preset
+              ? typedPreview.preset.days === preset.days
+              : isRelativeActive(preset.days),
             pick: () => applyRelative(preset.days),
           })),
         )}

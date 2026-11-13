@@ -68,8 +68,8 @@ on-screen keyboard over the calendar.
 
 ```ts
 type DatePhraseResult =
-  | { kind: "date"; date: string }
-  | { kind: "range"; from: string; to: string }
+  | { kind: "date"; date: string; rollingDays?: number } // 1 for "today"
+  | { kind: "range"; from: string; to: string; rollingDays?: number } // "last 30 days" → 30
   | { kind: "dates"; dates: string[]; label: string } // only with `sets`
   | { kind: "none" };
 

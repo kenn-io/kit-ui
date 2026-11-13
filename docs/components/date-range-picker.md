@@ -27,8 +27,7 @@ the picker switches to the Custom tab, moves the calendar to the start
 month, and shows the range as the draft, with a summary line under the field
 ("Sep 10 – Oct 20, 2026 · 41 days"). Nothing commits until Enter, which
 commits through the same path as the Custom tab's second click: `onSelect`
-receives a `custom` selection (also for "last 30 days": typed text never
-becomes a relative preset), the text clears, and the popover stays open. Clicking a day
+receives a `custom` selection, the text clears, and the popover stays open. Clicking a day
 drops the typed preview and starts a normal two-click pick. Text that isn't
 a date or range leaves the selection alone and shows `noMatchLabel` on
 Enter. Phrases are clamped to `earliestDate` and `maxDate`. See
@@ -36,6 +35,16 @@ Enter. Phrases are clamped to `earliestDate` and `maxDate`. See
 understands. `textEntry={false}` leaves the field out. This field is the one
 `input` in the panel: the Custom tab's From/To stay readouts, and there are
 no native date inputs.
+
+**Typed windows and presets**: a rolling window ending today ("last 30
+days", "past 2 weeks", "today") whose length in days equals an offered
+preset's `days` commits that preset through the same path as clicking its
+pill: `onSelect` gets `{ mode: "relative", days }`, the pill lights, and the
+trigger shows the preset's `longLabel`. While it previews, the Relative tab
+lights that pill and the summary leads with the `longLabel`. Any other
+length, a window the bounds cut short, or a picker with `presets={[]}`
+commits a `custom` range. Months and years count their real days, so "last
+3 months" (about 92 days) doesn't match a 90-day preset.
 
 **Sets** (`dateSets`, off by default): typed text can also pick separate
 days, such as "last 3 Fridays" or "weekends since October". The Custom tab

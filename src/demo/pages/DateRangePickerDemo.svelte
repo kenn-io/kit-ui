@@ -36,6 +36,16 @@
   let typedSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
   const typedRange = $derived(resolveRange(typedSelection));
   let plainSelection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
+  let frSelection = $state.raw<RangeSelection>({ mode: "relative", days: 30 });
+  const frPresets = [
+    { label: "2 sem.", longLabel: "Deux dernières semaines", days: 14 },
+    { label: "30 j", longLabel: "30 derniers jours", days: 30 },
+  ];
+  let noPresetSelection = $state.raw<RangeSelection>({
+    mode: "custom",
+    from: "2026-06-01",
+    to: "2026-06-07",
+  });
   let setSelection = $state.raw<RangeSelection>({ mode: "relative", days: 7 });
   // A set committed earlier, as an app would restore it from storage.
   const savedSet: RangeSelection = {
@@ -165,6 +175,32 @@
     />
     <output data-testid="typed-range-selection">{JSON.stringify(typedSelection)}</output>
     <output data-testid="typed-range-bounds">{typedRange.from} → {typedRange.to}</output>
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Typed windows and presets"
+  description="A typed rolling window (“last 2 weeks”, “past 30 days”) whose length matches an offered preset commits that preset, exactly as clicking its pill does, so the app keeps a rolling window. Other lengths, or a picker with presets={[]}, commit a custom range."
+  code={`<DateRangePicker {selection} onSelect={...} presets={[{ label: "2 sem.", longLabel: "Deux dernières semaines", days: 14 }, ...]} />
+<DateRangePicker {selection} onSelect={...} presets={[]} />`}
+>
+  <div data-testid="fr-presets-picker" class="typed-demo">
+    <DateRangePicker
+      selection={frSelection}
+      onSelect={(sel) => (frSelection = sel)}
+      presets={frPresets}
+      locale="en-US"
+    />
+    <output data-testid="fr-presets-selection">{JSON.stringify(frSelection)}</output>
+  </div>
+  <div data-testid="no-presets-picker" class="typed-demo">
+    <DateRangePicker
+      selection={noPresetSelection}
+      onSelect={(sel) => (noPresetSelection = sel)}
+      presets={[]}
+      locale="en-US"
+    />
+    <output data-testid="no-presets-selection">{JSON.stringify(noPresetSelection)}</output>
   </div>
 </DemoSection>
 

@@ -62,8 +62,22 @@ export interface DatePhraseOptions {
 /** What a typed phrase means: one day, an inclusive range, a set of
  * separate days (only with `sets`), or nothing. */
 export type DatePhraseResult =
-  | { kind: "date"; date: string }
-  | { kind: "range"; from: string; to: string }
+  | {
+      kind: "date";
+      date: string;
+      /** 1 when the text was "today": a rolling one-day window. */
+      rollingDays?: number;
+    }
+  | {
+      kind: "range";
+      from: string;
+      to: string;
+      /** Set when the text was a rolling window ending today ("last 30
+       * days", "past 2 weeks"): its length in days, today included, so a
+       * picker can match it to a relative preset. Absent for anything
+       * else, including a window cut short by the bounds. */
+      rollingDays?: number;
+    }
   | {
       kind: "dates";
       /** Ascending, unique YYYY-MM-DD days. */
@@ -87,6 +101,8 @@ interface Span {
   to: string;
   single: boolean;
   explicitYear: boolean;
+  /** A rolling window ending today ("last 30 days", "today"). */
+  rolling?: boolean;
 }
 
 interface Ctx {
@@ -436,7 +452,7 @@ function parseCore(text: string, ctx: Ctx, yearHint?: number): Span | null {
   const { months, weekdays } = ctx.words;
 
   if (n === 1) {
-    if (a === "today" || a === "now") return single(ctx.today);
+    if (a === "today" || a === "now") return { ...single(ctx.today)!, rolling: true };
     if (a === "yesterday") return single(addDays(ctx.today, -1));
     if (a === "tomorrow") return single(addDays(ctx.today, 1));
   }
@@ -508,7 +524,7 @@ function parseCore(text: string, ctx: Ctx, yearHint?: number): Span | null {
     const amount = n === 3 ? count(b) : n === 2 && a === "past" ? 1 : null;
     const unit = n === 3 ? UNITS[c!] : UNITS[b!];
     if (amount !== null && unit && (n === 3 || a === "past")) {
-      return range(addDays(shift(ctx.today, unit, -amount), 1), ctx.today);
+      return { ...range(addDays(shift(ctx.today, unit, -amount), 1), ctx.today), rolling: true };
     }
   }
   // Rolling windows starting today: "next 10 days".
@@ -789,11 +805,17 @@ export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): 
 
   if (span.single) {
     if ((lo && span.from < lo) || (hi && span.from > hi)) return NONE;
-    return { kind: "date", date: span.from };
+    return span.rolling
+      ? { kind: "date", date: span.from, rollingDays: 1 }
+      : { kind: "date", date: span.from };
   }
   const from = lo && span.from < lo ? lo : span.from;
   const to = hi && span.to > hi ? hi : span.to;
   if (from > to) return NONE;
+  // A window the bounds cut short no longer ends today with its full length.
+  if (span.rolling && from === span.from && to === span.to) {
+    return { kind: "range", from, to, rollingDays: daysInRange(from, to) };
+  }
   return { kind: "range", from, to };
 }
 
