@@ -244,7 +244,7 @@
   code={`<DayLane
   {items}
   dayMinutes={1440}
-  nowMinute={14 * 60 + 35}
+  nowMinute={12 * 60 + 30}
   onselect={(id) => (selected = id)}
   onoverflow={({ ids }) => openList(ids)}
 >
