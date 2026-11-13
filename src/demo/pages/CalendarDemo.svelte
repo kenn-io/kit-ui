@@ -48,13 +48,16 @@
   let activityDay = $state<string | null>(null);
   const activity = $derived.by(() => {
     const counts: Record<string, number> = {};
-    for (const date of monthGridDates(activityMonth)) {
+    const dates = monthGridDates(activityMonth);
+    for (const date of dates) {
       if (date > todayStr()) break;
       const day = Number.parseInt(date.slice(8), 10);
       const weekday = new Date(`${date}T12:00:00`).getDay();
       const count = ((day * 7 + 3) % 11) - (weekday === 0 || weekday === 6 ? 6 : 1);
       if (count > 0) counts[date] = count;
     }
+    counts[dates[0]!] = NaN;
+    counts[dates[1]!] = Infinity;
     return counts;
   });
 
@@ -233,7 +236,7 @@ function pickRangeDay(d: string) {
 
 <DemoSection
   title="Month strip"
-  description="The strip layout shows the visible month as one row of weekday/number cells that scrolls inside itself when narrow. Weekend letters are quieter, the selected day keeps its shade under an outline, and matches marks days with a dot — independent of activity, selection, and maxDate — adding matchLabel to their accessible label. The second strip is Sunday-first, in French, with a blue accent and maxDate."
+  description="The strip layout shows the visible month as one row of weekday/number cells that scrolls inside itself when narrow. The selected day keeps its shade under an outline, and matches marks days with a dot — independent of activity, selection, and maxDate — adding matchLabel to their accessible label. The second strip is Sunday-first, in French, with a blue accent and maxDate."
   code={`<Calendar
   layout="strip"
   bind:month

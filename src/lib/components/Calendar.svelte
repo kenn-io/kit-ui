@@ -172,8 +172,6 @@
   function navStep(delta: 1 | -1): void {
     if (dayView) {
       month = stepAnchor("month", month, delta);
-      // A strip that pages returns to the grid's days, not a stale zoom.
-      view = "days";
     } else if (view === "months") {
       zoomYear += delta;
     } else {
@@ -242,12 +240,6 @@
     if (strip) label = `${weekdays[index % 7]}, ${label}`;
     if (count != null && count > 0) label += `, ${activityLabel(count)}`;
     return matched ? `${label}, ${matchLabel}` : label;
-  }
-
-  // Saturday and Sunday, from the day's weekday column.
-  function isWeekend(index: number): boolean {
-    const column = index % 7;
-    return weekStart === "sunday" ? column === 0 || column === 6 : column >= 5;
   }
 
   // The strip scrolls inside itself, so a selected day late in the month
@@ -329,7 +321,6 @@
         class:fill-above={band && index >= 7 && inRange(cells[index - 7]!)}
         class:strip
         class:outlined={selectedDay && strip}
-        class:weekend={strip && isWeekend(index)}
         type="button"
         data-activity={step > 0 ? step : undefined}
         disabled={maxDate != null && date > maxDate}
@@ -703,10 +694,6 @@
   .kit-calendar__day-weekday {
     font-size: var(--font-size-2xs);
     line-height: 1;
-  }
-
-  .kit-calendar__day.weekend .kit-calendar__day-weekday {
-    color: color-mix(in srgb, currentColor 95%, var(--bg-surface));
   }
 
   .kit-calendar__day-number {

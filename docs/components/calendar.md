@@ -156,16 +156,12 @@ above a list.
 ```
 
 - Only the month's own days render, in order, starting on whatever weekday
-  the 1st falls on. `weekStart` still decides which column a weekday maps
-  to, so the weekend marking and labels follow it.
+  the 1st falls on. `weekStart` determines the weekday labels.
 - Weekday letters are the locale's narrow names
-  (`weekdayLabels(locale, weekStart, "narrow")`) in the day's ink; Saturday
-  and Sunday letters are that ink mixed 5% toward `--bg-surface`, slightly
-  quieter while following the shade, selection and hover ink.
+  (`weekdayLabels(locale, weekStart, "narrow")`) in the day's ink.
 - The header is the arrows and a static month label: the strip pages by
   month, with `maxDate` blocking later months, and has no month/year
-  drill-down. Paging the strip also ends any drill-down left open in the
-  grid layout.
+  drill-down.
 - The calendar fills its container's width. The header sits beside the
   days and wraps above them when narrow; the days then scroll sideways
   inside the strip, never the page, with a thin scrollbar. When the month,

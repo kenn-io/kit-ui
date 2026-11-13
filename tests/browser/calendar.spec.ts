@@ -159,6 +159,13 @@ test.describe("activity", () => {
     );
     expect(Math.max(...steps)).toBe(4);
     await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
+    for (const day of [
+      calendar.locator(".kit-calendar__day").nth(0),
+      calendar.locator(".kit-calendar__day").nth(1),
+    ]) {
+      await expect(day).not.toHaveAttribute("data-activity");
+      await expect(day).not.toHaveAttribute("aria-label", /(?:NaN|Infinity|items?)/);
+    }
 
     // Shaded and plain days have different fills. Plain days may all be
     // future, disabled ones early in a month; opacity leaves the fill alone.
@@ -234,19 +241,6 @@ test.describe("activity", () => {
           // Poll: day cells transition color, so a theme switch takes a moment to settle.
           await expect.poll(() => contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
         }
-        // Strip weekend letters use the quieter ink; measure them on their shades
-        // too (green strip, blue Sunday strip).
-        if (!id.startsWith("calendar-strip")) continue;
-        const letters = page
-          .getByTestId(id)
-          .locator(
-            ".kit-calendar__day.weekend[data-activity]:not(:disabled) .kit-calendar__day-weekday",
-          );
-        const letterCount = await letters.count();
-        expect(letterCount).toBeGreaterThan(0);
-        for (let i = 0; i < letterCount; i++) {
-          await expect.poll(() => contrastOf(letters.nth(i))).toBeGreaterThanOrEqual(4.5);
-        }
       }
     });
   }
@@ -262,9 +256,7 @@ test.describe("month strip", () => {
   const filter = (page: import("@playwright/test").Page, name: string) =>
     page.getByRole("radiogroup", { name: "Strip filter" }).getByRole("radio", { name });
 
-  test("shows the month's own days in one row, with weekday letters and weekends", async ({
-    page,
-  }) => {
+  test("shows the month's own days in one row, with weekday letters", async ({ page }) => {
     const cal = strip(page);
     const days = cal.locator(".kit-calendar__day");
     await expect(days).toHaveCount(31);
@@ -278,30 +270,6 @@ test.describe("month strip", () => {
     await expect(days.first().locator(".kit-calendar__day-number")).toHaveText("1");
     await expect(days.last().locator(".kit-calendar__day-number")).toHaveText("31");
     await expect(days.first().locator(".kit-calendar__day-weekday")).not.toBeEmpty();
-
-    // Mar 1 2026 is a Sunday: nine weekend days, their letters in a quieter ink.
-    await expect(cal.locator(".kit-calendar__day.weekend")).toHaveCount(9);
-    await expect(days.first()).toHaveClass(/weekend/);
-    await expect(days.nth(2)).not.toHaveClass(/weekend/);
-    const ink = (n: number) =>
-      days
-        .nth(n)
-        .locator(".kit-calendar__day-weekday")
-        .evaluate((node) => getComputedStyle(node).color);
-    // Day 1 (Sunday) and day 3 (Tuesday) share a shade step, so only the weekend ink differs.
-    await expect(days.first()).toHaveAttribute(
-      "data-activity",
-      (await days.nth(2).getAttribute("data-activity")) ?? "",
-    );
-    expect(await ink(0)).not.toBe(await ink(2));
-
-    // Sunday-first: Feb 1 2026 is a Sunday, so the first and seventh days are the weekend.
-    const sunday = page.getByTestId("calendar-strip-sunday").locator(".kit-calendar__day");
-    await expect(
-      page.getByTestId("calendar-strip-sunday").locator(".kit-calendar__day.weekend"),
-    ).toHaveCount(8);
-    await expect(sunday.first()).toHaveClass(/weekend/);
-    await expect(sunday.nth(6)).toHaveClass(/weekend/);
   });
 
   test("a Sunday-first strip follows its locale, labels and maxDate", async ({ page }) => {
