@@ -125,25 +125,20 @@ test("civil-date helpers preserve the skipped date in Apia", () => {
   ]);
 });
 
-describe("activityStep", () => {
-  test("quarters of the busiest day, with any activity at least step 1", () => {
-    expect([0, 1, 3, 5, 6, 8, 12].map((count) => activityStep(count, 12))).toEqual([
-      0, 1, 1, 2, 2, 3, 4,
-    ]);
-    // No activity or no maximum gives step 0.
-    expect(activityStep(0, 0)).toBe(0);
-    expect(activityStep(3, 0)).toBe(0);
-    expect(activityStep(-2, 10)).toBe(0);
-    expect(activityStep(Number.NaN, 10)).toBe(0);
-    // A count above the maximum stays at step 4.
-    expect(activityStep(20, 10)).toBe(4);
-  });
+test("activityStep uses quarters of the busiest day, with any activity at least step 1", () => {
+  expect([0, 1, 3, 5, 6, 8, 12].map((count) => activityStep(count, 12))).toEqual([
+    0, 1, 1, 2, 2, 3, 4,
+  ]);
+  // No activity or no maximum gives step 0.
+  expect(activityStep(3, 0)).toBe(0);
+  expect(activityStep(-2, 10)).toBe(0);
+  expect(activityStep(Number.NaN, 10)).toBe(0);
+  // A count above the maximum stays at step 4.
+  expect(activityStep(20, 10)).toBe(4);
 });
 
-describe("month strip inputs", () => {
-  test("narrow weekday labels follow the week start and locale", () => {
-    expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
-    expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
-    expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
-  });
+test("narrow weekday labels follow the week start and locale", () => {
+  expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
+  expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
+  expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
 });

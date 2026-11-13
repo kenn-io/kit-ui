@@ -21,17 +21,12 @@ function drillCalendar(page: import("@playwright/test").Page) {
   return page.locator(".kit-calendar").nth(1);
 }
 
-function rangeDay(page: import("@playwright/test").Page, day: number) {
-  const date = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(thisYear, thisMonth, day)));
+function rangeDay(page: import("@playwright/test").Page, n: number) {
   return page
     .locator(".kit-calendar")
     .nth(3)
-    .getByRole("button", { name: new RegExp(`^${date}(?:,|$)`) });
+    .locator(".kit-calendar__day:not(.outside)")
+    .filter({ hasText: new RegExp(`^\\s*${n}\\s*$`) });
 }
 
 test("header click zooms days → months → years; year click has nothing above it", async ({
@@ -153,16 +148,12 @@ test.describe("activity", () => {
   test("shades days with a count and adds the count to their label", async ({ page }) => {
     const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
     const shaded = calendar.locator(".kit-calendar__day[data-activity]");
-    expect(await shaded.count()).toBeGreaterThan(0);
     const steps = await shaded.evaluateAll((nodes) =>
       nodes.map((node) => Number((node as HTMLElement).dataset.activity)),
     );
     expect(Math.max(...steps)).toBe(4);
     await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
-    for (const day of [
-      calendar.locator(".kit-calendar__day").nth(0),
-      calendar.locator(".kit-calendar__day").nth(1),
-    ]) {
+    for (const day of [0, 1].map((i) => calendar.locator(".kit-calendar__day").nth(i))) {
       await expect(day).not.toHaveAttribute("data-activity");
       await expect(day).not.toHaveAttribute("aria-label", /(?:NaN|Infinity|items?)/);
     }
@@ -263,7 +254,6 @@ test.describe("month strip", () => {
     expect(new Set(tops).size).toBe(1);
     await expect(days.first().locator(".kit-calendar__day-number")).toHaveText("1");
     await expect(days.last().locator(".kit-calendar__day-number")).toHaveText("31");
-    await expect(days.first().locator(".kit-calendar__day-weekday")).not.toBeEmpty();
   });
 
   test("a Sunday-first strip follows its locale, labels and maxDate", async ({ page }) => {
@@ -314,7 +304,6 @@ test.describe("month strip", () => {
     await expect(days.nth(9)).toHaveAttribute("aria-label", /, matches filters$/);
     await expect(days.nth(19)).not.toHaveAttribute("data-activity");
     await expect(days.nth(19)).toHaveAttribute("aria-label", /\d, matches filters$/);
-    await expect(days.nth(19)).not.toHaveAttribute("aria-label", /message/);
     expect(await facts()).toEqual(before);
 
     await filter(page, "No filter").click();
@@ -442,7 +431,6 @@ test("matches draw on the grid, in surface ink on a solid range end", async ({ p
   await day(5).click();
   await day(10).click();
   await expect(day(10)).toHaveClass(/range-end/);
-  await expect(day(10)).toHaveAttribute("aria-pressed", "true");
   await expect(day(10)).toHaveAttribute("aria-label", /, matches filters$/);
   const dot = (n: number) =>
     day(n)

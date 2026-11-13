@@ -210,7 +210,6 @@
 
   // The busiest day among the rendered cells sets the default scale.
   const activityMax = $derived.by(() => {
-    if (activity == null) return 0;
     let max = 0;
     for (const { date } of days) max = Math.max(max, countOf(date) ?? 0);
     return max;
@@ -652,7 +651,6 @@
    * row that wraps below the header when narrow and scrolls inside itself. */
   .kit-calendar--strip {
     display: flex;
-    flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
