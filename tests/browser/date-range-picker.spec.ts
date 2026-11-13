@@ -32,7 +32,7 @@ async function openCustomTab(page: import("@playwright/test").Page) {
 function day(page: import("@playwright/test").Page, n: number) {
   return panel(page)
     .locator(".kit-calendar__day:not(.outside)")
-    .filter({ hasText: new RegExp(`^${n}$`) });
+    .filter({ hasText: new RegExp(`^\\s*${n}\\s*$`) });
 }
 
 async function expectCompactEndpointsToFit(page: import("@playwright/test").Page) {
