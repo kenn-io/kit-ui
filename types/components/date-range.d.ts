@@ -86,6 +86,21 @@ export declare function periodBounds(unit: CalendarUnit, anchor: string, weekSta
  * overflowing into March).
  */
 export declare function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): string;
+/** Move `anchor` by `months` calendar months, clamping the day to the
+ * target month's length (Jan 31 + 1 → Feb 28; Feb 29 + 12 → Feb 28). */
+export declare function shiftMonths(anchor: string, months: number): string;
+/**
+ * The date a day-grid key moves focus to from `from`, following the
+ * WAI-ARIA APG date picker grid: arrows move a day or a week, Home/End go
+ * to the ends of the week (by `weekStart`), PageUp/PageDown move a month
+ * and with Shift a year. Returns null for any other key. `rtl` swaps the
+ * horizontal arrows.
+ */
+export declare function dayGridKeyTarget(key: string, from: string, options?: {
+    shiftKey?: boolean;
+    weekStart?: WeekStart;
+    rtl?: boolean;
+}): string | null;
 /**
  * The 42 dates (six weeks, Monday-first by default) covering `anchor`'s month — the
  * cells of a fixed-height month grid. Leading/trailing dates belong to the
@@ -112,6 +127,10 @@ export declare function formatWeekOfLabel(template: string, dateLabel: string): 
 /** "Jun 29, 2026" style label for a day anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatDayLabel(anchor: string, locale?: string): string;
+/** "Monday, June 29, 2026" style label for a calendar day cell: the full
+ * date with its weekday, since the grid's weekday headers are visual
+ * only. `locale` omitted = the browser locale. */
+export declare function formatDayCellLabel(anchor: string, locale?: string): string;
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatMonthLabel(anchor: string, locale?: string): string;

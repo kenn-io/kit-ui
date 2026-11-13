@@ -136,3 +136,178 @@ test("zooming out and back preserves the selected range highlight", async ({ pag
   await cal.locator(".kit-calendar__unit.current").click();
   await expect(cal.locator(".kit-calendar__day.selected")).toHaveCount(selectedBefore);
 });
+
+// Keyboard grid navigation (WAI-ARIA APG date picker grid). "Today" is
+// pinned to Thursday 2026-01-15 at noon so the month and year boundaries
+// below are the same in every runner timezone. Assertions read each day's
+// `data-date` rather than its locale-dependent name.
+test.describe("keyboard grid", () => {
+  test.beforeEach(async ({ page }) => {
+    // The file-level hook already loaded the page on the real clock; a
+    // same-hash goto would not reload it.
+    await page.clock.setFixedTime(new Date(2026, 0, 15, 12, 0, 0));
+    await page.reload();
+    await page.locator(".content__heading").waitFor();
+  });
+
+  // The day-range demo: no maxDate and no selection until a pick.
+  function rangeCalendar(page: import("@playwright/test").Page) {
+    return page.locator(".kit-calendar").nth(3);
+  }
+
+  async function expectFocusedDay(cal: import("@playwright/test").Locator, date: string) {
+    const focused = cal.locator(".kit-calendar__day:focus");
+    await expect(focused).toHaveAttribute("data-date", date);
+    await expect(focused).toHaveAttribute("tabindex", "0");
+  }
+
+  test("the grid is one tab stop, on today when nothing is selected", async ({ page }) => {
+    const cal = rangeCalendar(page);
+    await expect(cal.locator('.kit-calendar__day[tabindex="0"]')).toHaveCount(1);
+    await expect(cal.locator('.kit-calendar__day[tabindex="-1"]')).toHaveCount(41);
+
+    await cal.locator(".kit-calendar__nav").last().focus();
+    await page.keyboard.press("Tab");
+    await expectFocusedDay(cal, "2026-01-15");
+    await page.keyboard.press("Tab");
+    await expect(cal.locator(".kit-calendar__day:focus")).toHaveCount(0);
+    await page.keyboard.press("Shift+Tab");
+    await expectFocusedDay(cal, "2026-01-15");
+  });
+
+  test("the tab stop starts on the selected day, else the month's first day", async ({ page }) => {
+    // The range-highlight demo selects Mon 12 – Sun 18 January.
+    const week = page.locator(".kit-calendar").nth(2);
+    await expect(week.locator('.kit-calendar__day[tabindex="0"]')).toHaveAttribute(
+      "data-date",
+      "2026-01-12",
+    );
+
+    const cal = rangeCalendar(page);
+    await cal.locator(".kit-calendar__nav").last().click();
+    await expect(cal.locator('.kit-calendar__day[tabindex="0"]')).toHaveAttribute(
+      "data-date",
+      "2026-02-01",
+    );
+  });
+
+  test("grid semantics: rows of gridcells with dates, selection, and today", async ({ page }) => {
+    const cal = page.locator(".kit-calendar").first();
+    const grid = cal.getByRole("grid", { name: "January 2026" });
+    await expect(grid.getByRole("row")).toHaveCount(6);
+    await expect(grid.getByRole("gridcell")).toHaveCount(42);
+    const today = grid.getByRole("gridcell", { name: "Thursday, January 15, 2026" });
+    await expect(today).toHaveAttribute("aria-current", "date");
+    await expect(today).toHaveAttribute("aria-selected", "true");
+    await expect(
+      grid.getByRole("gridcell", { name: "Wednesday, January 14, 2026" }),
+    ).toHaveAttribute("aria-selected", "false");
+  });
+
+  test("arrows move by day and week, crossing into the next month", async ({ page }) => {
+    const cal = rangeCalendar(page);
+    await cal.locator('.kit-calendar__day[tabindex="0"]').focus();
+
+    await page.keyboard.press("ArrowRight");
+    await expectFocusedDay(cal, "2026-01-16");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    await expectFocusedDay(cal, "2026-01-14");
+    await page.keyboard.press("ArrowUp");
+    await expectFocusedDay(cal, "2026-01-07");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expectFocusedDay(cal, "2026-02-04");
+    await expect(cal.getByRole("grid")).toHaveAccessibleName("February 2026");
+    await expect(page.locator(".calendar-demo").nth(3).locator(".readout")).toHaveText(
+      "pick a start date",
+    );
+  });
+
+  test("Home and End go to the week's first and last day", async ({ page }) => {
+    const cal = rangeCalendar(page);
+    await cal.locator('.kit-calendar__day[tabindex="0"]').focus();
+    await page.keyboard.press("Home");
+    await expectFocusedDay(cal, "2026-01-12");
+    await page.keyboard.press("End");
+    await expectFocusedDay(cal, "2026-01-18");
+  });
+
+  test("PageUp/PageDown move a month, clamping the day; Shift moves a year", async ({ page }) => {
+    const cal = rangeCalendar(page);
+    await cal.locator('.kit-calendar__day[tabindex="0"]').focus();
+    await page.keyboard.press("PageUp");
+    await expectFocusedDay(cal, "2025-12-15");
+    await expect(cal.getByRole("grid")).toHaveAccessibleName("December 2025");
+    await page.keyboard.press("PageDown");
+    await expectFocusedDay(cal, "2026-01-15");
+
+    // Jan 15 → Jan 29 → Jan 31, then a month later is the last day of February.
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await expectFocusedDay(cal, "2026-01-31");
+    await page.keyboard.press("PageDown");
+    await expectFocusedDay(cal, "2026-02-28");
+
+    await page.keyboard.press("Shift+PageUp");
+    await expectFocusedDay(cal, "2025-02-28");
+    await expect(cal.getByRole("grid")).toHaveAccessibleName("February 2025");
+    await page.keyboard.press("Shift+PageDown");
+    await page.keyboard.press("Shift+PageDown");
+    await expectFocusedDay(cal, "2027-02-28");
+  });
+
+  test("Enter and Space pick the focused day, including across months", async ({ page }) => {
+    const cal = rangeCalendar(page);
+    const readout = page.locator(".calendar-demo").nth(3).locator(".readout");
+    await cal.locator('.kit-calendar__day[tabindex="0"]').focus();
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("Enter");
+    await expect(readout).toContainText("2026-01-14");
+
+    await page.keyboard.press("PageDown");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Space");
+    await expect(readout).toHaveText("range: 2026-01-14 → 2026-02-15");
+    await expect(cal.locator(".kit-calendar__day.selected").first()).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  test("days after maxDate are reachable but cannot be picked", async ({ page }) => {
+    const cal = page.locator(".kit-calendar").first();
+    const readout = page.locator(".calendar-demo").first().locator("code");
+    await expect(readout).toHaveText("2026-01-15");
+
+    await cal.locator('.kit-calendar__day[tabindex="0"]').focus();
+    await expectFocusedDay(cal, "2026-01-15");
+    await page.keyboard.press("ArrowRight");
+    await expectFocusedDay(cal, "2026-01-16");
+    await expect(cal.locator(".kit-calendar__day:focus")).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Space");
+    // force: Playwright waits on aria-disabled; the click itself is real.
+    await cal.locator('[data-date="2026-01-16"]').click({ force: true });
+    await expect(readout).toHaveText("2026-01-15");
+
+    // Paging into a month wholly after maxDate stays blocked, as the arrow
+    // button is.
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expectFocusedDay(cal, "2026-01-30");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("PageDown");
+    await expectFocusedDay(cal, "2026-01-30");
+    await expect(cal.getByRole("grid")).toHaveAccessibleName("January 2026");
+
+    // Back to an enabled day, which picks.
+    await page.keyboard.press("PageUp");
+    await page.keyboard.press("Enter");
+    await expect(readout).toHaveText("2025-12-30");
+  });
+});

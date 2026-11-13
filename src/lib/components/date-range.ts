@@ -171,11 +171,60 @@ export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): str
   } else if (unit === "week") {
     d.setDate(d.getDate() + 7 * dir);
   } else {
-    const target = new Date(d.getFullYear(), d.getMonth() + dir, 1);
-    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-    target.setDate(Math.min(d.getDate(), lastDay));
-    d.setTime(target.getTime());
+    return shiftMonths(anchor, dir);
   }
+  return localDateStr(d);
+}
+
+/** Move `anchor` by `months` calendar months, clamping the day to the
+ * target month's length (Jan 31 + 1 → Feb 28; Feb 29 + 12 → Feb 28). */
+export function shiftMonths(anchor: string, months: number): string {
+  const d = parseLocal(anchor);
+  const target = new Date(d.getFullYear(), d.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(d.getDate(), lastDay));
+  return localDateStr(target);
+}
+
+/**
+ * The date a day-grid key moves focus to from `from`, following the
+ * WAI-ARIA APG date picker grid: arrows move a day or a week, Home/End go
+ * to the ends of the week (by `weekStart`), PageUp/PageDown move a month
+ * and with Shift a year. Returns null for any other key. `rtl` swaps the
+ * horizontal arrows.
+ */
+export function dayGridKeyTarget(
+  key: string,
+  from: string,
+  options: { shiftKey?: boolean; weekStart?: WeekStart; rtl?: boolean } = {},
+): string | null {
+  const { shiftKey = false, weekStart = "monday", rtl = false } = options;
+  const back = rtl ? 1 : -1;
+  switch (key) {
+    case "ArrowLeft":
+      return addDays(from, back);
+    case "ArrowRight":
+      return addDays(from, -back);
+    case "ArrowUp":
+      return addDays(from, -7);
+    case "ArrowDown":
+      return addDays(from, 7);
+    case "Home":
+      return periodBounds("week", from, weekStart).from;
+    case "End":
+      return periodBounds("week", from, weekStart).to;
+    case "PageUp":
+      return shiftMonths(from, shiftKey ? -12 : -1);
+    case "PageDown":
+      return shiftMonths(from, shiftKey ? 12 : 1);
+    default:
+      return null;
+  }
+}
+
+function addDays(anchor: string, days: number): string {
+  const d = parseLocal(anchor);
+  d.setDate(d.getDate() + days);
   return localDateStr(d);
 }
 
@@ -295,6 +344,16 @@ export function formatDayLabel(anchor: string, locale?: string): string {
   return formatter({ year: "numeric", month: "short", day: "numeric" }, locale).format(
     parseLocal(anchor),
   );
+}
+
+/** "Monday, June 29, 2026" style label for a calendar day cell: the full
+ * date with its weekday, since the grid's weekday headers are visual
+ * only. `locale` omitted = the browser locale. */
+export function formatDayCellLabel(anchor: string, locale?: string): string {
+  return formatter(
+    { weekday: "long", year: "numeric", month: "long", day: "numeric" },
+    locale,
+  ).format(parseLocal(anchor));
 }
 
 /** "June 2026" style label for a month anchor. `locale` omitted = the

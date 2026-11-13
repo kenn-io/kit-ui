@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  dayGridKeyTarget,
+  formatDayCellLabel,
   formatDayLabel,
   formatMonthLabel,
   formatShortDate,
@@ -8,6 +10,7 @@ import {
   periodBounds,
   resolveRange,
   monthGridDates,
+  shiftMonths,
   weekdayLabels,
 } from "../src/lib/components/date-range.js";
 
@@ -98,4 +101,59 @@ test("Sunday-start calendar weeks and grid", () => {
     "Sat",
   ]);
   expect(weekdayLabels("en-US")[0]).toBe("Mon");
+});
+
+describe("shiftMonths", () => {
+  test("clamps the day to a shorter target month", () => {
+    expect(shiftMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(shiftMonths("2028-01-31", 1)).toBe("2028-02-29");
+    expect(shiftMonths("2026-03-31", -1)).toBe("2026-02-28");
+  });
+
+  test("moves across years, clamping Feb 29 in a non-leap year", () => {
+    expect(shiftMonths("2026-01-15", -1)).toBe("2025-12-15");
+    expect(shiftMonths("2028-02-29", 12)).toBe("2029-02-28");
+    expect(shiftMonths("2028-02-29", -12)).toBe("2027-02-28");
+  });
+});
+
+describe("dayGridKeyTarget", () => {
+  test("arrows move a day or a week", () => {
+    expect(dayGridKeyTarget("ArrowLeft", "2026-03-01")).toBe("2026-02-28");
+    expect(dayGridKeyTarget("ArrowRight", "2026-12-31")).toBe("2027-01-01");
+    expect(dayGridKeyTarget("ArrowUp", "2026-03-03")).toBe("2026-02-24");
+    expect(dayGridKeyTarget("ArrowDown", "2026-02-24")).toBe("2026-03-03");
+  });
+
+  test("Home and End follow weekStart", () => {
+    // Wednesday 2026-07-01.
+    expect(dayGridKeyTarget("Home", "2026-07-01")).toBe("2026-06-29");
+    expect(dayGridKeyTarget("End", "2026-07-01")).toBe("2026-07-05");
+    expect(dayGridKeyTarget("Home", "2026-07-01", { weekStart: "sunday" })).toBe("2026-06-28");
+    expect(dayGridKeyTarget("End", "2026-07-01", { weekStart: "sunday" })).toBe("2026-07-04");
+  });
+
+  test("PageUp/PageDown move a month, and a year with Shift", () => {
+    expect(dayGridKeyTarget("PageDown", "2026-01-31")).toBe("2026-02-28");
+    expect(dayGridKeyTarget("PageUp", "2026-01-15")).toBe("2025-12-15");
+    expect(dayGridKeyTarget("PageDown", "2028-02-29", { shiftKey: true })).toBe("2029-02-28");
+    expect(dayGridKeyTarget("PageUp", "2026-01-15", { shiftKey: true })).toBe("2025-01-15");
+  });
+
+  test("rtl swaps the horizontal arrows only", () => {
+    expect(dayGridKeyTarget("ArrowLeft", "2026-01-15", { rtl: true })).toBe("2026-01-16");
+    expect(dayGridKeyTarget("ArrowRight", "2026-01-15", { rtl: true })).toBe("2026-01-14");
+    expect(dayGridKeyTarget("ArrowDown", "2026-01-15", { rtl: true })).toBe("2026-01-22");
+  });
+
+  test("other keys move nowhere", () => {
+    expect(dayGridKeyTarget("Enter", "2026-01-15")).toBeNull();
+    expect(dayGridKeyTarget("a", "2026-01-15")).toBeNull();
+  });
+});
+
+describe("formatDayCellLabel", () => {
+  test("names the weekday and the full date", () => {
+    expect(formatDayCellLabel("2026-06-29", "en-US")).toBe("Monday, June 29, 2026");
+  });
 });

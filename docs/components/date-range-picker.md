@@ -19,6 +19,11 @@ in place. `resolveRange()` turns any selection into concrete inclusive
 `{from, to}` bounds (local-timezone `YYYY-MM-DD` strings). Escape and outside
 clicks dismiss the popover.
 
+Opening on the Calendar or Custom tab moves focus to the calendar's day
+grid, where the [calendar keys](calendar.md#keyboard) move between days and
+Enter picks one. The Relative tab has no grid, so opening there leaves
+focus on the trigger.
+
 The mode tabs (Relative / Calendar / Custom) are a normal SegmentedControl.
 The chosen mode's options (7d … All, or Day / Week / Month) are a lower tier
 tucked under the tabs: flush with their bottom edge, square on top and

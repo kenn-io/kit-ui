@@ -366,3 +366,44 @@ test("Sunday-start picker highlights and commits Sunday through Saturday", async
   await day(page, 21).click();
   await expect(demo.locator("output")).toHaveText("2026-06-21 → 2026-06-27");
 });
+
+test("the keyboard picks a custom range across months", async ({ page }) => {
+  await openCustomTab(page);
+  const calendar = panel(page).locator(".kit-calendar");
+  await calendar.locator('.kit-calendar__day[tabindex="0"]').focus();
+  const focused = calendar.locator(".kit-calendar__day:focus");
+
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Enter");
+  const from = await focused.getAttribute("data-date");
+  await page.keyboard.press("PageDown");
+  const to = await focused.getAttribute("data-date");
+  await page.keyboard.press("Space");
+  await expect(page.locator("code", { hasText: `"from":"${from}","to":"${to}"` })).toBeVisible();
+});
+
+test("opening on a calendar tab focuses the selected week; Home and End follow weekStart", async ({
+  page,
+}) => {
+  const demo = page.getByTestId("sunday-picker");
+  await demo.getByRole("button", { name: /Week of Jun 14/ }).click();
+  const focused = panel(page).locator(".kit-calendar__day:focus");
+  await expect(focused).toHaveAttribute("data-date", "2026-06-14");
+
+  await page.keyboard.press("ArrowRight");
+  await expect(focused).toHaveAttribute("data-date", "2026-06-15");
+  await page.keyboard.press("End");
+  await expect(focused).toHaveAttribute("data-date", "2026-06-20");
+  await page.keyboard.press("Home");
+  await expect(focused).toHaveAttribute("data-date", "2026-06-14");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(demo.locator("output")).toHaveText("2026-06-21 → 2026-06-27");
+});
+
+test("opening on the relative tab leaves focus on the trigger", async ({ page }) => {
+  const trigger = page.locator(".kit-date-range-picker__trigger").first();
+  await trigger.click();
+  await expect(panel(page)).toBeVisible();
+  await expect(trigger).toBeFocused();
+});
