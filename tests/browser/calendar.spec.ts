@@ -363,6 +363,13 @@ test.describe("month strip", () => {
       expect(
         await cal.evaluate((node) => node.getBoundingClientRect().right <= window.innerWidth),
       ).toBe(true);
+      expect(
+        await track.evaluate((node) => {
+          const trackBox = node.getBoundingClientRect();
+          const calendarBox = node.parentElement!.getBoundingClientRect();
+          return trackBox.left >= calendarBox.left && trackBox.right <= calendarBox.right;
+        }),
+      ).toBe(true);
       await expect.poll(visible).toBe(true);
 
       // A month without a selection starts at day 1.

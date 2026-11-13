@@ -651,6 +651,7 @@
    * row that wraps below the header when narrow and scrolls inside itself. */
   .kit-calendar--strip {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
