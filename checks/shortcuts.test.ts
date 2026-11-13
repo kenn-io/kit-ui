@@ -414,9 +414,14 @@ describe("createShortcutManager", () => {
       fired += 1;
     });
     expect(m.handleKeydown(kbd("k", { ctrl: true }, null, { isComposing: true }))).toBe(false);
-    // Chromium and Safari report keyCode 229 for keys an IME consumes.
-    expect(m.handleKeydown(kbd("Process", { ctrl: true }, null, { keyCode: 229 }))).toBe(false);
+    // Chromium and Safari report keyCode 229 for keys an IME consumes. The
+    // physical key would otherwise match through the code fallback.
+    expect(
+      m.handleKeydown(kbd("Process", { ctrl: true }, null, { keyCode: 229, code: "KeyK" })),
+    ).toBe(false);
     expect(fired).toBe(0);
+    expect(m.handleKeydown(kbd("Process", { ctrl: true }, null, { code: "KeyK" }))).toBe(true);
+    expect(fired).toBe(1);
   });
 
   test("held keys fire once unless the binding opts into repeat", () => {
