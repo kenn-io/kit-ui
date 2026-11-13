@@ -158,8 +158,10 @@ export function periodBounds(
     last.setUTCDate(first.getUTCDate() + 6);
     return { from: dateStr(first), to: dateStr(last) };
   }
-  const first = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
+  const first = new Date(d);
+  first.setUTCDate(1);
+  const last = new Date(first);
+  last.setUTCMonth(last.getUTCMonth() + 1, 0);
   return { from: dateStr(first), to: dateStr(last) };
 }
 
