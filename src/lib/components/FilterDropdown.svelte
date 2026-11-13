@@ -312,8 +312,7 @@
     isOpen = true;
     await tick();
     positionDropdown();
-    // A searchable panel takes typing at once. Focus after positioning so
-    // the page does not scroll to where the panel first rendered.
+    // A searchable panel takes typing at once.
     if (searchable) searchInput?.focus({ preventScroll: true });
   }
 
