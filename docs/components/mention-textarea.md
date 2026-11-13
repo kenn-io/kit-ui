@@ -122,6 +122,13 @@ closed — reaches the textarea and the `onkeydown` prop. Caret movement
 (arrows, Home/End, clicks) re-evaluates whether the caret sits in a mention
 query.
 
+Keys an input method uses while it composes text leave the menu alone: Enter
+or Tab confirming a candidate inserts nothing, and the arrows do not move the
+highlight. They reach `onkeydown`, so a composer that sends on Enter should
+skip them with [`isComposingKey`](../utilities.md#input-method-composition).
+A composing Escape with the menu shown stops at the textarea, so a parent
+overlay stays open.
+
 ## Composer embedding
 
 `embedded` removes the field's border, background, focus border, and resize

@@ -22,6 +22,7 @@
 <script lang="ts">
   import { tick, untrack } from "svelte";
   import { highlightSegments } from "../utils/highlight.js";
+  import { isComposingKey } from "../utils/ime.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
   import { scrollFade } from "../utils/scroll-fade.js";
@@ -238,6 +239,12 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
+    // Keys an input method composes with in the search field are its own.
+    // Escape still stops here so it cannot reach the page behind.
+    if (isComposingKey(event)) {
+      if (event.key === "Escape") event.stopPropagation();
+      return;
+    }
     if (event.key === "ArrowDown") {
       event.preventDefault();
       move(1);
