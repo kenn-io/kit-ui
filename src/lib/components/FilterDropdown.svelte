@@ -100,6 +100,7 @@
   }: Props = $props();
 
   let isOpen = $state(false);
+  let searchInput = $state<HTMLInputElement>();
   let search = $state("");
   let buttonRef = $state<HTMLButtonElement>();
   let dropdownRef = $state<HTMLDivElement>();
@@ -311,6 +312,9 @@
     isOpen = true;
     await tick();
     positionDropdown();
+    // A searchable panel takes typing at once. Focus after positioning so
+    // the page does not scroll to where the panel first rendered.
+    if (searchable) searchInput?.focus({ preventScroll: true });
   }
 
   async function toggleOpen(): Promise<void> {
@@ -393,7 +397,13 @@
     >
       {#if searchable}
         <div class="kit-filter-dropdown__search">
-          <SearchInput bind:value={search} size="sm" block placeholder={searchPlaceholder} />
+          <SearchInput
+            bind:value={search}
+            bind:inputEl={searchInput}
+            size="sm"
+            block
+            placeholder={searchPlaceholder}
+          />
         </div>
       {/if}
       {#if hasBulkActions}

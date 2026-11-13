@@ -40,26 +40,26 @@ otherwise.
 
 ## Props
 
-| Prop                                  | Type                           | Default                           | Notes                                      |
-| ------------------------------------- | ------------------------------ | --------------------------------- | ------------------------------------------ |
-| `label`                               | `string`                       | required                          | Trigger text + aria-label                  |
-| `sections`                            | `FilterDropdownSection[]`      | required                          | `{ title?, items }`                        |
-| `detail`                              | `string`                       | —                                 | Secondary trigger text                     |
-| `active`                              | `boolean`                      | `false`                           | Force the active trigger style             |
-| `badgeCount`                          | `number`                       | `0`                               | Count badge; also activates the trigger    |
-| `showBadge`                           | `boolean`                      | `true`                            |                                            |
-| `disabled`                            | `boolean`                      | `false`                           |                                            |
-| `resetLabel` / `onReset`              |                                | —                                 | Reset row (both required to show)          |
-| `searchable`                          | `boolean`                      | `false`                           | Text input filtering items across sections |
-| `searchPlaceholder`                   | `string`                       | `"Search…"`                       |                                            |
-| `onSelectAll` / `onDeselectAll`       | `() => void`                   | —                                 | Bulk action row (either shows it)          |
-| `selectAllLabel` / `deselectAllLabel` | `string`                       | `"Select all"` / `"Deselect all"` |                                            |
-| `emptyLabel`                          | `string`                       | `"No matches"`                    | Shown when search filters everything out   |
-| `excludedLabel`                       | `string`                       | `"left out of results"`           | Screen-reader text on an excluded row      |
-| `minWidth`                            | `string`                       | `"200px"`                         | Panel min-width                            |
-| `align`                               | `"start" \| "end"`             | `"start"`                         | Panel alignment relative to trigger        |
-| `icon`                                | `"filter" \| "sort" \| "more"` | `"filter"`                        | Trigger icon                               |
-| `onOpenChange`                        | `(open: boolean) => void`      | —                                 | Called when the panel opens or closes      |
+| Prop                                  | Type                           | Default                           | Notes                                                                    |
+| ------------------------------------- | ------------------------------ | --------------------------------- | ------------------------------------------------------------------------ |
+| `label`                               | `string`                       | required                          | Trigger text + aria-label                                                |
+| `sections`                            | `FilterDropdownSection[]`      | required                          | `{ title?, items }`                                                      |
+| `detail`                              | `string`                       | —                                 | Secondary trigger text                                                   |
+| `active`                              | `boolean`                      | `false`                           | Force the active trigger style                                           |
+| `badgeCount`                          | `number`                       | `0`                               | Count badge; also activates the trigger                                  |
+| `showBadge`                           | `boolean`                      | `true`                            |                                                                          |
+| `disabled`                            | `boolean`                      | `false`                           |                                                                          |
+| `resetLabel` / `onReset`              |                                | —                                 | Reset row (both required to show)                                        |
+| `searchable`                          | `boolean`                      | `false`                           | Text input filtering items across sections; focused when the panel opens |
+| `searchPlaceholder`                   | `string`                       | `"Search…"`                       |                                                                          |
+| `onSelectAll` / `onDeselectAll`       | `() => void`                   | —                                 | Bulk action row (either shows it)                                        |
+| `selectAllLabel` / `deselectAllLabel` | `string`                       | `"Select all"` / `"Deselect all"` |                                                                          |
+| `emptyLabel`                          | `string`                       | `"No matches"`                    | Shown when search filters everything out                                 |
+| `excludedLabel`                       | `string`                       | `"left out of results"`           | Screen-reader text on an excluded row                                    |
+| `minWidth`                            | `string`                       | `"200px"`                         | Panel min-width                                                          |
+| `align`                               | `"start" \| "end"`             | `"start"`                         | Panel alignment relative to trigger                                      |
+| `icon`                                | `"filter" \| "sort" \| "more"` | `"filter"`                        | Trigger icon                                                             |
+| `onOpenChange`                        | `(open: boolean) => void`      | —                                 | Called when the panel opens or closes                                    |
 
 ## Item shape
 

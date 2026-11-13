@@ -362,3 +362,26 @@ test("only a row with a category color shows a dot, and the others align with it
   );
   expect(await labelLeft(approved)).toBe(rowLeft);
 });
+
+test("a searchable dropdown takes typing as soon as it opens", async ({ page }) => {
+  await gotoPage(page, "filter-dropdown");
+  const trigger = page.getByRole("button", { name: /^Models/ });
+  await trigger.click();
+  const search = page.locator(".kit-filter-dropdown__search input");
+  await expect(search).toBeFocused();
+  const before = await page.evaluate(() => window.scrollY);
+  await page.keyboard.type("zzz-no-model");
+  await expect(search).toHaveValue("zzz-no-model");
+  await expect(page.getByText("No matches")).toBeVisible();
+  expect(
+    await page.evaluate(() => window.scrollY),
+    "focusing the field does not scroll the page",
+  ).toBe(before);
+  // Escape first clears the query, then closes the panel.
+  await page.keyboard.press("Escape");
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(search).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
