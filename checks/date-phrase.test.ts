@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
   completeDatePhrase,
   DATE_PHRASE_MAX_LENGTH,
@@ -540,13 +541,13 @@ describe("review regressions", () => {
 });
 
 describe("sets of separate days", () => {
-  // The video's today: Wednesday 2026-11-18.
+  // Today: Wednesday 2026-11-18.
   const on: DatePhraseOptions = { today: "2026-11-18", locale: "en-US", sets: true };
   const set = (text: string, options: DatePhraseOptions = {}) =>
     parseDatePhrase(text, { ...on, ...options });
   const dates = (label: string, ...days: string[]) => ({ kind: "dates", dates: days, label });
 
-  test("the video's two examples", () => {
+  test("last 3 Fridays and weekends since October", () => {
     expect(set("Last 3 Fridays")).toEqual(
       dates("Fridays", "2026-10-30", "2026-11-06", "2026-11-13"),
     );
@@ -696,12 +697,20 @@ describe("sets of separate days", () => {
     expect(set("last 2 weekdays", { weekdaysLabel: "Workdays" })).toEqual(
       dates("Workdays", "2026-11-17", "2026-11-18"),
     );
-    // German: "Freitag" with an English plural s, labelled in German.
-    expect(set("last 2 freitags", { locale: "de-DE" })).toEqual(
+    // Other languages: the English plural, or every + the locale's
+    // singular name, labelled with the locale's singular name.
+    expect(set("last 2 fridays", { locale: "de-DE" })).toEqual(
       dates("Freitag", "2026-11-06", "2026-11-13"),
     );
     expect(set("every freitag in october", { locale: "de-DE" })).toEqual(
       expect.objectContaining({ label: "Freitag" }),
+    );
+    expect(set("jeden freitag in october", { locale: "de-DE" })).toEqual(none);
+    // A locale name never takes the plural "s".
+    expect(set("last 2 freitags", { locale: "de-DE" })).toEqual(none);
+    // The label's first letter is cased for the locale.
+    expect(set("every cuma in october", { locale: "tr-TR" })).toEqual(
+      expect.objectContaining({ label: "Cuma" }),
     );
   });
 
@@ -732,5 +741,140 @@ describe("sets of separate days", () => {
     expect(completeDatePhrase("ever", { sets: true })).toBe("y");
     expect(completeDatePhrase("ever")).toBe("");
     expect(completeDatePhrase("every f", { sets: true })).toBe("riday");
+  });
+});
+
+describe("sets review regressions", () => {
+  const on: DatePhraseOptions = { today: "2026-11-18", locale: "en-US", sets: true };
+  const set = (text: string, options: DatePhraseOptions = {}) =>
+    parseDatePhrase(text, { ...on, ...options });
+
+  test("locale names that end in s stay what they mean without sets", () => {
+    expect(set("mars 2026", { locale: "fr-FR" })).toEqual(range("2026-03-01", "2026-03-31"));
+    for (const locale of ["de-DE", "de-AT"]) {
+      for (const text of ["last 2 mos", "past 2 mos", "next 2 mos"]) {
+        expect(set(text, { locale })).toEqual(
+          parseDatePhrase(text, { today: "2026-11-18", locale }),
+        );
+        expect(set(text, { locale }).kind).toBe("range");
+      }
+    }
+  });
+
+  test("turning sets on never changes a phrase that parses without it", () => {
+    // Every string literal in this file, in several locales and on dates
+    // around a weekend and a year end.
+    const source = readFileSync(new URL(import.meta.url).pathname, "utf8");
+    const phrases = [...new Set([...source.matchAll(/"([^"\\\n]{1,60})"/g)].map((m) => m[1]!))];
+    expect(phrases.length).toBeGreaterThan(200);
+    let checked = 0;
+    for (const locale of ["en-US", "en-GB", "de-DE", "fr-FR", "es-ES", "ru-RU", "th-TH"]) {
+      for (const today of ["2026-11-18", "2026-11-14", "2026-12-31"]) {
+        for (const text of phrases) {
+          const off = parseDatePhrase(text, { today, locale });
+          if (off.kind === "none") continue;
+          checked++;
+          expect({
+            text,
+            locale,
+            today,
+            result: parseDatePhrase(text, { today, locale, sets: true }),
+          }).toEqual({
+            text,
+            locale,
+            today,
+            result: off,
+          });
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  test("the set cap holds for weekends", () => {
+    expect((set("last 183 weekends") as { dates: string[] }).dates).toHaveLength(366);
+    expect(set("last 184 weekends")).toEqual(none);
+    expect(set("last 366 weekends")).toEqual(none);
+    expect((set("next 183 weekends") as { dates: string[] }).dates).toHaveLength(366);
+    expect(set("next 184 weekends")).toEqual(none);
+  });
+
+  test("next N weekends counts whole weekends; last N takes the most recent days", () => {
+    const fri = { today: "2026-11-13" };
+    const sat = { today: "2026-11-14" };
+    const sun = { today: "2026-11-15" };
+    const mon = { today: "2026-11-16" };
+    const wk = (...days: string[]) => ({ kind: "dates", dates: days, label: "Weekends" });
+    expect(set("next 1 weekends", fri)).toEqual(wk("2026-11-14", "2026-11-15"));
+    expect(set("next 1 weekends", sat)).toEqual(wk("2026-11-21", "2026-11-22"));
+    expect(set("next 1 weekends", sun)).toEqual(wk("2026-11-21", "2026-11-22"));
+    expect(set("next 1 weekends", mon)).toEqual(wk("2026-11-21", "2026-11-22"));
+    expect(set("last 1 weekends", fri)).toEqual(wk("2026-11-07", "2026-11-08"));
+    expect(set("last 1 weekends", sat)).toEqual(wk("2026-11-14"));
+    expect(set("last 1 weekends", sun)).toEqual(wk("2026-11-14", "2026-11-15"));
+    expect(set("last 1 weekends", mon)).toEqual(wk("2026-11-14", "2026-11-15"));
+  });
+
+  test("this, next and last weekend are two-day sets", () => {
+    const wk = (...days: string[]) => ({ kind: "dates", dates: days, label: "Weekends" });
+    expect(set("this weekend")).toEqual(wk("2026-11-21", "2026-11-22"));
+    expect(set("next weekend")).toEqual(wk("2026-11-28", "2026-11-29"));
+    expect(set("last weekend")).toEqual(wk("2026-11-14", "2026-11-15"));
+    // On a Sunday, this weekend is the one that started yesterday.
+    expect(set("this weekend", { today: "2026-11-15" })).toEqual(wk("2026-11-14", "2026-11-15"));
+    expect(set("this weekend", { today: "2026-11-14" })).toEqual(wk("2026-11-14", "2026-11-15"));
+    expect(set("this weekend", { maxDate: "2026-11-21" })).toEqual(wk("2026-11-21"));
+    expect(set("this weekend", { weekendsLabel: "Wochenende" })).toEqual(
+      expect.objectContaining({ label: "Wochenende" }),
+    );
+    // Without sets, and without a window, no match.
+    expect(parse("this weekend")).toEqual(none);
+    for (const text of ["weekends", "weekdays", "fridays", "weekend"]) {
+      expect(set(text)).toEqual(none);
+    }
+  });
+
+  test("last friday and last 1 fridays mean different days, as documented", () => {
+    // Friday of the previous week, versus the most recent Friday on or
+    // before today.
+    expect(set("last friday", { today: "2026-11-20" })).toEqual(date("2026-11-13"));
+    expect(set("last 1 fridays", { today: "2026-11-20" })).toEqual({
+      kind: "dates",
+      dates: ["2026-11-20"],
+      label: "Fridays",
+    });
+  });
+
+  test("set words complete only where a set can follow", () => {
+    const on = { sets: true, locale: "en-US" };
+    expect(completeDatePhrase("10 S", on)).toBe("eptember");
+    expect(completeDatePhrase("10 F", on)).toBe("ebruary");
+    expect(completeDatePhrase("10 T", on)).toBe("o");
+    expect(completeDatePhrase("Sep 10 S", on)).toBe(
+      completeDatePhrase("Sep 10 S", { locale: "en-US" }),
+    );
+    expect(completeDatePhrase("last 3 F", on)).toBe("ridays");
+    expect(completeDatePhrase("next 2 W", on)).toBe("eeks");
+  });
+
+  test("with sets on, completing a prefix of an ordinary phrase is unchanged", () => {
+    const source = readFileSync(new URL(import.meta.url).pathname, "utf8");
+    const phrases = [...new Set([...source.matchAll(/"([^"\\\n]{1,60})"/g)].map((m) => m[1]!))];
+    let checked = 0;
+    for (const text of phrases) {
+      if (parseDatePhrase(text, { today: "2026-11-18", locale: "en-US" }).kind === "none") continue;
+      for (let i = 1; i <= text.length; i++) {
+        const prefix = text.slice(0, i);
+        checked++;
+        expect({
+          prefix,
+          ghost: completeDatePhrase(prefix, { locale: "en-US", sets: true }),
+        }).toEqual({
+          prefix,
+          ghost: completeDatePhrase(prefix, { locale: "en-US" }),
+        });
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
   });
 });

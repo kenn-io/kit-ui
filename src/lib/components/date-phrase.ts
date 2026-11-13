@@ -635,6 +635,14 @@ function parseExpr(text: string, ctx: Ctx): Span | null {
 
 /* ---------- sets of separate days ---------- */
 
+/** English weekday names and abbreviations, the only stems a plural "s"
+ * may follow. */
+const ENGLISH_WEEKDAY_KEYS = new Map<string, number>([
+  ...ENGLISH_WEEKDAYS.map((name, w) => [name.toLowerCase(), w] as [string, number]),
+  ...ENGLISH_WEEKDAYS.map((name, w) => [name.slice(0, 3).toLowerCase(), w] as [string, number]),
+  ...Object.entries(ENGLISH_EXTRA_WEEKDAYS),
+]);
+
 const WEEKENDS = [0, 6];
 const WEEKDAYS = [1, 2, 3, 4, 5];
 
@@ -657,13 +665,25 @@ function dayKind(
   if (token === "weekdays" || (!plural && token === "weekday")) {
     return { days: WEEKDAYS, label: opts.weekdaysLabel ?? "Weekdays" };
   }
-  const { weekdays } = ctx.words;
+  // A plural is an English weekday name or abbreviation plus "s"
+  // ("fridays", "fris"); a locale name never takes the "s", so "mars" stays
+  // March. The singular after every/all takes any accepted weekday name.
   const stem = token.endsWith("s") ? token.slice(0, -1) : null;
   const day =
-    stem && weekdays.has(stem) ? weekdays.get(stem)! : !plural ? weekdays.get(token) : undefined;
+    stem !== null && ENGLISH_WEEKDAY_KEYS.has(stem)
+      ? ENGLISH_WEEKDAY_KEYS.get(stem)
+      : !plural
+        ? ctx.words.weekdays.get(token)
+        : undefined;
   if (day === undefined) return null;
   const name = ctx.words.weekdayLong[day] ?? ENGLISH_WEEKDAYS[day]!;
-  const label = name.charAt(0).toLocaleUpperCase() + name.slice(1);
+  let first = name.charAt(0);
+  try {
+    first = first.toLocaleUpperCase(opts.locale);
+  } catch {
+    first = first.toUpperCase();
+  }
+  const label = first + name.slice(1);
   // English names pluralize with "s"; other languages keep the plain name.
   return { days: [day], label: name === ENGLISH_WEEKDAYS[day] ? `${label}s` : label };
 }
@@ -699,6 +719,21 @@ function parseSet(
   opts: DatePhraseOptions,
 ): { dates: string[]; label: string } | null {
   let toks = text.split(" ");
+
+  // "this weekend", "next weekend", "last weekend": the Saturday and Sunday
+  // of the current, following or previous week. On a Sunday, "this
+  // weekend" is the one that started yesterday.
+  if (toks.length === 2 && toks[1] === "weekend" && /^(this|next|last)$/.test(toks[0]!)) {
+    const dow = dayOfWeek(ctx.today);
+    let saturday = dow === 0 ? addDays(ctx.today, -1) : addDays(ctx.today, 6 - dow);
+    if (toks[0] === "next") saturday = addDays(saturday, 7);
+    if (toks[0] === "last") saturday = addDays(saturday, -7);
+    return {
+      dates: [saturday, addDays(saturday, 1)],
+      label: opts.weekendsLabel ?? "Weekends",
+    };
+  }
+
   const every = toks[0] === "every" || toks[0] === "all";
   if (every) toks = toks.slice(1);
 
@@ -713,6 +748,9 @@ function parseSet(
     const out: string[] = [];
     const groups = new Set<string>();
     let date = dir < 0 ? ctx.today : addDays(ctx.today, 1);
+    // "next N weekends" counts whole weekends: from the first Saturday
+    // after today, skipping the rest of a weekend already under way.
+    if (weekends && dir > 0) date = addDays(ctx.today, (6 - dayOfWeek(ctx.today) + 7) % 7 || 7);
     let dow = dayOfWeek(date);
     for (let step = 0; step < 7 * DATE_SET_MAX_DAYS; step++) {
       if (kind.days.includes(dow)) {
@@ -726,7 +764,7 @@ function parseSet(
       date = addDays(date, dir);
       dow = (dow + dir + 7) % 7;
     }
-    return { dates: out.sort(), label: kind.label };
+    return out.length > DATE_SET_MAX_DAYS ? null : { dates: out.sort(), label: kind.label };
   }
 
   // "Fridays in October", "weekends since October", "weekdays this month",
@@ -794,12 +832,22 @@ export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): 
   const lo = bound(options.earliestDate);
   const hi = bound(options.maxDate);
 
-  const set = options.sets ? parseSet(normalized, ctx, options) : null;
-  if (set) {
-    const dates = set.dates.filter((d) => inYears(d, ctx) && !(lo && d < lo) && !(hi && d > hi));
-    return dates.length ? { kind: "dates", dates, label: set.label } : NONE;
-  }
+  // The ordinary grammar first: turning `sets` on never changes what a
+  // phrase that already parses means.
+  const result = parseOrdinary(normalized, ctx, lo, hi);
+  if (result.kind !== "none" || !options.sets) return result;
+  const set = parseSet(normalized, ctx, options);
+  if (!set) return NONE;
+  const dates = set.dates.filter((d) => inYears(d, ctx) && !(lo && d < lo) && !(hi && d > hi));
+  return dates.length ? { kind: "dates", dates, label: set.label } : NONE;
+}
 
+function parseOrdinary(
+  normalized: string,
+  ctx: Ctx,
+  lo: string | null,
+  hi: string | null,
+): DatePhraseResult {
   const span = parseExpr(normalized, ctx);
   if (!span || !inYears(span.from, ctx) || !inYears(span.to, ctx)) return NONE;
 
@@ -875,10 +923,12 @@ export function completeDatePhrase(
 
   let candidates: string[];
   if (prev !== null && count(prev) !== null && before.length >= 1) {
-    // After a number: units ("3 days"), set days ("last 3 Fridays"), a
-    // range word ("Sep 10 to") or a month ("10 September").
+    // After a number: units ("3 days"), a range word ("Sep 10 to") or a
+    // month ("10 September"); set days only after last/past/next
+    // ("last 3 Fridays"), where nothing else can follow.
     const units = count(prev) === 1 ? ["day", "week", "month", "year"] : PLURAL_UNITS;
-    candidates = [...units, ...plurals, ...TRAILING_KEYWORDS, ...words.monthNames];
+    const counted = /^(last|past|next)$/.test(fold(before[before.length - 2] ?? ""));
+    candidates = [...units, ...(counted ? plurals : []), ...TRAILING_KEYWORDS, ...words.monthNames];
   } else if (prev !== null && UNITS[prev]) {
     candidates = ["ago", ...TRAILING_KEYWORDS];
   } else if (prev === "last" || prev === "this" || prev === "next" || prev === "past") {
@@ -893,8 +943,8 @@ export function completeDatePhrase(
       ...LEADING_KEYWORDS,
       ...words.monthNames,
       ...words.weekdayNames,
-      ...plurals,
-      ...(options.sets ? ["every"] : []),
+      // Not the weekday plurals: "Friday" is a whole phrase already.
+      ...(options.sets ? [...SET_WORDS, "every"] : []),
       ...LATE_KEYWORDS,
     ];
   } else {
