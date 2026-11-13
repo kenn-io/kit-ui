@@ -9,7 +9,7 @@
   let toneOpen = $state<ModalTone | null>(null);
   let tallOpen = $state(false);
 
-  const allRows = ["alpha", "beta", "gamma"];
+  const allRows = ["alpha", "beta", "gamma", "delta", "epsilon"];
   let rows = $state([...allRows]);
   let pendingDelete = $state<string | null>(null);
 
@@ -114,7 +114,7 @@
 
 <DemoSection
   title="Confirm removes the trigger"
-  description="Deleting a row also removes the button that opened the dialog. Focus then goes to the next row's button, or the previous row's when the last row went, instead of dropping to the page."
+  description="Deleting a row also removes the button that opened the dialog. Focus then goes to the next remaining row's button, or the previous one's when no row follows, instead of dropping to the page."
   code={`{#if pending}
   <Modal title="Delete {pending}?" tone="danger" onclose={() => (pending = null)}>
     {#snippet footer()}
@@ -140,6 +140,15 @@
           surface="solid"
           onclick={() => {
             rows = rows.filter((row) => row !== name);
+            pendingDelete = null;
+          }}
+        />
+        <Button
+          label="Delete with neighbors"
+          tone="danger"
+          onclick={() => {
+            const at = rows.indexOf(name);
+            rows = rows.filter((_, index) => Math.abs(index - at) > 1);
             pendingDelete = null;
           }}
         />

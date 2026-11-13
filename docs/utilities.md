@@ -294,9 +294,11 @@ On teardown, focus goes back to the element that had it before the surface
 opened. In Safari and Firefox on macOS, which do not focus a pressed button,
 that is the control last pressed. When that element has left the page, or is
 now disabled, hidden or inert, focus goes to the nearest tab stop where it
-was. The trap records the trigger's ancestors and their neighbours when it
+was. The trap records the trigger's ancestors and all their siblings when it
 opens, and on close it picks the first tab stop after that spot, else the
 last one before it, starting at the closest ancestor still on the page.
+Siblings removed along with the trigger are skipped, so deleting a row and
+its neighbours still focuses the next row left.
 The check runs once more after the current update, since the update that
 closes the surface can remove the trigger after the surface's own teardown.
 If focus is already on something real when the surface closes, because the

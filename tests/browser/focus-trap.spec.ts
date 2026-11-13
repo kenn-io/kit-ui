@@ -71,13 +71,24 @@ test.describe("Focus restore when the trigger is gone", () => {
 
   test("removing the last row focuses the previous row's button", async ({ page }) => {
     await gotoPage(page, "modal");
-    await confirmDelete(page, "gamma");
-    await expect(page.getByRole("button", { name: "Delete beta" })).toBeFocused();
+    await confirmDelete(page, "epsilon");
+    await expect(page.getByRole("button", { name: "Delete delta" })).toBeFocused();
+  });
+
+  test("removing the trigger's neighbors too focuses the next row left", async ({ page }) => {
+    await gotoPage(page, "modal");
+    await page.getByRole("button", { name: "Delete gamma", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Delete gamma?" });
+    await dialog.getByRole("button", { name: "Delete with neighbors" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("button", { name: /^Delete (beta|gamma|delta)$/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Delete epsilon" })).toBeFocused();
   });
 
   test("removing every row focuses the control after the list", async ({ page }) => {
     await gotoPage(page, "modal");
-    for (const row of ["alpha", "beta", "gamma"]) await confirmDelete(page, row);
+    for (const row of ["alpha", "beta", "gamma", "delta", "epsilon"])
+      await confirmDelete(page, row);
     await expect(page.getByRole("button", { name: "Restore rows" })).toBeFocused();
   });
 

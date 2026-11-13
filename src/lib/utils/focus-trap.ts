@@ -172,14 +172,19 @@ function focusIsLost(surface: HTMLElement): boolean {
   );
 }
 
-/** Where the trigger was: each ancestor with its element siblings. Element
- * siblings, since Svelte's anchor comments beside the trigger leave with it. */
-type Step = { node: Element; next: Element | null; previous: Element | null };
+/** Where the trigger was: each ancestor with its element siblings, nearest
+ * first. All of them, since a close can remove the trigger's neighbors too.
+ * Element siblings, since Svelte's anchor comments leave with the trigger. */
+type Step = { node: Element; after: Element[]; before: Element[] };
 
 function pathTo(el: HTMLElement | null): Step[] {
   const path: Step[] = [];
   for (let node: Element | null = el; node && node !== document.body; node = node.parentElement) {
-    path.push({ node, next: node.nextElementSibling, previous: node.previousElementSibling });
+    const after: Element[] = [];
+    const before: Element[] = [];
+    for (let s = node.nextElementSibling; s; s = s.nextElementSibling) after.push(s);
+    for (let s = node.previousElementSibling; s; s = s.previousElementSibling) before.push(s);
+    path.push({ node, after, before });
   }
   return path;
 }
@@ -202,7 +207,10 @@ function nearestStop(path: Step[], surface: HTMLElement): HTMLElement | null {
   } else {
     const kept = path.findIndex((step) => step.node.isConnected);
     const parent = path[kept]?.node ?? document.body;
-    const { next = null, previous = null } = path[(kept === -1 ? path.length : kept) - 1] ?? {};
+    const step = path[(kept === -1 ? path.length : kept) - 1];
+    const stays = (el: Element) => el.parentElement === parent;
+    const next = step?.after.find(stays);
+    const previous = step?.before.find(stays);
     scope = parent;
     if (next?.parentElement === parent) {
       isAfter = (el) => el === next || follows(next, el);
