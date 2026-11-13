@@ -22,6 +22,8 @@
     month?: string;
     /** Inclusive range to highlight (e.g. the current selection). */
     selected?: DateRange | null;
+    /** Separate days to show selected, each on its own (no band). */
+    selectedDates?: readonly string[] | null;
     /** Called with the clicked date (YYYY-MM-DD). */
     onpick?: (date: string) => void;
     /** Dates after this are disabled; paging into fully-later months too. */
@@ -37,6 +39,7 @@
   let {
     month = $bindable(todayStr()),
     selected = null,
+    selectedDates = null,
     onpick = undefined,
     maxDate = null,
     previousMonthLabel = "Previous month",
@@ -173,6 +176,8 @@
     };
   });
 
+  const pickedDates = $derived(new Set(selectedDates));
+
   function inRange(date: string): boolean {
     return selected != null && date >= selected.from && date <= selected.to;
   }
@@ -224,14 +229,15 @@
 
     <div class="kit-calendar__grid">
       {#each cells as date, i (date)}
-        {@const selectedDay = inRange(date)}
+        {@const picked = pickedDates.has(date)}
+        {@const selectedDay = picked || inRange(date)}
         <button
           class="kit-calendar__day kit-control-states"
           class:outside={!date.startsWith(monthPrefix)}
           class:today={date === today}
           class:selected={selectedDay}
-          class:range-start={selectedDay && date === selected?.from}
-          class:range-end={selectedDay && date === selected?.to}
+          class:range-start={picked || (selectedDay && date === selected?.from)}
+          class:range-end={picked || (selectedDay && date === selected?.to)}
           class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
           type="button"
           disabled={maxDate != null && date > maxDate}

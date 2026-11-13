@@ -9,25 +9,29 @@
   let month = $state(todayStr());
   let committed = $state<string>("none");
 
-  const range = $derived(datePhraseRange(parseDatePhrase(text, { locale: "en-US" })));
+  const result = $derived(parseDatePhrase(text, { locale: "en-US", sets: true }));
+  const range = $derived(datePhraseRange(result));
+  // A set shows as separate days; anything else as a range.
+  const days = $derived(result.kind === "dates" ? result.dates : null);
   const summary = $derived(
     range
-      ? `${formatDateRangeLabel(range.from, range.to, "en-US")} · ${daysInRange(range.from, range.to)} days`
+      ? `${result.kind === "dates" ? `${result.label} · ` : ""}${formatDateRangeLabel(range.from, range.to, "en-US")} · ${days?.length ?? daysInRange(range.from, range.to)} days`
       : "",
   );
 </script>
 
 <DemoSection
   title="With a bare Calendar"
-  description="DatePicker and DateRangePicker already include this field. Apps that wrap Calendar in their own popover can put DatePhraseInput above it and drive the grid from parseDatePhrase(). Ghost text finishes the word being typed; Tab or → takes it."
+  description="DatePicker and DateRangePicker already include this field. Apps that wrap Calendar in their own popover can put DatePhraseInput above it and drive the grid from parseDatePhrase(). Ghost text finishes the word being typed; Tab or → takes it. This one reads sets too (“last 3 Fridays”), shown with Calendar's selectedDates."
   code={`<DatePhraseInput
   bind:value={text}
   summary={summary}
   hint="Type or select dates."
+  sets
   oninput={() => range && (month = range.from)}
   onsubmit={() => range && apply(range)}
 />
-<Calendar bind:month selected={range} />`}
+<Calendar bind:month selected={days ? null : range} selectedDates={days} />`}
 >
   <div class="host" data-testid="date-phrase-host">
     <DatePhraseInput
@@ -35,6 +39,7 @@
       {summary}
       hint="Type or select dates."
       locale="en-US"
+      sets
       oninput={() => {
         if (range) month = range.from;
       }}
@@ -42,7 +47,7 @@
         if (range) committed = `${range.from} → ${range.to}`;
       }}
     />
-    <Calendar bind:month selected={range} locale="en-US" />
+    <Calendar bind:month selected={days ? null : range} selectedDates={days} locale="en-US" />
     <code class="readout">committed: {committed}</code>
   </div>
 </DemoSection>
