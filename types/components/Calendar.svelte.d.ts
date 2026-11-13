@@ -24,6 +24,14 @@ interface Props extends CalendarNavLabels {
     activityScale?: ((count: number, date: string) => number) | undefined;
     /** Text for a day's count in its accessible label, after the date. */
     activityLabel?: (count: number) => string;
+    /** "grid" is the six-week month grid; "strip" is the visible month as
+     * one horizontal row of weekday/number cells. */
+    layout?: "grid" | "strip" | undefined;
+    /** Days to mark with a dot, such as days matching the app's filters.
+     * Independent of activity, selection and pickability. */
+    matches?: ((date: string) => boolean) | undefined;
+    /** Text appended to a marked day's accessible label. */
+    matchLabel?: string | undefined;
     class?: string;
 }
 declare const Calendar: import("svelte").Component<Props, {}, "month">;

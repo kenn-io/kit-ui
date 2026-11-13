@@ -92,9 +92,9 @@ export declare function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 |
  * adjacent months.
  */
 export declare function monthGridDates(anchor: string, weekStart?: WeekStart): string[];
-/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
- * omitted = the browser locale. */
-export declare function weekdayLabels(locale?: string, weekStart?: WeekStart): string[];
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …, or
+ * "M", … with `style` "narrow"). `locale` is a BCP 47 tag; omitted = the browser locale. */
+export declare function weekdayLabels(locale?: string, weekStart?: WeekStart, style?: "short" | "narrow"): string[];
 /** January-first month labels ("Jan"/"January", …). `locale` omitted = the
  * browser locale. */
 export declare function monthLabels(style: "short" | "long", locale?: string): string[];
