@@ -35,12 +35,12 @@
     /** Activity per day, keyed by `YYYY-MM-DD`: a count such as messages or
      * documents. Days with a count are shaded in four steps and their
      * accessible label includes it. */
-    activity?: Readonly<Record<string, number>> | null;
+    activity?: Readonly<Record<string, number>> | null | undefined;
     /** Shade step (0–4) for a day's count, for apps with their own scale.
      * Defaults to quarters of the busiest day in view. */
     activityScale?: ((count: number, date: string) => number) | undefined;
     /** Text for a day's count in its accessible label, after the date. */
-    activityLabel?: (count: number) => string;
+    activityLabel?: ((count: number) => string) | undefined;
     /** "grid" is the six-week month grid; "strip" is the visible month as
      * one horizontal row of weekday/number cells. */
     layout?: "grid" | "strip" | undefined;
@@ -210,8 +210,7 @@
     };
   });
 
-  // The busiest day among the rendered cells, so the default steps use the
-  // whole range of shades in every month.
+  // The busiest day among the rendered cells sets the default scale.
   const activityMax = $derived.by(() => {
     if (activity == null) return 0;
     let max = 0;
@@ -241,7 +240,7 @@
     let label = formatDayLabel(date, locale);
     // The strip shows the weekday, so its label names it too.
     if (strip) label = `${weekdays[index % 7]}, ${label}`;
-    if (count != null) label += `, ${activityLabel(count)}`;
+    if (count != null && count !== 0) label += `, ${activityLabel(count)}`;
     return matched ? `${label}, ${matchLabel}` : label;
   }
 

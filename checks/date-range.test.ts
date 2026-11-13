@@ -101,6 +101,24 @@ test("Sunday-start calendar weeks and grid", () => {
   expect(weekdayLabels("en-US")[0]).toBe("Mon");
 });
 
+test("month grid includes the skipped civil date in Apia", () => {
+  const result = Bun.spawnSync({
+    cmd: [
+      process.execPath,
+      "-e",
+      'import { monthGridDates } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify(monthGridDates("2011-12-01").slice(30, 34)))',
+    ],
+    env: { ...process.env, TZ: "Pacific/Apia" },
+  });
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout.toString())).toEqual([
+    "2011-12-28",
+    "2011-12-29",
+    "2011-12-30",
+    "2011-12-31",
+  ]);
+});
+
 describe("activityStep", () => {
   test("quarters of the busiest day, with any activity at least step 1", () => {
     expect([0, 1, 3, 5, 6, 8, 12].map((count) => activityStep(count, 12))).toEqual([

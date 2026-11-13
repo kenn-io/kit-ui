@@ -185,15 +185,14 @@ export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): str
  * adjacent months.
  */
 export function monthGridDates(anchor: string, weekStart: WeekStart = "monday"): string[] {
-  const d = parseLocal(anchor);
-  const first = new Date(d.getFullYear(), d.getMonth(), 1);
-  const offset = (first.getDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
+  const first = new Date(`${anchor.slice(0, 7)}-01T00:00:00Z`);
+  const offset = (first.getUTCDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
   const start = new Date(first);
-  start.setDate(first.getDate() - offset);
+  start.setUTCDate(first.getUTCDate() - offset);
   return Array.from({ length: 42 }, (_, i) => {
     const day = new Date(start);
-    day.setDate(start.getDate() + i);
-    return localDateStr(day);
+    day.setUTCDate(start.getUTCDate() + i);
+    return day.toISOString().slice(0, 10);
   });
 }
 

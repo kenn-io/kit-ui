@@ -81,10 +81,10 @@ a finite number (`NaN`, `Infinity`) is treated as no count.
 ```
 
 - By default the steps are quarters of the busiest day shown (the whole
-  grid, or the month's own days in the strip), so each month uses the whole
-  range of shades. `activityStep(count, max)` is that rule, exported for a
-  legend. An app with its own scale passes
-  `activityScale`, which returns a step from 0 to 4 for a count and its date.
+  grid, or the month's own days in the strip). An outlier can leave most days
+  in the same shade. `activityStep(count, max)` is that rule, exported for a
+  legend. Pass `activityScale` to use thresholds suited to your distribution;
+  it returns a step from 0 to 4 for a count and its date.
 - A day with a count gets it in its accessible label: "Nov 4, 2026, 12
   messages". `activityLabel` words the count; the default is "N items".
 - The accent is `--accent-green`. Set `--kit-calendar-activity-color` on the

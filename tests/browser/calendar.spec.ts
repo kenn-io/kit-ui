@@ -172,7 +172,8 @@ test.describe("activity", () => {
     facts.forEach(([step, label], i) => {
       const count = (i * 5) % 13;
       expect(step).toBe(expected(count));
-      expect(label).toMatch(count === 1 ? /, 1 message$/ : new RegExp(`, ${count} messages$`));
+      if (count === 0) expect(label).not.toMatch(/messages?$/);
+      else expect(label).toMatch(count === 1 ? /, 1 message$/ : new RegExp(`, ${count} messages$`));
     });
   });
 
