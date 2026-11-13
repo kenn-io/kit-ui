@@ -305,12 +305,14 @@
           data-fold-key={segment.key}
           onclick={() => toggleFold(segment, true)}
         >
-          <ChevronsUpDownIcon size={13} aria-hidden="true" />
-          {foldLabel(
-            timeText(segment.startMinute),
-            timeText(segment.endMinute),
-            segment.foldHours ?? 0,
-          )}
+          <span class="kit-day-lane__fold-label">
+            <ChevronsUpDownIcon size={13} aria-hidden="true" />
+            {foldLabel(
+              timeText(segment.startMinute),
+              timeText(segment.endMinute),
+              segment.foldHours ?? 0,
+            )}
+          </span>
         </button>
       {:else if segment.key}
         <button
@@ -486,6 +488,20 @@
   .kit-day-lane__fold:hover {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
+  }
+
+  .kit-day-lane__fold-label {
+    position: relative;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-inline: var(--space-3);
+    background: var(--bg-inset);
+  }
+
+  .kit-day-lane__fold:hover .kit-day-lane__fold-label {
+    background: var(--bg-surface-hover);
   }
 
   .kit-day-lane__refold {
