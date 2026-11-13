@@ -21,6 +21,19 @@ function drillCalendar(page: import("@playwright/test").Page) {
   return page.locator(".kit-calendar").nth(1);
 }
 
+function rangeDay(page: import("@playwright/test").Page, day: number) {
+  const date = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(thisYear, thisMonth, day)));
+  return page
+    .locator(".kit-calendar")
+    .nth(3)
+    .getByRole("button", { name: new RegExp(`^${date}(?:,|$)`) });
+}
+
 test("header click zooms days → months → years; year click has nothing above it", async ({
   page,
 }) => {
@@ -109,8 +122,7 @@ test("browsing zoomed grids never mutates the bound month", async ({ page }) => 
 test("two-click day range completes, swaps reversed picks, and restarts", async ({ page }) => {
   // The day-range demo renders the fourth calendar on the page.
   const cal = page.locator(".kit-calendar").nth(3);
-  const day = (n: number) =>
-    cal.locator(".kit-calendar__day:not(.outside)").filter({ hasText: new RegExp(`^${n}$`) });
+  const day = (n: number) => rangeDay(page, n);
   const mm = String(thisMonth + 1).padStart(2, "0");
 
   // Reversed picks swap into an ordered range.
@@ -385,7 +397,7 @@ test.describe("month strip", () => {
 
   test("at 400px the strip scrolls inside itself and shows the selected day", async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 800 });
-    await gotoPage(page, "calendar");
+    await page.reload();
     const cal = strip(page);
     const track = cal.locator(".kit-calendar__strip");
     const nav = cal.locator(".kit-calendar__nav");
@@ -431,9 +443,7 @@ test.describe("month strip", () => {
 
 test("matches draw on the grid, in surface ink on a solid range end", async ({ page }) => {
   // The day-range demo (fourth calendar) marks days ending in 0.
-  const cal = page.locator(".kit-calendar").nth(3);
-  const day = (n: number) =>
-    cal.locator(".kit-calendar__day:not(.outside)").filter({ hasText: new RegExp(`^${n}$`) });
+  const day = (n: number) => rangeDay(page, n);
   await expect(day(20).locator(".kit-calendar__match")).toHaveCount(1);
   await expect(day(20)).toHaveAttribute("aria-label", /, matches filters$/);
   await expect(day(21).locator(".kit-calendar__match")).toHaveCount(0);
