@@ -82,9 +82,13 @@ export const DEFAULT_RANGE_PRESETS: RangePreset[] = [
   { label: "All", longLabel: "All time", days: 0 },
 ];
 
-/** Parse a YYYY-MM-DD date string as local midnight. */
-function parseLocal(date: string): Date {
-  return new Date(date + "T00:00:00");
+/** Parse and format civil dates without local timezone transitions. */
+function parseDate(date: string): Date {
+  return new Date(`${date}T00:00:00Z`);
+}
+
+function dateStr(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 /** Format a Date as a local-timezone YYYY-MM-DD string. */
@@ -141,22 +145,24 @@ export function periodBounds(
   anchor: string,
   weekStart: WeekStart = "monday",
 ): DateRange {
-  const d = parseLocal(anchor);
+  const d = parseDate(anchor);
   if (unit === "day") {
     return { from: anchor, to: anchor };
   }
   if (unit === "week") {
-    // getDay(): 0=Sun..6=Sat.
-    const offset = (d.getDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
+    // getUTCDay(): 0=Sun..6=Sat.
+    const offset = (d.getUTCDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
     const first = new Date(d);
-    first.setDate(d.getDate() - offset);
+    first.setUTCDate(d.getUTCDate() - offset);
     const last = new Date(first);
-    last.setDate(first.getDate() + 6);
-    return { from: localDateStr(first), to: localDateStr(last) };
+    last.setUTCDate(first.getUTCDate() + 6);
+    return { from: dateStr(first), to: dateStr(last) };
   }
-  const first = new Date(d.getFullYear(), d.getMonth(), 1);
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return { from: localDateStr(first), to: localDateStr(last) };
+  const first = new Date(d);
+  first.setUTCDate(1);
+  const last = new Date(first);
+  last.setUTCMonth(last.getUTCMonth() + 1, 0);
+  return { from: dateStr(first), to: dateStr(last) };
 }
 
 /**
@@ -165,18 +171,20 @@ export function periodBounds(
  * overflowing into March).
  */
 export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): string {
-  const d = parseLocal(anchor);
+  const d = parseDate(anchor);
   if (unit === "day") {
-    d.setDate(d.getDate() + dir);
+    d.setUTCDate(d.getUTCDate() + dir);
   } else if (unit === "week") {
-    d.setDate(d.getDate() + 7 * dir);
+    d.setUTCDate(d.getUTCDate() + 7 * dir);
   } else {
-    const target = new Date(d.getFullYear(), d.getMonth() + dir, 1);
-    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-    target.setDate(Math.min(d.getDate(), lastDay));
+    const target = new Date(d);
+    target.setUTCDate(1);
+    target.setUTCMonth(target.getUTCMonth() + dir + 1, 0);
+    const lastDay = target.getUTCDate();
+    target.setUTCDate(Math.min(d.getUTCDate(), lastDay));
     d.setTime(target.getTime());
   }
-  return localDateStr(d);
+  return dateStr(d);
 }
 
 /**

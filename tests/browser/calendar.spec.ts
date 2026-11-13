@@ -439,6 +439,38 @@ test.describe("month strip", () => {
     await expect.poll(visible).toBe(true);
     expect(await ancestorScroll()).toEqual(before);
   });
+
+  test("keyboard focus rings fit inside the strip at both ends", async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 800 });
+    await page.reload();
+    const cal = strip(page);
+    const days = cal.locator(".kit-calendar__day");
+    for (const highContrast of [false, true]) {
+      await setTheme(page, { highContrast });
+      for (const index of [0, 30]) {
+        if (index === 0) await cal.locator(".kit-calendar__nav").last().focus();
+        else await days.nth(index - 1).focus();
+        await page.keyboard.press("Tab");
+        const day = days.nth(index);
+        await expect(day).toBeFocused();
+        const fits = await day.evaluate((element) => {
+          const dayBox = element.getBoundingClientRect();
+          const trackBox = element.parentElement!.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+          return (
+            style.outlineStyle !== "none" &&
+            ring > 0 &&
+            dayBox.left - ring >= trackBox.left &&
+            dayBox.right + ring <= trackBox.right &&
+            dayBox.top - ring >= trackBox.top &&
+            dayBox.bottom + ring <= trackBox.bottom
+          );
+        });
+        expect(fits).toBe(true);
+      }
+    }
+  });
 });
 
 test("matches draw on the grid, in surface ink on a solid range end", async ({ page }) => {
