@@ -316,7 +316,7 @@ describe("placing items", () => {
     expect(late.top + late.height).toBe(height);
   });
 
-  test("a card near the day's end stops at the end, below its minimum height", () => {
+  test("late point cards keep their height and intervals crossing the day remain clipped", () => {
     const { entries, height } = layoutDayLane(
       [
         span("late", 23, 50, 25, 0),
@@ -328,8 +328,27 @@ describe("placing items", () => {
       { ...base, foldQuietMinutes: 0 },
     );
     for (const e of entries) expect(e.top + e.height).toBeLessThanOrEqual(height);
-    expect(byId(entries, "late").height).toBe(height - byId(entries, "late").top);
+    expect(byId(entries, "late").top + byId(entries, "late").height).toBe(24 * 96);
+    expect(byId(entries, "p1").height).toBe(44);
     expect(overflows(entries)).toHaveLength(1);
+    expect(overflows(entries)[0]!.height).toBe(44);
+  });
+
+  test("a point in the last minute keeps its exact position and minimum height", () => {
+    for (const [dayMinutes, top] of [
+      [1440, 2302.4],
+      [1380, 2206.4],
+    ]) {
+      const layout = layoutDayLane([{ id: "late", startMinute: dayMinutes! - 1 }], {
+        ...base,
+        dayMinutes: dayMinutes!,
+        foldQuietMinutes: 0,
+      });
+      const late = byId(layout.entries, "late");
+      expect(late.top).toBeCloseTo(top!);
+      expect(late.height).toBe(44);
+      expect(layout.height).toBeGreaterThanOrEqual(late.top + 44);
+    }
   });
 
   test("overflow keys stay distinct when ids contain spaces", () => {

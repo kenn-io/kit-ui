@@ -85,7 +85,10 @@
     class: className = "",
   }: Props = $props();
 
-  let expanded = $state<{ day: string | number; keys: string[] }>({ day: "", keys: [] });
+  let expandedFolds = $derived.by(() => {
+    void dayKey;
+    return [] as string[];
+  });
   let activeKey = $state<string | null>(null);
   let scroller = $state<HTMLDivElement>();
   let scrolledFor: string | number | null = null;
@@ -103,7 +106,6 @@
     ticks ?? hourTicks(dayMinutes, (h) => hourFormat.format(clock(h * 60))),
   );
 
-  const expandedFolds = $derived(expanded.day === dayKey ? expanded.keys : []);
   const layout = $derived(
     layoutDayLane(items, {
       dayMinutes,
@@ -136,11 +138,19 @@
     return order[0] ?? null;
   });
 
-  const nowY = $derived(
-    nowMinute !== undefined && nowMinute >= 0 && nowMinute < dayMinutes
-      ? minuteToY(layout.segments, nowMinute, hourHeight)
-      : null,
-  );
+  const nowY = $derived.by(() => {
+    if (nowMinute === undefined || !(nowMinute >= 0 && nowMinute < dayMinutes)) return null;
+    const fold = layout.segments.find(
+      (s) => s.kind === "fold" && nowMinute >= s.startMinute && nowMinute < s.endMinute,
+    );
+    if (fold)
+      return (
+        fold.top +
+        3 +
+        ((nowMinute - fold.startMinute) / (fold.endMinute - fold.startMinute)) * (fold.height - 6)
+      );
+    return minuteToY(layout.segments, nowMinute, hourHeight);
+  });
 
   function timeLabel(i: DayLaneItem): string {
     if (i.dateOnly || i.startMinute === undefined) return dateOnlyLabel;
@@ -168,7 +178,7 @@
     const key = segment.key;
     if (!key) return;
     const keys = open ? [...expandedFolds, key] : expandedFolds.filter((k) => k !== key);
-    expanded = { day: dayKey, keys };
+    expandedFolds = keys;
     const [startMinute, endMinute] = key.split("-").map(Number) as [number, number];
     onfoldchange?.({ startMinute, endMinute, expanded: open });
     // The band and its "Fold" button swap places; keep focus on the one that replaced it.
@@ -242,6 +252,9 @@
   role="group"
   aria-label={ariaLabel}
   {onkeydown}
+  onfocusout={(event) => {
+    if (!scroller?.contains(event.relatedTarget as Node | null)) activeKey = null;
+  }}
 >
   {#if layout.dateOnly.length}
     <div class="kit-day-lane__date-only">

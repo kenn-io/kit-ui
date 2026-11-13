@@ -74,3 +74,36 @@ test("keyboard focus follows a fold as it opens and closes", async ({ page }) =>
   await page.keyboard.press("Enter");
   await expect(fold).toBeFocused();
 });
+
+test("changing days closes folds even when returning to the original day", async ({ page }) => {
+  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
+  await fold.click();
+  await page.getByText("23 h (spring)").click();
+  await page.getByText("24 h", { exact: true }).click();
+  await expect(fold).toHaveAttribute("aria-expanded", "false");
+});
+
+test("tabbing back into the lane returns to the selected card", async ({ page }) => {
+  const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
+  const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
+  await standup.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(call).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(standup).toBeFocused();
+  await expect(standup).toHaveAttribute("tabindex", "0");
+  await expect(call).toHaveAttribute("tabindex", "-1");
+});
+
+test("the now line stays inside a fold and moves to its hour when opened", async ({ page }) => {
+  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
+  const now = lane(page).locator(".kit-day-lane__now");
+  const [band, line] = await Promise.all([fold.boundingBox(), now.boundingBox()]);
+  expect(line!.y).toBeGreaterThan(band!.y);
+  expect(line!.y).toBeLessThan(band!.y + band!.height);
+  await fold.click();
+  const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
+  const [button, openedLine] = await Promise.all([refold.boundingBox(), now.boundingBox()]);
+  expect(openedLine!.y).toBeGreaterThan(button!.y + button!.height);
+});

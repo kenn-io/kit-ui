@@ -355,7 +355,6 @@ export function placeDayLaneItems(
   options: DayLaneLayoutOptions,
 ): DayLaneEntry[] {
   const o = resolve(options);
-  // Cards end at the day's end even when that leaves less than the minimum height.
   const dayBottom = segmentsHeight(segments);
   const spans: Array<ColumnInput & { item: DayLaneItem }> = [];
   for (const item of items) {
@@ -363,11 +362,8 @@ export function placeDayLaneItems(
     const start = item.startMinute as number;
     const top = minuteToY(segments, start, o.hourHeight);
     const end = isPointItem(item) ? start : (item.endMinute as number);
-    const bottom = Math.min(
-      Math.max(minuteToY(segments, end, o.hourHeight), top + o.minItemHeight),
-      dayBottom,
-    );
-    spans.push({ item, top, bottom });
+    const bottom = Math.max(minuteToY(segments, end, o.hourHeight), top + o.minItemHeight);
+    spans.push({ item, top, bottom: end > o.dayMinutes ? Math.min(bottom, dayBottom) : bottom });
   }
   const { placed, overflows } = placeColumns(spans, o.maxColumns, o.minItemHeight);
   const entries: DayLaneEntry[] = placed.map(({ entry, column, columns }) => ({
@@ -389,7 +385,7 @@ export function placeDayLaneItems(
       items: hidden,
       startMinute: Math.min(...hidden.map((i) => i.startMinute as number)),
       top: overflow.top,
-      height: Math.min(o.minItemHeight, dayBottom - overflow.top),
+      height: o.minItemHeight,
       column: overflow.column,
       columns: overflow.columns,
     });
@@ -403,10 +399,14 @@ export function layoutDayLane(
   options: DayLaneLayoutOptions,
 ): DayLaneLayout {
   const segments = buildDayLaneSegments(items, options);
+  const entries = placeDayLaneItems(items, segments, options);
   return {
     segments,
-    height: segmentsHeight(segments),
-    entries: placeDayLaneItems(items, segments, options),
+    height: entries.reduce(
+      (height, entry) => Math.max(height, entry.top + entry.height),
+      segmentsHeight(segments),
+    ),
+    entries,
     dateOnly: items.filter((i) => i.dateOnly),
     outside: items.filter((i) => !i.dateOnly && !isInDay(i, options.dayMinutes)).map((i) => i.id),
   };

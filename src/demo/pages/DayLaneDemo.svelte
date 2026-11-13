@@ -285,7 +285,7 @@
         formatMinute={clock}
         maxColumns={Number(columns)}
         foldQuietMinutes={fold ? 120 : 0}
-        nowMinute={showNow ? t(14, 35) : undefined}
+        nowMinute={showNow ? t(12, 30) : undefined}
         dayKey={`busy-${dst}`}
         ariaLabel="Tuesday, March 10"
         onselect={(id) => {

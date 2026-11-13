@@ -82,9 +82,11 @@ the tick of a point item.
 
 ## Layout rules
 
-- An item's top is its start; its height is its length, never less than
-  `minItemHeight`. A point item (no `endMinute`) is a compact card with a
-  tick on the hour gutter at its exact minute.
+- An item's top is its start; its height is its length, at least
+  `minItemHeight` unless it crosses the day boundary. A point item (no `endMinute`) is a compact card with a
+  tick on the hour gutter at its exact minute. A late card keeps its minimum
+  height, extending the axis below the last hour; intervals crossing the day
+  boundary are clipped at the end of the day.
 - Overlap uses the rendered span, so two point items ten minutes apart sit
   side by side instead of covering each other.
 - Overlapping items share a cluster and take the first free column. Past
@@ -93,7 +95,8 @@ the tick of a point item.
   Nothing is trimmed or dropped.
 - An hour is busy when any rendered span touches it. A run of empty hours at
   least `foldQuietMinutes` long folds to a 32px band; activating it opens the
-  hours, and a "Fold" button on the first opened hour closes them again.
+  hours, and a "Fold" button on the first opened hour closes them again. The
+  now line sits within the band when its time falls inside a fold.
 - Date-only items sit in a strip above the hours, in input order.
 - Selected and dimmed come from the items; DayLane never hides an item.
 
