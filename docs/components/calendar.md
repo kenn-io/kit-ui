@@ -105,6 +105,7 @@ a finite number (`NaN`, `Infinity`) is treated as no count.
   ```
 
   The bins themselves stay the app's: pass them as `activityScale`.
+
 - The selected range, the hover fill, and the outside-month dimming draw over
   the shade, and today's ring and `maxDate` work as before. Without
   `activity` the calendar renders exactly as it did.
