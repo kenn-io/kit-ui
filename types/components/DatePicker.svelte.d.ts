@@ -20,6 +20,19 @@ interface Props extends CalendarNavLabels {
      * locale. (`| undefined` keeps exactOptionalPropertyTypes consumers
      * happy.) */
     locale?: string | undefined;
+    /** Show the text field for typing a date ("tomorrow", "Sep 10",
+     * "last Friday") above the calendar. */
+    textEntry?: boolean;
+    /** Placeholder of the text field. */
+    textEntryPlaceholder?: string;
+    /** Accessible name of the text field. */
+    textEntryLabel?: string;
+    /** The text field's clear button label. */
+    textEntryClearLabel?: string;
+    /** The line under the text field while nothing is typed. */
+    textEntryHint?: string;
+    /** Shown when Enter is pressed on text that isn't a date. */
+    noMatchLabel?: string;
 }
 declare const DatePicker: import("svelte").Component<Props, {}, "">;
 type DatePicker = ReturnType<typeof DatePicker>;

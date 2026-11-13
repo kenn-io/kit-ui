@@ -57,6 +57,7 @@
   import PageHeaderDemo from "./pages/PageHeaderDemo.svelte";
   import PanZoomDemo from "./pages/PanZoomDemo.svelte";
   import ProviderBrandDemo from "./pages/ProviderBrandDemo.svelte";
+  import DatePhraseInputDemo from "./pages/DatePhraseInputDemo.svelte";
   import DatePickerDemo from "./pages/DatePickerDemo.svelte";
   import DateRangePickerDemo from "./pages/DateRangePickerDemo.svelte";
   import RadioGroupDemo from "./pages/RadioGroupDemo.svelte";
@@ -152,6 +153,7 @@
     { id: "palette", label: "Palette", component: PaletteDemo },
     { id: "pan-zoom", label: "Pan and zoom", component: PanZoomDemo },
     { id: "provider-brand", label: "Provider brand", component: ProviderBrandDemo },
+    { id: "date-phrase-input", label: "DatePhraseInput", component: DatePhraseInputDemo },
     { id: "date-picker", label: "DatePicker", component: DatePickerDemo },
     { id: "date-range-picker", label: "DateRangePicker", component: DateRangePickerDemo },
     { id: "radio-group", label: "RadioGroup", component: RadioGroupDemo },

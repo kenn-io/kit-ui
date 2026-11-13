@@ -5,6 +5,8 @@
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
+  import DatePhraseInput, { focusOnOpen } from "./DatePhraseInput.svelte";
+  import { parseDatePhrase } from "./date-phrase.js";
   import { formatDayLabel, todayStr, type CalendarNavLabels } from "./date-range.js";
 
   interface Props extends CalendarNavLabels {
@@ -28,6 +30,19 @@
      * locale. (`| undefined` keeps exactOptionalPropertyTypes consumers
      * happy.) */
     locale?: string | undefined;
+    /** Show the text field for typing a date ("tomorrow", "Sep 10",
+     * "last Friday") above the calendar. */
+    textEntry?: boolean;
+    /** Placeholder of the text field. */
+    textEntryPlaceholder?: string;
+    /** Accessible name of the text field. */
+    textEntryLabel?: string;
+    /** The text field's clear button label. */
+    textEntryClearLabel?: string;
+    /** The line under the text field while nothing is typed. */
+    textEntryHint?: string;
+    /** Shown when Enter is pressed on text that isn't a date. */
+    noMatchLabel?: string;
   }
 
   let {
@@ -41,6 +56,12 @@
     block = false,
     dialogLabel = "Select date",
     locale = undefined,
+    textEntry = true,
+    textEntryPlaceholder = "Type a date",
+    textEntryLabel = "Type a date",
+    textEntryClearLabel = "Clear",
+    textEntryHint = "Type or select a date.",
+    noMatchLabel = "No date matches that. Try “tomorrow” or “Sep 10”.",
     ...calendarLabels
   }: Props = $props();
 
@@ -54,6 +75,61 @@
   let month = $state<string>(todayStr());
 
   const label = $derived(value ? formatDayLabel(value, locale) : placeholder);
+
+  // Typed entry. `phrase` is the text; `typed` is the date it parses to
+  // right now, and `preview` is what the calendar shows as the pending
+  // pick. The preview follows the text after a short pause and holds while
+  // a phrase is incomplete, so the grid doesn't flicker on every keystroke.
+  // Nothing commits until Enter.
+  let phrase = $state("");
+  let preview = $state<string | null>(null);
+  let noMatch = $state(false);
+  let previewTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const typed = $derived.by(() => {
+    const result = parseDatePhrase(phrase, { locale, maxDate });
+    return result.kind === "date" ? result.date : null;
+  });
+
+  // Describes what the calendar shows: the current parse, or the preview
+  // held while the text is incomplete, so the line and the grid agree.
+  const summary = $derived.by(() => {
+    if (noMatch) return noMatchLabel;
+    const shown = typed ?? preview;
+    return shown ? formatDayLabel(shown, locale) : "";
+  });
+
+  function resetPhrase(): void {
+    clearTimeout(previewTimer);
+    phrase = "";
+    preview = null;
+    noMatch = false;
+  }
+
+  function handlePhraseInput(): void {
+    noMatch = false;
+    clearTimeout(previewTimer);
+    if (phrase.trim() === "") {
+      // Emptied: back to the chosen date's month.
+      if (preview) month = value ?? todayStr();
+      preview = null;
+      return;
+    }
+    const next = typed;
+    if (!next) return;
+    previewTimer = setTimeout(() => {
+      preview = next;
+      month = next;
+    }, 100);
+  }
+
+  function submitPhrase(): void {
+    if (typed) {
+      pick(typed);
+    } else if (phrase.trim() !== "") {
+      noMatch = true;
+    }
+  }
 
   function positionPanel(): void {
     if (!containerEl || !panelEl) return;
@@ -73,6 +149,7 @@
   async function toggleOpen(): Promise<void> {
     if (disabled) return;
     open = !open;
+    resetPhrase();
     if (open) {
       month = value ?? todayStr();
       await tick();
@@ -81,6 +158,7 @@
   }
 
   function pick(date: string): void {
+    resetPhrase();
     open = false;
     onchange(date);
     triggerEl?.focus();
@@ -91,7 +169,10 @@
     const cleanups = [
       dismissable({
         owners: () => [containerEl],
-        dismiss: () => (open = false),
+        dismiss: () => {
+          open = false;
+          resetPhrase();
+        },
         escapeFocus: () => triggerEl,
       }),
       // Drilling into the month or year grid changes the panel's height.
@@ -132,9 +213,29 @@
       role="dialog"
       aria-label={dialogLabel}
     >
+      {#if textEntry}
+        <DatePhraseInput
+          bind:value={phrase}
+          class="kit-date-picker__phrase"
+          placeholder={textEntryPlaceholder}
+          ariaLabel={textEntryLabel}
+          clearLabel={textEntryClearLabel}
+          {summary}
+          hint={textEntryHint}
+          invalid={noMatch}
+          {locale}
+          autofocus={focusOnOpen()}
+          oninput={handlePhraseInput}
+          onsubmit={submitPhrase}
+        />
+      {/if}
       <Calendar
         bind:month
-        selected={value ? { from: value, to: value } : null}
+        selected={preview
+          ? { from: preview, to: preview }
+          : value
+            ? { from: value, to: value }
+            : null}
         {maxDate}
         {...calendarLabels}
         {locale}
@@ -230,6 +331,12 @@
     z-index: var(--z-popover);
     padding: var(--space-4);
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .kit-date-picker__panel :global(.kit-date-picker__phrase) {
+    align-self: stretch;
   }
 </style>

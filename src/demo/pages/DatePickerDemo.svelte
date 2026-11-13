@@ -6,6 +6,8 @@
   let start = $state<string | null>(daysAgo(30));
   let empty = $state<string | null>(null);
   let bounded = $state<string | null>(null);
+  let typed = $state<string | null>(null);
+  let plain = $state<string | null>(null);
 </script>
 
 <DemoSection
@@ -43,6 +45,34 @@
       block
     />
   </div>
+</DemoSection>
+
+<DemoSection
+  title="Type a date"
+  description="The popover opens with a text field: type “tomorrow”, “Sep 10”, “next Friday” or “3 days ago”. Ghost text finishes the word (Tab or → takes it), the calendar previews the date, and Enter picks it. A range or text that isn't a date shows a hint and changes nothing."
+  code={`<DatePicker value={value} onchange={(date) => (value = date)} locale="en-US" />`}
+>
+  <DatePicker
+    value={typed}
+    onchange={(date) => (typed = date)}
+    ariaLabel="Typed date"
+    placeholder="Pick or type a day"
+    locale="en-US"
+  />
+  <code class="readout" data-testid="typed-date-value">{typed ?? "null"}</code>
+</DemoSection>
+
+<DemoSection
+  title="Without text entry"
+  description="textEntry={false} leaves out the text field."
+  code={`<DatePicker value={value} onchange={(date) => (value = date)} textEntry={false} />`}
+>
+  <DatePicker
+    value={plain}
+    onchange={(date) => (plain = date)}
+    ariaLabel="Calendar only"
+    textEntry={false}
+  />
 </DemoSection>
 
 <style>

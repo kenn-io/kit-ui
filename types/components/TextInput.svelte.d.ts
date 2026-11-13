@@ -35,6 +35,8 @@ interface Props {
     ariaValuenow?: number;
     ariaValuemin?: number;
     ariaValuemax?: number;
+    /** Longest value the field accepts. */
+    maxlength?: number;
     /** Virtual keyboard hint on touch devices, e.g. "decimal". */
     inputmode?: HTMLInputAttributes["inputmode"];
     /** Focus the input when it mounts. */

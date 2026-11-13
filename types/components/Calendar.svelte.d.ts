@@ -6,6 +6,8 @@ interface Props extends CalendarNavLabels {
     month?: string;
     /** Inclusive range to highlight (e.g. the current selection). */
     selected?: DateRange | null;
+    /** Separate days to show selected, each on its own (no band). */
+    selectedDates?: readonly string[] | null;
     /** Called with the clicked date (YYYY-MM-DD). */
     onpick?: (date: string) => void;
     /** Dates after this are disabled; paging into fully-later months too. */

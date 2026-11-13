@@ -5,9 +5,13 @@
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import Calendar from "./Calendar.svelte";
+  import DatePhraseInput, { focusOnOpen } from "./DatePhraseInput.svelte";
+  import { datePhraseRange, parseDatePhrase } from "./date-phrase.js";
   import SegmentedControl, { type SegmentedControlOption } from "./SegmentedControl.svelte";
   import {
     DEFAULT_RANGE_PRESETS,
+    daysInRange,
+    formatDateRangeLabel,
     formatDayLabel,
     formatMonthLabel,
     formatShortDate,
@@ -66,6 +70,30 @@
      * locale. (`| undefined` keeps forwarding consumers with
      * exactOptionalPropertyTypes happy.) */
     locale?: string | undefined;
+    /** Show the text field for typing dates ("last 30 days", "Sep 10 to
+     * Oct 20", "since March") above the tabs. */
+    textEntry?: boolean;
+    /** Placeholder of the text field. */
+    textEntryPlaceholder?: string;
+    /** Accessible name of the text field. */
+    textEntryLabel?: string;
+    /** The text field's clear button label. */
+    textEntryClearLabel?: string;
+    /** The line under the text field while nothing is typed. */
+    textEntryHint?: string;
+    /** Shown when Enter is pressed on text that isn't a date or range. */
+    noMatchLabel?: string;
+    /** Day count after a typed range's dates in the summary line. */
+    dayCountLabel?: (count: number) => string;
+    /** Let typed text pick a set of separate days ("last 3 Fridays",
+     * "weekends since October"). A set commits as a `custom` selection
+     * whose `dates` lists the days and `label` names them; `from`/`to` are
+     * its first and last day. Off by default. */
+    dateSets?: boolean;
+    /** Set names in the summary and trigger. One weekday is named from the
+     * locale ("Fridays"). */
+    weekendsLabel?: string;
+    weekdaysLabel?: string;
   }
 
   let {
@@ -93,6 +121,16 @@
     calendarGroupLabel = "Calendar period",
     locale = undefined,
     weekStart = "monday",
+    textEntry = true,
+    textEntryPlaceholder = "What dates are you looking for?",
+    textEntryLabel = "Type dates",
+    textEntryClearLabel = "Clear",
+    textEntryHint = "Type or select dates.",
+    noMatchLabel = "No dates match that. Try “last 30 days” or “Sep 10 to Oct 20”.",
+    dayCountLabel = (count: number) => (count === 1 ? "1 day" : `${count} days`),
+    dateSets = false,
+    weekendsLabel = "Weekends",
+    weekdaysLabel = "Weekdays",
     // Calendar's nav/drill-down labels, forwarded verbatim so Calendar's
     // own English defaults stay the single source.
     ...calendarLabels
@@ -113,6 +151,8 @@
   let calMonth = $state<string>(todayStr());
   let customFrom = $state<string>("");
   let customTo = $state<string>("");
+  // The committed set's days, when the selection is one.
+  let customDates = $state<string[] | null>(null);
   // Two-click range pick on the Custom tab: true after the first click,
   // meaning the next pick completes the range.
   let customPending = $state(false);
@@ -123,10 +163,106 @@
   // seed()/pick handlers, so a plain (non-reactive) variable.
   let pendingFor: string | null = null;
 
+  // Typed entry. `phrase` is the text and `typed` the range it parses to
+  // right now (a single date is a one-day range). `typedPreview` is what the
+  // Custom tab shows as its draft: it follows the text after a short pause
+  // and holds while a phrase is incomplete, so the grid doesn't flicker on
+  // every keystroke. Nothing commits until Enter.
+  let phrase = $state("");
+  // A typed range, or with `dateSets` a set: its days plus first and last.
+  // A rolling window that matches an offered preset carries it.
+  type TypedPick = DateRange & { dates?: string[]; label?: string; preset?: RangePreset };
+  let typedPreview = $state<TypedPick | null>(null);
+  let noMatch = $state(false);
+  let previewTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const typed = $derived.by((): TypedPick | null => {
+    const result = parseDatePhrase(phrase, {
+      locale,
+      weekStart,
+      maxDate,
+      earliestDate,
+      sets: dateSets,
+      weekendsLabel,
+      weekdaysLabel,
+    });
+    const span = datePhraseRange(result);
+    if (!span) return null;
+    if (result.kind === "dates") return { ...span, dates: result.dates, label: result.label };
+    // "last 30 days" with a 30-day preset on offer commits that preset, so
+    // the app gets the rolling window its pill gives, not a frozen range.
+    const preset =
+      result.kind !== "none" && result.rollingDays
+        ? presets.find((p) => p.days > 0 && p.days === result.rollingDays)
+        : undefined;
+    return preset ? { ...span, preset } : span;
+  });
+
+  // "Fridays · Oct 30 – Nov 13, 2026 · 3 days" for a set; without the
+  // label for a range.
+  function describe(pick: TypedPick): string {
+    const days = dayCountLabel(pick.dates?.length ?? daysInRange(pick.from, pick.to));
+    const span = formatDateRangeLabel(pick.from, pick.to, locale);
+    const name = pick.preset?.longLabel ?? pick.label;
+    return name ? `${name} · ${span} · ${days}` : `${span} · ${days}`;
+  }
+
+  // Describes what the calendar shows: the current parse, or the preview
+  // held while the text is incomplete, so the line and the grid agree.
+  const phraseSummary = $derived.by(() => {
+    if (noMatch) return noMatchLabel;
+    const shown = typed ?? typedPreview;
+    return shown ? describe(shown) : "";
+  });
+
+  function resetPhrase(): void {
+    clearTimeout(previewTimer);
+    phrase = "";
+    typedPreview = null;
+    noMatch = false;
+  }
+
+  function handlePhraseInput(): void {
+    noMatch = false;
+    clearTimeout(previewTimer);
+    if (phrase.trim() === "") {
+      // Emptied: back to the draft, and to the month that shows it.
+      if (typedPreview) customMonth = customTo || customFrom || todayStr();
+      typedPreview = null;
+      return;
+    }
+    const next = typed;
+    if (!next) return;
+    previewTimer = setTimeout(() => {
+      typedPreview = next;
+      // A preset match previews as its pill; anything else on the calendar.
+      tab = next.preset ? "relative" : "custom";
+      customMonth = next.from;
+    }, 100);
+  }
+
+  function submitPhrase(): void {
+    if (typed?.preset) {
+      // Exactly what clicking the pill does.
+      const { days } = typed.preset;
+      tab = "relative";
+      applyRelative(days);
+    } else if (typed) {
+      const { from, to, dates, label } = typed;
+      // Clear the text too, so a second Enter doesn't emit again.
+      resetPhrase();
+      tab = "custom";
+      customMonth = from;
+      commitCustom(from, to, dates, label);
+    } else if (phrase.trim() !== "") {
+      noMatch = true;
+    }
+  }
+
   function selectionKey(sel: RangeSelection): string {
     if (sel.mode === "relative") return `relative:${sel.days}`;
     if (sel.mode === "calendar") return `calendar:${sel.unit}:${sel.anchor}`;
-    return `custom:${sel.from}:${sel.to}`;
+    return `custom:${sel.from}:${sel.to}:${sel.dates?.join(",") ?? ""}`;
   }
 
   const tabs = $derived<SegmentedControlOption[]>([
@@ -160,6 +296,10 @@
     if (selection.mode === "calendar") {
       return calendarLabelFor(selection.unit, selection.anchor);
     }
+    if (selection.dates?.length) {
+      const days = dayCountLabel(selection.dates.length);
+      return selection.label ? `${selection.label} · ${days}` : days;
+    }
     if (!selection.from || !selection.to) return customRangeLabel;
     if (selection.from === selection.to) return selection.from;
     return `${selection.from} - ${selection.to}`;
@@ -169,10 +309,16 @@
   // current anchor.
   const calSelected = $derived(periodBounds(calUnit, calAnchor, weekStart));
 
-  // While an end pick is pending only the start day highlights.
-  const calCustomSelected = $derived<DateRange | null>(
-    customFrom ? { from: customFrom, to: customTo || customFrom } : null,
-  );
+  // While an end pick is pending only the start day highlights. A typed
+  // phrase's preview shows in place of the draft until it commits or
+  // the user clicks a day.
+  const calCustomSelected = $derived.by((): DateRange | null => {
+    if (typedPreview) return typedPreview.dates ? null : typedPreview;
+    if (customDates) return null;
+    return customFrom ? { from: customFrom, to: customTo || customFrom } : null;
+  });
+  // A set's separate days, typed or committed.
+  const calCustomDates = $derived(typedPreview ? (typedPreview.dates ?? null) : customDates);
 
   function seed(): void {
     // A mid-pick draft survives dismiss/reopen — an Escape between the two
@@ -202,6 +348,7 @@
     const resolved = resolveRange(selection, earliestDate, weekStart);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
+    customDates = selection.mode === "custom" && selection.dates?.length ? selection.dates : null;
     // A controlled selection with only `from` is a range mid-pick: stay
     // armed so the next click completes it instead of restarting. Re-key
     // the draft to THIS selection either way — a full reseed that leaves
@@ -210,7 +357,8 @@
     customPending = customFrom !== "" && customTo === "";
     pendingFor = customPending ? selectionKey(selection) : null;
     calMonth = calAnchor;
-    customMonth = customTo || customFrom || todayStr();
+    // A set with no usable bounds still opens on its first day's month.
+    customMonth = customTo || customFrom || customDates?.[0] || todayStr();
   }
 
   let panelEl = $state<HTMLDivElement>();
@@ -239,6 +387,7 @@
 
   async function toggleOpen(): Promise<void> {
     open = !open;
+    resetPhrase();
     if (open) {
       seed();
       await tick();
@@ -257,12 +406,14 @@
     const resolved = resolveRange(sel, earliestDate, weekStart);
     customFrom = resolved.from;
     customTo = resolved.to;
+    customDates = null;
     customPending = false;
     pendingFor = null;
     customMonth = resolved.to;
   }
 
   function applyRelative(days: number): void {
+    resetPhrase();
     const sel: RangeSelection = { mode: "relative", days };
     calAnchor = resolveRange(sel, earliestDate, weekStart).to;
     syncCustomFields(sel);
@@ -270,6 +421,7 @@
   }
 
   function applyCalendar(unit: CalendarUnit, anchor: string): void {
+    resetPhrase();
     calUnit = unit;
     calAnchor = anchor;
     calMonth = anchor;
@@ -282,6 +434,15 @@
   // completes it (an earlier second click swaps the ends so consumers always
   // get ordered bounds), and only a complete range commits.
   function pickCustomDay(date: string): void {
+    // A click takes over from typed text: the two-click pick starts fresh
+    // from the clicked day, even if a click was pending before the typing.
+    // A shown set gives way the same way.
+    if (typedPreview !== null || phrase.trim() !== "" || customDates) {
+      customPending = false;
+      pendingFor = null;
+      customDates = null;
+    }
+    resetPhrase();
     const currentSelectionKey = selectionKey(selection);
     if (!customPending || currentSelectionKey !== pendingFor) {
       customFrom = date;
@@ -290,15 +451,19 @@
       pendingFor = currentSelectionKey;
       return;
     }
+    if (date < customFrom) commitCustom(date, customFrom);
+    else commitCustom(customFrom, date);
+  }
+
+  // Both ways a custom range commits, the completing second click and Enter
+  // on a typed phrase, end here: ordered bounds, draft cleared, one emit.
+  function commitCustom(from: string, to: string, dates?: string[], label?: string): void {
     customPending = false;
     pendingFor = null;
-    if (date < customFrom) {
-      customTo = customFrom;
-      customFrom = date;
-    } else {
-      customTo = date;
-    }
-    onSelect({ mode: "custom", from: customFrom, to: customTo });
+    customFrom = from;
+    customTo = to;
+    customDates = dates ?? null;
+    onSelect(dates ? { mode: "custom", from, to, dates, label } : { mode: "custom", from, to });
   }
 
   // Invalidate while closed too: a selection A -> B -> A round trip before
@@ -316,7 +481,10 @@
     const cleanups = [
       dismissable({
         owners: () => [containerEl],
-        dismiss: () => (open = false),
+        dismiss: () => {
+          open = false;
+          resetPhrase();
+        },
         escapeFocus: () => triggerEl,
       }),
       // Tab switches / calendar paging change the panel's height — track it
@@ -379,6 +547,23 @@
       role="dialog"
       aria-label={dialogLabel}
     >
+      {#if textEntry}
+        <DatePhraseInput
+          bind:value={phrase}
+          class="kit-date-range-picker__phrase"
+          placeholder={textEntryPlaceholder}
+          ariaLabel={textEntryLabel}
+          clearLabel={textEntryClearLabel}
+          summary={phraseSummary}
+          hint={textEntryHint}
+          invalid={noMatch}
+          {locale}
+          sets={dateSets}
+          autofocus={focusOnOpen()}
+          oninput={handlePhraseInput}
+          onsubmit={submitPhrase}
+        />
+      {/if}
       <div class="kit-date-range-picker__tabs">
         <SegmentedControl
           block
@@ -394,7 +579,10 @@
           presets.map((preset) => ({
             key: preset.days,
             label: preset.label,
-            active: isRelativeActive(preset.days),
+            // While a typed preset match previews, its pill is the one lit.
+            active: typedPreview?.preset
+              ? typedPreview.preset.days === preset.days
+              : isRelativeActive(preset.days),
             pick: () => applyRelative(preset.days),
           })),
         )}
@@ -420,9 +608,9 @@
           />
         </div>
       {:else}
-        <!-- Readout, not inputs: the range is picked on the calendar below
-             (two clicks); the highlighted endpoint is the one the next
-             click sets. -->
+        <!-- Readout: the range is picked on the calendar below (two clicks)
+             or typed in the field above; the highlighted endpoint is the one
+             the next click sets. -->
         <div
           class="kit-date-range-picker__endpoints"
           class:compact={compactPanel}
@@ -431,13 +619,13 @@
           <span class="kit-date-range-picker__endpoint" class:active={!customPending}>
             <span class="kit-date-range-picker__endpoint-label">{fromLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
-              {customFrom || "…"}
+              {typedPreview?.from ?? (customFrom || "…")}
             </span>
           </span>
           <span class="kit-date-range-picker__endpoint" class:active={customPending}>
             <span class="kit-date-range-picker__endpoint-label">{toLabel}</span>
             <span class="kit-date-range-picker__endpoint-value">
-              {customTo || "…"}
+              {typedPreview?.to ?? (customTo || "…")}
             </span>
           </span>
         </div>
@@ -445,6 +633,7 @@
           <Calendar
             bind:month={customMonth}
             selected={calCustomSelected}
+            selectedDates={calCustomDates}
             {maxDate}
             {...calendarLabels}
             {locale}
@@ -540,6 +729,10 @@
     box-sizing: border-box;
     z-index: var(--z-popover);
     padding: var(--space-4);
+  }
+
+  .kit-date-range-picker__panel :global(.kit-date-range-picker__phrase) {
+    margin-bottom: var(--space-4);
   }
 
   /* The mode switch is a stock SegmentedControl; only the panel spacing

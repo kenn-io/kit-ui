@@ -3,7 +3,8 @@ import { gotoPage } from "./helpers.js";
 
 // The Custom tab picks its from/to span with two clicks on the embedded
 // Calendar (first click starts the range, an earlier second click swaps the
-// ends) — no native date inputs.
+// ends). The popover's only input is the plain text field for typed dates
+// (date-phrase.spec.ts) — no native date inputs.
 
 // The picker seeds "today" from the browser clock, and these tests click
 // specific days of the visible month and count selected cells for rolling
@@ -55,10 +56,19 @@ async function expectCompactEndpointsToFit(page: import("@playwright/test").Page
   }
 }
 
-test("custom tab renders a calendar, not native date inputs", async ({ page }) => {
+test("custom tab renders a calendar and one plain text field, not native date inputs", async ({
+  page,
+}) => {
+  // kenn-io/kit-ui#20 kept the panel free of inputs; typed entry adds one
+  // free-text field on purpose. Native date/datetime inputs stay out.
   await openCustomTab(page);
   await expect(panel(page).locator(".kit-calendar")).toBeVisible();
-  await expect(panel(page).locator("input")).toHaveCount(0);
+  const inputs = panel(page).locator("input");
+  await expect(inputs).toHaveCount(1);
+  await expect(inputs).toHaveAttribute("type", "text");
+  await expect(panel(page).locator('input[type="date"], input[type="datetime-local"]')).toHaveCount(
+    0,
+  );
 });
 
 test("two clicks commit an ordered custom range; the readout tracks the pending endpoint", async ({

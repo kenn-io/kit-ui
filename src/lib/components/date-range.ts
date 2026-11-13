@@ -13,7 +13,8 @@
  * - relative: a rolling window ending today (last N days; days === 0 means
  *   "all", anchored to `earliestDate`).
  * - calendar: a single day/week/month period the user can step through.
- * - custom: an explicit from/to span.
+ * - custom: an explicit from/to span, or (with DateRangePicker's
+ *   `dateSets`) a set of separate days in `dates` that `from`/`to` bound.
  */
 export type RangeMode = "relative" | "calendar" | "custom";
 export type WeekStart = "monday" | "sunday";
@@ -35,6 +36,12 @@ export interface CustomSelection {
   mode: "custom";
   from: string;
   to: string;
+  /** Only from a DateRangePicker with `dateSets`: the separate days a set
+   * phrase picked ("last 3 Fridays"), ascending, from `from` to `to`.
+   * Absent for an ordinary span. */
+  dates?: string[] | undefined;
+  /** The set's name for display ("Fridays"), alongside `dates`. */
+  label?: string | undefined;
 }
 
 export type RangeSelection = RelativeSelection | CalendarSelection | CustomSelection;
@@ -214,7 +221,9 @@ export function monthGridDates(anchor: string, weekStart: WeekStart = "monday"):
  * happens client-side. */
 const CACHE_MAX = 64;
 
-function capped<V>(cache: Map<string, V>, key: string, value: V): V {
+/** Store `value` under `key` in a size-capped cache (FIFO eviction) and
+ * return it. Shared with date-phrase.ts's locale word tables. */
+export function capped<V>(cache: Map<string, V>, key: string, value: V): V {
   if (cache.size >= CACHE_MAX) {
     cache.delete(cache.keys().next().value as string);
   }
@@ -301,4 +310,27 @@ export function formatDayLabel(anchor: string, locale?: string): string {
  * browser locale. */
 export function formatMonthLabel(anchor: string, locale?: string): string {
   return formatter({ year: "numeric", month: "long" }, locale).format(parseLocal(anchor));
+}
+
+/** A YYYY-MM-DD string as a local-midnight Date, for any year (setFullYear
+ * avoids Date's 0–99 → 1900s mapping). */
+function localMidnight(date: string): Date {
+  const d = new Date(2000, 0, 1);
+  d.setFullYear(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+  return d;
+}
+
+/** Inclusive number of days from `from` to `to` (both YYYY-MM-DD). */
+export function daysInRange(from: string, to: string): number {
+  const utc = (date: string) =>
+    Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+  return Math.round((utc(to) - utc(from)) / 86_400_000) + 1;
+}
+
+/** "Sep 10 – Oct 20, 2026" (or "Sep 10, 2026" for one day) in the locale's
+ * own range format. `locale` omitted = the browser locale. */
+export function formatDateRangeLabel(from: string, to: string, locale?: string): string {
+  const fmt = formatter({ year: "numeric", month: "short", day: "numeric" }, locale);
+  if (from === to) return fmt.format(localMidnight(from));
+  return fmt.formatRange(localMidnight(from), localMidnight(to));
 }
