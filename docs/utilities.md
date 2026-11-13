@@ -299,10 +299,11 @@ opens, and on close it picks the first tab stop after that spot, else the
 last one before it, starting at the closest ancestor still on the page.
 Siblings removed along with the trigger are skipped, so deleting a row and
 its neighbours still focuses the next row left.
-The check runs once more after the current update, since the update that
-closes the surface can remove the trigger after the surface's own teardown.
 If focus is already on something real when the surface closes, because the
 app focused an element in its close handler, the trap leaves it there.
+The check runs once more after the current update, since that update can
+remove the focused element after the surface's own teardown. This includes
+a trigger the app focused itself just before its row was removed.
 
 Tab moves in the browser's own order, iframe content included. Two
 invisible guard elements (`[data-kit-focus-guard]`) sit just before and

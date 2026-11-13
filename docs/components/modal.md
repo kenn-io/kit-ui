@@ -53,7 +53,8 @@ The panel is `role="dialog"` + `aria-modal="true"`, named by `ariaLabel`
   the row whose button opened the dialog, focus lands on the next remaining
   row's button, or the previous one's when no row follows. This holds when
   the delete also removes the rows beside it. If the app moved
-  focus somewhere else while closing, the dialog leaves it there.
+  focus somewhere else while closing, the dialog leaves it there, unless the
+  same update removes that element too.
 - **Scroll lock**: body scrolling is locked while any modal surface is open
   (re-entrant across stacked surfaces).
 

@@ -126,7 +126,12 @@ test.describe("Focus restore when the trigger is gone", () => {
 
   // Raw trapFocus on a hand-built page. `close` runs after the surface left
   // and decides when the trap releases and what else changes around it.
-  type Close = "disable-trigger" | "remove-row" | "app-focuses" | "app-focuses-after-removal";
+  type Close =
+    | "disable-trigger"
+    | "remove-row"
+    | "app-focuses"
+    | "app-focuses-after-removal"
+    | "app-focuses-trigger-then-row-leaves";
   async function openAndClose(page: Page, html: string, close: Close) {
     const errors: Error[] = [];
     page.on("pageerror", (error) => errors.push(error));
@@ -152,6 +157,12 @@ test.describe("Focus restore when the trigger is gone", () => {
         } else if (close === "app-focuses") {
           $("#target").focus();
           release();
+        } else if (close === "app-focuses-trigger-then-row-leaves") {
+          // The app hands focus back itself, then the same update removes
+          // the row that held the trigger.
+          $("#trigger").focus();
+          release();
+          $("#row").remove();
         } else {
           // The trap releases first; the row and the app's own focus call
           // come later in the same update.
@@ -217,6 +228,16 @@ test.describe("Focus restore when the trigger is gone", () => {
       "app-focuses",
     );
     expect(focused).toBe("Target");
+  });
+
+  test("a trigger the app refocused that leaves later still hands focus on", async ({ page }) => {
+    const focused = await openAndClose(
+      page,
+      `<div id="row"><button id="trigger" aria-label="Trigger">Go</button></div>
+       <input aria-label="After">`,
+      "app-focuses-trigger-then-row-leaves",
+    );
+    expect(focused).toBe("After");
   });
 
   test("focus the app moves after the trigger left stays put", async ({ page }) => {

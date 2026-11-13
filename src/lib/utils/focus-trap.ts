@@ -275,11 +275,10 @@ export function trapFocus(surface: HTMLElement): () => void {
     endGuard.remove();
     unlockScroll();
     openSurfaces.delete(surface);
-    if (!focusIsLost(surface)) return;
-    restoreFocus(previous, path, surface);
+    if (focusIsLost(surface)) restoreFocus(previous, path, surface);
     // Svelte removes a block's DOM before it runs the block's teardowns, but
-    // the update that closed the surface can remove the trigger later on,
-    // such as a confirmed delete that drops the trigger's row. Look again
+    // the update that closed the surface can remove the focused element later
+    // on, such as a confirmed delete that drops the trigger's row. Look again
     // once that update is done.
     queueMicrotask(() => {
       if (focusIsLost(surface)) restoreFocus(previous, path, surface);
