@@ -333,10 +333,9 @@ test("keyboard focus follows a fold as it opens and closes", async ({ page }) =>
 test("a 23-hour day labels its hours from the app's ticks", async ({ page }) => {
   await page.getByText("23 h (spring)").click();
   await page.getByRole("checkbox", { name: "Fold quiet hours" }).uncheck();
-  const labels = (await lane(page).locator(".kit-day-lane__hour-label").allTextContents()).map(
-    (s) => s.trim(),
-  );
-  expect(labels).toHaveLength(23);
+  const hourLabels = lane(page).locator(".kit-day-lane__hour-label");
+  await expect(hourLabels).toHaveCount(23);
+  const labels = (await hourLabels.allTextContents()).map((s) => s.trim());
   await page.getByRole("checkbox", { name: "Fold quiet hours" }).check();
   // The 1 AM to 7 AM band names its own start, so no "1 AM" label sits beside it.
   await expect(
