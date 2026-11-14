@@ -186,6 +186,43 @@ for (const foldQuietMinutes of [0, 120]) {
   });
 }
 
+test("the first timed card is visible below a tall date-only strip", async ({ page }) => {
+  const fixture = await mountDayLane(page, {
+    items: [],
+    dayKey: "a",
+    foldQuietMinutes: 0,
+    label: "Item",
+  });
+  await fixture.evaluate((component) =>
+    component.update({
+      dayKey: "b",
+      items: [
+        ...Array.from({ length: 60 }, (_, i) => ({ id: `date-${i}`, dateOnly: true })),
+        { id: "midnight", startMinute: 0 },
+      ],
+    }),
+  );
+  const scroller = page.locator(".kit-day-lane");
+  const card = page.locator('[data-day-lane-key="item:midnight"]');
+  await expect
+    .poll(async () => {
+      const [frame, item] = await Promise.all([scroller.boundingBox(), card.boundingBox()]);
+      return item!.y >= frame!.y && item!.y + item!.height <= frame!.y + frame!.height;
+    })
+    .toBe(true);
+  await fixture.evaluate((component) =>
+    component.update({
+      dayKey: "c",
+      items: [
+        { id: "date", dateOnly: true },
+        { id: "midnight", startMinute: 0 },
+      ],
+    }),
+  );
+  await expect(page.locator('[data-day-lane-key="item:date"]')).toHaveCount(1);
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
+});
+
 test("a late interval stays within the day axis", async ({ page }) => {
   await mountDayLane(page, {
     items: [{ id: "late", startMinute: 1439, endMinute: 1500 }],

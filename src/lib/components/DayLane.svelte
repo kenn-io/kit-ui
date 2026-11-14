@@ -289,7 +289,10 @@
     // Near the top already: keep the date-only strip whole rather than half scrolled away.
     const axis = scroller.querySelector<HTMLElement>(".kit-day-lane__axis");
     const axisTop = axis ? axis.getBoundingClientRect().top - top : 0;
-    scroller.scrollTop = offset <= axisTop ? 0 : offset;
+    scroller.scrollTop =
+      offset <= axisTop && el.getBoundingClientRect().bottom - top <= scroller.clientHeight
+        ? 0
+        : offset;
   });
 </script>
 
