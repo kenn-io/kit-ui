@@ -82,9 +82,13 @@ export const DEFAULT_RANGE_PRESETS: RangePreset[] = [
   { label: "All", longLabel: "All time", days: 0 },
 ];
 
-/** Parse a YYYY-MM-DD date string as local midnight. */
-function parseLocal(date: string): Date {
-  return new Date(date + "T00:00:00");
+/** Parse and format civil dates without local timezone transitions. */
+function parseDate(date: string): Date {
+  return new Date(`${date}T00:00:00Z`);
+}
+
+function dateStr(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 /** Format a Date as a local-timezone YYYY-MM-DD string. */
@@ -141,22 +145,21 @@ export function periodBounds(
   anchor: string,
   weekStart: WeekStart = "monday",
 ): DateRange {
-  const d = parseLocal(anchor);
+  const d = parseDate(anchor);
   if (unit === "day") {
     return { from: anchor, to: anchor };
   }
   if (unit === "week") {
-    // getDay(): 0=Sun..6=Sat.
-    const offset = (d.getDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
+    // getUTCDay(): 0=Sun..6=Sat.
+    const offset = (d.getUTCDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
     const first = new Date(d);
-    first.setDate(d.getDate() - offset);
+    first.setUTCDate(d.getUTCDate() - offset);
     const last = new Date(first);
-    last.setDate(first.getDate() + 6);
-    return { from: localDateStr(first), to: localDateStr(last) };
+    last.setUTCDate(first.getUTCDate() + 6);
+    return { from: dateStr(first), to: dateStr(last) };
   }
-  const first = new Date(d.getFullYear(), d.getMonth(), 1);
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return { from: localDateStr(first), to: localDateStr(last) };
+  d.setUTCMonth(d.getUTCMonth() + 1, 0);
+  return { from: `${anchor.slice(0, 7)}-01`, to: dateStr(d) };
 }
 
 /**
@@ -165,25 +168,25 @@ export function periodBounds(
  * overflowing into March).
  */
 export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): string {
-  const d = parseLocal(anchor);
+  const d = parseDate(anchor);
   if (unit === "day") {
-    d.setDate(d.getDate() + dir);
+    d.setUTCDate(d.getUTCDate() + dir);
   } else if (unit === "week") {
-    d.setDate(d.getDate() + 7 * dir);
+    d.setUTCDate(d.getUTCDate() + 7 * dir);
   } else {
     return shiftMonths(anchor, dir);
   }
-  return localDateStr(d);
+  return dateStr(d);
 }
 
 /** Move `anchor` by `months` calendar months, clamping the day to the
  * target month's length (Jan 31 + 1 → Feb 28; Feb 29 + 12 → Feb 28). */
 export function shiftMonths(anchor: string, months: number): string {
-  const d = parseLocal(anchor);
-  const target = new Date(d.getFullYear(), d.getMonth() + months, 1);
-  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-  target.setDate(Math.min(d.getDate(), lastDay));
-  return localDateStr(target);
+  const d = parseDate(anchor);
+  const day = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + months + 1, 0);
+  d.setUTCDate(Math.min(day, d.getUTCDate()));
+  return dateStr(d);
 }
 
 /**
@@ -223,9 +226,9 @@ export function dayGridKeyTarget(
 }
 
 function addDays(anchor: string, days: number): string {
-  const d = parseLocal(anchor);
-  d.setDate(d.getDate() + days);
-  return localDateStr(d);
+  const d = parseDate(anchor);
+  d.setUTCDate(d.getUTCDate() + days);
+  return dateStr(d);
 }
 
 /**
@@ -234,15 +237,14 @@ function addDays(anchor: string, days: number): string {
  * adjacent months.
  */
 export function monthGridDates(anchor: string, weekStart: WeekStart = "monday"): string[] {
-  const d = parseLocal(anchor);
-  const first = new Date(d.getFullYear(), d.getMonth(), 1);
-  const offset = (first.getDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
+  const first = parseDate(`${anchor.slice(0, 7)}-01`);
+  const offset = (first.getUTCDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
   const start = new Date(first);
-  start.setDate(first.getDate() - offset);
+  start.setUTCDate(first.getUTCDate() - offset);
   return Array.from({ length: 42 }, (_, i) => {
     const day = new Date(start);
-    day.setDate(start.getDate() + i);
-    return localDateStr(day);
+    day.setUTCDate(start.getUTCDate() + i);
+    return dateStr(day);
   });
 }
 
@@ -284,12 +286,16 @@ function labelTable(key: string, build: () => string[]): string[] {
   return labelTables.get(key) ?? capped(labelTables, key, build());
 }
 
-/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
- * omitted = the browser locale. */
-export function weekdayLabels(locale?: string, weekStart: WeekStart = "monday"): string[] {
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …, or
+ * "M", … with `style` "narrow"). `locale` is a BCP 47 tag; omitted = the browser locale. */
+export function weekdayLabels(
+  locale?: string,
+  weekStart: WeekStart = "monday",
+  style: "short" | "narrow" = "short",
+): string[] {
   // 2024-01-01 is a Monday. Sliced so callers can't mutate the shared cache.
-  return labelTable(`weekdays|${locale ?? ""}|${weekStart}`, () => {
-    const fmt = formatter({ weekday: "short" }, locale);
+  return labelTable(`weekdays-${style}|${locale ?? ""}|${weekStart}`, () => {
+    const fmt = formatter({ weekday: style }, locale);
     return Array.from({ length: 7 }, (_, i) =>
       fmt.format(new Date(2024, 0, (weekStart === "sunday" ? 7 : 1) + i)),
     );
@@ -324,7 +330,9 @@ export function resolveRange(
 
 /** "Jun 29" style short label. `locale` omitted = the browser locale. */
 export function formatShortDate(date: string, locale?: string): string {
-  return formatter({ month: "short", day: "numeric" }, locale).format(parseLocal(date));
+  return formatter({ month: "short", day: "numeric", timeZone: "UTC" }, locale).format(
+    parseDate(date),
+  );
 }
 
 /**
@@ -341,9 +349,10 @@ export function formatWeekOfLabel(template: string, dateLabel: string): string {
 /** "Jun 29, 2026" style label for a day anchor. `locale` omitted = the
  * browser locale. */
 export function formatDayLabel(anchor: string, locale?: string): string {
-  return formatter({ year: "numeric", month: "short", day: "numeric" }, locale).format(
-    parseLocal(anchor),
-  );
+  return formatter(
+    { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" },
+    locale,
+  ).format(parseDate(anchor));
 }
 
 /** "Monday, June 29, 2026" style label for a calendar day cell: the full
@@ -351,13 +360,23 @@ export function formatDayLabel(anchor: string, locale?: string): string {
  * only. `locale` omitted = the browser locale. */
 export function formatDayCellLabel(anchor: string, locale?: string): string {
   return formatter(
-    { weekday: "long", year: "numeric", month: "long", day: "numeric" },
+    { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" },
     locale,
-  ).format(parseLocal(anchor));
+  ).format(parseDate(anchor));
 }
 
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export function formatMonthLabel(anchor: string, locale?: string): string {
-  return formatter({ year: "numeric", month: "long" }, locale).format(parseLocal(anchor));
+  return formatter({ year: "numeric", month: "long", timeZone: "UTC" }, locale).format(
+    parseDate(anchor),
+  );
+}
+
+/** Shade step for a day's activity count, from 0 (none) to 4 (busiest),
+ * relative to `max`, the busiest count in view: each step covers a quarter
+ * of `max`, and any count above zero gets at least step 1. */
+export function activityStep(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
+  if (!(count > 0) || !(max > 0)) return 0;
+  return Math.min(4, Math.ceil((count / max) * 4)) as 1 | 2 | 3 | 4;
 }
