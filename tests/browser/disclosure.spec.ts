@@ -130,3 +130,50 @@ test("a card nested in a plain disclosure keeps its own card styles", async ({ p
     });
   expect(await styles(".fixture-inner")).toEqual(await styles(".fixture-reference"));
 });
+
+test.describe("bare rows", () => {
+  const rows = (page: import("@playwright/test").Page) =>
+    page.getByTestId("disclosure-bare").locator("details");
+
+  test("attributes reach the details and the summary", async ({ page }) => {
+    const requests = rows(page).first();
+    await expect(requests).toHaveAttribute("data-series", "requests");
+    await expect(requests).toHaveClass(/\bchart-row\b/);
+    await expect(requests.locator("summary")).toHaveAccessibleName("Requests: 48.2k");
+    await expect(requests.locator(".kit-disclosure__chevron")).toHaveCount(0);
+    await expect(requests.locator(".kit-disclosure__content")).toHaveCount(0);
+    await expect(rows(page).last()).toHaveAttribute("inert");
+    // The consumer's summary class lays out the row.
+    await expect(requests.locator("summary")).toHaveCSS("display", "grid");
+  });
+
+  test("a summary onclick runs alongside the native toggle", async ({ page }) => {
+    const errors = rows(page).nth(1);
+    const clicks = page.getByTestId("disclosure-row-clicks");
+    await errors.locator("summary").click();
+    await expect(errors).toHaveAttribute("open");
+    await expect(errors.getByText("Daily errors")).toBeVisible();
+    await expect(clicks).toHaveText("1");
+    await errors.locator("summary").click();
+    await expect(errors).not.toHaveAttribute("open");
+    await expect(clicks).toHaveText("2");
+  });
+
+  test("a summary onkeydown moves between rows and Enter still toggles", async ({ page }) => {
+    const summary = (index: number) => rows(page).nth(index).locator("summary");
+    await summary(0).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(summary(1)).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(rows(page).nth(1)).toHaveAttribute("open");
+    await page.keyboard.press("ArrowDown");
+    await expect(summary(2)).toBeFocused();
+    // The last row is inert, so focus stays put.
+    await page.keyboard.press("ArrowDown");
+    await expect(summary(2)).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await expect(summary(1)).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(rows(page).nth(1)).not.toHaveAttribute("open");
+  });
+});

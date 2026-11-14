@@ -122,3 +122,71 @@ test("the selected tab draws an accent bar on the list rule", async ({ page }) =
     .evaluate((el) => getComputedStyle(el, "::after").content);
   expect(unselected).toBe("none");
 });
+
+test.describe("browser-style strip", () => {
+  const strip = (page: import("@playwright/test").Page) => page.getByTestId("tabs-strip");
+
+  test("tabAttributes reach each tab and its onclick runs after selection", async ({ page }) => {
+    const calendar = strip(page).getByRole("tab", { name: "Calendar" });
+    await expect(calendar).toHaveAttribute("title", "Calendar");
+    await expect(calendar).toHaveAttribute("data-page", "calendar");
+    await expect(calendar).toHaveAttribute("draggable", "true");
+    await expect(calendar).toHaveClass(/\bkit-tabs__tab\b/);
+    await expect(calendar).toHaveClass(/\bstrip-tab\b/);
+
+    await calendar.click();
+    await expect(calendar).toHaveAttribute("aria-selected", "true");
+    await expect(calendar).toHaveAttribute("tabindex", "0");
+    await expect(page.getByTestId("tabs-strip-value")).toHaveText("calendar");
+    await expect(page.getByTestId("tabs-strip-clicks")).toHaveText("1");
+    // The consumer sees the new selection when its handler builds attributes.
+    await expect(calendar).toHaveAttribute("data-selected", "true");
+  });
+
+  test("arrow keys keep roving focus and selection", async ({ page }) => {
+    const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
+    await tab("Inbox").focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(tab("Calendar")).toBeFocused();
+    await expect(tab("Calendar")).toHaveAttribute("aria-selected", "true");
+    await expect(tab("Inbox")).toHaveAttribute("tabindex", "-1");
+    await page.keyboard.press("End");
+    await expect(tab("Changelog")).toBeFocused();
+    await expect(page.getByTestId("tabs-strip-value")).toHaveText("changelog");
+    // Keyboard selection does not click.
+    await expect(page.getByTestId("tabs-strip-clicks")).toHaveText("0");
+  });
+
+  test("drag handlers from tabAttributes reorder the tabs", async ({ page }) => {
+    const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
+    await tab("Billing").dragTo(tab("Inbox"));
+    await expect(page.getByTestId("tabs-strip-order")).toHaveText(/^billing, inbox, calendar/);
+    await expect(strip(page).getByRole("tab").first()).toHaveAccessibleName("Billing");
+  });
+
+  test("afterList controls sit outside the tablist and scroll the bound list", async ({ page }) => {
+    const list = strip(page).getByRole("tablist", { name: "Open pages" });
+    await expect(list).toHaveClass(/\bstrip-list\b/);
+    await expect(list.getByRole("button")).toHaveCount(0);
+    await expect(strip(page).getByRole("button", { name: "Scroll tabs back" })).toHaveCount(0);
+
+    await strip(page).getByRole("button", { name: "Scroll tabs forward" }).click();
+    await expect.poll(() => list.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+    // The list's onscroll handler re-measures and shows the back button.
+    await expect(strip(page).getByRole("button", { name: "Scroll tabs back" })).toBeVisible();
+  });
+
+  test("the bare variant drops the tab look", async ({ page }) => {
+    const list = strip(page).getByRole("tablist");
+    await expect(list).toHaveCSS("border-bottom-width", "0px");
+    const selected = list.getByRole("tab", { selected: true });
+    expect(await selected.evaluate((el) => getComputedStyle(el, "::after").content)).toBe("none");
+    // The consumer's tab class wins over the component's reset.
+    const reference = await page
+      .getByTestId("tabs-detail")
+      .getByRole("tab", { selected: true })
+      .evaluate((el) => getComputedStyle(el).paddingTop);
+    expect(await selected.evaluate((el) => getComputedStyle(el).paddingTop)).not.toBe(reference);
+    expect(await selected.evaluate((el) => getComputedStyle(el).paddingTop)).not.toBe("0px");
+  });
+});

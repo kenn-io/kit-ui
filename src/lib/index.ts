@@ -46,7 +46,10 @@ export type { PaletteCommand, PaletteLeaf } from "./components/CommandPalette.sv
 export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as Disclosure } from "./components/Disclosure.svelte";
-export type { DisclosureVariant } from "./components/Disclosure.svelte";
+export type {
+  DisclosureSummaryAttributes,
+  DisclosureVariant,
+} from "./components/Disclosure.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
 export { default as EmptyState } from "./components/EmptyState.svelte";
 export { default as FilterDropdown } from "./components/FilterDropdown.svelte";
@@ -152,7 +155,13 @@ export type { StructuredListLevel } from "./components/StructuredList.svelte";
 export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as Tabs } from "./components/Tabs.svelte";
-export type { TabItem, TabsActivation } from "./components/Tabs.svelte";
+export type {
+  TabAttributes,
+  TabItem,
+  TabListAttributes,
+  TabsActivation,
+  TabsVariant,
+} from "./components/Tabs.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export type { ColumnResize } from "./components/table-columns.js";
 export { TableSort } from "./components/table-sort.svelte.js";

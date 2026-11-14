@@ -1,5 +1,13 @@
 <script module lang="ts">
-  export type DisclosureVariant = "card" | "plain";
+  import type { HTMLAttributes, HTMLDetailsAttributes } from "svelte/elements";
+
+  export type DisclosureVariant = "card" | "plain" | "bare";
+
+  /** Extra attributes and handlers for the summary, the element that
+   * toggles the disclosure. `class` is added to the summary's own classes.
+   * Handlers run before the native toggle; `preventDefault` in `onclick`
+   * cancels it. */
+  export type DisclosureSummaryAttributes = Omit<HTMLAttributes<HTMLElement>, "children">;
 </script>
 
 <script lang="ts">
@@ -7,7 +15,12 @@
   import { getContext, setContext, type Snippet } from "svelte";
   import { accordionContext, type AccordionContext } from "./accordion-context.js";
 
-  interface Props {
+  /** Other attributes, such as `inert` or `data-*`, go on the `<details>`
+   * element. */
+  interface Props extends Omit<
+    HTMLDetailsAttributes,
+    "title" | "children" | "open" | "id" | "name" | "ontoggle" | "class"
+  > {
     /** Header text. Use `summary` for rich header content. */
     title?: string;
     /** Rich header content, rendered instead of `title`. */
@@ -25,10 +38,15 @@
      * with the same name. Accordion sets this for its items. */
     name?: string;
     /** `card` is a bordered panel; `plain` is a bare toggle row for inline
-     * use, such as a collapsible tool call in a transcript. Ignored inside
-     * an Accordion, which draws its own frame. */
+     * use, such as a collapsible tool call in a transcript. `bare` drops
+     * the chevron, padding, and type styles and renders the header and body
+     * without wrappers, so the summary can be laid out as a data row.
+     * Ignored inside an Accordion, which draws its own frame. */
     variant?: DisclosureVariant;
     ontoggle?: (open: boolean) => void;
+    /** Extra attributes and handlers for the summary, such as `aria-label`,
+     * `data-*`, `onclick`, or `onkeydown`. */
+    summaryAttributes?: DisclosureSummaryAttributes;
     class?: string;
   }
 
@@ -42,7 +60,9 @@
     name = undefined,
     variant = "card",
     ontoggle = undefined,
+    summaryAttributes = {},
     class: className = "",
+    ...rest
   }: Props = $props();
 
   const accordion = getContext<AccordionContext | undefined>(accordionContext);
@@ -71,29 +91,41 @@
 
 <svelte:window onhashchange={openIfTargeted} />
 
+{#snippet header()}
+  {#if summary}{@render summary()}{:else}{title}{/if}
+{/snippet}
+
 <details
-  class="kit-disclosure {className}"
-  class:kit-disclosure--card={look === "card"}
-  class:kit-disclosure--plain={look === "plain"}
-  class:kit-disclosure--grouped={look === "grouped"}
+  {...rest}
+  class={["kit-disclosure", `kit-disclosure--${look}`, className]}
   {id}
   name={groupName}
   bind:open
   ontoggle={(event) => ontoggle?.(event.currentTarget.open)}
 >
-  <summary class="kit-disclosure__summary">
-    <span class="kit-disclosure__chevron" aria-hidden="true"><ChevronRightIcon size={14} /></span>
-    <span class="kit-disclosure__title">
-      {#if summary}{@render summary()}{:else}{title}{/if}
-    </span>
-    {#if meta}<span class="kit-disclosure__meta">{@render meta()}</span>{/if}
-  </summary>
-  <div class="kit-disclosure__content">{@render children()}</div>
+  {#if look === "bare"}
+    <summary {...summaryAttributes} class={["kit-disclosure__row", summaryAttributes.class]}>
+      {@render header()}{@render meta?.()}
+    </summary>
+    {@render children()}
+  {:else}
+    <summary {...summaryAttributes} class={["kit-disclosure__summary", summaryAttributes.class]}>
+      <span class="kit-disclosure__chevron" aria-hidden="true"><ChevronRightIcon size={14} /></span>
+      <span class="kit-disclosure__title">{@render header()}</span>
+      {#if meta}<span class="kit-disclosure__meta">{@render meta()}</span>{/if}
+    </summary>
+    <div class="kit-disclosure__content">{@render children()}</div>
+  {/if}
 </details>
 
 <style>
   .kit-disclosure {
     min-width: 0;
+  }
+
+  .kit-disclosure--card,
+  .kit-disclosure--plain,
+  .kit-disclosure--grouped {
     color: var(--text-primary);
   }
 
@@ -120,8 +152,20 @@
     user-select: none;
   }
 
-  .kit-disclosure__summary::-webkit-details-marker {
+  .kit-disclosure__summary::-webkit-details-marker,
+  .kit-disclosure__row::-webkit-details-marker {
     display: none;
+  }
+
+  /* Zero specificity, so a consumer's own summary class wins. */
+  :where(.kit-disclosure__row) {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .kit-disclosure__row:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
   }
 
   .kit-disclosure--plain > .kit-disclosure__summary {
