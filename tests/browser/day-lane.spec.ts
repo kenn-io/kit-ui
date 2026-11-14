@@ -106,11 +106,18 @@ test("overlapping items sit side by side and the rest go to +N more", async ({ p
 
 test("the selected card is the tab stop and arrows move in time order", async ({ page }) => {
   const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
+  const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
   await expect(standup).toHaveAttribute("aria-pressed", "true");
   await expect(standup).toHaveAttribute("tabindex", "0");
   await standup.focus();
   await page.keyboard.press("ArrowDown");
-  await expect(lane(page).getByRole("button", { name: /Call: Jory and Dev/ })).toBeFocused();
+  await expect(call).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(standup).toBeFocused();
+  await expect(standup).toHaveAttribute("tabindex", "0");
+  await expect(call).toHaveAttribute("tabindex", "-1");
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(lastEvent(page)).toHaveText("select call");
   await page.keyboard.press("Home");
@@ -134,15 +141,17 @@ test("a card's accessible name ends with its time range", async ({ page }) => {
   );
 });
 
-test("a quiet stretch folds and opens again", async ({ page }) => {
+test("keyboard focus follows a fold as it opens and closes", async ({ page }) => {
   const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
   await expect(fold).toHaveAttribute("aria-expanded", "false");
-  await fold.click();
+  await fold.focus();
+  await page.keyboard.press("Enter");
   await expect(lastEvent(page)).toHaveText("open 11:00 AM – 2:00 PM");
   const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
   await expect(refold).toHaveAttribute("aria-expanded", "true");
-  await refold.click();
-  await expect(fold).toBeVisible();
+  await expect(refold).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(fold).toBeFocused();
 });
 
 test("a 23-hour day labels its hours from the app's ticks", async ({ page }) => {
@@ -160,34 +169,12 @@ test("a 23-hour day labels its hours from the app's ticks", async ({ page }) => 
   expect(labels.slice(0, 3)).toEqual(["12 AM", "1 AM", "3 AM"]);
 });
 
-test("keyboard focus follows a fold as it opens and closes", async ({ page }) => {
-  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
-  await fold.focus();
-  await page.keyboard.press("Enter");
-  await expect(lane(page).getByRole("button", { name: "Fold 3 quiet hours" })).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(fold).toBeFocused();
-});
-
 test("changing days closes folds even when returning to the original day", async ({ page }) => {
   const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
   await fold.click();
   await page.getByText("23 h (spring)").click();
   await page.getByText("24 h", { exact: true }).click();
   await expect(fold).toHaveAttribute("aria-expanded", "false");
-});
-
-test("tabbing back into the lane returns to the selected card", async ({ page }) => {
-  const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
-  const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
-  await standup.focus();
-  await page.keyboard.press("ArrowDown");
-  await expect(call).toBeFocused();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Shift+Tab");
-  await expect(standup).toBeFocused();
-  await expect(standup).toHaveAttribute("tabindex", "0");
-  await expect(call).toHaveAttribute("tabindex", "-1");
 });
 
 test("the now line stays inside a fold and moves to its hour when opened", async ({ page }) => {
