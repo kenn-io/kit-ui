@@ -676,7 +676,6 @@
     gap: var(--space-1);
     flex: 1 1 280px;
     min-width: 0;
-    max-width: 100%;
     padding: 6px;
     overflow-x: auto;
     overscroll-behavior-x: contain;

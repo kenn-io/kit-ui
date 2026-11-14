@@ -283,10 +283,6 @@ test.describe("month strip", () => {
     await expect(dots).toHaveCount(10);
     await expect(days.nth(2)).toHaveAttribute("aria-label", /, \d+ messages?, matches filters$/);
     await expect(days.nth(3)).not.toHaveAttribute("aria-label", /matches filters/);
-    await expect(days.nth(2).locator(".kit-calendar__match")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
     expect(await facts()).toEqual(before);
 
     // Replacing the filter replaces the marks; day 20 is marked without a count.

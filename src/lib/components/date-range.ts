@@ -158,11 +158,8 @@ export function periodBounds(
     last.setUTCDate(first.getUTCDate() + 6);
     return { from: dateStr(first), to: dateStr(last) };
   }
-  const first = new Date(d);
-  first.setUTCDate(1);
-  const last = new Date(first);
-  last.setUTCMonth(last.getUTCMonth() + 1, 0);
-  return { from: dateStr(first), to: dateStr(last) };
+  d.setUTCMonth(d.getUTCMonth() + 1, 0);
+  return { from: `${anchor.slice(0, 7)}-01`, to: dateStr(d) };
 }
 
 /**
@@ -177,12 +174,9 @@ export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): str
   } else if (unit === "week") {
     d.setUTCDate(d.getUTCDate() + 7 * dir);
   } else {
-    const target = new Date(d);
-    target.setUTCDate(1);
-    target.setUTCMonth(target.getUTCMonth() + dir + 1, 0);
-    const lastDay = target.getUTCDate();
-    target.setUTCDate(Math.min(d.getUTCDate(), lastDay));
-    d.setTime(target.getTime());
+    const day = d.getUTCDate();
+    d.setUTCMonth(d.getUTCMonth() + dir + 1, 0);
+    d.setUTCDate(Math.min(day, d.getUTCDate()));
   }
   return dateStr(d);
 }
