@@ -1,8 +1,9 @@
 # Calendar
 
-A single-month date grid: Monday-first weeks, month paging, an optional
-highlighted range, and a `maxDate` guard. `layout="strip"` shows the same
-month as one horizontal row of days instead. This is the calendar surface
+A single-month date grid: Monday-first weeks (or Sunday-first), month
+paging, keyboard grid navigation, an optional highlighted range, and a
+`maxDate` guard. `layout="strip"` shows the month as one horizontal row.
+This is the calendar surface
 `DateRangePicker` embeds in its Calendar tab; use it standalone for any
 pick-a-date UI.
 
@@ -28,8 +29,9 @@ pick-a-date UI.
 | --------------------------------------- | -------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `month`                                 | `string` (bindable)              | today                               | Any `YYYY-MM-DD` inside the visible month                                                                                                                                                 |
 | `selected`                              | `DateRange \| null`              | `null`                              | Inclusive range to highlight; a single day is `{ from: d, to: d }`                                                                                                                        |
-| `onpick`                                | `(date: string) => void`         | —                                   | Clicked date (`YYYY-MM-DD`); leading/trailing days of adjacent months are pickable                                                                                                        |
-| `maxDate`                               | `string \| null`                 | `null`                              | Later dates disabled; paging into fully-later months blocked                                                                                                                              |
+| `onpick`                                | `(date: string) => void`         | —                                   | Clicked date (`YYYY-MM-DD`), or the focused one on Enter/Space; leading/trailing days of adjacent months are pickable                                                                     |
+| `maxDate`                               | `string \| null`                 | `null`                              | Later dates cannot be picked. In the grid they remain focusable; in the strip they are disabled. Paging into fully-later months is blocked.                                               |
+| `weekStart`                             | `"monday" \| "sunday"`           | `"monday"`                          | First column of the grid, and the week Home/End move within                                                                                                                               |
 | `previousMonthLabel` / `nextMonthLabel` | `string`                         | `"Previous month"` / `"Next month"` | Arrow `aria-label`s in the day view                                                                                                                                                       |
 | `previousYearLabel` / `nextYearLabel`   | `string`                         | `"Previous year"` / `"Next year"`   | Arrow `aria-label`s in the month grid                                                                                                                                                     |
 | `previousYearsLabel` / `nextYearsLabel` | `string`                         | `"Previous years"` / `"Next years"` | Arrow `aria-label`s in the year grid                                                                                                                                                      |
@@ -61,8 +63,39 @@ pick-a-date UI.
 - The eight nav/drill-down label props are the shared `CalendarNavLabels`
   interface (exported); `DateRangePicker` accepts the same keys and
   forwards them verbatim.
-- Day cells are plain focusable buttons with full-date `aria-label`s (no
-  roving-tabindex grid navigation yet).
+- The day grid is a `role="grid"` named by the month ("January 2026"),
+  with one `role="row"` per week. Each day is a button with
+  `role="gridcell"`, a weekday-and-date name ("Thursday, January 15,
+  2026"), `aria-selected` for days in `selected`, and
+  `aria-current="date"` on today. Days after `maxDate` carry
+  `aria-disabled="true"` instead of `disabled`.
+
+## Keyboard
+
+The day grid follows the
+[WAI-ARIA date picker grid](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/)
+pattern. It is one tab stop: the selected day if the shown month has one,
+else today, else the month's first enabled day. The other days have
+`tabindex="-1"`.
+
+| Key                           | Moves focus to                                 |
+| ----------------------------- | ---------------------------------------------- |
+| Left / Right                  | The previous / next day                        |
+| Up / Down                     | The same weekday a week earlier / later        |
+| Home / End                    | The first / last day of the week (`weekStart`) |
+| PageUp / PageDown             | The same day a month earlier / later           |
+| Shift+PageUp / Shift+PageDown | The same day a year earlier / later            |
+| Enter / Space                 | Picks the focused day, as a click does         |
+
+When the target day is in another month, the calendar shows that month
+and keeps focus on the day. Month and year moves clamp the day to the
+target month's length, so Jan 31 + one month is Feb 28 (or 29). Keys never
+move into a month that lies wholly after `maxDate`. Days after `maxDate` in
+the shown month take focus so you can move past them, but Enter and Space
+do nothing there.
+
+`focus(options?)`, called through `bind:this`, moves focus to the tab stop.
+`DatePicker` and `DateRangePicker` call it when they open.
 
 ## Activity
 
@@ -85,7 +118,7 @@ a finite number (`NaN`, `Infinity`) is treated as no count.
   in the same shade. `activityStep(count, max)` is that rule, exported for a
   legend. Pass `activityScale` to use thresholds suited to your distribution;
   it returns a step from 0 to 4 for a count and its date.
-- A day with a count gets it in its accessible label: "Nov 4, 2026, 12
+- A day with a count gets it in its accessible label: "Wednesday, November 4, 2026, 12
   messages". `activityLabel` words the count; the default is "N items".
 - The accent is `--accent-green`. Set `--kit-calendar-activity-color` on the
   calendar or an ancestor for another one.
@@ -181,7 +214,7 @@ everything else: a marked day keeps its count, shade, selection and
 `maxDate` state, and a day can be marked without any activity. Change or
 clear the marks by passing a new function or `undefined`.
 
-A marked day's accessible label ends with `matchLabel`: "Mar 10, 2026, 8
+A marked day's accessible label ends with `matchLabel`: "Tuesday, March 10, 2026, 8
 messages, matches filters". The dot itself is hidden from assistive
 technology. On the grid's solid range ends the dot takes the surface color
 so it stays visible.

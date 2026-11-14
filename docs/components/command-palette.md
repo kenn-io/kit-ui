@@ -25,8 +25,13 @@ const off = appShortcuts.register("mod+k", openPalette, {
   reports, and combos naming a shifted-output character (`"mod+plus"`)
   tolerate the `shiftKey` a layout needs to produce it. Base symbols stay
   strict — plain `"/"` never matches while Shift is held, so it can't
-  shadow `"shift+/"`. Non-US layouts beyond these pairs match on the
-  produced character only.
+  shadow `"shift+/"`. Other symbols match on the produced character only.
+- **Layouts**: letters and digits match by physical key (`event.code`)
+  when the layout types something other than a Latin letter or digit
+  there. `"mod+k"` fires on a Russian, Greek, or Hebrew layout, `"alt+n"`
+  fires with macOS Option (which types `˜`), and `"mod+1"` fires on
+  AZERTY, where that key types `&`. A Latin letter is trusted as typed:
+  AZERTY's `a` sits where QWERTY has Q and matches `"a"`, never `"q"`.
 - **Validation**: malformed combos (`"mod+"`, unknown modifiers) throw at
   parse/registration time, so typos fail fast instead of silently never
   firing. Write the literal `+` key as `"plus"`.
@@ -40,6 +45,15 @@ const off = appShortcuts.register("mod+k", openPalette, {
 - **Inputs**: plain-key shortcuts don't fire while an
   input/textarea/select/contenteditable has focus; modifier combos do.
   Opt a plain key back in with `allowInInput: true` (e.g. `escape`).
+- **Skipped events**: the manager ignores a keydown whose default is
+  already prevented, so a key a component handled (Escape closing a Menu,
+  ArrowDown moving through it) doesn't also fire an app shortcut. It also
+  ignores keys typed into an input method composition (`isComposing`, or
+  `keyCode` 229).
+- **Held keys**: a shortcut fires once per press. Its auto-repeats are
+  claimed (default prevented) without running the handler, so holding a
+  toggle doesn't flip it over and over. Pass `repeat: true` for stepping
+  shortcuts that should repeat while held, such as `j`/`k` or arrows.
 - **Scopes**: `appShortcuts.pushScope("my-modal")` suspends everything
   except shortcuts registered with `{ scope: "my-modal" }`; the returned
   function pops it (out-of-order pops are safe). Modal-like components
@@ -53,7 +67,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
 - Importable from the root export or the `@kenn-io/kit-ui/utils/shortcuts`
   subpath (same granular pattern as the other utils).
 - Parsing/matching/scoping are pure and unit-tested
-  (`checks/shortcuts.test.ts`).
+  (`checks/shortcuts.test.ts`); `tests/browser/shortcuts.spec.ts` checks
+  the listener order against real component handlers and real key repeat.
 
 ## CommandPalette
 
@@ -127,6 +142,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
   has a runnable target). Escape follows SearchInput semantics: clears
   the query first, returns to the root from a child list, then closes.
   Backspace in an empty search returns from a child list to the root and keeps focus in the search field.
+- Keys an input method uses while it composes a query (Enter, Escape, the
+  arrows) neither run nor move the highlight, and the palette stays open.
 - While open it pushes an `appShortcuts` scope, so page-level shortcuts
   are suspended (registry-driven ones — its own keys are DOM handlers).
 - Overlay + `trapFocus` + `aria-modal`; the query field autofocuses.

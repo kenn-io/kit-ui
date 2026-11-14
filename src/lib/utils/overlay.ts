@@ -1,8 +1,7 @@
 /*
  * Shared overlay-dialog wiring for full-screen surfaces (Modal,
- * DetailDrawer, CommandPalette). The backdrop handlers were byte-identical
- * copies; the Escape handlers had drifted into three behaviors — this
- * settles both once. Positioning/chrome stay with the components.
+ * DetailDrawer, CommandPalette) and the Escape stack they share with
+ * popovers. Positioning/chrome stay with the components.
  */
 
 /**
@@ -67,16 +66,49 @@ function releaseTarget(event: PointerEvent): EventTarget | null {
   return hit === null && inViewport ? event.target : hit;
 }
 
+// Every open layer, oldest first: overlays (Modal, DetailDrawer) and
+// popovers (dismissable) alike. One document listener hands Escape to the
+// newest, so a dialog opened over a drawer or a dropdown closes before them,
+// wherever it sits in the markup.
+const layers: { onEscape: () => void; element: Element | null }[] = [];
+
+function handleEscape(event: KeyboardEvent): void {
+  // A handler nearer the focus already used the key: a search field
+  // clearing itself, a list closing its own menu.
+  if (event.key !== "Escape" || event.defaultPrevented) return;
+  // An input method uses Escape to cancel its candidate list. Safari ends
+  // the composition first and sends the key with isComposing false but the
+  // IME keyCode 229.
+  if (event.isComposing || event.keyCode === 229) return;
+  const top = layers.at(-1);
+  if (!top) return;
+  // Claimed, so app shortcuts on window leave it alone.
+  event.preventDefault();
+  top.onEscape();
+}
+
 /**
- * Escape closes one layer at a time: an inner surface that already handled
- * the key (a popover's dismissable(), a search field clearing itself)
- * calls preventDefault, and this respects it — so Escape peels the top
- * layer instead of collapsing the whole stack. Wire on `svelte:window`.
+ * Open a layer that Escape closes. Escape goes only to the layer opened
+ * last, one per press. Returns the function that removes the layer; call it
+ * from an `$effect` or an attachment so the layer lives while the surface
+ * is mounted: `{@attach (node) => escapeLayer(close, node)}`.
+ *
+ * `element` is the layer's outermost element. Svelte mounts a child before
+ * its parent, so a dialog that opens already holding an open dialog would
+ * otherwise land beneath it; a layer goes below any open layer inside its
+ * element instead.
  */
-export function escapeCloses(close: () => void): (event: KeyboardEvent) => void {
-  return (event) => {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
-    event.preventDefault();
-    close();
+export function escapeLayer(onEscape: () => void, element: Element | null = null): () => void {
+  const layer = { onEscape, element };
+  if (layers.length === 0) document.addEventListener("keydown", handleEscape);
+  const inside = element
+    ? layers.findIndex((other) => other.element && element.contains(other.element))
+    : -1;
+  if (inside === -1) layers.push(layer);
+  else layers.splice(inside, 0, layer);
+  return () => {
+    const index = layers.indexOf(layer);
+    if (index !== -1) layers.splice(index, 1);
+    if (layers.length === 0) document.removeEventListener("keydown", handleEscape);
   };
 }

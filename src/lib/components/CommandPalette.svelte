@@ -22,8 +22,10 @@
 <script lang="ts">
   import { tick, untrack } from "svelte";
   import { highlightSegments } from "../utils/highlight.js";
+  import { isComposingKey } from "../utils/ime.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
   import { appShortcuts } from "../utils/shortcuts.js";
   import { formatShortcutKeys } from "../utils/shortcuts.js";
   import KbdBadge from "./KbdBadge.svelte";
@@ -237,6 +239,12 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
+    // Keys an input method composes with in the search field are its own.
+    // Escape still stops here so it cannot reach the page behind.
+    if (isComposingKey(event)) {
+      if (event.key === "Escape") event.stopPropagation();
+      return;
+    }
     if (event.key === "ArrowDown") {
       event.preventDefault();
       move(1);
@@ -309,6 +317,7 @@
         role="listbox"
         id="{uid}-listbox"
         aria-label={parent?.label ?? ariaLabel}
+        {@attach scrollFade}
       >
         {#if flat.length === 0}
           <div class="kit-command-palette__empty">{emptyLabel}</div>

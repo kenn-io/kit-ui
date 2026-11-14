@@ -49,6 +49,7 @@
   let triggerEl: HTMLButtonElement | undefined = $state();
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
+  let calendar = $state<ReturnType<typeof Calendar>>();
   // The month the calendar shows; reset to the chosen date on every open so
   // the selection is always in view.
   let month = $state<string>(todayStr());
@@ -77,6 +78,9 @@
       month = value ?? todayStr();
       await tick();
       positionPanel();
+      // The dialog opens with focus on the calendar's day grid, as the APG
+      // date picker dialog does.
+      calendar?.focus({ preventScroll: true });
     }
   }
 
@@ -133,6 +137,7 @@
       aria-label={dialogLabel}
     >
       <Calendar
+        bind:this={calendar}
         bind:month
         selected={value ? { from: value, to: value } : null}
         {maxDate}

@@ -224,15 +224,38 @@ on window resize, any ancestor scroll (capture phase), and panel size
 changes (ResizeObserver), coalesced to one call per animation frame. Both
 return their cleanup function.
 
+## Scroll fades
+
+```svelte
+<script>
+  import { scrollFade } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/scroll-fade"
+</script>
+
+<div class="my-list kit-popover-card" {@attach scrollFade}>…</div>
+```
+
+Fades the top or bottom edge of a scroll container while rows lie past it.
+Overlay scrollbars stay hidden until the user scrolls, so without a fade a
+list cut at a row boundary looks complete. Every kit-ui dropdown list uses
+it (SelectDropdown, FilterDropdown and its flyouts, Menu, Typeahead,
+MentionTextarea, CommandPalette). Attach it to the element that scrolls. The
+fades are drawn by `theme.css` and paint in `--kit-scroll-fade-color`, which
+defaults to `--bg-popover`; set it when the list sits on another surface.
+`--kit-scroll-fade-size` (default `32px`) sets how tall each fade is.
+
 ## Overlay wiring
 
 ```svelte
 <script lang="ts">
-  import { backdropCloses, escapeCloses } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
+  import { backdropCloses, escapeLayer } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
 </script>
 
-<svelte:window onkeydown={escapeCloses(close)} />
-<div class="my-overlay" role="presentation" {@attach backdropCloses(close)}>
+<div
+  class="my-overlay"
+  role="presentation"
+  {@attach (overlay) => escapeLayer(close, overlay)}
+  {@attach backdropCloses(close)}
+>
 ```
 
 The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
@@ -241,10 +264,16 @@ and ends on the backdrop itself, so a drag between the panel and the
 backdrop, in either direction, doesn't dismiss. It closes on the click rather than the press: on touch, a tap's
 click arrives after the finger lifts, and closing earlier would let that
 click activate the page control under the backdrop.
-`escapeCloses` closes one layer at a time: inner surfaces that already
-handled Escape (a popover's `dismissable`, a clearing search field) call
-`preventDefault`, and it respects that. Pair with `trapFocus` below for a
-complete custom overlay.
+`escapeLayer` puts the overlay on the Escape stack it shares with every
+popover's `dismissable`, and returns the function that takes it off. Escape
+goes only to the layer opened last, one per press, so a dialog opened over a
+drawer or an open dropdown closes before them. Pass the overlay's outermost
+element: Svelte mounts a child before its parent, and the element lets a
+dialog that opens already holding another dialog stay beneath it. A handler
+nearer the focus that already used Escape (a clearing search field) calls
+`preventDefault`, and the stack leaves that press alone, as it does an
+Escape that cancels an input method's candidate list. Pair with `trapFocus`
+below for a complete custom overlay.
 
 ## Focus trap
 
@@ -266,6 +295,28 @@ invisible guard elements (`[data-kit-focus-guard]`) sit just before and
 after the surface while it is mounted; Tab past either end lands on one
 and wraps focus to the other end, as Headless UI and Floating UI do.
 
+## Input method composition
+
+```ts
+import { isComposingKey } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/ime"
+
+function handleKeydown(event: KeyboardEvent): void {
+  if (isComposingKey(event)) return;
+  if (event.key === "Enter") send();
+}
+```
+
+Japanese, Chinese and Korean users type through an input method. While it
+composes, Enter confirms a candidate, Escape cancels it, and the arrows move
+between candidates. `isComposingKey` is true for those keydowns: it checks
+`isComposing`, and key code 229 for the keydown Safari sends as a
+composition ends. Typeahead, MentionTextarea, CommandPalette, FindBar,
+SearchInput, and NumberInput ignore composing keys. An Escape one of them
+would have claimed still stops at the field, so a Modal around it stays
+open. MentionTextarea, SearchInput, and NumberInput pass composing keys to
+your `onkeydown`, so check it there before acting on Enter, such as to send a
+message.
+
 ## Formatters
 
 ```ts
@@ -275,6 +326,7 @@ import {
   formatNumber,
   formatTokenCount,
   formatCost,
+  formatInitials,
   formatSize,
 } from "@kenn-io/kit-ui";
 
@@ -301,6 +353,10 @@ formatCost(12.339); // "$12.34"
 formatCost(123.4); // "$123"
 
 formatSize(290_000_000, "fr"); // "290 Mo"
+
+formatInitials("Ada Lovelace"); // "AL"
+formatInitials("jane.doe@example.com"); // "JD"
+formatInitials(""); // "?"
 ```
 
 `formatSize(bytes, locale?)` always displays decimal megabytes, rounded to a whole number: one megabyte is 1,000,000 bytes. `Intl.NumberFormat` supplies the unit and spacing for the locale; omitting it uses the runtime locale.

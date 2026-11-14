@@ -8,7 +8,7 @@ export interface DismissableOptions {
 /**
  * Dismiss on `mousedown` outside the owning elements (mousedown, not click:
  * the popover should yield at press, and a press-inside-release-outside
- * drag should not dismiss) or on Escape anywhere in the document.
+ * drag should not dismiss) or on Escape while it is the newest open layer.
  */
 export declare function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions): () => void;
 /**

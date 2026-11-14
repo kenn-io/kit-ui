@@ -3,6 +3,7 @@
   import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
   import SearchIcon from "@lucide/svelte/icons/search";
   import XIcon from "@lucide/svelte/icons/x";
+  import { isComposingKey } from "../utils/ime.js";
 
   interface Props {
     /** Current search text (bindable). */
@@ -71,6 +72,12 @@
   });
 
   function handleKeydown(e: KeyboardEvent): void {
+    // Enter and Escape confirm or cancel an input method's composition.
+    // Escape still stops here so it cannot reach the page behind.
+    if (isComposingKey(e)) {
+      if (e.key === "Escape") e.stopPropagation();
+      return;
+    }
     if (e.key === "Escape") {
       e.stopPropagation();
       onclose?.();

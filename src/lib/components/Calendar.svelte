@@ -1,7 +1,10 @@
 <script lang="ts">
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import { tick } from "svelte";
   import {
+    dayGridKeyTarget,
+    formatDayCellLabel,
     activityStep,
     formatDayLabel,
     formatMonthLabel,
@@ -23,9 +26,10 @@
     month?: string;
     /** Inclusive range to highlight (e.g. the current selection). */
     selected?: DateRange | null;
-    /** Called with the clicked date (YYYY-MM-DD). */
+    /** Called with the picked date (YYYY-MM-DD) on click, Enter, or Space. */
     onpick?: (date: string) => void;
-    /** Dates after this are disabled; paging into fully-later months too. */
+    /** Dates after this are disabled (still focusable, never picked);
+     * paging into fully-later months is blocked. */
     maxDate?: string | null;
     /** BCP 47 tag for month/weekday/day names, for apps whose language
      * setting can diverge from the browser locale. Omitted = browser locale.
@@ -235,7 +239,7 @@
     count: number | undefined,
     matched: boolean,
   ): string {
-    let label = formatDayLabel(date, locale);
+    let label = strip ? formatDayLabel(date, locale) : formatDayCellLabel(date, locale);
     // The strip shows the weekday, so its label names it too.
     if (strip) label = `${weekdays[index % 7]}, ${label}`;
     if (count != null) label += `, ${activityLabel(count)}`;
@@ -268,6 +272,51 @@
 
   function inRange(date: string): boolean {
     return selected != null && date >= selected.from && date <= selected.to;
+  }
+
+  // Day grid keyboard model (WAI-ARIA APG date picker grid): the grid is one
+  // tab stop, a roving tabindex on a single day, and the keys move it.
+  let gridEl = $state<HTMLDivElement>();
+  // The day the user last focused. It holds the tab stop while its month is
+  // shown; paging away with the arrow buttons falls back to the default.
+  let focusedDate = $state<string | null>(null);
+
+  const weeks = $derived(Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7)));
+
+  function isDisabled(date: string): boolean {
+    return maxDate != null && date > maxDate;
+  }
+
+  // The selected day if the shown month has one, else today, else the
+  // month's first enabled day.
+  const tabStop = $derived.by(() => {
+    if (focusedDate?.startsWith(monthPrefix)) return focusedDate;
+    const monthDays = cells.filter((date) => date.startsWith(monthPrefix));
+    return (
+      monthDays.find(inRange) ??
+      (today.startsWith(monthPrefix) ? today : undefined) ??
+      monthDays.find((date) => !isDisabled(date)) ??
+      monthDays[0]!
+    );
+  });
+
+  async function moveFocus(event: KeyboardEvent, from: string): Promise<void> {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const target = dayGridKeyTarget(event.key, from, { shiftKey: event.shiftKey, weekStart });
+    if (target == null) return;
+    event.preventDefault();
+    // Like the next-month arrow, keys never page into a month that lies
+    // wholly after maxDate.
+    if (maxDate != null && target.slice(0, 7) > maxDate.slice(0, 7)) return;
+    focusedDate = target;
+    if (!target.startsWith(monthPrefix)) month = target;
+    await tick();
+    gridEl?.querySelector<HTMLElement>(`[data-date="${target}"]`)?.focus();
+  }
+
+  /** Focus the day grid's tab stop, e.g. when a picker opens the calendar. */
+  export function focus(options?: FocusOptions): void {
+    gridEl?.querySelector<HTMLElement>('[tabindex="0"]')?.focus(options);
   }
 </script>
 
@@ -362,8 +411,51 @@
       {/each}
     </div>
 
-    <div class="kit-calendar__grid">
-      {@render dayCells()}
+    <div class="kit-calendar__grid" role="grid" aria-label={nav.headerLabel} bind:this={gridEl}>
+      {#each weeks as week, w (week[0])}
+        <div class="kit-calendar__week" role="row">
+          {#each week as date, d (date)}
+            {@const i = w * 7 + d}
+            {@const selectedDay = inRange(date)}
+            {@const disabledDay = isDisabled(date)}
+            {@const matched = matches?.(date) === true}
+            {@const count = countOf(date)}
+            {@const step = count == null ? 0 : activityStepOf(date, count)}
+            <!-- A button keeps native click, Enter, and Space; the gridcell
+                 role puts it in the grid. Disabled days use aria-disabled
+                 so the keys can still move focus onto and past them. -->
+            <button
+              class="kit-calendar__day kit-control-states"
+              class:matched
+              class:outside={!date.startsWith(monthPrefix)}
+              class:today={date === today}
+              class:selected={selectedDay}
+              class:range-start={selectedDay && date === selected?.from}
+              class:range-end={selectedDay && date === selected?.to}
+              class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
+              type="button"
+              role="gridcell"
+              data-date={date}
+              data-activity={step > 0 ? step : undefined}
+              tabindex={date === tabStop ? 0 : -1}
+              aria-label={dayLabel(date, i, count, matched)}
+              aria-selected={selectedDay}
+              aria-current={date === today ? "date" : undefined}
+              aria-disabled={disabledDay ? "true" : undefined}
+              onclick={() => {
+                if (!disabledDay) onpick?.(date);
+              }}
+              onfocus={() => (focusedDate = date)}
+              onkeydown={(event) => moveFocus(event, date)}
+            >
+              {Number.parseInt(date.slice(8), 10)}{#if matched}<span
+                  class="kit-calendar__match"
+                  aria-hidden="true"
+                ></span>{/if}
+            </button>
+          {/each}
+        </div>
+      {/each}
     </div>
   {:else}
     <div class="kit-calendar__unit-grid">
@@ -450,8 +542,14 @@
     cursor: default;
   }
 
-  .kit-calendar__weekdays,
   .kit-calendar__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .kit-calendar__weekdays,
+  .kit-calendar__week {
     display: grid;
     grid-template-columns: repeat(7, 30px);
     gap: 1px;
@@ -496,7 +594,7 @@
     height: 26px;
   }
 
-  .kit-calendar__day:not(.strip):hover:not(:disabled),
+  .kit-calendar__day:not(.strip):hover:not([aria-disabled="true"]),
   .kit-calendar__unit:hover:not(:disabled) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
@@ -506,13 +604,13 @@
    * the grey hover surface — the selection must stay legible under the
    * pointer (it sits there right after a pick). Range ends keep their
    * solid pill. */
-  .kit-calendar__day.selected:hover:not(:disabled) {
+  .kit-calendar__day.selected:hover:not([aria-disabled="true"]) {
     background: color-mix(in srgb, var(--accent-blue) 24%, transparent);
     color: var(--accent-blue);
   }
 
-  .kit-calendar__day.range-start:hover:not(:disabled),
-  .kit-calendar__day.range-end:hover:not(:disabled) {
+  .kit-calendar__day.range-start:hover:not([aria-disabled="true"]),
+  .kit-calendar__day.range-end:hover:not([aria-disabled="true"]) {
     background: var(--accent-blue);
     color: var(--bg-surface);
   }
@@ -563,13 +661,13 @@
   /* The range must read as one contiguous region — no grid seams inside
    * it. ::before fills the 1px column gap to the left of every selected
    * cell with a selected neighbor there (range-start owns the band's
-   * left edge; first-column cells have the grid edge to their left).
+   * left edge; a week's first cell has the grid edge to its left).
    * ::after fills the 1px row gap above cells whose same-column neighbor
    * in the row above is selected (the .fill-above class — the component
    * computes it, since CSS can't see the cell above); it reaches 1px
    * left to also cover the four-cell corner pinhole, except in the first
    * column where that would poke past the grid edge. */
-  .kit-calendar__day.selected:not(.range-start):not(:nth-child(7n + 1))::before {
+  .kit-calendar__day.selected:not(.range-start):not(:first-child)::before {
     content: "";
     position: absolute;
     left: -1px;
@@ -589,7 +687,7 @@
     background: var(--kit-calendar-range-bg);
   }
 
-  .kit-calendar__day.fill-above:nth-child(7n + 1)::after {
+  .kit-calendar__day.fill-above:first-child::after {
     left: 0;
   }
 
@@ -725,7 +823,7 @@
   }
 
   /* Last so it outranks the equal-specificity .outside/.selected rules. */
-  .kit-calendar__day:disabled,
+  .kit-calendar__day[aria-disabled="true"],
   .kit-calendar__unit:disabled {
     opacity: 0.35;
     cursor: default;

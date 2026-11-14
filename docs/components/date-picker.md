@@ -8,7 +8,10 @@ The component is controlled: hold the date as a `YYYY-MM-DD` string (or
 `null` before one is chosen) and assign the value `onchange` receives.
 Picking a day commits it and closes the popover. Escape and outside clicks
 dismiss without changing the value. Each time it opens, the calendar shows
-the chosen date's month, or today's month when no date is chosen.
+the chosen date's month, or today's month when no date is chosen, and focus
+moves to the chosen day (or today). The
+[calendar keys](calendar.md#keyboard) then move between days, and Enter
+picks one.
 
 ```svelte
 <script lang="ts">

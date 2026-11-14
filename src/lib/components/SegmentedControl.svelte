@@ -60,15 +60,26 @@
     if (option.value !== value) onchange(option.value);
   }
 
-  // Roving focus: arrows move selection like a radio group.
-  function handleKeydown(event: KeyboardEvent): void {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  // The one segment Tab lands on: the chosen one, or the first enabled
+  // segment when no enabled segment is chosen (unset, stale, or disabled).
+  const tabStop = $derived.by(() => {
+    const enabled = options.filter((o) => !o.disabled);
+    return (enabled.find((o) => o.value === value) ?? enabled[0])?.value;
+  });
+
+  const STEPS: Record<string, number> = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
+
+  // Roving focus: all four arrows move the selection like a radio group,
+  // stepping from the focused segment and wrapping past disabled ones.
+  function handleKeydown(event: KeyboardEvent, from: SegmentedControlOption): void {
+    const delta = STEPS[event.key];
+    if (delta === undefined) return;
     event.preventDefault();
     const enabled = options.filter((o) => !o.disabled);
     if (enabled.length === 0) return;
-    const current = enabled.findIndex((o) => o.value === value);
-    const delta = event.key === "ArrowLeft" ? -1 : 1;
-    const next = enabled[(current + delta + enabled.length) % enabled.length];
+    const current = enabled.findIndex((o) => o.value === from.value);
+    const start = current === -1 ? (delta === 1 ? -1 : 0) : current;
+    const next = enabled[(start + delta + enabled.length) % enabled.length];
     if (!next) return;
     onchange(next.value);
     const index = options.findIndex((o) => o.value === next.value);
@@ -97,11 +108,11 @@
       role="radio"
       aria-checked={option.value === value}
       aria-label={segment ? option.label : undefined}
-      tabindex={option.value === value ? 0 : -1}
+      tabindex={option.value === tabStop ? 0 : -1}
       title={option.title}
       disabled={disabled || option.disabled}
       onclick={() => select(option)}
-      onkeydown={handleKeydown}
+      onkeydown={(event) => handleKeydown(event, option)}
     >
       {#if segment}
         {@render segment(option, option.value === value)}

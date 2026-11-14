@@ -6,7 +6,8 @@ previous/next arrows, and a close button. Ported from agentsview's
 input and navigation chrome; you compute the matches and move the highlight.
 
 Keyboard: **Enter** → `onnext`, **Shift+Enter** → `onprev`, **Escape** →
-`onclose`. When the query has no matches the counter shows the
+`onclose`. Enter and Escape pressed to confirm or cancel an input
+method's composition call neither. When the query has no matches the counter shows the
 "No matches" state and the focused card border turns red. Mount it
 conditionally; it autofocuses on mount by default.
 

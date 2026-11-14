@@ -216,6 +216,8 @@
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
   let compactPanel = $state(false);
+  // The Calendar or Custom tab's calendar; the Relative tab has none.
+  let calendar = $state<ReturnType<typeof Calendar>>();
 
   // Fixed positioning (shared popover contract) so the panel escapes
   // overflow-hidden ancestors; align maps left/right onto the trigger's
@@ -243,6 +245,9 @@
       seed();
       await tick();
       positionPanel();
+      // Opening on a tab with a calendar puts focus on its day grid. The
+      // Relative tab has no grid, so focus stays on the trigger.
+      calendar?.focus({ preventScroll: true });
     }
   }
 
@@ -410,6 +415,7 @@
         )}
         <div class="kit-date-range-picker__calendar">
           <Calendar
+            bind:this={calendar}
             bind:month={calMonth}
             selected={calSelected}
             {maxDate}
@@ -443,6 +449,7 @@
         </div>
         <div class="kit-date-range-picker__calendar">
           <Calendar
+            bind:this={calendar}
             bind:month={customMonth}
             selected={calCustomSelected}
             {maxDate}

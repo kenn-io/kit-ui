@@ -1,6 +1,8 @@
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
+  import { isComposingKey } from "../utils/ime.js";
   import { autoReposition } from "../utils/popover.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { MentionOption, MentionTrigger } from "./mention.js";
 
@@ -243,6 +245,14 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
+    // Enter, Tab, Escape and the arrows belong to an input method while it
+    // composes, so the menu stays as it is. An Escape the shown menu would
+    // have claimed stops here, so a parent overlay stays open too.
+    if (isComposingKey(event)) {
+      if (event.key === "Escape" && visible) event.stopPropagation();
+      onkeydown?.(event);
+      return;
+    }
     if (open && results.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -312,6 +322,7 @@
       aria-label={active?.menuLabel ?? "Insert reference"}
       tabindex="-1"
       onmousedown={preventBlur}
+      {@attach scrollFade}
     >
       {#if searching && results.length === 0}
         <div class="kit-mention__status">{active?.searchingLabel ?? searchingLabel}</div>
@@ -411,8 +422,6 @@
   .kit-mention__menu {
     position: fixed;
     box-sizing: border-box;
-    display: grid;
-    gap: 1px;
     max-height: 240px;
     overflow-y: auto;
     z-index: var(--z-popover);
@@ -440,6 +449,10 @@
     color: var(--text-secondary);
     cursor: pointer;
     text-align: left;
+  }
+
+  .kit-mention__option + .kit-mention__option {
+    margin-top: 1px;
   }
 
   .kit-mention__option.active {

@@ -258,6 +258,15 @@ export function checkHandRolledStatusDot(source: any): {
     line: number;
     message: string;
 }[];
+/** Hand-rolled avatars duplicate Avatar. Matches an avatar class name on its
+ * own or as the last part of a longer one (identity-avatar,
+ * user-picker__avatar); kit-avatar and suffixed names such as avatar-stack
+ * are exempt. The selector form skips member access like user.avatar. */
+export function checkHandRolledAvatar(source: any): {
+    rule: string;
+    line: number;
+    message: string;
+}[];
 /** Hand-rolled sidebar toggles duplicate SidebarToggle; kit-sidebar-toggle
  * is exempt. */
 export function checkHandRolledSidebarToggle(source: any): {
@@ -463,6 +472,7 @@ export const ALL_RULES: {
     "hand-rolled-drawer": typeof checkHandRolledDrawer;
     "hand-rolled-find-bar": typeof checkHandRolledFindBar;
     "hand-rolled-status-dot": typeof checkHandRolledStatusDot;
+    "hand-rolled-avatar": typeof checkHandRolledAvatar;
     "hand-rolled-checkbox": typeof checkHandRolledCheckbox;
     "hand-rolled-radio": typeof checkHandRolledRadio;
     "hand-rolled-toggle": typeof checkHandRolledToggle;

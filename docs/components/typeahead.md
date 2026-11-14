@@ -177,6 +177,12 @@ SearchInput clearing its text, wins). Keyboard-driven closes (Escape,
 selection) return focus to the trigger; closes caused by focus leaving the
 component do not steal focus back.
 
+Keys an input method uses while it composes text (Enter to confirm a
+candidate, Escape to cancel it, the arrows) leave the list as it is: Enter
+does not select and the highlight does not move. A composing Escape still
+stops at the input, so a parent overlay stays open
+([`isComposingKey`](../utilities.md#input-method-composition)).
+
 Enter always commits exactly the row `aria-activedescendant` names — the
 clear row clears even while filtering, and a custom value (`allowCustom`)
 appears as a real "Use \"query\"" row whenever the query is not an exact option
