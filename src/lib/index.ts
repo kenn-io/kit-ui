@@ -22,6 +22,8 @@ export type {
   SidebarView,
   SidebarViewRun,
 } from "./components/AppSidebar.svelte";
+export { default as Avatar } from "./components/Avatar.svelte";
+export type { AvatarShape, AvatarTone } from "./components/Avatar.svelte";
 export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
@@ -293,11 +295,13 @@ export {
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
+export { scrollFade } from "./utils/scroll-fade.js";
 export { backdropCloses, escapeCloses } from "./utils/overlay.js";
 export {
   formatCost,
   formatCount,
   formatDuration,
+  formatInitials,
   formatNumber,
   formatTokenCount,
 } from "./utils/format.js";

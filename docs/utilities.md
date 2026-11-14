@@ -224,6 +224,25 @@ on window resize, any ancestor scroll (capture phase), and panel size
 changes (ResizeObserver), coalesced to one call per animation frame. Both
 return their cleanup function.
 
+## Scroll fades
+
+```svelte
+<script>
+  import { scrollFade } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/scroll-fade"
+</script>
+
+<div class="my-list kit-popover-card" {@attach scrollFade}>…</div>
+```
+
+Fades the top or bottom edge of a scroll container while rows lie past it.
+Overlay scrollbars stay hidden until the user scrolls, so without a fade a
+list cut at a row boundary looks complete. Every kit-ui dropdown list uses
+it (SelectDropdown, FilterDropdown and its flyouts, Menu, Typeahead,
+MentionTextarea, CommandPalette). Attach it to the element that scrolls. The
+fades are drawn by `theme.css` and paint in `--kit-scroll-fade-color`, which
+defaults to `--bg-popover`; set it when the list sits on another surface.
+`--kit-scroll-fade-size` (default `32px`) sets how tall each fade is.
+
 ## Overlay wiring
 
 ```svelte
@@ -275,6 +294,7 @@ import {
   formatNumber,
   formatTokenCount,
   formatCost,
+  formatInitials,
   formatSize,
 } from "@kenn-io/kit-ui";
 
@@ -301,6 +321,10 @@ formatCost(12.339); // "$12.34"
 formatCost(123.4); // "$123"
 
 formatSize(290_000_000, "fr"); // "290 Mo"
+
+formatInitials("Ada Lovelace"); // "AL"
+formatInitials("jane.doe@example.com"); // "JD"
+formatInitials(""); // "?"
 ```
 
 `formatSize(bytes, locale?)` always displays decimal megabytes, rounded to a whole number: one megabyte is 1,000,000 bytes. `Intl.NumberFormat` supplies the unit and spacing for the locale; omitting it uses the runtime locale.

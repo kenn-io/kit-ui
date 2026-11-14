@@ -362,3 +362,42 @@ test("only a row with a category color shows a dot, and the others align with it
   );
   expect(await labelLeft(approved)).toBe(rowLeft);
 });
+
+// scrollPositions reads the window's scroll offset and that of every
+// scrollable container around the element, where opening could scroll.
+function scrollPositions(trigger: Locator): Promise<number[]> {
+  return trigger.evaluate((element) => {
+    const positions = [window.scrollX, window.scrollY];
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      if (node.scrollHeight > node.clientHeight || node.scrollWidth > node.clientWidth)
+        positions.push(node.scrollLeft, node.scrollTop);
+    }
+    return positions;
+  });
+}
+
+test("a searchable dropdown takes typing as soon as it opens", async ({ page }) => {
+  await gotoPage(page, "filter-dropdown");
+  const trigger = page.getByRole("button", { name: /^Models/ });
+  await trigger.scrollIntoViewIfNeeded();
+  const before = await scrollPositions(trigger);
+  await trigger.click();
+  const search = page.locator(".kit-filter-dropdown__search input");
+  await expect(search).toBeFocused();
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(await scrollPositions(trigger), "opening and focusing the field scrolls nothing").toEqual(
+    before,
+  );
+  await page.keyboard.type("zzz-no-model");
+  await expect(search).toHaveValue("zzz-no-model");
+  await expect(page.getByText("No matches")).toBeVisible();
+  // Escape first clears the query, then closes the panel.
+  await page.keyboard.press("Escape");
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(search).toBeHidden();
+  await expect(trigger).toBeFocused();
+});

@@ -116,6 +116,54 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Scroll fades, set up by the scrollFade attachment (utils/scroll-fade.ts):
+ * a gradient over the top or bottom edge of a scrolling list while rows lie
+ * past it, so a list cut at a row boundary still reads as scrollable when
+ * the scrollbar is an overlay that stays hidden until used. Each fade is a
+ * sticky pseudo-element with a negative margin, so it pins to the edge of
+ * the visible area without taking space, and lets clicks through to the
+ * rows under it. The fade paints in --kit-scroll-fade-color, the surface
+ * the list sits on. */
+[data-kit-scroll-fade]::before,
+[data-kit-scroll-fade]::after {
+  content: "";
+  position: sticky;
+  z-index: 2;
+  display: block;
+  height: var(--kit-scroll-fade-size, 32px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+[data-kit-scroll-fade]::before {
+  top: 0;
+  margin-bottom: calc(-1 * var(--kit-scroll-fade-size, 32px));
+  background: linear-gradient(
+    to bottom,
+    var(--kit-scroll-fade-color, var(--bg-popover)),
+    transparent
+  );
+}
+
+[data-kit-scroll-fade]::after {
+  bottom: 0;
+  margin-top: calc(-1 * var(--kit-scroll-fade-size, 32px));
+  background: linear-gradient(to top, var(--kit-scroll-fade-color, var(--bg-popover)), transparent);
+}
+
+[data-kit-scroll-fade-top]::before,
+[data-kit-scroll-fade-bottom]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-kit-scroll-fade]::before,
+  [data-kit-scroll-fade]::after {
+    transition: none;
+  }
+}
+
 /* In light a popover is the white surface; its shadow lifts it. In dark a
  * shadow barely shows on the near-black page, so a popover takes a lighter
  * raised surface and a lighter edge. That surface narrows the gap to the

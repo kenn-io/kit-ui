@@ -858,6 +858,23 @@ describe("hand-rolled components", () => {
     expect(checkSource(ok, "A.svelte", ["hand-rolled-status-dot"])).toHaveLength(0);
   });
 
+  test("avatar: avatar class names and selectors", () => {
+    const bad = svelte(
+      `.avatar { border-radius: 50%; }\n  .user-picker__avatar { width: 16px; }`,
+      `<span class="avatar">A</span><img class="repo-card__avatar" alt="" /><span class="identity-avatar">JD</span>`,
+    );
+    expect(checkSource(bad, "A.svelte", ["hand-rolled-avatar"])).toHaveLength(5);
+  });
+
+  test("avatar: kit-avatar, suffixed names, and member access are exempt", () => {
+    const ok = svelte(
+      `.avatar-stack { display: flex; }`,
+      `<span class="kit-avatar kit-avatar--circle"><img class="kit-avatar__image" alt="" /></span>
+<img src={user.avatar} alt="" />{account?.avatar_url}{list[0].avatar}`,
+    );
+    expect(checkSource(ok, "A.svelte", ["hand-rolled-avatar"])).toHaveLength(0);
+  });
+
   test("sidebar toggle: class match, kit-sidebar-toggle exempt", () => {
     const bad = svelte(``, `<button class="sidebar-toggle"></button>`);
     expect(checkSource(bad, "A.svelte", ["hand-rolled-sidebar-toggle"])).toHaveLength(1);

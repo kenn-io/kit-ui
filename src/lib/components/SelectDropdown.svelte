@@ -3,6 +3,7 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
   import { autoReposition, dismissable } from "../utils/popover.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
   import type { SelectDropdownIndicator, SelectDropdownOption } from "./select-dropdown.js";
 
@@ -235,6 +236,7 @@
       role="listbox"
       style={listStyle}
       bind:this={listEl}
+      {@attach scrollFade}
     >
       {#each options as option, index (option.value)}
         <button

@@ -94,6 +94,10 @@
       "types": "./types/utils/popover.d.ts",
       "default": "./src/lib/utils/popover.ts"
     },
+    "./utils/scroll-fade": {
+      "types": "./types/utils/scroll-fade.d.ts",
+      "default": "./src/lib/utils/scroll-fade.ts"
+    },
     "./utils/refresh": {
       "types": "./types/utils/refresh.d.ts",
       "default": "./src/lib/utils/refresh.ts"

@@ -40,6 +40,7 @@
   import { flushSync, onDestroy, tick, untrack } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
   import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
   import SearchInput from "./SearchInput.svelte";
 
@@ -99,6 +100,7 @@
   }: Props = $props();
 
   let isOpen = $state(false);
+  let searchInput = $state<HTMLInputElement>();
   let search = $state("");
   let buttonRef = $state<HTMLButtonElement>();
   let dropdownRef = $state<HTMLDivElement>();
@@ -310,6 +312,8 @@
     isOpen = true;
     await tick();
     positionDropdown();
+    // A searchable panel takes typing at once.
+    if (searchable) searchInput?.focus({ preventScroll: true });
   }
 
   async function toggleOpen(): Promise<void> {
@@ -387,11 +391,18 @@
       class="kit-filter-dropdown__panel kit-popover-card"
       bind:this={dropdownRef}
       style={dropdownStyle}
+      {@attach scrollFade}
       style:min-width={`min(${minWidth}, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)))`}
     >
       {#if searchable}
         <div class="kit-filter-dropdown__search">
-          <SearchInput bind:value={search} size="sm" block placeholder={searchPlaceholder} />
+          <SearchInput
+            bind:value={search}
+            bind:inputEl={searchInput}
+            size="sm"
+            block
+            placeholder={searchPlaceholder}
+          />
         </div>
       {/if}
       {#if hasBulkActions}
@@ -503,6 +514,7 @@
         tabindex="-1"
         style={submenuStyle}
         onkeydown={handleSubmenuKeydown}
+        {@attach scrollFade}
       >
         {@render submenuItem.submenu()}
       </div>
