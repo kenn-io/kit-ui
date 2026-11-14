@@ -146,12 +146,26 @@ test("zooming out and back preserves the selected range highlight", async ({ pag
 
 test.describe("activity", () => {
   test("shades days with a count and adds the count to their label", async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 2, 15, 12));
+    await page.reload();
     const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
     const shaded = calendar.locator(".kit-calendar__day[data-activity]");
-    const steps = await shaded.evaluateAll((nodes) =>
-      nodes.map((node) => Number((node as HTMLElement).dataset.activity)),
+    await expect(calendar.getByRole("button", { name: "Mar 3, 2026, 1 item" })).toHaveAttribute(
+      "data-activity",
+      "1",
     );
-    expect(Math.max(...steps)).toBe(4);
+    await expect(calendar.getByRole("button", { name: "Mar 5, 2026, 4 items" })).toHaveAttribute(
+      "data-activity",
+      "2",
+    );
+    await expect(calendar.getByRole("button", { name: "Mar 10, 2026, 6 items" })).toHaveAttribute(
+      "data-activity",
+      "3",
+    );
+    await expect(calendar.getByRole("button", { name: "Mar 12, 2026, 9 items" })).toHaveAttribute(
+      "data-activity",
+      "4",
+    );
     await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
     for (const day of [0, 1].map((i) => calendar.locator(".kit-calendar__day").nth(i))) {
       await expect(day).not.toHaveAttribute("data-activity");
@@ -182,26 +196,6 @@ test.describe("activity", () => {
     await expect(days.nth(9)).toHaveAttribute("aria-label", /, 6 messages$/);
     await expect(days.nth(2)).toHaveAttribute("data-activity", "4");
     await expect(days.nth(2)).toHaveAttribute("aria-label", /, 10 messages$/);
-  });
-
-  test("selection draws over the shade", async ({ page }) => {
-    const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
-    const day = calendar.locator(".kit-calendar__day[data-activity]:not(:disabled)").first();
-    await day.click();
-    await expect(day).toHaveAttribute("aria-pressed", "true");
-    await page.mouse.move(0, 0);
-    const accent = await day.evaluate((node) => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--accent-blue)";
-      node.appendChild(probe);
-      const color = getComputedStyle(probe).color;
-      probe.remove();
-      return color;
-    });
-    // A one-day selection is a solid accent pill; poll past the fill transition.
-    await expect
-      .poll(() => day.evaluate((node) => getComputedStyle(node).backgroundColor))
-      .toBe(accent);
   });
 
   test("shaded day numbers meet AA contrast in light and dark", async ({ page }) => {
@@ -256,12 +250,6 @@ test.describe("month strip", () => {
     await expect(sundayDays.first().locator(".kit-calendar__day-weekday")).toHaveText("D");
     await expect(sundayDays.first()).toHaveAttribute("aria-label", /^dim\., /);
 
-    // Feb 24 is past maxDate: disabled, yet still marked and announced.
-    const matched = sunday.locator(".kit-calendar__day:has(.kit-calendar__match)");
-    await expect(matched).toHaveCount(3);
-    await expect(sundayDays.nth(23)).toBeDisabled();
-    await expect(sundayDays.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
-    await expect(sundayDays.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
     await expect(sunday.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
   });
 
@@ -296,9 +284,57 @@ test.describe("month strip", () => {
 
     await filter(page, "No filter").click();
     await expect(dots).toHaveCount(0);
+
+    // Feb 24 is past maxDate: disabled, yet still marked and announced.
+    const sunday = page.getByTestId("calendar-strip-sunday").locator(".kit-calendar");
+    const sundayDays = sunday.locator(".kit-calendar__day");
+    await expect(sunday.locator(".kit-calendar__day:has(.kit-calendar__match)")).toHaveCount(3);
+    await expect(sundayDays.nth(23)).toBeDisabled();
+    await expect(sundayDays.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
+    await expect(sundayDays.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
+
+    // A match on a solid grid range end uses the surface color.
+    const day = (n: number) => rangeDay(page, n);
+    await expect(day(20).locator(".kit-calendar__match")).toHaveCount(1);
+    await expect(day(20)).toHaveAttribute("aria-label", /, matches filters$/);
+    await expect(day(21).locator(".kit-calendar__match")).toHaveCount(0);
+    await day(5).click();
+    await day(10).click();
+    await expect(day(10)).toHaveClass(/range-end/);
+    await expect(day(10)).toHaveAttribute("aria-label", /, matches filters$/);
+    const dot = day(10).locator(".kit-calendar__match");
+    const surface = await day(10).evaluate((node) => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = "var(--bg-surface)";
+      node.appendChild(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    await page.mouse.move(0, 0);
+    await expect
+      .poll(() => dot.evaluate((node) => getComputedStyle(node).backgroundColor))
+      .toBe(surface);
   });
 
   test("the selected day keeps its shade under an outline", async ({ page }) => {
+    const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
+    const day = calendar.locator(".kit-calendar__day[data-activity]:not(:disabled)").first();
+    await day.click();
+    await expect(day).toHaveAttribute("aria-pressed", "true");
+    await page.mouse.move(0, 0);
+    const accent = await day.evaluate((node) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--accent-blue)";
+      node.appendChild(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    await expect
+      .poll(() => day.evaluate((node) => getComputedStyle(node).backgroundColor))
+      .toBe(accent);
+
     const cal = strip(page);
     const days = cal.locator(".kit-calendar__day");
     const selected = days.nth(27);
@@ -328,16 +364,6 @@ test.describe("month strip", () => {
     await expect(page.locator("code", { hasText: "2026-03-05" })).toBeVisible();
     await expect(days.nth(4)).toHaveAttribute("aria-pressed", "true");
     await expect(selected).toHaveAttribute("aria-pressed", "false");
-  });
-
-  test("the arrows page one month and drop an out-of-month selection", async ({ page }) => {
-    const cal = strip(page);
-    await cal.locator(".kit-calendar__nav").nth(1).click();
-    await expect(cal.locator(".kit-calendar__month")).toHaveText("April 2026");
-    await cal.locator(".kit-calendar__nav").first().click();
-    await cal.locator(".kit-calendar__nav").first().click();
-    await expect(cal.locator(".kit-calendar__month")).toHaveText("February 2026");
-    await expect(cal.locator(".kit-calendar__day[aria-pressed='true']")).toHaveCount(0);
   });
 
   test("at 400px the strip scrolls and keeps keyboard focus visible", async ({ page }) => {
@@ -370,6 +396,7 @@ test.describe("month strip", () => {
 
       // A month without a selection starts at day 1.
       await nav.nth(1).click();
+      await expect(cal.locator(".kit-calendar__month")).toHaveText("April 2026");
       await expect.poll(scrollLeft).toBe(0);
 
       // Paging back reveals the selection by scrolling only the track. The
@@ -391,6 +418,10 @@ test.describe("month strip", () => {
       await nav.first().evaluate((node) => (node as HTMLElement).click());
       await expect.poll(visible).toBe(true);
       expect(await ancestorScroll()).toEqual(before);
+      await nav.first().click();
+      await expect(cal.locator(".kit-calendar__month")).toHaveText("February 2026");
+      await expect(cal.locator(".kit-calendar__day[aria-pressed='true']")).toHaveCount(0);
+      await nav.nth(1).click();
     });
 
     await test.step("keep focus rings inside both ends", async () => {
@@ -422,30 +453,4 @@ test.describe("month strip", () => {
       }
     });
   });
-});
-
-test("matches draw on the grid, in surface ink on a solid range end", async ({ page }) => {
-  // The day-range demo (fourth calendar) marks days ending in 0.
-  const day = (n: number) => rangeDay(page, n);
-  await expect(day(20).locator(".kit-calendar__match")).toHaveCount(1);
-  await expect(day(20)).toHaveAttribute("aria-label", /, matches filters$/);
-  await expect(day(21).locator(".kit-calendar__match")).toHaveCount(0);
-
-  await day(5).click();
-  await day(10).click();
-  await expect(day(10)).toHaveClass(/range-end/);
-  await expect(day(10)).toHaveAttribute("aria-label", /, matches filters$/);
-  const dot = day(10).locator(".kit-calendar__match");
-  const surface = await day(10).evaluate((node) => {
-    const probe = document.createElement("span");
-    probe.style.backgroundColor = "var(--bg-surface)";
-    node.appendChild(probe);
-    const color = getComputedStyle(probe).backgroundColor;
-    probe.remove();
-    return color;
-  });
-  await page.mouse.move(0, 0);
-  await expect
-    .poll(() => dot.evaluate((node) => getComputedStyle(node).backgroundColor))
-    .toBe(surface);
 });
