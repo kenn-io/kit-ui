@@ -153,13 +153,7 @@
       (e) => e.kind === "overflow" && e.items.some((i) => i.selected),
     );
     if (hidden) return keyOf(hidden);
-    return (
-      (layout.dateOnly[0]
-        ? `item:${layout.dateOnly[0].id}`
-        : layout.entries[0]
-          ? keyOf(layout.entries[0])
-          : order[0]) ?? null
-    );
+    return order.find((key) => !key.startsWith("fold:")) ?? order[0] ?? null;
   });
 
   const nowFold = $derived(
