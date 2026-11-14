@@ -273,6 +273,7 @@ export {
 } from "./utils/palette.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
+export { isComposingKey } from "./utils/ime.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { scrollFade } from "./utils/scroll-fade.js";
 export { backdropCloses, escapeLayer } from "./utils/overlay.js";

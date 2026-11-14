@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
+  import { isComposingKey } from "../utils/ime.js";
   import { autoReposition } from "../utils/popover.js";
   import { scrollFade } from "../utils/scroll-fade.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
@@ -244,6 +245,14 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
+    // Enter, Tab, Escape and the arrows belong to an input method while it
+    // composes, so the menu stays as it is. An Escape the shown menu would
+    // have claimed stops here, so a parent overlay stays open too.
+    if (isComposingKey(event)) {
+      if (event.key === "Escape" && visible) event.stopPropagation();
+      onkeydown?.(event);
+      return;
+    }
     if (open && results.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();

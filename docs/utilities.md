@@ -295,6 +295,28 @@ invisible guard elements (`[data-kit-focus-guard]`) sit just before and
 after the surface while it is mounted; Tab past either end lands on one
 and wraps focus to the other end, as Headless UI and Floating UI do.
 
+## Input method composition
+
+```ts
+import { isComposingKey } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/ime"
+
+function handleKeydown(event: KeyboardEvent): void {
+  if (isComposingKey(event)) return;
+  if (event.key === "Enter") send();
+}
+```
+
+Japanese, Chinese and Korean users type through an input method. While it
+composes, Enter confirms a candidate, Escape cancels it, and the arrows move
+between candidates. `isComposingKey` is true for those keydowns: it checks
+`isComposing`, and key code 229 for the keydown Safari sends as a
+composition ends. Typeahead, MentionTextarea, CommandPalette, FindBar,
+SearchInput, and NumberInput ignore composing keys. An Escape one of them
+would have claimed still stops at the field, so a Modal around it stays
+open. MentionTextarea, SearchInput, and NumberInput pass composing keys to
+your `onkeydown`, so check it there before acting on Enter, such as to send a
+message.
+
 ## Formatters
 
 ```ts

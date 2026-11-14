@@ -127,6 +127,8 @@ const off = appShortcuts.register("mod+k", openPalette, {
   has a runnable target). Escape follows SearchInput semantics: clears
   the query first, returns to the root from a child list, then closes.
   Backspace in an empty search returns from a child list to the root and keeps focus in the search field.
+- Keys an input method uses while it composes a query (Enter, Escape, the
+  arrows) neither run nor move the highlight, and the palette stays open.
 - While open it pushes an `appShortcuts` scope, so page-level shortcuts
   are suspended (registry-driven ones — its own keys are DOM handlers).
 - Overlay + `trapFocus` + `aria-modal`; the query field autofocuses.

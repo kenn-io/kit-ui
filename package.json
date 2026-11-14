@@ -62,6 +62,10 @@
       "types": "./types/utils/focus-trap.d.ts",
       "default": "./src/lib/utils/focus-trap.ts"
     },
+    "./utils/ime": {
+      "types": "./types/utils/ime.d.ts",
+      "default": "./src/lib/utils/ime.ts"
+    },
     "./utils/format": {
       "types": "./types/utils/format.d.ts",
       "default": "./src/lib/utils/format.ts"
