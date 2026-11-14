@@ -187,14 +187,14 @@ export function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): str
  * adjacent months.
  */
 export function monthGridDates(anchor: string, weekStart: WeekStart = "monday"): string[] {
-  const first = new Date(`${anchor.slice(0, 7)}-01T00:00:00Z`);
+  const first = parseDate(`${anchor.slice(0, 7)}-01`);
   const offset = (first.getUTCDay() + (weekStart === "sunday" ? 0 : 6)) % 7;
   const start = new Date(first);
   start.setUTCDate(first.getUTCDate() - offset);
   return Array.from({ length: 42 }, (_, i) => {
     const day = new Date(start);
     day.setUTCDate(start.getUTCDate() + i);
-    return day.toISOString().slice(0, 10);
+    return dateStr(day);
   });
 }
 
@@ -281,7 +281,7 @@ export function resolveRange(
 /** "Jun 29" style short label. `locale` omitted = the browser locale. */
 export function formatShortDate(date: string, locale?: string): string {
   return formatter({ month: "short", day: "numeric", timeZone: "UTC" }, locale).format(
-    new Date(`${date}T00:00:00Z`),
+    parseDate(date),
   );
 }
 
@@ -302,14 +302,14 @@ export function formatDayLabel(anchor: string, locale?: string): string {
   return formatter(
     { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" },
     locale,
-  ).format(new Date(`${anchor}T00:00:00Z`));
+  ).format(parseDate(anchor));
 }
 
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export function formatMonthLabel(anchor: string, locale?: string): string {
   return formatter({ year: "numeric", month: "long", timeZone: "UTC" }, locale).format(
-    new Date(`${anchor}T00:00:00Z`),
+    parseDate(anchor),
   );
 }
 

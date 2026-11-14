@@ -238,7 +238,7 @@
     let label = formatDayLabel(date, locale);
     // The strip shows the weekday, so its label names it too.
     if (strip) label = `${weekdays[index % 7]}, ${label}`;
-    if (count != null && count > 0) label += `, ${activityLabel(count)}`;
+    if (count != null) label += `, ${activityLabel(count)}`;
     return matched ? `${label}, ${matchLabel}` : label;
   }
 
@@ -246,6 +246,14 @@
   // can start out of view. After the month, selection or layout changes,
   // scroll the track (never the page or focus) to show the first selected day.
   let track = $state<HTMLElement | null>(null);
+  function reveal(cell: HTMLElement) {
+    if (track == null) return;
+    const box = track.getBoundingClientRect();
+    const rect = cell.getBoundingClientRect();
+    if (rect.left - 6 < box.left) track.scrollLeft -= box.left - rect.left + 6;
+    else if (rect.right + 6 > box.right) track.scrollLeft += rect.right - box.right + 6;
+  }
+
   $effect(() => {
     void [monthPrefix, selected?.from, selected?.to];
     if (track == null) return;
@@ -255,10 +263,7 @@
       track.scrollLeft = 0;
       return;
     }
-    const box = track.getBoundingClientRect();
-    const rect = cell.getBoundingClientRect();
-    if (rect.left < box.left) track.scrollLeft -= box.left - rect.left;
-    else if (rect.right > box.right) track.scrollLeft += rect.right - box.right;
+    reveal(cell);
   });
 
   function inRange(date: string): boolean {
@@ -333,8 +338,7 @@
           <span class="kit-calendar__day-number">{dayNumber}</span>
         {:else}
           {dayNumber}
-        {/if}
-        {#if matched}
+        {/if}{#if matched}
           <span class="kit-calendar__match" aria-hidden="true"></span>
         {/if}
       </button>
@@ -342,7 +346,13 @@
   {/snippet}
 
   {#if strip}
-    <div class="kit-calendar__strip" bind:this={track}>
+    <div
+      class="kit-calendar__strip"
+      bind:this={track}
+      onfocusin={(event) => {
+        if (event.target instanceof HTMLElement) reveal(event.target);
+      }}
+    >
       {@render dayCells()}
     </div>
   {:else if view === "days"}

@@ -187,7 +187,7 @@ test.describe("activity", () => {
     const calendar = page.getByTestId("calendar-activity-scale").locator(".kit-calendar");
     const days = calendar.locator(".kit-calendar__day");
     await expect(days.nth(0)).not.toHaveAttribute("data-activity");
-    await expect(days.nth(0)).not.toHaveAttribute("aria-label", /messages?$/);
+    await expect(days.nth(0)).toHaveAttribute("aria-label", /, 0 messages$/);
     await expect(days.nth(8)).toHaveAttribute("data-activity", "1");
     await expect(days.nth(8)).toHaveAttribute("aria-label", /, 1 message$/);
     await expect(days.nth(11)).toHaveAttribute("data-activity", "2");
@@ -196,6 +196,22 @@ test.describe("activity", () => {
     await expect(days.nth(9)).toHaveAttribute("aria-label", /, 6 messages$/);
     await expect(days.nth(2)).toHaveAttribute("data-activity", "4");
     await expect(days.nth(2)).toHaveAttribute("aria-label", /, 10 messages$/);
+
+    await page.evaluate(async () => {
+      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: CalendarLayout } =
+        await import("/tests/browser/fixtures/CalendarLayout.svelte");
+      document.body.replaceChildren();
+      mount(CalendarLayout, { target: document.body });
+    });
+    const custom = page.locator(".kit-calendar");
+    await expect(custom.getByRole("button", { name: "Mar 1, 2026, 0 messages" })).toHaveAttribute(
+      "data-activity",
+      "1",
+    );
+    await expect(
+      custom.getByRole("button", { name: "Mar 2, 2026, -1 messages" }),
+    ).not.toHaveAttribute("data-activity");
   });
 
   test("shaded day numbers meet AA contrast in light and dark", async ({ page }) => {
@@ -452,31 +468,35 @@ test.describe("month strip", () => {
       await nav.nth(1).click();
     });
 
-    await test.step("keep focus rings inside both ends", async () => {
+    await test.step("keep focus rings visible while tabbing through days", async () => {
       const days = cal.locator(".kit-calendar__day");
       for (const highContrast of [false, true]) {
         await setTheme(page, { highContrast });
-        for (const index of [0, 30]) {
-          if (index === 0) await cal.locator(".kit-calendar__nav").last().focus();
-          else await days.nth(index - 1).focus();
-          await page.keyboard.press("Tab");
-          const day = days.nth(index);
-          await expect(day).toBeFocused();
-          const fits = await day.evaluate((element) => {
-            const dayBox = element.getBoundingClientRect();
-            const trackBox = element.parentElement!.getBoundingClientRect();
-            const style = getComputedStyle(element);
-            const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
-            return (
-              style.outlineStyle !== "none" &&
-              ring > 0 &&
-              dayBox.left - ring >= trackBox.left &&
-              dayBox.right + ring <= trackBox.right &&
-              dayBox.top - ring >= trackBox.top &&
-              dayBox.bottom + ring <= trackBox.bottom
-            );
-          });
-          expect(fits).toBe(true);
+        await cal.locator(".kit-calendar__nav").last().focus();
+        for (const [key, indices] of [
+          ["Tab", Array.from({ length: 31 }, (_, i) => i)],
+          ["Shift+Tab", Array.from({ length: 30 }, (_, i) => 29 - i)],
+        ] as const) {
+          for (const index of indices) {
+            await page.keyboard.press(key);
+            const day = days.nth(index);
+            await expect(day).toBeFocused();
+            const fits = await day.evaluate((element) => {
+              const dayBox = element.getBoundingClientRect();
+              const trackBox = element.parentElement!.getBoundingClientRect();
+              const style = getComputedStyle(element);
+              const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+              return (
+                style.outlineStyle !== "none" &&
+                ring > 0 &&
+                dayBox.left - ring >= trackBox.left &&
+                dayBox.right + ring <= trackBox.right &&
+                dayBox.top - ring >= trackBox.top &&
+                dayBox.bottom + ring <= trackBox.bottom
+              );
+            });
+            expect(fits, `day ${index + 1}, ${key}, high contrast ${highContrast}`).toBe(true);
+          }
         }
       }
     });
