@@ -34,21 +34,61 @@ group of disclosures and can keep only one open.
 
 ## Disclosure props
 
-| Prop       | Type                      | Default  | Notes                                                                                      |
-| ---------- | ------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `title`    | `string`                  | —        | Header text                                                                                |
-| `summary`  | `Snippet`                 | —        | Rich header content, rendered instead of `title`                                           |
-| `meta`     | `Snippet`                 | —        | Trailing header content, such as a count or chip. It sits inside the toggle: no controls   |
-| `children` | `Snippet`                 | required | Body                                                                                       |
-| `open`     | `boolean`                 | `false`  | Bindable expanded state                                                                    |
-| `id`       | `string`                  | —        | Deep-link anchor                                                                           |
-| `name`     | `string`                  | —        | Native exclusive group. Accordion sets it for its items                                    |
-| `variant`  | `"card" \| "plain"`       | `"card"` | `card` is a bordered panel. `plain` is a bare toggle row for inline use, as in transcripts |
-| `ontoggle` | `(open: boolean) => void` | —        | Called after every open or close, from the user or from `open`                             |
-| `class`    | `string`                  | `""`     |                                                                                            |
+| Prop                | Type                          | Default  | Notes                                                                                                                     |
+| ------------------- | ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `title`             | `string`                      | —        | Header text                                                                                                               |
+| `summary`           | `Snippet`                     | —        | Rich header content, rendered instead of `title`                                                                          |
+| `meta`              | `Snippet`                     | —        | Trailing header content, such as a count or chip. It sits inside the toggle: no controls                                  |
+| `children`          | `Snippet`                     | required | Body                                                                                                                      |
+| `open`              | `boolean`                     | `false`  | Bindable expanded state                                                                                                   |
+| `id`                | `string`                      | —        | Deep-link anchor                                                                                                          |
+| `name`              | `string`                      | —        | Native exclusive group. Accordion sets it for its items                                                                   |
+| `variant`           | `"card" \| "plain" \| "bare"` | `"card"` | `card` is a bordered panel. `plain` is a bare toggle row for inline use, as in transcripts. `bare` is unstyled; see below |
+| `ontoggle`          | `(open: boolean) => void`     | —        | Called after every open or close, from the user or from `open`                                                            |
+| `summaryAttributes` | `DisclosureSummaryAttributes` | `{}`     | Extra attributes and handlers for the `<summary>`; see below                                                              |
+| `class`             | `string`                      | `""`     |                                                                                                                           |
+
+Any other attribute, such as `inert` or `data-*`, goes on the `<details>`
+element.
 
 Inside an `Accordion`, `variant` is ignored: items drop their own border
 and are divided by rules inside the accordion's frame.
+
+## Data rows
+
+`variant="bare"` drops the chevron, padding, and type styles, and renders
+the header and body without wrapper elements: the summary holds only the
+`summary` snippet (or `title`) and `meta`, and the body follows it directly.
+Lay the summary out with a class from `summaryAttributes`; the component
+keeps only the pointer cursor, the hidden marker, and the focus ring. Use it
+for a list of rows that expand inline, such as chart rows.
+
+```svelte
+{#each series as row (row.id)}
+  <Disclosure
+    variant="bare"
+    class="chart-row"
+    data-series={row.id}
+    inert={row.loading}
+    summaryAttributes={{
+      class: "chart-row__summary",
+      "aria-label": `${row.label}: ${row.value}`,
+      onkeydown: moveBetweenRows,
+    }}
+  >
+    {#snippet summary()}
+      <span>{row.label}</span>
+      <Sparkline values={row.values} />
+    {/snippet}
+    <Chart series={row.id} />
+  </Disclosure>
+{/each}
+```
+
+`DisclosureSummaryAttributes` is every `<summary>` attribute. `class` is
+added to the summary's own classes. Handlers run before the native toggle,
+and calling `preventDefault` in `onclick` keeps the disclosure from
+toggling.
 
 ## Accordion props
 
