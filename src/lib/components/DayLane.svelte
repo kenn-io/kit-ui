@@ -97,6 +97,9 @@
     void dayKey;
     return false;
   });
+  let previousDay: string | number | undefined;
+  let hadTimedItems = false;
+  let savedScroll: number | undefined;
 
   // A fixed UTC date turns a minute into a clock time without reading any zone.
   const clock = (minute: number) => new Date(Date.UTC(2000, 0, 1, 0, minute));
@@ -247,6 +250,29 @@
     const target = order[Math.max(0, Math.min(order.length - 1, next))];
     if (target) focusKey(target);
   }
+
+  $effect.pre(() => {
+    const hasTimedItems = layout.entries.length > 0;
+    if (!scroller) return;
+    if (previousDay !== undefined && dayKey !== previousDay) {
+      savedScroll = undefined;
+      scroller.scrollTop = 0;
+    } else if (hadTimedItems && !hasTimedItems) {
+      savedScroll = scroller.scrollTop;
+    } else if (!hadTimedItems && hasTimedItems && savedScroll !== undefined) {
+      const element = scroller;
+      const restore = element.scrollHeight - element.clientHeight >= savedScroll
+        ? element.scrollTop
+        : savedScroll;
+      const day = dayKey;
+      savedScroll = undefined;
+      void tick().then(() => {
+        if (dayKey === day && scroller === element) element.scrollTop = restore;
+      });
+    }
+    previousDay = dayKey;
+    hadTimedItems = hasTimedItems;
+  });
 
   // Bring the first timed item into view once per day, as soon as there is one.
   $effect(() => {

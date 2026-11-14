@@ -123,6 +123,62 @@ test("returning to a day after an empty day scrolls once to its first card", asy
   await expect(page.getByRole("button", { name: /First/ })).toBeInViewport();
 });
 
+for (const foldQuietMinutes of [0, 120]) {
+  test(`preserves scroll across a temporary empty state with folding ${foldQuietMinutes}`, async ({
+    page,
+  }) => {
+    const items = [
+      { id: "first", startMinute: 540, endMinute: 1200 },
+      { id: "last", startMinute: 1200 },
+    ];
+    const fixture = await mountDayLane(page, {
+      items,
+      dayKey: "a",
+      foldQuietMinutes,
+      label: "Item",
+    });
+    const scroller = page.locator(".kit-day-lane");
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await scroller.evaluate((el) => (el.scrollTop = 100));
+    await fixture.evaluate((component) => component.update({ items: [] }));
+    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(0);
+    await fixture.evaluate((component, items) => component.update({ items }), items);
+    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(2);
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(100);
+  });
+
+  test(`resets scroll for an empty day with folding ${foldQuietMinutes}`, async ({ page }) => {
+    const fixture = await mountDayLane(page, {
+      items: [
+        { id: "first", startMinute: 540 },
+        { id: "last", startMinute: 1200 },
+      ],
+      dayKey: "a",
+      foldQuietMinutes,
+      label: "Item",
+    });
+    const scroller = page.locator(".kit-day-lane");
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await fixture.evaluate((component) => component.update({ items: [], dayKey: "b" }));
+    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(0);
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
+    await fixture.evaluate((component) =>
+      component.update({ items: [{ id: "date", dateOnly: true }] }),
+    );
+    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(1);
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
+    await fixture.evaluate((component) =>
+      component.update({
+        items: [
+          { id: "later", startMinute: 540 },
+          { id: "last", startMinute: 1200 },
+        ],
+      }),
+    );
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  });
+}
+
 test("a late interval stays within the day axis", async ({ page }) => {
   await mountDayLane(page, {
     items: [{ id: "late", startMinute: 1439, endMinute: 1500 }],
