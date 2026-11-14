@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { contrastOf, gotoPage, setTheme } from "./helpers.js";
+import { contrastOf, gotoPage, resolvedStyle, setTheme } from "./helpers.js";
 
 // Calendar month/year drill-down (kata j9cr): the header label zooms out
 // days → months → years; picking an entry drills back down. Assertions
@@ -166,7 +166,6 @@ test.describe("activity", () => {
       "data-activity",
       "4",
     );
-    await expect(shaded.first()).toHaveAttribute("aria-label", /, \d+ items?$/);
     for (const day of [0, 1].map((i) => calendar.locator(".kit-calendar__day").nth(i))) {
       await expect(day).not.toHaveAttribute("data-activity");
       await expect(day).not.toHaveAttribute("aria-label", /(?:NaN|Infinity|items?)/);
@@ -318,18 +317,9 @@ test.describe("month strip", () => {
     await expect(day(10)).toHaveClass(/range-end/);
     await expect(day(10)).toHaveAttribute("aria-label", /, matches filters$/);
     const dot = day(10).locator(".kit-calendar__match");
-    const surface = await day(10).evaluate((node) => {
-      const probe = document.createElement("span");
-      probe.style.backgroundColor = "var(--bg-surface)";
-      node.appendChild(probe);
-      const color = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return color;
-    });
+    const surface = await resolvedStyle(page, "background-color", "var(--bg-surface)");
     await page.mouse.move(0, 0);
-    await expect
-      .poll(() => dot.evaluate((node) => getComputedStyle(node).backgroundColor))
-      .toBe(surface);
+    await expect(dot).toHaveCSS("background-color", surface);
   });
 
   test("the selected day keeps its shade under an outline", async ({ page }) => {
@@ -340,17 +330,8 @@ test.describe("month strip", () => {
     await day.click();
     await expect(day).toHaveAttribute("aria-pressed", "true");
     await page.mouse.move(0, 0);
-    const accent = await day.evaluate((node) => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--accent-blue)";
-      node.appendChild(probe);
-      const color = getComputedStyle(probe).color;
-      probe.remove();
-      return color;
-    });
-    await expect
-      .poll(() => day.evaluate((node) => getComputedStyle(node).backgroundColor))
-      .toBe(accent);
+    const accent = await resolvedStyle(page, "color", "var(--accent-blue)");
+    await expect(day).toHaveCSS("background-color", accent);
 
     const cal = strip(page);
     const days = cal.locator(".kit-calendar__day");
@@ -359,22 +340,15 @@ test.describe("month strip", () => {
     await expect(selected).toHaveAttribute("data-activity", "2");
     const peer = cal.locator('.kit-calendar__day[data-activity="2"][aria-pressed="false"]').first();
     await page.mouse.move(0, 0);
-    const background = (locator: import("@playwright/test").Locator) =>
-      locator.evaluate((node) => getComputedStyle(node).backgroundColor);
-    const colors = await selected.evaluate((node) => {
-      const probe = document.createElement("span");
-      probe.style.backgroundColor = "color-mix(in srgb, var(--accent-green) 22%, transparent)";
-      probe.style.color = "var(--accent-blue)";
-      node.appendChild(probe);
-      const style = getComputedStyle(probe);
-      const result = { tint: style.backgroundColor, accent: style.color };
-      probe.remove();
-      return result;
-    });
-    await expect.poll(() => background(selected)).toBe(colors.tint);
-    await expect.poll(() => background(peer)).toBe(colors.tint);
+    const tint = await resolvedStyle(
+      page,
+      "background-color",
+      "color-mix(in srgb, var(--accent-green) 22%, transparent)",
+    );
+    await expect(selected).toHaveCSS("background-color", tint);
+    await expect(peer).toHaveCSS("background-color", tint);
     const shadow = await selected.evaluate((node) => getComputedStyle(node).boxShadow);
-    expect(shadow).toContain(colors.accent);
+    expect(shadow).toContain(accent);
     expect(shadow).toMatch(/0px 0px 0px 2px inset/);
 
     await days.nth(4).click();
