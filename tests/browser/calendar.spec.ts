@@ -199,6 +199,8 @@ test.describe("activity", () => {
   });
 
   test("shaded day numbers meet AA contrast in light and dark", async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 2, 15, 12));
+    await page.reload();
     for (const dark of [false, true]) {
       await setTheme(page, { dark });
       for (const id of ["calendar-activity", "calendar-activity-scale", "calendar-strip-sunday"]) {
@@ -318,6 +320,8 @@ test.describe("month strip", () => {
   });
 
   test("the selected day keeps its shade under an outline", async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 2, 15, 12));
+    await page.reload();
     const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
     const day = calendar.locator(".kit-calendar__day[data-activity]:not(:disabled)").first();
     await day.click();
@@ -364,6 +368,30 @@ test.describe("month strip", () => {
     await expect(page.locator("code", { hasText: "2026-03-05" })).toBeVisible();
     await expect(days.nth(4)).toHaveAttribute("aria-pressed", "true");
     await expect(selected).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("paging the strip resets an open grid chooser", async ({ page }) => {
+    await page.evaluate(async () => {
+      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: CalendarLayout } =
+        await import("/tests/browser/fixtures/CalendarLayout.svelte");
+      document.body.replaceChildren();
+      mount(CalendarLayout, { target: document.body });
+    });
+    const cal = page.locator(".kit-calendar");
+    for (const [zoom, month] of [
+      [1, "April 2026"],
+      [2, "May 2026"],
+    ] as const) {
+      await cal.locator(".kit-calendar__month--button").click();
+      if (zoom === 2) await cal.locator(".kit-calendar__month--button").click();
+      await expect(cal.locator(".kit-calendar__unit")).toHaveCount(12);
+      await page.getByRole("button", { name: "Strip", exact: true }).click();
+      await cal.getByRole("button", { name: "Next month" }).click();
+      await page.getByRole("button", { name: "Grid", exact: true }).click();
+      await expect(cal.locator(".kit-calendar__grid")).toBeVisible();
+      await expect(cal.locator(".kit-calendar__month--button")).toContainText(month);
+    }
   });
 
   test("at 400px the strip scrolls and keeps keyboard focus visible", async ({ page }) => {

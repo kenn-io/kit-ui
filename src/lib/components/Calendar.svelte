@@ -172,6 +172,7 @@
   function navStep(delta: 1 | -1): void {
     if (dayView) {
       month = stepAnchor("month", month, delta);
+      view = "days";
     } else if (view === "months") {
       zoomYear += delta;
     } else {
