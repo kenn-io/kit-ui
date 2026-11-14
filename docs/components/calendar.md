@@ -68,7 +68,7 @@ pick-a-date UI.
 
 Pass `activity`, a count per day, to shade days by how much happened on them,
 such as messages, documents, or events. The calendar draws four tints of one
-accent; days without a count, or with zero, stay plain. A count that is not
+accent; days without a count stay plain. A count that is not
 a finite number (`NaN`, `Infinity`) is treated as no count.
 
 ```svelte
