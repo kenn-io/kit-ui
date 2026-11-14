@@ -679,13 +679,11 @@
   }
 
   .kit-day-lane__now--fold {
-    left: calc(var(--kit-day-lane-gutter) + var(--space-3));
-    right: auto;
-    width: var(--space-4);
+    right: var(--space-4);
   }
 
   .kit-day-lane__now--fold::before {
-    display: none;
+    transform: translateX(-50%);
   }
 
   .kit-day-lane__item--tone-info {

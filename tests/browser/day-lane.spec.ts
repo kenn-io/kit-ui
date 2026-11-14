@@ -259,7 +259,7 @@ test("changing days closes folds even when returning to the original day", async
   await expect(fold).toHaveAttribute("aria-expanded", "false");
 });
 
-test("the now marker stays inside a fold and becomes a line when opened", async ({ page }) => {
+test("the now line stays inside a fold and moves to its hour when opened", async ({ page }) => {
   const fixture = await mountDayLane(page, {
     items: [
       { id: "morning", startMinute: 600, endMinute: 630 },
@@ -274,9 +274,12 @@ test("the now marker stays inside a fold and becomes a line when opened", async 
   const [band, line] = await Promise.all([fold.boundingBox(), now.boundingBox()]);
   expect(line!.y).toBeGreaterThan(band!.y);
   expect(line!.y).toBeLessThan(band!.y + band!.height);
-  expect(line!.x).toBeGreaterThan(band!.x);
-  expect(line!.x + line!.width).toBeLessThan(band!.x + band!.width);
-  expect(line!.width).toBeLessThanOrEqual(16);
+  expect(line!.x + line!.width).toBeCloseTo(band!.x + band!.width);
+  const markerRight = await now.evaluate((element) => {
+    const style = getComputedStyle(element, "::before");
+    return element.getBoundingClientRect().left + parseFloat(style.left) + new DOMMatrixReadOnly(style.transform).m41 + parseFloat(style.width);
+  });
+  expect(markerRight).toBeLessThanOrEqual(band!.x);
   await fixture.evaluate((component) => component.update({ nowMinute: 839 }));
   await expect.poll(async () => (await now.boundingBox())!.y).toBeGreaterThan(line!.y);
   const endLine = (await now.boundingBox())!;
@@ -285,5 +288,4 @@ test("the now marker stays inside a fold and becomes a line when opened", async 
   const refold = page.getByRole("button", { name: "Fold 3 quiet hours" });
   const [button, openedLine] = await Promise.all([refold.boundingBox(), now.boundingBox()]);
   expect(openedLine!.y).toBeGreaterThan(button!.y + button!.height);
-  expect(openedLine!.width).toBeGreaterThan(line!.width);
 });

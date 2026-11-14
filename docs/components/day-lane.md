@@ -99,7 +99,7 @@ a point card's top edge.
 - An hour is busy when any rendered span touches it. A run of empty hours at
   least `foldQuietMinutes` long folds to a 32px band; activating it opens the
   hours, and a "Fold" button on the first opened hour closes them again. The
-  now marker sits within the band when its time falls inside a fold.
+  now line sits within the band when its time falls inside a fold.
 - Date-only items sit in a strip above the hours, in input order.
 - Selected and dimmed come from the items; DayLane never hides an item.
 
