@@ -275,7 +275,7 @@ export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
 export { scrollFade } from "./utils/scroll-fade.js";
-export { backdropCloses, escapeCloses } from "./utils/overlay.js";
+export { backdropCloses, escapeLayer } from "./utils/overlay.js";
 export {
   formatCost,
   formatCount,

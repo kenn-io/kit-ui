@@ -6,7 +6,9 @@ genericized: content comes in via snippets instead of hard-wired detail
 views.
 
 Like `Modal`, it dismisses on Escape, overlay click (unless disabled), or the
-built-in close button, and renders as an `aria-modal` dialog. Mount it
+built-in close button, and renders as an `aria-modal` dialog. Escape closes
+the drawer only when nothing opened after it is still open: a modal or menu
+over the drawer closes first, one per press. Mount it
 conditionally — rendering it means it is open:
 
 ```svelte

@@ -6,7 +6,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
-  import { backdropCloses, escapeCloses } from "../utils/overlay.js";
+  import { backdropCloses, escapeLayer } from "../utils/overlay.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -56,11 +56,10 @@
   const showClose = $derived(closable ?? !footer);
 </script>
 
-<svelte:window onkeydown={escapeCloses(close)} />
-
 <div
   class="kit-modal-overlay"
   role="presentation"
+  {@attach (overlay) => escapeLayer(close, overlay)}
   {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div

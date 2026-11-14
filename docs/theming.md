@@ -302,11 +302,12 @@ than raw numbers so an app that must slot its own chrome between layers
 can retune them in one place; `AppSidebar` and its narrow bar sit one below
 `--z-overlay`, so overlays stay above them after a retune.
 
-**Escape layering**: Escape closes one layer per press. Popover dismissal
-(`dismissable`) and search-field clearing claim the key with
-`preventDefault`; overlay Escape handlers (`escapeCloses`) respect
-`defaultPrevented` — so Escape in an open dropdown inside a modal closes
-the dropdown first and the modal on the next press.
+**Escape layering**: Escape closes one layer per press. Popovers
+(`dismissable`) and overlays (`escapeLayer`) share one stack, and Escape goes
+only to the layer opened last: a dropdown inside a modal closes before the
+modal, and a modal opened over a drawer or a dropdown closes before them. A
+search field that clears itself claims the key with `preventDefault` first,
+and the stack leaves that press alone.
 
 Chrome and positioning are separate contracts. _Trigger-anchored_ popovers
 (SelectDropdown, Typeahead, FilterDropdown, DateRangePicker, Tooltip)

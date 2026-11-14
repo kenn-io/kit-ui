@@ -24,6 +24,10 @@ Render it conditionally — the parent owns the open state:
 ```
 
 `onclose` fires on Escape, overlay click (unless disabled), and the X button.
+Escape reaches only the layer that opened last, so a modal opened over a
+drawer or an open menu closes first, even when it is rendered inside the
+drawer. An Escape that cancels an input method's candidate list closes
+nothing.
 The X shows only when there is no `footer`: a footer carries its own way out,
 such as Cancel, and a dialog should not offer two controls that do the same
 thing. Pass `closable` to override.
