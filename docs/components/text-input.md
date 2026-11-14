@@ -79,7 +79,9 @@ and clearing — by click or Escape — returns focus to the input so keyboard
 users aren't dropped when the button unmounts. Escape **stops propagation
 only when it actually clears** — a search-in-modal clears before the
 modal's Escape-to-close fires and a second Escape reaches the modal, while
-a readonly/disabled/empty field passes Escape straight through. `inputEl`
+a readonly/disabled/empty field passes Escape straight through. An Escape
+that cancels an input method's composition leaves the text in place but
+still stops propagation, so the modal stays open. `inputEl`
 is bindable for app shortcut handlers that focus the field.
 
 ## Where NOT to use it

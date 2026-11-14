@@ -9,6 +9,8 @@
  * body collapses to two calls.
  */
 
+import { escapeLayer } from "./overlay.js";
+
 export interface DismissableOptions {
   /** Elements that count as "inside"; a pointer-down outside them all dismisses. */
   owners: () => (Element | null | undefined)[];
@@ -17,20 +19,22 @@ export interface DismissableOptions {
   escapeFocus?: () => HTMLElement | null | undefined;
 }
 
-// Open dismissables, oldest first. Every one listens on the document, and
-// listeners there run in the order they were added, so the outermost popover
-// would hear Escape first. Only the newest answers instead, which closes a
-// nested popover (a select inside a flyout) before the one around it.
-const escapeLayers: object[] = [];
-
 /**
  * Dismiss on `mousedown` outside the owning elements (mousedown, not click:
  * the popover should yield at press, and a press-inside-release-outside
- * drag should not dismiss) or on Escape anywhere in the document.
+ * drag should not dismiss) or on Escape while it is the newest open layer.
  */
 export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions): () => void {
-  const layer = {};
-  escapeLayers.push(layer);
+  // On the stack shared with overlays, so Escape closes this popover only
+  // while nothing opened after it: a select inside a flyout closes first,
+  // and a dialog opened over the popover closes before it.
+  const removeLayer = escapeLayer(
+    () => {
+      dismiss();
+      escapeFocus?.()?.focus();
+    },
+    owners().find((owner) => owner) ?? null,
+  );
 
   function handleMousedown(event: MouseEvent): void {
     const target = event.target as Node;
@@ -38,22 +42,10 @@ export function dismissable({ owners, dismiss, escapeFocus }: DismissableOptions
     dismiss();
   }
 
-  function handleKeydown(event: KeyboardEvent): void {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
-    if (escapeLayers.at(-1) !== layer) return;
-    // Claim the key so enclosing layers (an overlay's escapeCloses) leave
-    // their surface open — Escape peels one layer per press.
-    event.preventDefault();
-    dismiss();
-    escapeFocus?.()?.focus();
-  }
-
   document.addEventListener("mousedown", handleMousedown);
-  document.addEventListener("keydown", handleKeydown);
   return () => {
-    escapeLayers.splice(escapeLayers.indexOf(layer), 1);
+    removeLayer();
     document.removeEventListener("mousedown", handleMousedown);
-    document.removeEventListener("keydown", handleKeydown);
   };
 }
 

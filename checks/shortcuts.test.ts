@@ -9,8 +9,10 @@ import {
 const ev = (
   key: string,
   mods: Partial<Record<"meta" | "ctrl" | "alt" | "shift", boolean>> = {},
+  code?: string,
 ) => ({
   key,
+  ...(code === undefined ? {} : { code }),
   metaKey: mods.meta ?? false,
   ctrlKey: mods.ctrl ?? false,
   altKey: mods.alt ?? false,
@@ -101,6 +103,78 @@ describe("shortcutMatches", () => {
   });
 });
 
+describe("shortcutMatches by physical key", () => {
+  test("a Cyrillic layout matches mod+k through the key's position", () => {
+    const parsed = parseShortcut("mod+k");
+    expect(shortcutMatches(parsed, ev("л", { ctrl: true }, "KeyK"), false)).toBe(true);
+    expect(shortcutMatches(parsed, ev("л", { meta: true }, "KeyK"), true)).toBe(true);
+    // Another Cyrillic letter on a different key is not k.
+    expect(shortcutMatches(parsed, ev("д", { ctrl: true }, "KeyL"), false)).toBe(false);
+  });
+
+  test("Greek and Hebrew letters, shifted or not, match by position", () => {
+    expect(shortcutMatches(parseShortcut("g"), ev("γ", {}, "KeyG"), false)).toBe(true);
+    expect(
+      shortcutMatches(
+        parseShortcut("mod+shift+p"),
+        ev("Π", { ctrl: true, shift: true }, "KeyP"),
+        false,
+      ),
+    ).toBe(true);
+    expect(shortcutMatches(parseShortcut("mod+k"), ev("ל", { ctrl: true }, "KeyK"), false)).toBe(
+      true,
+    );
+  });
+
+  test("Mac Option combos match the letter Option was held on", () => {
+    // Option+N types "˜" (or reports a dead key) on a US Mac layout.
+    const parsed = parseShortcut("alt+n");
+    expect(shortcutMatches(parsed, ev("˜", { alt: true }, "KeyN"), true)).toBe(true);
+    expect(shortcutMatches(parsed, ev("Dead", { alt: true }, "KeyN"), true)).toBe(true);
+    // The modifier check still applies to the fallback.
+    expect(shortcutMatches(parsed, ev("˜", {}, "KeyN"), true)).toBe(false);
+    expect(shortcutMatches(parseShortcut("alt+1"), ev("¡", { alt: true }, "Digit1"), true)).toBe(
+      true,
+    );
+  });
+
+  test("digits match by position when the layout types a symbol there", () => {
+    // AZERTY: the 1 key types "&" without Shift.
+    expect(shortcutMatches(parseShortcut("mod+1"), ev("&", { ctrl: true }, "Digit1"), false)).toBe(
+      true,
+    );
+  });
+
+  test("a Latin letter on another key is that letter, not the key's QWERTY name", () => {
+    // AZERTY puts "a" on the key QWERTY calls Q.
+    const event = ev("a", {}, "KeyQ");
+    expect(shortcutMatches(parseShortcut("a"), event, false)).toBe(true);
+    expect(shortcutMatches(parseShortcut("q"), event, false)).toBe(false);
+    // Dvorak puts "k" on QWERTY's V and types "x" on QWERTY's B.
+    expect(shortcutMatches(parseShortcut("mod+k"), ev("k", { ctrl: true }, "KeyV"), false)).toBe(
+      true,
+    );
+    expect(shortcutMatches(parseShortcut("mod+b"), ev("x", { ctrl: true }, "KeyB"), false)).toBe(
+      false,
+    );
+  });
+
+  test("shifted symbols keep matching by character", () => {
+    expect(shortcutMatches(parseShortcut("shift+/"), ev("?", { shift: true }, "Slash"), true)).toBe(
+      true,
+    );
+    expect(
+      shortcutMatches(
+        parseShortcut("mod+plus"),
+        ev("+", { meta: true, shift: true }, "Equal"),
+        true,
+      ),
+    ).toBe(true);
+    // Symbols never fall back to position: "/" typed elsewhere stays "/".
+    expect(shortcutMatches(parseShortcut("/"), ev("-", {}, "Slash"), true)).toBe(false);
+  });
+});
+
 describe("formatShortcutKeys", () => {
   test("platform labels", () => {
     expect(formatShortcutKeys("mod+k", true)).toEqual(["⌘", "K"]);
@@ -126,8 +200,28 @@ describe("formatShortcutKeys", () => {
 });
 
 describe("createShortcutManager", () => {
-  const kbd = (key: string, mods = {}, target: EventTarget | null = null) =>
-    ({ ...ev(key, mods), target, preventDefault() {} }) as unknown as KeyboardEvent;
+  const kbd = (
+    key: string,
+    mods = {},
+    target: EventTarget | null = null,
+    extra: Partial<
+      Pick<KeyboardEvent, "repeat" | "isComposing" | "keyCode" | "defaultPrevented" | "code">
+    > = {},
+  ) => {
+    const event = {
+      ...ev(key, mods),
+      target,
+      repeat: false,
+      isComposing: false,
+      keyCode: 0,
+      defaultPrevented: false,
+      ...extra,
+      preventDefault() {
+        event.defaultPrevented = true;
+      },
+    };
+    return event as unknown as KeyboardEvent;
+  };
 
   test("registers, fires, unregisters", () => {
     const m = createShortcutManager(true);
@@ -299,5 +393,62 @@ describe("createShortcutManager", () => {
     const input = { tagName: "INPUT", isContentEditable: false };
     expect(m.handleKeydown(kbd("Escape", {}, input as unknown as EventTarget))).toBe(true);
     expect(fired).toBe(1);
+  });
+
+  test("events another handler already claimed are left alone", () => {
+    const m = createShortcutManager(true);
+    let fired = 0;
+    m.register("escape", () => {
+      fired += 1;
+    });
+    expect(m.handleKeydown(kbd("Escape", {}, null, { defaultPrevented: true }))).toBe(false);
+    expect(fired).toBe(0);
+    expect(m.handleKeydown(kbd("Escape"))).toBe(true);
+    expect(fired).toBe(1);
+  });
+
+  test("keys pressed while an input method composes text are left alone", () => {
+    const m = createShortcutManager(false);
+    let fired = 0;
+    m.register("mod+k", () => {
+      fired += 1;
+    });
+    expect(m.handleKeydown(kbd("k", { ctrl: true }, null, { isComposing: true }))).toBe(false);
+    // Chromium and Safari report keyCode 229 for keys an IME consumes. The
+    // physical key would otherwise match through the code fallback.
+    expect(
+      m.handleKeydown(kbd("Process", { ctrl: true }, null, { keyCode: 229, code: "KeyK" })),
+    ).toBe(false);
+    expect(fired).toBe(0);
+    expect(m.handleKeydown(kbd("Process", { ctrl: true }, null, { code: "KeyK" }))).toBe(true);
+    expect(fired).toBe(1);
+  });
+
+  test("held keys fire once unless the binding opts into repeat", () => {
+    const m = createShortcutManager(true);
+    let toggles = 0;
+    let steps = 0;
+    m.register("t", () => {
+      toggles += 1;
+    });
+    m.register(
+      "j",
+      () => {
+        steps += 1;
+      },
+      { repeat: true },
+    );
+    m.handleKeydown(kbd("t"));
+    const held = kbd("t", {}, null, { repeat: true });
+    // The repeat still belongs to the shortcut, so the browser default
+    // stays suppressed, but the handler does not run again.
+    expect(m.handleKeydown(held)).toBe(true);
+    expect(held.defaultPrevented).toBe(true);
+    expect(toggles).toBe(1);
+
+    m.handleKeydown(kbd("j"));
+    m.handleKeydown(kbd("j", {}, null, { repeat: true }));
+    m.handleKeydown(kbd("j", {}, null, { repeat: true }));
+    expect(steps).toBe(3);
   });
 });

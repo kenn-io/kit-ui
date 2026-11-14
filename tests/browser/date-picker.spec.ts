@@ -46,3 +46,39 @@ test("maxDate disables later days", async ({ page }) => {
     dialog.locator(".kit-calendar__day:not(.outside)").filter({ hasText: /^16$/ }),
   ).toBeDisabled();
 });
+
+test("opening moves focus to the chosen day; arrows and Enter pick a new one", async ({ page }) => {
+  const trigger = page.getByRole("button", { name: /^Start date: / });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Select date" });
+  const focused = dialog.locator(".kit-calendar__day:focus");
+  await expect(focused).toHaveAttribute("data-date", "2026-05-16");
+
+  await page.keyboard.press("PageDown");
+  await page.keyboard.press("ArrowRight");
+  await expect(focused).toHaveAttribute("data-date", "2026-06-17");
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId("date-picker-value")).toHaveText("2026-06-17");
+  await expect(trigger).toBeFocused();
+});
+
+test("an empty picker opens with focus on today", async ({ page }) => {
+  await page.getByRole("button", { name: "Date", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Select date" });
+  await expect(dialog.locator(".kit-calendar__day:focus")).toHaveAttribute(
+    "data-date",
+    "2026-06-15",
+  );
+});
+
+test("a day after maxDate takes focus but Enter does not pick it", async ({ page }) => {
+  const trigger = page.getByRole("button", { name: "Last day" });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Select date" });
+  const focused = dialog.locator(".kit-calendar__day:focus");
+  await page.keyboard.press("End");
+  await expect(focused).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+});

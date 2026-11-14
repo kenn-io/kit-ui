@@ -5,7 +5,10 @@
  *
  * Combo syntax: `"mod+k"`, `"shift+/"`, `"g"`, `"escape"`, `"mod+shift+p"`.
  * `mod` is ⌘ on Apple platforms and Ctrl elsewhere. Matching is strict:
- * modifiers the combo doesn't name must not be pressed.
+ * modifiers the combo doesn't name must not be pressed. Letters and digits
+ * match by physical key (`event.code`) when the layout types something
+ * other than a Latin letter or digit there, so `mod+k` works on a Russian
+ * layout and `alt+n` works with macOS Option.
  */
 export interface ParsedShortcut {
     /** Lowercased KeyboardEvent.key value ("k", "escape", "arrowdown", " "). */
@@ -28,6 +31,9 @@ export declare function parseShortcut(combo: string): ParsedShortcut;
  * without constructing real events. */
 export interface ShortcutKeyEvent {
     key: string;
+    /** Physical key ("KeyK", "Digit1"). Optional so hand-built events can
+     * omit it; without it, letters and digits match by character only. */
+    code?: string;
     metaKey: boolean;
     ctrlKey: boolean;
     altKey: boolean;
@@ -48,6 +54,11 @@ export interface ShortcutOptions {
      * so exactOptionalPropertyTypes consumers can forward a possibly-undefined
      * value (same contract as RegisteredShortcut below). */
     description?: string | undefined;
+    /** Fire again on auto-repeat while the key is held, for stepping
+     * shortcuts such as j/k or arrow navigation. Off by default: a held key
+     * fires once, and its repeats are claimed (default prevented) without
+     * running the handler. */
+    repeat?: boolean;
 }
 export interface RegisteredShortcut {
     combo: string;
@@ -63,7 +74,11 @@ export interface ShortcutManager {
      * fire — everything below the top of the stack is suspended. */
     pushScope(scope: string): () => void;
     activeScope(): string;
-    /** Feed a keydown; returns true when a shortcut handled it. */
+    /** Feed a keydown; returns true when a shortcut claimed it. Ignores
+     * events whose default is already prevented (a component handled the
+     * key first), events typed into an input method composition, and
+     * auto-repeats for shortcuts without `repeat`, which it claims without
+     * running the handler. */
     handleKeydown(event: KeyboardEvent): boolean;
     /** Registered shortcuts (for help dialogs). */
     list(): RegisteredShortcut[];

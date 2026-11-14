@@ -1,10 +1,15 @@
 <script lang="ts">
   import Button from "../../lib/components/Button.svelte";
   import DetailDrawer from "../../lib/components/DetailDrawer.svelte";
+  import Modal from "../../lib/components/Modal.svelte";
+  import { Menu, MenuContent, MenuItem, MenuTrigger } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   let basicOpen = $state(false);
   let customOpen = $state(false);
+  let stackOpen = $state(false);
+  let innerConfirmOpen = $state(false);
+  let outerConfirmOpen = $state(false);
 </script>
 
 <DemoSection
@@ -69,6 +74,51 @@
         />
       {/snippet}
     </DetailDrawer>
+  {/if}
+</DemoSection>
+
+<DemoSection
+  title="Stacked layers"
+  description="Escape closes only the topmost layer: a dialog over the drawer, a dialog rendered inside it, or a menu in it. Each press peels one layer."
+  code={`<DetailDrawer title="Stacked layers" onclose={closeDrawer}>
+  <Menu>…</Menu>
+  {#if confirmOpen}
+    <Modal title="Confirm" onclose={() => (confirmOpen = false)}>…</Modal>
+  {/if}
+</DetailDrawer>`}
+>
+  <Button label="Open stacked drawer" onclick={() => (stackOpen = true)} />
+  <Button
+    label="Open confirm in a new drawer"
+    onclick={() => {
+      stackOpen = true;
+      innerConfirmOpen = true;
+    }}
+  />
+  {#if stackOpen}
+    <DetailDrawer title="Stacked layers" onclose={() => (stackOpen = false)}>
+      <div class="drawer-demo-body">
+        <Menu>
+          <MenuTrigger>Actions</MenuTrigger>
+          <MenuContent ariaLabel="Drawer actions">
+            <MenuItem onselect={() => {}}>Assign</MenuItem>
+            <MenuItem onselect={() => {}}>Label</MenuItem>
+          </MenuContent>
+        </Menu>
+        <Button label="Confirm inside drawer" onclick={() => (innerConfirmOpen = true)} />
+        <Button label="Confirm over drawer" onclick={() => (outerConfirmOpen = true)} />
+        {#if innerConfirmOpen}
+          <Modal title="Inner confirm" onclose={() => (innerConfirmOpen = false)}>
+            <p>Rendered inside the drawer's markup.</p>
+          </Modal>
+        {/if}
+      </div>
+    </DetailDrawer>
+  {/if}
+  {#if outerConfirmOpen}
+    <Modal title="Outer confirm" onclose={() => (outerConfirmOpen = false)}>
+      <p>Rendered beside the drawer, opened after it.</p>
+    </Modal>
   {/if}
 </DemoSection>
 

@@ -5,7 +5,10 @@
  *
  * Combo syntax: `"mod+k"`, `"shift+/"`, `"g"`, `"escape"`, `"mod+shift+p"`.
  * `mod` is ⌘ on Apple platforms and Ctrl elsewhere. Matching is strict:
- * modifiers the combo doesn't name must not be pressed.
+ * modifiers the combo doesn't name must not be pressed. Letters and digits
+ * match by physical key (`event.code`) when the layout types something
+ * other than a Latin letter or digit there, so `mod+k` works on a Russian
+ * layout and `alt+n` works with macOS Option.
  */
 
 export interface ParsedShortcut {
@@ -113,10 +116,25 @@ export function parseShortcut(combo: string): ParsedShortcut {
  * without constructing real events. */
 export interface ShortcutKeyEvent {
   key: string;
+  /** Physical key ("KeyK", "Digit1"). Optional so hand-built events can
+   * omit it; without it, letters and digits match by character only. */
+  code?: string;
   metaKey: boolean;
   ctrlKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
+}
+
+const LATIN_KEY = /^[a-z0-9]$/;
+
+// Letters and digits fall back to the physical key when the typed
+// character isn't a Latin letter or digit: Cyrillic, Greek, and Hebrew
+// layouts type their own letters, and macOS Option+N types "˜" or reports
+// a dead key. A Latin letter or digit is trusted as typed, so AZERTY's "a"
+// (on the key QWERTY calls Q) never matches "q".
+function physicalKeyMatches(key: string, eventKey: string, code: string | undefined): boolean {
+  if (code === undefined || !LATIN_KEY.test(key) || LATIN_KEY.test(eventKey)) return false;
+  return code === (/\d/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`);
 }
 
 export function shortcutMatches(
@@ -125,7 +143,7 @@ export function shortcutMatches(
   isMac: boolean,
 ): boolean {
   const eventKey = event.key.toLowerCase();
-  let keyMatches = eventKey === parsed.key;
+  let keyMatches = eventKey === parsed.key || physicalKeyMatches(parsed.key, eventKey, event.code);
   let shiftMatches = event.shiftKey === parsed.shift;
   // Printable symbol keys encode Shift in the produced character: Shift+/
   // reports key "?", and "+" arrives with shiftKey set on layouts where it
@@ -211,6 +229,11 @@ export interface ShortcutOptions {
    * so exactOptionalPropertyTypes consumers can forward a possibly-undefined
    * value (same contract as RegisteredShortcut below). */
   description?: string | undefined;
+  /** Fire again on auto-repeat while the key is held, for stepping
+   * shortcuts such as j/k or arrow navigation. Off by default: a held key
+   * fires once, and its repeats are claimed (default prevented) without
+   * running the handler. */
+  repeat?: boolean;
 }
 
 export interface RegisteredShortcut {
@@ -235,7 +258,11 @@ export interface ShortcutManager {
    * fire — everything below the top of the stack is suspended. */
   pushScope(scope: string): () => void;
   activeScope(): string;
-  /** Feed a keydown; returns true when a shortcut handled it. */
+  /** Feed a keydown; returns true when a shortcut claimed it. Ignores
+   * events whose default is already prevented (a component handled the
+   * key first), events typed into an input method composition, and
+   * auto-repeats for shortcuts without `repeat`, which it claims without
+   * running the handler. */
   handleKeydown(event: KeyboardEvent): boolean;
   /** Registered shortcuts (for help dialogs). */
   list(): RegisteredShortcut[];
@@ -247,6 +274,7 @@ interface Entry {
   handler: (event: KeyboardEvent) => void;
   scope: string;
   allowInInput: boolean;
+  repeat: boolean;
   description?: string | undefined;
 }
 
@@ -293,6 +321,7 @@ export function createShortcutManager(isMac: boolean = isMacPlatform()): Shortcu
         handler,
         scope: options.scope ?? ROOT_SCOPE,
         allowInInput: options.allowInInput ?? false,
+        repeat: options.repeat ?? false,
         description: options.description,
       };
       // Conflict policy: first registered wins (handleKeydown fires the
@@ -328,6 +357,12 @@ export function createShortcutManager(isMac: boolean = isMacPlatform()): Shortcu
     },
 
     handleKeydown(event) {
+      // Keydown listeners on the app root (Svelte's delegated handlers)
+      // and on document run before this window listener, so a component
+      // that handled the key, such as Escape closing a menu, has already
+      // prevented its default. keyCode 229 is how Chromium and Safari mark
+      // a key an input method consumed.
+      if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return false;
       const active = this.activeScope();
       const inInput = isEditableTarget(event.target);
       for (const entry of entries) {
@@ -337,6 +372,7 @@ export function createShortcutManager(isMac: boolean = isMacPlatform()): Shortcu
         const hasModifier = parsed.mod || parsed.ctrl || parsed.alt || parsed.meta;
         if (inInput && !entry.allowInInput && !hasModifier) continue;
         event.preventDefault();
+        if (event.repeat && !entry.repeat) return true;
         entry.handler(event);
         return true;
       }

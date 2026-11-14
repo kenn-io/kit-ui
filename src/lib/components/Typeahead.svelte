@@ -6,6 +6,7 @@
   import type { Attachment } from "svelte/attachments";
   import { SvelteMap } from "svelte/reactivity";
   import { highlightSegments } from "../utils/highlight.js";
+  import { isComposingKey } from "../utils/ime.js";
   import { autoReposition } from "../utils/popover.js";
   import { scrollFade } from "../utils/scroll-fade.js";
   import { floatingPopoverStyle } from "./floatingPosition.js";
@@ -401,6 +402,7 @@
   }
 
   function handleTriggerKeydown(event: KeyboardEvent): void {
+    if (isComposingKey(event)) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       void openDropdown();
@@ -411,8 +413,7 @@
       event.key === " " ||
       event.ctrlKey ||
       event.metaKey ||
-      event.altKey ||
-      event.isComposing
+      event.altKey
     )
       return;
     event.preventDefault();
@@ -533,17 +534,22 @@
   // or a header snippet control — without also closing a parent overlay.
   // Attached to both the input and the panel (the header lives in the panel,
   // which is a DOM sibling of the input). Skips events a descendant already
-  // consumed, e.g. a header SearchInput clearing its own text.
+  // consumed, e.g. a header SearchInput clearing its own text. An Escape
+  // that cancels an input method's composition keeps the list open, and
+  // still stops here so it cannot close a parent overlay instead.
   function handleEscape(e: KeyboardEvent): boolean {
     if (e.key !== "Escape" || e.defaultPrevented) return false;
-    e.preventDefault();
     e.stopPropagation();
+    if (isComposingKey(e)) return true;
+    e.preventDefault();
     void closeDropdown(true);
     return true;
   }
 
   function handleKeydown(e: KeyboardEvent) {
     if (handleEscape(e)) return;
+    // Enter and the arrows belong to an input method while it composes.
+    if (isComposingKey(e)) return;
     // A loading status row stands in for the options, so there is nothing to
     // navigate to or select — keep selection/navigation keys inert (Enter
     // would otherwise submit an enclosing form) but let editing keys reach
