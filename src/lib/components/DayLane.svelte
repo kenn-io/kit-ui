@@ -261,9 +261,10 @@
       savedScroll = scroller.scrollTop;
     } else if (!hadTimedItems && hasTimedItems && savedScroll !== undefined) {
       const element = scroller;
-      const restore = element.scrollHeight - element.clientHeight >= savedScroll
-        ? element.scrollTop
-        : savedScroll;
+      const restore =
+        element.scrollHeight - element.clientHeight >= savedScroll
+          ? element.scrollTop
+          : savedScroll;
       const day = dayKey;
       savedScroll = undefined;
       void tick().then(() => {
