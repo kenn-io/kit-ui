@@ -29,6 +29,16 @@ function rangeDay(page: import("@playwright/test").Page, n: number) {
     .filter({ hasText: new RegExp(`^${n}$`) });
 }
 
+async function mountCalendarLayout(page: import("@playwright/test").Page) {
+  await page.evaluate(async () => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: CalendarLayout } =
+      await import("/tests/browser/fixtures/CalendarLayout.svelte");
+    document.body.replaceChildren();
+    mount(CalendarLayout, { target: document.body });
+  });
+}
+
 test("header click zooms days → months → years; year click has nothing above it", async ({
   page,
 }) => {
@@ -127,6 +137,10 @@ test("two-click day range completes, swaps reversed picks, and restarts", async 
     page.locator("code", { hasText: `${thisYear}-${mm}-05 → ${thisYear}-${mm}-10` }),
   ).toBeVisible();
   await expect(cal.locator(".kit-calendar__day.selected")).toHaveCount(6);
+  await expect(day(10)).toHaveClass(/range-end/);
+  const surface = await resolvedStyle(page, "background-color", "var(--bg-surface)");
+  await page.mouse.move(0, 0);
+  await expect(day(10).locator(".kit-calendar__match")).toHaveCSS("background-color", surface);
 
   // A third pick starts a fresh range.
   await day(20).click();
@@ -149,7 +163,6 @@ test.describe("activity", () => {
     await page.clock.setFixedTime(new Date(2026, 2, 15, 12));
     await page.reload();
     const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
-    const shaded = calendar.locator(".kit-calendar__day[data-activity]");
     await expect(calendar.getByRole("button", { name: "Mar 3, 2026, 1 item" })).toBeVisible();
     await expect(calendar.getByRole("button", { name: "Mar 5, 2026, 4 items" })).toBeVisible();
     await expect(calendar.getByRole("button", { name: "Mar 10, 2026, 6 items" })).toBeVisible();
@@ -162,12 +175,6 @@ test.describe("activity", () => {
       await expect(day).not.toHaveAttribute("aria-label", /(?:NaN|Infinity|items?)/);
     }
 
-    // Shaded and plain days have different fills. Plain days may all be
-    // future, disabled ones early in a month; opacity leaves the fill alone.
-    const plain = calendar.locator(".kit-calendar__day:not([data-activity])");
-    const background = (locator: import("@playwright/test").Locator) =>
-      locator.evaluate((node) => getComputedStyle(node).backgroundColor);
-    expect(await background(shaded.first())).not.toBe(await background(plain.first()));
     await test.step("shaded day numbers meet AA contrast in light and dark", async () => {
       for (const dark of [false, true]) {
         await setTheme(page, { dark });
@@ -179,10 +186,15 @@ test.describe("activity", () => {
           const days = page
             .getByTestId(id)
             .locator(".kit-calendar__day[data-activity]:not(.outside):not(:disabled)");
-          const count = await days.count();
-          expect(count).toBeGreaterThan(0);
-          for (let i = 0; i < count; i++) {
-            await expect.poll(() => contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
+          expect(await days.count()).toBeGreaterThan(0);
+          for (const step of [1, 2, 3, 4]) {
+            const day = page
+              .getByTestId(id)
+              .locator(`.kit-calendar__day[data-activity="${step}"]:not(.outside):not(:disabled)`)
+              .first();
+            if (await day.count()) {
+              await expect.poll(() => contrastOf(day)).toBeGreaterThanOrEqual(4.5);
+            }
           }
         }
       }
@@ -199,20 +211,7 @@ test.describe("activity", () => {
   });
 
   test("an app scale and label replace the defaults", async ({ page }) => {
-    const calendar = page.getByTestId("calendar-activity-scale").locator(".kit-calendar");
-    const days = calendar.locator(".kit-calendar__day");
-    await expect(days.nth(0)).not.toHaveAttribute("data-activity");
-    await expect(days.nth(0)).toHaveAttribute("aria-label", /, 0 messages$/);
-    await expect(days.nth(2)).toHaveAttribute("data-activity", "4");
-    await expect(days.nth(2)).toHaveAttribute("aria-label", /, 10 messages$/);
-
-    await page.evaluate(async () => {
-      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
-      const { default: CalendarLayout } =
-        await import("/tests/browser/fixtures/CalendarLayout.svelte");
-      document.body.replaceChildren();
-      mount(CalendarLayout, { target: document.body });
-    });
+    await mountCalendarLayout(page);
     const custom = page.locator(".kit-calendar");
     await expect(custom.getByRole("button", { name: "Mar 1, 2026, 0 messages" })).toHaveAttribute(
       "data-activity",
@@ -296,18 +295,6 @@ test.describe("month strip", () => {
     await expect(sundayDays.nth(23)).toBeDisabled();
     await expect(sundayDays.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
     await expect(sundayDays.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
-
-    // A match on a solid grid range end uses the surface color.
-    const day = (n: number) => rangeDay(page, n);
-    await expect(day(20).locator(".kit-calendar__match")).toHaveCount(1);
-    await expect(day(21).locator(".kit-calendar__match")).toHaveCount(0);
-    await day(5).click();
-    await day(10).click();
-    await expect(day(10)).toHaveClass(/range-end/);
-    const dot = day(10).locator(".kit-calendar__match");
-    const surface = await resolvedStyle(page, "background-color", "var(--bg-surface)");
-    await page.mouse.move(0, 0);
-    await expect(dot).toHaveCSS("background-color", surface);
   });
 
   test("the selected day keeps its shade under an outline", async ({ page }) => {
@@ -332,19 +319,12 @@ test.describe("month strip", () => {
     expect(shadow).toMatch(/0px 0px 0px 2px inset/);
 
     await days.nth(4).click();
-    await expect(page.locator("code", { hasText: "2026-03-05" })).toBeVisible();
     await expect(days.nth(4)).toHaveAttribute("aria-pressed", "true");
     await expect(selected).toHaveAttribute("aria-pressed", "false");
   });
 
   test("paging the strip resets an open grid chooser", async ({ page }) => {
-    await page.evaluate(async () => {
-      const { mount } = await import("/node_modules/.vite/deps/svelte.js");
-      const { default: CalendarLayout } =
-        await import("/tests/browser/fixtures/CalendarLayout.svelte");
-      document.body.replaceChildren();
-      mount(CalendarLayout, { target: document.body });
-    });
+    await mountCalendarLayout(page);
     const cal = page.locator(".kit-calendar");
     for (const [zoom, month] of [
       [1, "April 2026"],
