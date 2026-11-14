@@ -102,12 +102,13 @@ a point card's top edge.
 
 ## Keyboard and screen readers
 
-The lane is a `group` with one tab stop: the selected card, else the first.
-Arrow keys move through cards in time order (the date-only strip first, then
-the axis by top and column), Home and End jump to the ends, Enter and Space
-select. Escape is left to the app, which owns the selection. Each card is a
-`button` with `aria-pressed`, and its accessible name ends with the time or
-time range, so the snippet can mark its own visible time `aria-hidden`.
+The lane is a `group` with one tab stop: the selected card, else the first card
+or fold. Arrow keys move through cards and fold buttons in time order (the
+date-only strip first, then the axis by top and column), Home and End jump to
+the ends, and Enter and Space activate. Escape is left to the app, which owns
+the selection. Each card is a `button` with `aria-pressed`, and its accessible
+name ends with the time or time range, so the snippet can mark its own visible
+time `aria-hidden`.
 Hover transitions stop under `prefers-reduced-motion`.
 
 ## Layout functions

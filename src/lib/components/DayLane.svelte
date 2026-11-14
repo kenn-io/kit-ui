@@ -124,7 +124,14 @@
   /** Focus order: the date-only strip, then the axis in time order. */
   const order = $derived([
     ...layout.dateOnly.map((i) => `item:${i.id}`),
-    ...layout.entries.map(keyOf),
+    ...[
+      ...layout.entries.map((entry) => ({ top: entry.top, key: keyOf(entry) })),
+      ...layout.segments
+        .filter((segment) => segment.key)
+        .map((segment) => ({ top: segment.top, key: `fold:${segment.key}` })),
+    ]
+      .sort((a, b) => a.top - b.top)
+      .map((entry) => entry.key),
   ]);
   const tabKey = $derived.by(() => {
     if (activeKey && order.includes(activeKey)) return activeKey;
@@ -135,7 +142,13 @@
       (e) => e.kind === "overflow" && e.items.some((i) => i.selected),
     );
     if (hidden) return keyOf(hidden);
-    return order[0] ?? null;
+    return (
+      (layout.dateOnly[0]
+        ? `item:${layout.dateOnly[0].id}`
+        : layout.entries[0]
+          ? keyOf(layout.entries[0])
+          : order[0]) ?? null
+    );
   });
 
   const nowFold = $derived(
@@ -250,7 +263,7 @@
   });
 </script>
 
-<!-- The group only routes arrow keys between its card buttons (roving focus). -->
+<!-- The group routes arrow keys between its buttons (roving focus). -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   bind:this={scroller}
@@ -301,6 +314,7 @@
     {/each}
 
     {#each layout.segments as segment (segment.startMinute)}
+      {@const key = `fold:${segment.key}`}
       {#if segment.kind === "fold"}
         <button
           type="button"
@@ -309,6 +323,9 @@
           style:height="{segment.height - 6}px"
           aria-expanded="false"
           data-fold-key={segment.key}
+          data-day-lane-key={key}
+          tabindex={tabKey === key ? 0 : -1}
+          onfocus={() => (activeKey = key)}
           onclick={() => toggleFold(segment, true)}
         >
           <span class="kit-day-lane__fold-label">
@@ -327,6 +344,9 @@
           style:top="{segment.top + 4}px"
           aria-expanded="true"
           data-fold-key={segment.key}
+          data-day-lane-key={key}
+          tabindex={tabKey === key ? 0 : -1}
+          onfocus={() => (activeKey = key)}
           onclick={() => toggleFold(segment, false)}
         >
           <ChevronsDownUpIcon size={12} aria-hidden="true" />

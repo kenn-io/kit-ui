@@ -109,7 +109,29 @@ test("the selected card is the tab stop and arrows move in time order", async ({
   const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
   await expect(standup).toHaveAttribute("aria-pressed", "true");
   await expect(standup).toHaveAttribute("tabindex", "0");
+  await page.getByRole("checkbox", { name: "Dim chats" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(standup).toBeFocused();
+  await lane(page).evaluate((frame) => {
+    const after = document.createElement("button");
+    after.textContent = "After lane";
+    frame.after(after);
+  });
+  await page.getByRole("button", { name: "After lane" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(standup).toBeFocused();
+  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
+  await expect(fold).toHaveAttribute("tabindex", "-1");
+  await lane(page)
+    .getByRole("button", { name: /Pallet count v3/ })
+    .focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(fold).toBeFocused();
+  await page.keyboard.press("Enter");
+  const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
+  await expect(refold).toBeFocused();
   await standup.focus();
+  await expect(refold).toHaveAttribute("tabindex", "-1");
   await page.keyboard.press("ArrowDown");
   await expect(call).toBeFocused();
   await page.keyboard.press("Tab");
