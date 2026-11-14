@@ -51,4 +51,5 @@ Notes:
 - The slide-in animation is disabled under `prefers-reduced-motion`.
 - Focus management matches `Modal` (shared `trapFocus` behavior): initial
   focus on the first `[autofocus]` descendant (else the panel), Tab cycling
-  trapped inside, focus restored on close, body scroll locked while open.
+  trapped inside, focus restored on close (to the nearest remaining control
+  when the trigger is gone), body scroll locked while open.
