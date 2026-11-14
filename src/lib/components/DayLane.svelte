@@ -341,7 +341,7 @@
         {@const inset =
           entry.kind === "item" &&
           (entry.clippedStart || entry.clippedEnd || entry.height > minItemHeight + 0.001)
-            ? 1
+            ? Math.min(1, Math.max(0, (entry.height - 2) / 2))
             : 0}
         {#if entry.kind === "item"}
           <button
@@ -357,6 +357,7 @@
             ]}
             style:top="{entry.top + inset}px"
             style:height="{entry.height - 2 * inset}px"
+            style:border-block-width={entry.height < 2 ? "0" : undefined}
             style:left="calc({entry.column} * 100% / {entry.columns})"
             style:width="calc(100% / {entry.columns} - 4px)"
             aria-pressed={!!entry.item.selected}

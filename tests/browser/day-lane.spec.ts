@@ -68,6 +68,30 @@ test("returning to a day after an empty day scrolls once to its first card", asy
   expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
 });
 
+test("a late interval stays within the day axis", async ({ page }) => {
+  await page.evaluate(async () => {
+    const [{ mountReactive }, { default: DayLane }, { createRawSnippet }] = await Promise.all([
+      import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+      import("/src/lib/components/DayLane.svelte"),
+      import("/node_modules/.vite/deps/svelte.js"),
+    ]);
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    host.style.height = "300px";
+    document.body.appendChild(host);
+    mountReactive(DayLane, host, {
+      items: [{ id: "late", startMinute: 1439, endMinute: 1500 }],
+      foldQuietMinutes: 0,
+      item: createRawSnippet(() => ({ render: () => "<span>Late</span>" })),
+    });
+  });
+  const card = page.getByRole("button", { name: /Late/ });
+  const axis = page.locator(".kit-day-lane__axis");
+  const [cardBox, axisBox] = await Promise.all([card.boundingBox(), axis.boundingBox()]);
+  expect(cardBox!.height).toBeGreaterThan(0);
+  expect(cardBox!.y + cardBox!.height).toBeLessThanOrEqual(axisBox!.y + axisBox!.height);
+});
+
 test("overlapping items sit side by side and the rest go to +N more", async ({ page }) => {
   const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
   const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
