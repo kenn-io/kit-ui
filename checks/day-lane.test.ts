@@ -323,7 +323,8 @@ describe("placing items", () => {
     const overflow = overflows(entries);
     expect(overflow).toHaveLength(1);
     expect(overflow[0]!.height).toBe(44);
-    for (const entry of entries) expect(day.height).toBeGreaterThanOrEqual(entry.top + entry.height);
+    for (const entry of entries)
+      expect(day.height).toBeGreaterThanOrEqual(entry.top + entry.height);
   });
 
   test("overflow keys stay distinct when ids contain spaces", () => {
