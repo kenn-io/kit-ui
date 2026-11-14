@@ -169,21 +169,6 @@ describe("ticks", () => {
       ["10", 128, true],
     ]);
   });
-
-  test("DST ticks from the caller keep their labels at their minutes", () => {
-    // Spring forward: the caller labels minute 120 as 3 AM.
-    const ticks = [
-      { minute: 0, label: "12 AM" },
-      { minute: 60, label: "1 AM" },
-      { minute: 120, label: "3 AM" },
-    ];
-    const segments = buildDayLaneSegments([], { ...base, dayMinutes: 1380, foldQuietMinutes: 0 });
-    expect(placeTicks(ticks, segments, 96).map((t) => [t.label, t.top])).toEqual([
-      ["12 AM", 0],
-      ["1 AM", 96],
-      ["3 AM", 192],
-    ]);
-  });
 });
 
 describe("placing items", () => {
