@@ -314,9 +314,18 @@
     gridEl?.querySelector<HTMLElement>(`[data-date="${target}"]`)?.focus();
   }
 
-  /** Focus the day grid's tab stop, e.g. when a picker opens the calendar. */
+  /** Focus a day, e.g. when a picker opens the calendar. */
   export function focus(options?: FocusOptions): void {
-    gridEl?.querySelector<HTMLElement>('[tabindex="0"]')?.focus(options);
+    const day = strip
+      ? (track?.querySelector<HTMLElement>(
+          '.kit-calendar__day[aria-pressed="true"]:not(:disabled)',
+        ) ??
+        track?.querySelector<HTMLElement>(
+          '.kit-calendar__day[aria-current="date"]:not(:disabled)',
+        ) ??
+        track?.querySelector<HTMLElement>(".kit-calendar__day:not(:disabled)"))
+      : gridEl?.querySelector<HTMLElement>('[tabindex="0"]');
+    day?.focus(options);
   }
 </script>
 
@@ -360,34 +369,25 @@
   {#snippet dayCells()}
     {#each days as { date, index } (date)}
       {@const selectedDay = inRange(date)}
-      {@const band = selectedDay && !strip}
       {@const count = countOf(date)}
       {@const step = count == null ? 0 : activityStepOf(date, count)}
       {@const matched = matches?.(date) === true}
       {@const dayNumber = Number.parseInt(date.slice(8), 10)}
       <button
-        class="kit-calendar__day kit-control-states"
-        class:outside={!date.startsWith(monthPrefix)}
+        class="kit-calendar__day kit-control-states strip"
         class:today={date === today}
-        class:selected={band}
-        class:range-start={band && date === selected?.from}
-        class:range-end={band && date === selected?.to}
-        class:fill-above={band && index >= 7 && inRange(cells[index - 7]!)}
-        class:strip
-        class:outlined={selectedDay && strip}
+        class:outlined={selectedDay}
         type="button"
         data-activity={step > 0 ? step : undefined}
         disabled={maxDate != null && date > maxDate}
         aria-label={dayLabel(date, index, count, matched)}
         aria-pressed={selectedDay}
+        aria-current={date === today ? "date" : undefined}
         onclick={() => onpick?.(date)}
       >
-        {#if strip}
-          <span class="kit-calendar__day-weekday">{narrowWeekdays[index % 7]}</span>
-          <span class="kit-calendar__day-number">{dayNumber}</span>
-        {:else}
-          {dayNumber}
-        {/if}{#if matched}
+        <span class="kit-calendar__day-weekday">{narrowWeekdays[index % 7]}</span>
+        <span class="kit-calendar__day-number">{dayNumber}</span>
+        {#if matched}
           <span class="kit-calendar__match" aria-hidden="true"></span>
         {/if}
       </button>
@@ -426,7 +426,6 @@
                  so the keys can still move focus onto and past them. -->
             <button
               class="kit-calendar__day kit-control-states"
-              class:matched
               class:outside={!date.startsWith(monthPrefix)}
               class:today={date === today}
               class:selected={selectedDay}

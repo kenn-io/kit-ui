@@ -404,6 +404,43 @@ test.describe("month strip", () => {
   const filter = (page: import("@playwright/test").Page, name: string) =>
     page.getByRole("radiogroup", { name: "Strip filter" }).getByRole("radio", { name });
 
+  test("focuses the selected day, today, or the first enabled day", async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 2, 15, 12));
+    await page.reload();
+    await mountCalendarLayout(page);
+    await page.getByRole("button", { name: "Strip", exact: true }).click();
+    const calendar = page.locator(".kit-calendar");
+    const days = calendar.locator(".kit-calendar__day");
+    const focus = page.getByRole("button", { name: "Focus calendar" });
+
+    await page.getByRole("button", { name: "Select March 20" }).click();
+    await focus.click();
+    await expect(days.nth(19)).toBeFocused();
+
+    await page.getByRole("button", { name: "Clear selection" }).click();
+    await focus.click();
+    await expect(days.nth(14)).toBeFocused();
+
+    await page.getByRole("button", { name: "Select March 20" }).click();
+    await page.getByRole("button", { name: "Limit to March 10" }).click();
+    await focus.click();
+    await expect(days.first()).toBeFocused();
+
+    await page.getByRole("button", { name: "Clear selection" }).click();
+    await page.getByRole("button", { name: "Clear limit" }).click();
+    await calendar.getByRole("button", { name: "Next month" }).click();
+    await focus.click();
+    await expect(days.first()).toBeFocused();
+  });
+
+  test("marks today in the strip for assistive technology", async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 2, 15, 12));
+    await page.reload();
+    const days = strip(page).locator(".kit-calendar__day");
+    await expect(days.nth(14)).toHaveAttribute("aria-current", "date");
+    await expect(days.nth(13)).not.toHaveAttribute("aria-current");
+  });
+
   test("shows the month's own days in one row, with weekday letters", async ({ page }) => {
     const cal = strip(page);
     const days = cal.locator(".kit-calendar__day");

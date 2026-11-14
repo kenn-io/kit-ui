@@ -89,6 +89,7 @@ export type { ProviderBrand } from "./components/provider-brand.js";
 export { default as DatePicker } from "./components/DatePicker.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export {
+  activityStep,
   allFromDate,
   daysAgo,
   DEFAULT_RANGE_PRESETS,
@@ -101,7 +102,6 @@ export {
   stepAnchor,
   todayStr,
   weekdayLabels,
-  activityStep,
   type CalendarNavLabels,
   type CalendarSelection,
   type CalendarUnit,
