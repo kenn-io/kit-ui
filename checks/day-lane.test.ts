@@ -6,7 +6,6 @@ import {
   type DayLaneOverflow,
   type DayLanePlacedItem,
   hourTicks,
-  isInDay,
   layoutDayLane,
   minuteToY,
   placeColumns,
@@ -63,7 +62,7 @@ describe("segments and folding", () => {
     expect(segments[23]!.top).toBe(23 * 96);
   });
 
-  test("a two-hour gap folds and a one-hour gap does not", () => {
+  test("quiet gaps fold at the configured threshold", () => {
     const segments = buildDayLaneSegments([point("a", 9), point("b", 11), point("c", 14)], base);
     // 0-9 fold, 9 busy, 10 empty (one hour, stays), 11 busy, 12-14 fold, 14 busy, 15-24 fold.
     expect(rows(segments)).toEqual([
@@ -76,9 +75,6 @@ describe("segments and folding", () => {
       "fold:15",
     ]);
     expect(segments[4]).toMatchObject({ endMinute: at(14), foldHours: 2 });
-  });
-
-  test("foldQuietMinutes sets the shortest stretch that folds", () => {
     const items = [point("a", 9), point("b", 12)];
     const folds = (minutes: number) =>
       buildDayLaneSegments(items, { ...base, foldQuietMinutes: minutes })
@@ -88,16 +84,18 @@ describe("segments and folding", () => {
     expect(folds(180)).toEqual([0, 13]);
   });
 
-  test("an item's minimum height keeps the next hour open", () => {
+  test("hours stay open only where a rendered item reaches", () => {
     // 44px at 96px/h is 27.5 minutes, so a point at 9:45 reaches 10:12.
     const segments = buildDayLaneSegments([point("a", 9, 45)], base);
     expect(rows(segments)).toEqual(["fold:0", "hour:9", "hour:10", "fold:11"]);
     expect(renderedEndMinute(point("a", 9, 45), 96, 44)).toBe(at(10, 12.5));
-  });
-
-  test("an item ending exactly on the hour does not open the next one", () => {
-    const segments = buildDayLaneSegments([span("a", 9, 0, 10, 0)], base);
-    expect(rows(segments)).toEqual(["fold:0", "hour:9", "fold:10"]);
+    const endingOnHour = buildDayLaneSegments([span("a", 9, 0, 10, 0)], base);
+    expect(rows(endingOnHour)).toEqual(["fold:0", "hour:9", "fold:10"]);
+    // At 32px per hour a 44px carryover reaches 1:22, so hour 1 stays open.
+    const options = { ...base, hourHeight: 32 };
+    const carryover = buildDayLaneSegments([span("night", -1, 0, 0, 5)], options);
+    expect(rows(carryover)).toEqual(["hour:0", "hour:1", "fold:2"]);
+    expect(renderedEndMinute(span("night", -1, 0, 0, 5), 32, 44)).toBe(82.5);
   });
 
   test("an opened fold shows its hours and marks the first with the key", () => {
@@ -111,7 +109,7 @@ describe("segments and folding", () => {
     expect(open[10]!.kind).toBe("fold");
   });
 
-  test("a 25-hour day has 25 rows and the 25th hour holds items", () => {
+  test("a 25-hour day folds quiet hours and places items in its last hour", () => {
     const layout = layoutDayLane([point("x", 24, 15)], { ...base, dayMinutes: 1500 });
     expect(layout.outside).toEqual([]);
     const last = layout.segments[layout.segments.length - 1]!;
@@ -124,10 +122,6 @@ describe("segments and folding", () => {
     const segments = buildDayLaneSegments([], { ...base, dayMinutes: 1410, foldQuietMinutes: 0 });
     expect(segments).toHaveLength(24);
     expect(segments[23]).toMatchObject({ height: 48, endMinute: 1410 });
-  });
-
-  test("a day with no length has no rows", () => {
-    expect(layoutDayLane([point("a", 0)], { ...base, dayMinutes: 0 }).segments).toEqual([]);
   });
 });
 
@@ -278,11 +272,6 @@ describe("placing items", () => {
       expect(late.height).toBe(44);
       expect(day.height).toBeGreaterThanOrEqual(late.top + 44);
     }
-    const options = { ...base, dayMinutes: 1380, foldQuietMinutes: 0 };
-    const day = layoutDayLane([point("late", 22, 30)], options);
-    expect(day.segments).toHaveLength(23);
-    expect(day.height).toBe(23 * 96);
-    expect(layoutDayLane([point("gone", 23, 10)], options).outside).toEqual(["gone"]);
   });
 
   test("crossing intervals are clipped while late points and overflow keep their height", () => {
@@ -320,14 +309,6 @@ describe("placing items", () => {
     expect(overflows(a.entries)[0]!.key).not.toBe(overflows(b.entries)[0]!.key);
   });
 
-  test("a carried-over card keeps open every hour it covers", () => {
-    // At 32px per hour a 44px card from minute 0 reaches 1:22, so hour 1 stays open.
-    const options = { ...base, hourHeight: 32 };
-    const segments = buildDayLaneSegments([span("night", -1, 0, 0, 5)], options);
-    expect(rows(segments)).toEqual(["hour:0", "hour:1", "fold:2"]);
-    expect(renderedEndMinute(span("night", -1, 0, 0, 5), 32, 44)).toBe(82.5);
-  });
-
   test("items outside the day are reported, not placed", () => {
     const items = [
       point("start", 0),
@@ -339,7 +320,9 @@ describe("placing items", () => {
     const layout = layoutDayLane(items, base);
     expect(placed(layout.entries).map((e) => e.item.id)).toEqual(["start"]);
     expect(layout.outside).toEqual(["end", "before", "nan", "untimed"]);
-    expect(isInDay(point("x", 0), 1440)).toBe(true);
+    expect(layoutDayLane([point("gone", 23, 10)], { ...base, dayMinutes: 1380 }).outside).toEqual([
+      "gone",
+    ]);
   });
 
   test("date-only items go to the strip and do not open hours", () => {

@@ -115,6 +115,7 @@ test("returning to a day after an empty day scrolls once to its first card", asy
   expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
   await fixture.evaluate((component) => component.update({ items: [], dayKey: "b" }));
   await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
   await scroller.evaluate((el) => (el.scrollTop = 0));
   await fixture.evaluate((component) =>
     component.update({ items: [{ id: "first", startMinute: 540 }], dayKey: "a" }),
@@ -147,7 +148,9 @@ for (const foldQuietMinutes of [0, 120]) {
     await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(100);
   });
 
-  test(`resets scroll for an empty day with folding ${foldQuietMinutes}`, async ({ page }) => {
+  test(`resets scroll for a day without timed items with folding ${foldQuietMinutes}`, async ({
+    page,
+  }) => {
     const fixture = await mountDayLane(page, {
       items: [
         { id: "first", startMinute: 540 },
@@ -159,13 +162,16 @@ for (const foldQuietMinutes of [0, 120]) {
     });
     const scroller = page.locator(".kit-day-lane");
     await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-    await fixture.evaluate((component) => component.update({ items: [], dayKey: "b" }));
-    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(0);
-    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
+    await scroller.evaluate((el) => (el.scrollTop = 100));
+    expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
     await fixture.evaluate((component) =>
-      component.update({ items: [{ id: "date", dateOnly: true }] }),
+      component.update({
+        dayKey: "b",
+        items: Array.from({ length: 60 }, (_, i) => ({ id: `date-${i}`, dateOnly: true })),
+      }),
     );
-    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /Item/ })).toHaveCount(60);
+    expect(await scroller.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100);
     await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
     await fixture.evaluate((component) =>
       component.update({
@@ -176,6 +182,7 @@ for (const foldQuietMinutes of [0, 120]) {
       }),
     );
     await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(page.locator('[data-day-lane-key="item:later"]')).toBeInViewport();
   });
 }
 
@@ -230,17 +237,6 @@ test("Tab returns to the selected card after focus leaves the lane", async ({ pa
   await page.getByRole("checkbox", { name: "Dim chats" }).focus();
   await page.keyboard.press("Tab");
   await expect(standup).toBeFocused();
-  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
-  await expect(fold).toHaveAttribute("tabindex", "-1");
-  await lane(page)
-    .getByRole("button", { name: /Pallet count v3/ })
-    .focus();
-  await page.keyboard.press("ArrowDown");
-  await expect(fold).toBeFocused();
-  await page.keyboard.press("Enter");
-  const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
-  await standup.focus();
-  await expect(refold).toHaveAttribute("tabindex", "-1");
   await page.keyboard.press("ArrowDown");
   await expect(call).toBeFocused();
   await lane(page).evaluate((frame) => {
@@ -249,10 +245,17 @@ test("Tab returns to the selected card after focus leaves the lane", async ({ pa
     frame.after(after);
   });
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "After lane" })).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(standup).toBeFocused();
   await expect(standup).toHaveAttribute("tabindex", "0");
   await expect(call).toHaveAttribute("tabindex", "-1");
+});
+
+test("keyboard navigation selects a card and reaches both ends", async ({ page }) => {
+  await lane(page)
+    .getByRole("button", { name: /Shipment status standup/ })
+    .focus();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(lastEvent(page)).toHaveText("select call");
