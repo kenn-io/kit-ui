@@ -244,7 +244,6 @@ test.describe("month strip", () => {
     // Feb 1 2026 is a Sunday.
     await expect(sundayDays.first().locator(".kit-calendar__day-weekday")).toHaveText("D");
     await expect(sundayDays.first()).toHaveAttribute("aria-label", /^dim\., /);
-
   });
 
   test("matches mark days independently of counts and selection", async ({ page }) => {
@@ -305,7 +304,6 @@ test.describe("month strip", () => {
     const shadow = await selected.evaluate((node) => getComputedStyle(node).boxShadow);
     expect(shadow).toContain(accent);
     expect(shadow).toMatch(/0px 0px 0px 2px inset/);
-
   });
 
   test("paging the strip resets an open grid chooser", async ({ page }) => {
