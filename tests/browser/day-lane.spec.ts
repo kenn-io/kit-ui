@@ -289,6 +289,23 @@ test("Tab returns to the selected card after focus leaves the lane", async ({ pa
   await expect(call).toHaveAttribute("tabindex", "-1");
 });
 
+test("a focusout that retains focus preserves the active card's tab stop", async ({ page }) => {
+  const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
+  const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
+  await standup.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(call).toBeFocused();
+  await call.evaluate((element) => {
+    element.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
+  });
+  await expect(call).toHaveAttribute("tabindex", "0");
+  await expect(standup).toHaveAttribute("tabindex", "-1");
+  await expect(call).toBeFocused();
+  await call.blur();
+  await expect(standup).toHaveAttribute("tabindex", "0");
+  await expect(call).toHaveAttribute("tabindex", "-1");
+});
+
 test("keyboard navigation selects a card and reaches both ends", async ({ page }) => {
   await lane(page)
     .getByRole("button", { name: /Shipment status standup/ })
