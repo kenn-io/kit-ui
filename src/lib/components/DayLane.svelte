@@ -165,7 +165,7 @@
         nowFold.top +
         3 +
         ((nowMinute - nowFold.startMinute) / (nowFold.endMinute - nowFold.startMinute)) *
-          (nowFold.height - 6)
+          (nowFold.height - 8)
       );
     return minuteToY(layout.segments, nowMinute, hourHeight);
   });
@@ -361,7 +361,13 @@
         {@const inset =
           entry.kind === "item" &&
           (entry.clippedStart || entry.clippedEnd || entry.height > minItemHeight + 0.001)
-            ? Math.min(1, Math.max(0, (entry.height - 2) / 2))
+            ? Math.min(
+                1,
+                Math.max(
+                  0,
+                  (entry.height - (entry.clippedStart || entry.clippedEnd ? 2 : minItemHeight)) / 2,
+                ),
+              )
             : 0}
         {#if entry.kind === "item"}
           <button

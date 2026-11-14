@@ -77,6 +77,9 @@ a `startMinute`, are not drawn.
 | `onfoldchange`     | `({ startMinute, endMinute, expanded })`                                  | —            | A fold was opened or closed                                                        |
 | labels             | `ariaLabel`, `dateOnlyLabel`, `overflowLabel`, `foldLabel`, `refoldLabel` | English      | Strings and small functions for translation                                        |
 
+When changing `dayKey`, pass the items for that day with the new key. Pass an
+empty list while the new day's items load.
+
 `tone` takes the Chip tone vocabulary and colors the card's accent bar and
 a point card's top edge.
 

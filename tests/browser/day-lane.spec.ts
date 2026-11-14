@@ -92,6 +92,61 @@ test("a late interval stays within the day axis", async ({ page }) => {
   expect(cardBox!.y + cardBox!.height).toBeLessThanOrEqual(axisBox!.y + axisBox!.height);
 });
 
+test("short intervals keep their minimum height while taller intervals have a gap", async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const [{ mountReactive }, { default: DayLane }, { createRawSnippet }] = await Promise.all([
+      import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+      import("/src/lib/components/DayLane.svelte"),
+      import("/node_modules/.vite/deps/svelte.js"),
+    ]);
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    host.style.height = "300px";
+    document.body.appendChild(host);
+    mountReactive(DayLane, host, {
+      items: [
+        { id: "short", startMinute: 540, endMinute: 568 },
+        { id: "tall", startMinute: 600, endMinute: 660 },
+      ],
+      foldQuietMinutes: 0,
+      item: createRawSnippet(() => ({ render: () => "<span>Item</span>" })),
+    });
+  });
+  expect((await page.locator('[data-day-lane-key="item:short"]').boundingBox())!.height).toBe(44);
+  expect((await page.locator('[data-day-lane-key="item:tall"]').boundingBox())!.height).toBe(94);
+});
+
+test("the now line stays inside the end of a folded band", async ({ page }) => {
+  await page.evaluate(async () => {
+    const [{ mountReactive }, { default: DayLane }, { createRawSnippet }] = await Promise.all([
+      import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+      import("/src/lib/components/DayLane.svelte"),
+      import("/node_modules/.vite/deps/svelte.js"),
+    ]);
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    host.style.height = "300px";
+    document.body.appendChild(host);
+    mountReactive(DayLane, host, {
+      items: [
+        { id: "morning", startMinute: 600, endMinute: 630 },
+        { id: "afternoon", startMinute: 840 },
+      ],
+      foldQuietMinutes: 120,
+      nowMinute: 839,
+      item: createRawSnippet(() => ({ render: () => "<span>Item</span>" })),
+    });
+  });
+  const fold = page.getByRole("button", { name: /11:00 AM.*2:00 PM/ });
+  const [band, line] = await Promise.all([
+    fold.boundingBox(),
+    page.locator(".kit-day-lane__now").boundingBox(),
+  ]);
+  expect(line!.y + line!.height).toBeLessThanOrEqual(band!.y + band!.height);
+});
+
 test("overlapping items sit side by side and the rest go to +N more", async ({ page }) => {
   const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
   const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
