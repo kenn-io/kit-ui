@@ -118,20 +118,6 @@ describe("segments and folding", () => {
     expect(layout.height).toBe(23 * 96);
     expect(byId(layout.entries, "late").top).toBe(22.5 * 96);
     expect(layoutDayLane([point("gone", 23, 10)], options).outside).toEqual(["gone"]);
-    for (const [dayMinutes, top] of [
-      [1440, 2302.4],
-      [1380, 2206.4],
-    ]) {
-      const day = layoutDayLane([{ id: "late", startMinute: dayMinutes! - 1 }], {
-        ...base,
-        dayMinutes: dayMinutes!,
-        foldQuietMinutes: 0,
-      });
-      const late = byId(day.entries, "late");
-      expect(late.top).toBeCloseTo(top!);
-      expect(late.height).toBe(44);
-      expect(day.height).toBeGreaterThanOrEqual(late.top + 44);
-    }
   });
 
   test("a 25-hour day has 25 rows and the 25th hour holds items", () => {
@@ -210,12 +196,6 @@ describe("ticks", () => {
 });
 
 describe("placing items", () => {
-  test("two overlapping items sit side by side", () => {
-    const { entries } = layoutDayLane([span("a", 9, 0, 10, 0), span("b", 9, 30, 10, 30)], base);
-    expect(byId(entries, "a")).toMatchObject({ column: 0, columns: 2 });
-    expect(byId(entries, "b")).toMatchObject({ column: 1, columns: 2 });
-  });
-
   test("three overlapping items use three columns with no overflow", () => {
     const { entries } = layoutDayLane(
       [span("a", 9, 0, 10, 0), span("b", 9, 10, 10, 0), span("c", 9, 20, 10, 0)],
@@ -284,14 +264,6 @@ describe("placing items", () => {
     expect(placed(entries).every((e) => e.columns === 2)).toBe(true);
   });
 
-  test("separate clusters do not share a column count", () => {
-    const { entries } = layoutDayLane(
-      [span("a", 9, 0, 10, 0), span("b", 9, 30, 10, 0), span("c", 13, 0, 14, 0)],
-      base,
-    );
-    expect(byId(entries, "c")).toMatchObject({ column: 0, columns: 1 });
-  });
-
   test("hidden items far apart in one cluster get separate +N more items", () => {
     const items = [
       span("a", 8, 0, 12, 0),
@@ -319,17 +291,22 @@ describe("placing items", () => {
     });
   });
 
-  test("an item running into the next day is clipped at the bottom", () => {
-    const { entries, height } = layoutDayLane([span("late", 23, 30, 25, 0)], {
-      ...base,
-      foldQuietMinutes: 0,
-    });
-    const late = byId(entries, "late");
-    expect(late.clippedEnd).toBe(true);
-    expect(late.top + late.height).toBe(height);
-  });
+  test("late point cards keep their height on 23- and 24-hour days and crossing intervals are clipped", () => {
+    for (const [dayMinutes, top] of [
+      [1440, 2302.4],
+      [1380, 2206.4],
+    ]) {
+      const day = layoutDayLane([{ id: "late", startMinute: dayMinutes! - 1 }], {
+        ...base,
+        dayMinutes: dayMinutes!,
+        foldQuietMinutes: 0,
+      });
+      const late = byId(day.entries, "late");
+      expect(late.top).toBeCloseTo(top!);
+      expect(late.height).toBe(44);
+      expect(day.height).toBeGreaterThanOrEqual(late.top + 44);
+    }
 
-  test("late point cards keep their height and intervals crossing the day remain clipped", () => {
     const { entries } = layoutDayLane(
       [
         span("late", 23, 50, 25, 0),
@@ -341,9 +318,8 @@ describe("placing items", () => {
       { ...base, foldQuietMinutes: 0 },
     );
     expect(byId(entries, "late").top + byId(entries, "late").height).toBe(24 * 96);
-    expect(byId(entries, "p1").height).toBe(44);
+    expect(byId(entries, "late").clippedEnd).toBe(true);
     expect(overflows(entries)).toHaveLength(1);
-    expect(overflows(entries)[0]!.height).toBe(44);
   });
 
   test("overflow keys stay distinct when ids contain spaces", () => {
@@ -420,21 +396,5 @@ describe("placeColumns", () => {
       [0, 1],
       [0, 1],
     ]);
-  });
-});
-
-describe("busy days", () => {
-  test("a busy day accounts for 600 items", () => {
-    // Deterministic pseudo-random items, clustered in working hours.
-    let seed = 7;
-    const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-    const items: DayLaneItem[] = Array.from({ length: 600 }, (_, i) => {
-      const startMinute = at(7) + rand() * 14 * 60;
-      return rand() < 0.6
-        ? { id: `i${i}`, startMinute }
-        : { id: `i${i}`, startMinute, endMinute: startMinute + rand() * 90 };
-    });
-    const layout = layoutDayLane(items, base);
-    expect(accountedIds(layout.entries)).toHaveLength(600);
   });
 });

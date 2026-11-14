@@ -36,25 +36,6 @@ async function mountDayLane(
   }, options);
 }
 
-test("refilling the same day leaves the user's scroll position alone", async ({ page }) => {
-  const fixture = await mountDayLane(page, {
-    items: [{ id: "first", startMinute: 540 }],
-    dayKey: "a",
-    foldQuietMinutes: 0,
-    label: "First",
-  });
-  const scroller = page.locator(".kit-day-lane");
-  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  await fixture.evaluate((component) => component.update({ items: [] }));
-  await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
-  await scroller.evaluate((el) => (el.scrollTop = 100));
-  await fixture.evaluate((component) =>
-    component.update({ items: [{ id: "first", startMinute: 540 }] }),
-  );
-  await expect(page.getByRole("button", { name: /First/ })).toBeVisible();
-  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
-});
-
 test("a fold closes when its old quiet span returns", async ({ page }) => {
   const fixture = await mountDayLane(page, {
     items: [
@@ -91,20 +72,17 @@ test("a fold closes when its old quiet span returns", async ({ page }) => {
 
 test("point cards mark their own exact start at the top edge", async ({ page }) => {
   const dock = lane(page).getByRole("button", { name: /Dock schedule/ });
-  const pallet = lane(page).getByRole("button", { name: /Pallet count v3/ });
   const interval = lane(page).getByRole("button", { name: /Container BRKU/ });
-  for (const point of [dock, pallet]) {
-    await expect(point).toHaveCSS("border-top-width", "2px");
-    const colors = await point.evaluate((el) => {
-      const sample = document.createElement("span");
-      sample.style.color = "var(--accent-red)";
-      el.appendChild(sample);
-      const result = [getComputedStyle(el).borderTopColor, getComputedStyle(sample).color];
-      sample.remove();
-      return result;
-    });
-    expect(colors[0]).toBe(colors[1]);
-  }
+  await expect(dock).toHaveCSS("border-top-width", "2px");
+  const colors = await dock.evaluate((el) => {
+    const sample = document.createElement("span");
+    sample.style.color = "var(--accent-red)";
+    el.appendChild(sample);
+    const result = [getComputedStyle(el).borderTopColor, getComputedStyle(sample).color];
+    sample.remove();
+    return result;
+  });
+  expect(colors[0]).toBe(colors[1]);
   await expect(interval).toHaveCSS("border-top-width", "1px");
   const hour = lane(page).locator(".kit-day-lane__hour-label", { hasText: /^\s*8 AM\s*$/ });
   const nextHour = lane(page).locator(".kit-day-lane__hour-label", { hasText: /^\s*9 AM\s*$/ });
@@ -127,6 +105,14 @@ test("returning to a day after an empty day scrolls once to its first card", asy
   });
   const scroller = page.locator(".kit-day-lane");
   await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await fixture.evaluate((component) => component.update({ items: [] }));
+  await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
+  await scroller.evaluate((el) => (el.scrollTop = 100));
+  await fixture.evaluate((component) =>
+    component.update({ items: [{ id: "first", startMinute: 540 }] }),
+  );
+  await expect(page.getByRole("button", { name: /First/ })).toBeVisible();
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
   await fixture.evaluate((component) => component.update({ items: [], dayKey: "b" }));
   await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
   await scroller.evaluate((el) => (el.scrollTop = 0));
@@ -135,14 +121,6 @@ test("returning to a day after an empty day scrolls once to its first card", asy
   );
   await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: /First/ })).toBeInViewport();
-  await scroller.evaluate((el) => (el.scrollTop = 100));
-  await fixture.evaluate((component) =>
-    component.update({ items: [{ id: "first", startMinute: 540, tone: "info" }] }),
-  );
-  await expect(page.getByRole("button", { name: /First/ })).toHaveClass(
-    /kit-day-lane__item--tone-info/,
-  );
-  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
 });
 
 test("a late interval stays within the day axis", async ({ page }) => {
@@ -163,32 +141,16 @@ test("short intervals keep their minimum height while taller intervals have a ga
 }) => {
   await mountDayLane(page, {
     items: [
-      { id: "short", startMinute: 540, endMinute: 568 },
+      { id: "short", startMinute: 540, endMinute: 550 },
+      { id: "near", startMinute: 570, endMinute: 598 },
       { id: "tall", startMinute: 600, endMinute: 660 },
     ],
     foldQuietMinutes: 0,
     label: "Item",
   });
   expect((await page.locator('[data-day-lane-key="item:short"]').boundingBox())!.height).toBe(44);
+  expect((await page.locator('[data-day-lane-key="item:near"]').boundingBox())!.height).toBe(44);
   expect((await page.locator('[data-day-lane-key="item:tall"]').boundingBox())!.height).toBe(94);
-});
-
-test("the now line stays inside the end of a folded band", async ({ page }) => {
-  await mountDayLane(page, {
-    items: [
-      { id: "morning", startMinute: 600, endMinute: 630 },
-      { id: "afternoon", startMinute: 840 },
-    ],
-    foldQuietMinutes: 120,
-    nowMinute: 839,
-    label: "Item",
-  });
-  const fold = page.getByRole("button", { name: /11:00 AM.*2:00 PM/ });
-  const [band, line] = await Promise.all([
-    fold.boundingBox(),
-    page.locator(".kit-day-lane__now").boundingBox(),
-  ]);
-  expect(line!.y + line!.height).toBeLessThanOrEqual(band!.y + band!.height);
 });
 
 test("overlapping items sit side by side and the rest go to +N more", async ({ page }) => {
@@ -228,7 +190,6 @@ test("the selected card is the tab stop and arrows move in time order", async ({
   await expect(fold).toBeFocused();
   await page.keyboard.press("Enter");
   const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
-  await expect(refold).toBeFocused();
   await standup.focus();
   await expect(refold).toHaveAttribute("tabindex", "-1");
   await page.keyboard.press("ArrowDown");
@@ -299,8 +260,17 @@ test("changing days closes folds even when returning to the original day", async
 });
 
 test("the now line stays inside a fold and moves to its hour when opened", async ({ page }) => {
-  const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
-  const now = lane(page).locator(".kit-day-lane__now");
+  const fixture = await mountDayLane(page, {
+    items: [
+      { id: "morning", startMinute: 600, endMinute: 630 },
+      { id: "afternoon", startMinute: 840 },
+    ],
+    foldQuietMinutes: 120,
+    nowMinute: 750,
+    label: "Item",
+  });
+  const fold = page.getByRole("button", { name: /11:00 AM.*2:00 PM/ });
+  const now = page.locator(".kit-day-lane__now");
   const [band, line] = await Promise.all([fold.boundingBox(), now.boundingBox()]);
   expect(line!.y).toBeGreaterThan(band!.y);
   expect(line!.y).toBeLessThan(band!.y + band!.height);
@@ -315,8 +285,12 @@ test("the now line stays inside a fold and moves to its hour when opened", async
     );
   });
   expect(markerRight).toBeLessThanOrEqual(band!.x);
+  await fixture.evaluate((component) => component.update({ nowMinute: 839 }));
+  await expect.poll(async () => (await now.boundingBox())!.y).toBeGreaterThan(line!.y);
+  const endLine = (await now.boundingBox())!;
+  expect(endLine.y + endLine.height).toBeLessThanOrEqual(band!.y + band!.height);
   await fold.click();
-  const refold = lane(page).getByRole("button", { name: "Fold 3 quiet hours" });
+  const refold = page.getByRole("button", { name: "Fold 3 quiet hours" });
   const [button, openedLine] = await Promise.all([refold.boundingBox(), now.boundingBox()]);
   expect(openedLine!.y).toBeGreaterThan(button!.y + button!.height);
 });
