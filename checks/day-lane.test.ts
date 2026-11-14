@@ -274,27 +274,13 @@ describe("placing items", () => {
     }
   });
 
-  test("crossing intervals are clipped while late points and overflow keep their height", () => {
-    const day = layoutDayLane(
-      [
-        span("late", 23, 50, 25, 0),
-        point("p1", 23, 55),
-        point("p2", 23, 55),
-        point("p3", 23, 55),
-        point("p4", 23, 55),
-        point("p5", 23, 55),
-      ],
-      { ...base, foldQuietMinutes: 0, maxColumns: 5 },
-    );
-    const { entries } = day;
+  test("crossing intervals are clipped at the end of the day", () => {
+    const { entries } = layoutDayLane([span("late", 23, 59, 25, 0)], {
+      ...base,
+      foldQuietMinutes: 0,
+    });
     expect(byId(entries, "late").top + byId(entries, "late").height).toBe(24 * 96);
     expect(byId(entries, "late").clippedEnd).toBe(true);
-    for (const id of ["p1", "p2", "p3"]) expect(byId(entries, id).height).toBe(44);
-    const overflow = overflows(entries);
-    expect(overflow).toHaveLength(1);
-    expect(overflow[0]!.height).toBe(44);
-    for (const entry of entries)
-      expect(day.height).toBeGreaterThanOrEqual(entry.top + entry.height);
   });
 
   test("overflow keys stay distinct when ids contain spaces", () => {

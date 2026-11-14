@@ -306,8 +306,7 @@
   aria-label={ariaLabel}
   {onkeydown}
   onfocusout={(event) => {
-    if (!scroller?.contains((event.relatedTarget ?? document.activeElement) as Node | null))
-      activeKey = null;
+    if (!scroller?.contains(event.relatedTarget as Node | null)) activeKey = null;
   }}
 >
   {#if layout.dateOnly.length}

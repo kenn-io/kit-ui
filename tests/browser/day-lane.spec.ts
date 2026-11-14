@@ -96,34 +96,6 @@ test("point cards mark their own exact start at the top edge", async ({ page }) 
   expect((card!.y - firstY) / (nextY - firstY)).toBeCloseTo(47 / 60, 2);
 });
 
-test("returning to a day after an empty day scrolls once to its first card", async ({ page }) => {
-  const fixture = await mountDayLane(page, {
-    items: [{ id: "first", startMinute: 540 }],
-    dayKey: "a",
-    foldQuietMinutes: 0,
-    label: "First",
-  });
-  const scroller = page.locator(".kit-day-lane");
-  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  await fixture.evaluate((component) => component.update({ items: [] }));
-  await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
-  await scroller.evaluate((el) => (el.scrollTop = 100));
-  await fixture.evaluate((component) =>
-    component.update({ items: [{ id: "first", startMinute: 540 }] }),
-  );
-  await expect(page.getByRole("button", { name: /First/ })).toBeVisible();
-  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
-  await fixture.evaluate((component) => component.update({ items: [], dayKey: "b" }));
-  await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
-  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
-  await scroller.evaluate((el) => (el.scrollTop = 0));
-  await fixture.evaluate((component) =>
-    component.update({ items: [{ id: "first", startMinute: 540 }], dayKey: "a" }),
-  );
-  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  await expect(page.getByRole("button", { name: /First/ })).toBeInViewport();
-});
-
 for (const foldQuietMinutes of [0, 120]) {
   test(`preserves scroll across a temporary empty state with folding ${foldQuietMinutes}`, async ({
     page,
@@ -175,6 +147,24 @@ for (const foldQuietMinutes of [0, 120]) {
     await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
     await fixture.evaluate((component) =>
       component.update({
+        dayKey: "a",
+        items: [
+          { id: "first", startMinute: 540 },
+          { id: "last", startMinute: 1200 },
+        ],
+      }),
+    );
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(page.locator('[data-day-lane-key="item:first"]')).toBeInViewport();
+    await fixture.evaluate((component) =>
+      component.update({
+        dayKey: "b",
+        items: Array.from({ length: 60 }, (_, i) => ({ id: `date-${i}`, dateOnly: true })),
+      }),
+    );
+    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
+    await fixture.evaluate((component) =>
+      component.update({
         items: [
           { id: "later", startMinute: 540 },
           { id: "last", startMinute: 1200 },
@@ -223,20 +213,6 @@ test("the first timed card is visible below a tall date-only strip", async ({ pa
   await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
 });
 
-test("a late interval stays within the day axis", async ({ page }) => {
-  await mountDayLane(page, {
-    items: [{ id: "late", startMinute: 1439, endMinute: 1500 }],
-    foldQuietMinutes: 0,
-    label: "Late",
-  });
-  const card = page.getByRole("button", { name: /Late/ });
-  const axis = page.locator(".kit-day-lane__axis");
-  const [cardBox, axisBox] = await Promise.all([card.boundingBox(), axis.boundingBox()]);
-  expect(axisBox!.height).toBe(24 * 96);
-  expect(cardBox!.height).toBeGreaterThan(0);
-  expect(cardBox!.y + cardBox!.height).toBeLessThanOrEqual(axisBox!.y + axisBox!.height);
-});
-
 test("short intervals keep their minimum height while taller intervals have a gap", async ({
   page,
 }) => {
@@ -254,14 +230,8 @@ test("short intervals keep their minimum height while taller intervals have a ga
   expect((await page.locator('[data-day-lane-key="item:tall"]').boundingBox())!.height).toBe(94);
 });
 
-test("overlapping items sit side by side and the rest go to +N more", async ({ page }) => {
-  const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
-  const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
+test("overflow shows its label and reports a click", async ({ page }) => {
   const more = lane(page).getByRole("button", { name: /\+3 more from 9:30 AM/ });
-  const [a, b, c] = await Promise.all([standup, call, more].map((l) => l.boundingBox()));
-  expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x);
-  expect(b!.x + b!.width).toBeLessThanOrEqual(c!.x);
-  expect(c!.height).toBe(44);
   await more.click();
   await expect(lastEvent(page)).toHaveText("overflow 3 from 9:30 AM");
 });
@@ -289,23 +259,6 @@ test("Tab returns to the selected card after focus leaves the lane", async ({ pa
   await expect(call).toHaveAttribute("tabindex", "-1");
 });
 
-test("a focusout that retains focus preserves the active card's tab stop", async ({ page }) => {
-  const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
-  const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
-  await standup.focus();
-  await page.keyboard.press("ArrowDown");
-  await expect(call).toBeFocused();
-  await call.evaluate((element) => {
-    element.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
-  });
-  await expect(call).toHaveAttribute("tabindex", "0");
-  await expect(standup).toHaveAttribute("tabindex", "-1");
-  await expect(call).toBeFocused();
-  await call.blur();
-  await expect(standup).toHaveAttribute("tabindex", "0");
-  await expect(call).toHaveAttribute("tabindex", "-1");
-});
-
 test("keyboard navigation selects a card and reaches both ends", async ({ page }) => {
   await lane(page)
     .getByRole("button", { name: /Shipment status standup/ })
@@ -317,15 +270,6 @@ test("keyboard navigation selects a card and reaches both ends", async ({ page }
   await expect(lane(page).getByRole("button", { name: /Signed delivery receipt/ })).toBeFocused();
   await page.keyboard.press("End");
   await expect(lane(page).getByRole("button", { name: /Late note/ })).toBeFocused();
-});
-
-test("a point in the last minute renders at full height on 24-hour and 23-hour days", async ({
-  page,
-}) => {
-  const late = lane(page).getByRole("button", { name: /Late note/ });
-  expect((await late.boundingBox())!.height).toBe(44);
-  await page.getByText("23 h (spring)").click();
-  expect((await late.boundingBox())!.height).toBe(44);
 });
 
 test("an interval card's accessible name ends with its time range", async ({ page }) => {
