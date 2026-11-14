@@ -173,14 +173,6 @@ test("the selected card is the tab stop and arrows move in time order", async ({
   await page.getByRole("checkbox", { name: "Dim chats" }).focus();
   await page.keyboard.press("Tab");
   await expect(standup).toBeFocused();
-  await lane(page).evaluate((frame) => {
-    const after = document.createElement("button");
-    after.textContent = "After lane";
-    frame.after(after);
-  });
-  await page.getByRole("button", { name: "After lane" }).focus();
-  await page.keyboard.press("Shift+Tab");
-  await expect(standup).toBeFocused();
   const fold = lane(page).getByRole("button", { name: /11:00 AM – 2:00 PM · 3 quiet hours/ });
   await expect(fold).toHaveAttribute("tabindex", "-1");
   await lane(page)
@@ -194,6 +186,11 @@ test("the selected card is the tab stop and arrows move in time order", async ({
   await expect(refold).toHaveAttribute("tabindex", "-1");
   await page.keyboard.press("ArrowDown");
   await expect(call).toBeFocused();
+  await lane(page).evaluate((frame) => {
+    const after = document.createElement("button");
+    after.textContent = "After lane";
+    frame.after(after);
+  });
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
   await expect(standup).toBeFocused();
@@ -217,7 +214,7 @@ test("a point in the last minute renders at full height on 24-hour and 23-hour d
   expect((await late.boundingBox())!.height).toBe(44);
 });
 
-test("a card's accessible name ends with its time range", async ({ page }) => {
+test("an interval card's accessible name ends with its time range", async ({ page }) => {
   await expect(lane(page).getByRole("button", { name: /Container BRKU/ })).toHaveAccessibleName(
     /, 8:30 AM – 8:52 AM$/,
   );
