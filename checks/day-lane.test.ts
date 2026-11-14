@@ -111,15 +111,6 @@ describe("segments and folding", () => {
     expect(open[10]!.kind).toBe("fold");
   });
 
-  test("a 23-hour day has 23 rows and its last item lands on the last row", () => {
-    const options = { ...base, dayMinutes: 1380, foldQuietMinutes: 0 };
-    const layout = layoutDayLane([point("late", 22, 30)], options);
-    expect(layout.segments).toHaveLength(23);
-    expect(layout.height).toBe(23 * 96);
-    expect(byId(layout.entries, "late").top).toBe(22.5 * 96);
-    expect(layoutDayLane([point("gone", 23, 10)], options).outside).toEqual(["gone"]);
-  });
-
   test("a 25-hour day has 25 rows and the 25th hour holds items", () => {
     const layout = layoutDayLane([point("x", 24, 15)], { ...base, dayMinutes: 1500 });
     expect(layout.outside).toEqual([]);
@@ -291,7 +282,7 @@ describe("placing items", () => {
     });
   });
 
-  test("late point cards keep their height on 23- and 24-hour days and crossing intervals are clipped", () => {
+  test("late point cards keep their height on 23- and 24-hour days", () => {
     for (const [dayMinutes, top] of [
       [1440, 2302.4],
       [1380, 2206.4],
@@ -306,20 +297,33 @@ describe("placing items", () => {
       expect(late.height).toBe(44);
       expect(day.height).toBeGreaterThanOrEqual(late.top + 44);
     }
+    const options = { ...base, dayMinutes: 1380, foldQuietMinutes: 0 };
+    const day = layoutDayLane([point("late", 22, 30)], options);
+    expect(day.segments).toHaveLength(23);
+    expect(day.height).toBe(23 * 96);
+    expect(layoutDayLane([point("gone", 23, 10)], options).outside).toEqual(["gone"]);
+  });
 
-    const { entries } = layoutDayLane(
+  test("crossing intervals are clipped while late points and overflow keep their height", () => {
+    const day = layoutDayLane(
       [
         span("late", 23, 50, 25, 0),
         point("p1", 23, 55),
         point("p2", 23, 55),
         point("p3", 23, 55),
         point("p4", 23, 55),
+        point("p5", 23, 55),
       ],
-      { ...base, foldQuietMinutes: 0 },
+      { ...base, foldQuietMinutes: 0, maxColumns: 5 },
     );
+    const { entries } = day;
     expect(byId(entries, "late").top + byId(entries, "late").height).toBe(24 * 96);
     expect(byId(entries, "late").clippedEnd).toBe(true);
-    expect(overflows(entries)).toHaveLength(1);
+    for (const id of ["p1", "p2", "p3"]) expect(byId(entries, id).height).toBe(44);
+    const overflow = overflows(entries);
+    expect(overflow).toHaveLength(1);
+    expect(overflow[0]!.height).toBe(44);
+    for (const entry of entries) expect(day.height).toBeGreaterThanOrEqual(entry.top + entry.height);
   });
 
   test("overflow keys stay distinct when ids contain spaces", () => {

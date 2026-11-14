@@ -132,6 +132,7 @@ test("a late interval stays within the day axis", async ({ page }) => {
   const card = page.getByRole("button", { name: /Late/ });
   const axis = page.locator(".kit-day-lane__axis");
   const [cardBox, axisBox] = await Promise.all([card.boundingBox(), axis.boundingBox()]);
+  expect(axisBox!.height).toBe(24 * 96);
   expect(cardBox!.height).toBeGreaterThan(0);
   expect(cardBox!.y + cardBox!.height).toBeLessThanOrEqual(axisBox!.y + axisBox!.height);
 });
@@ -274,7 +275,12 @@ test("the now line stays inside a fold and moves to its hour when opened", async
   expect(line!.x + line!.width).toBeCloseTo(band!.x + band!.width);
   const markerRight = await now.evaluate((element) => {
     const style = getComputedStyle(element, "::before");
-    return element.getBoundingClientRect().left + parseFloat(style.left) + new DOMMatrixReadOnly(style.transform).m41 + parseFloat(style.width);
+    return (
+      element.getBoundingClientRect().left +
+      parseFloat(style.left) +
+      new DOMMatrixReadOnly(style.transform).m41 +
+      parseFloat(style.width)
+    );
   });
   expect(markerRight).toBeLessThanOrEqual(band!.x);
   await fixture.evaluate((component) => component.update({ nowMinute: 839 }));
