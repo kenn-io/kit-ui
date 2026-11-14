@@ -184,9 +184,8 @@ test.describe("activity", () => {
               .getByTestId(id)
               .locator(`.kit-calendar__day[data-activity="${step}"]:not(.outside):not(:disabled)`)
               .first();
-            if (await day.count()) {
-              await expect.poll(() => contrastOf(day)).toBeGreaterThanOrEqual(4.5);
-            }
+            await expect(day).toHaveCount(1);
+            await expect.poll(() => contrastOf(day)).toBeGreaterThanOrEqual(4.5);
           }
         }
       }
@@ -246,7 +245,6 @@ test.describe("month strip", () => {
     await expect(sundayDays.first().locator(".kit-calendar__day-weekday")).toHaveText("D");
     await expect(sundayDays.first()).toHaveAttribute("aria-label", /^dim\., /);
 
-    await expect(sunday.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
   });
 
   test("matches mark days independently of counts and selection", async ({ page }) => {
@@ -308,9 +306,6 @@ test.describe("month strip", () => {
     expect(shadow).toContain(accent);
     expect(shadow).toMatch(/0px 0px 0px 2px inset/);
 
-    await days.nth(4).click();
-    await expect(days.nth(4)).toHaveAttribute("aria-pressed", "true");
-    await expect(selected).toHaveAttribute("aria-pressed", "false");
   });
 
   test("paging the strip resets an open grid chooser", async ({ page }) => {

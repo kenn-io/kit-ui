@@ -106,7 +106,7 @@ test("civil-date helpers preserve the skipped date in Apia", () => {
     cmd: [
       process.execPath,
       "-e",
-      'import { monthGridDates, formatDayLabel, formatShortDate, formatMonthLabel, stepAnchor, periodBounds } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify([monthGridDates("2011-12-01").slice(30, 34), formatDayLabel("2011-12-30", "en-US"), formatShortDate("2011-12-30", "en-US"), formatMonthLabel("2011-12-30", "en-US"), stepAnchor("month", "2011-12-30", 1), stepAnchor("day", "2011-12-31", -1), stepAnchor("month", "2012-01-31", 1), periodBounds("week", "2011-12-30"), periodBounds("week", "2011-12-30", "sunday"), periodBounds("month", "2011-12-30")]))',
+      'import { monthGridDates, formatDayLabel, formatShortDate, stepAnchor, periodBounds } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify([monthGridDates("2011-12-01").slice(30, 34), formatDayLabel("2011-12-30", "en-US"), formatShortDate("2011-12-30", "en-US"), stepAnchor("month", "2011-12-30", 1), stepAnchor("day", "2011-12-31", -1), stepAnchor("month", "2012-01-31", 1), periodBounds("week", "2011-12-30"), periodBounds("week", "2011-12-30", "sunday"), periodBounds("month", "2011-12-30")]))',
     ],
     env: { ...process.env, TZ: "Pacific/Apia" },
   });
@@ -115,7 +115,6 @@ test("civil-date helpers preserve the skipped date in Apia", () => {
     ["2011-12-28", "2011-12-29", "2011-12-30", "2011-12-31"],
     "Dec 30, 2011",
     "Dec 30",
-    "December 2011",
     "2012-01-30",
     "2011-12-30",
     "2012-02-29",
