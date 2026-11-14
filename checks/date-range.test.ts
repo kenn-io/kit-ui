@@ -45,10 +45,22 @@ describe("date label locale", () => {
     expect(formatMonthLabel("2026-06-29", "zh-CN")).toBe("2026年6月");
   });
 
-  test("weekdayLabels stay Monday-first in every locale", () => {
+  test("weekday labels follow the locale, week start, and width", () => {
     expect(weekdayLabels("en-US")[0]).toBe("Mon");
     expect(weekdayLabels("zh-CN")[0]).toBe("周一");
     expect(weekdayLabels("en-US")).toHaveLength(7);
+    expect(weekdayLabels("en-US", "sunday")).toEqual([
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+    ]);
+    expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
+    expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
+    expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
   });
 
   test("caches are size-capped — many distinct locales still format correctly", () => {
@@ -89,16 +101,6 @@ test("Sunday-start calendar weeks and grid", () => {
     resolveRange({ mode: "calendar", unit: "week", anchor: "2027-01-03" }, undefined, "sunday"),
   ).toEqual({ from: "2027-01-03", to: "2027-01-09" });
   expect(monthGridDates("2027-01-01", "sunday")[0]).toBe("2026-12-27");
-  expect(weekdayLabels("en-US", "sunday")).toEqual([
-    "Sun",
-    "Mon",
-    "Tue",
-    "Wed",
-    "Thu",
-    "Fri",
-    "Sat",
-  ]);
-  expect(weekdayLabels("en-US")[0]).toBe("Mon");
 });
 
 test("civil-date helpers preserve the skipped date in Apia", () => {
@@ -135,10 +137,4 @@ test("activityStep uses quarters of the busiest day, with any activity at least 
   expect(activityStep(Number.NaN, 10)).toBe(0);
   // A count above the maximum stays at step 4.
   expect(activityStep(20, 10)).toBe(4);
-});
-
-test("narrow weekday labels follow the week start and locale", () => {
-  expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
-  expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
-  expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
 });

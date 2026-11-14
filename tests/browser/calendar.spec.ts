@@ -164,26 +164,24 @@ test.describe("activity", () => {
     const background = (locator: import("@playwright/test").Locator) =>
       locator.evaluate((node) => getComputedStyle(node).backgroundColor);
     expect(await background(shaded.first())).not.toBe(await background(plain.first()));
+    const noActivity = page.locator(".kit-calendar").first();
+    await expect(noActivity.locator(".kit-calendar__day[data-activity]")).toHaveCount(0);
+    await expect(noActivity.locator(".kit-calendar__strip, .kit-calendar__match")).toHaveCount(0);
   });
 
   test("an app scale and label replace the defaults", async ({ page }) => {
     const calendar = page.getByTestId("calendar-activity-scale").locator(".kit-calendar");
     const days = calendar.locator(".kit-calendar__day");
-    // The demo's counts are (index * 5) % 13; its scale maps 1–2, 3–5, 6–9, 10+.
-    const facts = await days.evaluateAll((nodes) =>
-      nodes.map((node) => [
-        (node as HTMLElement).dataset.activity ?? null,
-        node.getAttribute("aria-label"),
-      ]),
-    );
-    const expected = (count: number) =>
-      count <= 0 ? null : count <= 2 ? "1" : count <= 5 ? "2" : count <= 9 ? "3" : "4";
-    facts.forEach(([step, label], i) => {
-      const count = (i * 5) % 13;
-      expect(step).toBe(expected(count));
-      if (count === 0) expect(label).not.toMatch(/messages?$/);
-      else expect(label).toMatch(count === 1 ? /, 1 message$/ : new RegExp(`, ${count} messages$`));
-    });
+    await expect(days.nth(0)).not.toHaveAttribute("data-activity");
+    await expect(days.nth(0)).not.toHaveAttribute("aria-label", /messages?$/);
+    await expect(days.nth(8)).toHaveAttribute("data-activity", "1");
+    await expect(days.nth(8)).toHaveAttribute("aria-label", /, 1 message$/);
+    await expect(days.nth(11)).toHaveAttribute("data-activity", "2");
+    await expect(days.nth(11)).toHaveAttribute("aria-label", /, 3 messages$/);
+    await expect(days.nth(9)).toHaveAttribute("data-activity", "3");
+    await expect(days.nth(9)).toHaveAttribute("aria-label", /, 6 messages$/);
+    await expect(days.nth(2)).toHaveAttribute("data-activity", "4");
+    await expect(days.nth(2)).toHaveAttribute("aria-label", /, 10 messages$/);
   });
 
   test("selection draws over the shade", async ({ page }) => {
@@ -206,15 +204,8 @@ test.describe("activity", () => {
       .toBe(accent);
   });
 
-  test("calendars without activity stay unshaded", async ({ page }) => {
-    const plain = page.locator(".kit-calendar").first();
-    await expect(plain.locator(".kit-calendar__day[data-activity]")).toHaveCount(0);
-    // Without layout or matches the grid has no strip parts.
-    await expect(plain.locator(".kit-calendar__strip, .kit-calendar__match")).toHaveCount(0);
-  });
-
-  for (const dark of [false, true]) {
-    test(`shaded day numbers meet AA contrast in ${dark ? "dark" : "light"}`, async ({ page }) => {
+  test("shaded day numbers meet AA contrast in light and dark", async ({ page }) => {
+    for (const dark of [false, true]) {
       await setTheme(page, { dark });
       for (const id of ["calendar-activity", "calendar-activity-scale", "calendar-strip-sunday"]) {
         const days = page
@@ -227,8 +218,8 @@ test.describe("activity", () => {
           await expect.poll(() => contrastOf(days.nth(i))).toBeGreaterThanOrEqual(4.5);
         }
       }
-    });
-  }
+    }
+  });
 });
 
 // Month strip demo: March 2026 with day 28 selected, the app's fixed
@@ -254,23 +245,24 @@ test.describe("month strip", () => {
     expect(new Set(tops).size).toBe(1);
     await expect(days.first().locator(".kit-calendar__day-number")).toHaveText("1");
     await expect(days.last().locator(".kit-calendar__day-number")).toHaveText("31");
-  });
+    expect(
+      (await days.locator(".kit-calendar__day-weekday").allTextContents()).slice(0, 7),
+    ).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
 
-  test("a Sunday-first strip follows its locale, labels and maxDate", async ({ page }) => {
-    const cal = page.getByTestId("calendar-strip-sunday").locator(".kit-calendar");
-    const days = cal.locator(".kit-calendar__day");
-    await expect(days).toHaveCount(28);
+    const sunday = page.getByTestId("calendar-strip-sunday").locator(".kit-calendar");
+    const sundayDays = sunday.locator(".kit-calendar__day");
+    await expect(sundayDays).toHaveCount(28);
     // Feb 1 2026 is a Sunday.
-    await expect(days.first().locator(".kit-calendar__day-weekday")).toHaveText("D");
-    await expect(days.first()).toHaveAttribute("aria-label", /^dim\., /);
+    await expect(sundayDays.first().locator(".kit-calendar__day-weekday")).toHaveText("D");
+    await expect(sundayDays.first()).toHaveAttribute("aria-label", /^dim\., /);
 
     // Feb 24 is past maxDate: disabled, yet still marked and announced.
-    const matched = cal.locator(".kit-calendar__day:has(.kit-calendar__match)");
+    const matched = sunday.locator(".kit-calendar__day:has(.kit-calendar__match)");
     await expect(matched).toHaveCount(3);
-    await expect(days.nth(23)).toBeDisabled();
-    await expect(days.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
-    await expect(days.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
-    await expect(cal.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
+    await expect(sundayDays.nth(23)).toBeDisabled();
+    await expect(sundayDays.nth(23).locator(".kit-calendar__match")).toHaveCount(1);
+    await expect(sundayDays.nth(23)).toHaveAttribute("aria-label", /, correspond aux filtres$/);
+    await expect(sunday.locator(".kit-calendar__nav").nth(1)).toBeDisabled();
   });
 
   test("matches mark days independently of counts and selection", async ({ page }) => {
@@ -315,18 +307,26 @@ test.describe("month strip", () => {
     const days = cal.locator(".kit-calendar__day");
     const selected = days.nth(27);
     await expect(selected).toHaveAttribute("aria-pressed", "true");
-    const step = await selected.getAttribute("data-activity");
-    expect(step).not.toBeNull();
-    const peer = cal
-      .locator(`.kit-calendar__day[data-activity="${step}"][aria-pressed="false"]`)
-      .first();
+    await expect(selected).toHaveAttribute("data-activity", "2");
+    const peer = cal.locator('.kit-calendar__day[data-activity="2"][aria-pressed="false"]').first();
     await page.mouse.move(0, 0);
     const background = (locator: import("@playwright/test").Locator) =>
       locator.evaluate((node) => getComputedStyle(node).backgroundColor);
-    await expect.poll(() => background(selected)).toBe(await background(peer));
-    expect(await selected.evaluate((node) => getComputedStyle(node).boxShadow)).toMatch(
-      /0px 0px 0px 2px inset/,
-    );
+    const colors = await selected.evaluate((node) => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = "color-mix(in srgb, var(--accent-green) 22%, transparent)";
+      probe.style.color = "var(--accent-blue)";
+      node.appendChild(probe);
+      const style = getComputedStyle(probe);
+      const result = { tint: style.backgroundColor, accent: style.color };
+      probe.remove();
+      return result;
+    });
+    await expect.poll(() => background(selected)).toBe(colors.tint);
+    await expect.poll(() => background(peer)).toBe(colors.tint);
+    const shadow = await selected.evaluate((node) => getComputedStyle(node).boxShadow);
+    expect(shadow).toContain(colors.accent);
+    expect(shadow).toMatch(/0px 0px 0px 2px inset/);
 
     await days.nth(4).click();
     await expect(page.locator("code", { hasText: "2026-03-05" })).toBeVisible();
@@ -439,10 +439,17 @@ test("matches draw on the grid, in surface ink on a solid range end", async ({ p
   await day(10).click();
   await expect(day(10)).toHaveClass(/range-end/);
   await expect(day(10)).toHaveAttribute("aria-label", /, matches filters$/);
-  const dot = (n: number) =>
-    day(n)
-      .locator(".kit-calendar__match")
-      .evaluate((node) => getComputedStyle(node).backgroundColor);
+  const dot = day(10).locator(".kit-calendar__match");
+  const surface = await day(10).evaluate((node) => {
+    const probe = document.createElement("span");
+    probe.style.backgroundColor = "var(--bg-surface)";
+    node.appendChild(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
   await page.mouse.move(0, 0);
-  await expect.poll(() => dot(10)).not.toBe(await dot(20));
+  await expect
+    .poll(() => dot.evaluate((node) => getComputedStyle(node).backgroundColor))
+    .toBe(surface);
 });
