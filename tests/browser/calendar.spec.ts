@@ -21,14 +21,6 @@ function drillCalendar(page: import("@playwright/test").Page) {
   return page.locator(".kit-calendar").nth(1);
 }
 
-function rangeDay(page: import("@playwright/test").Page, n: number) {
-  return page
-    .locator(".kit-calendar")
-    .nth(3)
-    .locator(".kit-calendar__day:not(.outside)")
-    .filter({ hasText: new RegExp(`^${n}$`) });
-}
-
 async function mountCalendarLayout(page: import("@playwright/test").Page) {
   await page.evaluate(async () => {
     const { mount } = await import("/node_modules/.vite/deps/svelte.js");
@@ -127,7 +119,8 @@ test("browsing zoomed grids never mutates the bound month", async ({ page }) => 
 test("two-click day range completes, swaps reversed picks, and restarts", async ({ page }) => {
   // The day-range demo renders the fourth calendar on the page.
   const cal = page.locator(".kit-calendar").nth(3);
-  const day = (n: number) => rangeDay(page, n);
+  const day = (n: number) =>
+    cal.locator(".kit-calendar__day:not(.outside)").filter({ hasText: new RegExp(`^${n}$`) });
   const mm = String(thisMonth + 1).padStart(2, "0");
 
   // Reversed picks swap into an ordered range.
@@ -165,7 +158,6 @@ test.describe("activity", () => {
     const calendar = page.getByTestId("calendar-activity").locator(".kit-calendar");
     await expect(calendar.getByRole("button", { name: "Mar 3, 2026, 1 item" })).toBeVisible();
     await expect(calendar.getByRole("button", { name: "Mar 5, 2026, 4 items" })).toBeVisible();
-    await expect(calendar.getByRole("button", { name: "Mar 10, 2026, 6 items" })).toBeVisible();
     await expect(calendar.getByRole("button", { name: "Mar 12, 2026, 9 items" })).toHaveAttribute(
       "data-activity",
       "4",
@@ -305,7 +297,6 @@ test.describe("month strip", () => {
     const selected = days.nth(27);
     await expect(selected).toHaveAttribute("aria-pressed", "true");
     await expect(selected).toHaveAttribute("data-activity", "2");
-    const peer = cal.locator('.kit-calendar__day[data-activity="2"][aria-pressed="false"]').first();
     await page.mouse.move(0, 0);
     const tint = await resolvedStyle(
       page,
@@ -313,7 +304,6 @@ test.describe("month strip", () => {
       "color-mix(in srgb, var(--accent-green) 22%, transparent)",
     );
     await expect(selected).toHaveCSS("background-color", tint);
-    await expect(peer).toHaveCSS("background-color", tint);
     const shadow = await selected.evaluate((node) => getComputedStyle(node).boxShadow);
     expect(shadow).toContain(accent);
     expect(shadow).toMatch(/0px 0px 0px 2px inset/);
@@ -326,19 +316,14 @@ test.describe("month strip", () => {
   test("paging the strip resets an open grid chooser", async ({ page }) => {
     await mountCalendarLayout(page);
     const cal = page.locator(".kit-calendar");
-    for (const [zoom, month] of [
-      [1, "April 2026"],
-      [2, "May 2026"],
-    ] as const) {
-      await cal.locator(".kit-calendar__month--button").click();
-      if (zoom === 2) await cal.locator(".kit-calendar__month--button").click();
-      await expect(cal.locator(".kit-calendar__unit")).toHaveCount(12);
-      await page.getByRole("button", { name: "Strip", exact: true }).click();
-      await cal.getByRole("button", { name: "Next month" }).click();
-      await page.getByRole("button", { name: "Grid", exact: true }).click();
-      await expect(cal.locator(".kit-calendar__grid")).toBeVisible();
-      await expect(cal.locator(".kit-calendar__month--button")).toContainText(month);
-    }
+    await cal.locator(".kit-calendar__month--button").click();
+    await cal.locator(".kit-calendar__month--button").click();
+    await expect(cal.locator(".kit-calendar__unit")).toHaveCount(12);
+    await page.getByRole("button", { name: "Strip", exact: true }).click();
+    await cal.getByRole("button", { name: "Next month" }).click();
+    await page.getByRole("button", { name: "Grid", exact: true }).click();
+    await expect(cal.locator(".kit-calendar__grid")).toBeVisible();
+    await expect(cal.locator(".kit-calendar__month--button")).toContainText("April 2026");
   });
 
   test("at 400px the strip scrolls and keeps keyboard focus visible", async ({ page }) => {

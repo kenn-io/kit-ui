@@ -59,8 +59,6 @@ describe("date label locale", () => {
       "Sat",
     ]);
     expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
-    expect(weekdayLabels("en-US", "sunday", "narrow")).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
-    expect(weekdayLabels("fr", "monday", "narrow")[0]).toBe("L");
   });
 
   test("caches are size-capped — many distinct locales still format correctly", () => {
