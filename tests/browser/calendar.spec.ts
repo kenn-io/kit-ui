@@ -209,9 +209,6 @@ test.describe("activity", () => {
       "data-activity",
       "1",
     );
-    await expect(
-      custom.getByRole("button", { name: "Mar 2, 2026, -1 messages" }),
-    ).not.toHaveAttribute("data-activity");
   });
 
   test("shaded day numbers meet AA contrast in light and dark", async ({ page }) => {

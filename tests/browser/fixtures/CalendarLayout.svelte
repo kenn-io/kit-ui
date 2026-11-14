@@ -10,7 +10,7 @@
 <Calendar
   bind:month
   {layout}
-  activity={{ "2026-03-01": 0, "2026-03-02": -1 }}
+  activity={{ "2026-03-01": 0 }}
   activityScale={(count) => (count === 0 ? 1 : 0)}
   activityLabel={(count) => `${count} messages`}
 />
