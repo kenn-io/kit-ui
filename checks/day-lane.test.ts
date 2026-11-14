@@ -217,14 +217,10 @@ describe("placing items", () => {
     expect(more).toMatchObject({ column: 2, columns: 3, startMinute: at(9, 10), height: 44 });
     expect(more!.top).toBe(32 + (10 / 60) * 96);
     expect(accountedIds(entries)).toEqual(["a", "b", "c", "d"]);
-  });
-
-  test("maxColumns is configurable", () => {
-    const items = [span("a", 9, 0, 10, 0), span("b", 9, 5, 10, 0), span("c", 9, 10, 10, 0)];
-    const { entries } = layoutDayLane(items, { ...base, maxColumns: 2 });
-    expect(placed(entries).map((e) => e.item.id)).toEqual(["a"]);
-    expect(overflows(entries)[0]!.items.map((i) => i.id)).toEqual(["b", "c"]);
-    expect(overflows(entries)[0]).toMatchObject({ column: 1, columns: 2 });
+    const narrow = layoutDayLane(items.slice(0, 3), { ...base, maxColumns: 2 }).entries;
+    expect(placed(narrow).map((e) => e.item.id)).toEqual(["a"]);
+    expect(overflows(narrow)[0]!.items.map((i) => i.id)).toEqual(["b", "c"]);
+    expect(overflows(narrow)[0]).toMatchObject({ column: 1, columns: 2 });
   });
 
   test("point items at the same minute share the row, then overflow", () => {

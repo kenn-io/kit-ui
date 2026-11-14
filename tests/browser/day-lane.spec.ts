@@ -166,7 +166,7 @@ test("overlapping items sit side by side and the rest go to +N more", async ({ p
   await expect(lastEvent(page)).toHaveText("overflow 3 from 9:30 AM");
 });
 
-test("the selected card is the tab stop and arrows move in time order", async ({ page }) => {
+test("Tab returns to the selected card after focus leaves the lane", async ({ page }) => {
   const standup = lane(page).getByRole("button", { name: /Shipment status standup/ });
   const call = lane(page).getByRole("button", { name: /Call: Jory and Dev/ });
   await expect(standup).toHaveAttribute("aria-pressed", "true");
