@@ -91,7 +91,12 @@
   });
   let activeKey = $state<string | null>(null);
   let scroller = $state<HTMLDivElement>();
-  let scrolledFor: string | number | null = null;
+  const foldInset = 3;
+  const nowLineHeight = 2;
+  let scrolledFor = $derived.by(() => {
+    void dayKey;
+    return false;
+  });
 
   // A fixed UTC date turns a minute into a clock time without reading any zone.
   const clock = (minute: number) => new Date(Date.UTC(2000, 0, 1, 0, minute));
@@ -117,6 +122,12 @@
     }),
   );
   const placedTicks = $derived(placeTicks(tickList, layout.segments, hourHeight));
+
+  $effect(() => {
+    const keys = new Set(layout.segments.map((segment) => segment.key));
+    const valid = expandedFolds.filter((key) => keys.has(key));
+    if (valid.length !== expandedFolds.length) expandedFolds = valid;
+  });
 
   const keyOf = (entry: DayLaneEntry) =>
     entry.kind === "item" ? `item:${entry.item.id}` : `more:${entry.key}`;
@@ -163,9 +174,9 @@
     if (nowFold)
       return (
         nowFold.top +
-        3 +
+        foldInset +
         ((nowMinute - nowFold.startMinute) / (nowFold.endMinute - nowFold.startMinute)) *
-          (nowFold.height - 8)
+          (nowFold.height - 2 * foldInset - nowLineHeight)
       );
     return minuteToY(layout.segments, nowMinute, hourHeight);
   });
@@ -246,10 +257,8 @@
   // Bring the first timed item into view once per day, as soon as there is one.
   $effect(() => {
     const first = layout.entries[0];
-    const day = dayKey;
-    if (!first) scrolledFor = null;
-    if (!scrollToFirst || !scroller || !first || scrolledFor === day) return;
-    scrolledFor = day;
+    if (!scrollToFirst || !scroller || !first || scrolledFor) return;
+    scrolledFor = true;
     const el = scroller.querySelector<HTMLElement>(
       `[data-day-lane-key="${CSS.escape(keyOf(first))}"]`,
     );
@@ -268,6 +277,7 @@
 <div
   bind:this={scroller}
   class={["kit-day-lane", className]}
+  style:--kit-day-lane-now-line-height="{nowLineHeight}px"
   role="group"
   aria-label={ariaLabel}
   {onkeydown}
@@ -306,7 +316,7 @@
 
   <div class="kit-day-lane__axis" style:height="{layout.height}px">
     <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
-    {#each placedTicks as tick, index (index)}
+    {#each placedTicks as tick}
       {#if !tick.atFold}
         <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
         <i class="kit-day-lane__hour-line" style:top="{tick.top}px" aria-hidden="true"></i>
@@ -319,8 +329,8 @@
         <button
           type="button"
           class="kit-day-lane__fold"
-          style:top="{segment.top + 3}px"
-          style:height="{segment.height - 6}px"
+          style:top="{segment.top + foldInset}px"
+          style:height="{segment.height - 2 * foldInset}px"
           aria-expanded="false"
           data-fold-key={segment.key}
           data-day-lane-key={key}
@@ -659,7 +669,7 @@
     left: calc(var(--kit-day-lane-gutter) - var(--space-2));
     right: 0;
     z-index: 3;
-    border-top: 2px solid var(--accent-red);
+    border-top: var(--kit-day-lane-now-line-height) solid var(--accent-red);
     pointer-events: none;
   }
 

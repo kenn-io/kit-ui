@@ -74,7 +74,7 @@ a `startMinute`, are not drawn.
 | `dayKey`           | `string \| number`                                                        | `""`         | Identifies the day shown; a new key scrolls again and closes opened folds          |
 | `onselect`         | `(id) => void`                                                            | —            | Click, Enter or Space on a card                                                    |
 | `onoverflow`       | `({ ids, startMinute }) => void`                                          | —            | A "+N more" item was chosen; the app shows the list                                |
-| `onfoldchange`     | `({ startMinute, endMinute, expanded })`                                  | —            | A fold was opened or closed                                                        |
+| `onfoldchange`     | `({ startMinute, endMinute, expanded })`                                  | —            | A user opened or closed a fold; automatic resets do not emit this callback         |
 | labels             | `ariaLabel`, `dateOnlyLabel`, `overflowLabel`, `foldLabel`, `refoldLabel` | English      | Strings and small functions for translation                                        |
 
 When changing `dayKey`, pass the items for that day with the new key. Pass an

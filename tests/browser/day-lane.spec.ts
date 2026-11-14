@@ -8,6 +8,81 @@ test.beforeEach(async ({ page }) => {
 const lane = (page: import("@playwright/test").Page) => page.getByTestId("day-lane-busy");
 const lastEvent = (page: import("@playwright/test").Page) => page.getByTestId("day-lane-event");
 
+test("refilling the same day leaves the user's scroll position alone", async ({ page }) => {
+  const fixture = await page.evaluateHandle(async () => {
+    const [{ mountReactive }, { default: DayLane }, { createRawSnippet }] = await Promise.all([
+      import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+      import("/src/lib/components/DayLane.svelte"),
+      import("/node_modules/.vite/deps/svelte.js"),
+    ]);
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    host.style.height = "300px";
+    document.body.appendChild(host);
+    return mountReactive(DayLane, host, {
+      items: [{ id: "first", startMinute: 540 }],
+      dayKey: "a",
+      foldQuietMinutes: 0,
+      item: createRawSnippet(() => ({ render: () => "<span>First</span>" })),
+    });
+  });
+  const scroller = page.locator(".kit-day-lane");
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await fixture.evaluate((component) => component.update({ items: [] }));
+  await expect(page.getByRole("button", { name: /First/ })).toHaveCount(0);
+  await scroller.evaluate((el) => (el.scrollTop = 100));
+  await fixture.evaluate((component) =>
+    component.update({ items: [{ id: "first", startMinute: 540 }] }),
+  );
+  await expect(page.getByRole("button", { name: /First/ })).toBeVisible();
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(100);
+});
+
+test("a fold closes when its old quiet span returns", async ({ page }) => {
+  const fixture = await page.evaluateHandle(async () => {
+    const [{ mountReactive }, { default: DayLane }, { createRawSnippet }] = await Promise.all([
+      import("/tests/browser/fixtures/mount-reactive.svelte.ts"),
+      import("/src/lib/components/DayLane.svelte"),
+      import("/node_modules/.vite/deps/svelte.js"),
+    ]);
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    host.style.height = "300px";
+    document.body.appendChild(host);
+    return mountReactive(DayLane, host, {
+      items: [
+        { id: "morning", startMinute: 600 },
+        { id: "afternoon", startMinute: 840 },
+      ],
+      dayKey: "a",
+      foldQuietMinutes: 120,
+      item: createRawSnippet(() => ({ render: () => "<span>Item</span>" })),
+    });
+  });
+  const fold = page.getByRole("button", { name: /11:00 AM.*2:00 PM/ });
+  await fold.click();
+  await expect(page.getByRole("button", { name: "Fold 3 quiet hours" })).toBeVisible();
+  await fixture.evaluate((component) =>
+    component.update({
+      items: [
+        { id: "morning", startMinute: 600 },
+        { id: "midday", startMinute: 720 },
+        { id: "afternoon", startMinute: 840 },
+      ],
+    }),
+  );
+  await expect(page.getByRole("button", { name: "Fold 3 quiet hours" })).toHaveCount(0);
+  await fixture.evaluate((component) =>
+    component.update({
+      items: [
+        { id: "morning", startMinute: 600 },
+        { id: "afternoon", startMinute: 840 },
+      ],
+    }),
+  );
+  await expect(fold).toBeVisible();
+});
+
 test("point cards mark their own exact start at the top edge", async ({ page }) => {
   const dock = lane(page).getByRole("button", { name: /Dock schedule/ });
   const pallet = lane(page).getByRole("button", { name: /Pallet count v3/ });
