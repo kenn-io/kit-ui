@@ -40,6 +40,37 @@ async function composingKey(page: Page, key: string) {
   }, key);
 }
 
+for (const picker of ["date-picker", "date-range-picker"] as const) {
+  test(`${picker}: a new preview restores days after month and year browsing`, async ({ page }) => {
+    await gotoPage(page, picker);
+    if (picker === "date-picker") {
+      await page.getByRole("button", { name: "Typed date" }).click();
+    } else {
+      await page
+        .getByTestId("typed-range-picker")
+        .locator(".kit-date-range-picker__trigger")
+        .click();
+      await page.getByRole("radio", { name: "Custom", exact: true }).click();
+    }
+    const calendar = page.locator(".kit-calendar");
+    for (const zoom of ["months", "years"]) {
+      await calendar.getByRole("button", { name: "Choose month", exact: true }).click();
+      await calendar.getByRole("button", { name: "Next year", exact: true }).click();
+      if (zoom === "years") {
+        await calendar.getByRole("button", { name: "Choose year", exact: true }).click();
+        await calendar.getByRole("button", { name: "Next years", exact: true }).click();
+      }
+      await field(page).fill("");
+      await field(page).fill("Sep 10 2025");
+      await expect(calendar.locator(".kit-calendar__month")).toHaveText("September 2025");
+      await expect(calendar.locator(".kit-calendar__day.selected")).toHaveText("10");
+      // Ordinary navigation remains usable after a preview.
+      await calendar.getByRole("button", { name: "Previous month", exact: true }).click();
+      await expect(calendar.locator(".kit-calendar__month")).toHaveText("August 2025");
+    }
+  });
+}
+
 test.describe("DateRangePicker", () => {
   test.beforeEach(async ({ page }) => {
     await gotoPage(page, "date-range-picker");

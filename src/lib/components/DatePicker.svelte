@@ -84,6 +84,7 @@
   let phrase = $state("");
   let preview = $state<string | null>(null);
   let noMatch = $state(false);
+  let previewRevision = $state(0);
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
   const typed = $derived.by(() => {
@@ -119,6 +120,7 @@
     if (!next) return;
     previewTimer = setTimeout(() => {
       preview = next;
+      previewRevision++;
       month = next;
     }, 100);
   }
@@ -229,18 +231,20 @@
           onsubmit={submitPhrase}
         />
       {/if}
-      <Calendar
-        bind:month
-        selected={preview
-          ? { from: preview, to: preview }
-          : value
-            ? { from: value, to: value }
-            : null}
-        {maxDate}
-        {...calendarLabels}
-        {locale}
-        onpick={pick}
-      />
+      {#key previewRevision}
+        <Calendar
+          bind:month
+          selected={preview
+            ? { from: preview, to: preview }
+            : value
+              ? { from: value, to: value }
+              : null}
+          {maxDate}
+          {...calendarLabels}
+          {locale}
+          onpick={pick}
+        />
+      {/key}
     </div>
   {/if}
 </div>

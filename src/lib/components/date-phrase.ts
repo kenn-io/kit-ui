@@ -121,7 +121,16 @@ function parts(iso: string): [number, number, number] {
 /** A valid calendar date as YYYY-MM-DD, or null (Feb 30, month 13, ...).
  * setFullYear avoids Date's 0–99 → 1900s mapping. */
 function makeDate(year: number, month: number, day: number): string | null {
-  if (!Number.isInteger(year) || month < 0 || month > 11 || day < 1 || day > 31) return null;
+  if (
+    !Number.isInteger(year) ||
+    year < 1000 ||
+    year > 9999 ||
+    month < 0 ||
+    month > 11 ||
+    day < 1 ||
+    day > 31
+  )
+    return null;
   const d = new Date(2000, 0, 1);
   d.setFullYear(year, month, day);
   if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
@@ -136,26 +145,32 @@ function addDays(iso: string, n: number): string {
 }
 
 /** Shift by whole months, clamping the day (Mar 31 − 1 month → Feb 28). */
-function addMonths(iso: string, n: number): string {
+function addMonths(iso: string, n: number): string | null {
   const [y, m, d] = parts(iso);
   const total = y * 12 + m + n;
   const year = Math.floor(total / 12);
+  if (!Number.isSafeInteger(total) || year < 1000 || year > 9999) return null;
   const month = total - year * 12;
   const last = new Date(2000, 0, 1);
   last.setFullYear(year, month + 1, 0);
-  return makeDate(year, month, Math.min(d, last.getDate())) as string;
+  return makeDate(year, month, Math.min(d, last.getDate()));
 }
 
-function shift(iso: string, unit: Unit, n: number): string {
+function shift(iso: string, unit: Unit, n: number): string | null {
+  const scaled = n * (unit === "week" ? 7 : unit === "year" ? 12 : 1);
+  if (!Number.isSafeInteger(scaled) || Math.abs(scaled) > 366_000) return null;
   if (unit === "day") return addDays(iso, n);
   if (unit === "week") return addDays(iso, 7 * n);
   if (unit === "month") return addMonths(iso, n);
   return addMonths(iso, 12 * n);
 }
 
-function monthSpan(year: number, month: number, explicitYear: boolean): Span {
-  const from = makeDate(year, month, 1) as string;
-  return { from, to: addDays(addMonths(from, 1), -1), single: false, explicitYear };
+function monthSpan(year: number, month: number, explicitYear: boolean): Span | null {
+  const from = makeDate(year, month, 1);
+  if (!from) return null;
+  const last = new Date(2000, 0, 1);
+  last.setFullYear(year, month + 1, 0);
+  return { from, to: localDateStr(last), single: false, explicitYear };
 }
 
 /* ---------- locale word tables ---------- */
@@ -340,6 +355,10 @@ const NUMBER_WORDS: Record<string, number> = {
   twelve: 12,
 };
 
+function unit(token: string | undefined): Unit | undefined {
+  return token !== undefined && Object.hasOwn(UNITS, token) ? UNITS[token] : undefined;
+}
+
 /** A positive count: digits (up to 1000 years' worth of days) or a word. */
 function count(token: string | undefined): number | null {
   if (token === undefined) return null;
@@ -347,7 +366,7 @@ function count(token: string | undefined): number | null {
     const n = Number(token);
     return n > 0 && n <= 366_000 ? n : null;
   }
-  return NUMBER_WORDS[token] ?? null;
+  return Object.hasOwn(NUMBER_WORDS, token) ? NUMBER_WORDS[token]! : null;
 }
 
 function dayNumber(token: string | undefined): number | null {
@@ -429,13 +448,14 @@ function monthDay(
  * year to assume when the text names none (the other end of a range). One
  * leading weekday is allowed when it agrees with the date ("Fri Sep 11");
  * one that contradicts it ("Mon Sep 10" in 2026) is no match. */
-function parseSpan(text: string, ctx: Ctx, yearHint?: number): Span | null {
+function parseSpan(text: string, ctx: Ctx, yearHint?: number, checkWeekday = true): Span | null {
   const space = text.indexOf(" ");
   const head = space > 0 ? text.slice(0, space) : "";
   const { months, weekdays } = ctx.words;
   if (head && weekdays.has(head) && !months.has(head)) {
     const rest = parseCore(text.slice(space + 1), ctx, yearHint);
     if (!rest?.single) return null;
+    if (!checkWeekday) return rest;
     const [y, m, d] = parts(rest.from);
     const date = new Date(2000, 0, 1);
     date.setFullYear(y, m, d);
@@ -490,12 +510,12 @@ function parseCore(text: string, ctx: Ctx, yearHint?: number): Span | null {
   }
 
   // "3 days ago", "a week ago".
-  if (n === 3 && c === "ago" && UNITS[b!] && count(a) !== null) {
-    return single(shift(ctx.today, UNITS[b!]!, -count(a)!));
+  if (n === 3 && c === "ago" && unit(b) && count(a) !== null) {
+    return single(shift(ctx.today, unit(b)!, -count(a)!));
   }
   // "in 3 days", "in a week".
-  if (n === 3 && a === "in" && UNITS[c!] && count(b) !== null) {
-    return single(shift(ctx.today, UNITS[c!]!, count(b)!));
+  if (n === 3 && a === "in" && unit(c) && count(b) !== null) {
+    return single(shift(ctx.today, unit(c)!, count(b)!));
   }
 
   // Weekdays: "Friday", "this Friday", "last Friday", "next Friday" — the
@@ -510,6 +530,7 @@ function parseCore(text: string, ctx: Ctx, yearHint?: number): Span | null {
   if (n === 2 && /^(this|last|next)$/.test(a!) && /^(week|month|year)$/.test(b!)) {
     const dir = a === "last" ? -1 : a === "next" ? 1 : 0;
     const anchor = shift(ctx.today, b as Unit, dir);
+    if (!anchor) return null;
     if (b === "year") {
       const y = anchor.slice(0, 4);
       return range(`${y}-01-01`, `${y}-12-31`);
@@ -522,14 +543,16 @@ function parseCore(text: string, ctx: Ctx, yearHint?: number): Span | null {
   // "past week" for one unit. Inclusive of today, like presetRange().
   if (/^(last|past)$/.test(a!)) {
     const amount = n === 3 ? count(b) : n === 2 && a === "past" ? 1 : null;
-    const unit = n === 3 ? UNITS[c!] : UNITS[b!];
-    if (amount !== null && unit && (n === 3 || a === "past")) {
-      return { ...range(addDays(shift(ctx.today, unit, -amount), 1), ctx.today), rolling: true };
+    const u = n === 3 ? unit(c) : unit(b);
+    if (amount !== null && u && (n === 3 || a === "past")) {
+      const start = shift(ctx.today, u, -amount);
+      return start ? { ...range(addDays(start, 1), ctx.today), rolling: true } : null;
     }
   }
   // Rolling windows starting today: "next 10 days".
-  if (n === 3 && a === "next" && count(b) !== null && UNITS[c!]) {
-    return range(ctx.today, addDays(shift(ctx.today, UNITS[c!]!, count(b)!), -1));
+  if (n === 3 && a === "next" && count(b) !== null && unit(c)) {
+    const end = shift(ctx.today, unit(c)!, count(b)!);
+    return end ? range(ctx.today, addDays(end, -1)) : null;
   }
 
   return null;
@@ -550,26 +573,36 @@ function splits(text: string, sep: string): [string, string][] {
 
 /** Join "<left> to <right>" into one range. */
 function joinPair(leftText: string, rightText: string, ctx: Ctx): Span | null {
-  let left = parseSpan(leftText, ctx);
-  if (!left || rightText === "") return null;
-  if (!left.explicitYear) {
-    // Only the right end names a year ("Sep 10 - Oct 20 2025", "Jan to Mar
-    // 2025"): the left end takes it, or the year before when that would put
-    // it after the right end ("Dec 20 - Jan 5 2027").
-    const right = parseSpan(rightText, ctx);
-    if (right?.explicitYear) {
-      const year = Number(right.from.slice(0, 4));
-      let hinted = parseSpan(leftText, ctx, year);
-      if (hinted && hinted.from > right.to) hinted = parseSpan(leftText, ctx, year - 1);
-      if (hinted) left = hinted;
-    }
+  if (rightText === "") return null;
+  const right = parseSpan(rightText, ctx);
+  let hint = right?.explicitYear ? Number(right.from.slice(0, 4)) : undefined;
+  if (hint !== undefined && right) {
+    // Resolve the shared year and any December-to-January rollover before
+    // checking a weekday prefix against that year's date.
+    const candidate = parseSpan(leftText, ctx, hint, false);
+    const previous = candidate ? null : parseSpan(leftText, ctx, hint - 1, false);
+    if (
+      (candidate && !candidate.explicitYear && candidate.from > right.to) ||
+      (previous && !previous.explicitYear && previous.from.slice(5) > right.to.slice(5))
+    )
+      hint--;
   }
+  const left = parseSpan(leftText, ctx, hint);
+  if (!left) return null;
   return joinRange(left, rightText, ctx);
 }
 
 function joinRange(left: Span, rightText: string, ctx: Ctx): Span | null {
-  const hint = left.explicitYear ? Number(left.to.slice(0, 4)) : undefined;
-  let right = parseSpan(rightText, ctx, hint);
+  let hint = left.explicitYear ? Number(left.to.slice(0, 4)) : undefined;
+  let right = parseSpan(rightText, ctx, hint, false);
+  if (!right) {
+    const nextYear = (hint ?? ctx.year) + 1;
+    const next = parseSpan(rightText, ctx, nextYear, false);
+    if (next && !next.explicitYear && next.from.slice(5) < left.from.slice(5)) {
+      hint = nextYear;
+      right = next;
+    }
+  }
   // "Sep 10 to 20": a bare day continues the left end's month.
   const day = right ? null : dayNumber(rightText);
   if (day !== null) {
@@ -581,11 +614,18 @@ function joinRange(left: Span, rightText: string, ctx: Ctx): Span | null {
   // crosses into the next year ("Dec 20 to Jan 5") or was typed backwards
   // ("Oct 20 to Sep 10"). Take whichever reading is the shorter range.
   if (right.from < left.from && !right.explicitYear && day === null) {
-    const rolled = parseSpan(rightText, ctx, Number(left.to.slice(0, 4)) + 1);
-    if (rolled && daysInRange(left.from, rolled.to) < daysInRange(right.from, left.to)) {
-      return { from: left.from, to: rolled.to, single: false, explicitYear: true };
+    const rolledYear = Number(left.to.slice(0, 4)) + 1;
+    const rolled = parseSpan(rightText, ctx, rolledYear, false);
+    if (
+      rolled &&
+      rolled.to >= left.from &&
+      daysInRange(left.from, rolled.to) < daysInRange(right.from, left.to)
+    ) {
+      right = rolled;
+      hint = rolledYear;
     }
   }
+  if (day === null && !parseSpan(rightText, ctx, hint)) return null;
   // Typed backwards ("Oct 20 to Sep 10") swaps the ends.
   const from = left.from < right.from ? left.from : right.from;
   const to = left.to > right.to ? left.to : right.to;

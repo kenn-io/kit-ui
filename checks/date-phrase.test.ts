@@ -32,6 +32,34 @@ function rolling(from: string, to: string, days: number) {
 
 const none = { kind: "none" };
 
+test("range years are resolved before date and weekday validation", () => {
+  expect(parse("Feb 29 to Mar 1 2028")).toEqual(range("2028-02-29", "2028-03-01"));
+  expect(parse("Feb 29 to Jan 5 2025")).toEqual(range("2024-02-29", "2025-01-05"));
+  expect(parse("Dec 31 2027 to Feb 29")).toEqual(range("2027-12-31", "2028-02-29"));
+  expect(parse("Dec 31 2027 to Sat Jan 1")).toEqual(range("2027-12-31", "2028-01-01"));
+  expect(parse("Thu Sep 10 to Oct 20 2025")).toEqual(none);
+  expect(parse("Thu Dec 31 to Jan 5 2027")).toEqual(range("2026-12-31", "2027-01-05"));
+});
+
+test("backward relative ranges swap rather than using an inverted rollover", () => {
+  expect(parse("today to yesterday")).toEqual(range("2026-11-11", "2026-11-12"));
+  expect(parse("Friday to Monday")).toEqual(range("2026-11-09", "2026-11-13"));
+  expect(parse("Dec 20 to Jan 5")).toEqual(range("2026-12-20", "2027-01-05"));
+});
+
+test("unsupported years and unknown count or unit words are no match", () => {
+  for (const text of [
+    "Sep 0999",
+    "Sep 10 0999",
+    "last several months",
+    "past season",
+    "next 10000 years",
+  ]) {
+    expect(parse(text)).toEqual(none);
+  }
+  expect(parse("Sep 1000")).toEqual(range("1000-09-01", "1000-09-30"));
+});
+
 describe("single dates", () => {
   test("today is a rolling one-day window", () => {
     expect(parse("today")).toEqual({ kind: "date", date: "2026-11-12", rollingDays: 1 });
@@ -524,10 +552,10 @@ describe("review regressions", () => {
   });
 
   test("long input is no match without work", () => {
-    const long = "fri ".repeat(8000);
+    const long = " ".repeat(8000) + "today";
     expect(parse(long, june)).toEqual(none);
     expect(completeDatePhrase(long + "fr")).toBe("");
-    expect(parse("x".repeat(DATE_PHRASE_MAX_LENGTH + 1), june)).toEqual(none);
+    expect(parse(" ".repeat(DATE_PHRASE_MAX_LENGTH) + "today", june)).toEqual(none);
     const started = performance.now();
     parse("fri ".repeat(50), june);
     expect(performance.now() - started).toBeLessThan(500);

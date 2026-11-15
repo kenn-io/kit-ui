@@ -174,6 +174,7 @@
   type TypedPick = DateRange & { dates?: string[]; label?: string; preset?: RangePreset };
   let typedPreview = $state<TypedPick | null>(null);
   let noMatch = $state(false);
+  let previewRevision = $state(0);
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
   const typed = $derived.by((): TypedPick | null => {
@@ -235,6 +236,7 @@
     if (!next) return;
     previewTimer = setTimeout(() => {
       typedPreview = next;
+      previewRevision++;
       // A preset match previews as its pill; anything else on the calendar.
       tab = next.preset ? "relative" : "custom";
       customMonth = next.from;
@@ -630,16 +632,18 @@
           </span>
         </div>
         <div class="kit-date-range-picker__calendar">
-          <Calendar
-            bind:month={customMonth}
-            selected={calCustomSelected}
-            selectedDates={calCustomDates}
-            {maxDate}
-            {...calendarLabels}
-            {locale}
-            {weekStart}
-            onpick={pickCustomDay}
-          />
+          {#key previewRevision}
+            <Calendar
+              bind:month={customMonth}
+              selected={calCustomSelected}
+              selectedDates={calCustomDates}
+              {maxDate}
+              {...calendarLabels}
+              {locale}
+              {weekStart}
+              onpick={pickCustomDay}
+            />
+          {/key}
         </div>
       {/if}
     </div>
