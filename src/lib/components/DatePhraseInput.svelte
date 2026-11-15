@@ -190,11 +190,12 @@
     class="kit-date-phrase-input__summary"
     class:kit-date-phrase-input__summary--invalid={invalid}
   >
-    {summary || hint}
+    <!-- Keep the live child mounted, with the idle hint outside it. -->
+    <span aria-live="polite">{summary}</span>
+    {#if !summary}
+      {hint}
+    {/if}
   </p>
-  <!-- Announces a new result or a no-match message, not the hint on every
-       keystroke. -->
-  <span class="kit-sr-only" aria-live="polite">{summary}</span>
 </div>
 
 <!-- Selection changes without an edit (clicks, arrow keys) move the caret
