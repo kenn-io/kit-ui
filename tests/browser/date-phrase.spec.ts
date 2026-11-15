@@ -81,6 +81,51 @@ for (const picker of ["date-picker", "date-range-picker"] as const) {
   });
 }
 
+for (const zoom of ["months", "years"] as const) {
+  test(`DateRangePicker: immediate Enter restores days from ${zoom} without a preview`, async ({
+    page,
+  }) => {
+    // Unlike setFixedTime, install + pauseAt also holds the 100 ms preview timer.
+    // Let navigation and chooser setup finish before pausing time.
+    await page.clock.install({ time: new Date(now.getTime() - 60_000) });
+    await gotoPage(page, "date-range-picker");
+    await page.getByTestId("typed-range-picker").locator(".kit-date-range-picker__trigger").click();
+    await page.getByRole("radio", { name: "Custom", exact: true }).click();
+    const calendar = page.locator(".kit-calendar");
+    await calendar.getByRole("button", { name: /\. Choose month$/ }).click();
+    await calendar.getByRole("button", { name: "Previous year", exact: true }).click();
+    if (zoom === "years") {
+      await calendar.getByRole("button", { name: /\. Choose year$/ }).click();
+      await calendar.getByRole("button", { name: "Previous years", exact: true }).click();
+    }
+    await expect(calendar.getByRole("button", { name: "Jun 10, 2026", exact: true })).toHaveCount(
+      0,
+    );
+    await page.clock.pauseAt(now);
+    // Fill simulates a whole pasted phrase. No simulated time passes before Enter.
+    await field(page).fill("Jun 10 to Jun 12");
+    await field(page).press("Enter");
+    await expect(page.getByTestId("typed-range-selection")).toHaveText(
+      '{"mode":"custom","from":"2026-06-10","to":"2026-06-12"}',
+    );
+    await expect(page.getByTestId("typed-range-bounds")).toHaveText("2026-06-10 → 2026-06-12");
+    await expect(field(page)).toHaveValue("");
+    await expect(calendar.locator(".kit-calendar__month")).toHaveText("June 2026");
+    await expect(calendar.getByRole("button", { name: "Jun 10, 2026", exact: true })).toBeVisible();
+    await expect(calendar.locator(".kit-calendar__day.selected")).toHaveText(["10", "11", "12"]);
+
+    await field(page).press("Enter");
+    // Browsing still works; a canceled preview cannot later snap it back.
+    await calendar.getByRole("button", { name: "Previous month", exact: true }).click();
+    await page.clock.runFor(200);
+    await expect(calendar.locator(".kit-calendar__month")).toHaveText("May 2026");
+    await expect(calendar.getByRole("button", { name: "May 1, 2026", exact: true })).toBeVisible();
+    await expect(page.getByTestId("typed-range-selection")).toHaveText(
+      '{"mode":"custom","from":"2026-06-10","to":"2026-06-12"}',
+    );
+  });
+}
+
 test.describe("DateRangePicker", () => {
   test.beforeEach(async ({ page }) => {
     await gotoPage(page, "date-range-picker");

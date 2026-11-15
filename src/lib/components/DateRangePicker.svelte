@@ -254,6 +254,8 @@
       // Clear the text too, so a second Enter doesn't emit again.
       resetPhrase();
       tab = "custom";
+      // Enter can beat the preview timer while the month/year chooser is open.
+      previewRevision++;
       customMonth = from;
       commitCustom(from, to, dates, label);
     } else if (phrase.trim() !== "") {
