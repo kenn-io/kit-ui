@@ -449,10 +449,12 @@ function monthDay(
  * leading weekday is allowed when it agrees with the date ("Fri Sep 11");
  * one that contradicts it ("Mon Sep 10" in 2026) is no match. */
 function parseSpan(text: string, ctx: Ctx, yearHint?: number, checkWeekday = true): Span | null {
+  const core = parseCore(text, ctx, yearHint);
+  if (core) return core;
   const space = text.indexOf(" ");
   const head = space > 0 ? text.slice(0, space) : "";
-  const { months, weekdays } = ctx.words;
-  if (head && weekdays.has(head) && !months.has(head)) {
+  const { weekdays } = ctx.words;
+  if (head && weekdays.has(head)) {
     const rest = parseCore(text.slice(space + 1), ctx, yearHint);
     if (!rest?.single) return null;
     if (!checkWeekday) return rest;
@@ -461,7 +463,7 @@ function parseSpan(text: string, ctx: Ctx, yearHint?: number, checkWeekday = tru
     date.setFullYear(y, m, d);
     return date.getDay() === weekdays.get(head) ? rest : null;
   }
-  return parseCore(text, ctx, yearHint);
+  return null;
 }
 
 /** parseSpan without the leading weekday. */
@@ -801,7 +803,7 @@ function parseSet(
           if (groups.size === n) break;
           groups.add(group);
         }
-        out.push(date);
+        if (!(lo && date < lo) && !(hi && date > hi)) out.push(date);
       }
       date = addDays(date, dir);
       dow = (dow + dir + 7) % 7;

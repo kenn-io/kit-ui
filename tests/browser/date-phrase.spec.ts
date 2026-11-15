@@ -53,6 +53,16 @@ for (const picker of ["date-picker", "date-range-picker"] as const) {
       await page.getByRole("radio", { name: "Custom", exact: true }).click();
     }
     const calendar = page.locator(".kit-calendar");
+    await field(page).fill("1000-01-01");
+    await expect(calendar.locator(".kit-calendar__month")).toHaveText("January 1000");
+    await expect(calendar.getByRole("button", { name: "Dec 30, 999", exact: true })).toBeVisible();
+    await expect(calendar.locator(".kit-calendar__day.selected")).toHaveText("1");
+    await calendar.getByRole("button", { name: /\. Choose month$/ }).click();
+    await calendar.getByRole("button", { name: "Previous year", exact: true }).click();
+    await calendar.getByRole("button", { name: "December 999", exact: true }).click();
+    await expect(calendar.locator(".kit-calendar__month")).toHaveText("December 999");
+    await expect(calendar.getByRole("button", { name: "Dec 1, 999", exact: true })).toBeVisible();
+
     for (const zoom of ["months", "years"]) {
       await calendar.getByRole("button", { name: /\. Choose month$/ }).click();
       await calendar.getByRole("button", { name: "Next year", exact: true }).click();

@@ -326,6 +326,9 @@ describe("locale names", () => {
 
   test("French names match with or without accents and abbreviation dots", () => {
     const fr = { locale: "fr-FR" };
+    expect(parse("mar. 10 novembre 2026", fr)).toEqual(date("2026-11-10"));
+    expect(parse("mar. 11 novembre 2026", fr)).toEqual(none);
+    expect(parse("mar 10", fr)).toEqual(date("2026-03-10"));
     expect(parse("3 févr.", fr)).toEqual(date("2026-02-03"));
     expect(parse("3 fevrier", fr)).toEqual(date("2026-02-03"));
     expect(parse("10 septembre au 20 octobre", fr)).toEqual(none); // keywords stay English
@@ -717,6 +720,14 @@ describe("sets of separate days", () => {
     expect(set("weekdays since 2025", { earliestDate: "2026-11-19" })).toEqual(none);
     expect(set("weekdays since 2025", { earliestDate: "2025-01-02" })).toEqual(none);
     expect(set("weekdays since 0999", { earliestDate: "2026-11-01" })).toEqual(none);
+    expect(set("last 184 weekends", { earliestDate: "2026-11-01" })).toEqual(
+      dates("Weekends", "2026-11-01", "2026-11-07", "2026-11-08", "2026-11-14", "2026-11-15"),
+    );
+    expect(set("next 184 weekends", { maxDate: "2026-12-01" })).toEqual(
+      dates("Weekends", "2026-11-21", "2026-11-22", "2026-11-28", "2026-11-29"),
+    );
+    expect(set("last 2 weekends", { maxDate: "2026-11-01" })).toEqual(none);
+    expect(set("last 367 weekends", { earliestDate: "2026-11-01" })).toEqual(none);
   });
 
   test("caps: N and the set size", () => {

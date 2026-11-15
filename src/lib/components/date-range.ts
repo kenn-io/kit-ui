@@ -96,7 +96,7 @@ function parseLocal(date: string): Date {
 
 /** Format a Date as a local-timezone YYYY-MM-DD string. */
 export function localDateStr(d: Date): string {
-  const y = d.getFullYear();
+  const y = String(d.getFullYear()).padStart(4, "0");
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;

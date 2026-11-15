@@ -84,7 +84,7 @@
   const maxYear = $derived(maxDate == null ? null : Number.parseInt(maxDate.slice(0, 4), 10));
 
   function monthKey(y: number, monthIndex: number): string {
-    return `${y}-${String(monthIndex + 1).padStart(2, "0")}`;
+    return `${String(y).padStart(4, "0")}-${String(monthIndex + 1).padStart(2, "0")}`;
   }
 
   // The month and year grids are the same 12-slot picker over different

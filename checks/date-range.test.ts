@@ -99,3 +99,15 @@ test("Sunday-start calendar weeks and grid", () => {
   ]);
   expect(weekdayLabels("en-US")[0]).toBe("Mon");
 });
+
+test("January 1000 grid keeps adjacent days parseable and labelable", () => {
+  const grid = monthGridDates("1000-01-01");
+  expect(grid).toHaveLength(42);
+  expect(grid[0]).toBe("0999-12-30");
+  expect(grid).toContain("1000-01-01");
+  for (const day of grid) {
+    expect(day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(formatDayLabel(day, "en-US")).not.toContain("Invalid");
+  }
+  expect(formatDayLabel(grid[0]!, "en-US")).toBe("Dec 30, 999");
+});
