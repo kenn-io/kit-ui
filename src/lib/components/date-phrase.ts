@@ -757,6 +757,8 @@ function parseSet(
   text: string,
   ctx: Ctx,
   opts: DatePhraseOptions,
+  lo: string | null,
+  hi: string | null,
 ): { dates: string[]; label: string } | null {
   let toks = text.split(" ");
 
@@ -815,8 +817,8 @@ function parseSet(
   let rest = toks.slice(1).join(" ");
   if (rest.startsWith("in ") || rest.startsWith("during "))
     rest = rest.slice(rest.indexOf(" ") + 1);
-  const span = parseExpr(rest, ctx);
-  if (!span || !inYears(span.from, ctx) || !inYears(span.to, ctx)) return null;
+  const span = datePhraseRange(parseOrdinary(rest, ctx, lo, hi));
+  if (!span) return null;
   const dates = daysBetween(span.from, span.to, kind);
   return dates ? { dates, label: kind.label } : null;
 }
@@ -876,7 +878,7 @@ export function parseDatePhrase(text: string, options: DatePhraseOptions = {}): 
   // phrase that already parses means.
   const result = parseOrdinary(normalized, ctx, lo, hi);
   if (result.kind !== "none" || !options.sets) return result;
-  const set = parseSet(normalized, ctx, options);
+  const set = parseSet(normalized, ctx, options, lo, hi);
   if (!set) return NONE;
   const dates = set.dates.filter((d) => inYears(d, ctx) && !(lo && d < lo) && !(hi && d > hi));
   return dates.length ? { kind: "dates", dates, label: set.label } : NONE;

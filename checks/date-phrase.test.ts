@@ -554,7 +554,7 @@ describe("review regressions", () => {
   test("long input is no match without work", () => {
     const long = " ".repeat(8000) + "today";
     expect(parse(long, june)).toEqual(none);
-    expect(completeDatePhrase(long + "fr")).toBe("");
+    expect(completeDatePhrase(" ".repeat(DATE_PHRASE_MAX_LENGTH) + "fr")).toBe("");
     expect(parse(" ".repeat(DATE_PHRASE_MAX_LENGTH) + "today", june)).toEqual(none);
     const started = performance.now();
     parse("fri ".repeat(50), june);
@@ -703,6 +703,20 @@ describe("sets of separate days", () => {
       dates("Fridays", "2026-10-30"),
     );
     expect(set("fridays next month", { maxDate: "2026-11-18" })).toEqual(none);
+    expect(set("weekdays since 2025", { earliestDate: "2026-11-01" })).toEqual(
+      dates(
+        "Weekdays",
+        ...[2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18].map(
+          (day) => `2026-11-${String(day).padStart(2, "0")}`,
+        ),
+      ),
+    );
+    expect(set("weekdays since 2025", { maxDate: "2025-01-03T12:00:00Z" })).toEqual(
+      dates("Weekdays", "2025-01-01", "2025-01-02", "2025-01-03"),
+    );
+    expect(set("weekdays since 2025", { earliestDate: "2026-11-19" })).toEqual(none);
+    expect(set("weekdays since 2025", { earliestDate: "2025-01-02" })).toEqual(none);
+    expect(set("weekdays since 0999", { earliestDate: "2026-11-01" })).toEqual(none);
   });
 
   test("caps: N and the set size", () => {

@@ -54,10 +54,10 @@ for (const picker of ["date-picker", "date-range-picker"] as const) {
     }
     const calendar = page.locator(".kit-calendar");
     for (const zoom of ["months", "years"]) {
-      await calendar.getByRole("button", { name: "Choose month", exact: true }).click();
+      await calendar.getByRole("button", { name: /\. Choose month$/ }).click();
       await calendar.getByRole("button", { name: "Next year", exact: true }).click();
       if (zoom === "years") {
-        await calendar.getByRole("button", { name: "Choose year", exact: true }).click();
+        await calendar.getByRole("button", { name: /\. Choose year$/ }).click();
         await calendar.getByRole("button", { name: "Next years", exact: true }).click();
       }
       await field(page).fill("");
