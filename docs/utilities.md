@@ -290,6 +290,21 @@ custom overlays: moves focus in (first `[autofocus]` descendant, else the
 surface — hence `tabindex="-1"`), traps Tab/Shift+Tab, locks body scroll
 (re-entrant), and restores focus on teardown.
 
+On teardown, focus goes back to the element that had it before the surface
+opened. In Safari and Firefox on macOS, which do not focus a pressed button,
+that is the control last pressed. When that element has left the page, or is
+now disabled, hidden or inert, focus goes to the nearest tab stop where it
+was. The trap records the trigger's ancestors and all their siblings when it
+opens, and on close it picks the first tab stop after that spot, else the
+last one before it, starting at the closest ancestor still on the page.
+Siblings removed along with the trigger are skipped, so deleting a row and
+its neighbours still focuses the next row left.
+If focus is already on something real when the surface closes, because the
+app focused an element in its close handler, the trap leaves it there.
+The check runs once more after the current update, since that update can
+remove the focused element after the surface's own teardown. This includes
+a trigger the app focused itself just before its row was removed.
+
 Tab moves in the browser's own order, iframe content included. Two
 invisible guard elements (`[data-kit-focus-guard]`) sit just before and
 after the surface while it is mounted; Tab past either end lands on one

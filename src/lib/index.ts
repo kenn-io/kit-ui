@@ -113,6 +113,27 @@ export {
   type RangeSelection,
   type RelativeSelection,
 } from "./components/date-range.js";
+export { default as DayLane } from "./components/DayLane.svelte";
+export {
+  buildDayLaneSegments,
+  DAY_LANE_DEFAULTS,
+  hourTicks,
+  layoutDayLane,
+  minuteToY,
+  placeColumns,
+  placeDayLaneItems,
+  placeTicks,
+  type DayLaneEntry,
+  type DayLaneItem,
+  type DayLaneItemContext,
+  type DayLaneLayout,
+  type DayLaneLayoutOptions,
+  type DayLaneOverflow,
+  type DayLanePlacedItem,
+  type DayLanePlacedTick,
+  type DayLaneSegment,
+  type DayLaneTick,
+} from "./components/day-lane.js";
 export { default as RadioGroup } from "./components/RadioGroup.svelte";
 export type { RadioGroupOption } from "./components/RadioGroup.svelte";
 export { default as RefreshControl } from "./components/RefreshControl.svelte";
