@@ -19,6 +19,7 @@
   import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
+  import DayLaneDemo from "./pages/DayLaneDemo.svelte";
   import CardDemo from "./pages/CardDemo.svelte";
   import CheckboxDemo from "./pages/CheckboxDemo.svelte";
   import ChipDemo from "./pages/ChipDemo.svelte";
@@ -118,6 +119,7 @@
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
     { id: "card", label: "Card", component: CardDemo },
+    { id: "day-lane", label: "DayLane", component: DayLaneDemo },
     { id: "checkbox", label: "Checkbox", component: CheckboxDemo },
     { id: "chip", label: "Chip", component: ChipDemo },
     { id: "chip-stack", label: "ChipStack", component: ChipStackDemo },
