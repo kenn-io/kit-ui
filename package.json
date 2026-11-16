@@ -143,18 +143,18 @@
     "svelte-mcp": "svelte-mcp"
   },
   "devDependencies": {
-    "@lucide/svelte": "1.62.0",
+    "@lucide/svelte": "1.70.0",
     "@playwright/test": "^1.64.1",
-    "@sveltejs/mcp": "0.1.28",
+    "@sveltejs/mcp": "0.1.30",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@tsconfig/svelte": "5.0.8",
     "@types/node": "^26.0.0",
-    "@videojs/html": "10.2.0",
+    "@videojs/html": "10.3.0",
     "axe-core": "4.14.0",
-    "mermaid": "12.2.0",
+    "mermaid": "12.3.0",
     "svelte": "5.57.3",
-    "svelte-check": "4.7.7",
-    "svelte2tsx": "0.7.62",
+    "svelte-check": "4.7.8",
+    "svelte2tsx": "0.7.63",
     "typescript": "^6.0.0",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.5.0",
     "vite-plus": "1.5.0"
@@ -164,7 +164,7 @@
     "@videojs/html": "^10.1.0",
     "dompurify": "^3.2.0",
     "marked": "^18.0.0",
-    "mermaid": "12.2.0",
+    "mermaid": "12.3.0",
     "shiki": "^4.0.0",
     "svelte": "^5.29.0"
   },
