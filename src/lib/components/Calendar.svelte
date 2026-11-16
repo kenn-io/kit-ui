@@ -248,7 +248,8 @@
 
   // The strip scrolls inside itself, so a selected day late in the month
   // can start out of view. After the month, selection or layout changes,
-  // scroll the track (never the page or focus) to show the first selected day.
+  // scroll the track (never the page or focus) to show the focused day, else
+  // the first selected day.
   let track = $state<HTMLElement | null>(null);
   function reveal(cell: HTMLElement) {
     if (track == null) return;
@@ -261,6 +262,12 @@
   $effect(() => {
     void [monthPrefix, selected?.from, selected?.to];
     if (track == null) return;
+    // A focused day keeps its place, such as day 28 after it ends a range.
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && track.contains(active)) {
+      reveal(active);
+      return;
+    }
     const cell = track.querySelector<HTMLElement>('[aria-pressed="true"]');
     if (cell == null) {
       // Nothing selected in this month: start it at day 1.
