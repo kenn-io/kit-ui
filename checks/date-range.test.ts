@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   dayGridKeyTarget,
   formatDayCellLabel,
+  activityStep,
   formatDayLabel,
   formatMonthLabel,
   formatShortDate,
@@ -47,10 +48,20 @@ describe("date label locale", () => {
     expect(formatMonthLabel("2026-06-29", "zh-CN")).toBe("2026年6月");
   });
 
-  test("weekdayLabels stay Monday-first in every locale", () => {
+  test("weekday labels follow the locale, week start, and width", () => {
     expect(weekdayLabels("en-US")[0]).toBe("Mon");
     expect(weekdayLabels("zh-CN")[0]).toBe("周一");
     expect(weekdayLabels("en-US")).toHaveLength(7);
+    expect(weekdayLabels("en-US", "sunday")).toEqual([
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+    ]);
+    expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
   });
 
   test("caches are size-capped — many distinct locales still format correctly", () => {
@@ -91,16 +102,6 @@ test("Sunday-start calendar weeks and grid", () => {
     resolveRange({ mode: "calendar", unit: "week", anchor: "2027-01-03" }, undefined, "sunday"),
   ).toEqual({ from: "2027-01-03", to: "2027-01-09" });
   expect(monthGridDates("2027-01-01", "sunday")[0]).toBe("2026-12-27");
-  expect(weekdayLabels("en-US", "sunday")).toEqual([
-    "Sun",
-    "Mon",
-    "Tue",
-    "Wed",
-    "Thu",
-    "Fri",
-    "Sat",
-  ]);
-  expect(weekdayLabels("en-US")[0]).toBe("Mon");
 });
 
 describe("shiftMonths", () => {
@@ -156,4 +157,42 @@ describe("formatDayCellLabel", () => {
   test("names the weekday and the full date", () => {
     expect(formatDayCellLabel("2026-06-29", "en-US")).toBe("Monday, June 29, 2026");
   });
+});
+
+test("civil-date helpers preserve the skipped date in Apia", () => {
+  const result = Bun.spawnSync({
+    cmd: [
+      process.execPath,
+      "-e",
+      'import { monthGridDates, formatDayLabel, formatDayCellLabel, formatShortDate, stepAnchor, dayGridKeyTarget, periodBounds } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify([monthGridDates("2011-12-01").slice(30, 34), formatDayLabel("2011-12-30", "en-US"), formatDayCellLabel("2011-12-30", "en-US"), formatShortDate("2011-12-30", "en-US"), stepAnchor("month", "2011-12-30", 1), stepAnchor("day", "2011-12-31", -1), dayGridKeyTarget("ArrowLeft", "2011-12-31"), dayGridKeyTarget("PageDown", "2011-12-30"), stepAnchor("month", "2012-01-31", 1), periodBounds("week", "2011-12-30"), periodBounds("week", "2011-12-30", "sunday"), periodBounds("month", "2011-12-30")]))',
+    ],
+    env: { ...process.env, TZ: "Pacific/Apia" },
+  });
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout.toString())).toEqual([
+    ["2011-12-28", "2011-12-29", "2011-12-30", "2011-12-31"],
+    "Dec 30, 2011",
+    "Friday, December 30, 2011",
+    "Dec 30",
+    "2012-01-30",
+    "2011-12-30",
+    "2011-12-30",
+    "2012-01-30",
+    "2012-02-29",
+    { from: "2011-12-26", to: "2012-01-01" },
+    { from: "2011-12-25", to: "2011-12-31" },
+    { from: "2011-12-01", to: "2011-12-31" },
+  ]);
+});
+
+test("activityStep uses quarters of the busiest day, with any activity at least step 1", () => {
+  expect([0, 1, 3, 5, 6, 8, 12].map((count) => activityStep(count, 12))).toEqual([
+    0, 1, 1, 2, 2, 3, 4,
+  ]);
+  // No activity or no maximum gives step 0.
+  expect(activityStep(3, 0)).toBe(0);
+  expect(activityStep(-2, 10)).toBe(0);
+  expect(activityStep(Number.NaN, 10)).toBe(0);
+  // A count above the maximum stays at step 4.
+  expect(activityStep(20, 10)).toBe(4);
 });

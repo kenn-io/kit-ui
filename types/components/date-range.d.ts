@@ -107,9 +107,9 @@ export declare function dayGridKeyTarget(key: string, from: string, options?: {
  * adjacent months.
  */
 export declare function monthGridDates(anchor: string, weekStart?: WeekStart): string[];
-/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
- * omitted = the browser locale. */
-export declare function weekdayLabels(locale?: string, weekStart?: WeekStart): string[];
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …, or
+ * "M", … with `style` "narrow"). `locale` is a BCP 47 tag; omitted = the browser locale. */
+export declare function weekdayLabels(locale?: string, weekStart?: WeekStart, style?: "short" | "narrow"): string[];
 /** January-first month labels ("Jan"/"January", …). `locale` omitted = the
  * browser locale. */
 export declare function monthLabels(style: "short" | "long", locale?: string): string[];
@@ -134,3 +134,7 @@ export declare function formatDayCellLabel(anchor: string, locale?: string): str
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatMonthLabel(anchor: string, locale?: string): string;
+/** Shade step for a day's activity count, from 0 (none) to 4 (busiest),
+ * relative to `max`, the busiest count in view: each step covers a quarter
+ * of `max`, and any count above zero gets at least step 1. */
+export declare function activityStep(count: number, max: number): 0 | 1 | 2 | 3 | 4;
