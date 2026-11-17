@@ -91,6 +91,10 @@ function rowsOf(node: HTMLElement): HTMLElement[] {
   return [...node.querySelectorAll<HTMLElement>("[data-list-row]")];
 }
 
+function rowFor(node: HTMLElement, key: string | undefined): HTMLElement | undefined {
+  return rowsOf(node).find((row) => row.dataset["listRow"] === key);
+}
+
 /**
  * Where the list in `node` is scrolled now, for a list showing `rows` rows:
  * its first row in view and how far below the top of the scroll box it sits.
@@ -108,6 +112,13 @@ function positionOf(node: HTMLElement, rows: number): ListPosition | null {
   };
 }
 
+// The key of the row whose link `target` is in, or undefined for any other click.
+function openedBy(node: HTMLElement, target: EventTarget | null): string | undefined {
+  const link = target instanceof Element ? target.closest("a[href]") : null;
+  const row = link?.closest<HTMLElement>("[data-list-row]");
+  return row && node.contains(row) ? row.dataset["listRow"] : undefined;
+}
+
 /**
  * Keeps `list`'s position in the current history entry while the reader
  * scrolls, and at once when they click the list. Attach it to the
@@ -119,7 +130,7 @@ function positionOf(node: HTMLElement, rows: number): ListPosition | null {
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const save = (opened = savedListPosition(list)?.opened) => {
+    const save = (opened?: string) => {
       const position = positionOf(node, rows());
       if (position) writeListPosition(list, { ...position, ...(opened ? { opened } : {}) });
     };
@@ -135,9 +146,7 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
     };
     const onclick = (event: MouseEvent) => {
       saveScroll.cancel();
-      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      const row = link?.closest<HTMLElement>("[data-list-row]");
-      save(row && node.contains(row) ? row.dataset["listRow"] : undefined);
+      save(openedBy(node, event.target));
     };
     document.addEventListener("scroll", onscroll, { capture: true, passive: true });
     node.addEventListener("click", onclick, { capture: true });
@@ -149,6 +158,13 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
   };
 }
 
+// Focus goes to the opened row's first link unless the reader already moved it.
+function focusOpened(node: HTMLElement, key: string | undefined): void {
+  const active = document.activeElement;
+  if (active === null || active === document.body)
+    rowFor(node, key)?.querySelector<HTMLElement>("a[href]")?.focus({ preventScroll: true });
+}
+
 /**
  * Puts the list back where `position` says, once its rows are shown: the
  * saved top row at its saved offset, or the saved scroll position when that
@@ -156,18 +172,29 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
  */
 function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const { scroller, boxTop } = boxOf(node);
-  const rows = rowsOf(node);
-  const top = rows.find((row) => row.dataset["listRow"] === position.top);
+  const top = rowFor(node, position.top);
   if (top) {
     scroller.scrollTop += top.getBoundingClientRect().top - boxTop - position.offset;
   } else {
     scroller.scrollTop = position.scrollTop;
   }
-  if (document.activeElement === document.body)
-    rows
-      .find((row) => row.dataset["listRow"] === position.opened)
-      ?.querySelector<HTMLElement>("a[href]")
-      ?.focus({ preventScroll: true });
+  focusOpened(node, position.opened);
+}
+
+// Counts the reader's input from now until `release`.
+function watchInput(): { stopped: () => boolean; release: () => void } {
+  let stopped = false;
+  const stop = () => {
+    stopped = true;
+  };
+  const inputs = ["wheel", "touchstart", "pointerdown", "keydown"];
+  for (const input of inputs) window.addEventListener(input, stop, { capture: true });
+  return {
+    stopped: () => stopped,
+    release: () => {
+      for (const input of inputs) window.removeEventListener(input, stop, { capture: true });
+    },
+  };
 }
 
 /** Restore a saved position after `ready` resolves, revealing an unrendered
@@ -178,18 +205,13 @@ export async function placeList(
   reveal?: (key: string, offset: number) => boolean,
   ready?: Promise<unknown>,
 ): Promise<void> {
-  let stopped = false;
-  const stop = () => {
-    stopped = true;
-  };
-  const inputs = ["wheel", "touchstart", "pointerdown", "keydown"];
-  for (const input of inputs) window.addEventListener(input, stop, { capture: true });
+  const input = watchInput();
   try {
     await ready;
     await tick();
     let steady = 0;
-    for (let pass = 0; pass < 12 && steady < 2 && !stopped && node.isConnected; pass++) {
-      const row = rowsOf(node).find((r) => r.dataset["listRow"] === position.top);
+    for (let pass = 0; pass < 12 && steady < 2 && !input.stopped() && node.isConnected; pass++) {
+      const row = rowFor(node, position.top);
       if (!row) {
         steady = 0;
         if (!reveal?.(position.top, position.offset)) {
@@ -207,6 +229,6 @@ export async function placeList(
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     }
   } finally {
-    for (const input of inputs) window.removeEventListener(input, stop, { capture: true });
+    input.release();
   }
 }

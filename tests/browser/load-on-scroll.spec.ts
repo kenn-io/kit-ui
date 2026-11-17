@@ -383,3 +383,78 @@ test("a click saves the current position before the scroll debounce", async ({ p
   });
   expect(saved).toBe(200);
 });
+
+test("only a row link click saves an opened row and scrolling clears it", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const saved = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { keepListPosition, savedListPosition } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "height:100px;overflow:auto";
+    box.innerHTML =
+      '<div><div data-list-row="a" style="height:500px"><a href="#row">Row</a><button>Action</button></div></div>';
+    document.body.prepend(box);
+    const node = box.firstElementChild as HTMLElement;
+    const detach = keepListPosition("opened-test", () => 1)(node);
+    node.addEventListener("click", (event) => event.preventDefault());
+    node.querySelector("a")!.click();
+    const afterLink = savedListPosition("opened-test")?.opened;
+    node.querySelector("button")!.click();
+    const afterButton = savedListPosition("opened-test")?.opened;
+    node.querySelector("a")!.click();
+    box.scrollTop = 200;
+    box.dispatchEvent(new Event("scroll"));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const afterScroll = savedListPosition("opened-test")?.opened;
+    detach?.();
+    box.remove();
+    return { afterLink, afterButton, afterScroll };
+  });
+  expect(saved).toEqual({ afterLink: "a", afterButton: undefined, afterScroll: undefined });
+});
+
+test("restoring a row leaves focus the reader already moved", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const result = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { placeList } = await import(path);
+    const node = document.createElement("div");
+    node.innerHTML = '<div data-list-row="a"><a href="#row">Row</a></div>';
+    const button = document.createElement("button");
+    document.body.prepend(node, button);
+    button.focus();
+    await placeList(node, { rows: 1, top: "a", offset: 0, scrollTop: 0, opened: "a" });
+    const keptFocus = document.activeElement === button;
+    node.remove();
+    button.remove();
+    return keptFocus;
+  });
+  expect(result).toBe(true);
+});
+
+test("restoring a row focuses its link when the document has no active element", async ({
+  page,
+}) => {
+  await gotoPage(page, "load-on-scroll");
+  const result = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { placeList } = await import(path);
+    const node = document.createElement("div");
+    node.innerHTML = '<div data-list-row="a"><a href="#row">Row</a></div>';
+    document.body.prepend(node);
+    const link = node.querySelector("a")!;
+    let focused = false;
+    link.addEventListener("focus", () => {
+      focused = true;
+    });
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => null });
+    try {
+      await placeList(node, { rows: 1, top: "a", offset: 0, scrollTop: 0, opened: "a" });
+    } finally {
+      delete (document as any).activeElement;
+      node.remove();
+    }
+    return focused;
+  });
+  expect(result).toBe(true);
+});
