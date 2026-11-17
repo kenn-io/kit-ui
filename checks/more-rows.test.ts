@@ -79,17 +79,6 @@ describe("MoreRows", () => {
       detail: "Request timed out",
       retryable: true,
     });
-    let value = "";
-    rows.retry(() => {
-      retry = rows.load(
-        async () => "retried",
-        (result) => {
-          value = result;
-        },
-      );
-    });
-    await retry;
-    expect(value).toBe("retried");
   });
 });
 

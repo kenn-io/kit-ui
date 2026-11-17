@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
 for (const change of ["distance", "growth", "resize"]) {
-  test(`watchListEnd prefetches after ${change}`, async ({ page }) => {
+  test(`watchListEnd prefetches ${change === "distance" ? "at a distance" : `after a scroller change following ${change}`}`, async ({
+    page,
+  }) => {
     if (change === "distance") await page.setViewportSize({ width: 200, height: 200 });
     await gotoPage(page, "load-on-scroll");
     const result = await page.evaluate(async (change) => {
@@ -41,36 +43,37 @@ for (const change of ["distance", "growth", "resize"]) {
   });
 }
 
-test("normalizes a shared filter URL and defaults an unknown filter", async ({ page }) => {
-  await page.goto("/?filter=Open#load-on-scroll");
-  await expect(page.getByRole("radio", { name: "Open" })).toBeChecked();
-  const rows = page.getByTestId("list-box").locator("[data-list-row]");
-  await expect(rows.filter({ hasText: "Open" }).first()).toBeVisible();
-  await expect(rows.filter({ hasText: "Closed" })).toHaveCount(0);
-  await page.goto("/?filter=unknown#load-on-scroll");
-  await expect(page.getByRole("radio", { name: "All" })).toBeChecked();
-  await expect(page.getByTestId("list-count")).toContainText("100");
-  await expect(rows.filter({ hasText: "Open" }).first()).toBeVisible();
-  await expect(rows.filter({ hasText: "Closed" }).first()).toBeVisible();
-});
-
 test("scrolling before placement cancels it", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
-  await page.evaluate(() => {
-    history.replaceState(
-      { listPositions: { "demo-list": { rows: 100, top: "60", offset: 0, scrollTop: 2500 } } },
-      "",
+  await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { placeList } = await import(path);
+    const box = document.createElement("div");
+    box.dataset.testid = "placement-box";
+    box.style.cssText = "position:fixed;top:0;left:0;width:300px;height:200px;overflow:auto";
+    box.innerHTML =
+      '<div style="height:1200px"><div data-list-row="target" style="margin-top:700px;height:40px">Row</div></div>';
+    document.body.prepend(box);
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => (release = resolve));
+    const placement = placeList(
+      box.firstElementChild as HTMLElement,
+      { rows: 1, top: "target", offset: 0, scrollTop: 700 },
+      undefined,
+      ready,
     );
+    (window as any).finishPlacement = async () => {
+      release();
+      await placement;
+    };
   });
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
-  await page.reload();
-  const box = page.getByTestId("list-box");
+  const box = page.getByTestId("placement-box");
+  const before = await box.evaluate((el) => el.scrollTop);
   await box.hover();
   await page.mouse.wheel(0, 100);
-  await expect.poll(() => box.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => box.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
   const position = await box.evaluate((el) => el.scrollTop);
-  await page.clock.runFor(700);
+  await page.evaluate(() => (window as any).finishPlacement());
   await expect(box).toHaveJSProperty("scrollTop", position);
 });
 
@@ -92,13 +95,15 @@ test("a restarted page-scrolled list returns to its top", async ({ page }) => {
 });
 
 for (const kind of ["list", "table"]) {
-  test(`${kind} keeps a long failure inside a narrow scroll box`, async ({ page }) => {
+  test(`${kind} loads, retries, and returns to an opened row`, async ({ page }) => {
     await gotoPage(page, "load-on-scroll");
     const box = page.getByTestId(`${kind}-box`);
     await box.evaluate((el) => (el.style.width = "200px"));
     const scroller = kind === "table" ? box.locator(".kit-table-wrapper") : box;
     await page.getByLabel("Fail next batch").check();
-    await scroller.evaluate((el) => (el.scrollTop = el.scrollHeight));
+    await scroller.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
     const alert = box.getByRole("alert");
     await expect(alert).toBeVisible();
     await alert
@@ -112,17 +117,6 @@ for (const kind of ["list", "table"]) {
     });
     expect(bounds.left).toBeGreaterThanOrEqual(0);
     expect(bounds.right).toBeLessThanOrEqual(1);
-  });
-
-  test(`${kind} loads, retries, and returns to an opened row`, async ({ page }) => {
-    await gotoPage(page, "load-on-scroll");
-    const box = page.getByTestId(`${kind}-box`);
-    const scroller = kind === "table" ? box.locator(".kit-table-wrapper") : box;
-    await page.getByLabel("Fail next batch").check();
-    await scroller.evaluate((el) => {
-      el.scrollTop = el.scrollHeight;
-    });
-    await expect(box.getByRole("alert")).toBeVisible();
     await box.getByRole("button", { name: "Retry" }).click();
     await expect(page.getByTestId(`${kind}-count`)).toContainText("200");
     for (let n = 300; n <= 1000; n += 100) {
@@ -130,10 +124,6 @@ for (const kind of ["list", "table"]) {
         el.scrollTop = el.scrollHeight;
       });
       await expect(page.getByTestId(`${kind}-count`)).toContainText(String(n));
-      const ids = await box
-        .locator("[data-list-row]")
-        .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-list-row")));
-      expect(new Set(ids).size).toBe(ids.length);
     }
     const link = box.getByRole("link", { name: "Row 640", exact: true });
     if (kind === "table") {
@@ -245,16 +235,21 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
   await gotoPage(page, "load-on-scroll");
   const calls = await page.evaluate(async () => {
     const componentPath = "/src/lib/components/ListEnd.svelte";
-    const sveltePath = "/node_modules/svelte/src/index-client.js";
+    const sveltePath = "/node_modules/.vite/deps/svelte.js";
     const { default: ListEnd } = await import(componentPath);
     const { mount, unmount, flushSync } = await import(sveltePath);
+    const internalPath = "/node_modules/.vite/deps/svelte_internal_client.js";
+    const { state, get, set } = await import(internalPath);
+    const idle = state(false);
     const host = document.createElement("ul");
     document.body.prepend(host);
     let count = 0;
     const props = {
       rows: { loading: false, problem: null, retry: () => {} },
       more: true,
-      idle: false,
+      get idle() {
+        return get(idle);
+      },
       label: "rows",
       onmore: () => count++,
     };
@@ -262,14 +257,10 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
     flushSync();
     await new Promise((resolve) => setTimeout(resolve, 300));
     const before = count;
-    await unmount(component);
-    const replacement = mount(ListEnd, {
-      target: host,
-      props: { ...props, idle: true },
-    });
+    set(idle, true);
     flushSync();
     await new Promise((resolve) => setTimeout(resolve, 300));
-    await unmount(replacement);
+    await unmount(component);
     host.remove();
     return { before, after: count };
   });

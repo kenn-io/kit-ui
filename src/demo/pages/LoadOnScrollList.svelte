@@ -77,19 +77,13 @@
       detach = keepListPosition(`demo-${kind}`, () => rows.length)(node);
       try {
         if (position) {
-          await placeList(
-            node,
-            position,
-            (key, offset) => {
-              const index = rows.findIndex((row) => String(row.id) === key);
-              if (index < 0) return false;
-              if (kind === "table") table?.scrollToIndex(index, offset);
-              return true;
-            },
-          );
+          await placeList(node, position, (key, offset) => {
+            const index = rows.findIndex((row) => String(row.id) === key);
+            if (index < 0) return false;
+            if (kind === "table") table?.scrollToIndex(index, offset);
+            return true;
+          });
         }
-      } catch (error) {
-        if (!controller.signal.aborted) throw error;
       } finally {
         if (!controller.signal.aborted) idle = true;
       }
@@ -173,13 +167,6 @@
   .list-box a,
   .table-box a {
     color: var(--accent-blue);
-  }
-  .list-box a:focus-visible,
-  .table-box a:focus-visible {
-    outline-offset: 2px;
-  }
-  .list-box :global(.kit-list-end-content) {
-    left: 10px;
   }
   .table-box {
     width: 100%;
