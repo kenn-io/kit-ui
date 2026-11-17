@@ -102,7 +102,7 @@
   }
 </script>
 
-<span data-testid="{kind}-count">{rows.length} rows loaded</span>
+<span class="count" data-testid="{kind}-count">{rows.length} rows loaded</span>
 {#if kind === "list"}
   <div class="list-box" data-testid="list-box">
     <ul {@attach restore}>
@@ -149,6 +149,9 @@
 {/if}
 
 <style>
+  .count {
+    padding-left: 10px;
+  }
   .list-box {
     height: 360px;
     overflow: auto;
@@ -163,13 +166,14 @@
     color: var(--text-secondary);
     list-style: none;
     padding: var(--space-3);
+    padding-inline: 10px;
   }
   .list-box a,
   .table-box a {
     color: var(--accent-blue);
   }
   .list-box :global(.kit-list-end-content) {
-    left: var(--space-3);
+    left: 10px;
   }
   .table-box {
     width: 100%;

@@ -48,6 +48,12 @@
 {/if}
 
 <style>
+  h3 {
+    margin-bottom: var(--space-4);
+  }
+  a {
+    color: var(--accent-blue);
+  }
   .controls {
     display: flex;
     align-items: center;
