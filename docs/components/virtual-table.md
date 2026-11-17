@@ -211,4 +211,4 @@ sizing, so a width is the cell's whole width whatever the app's
 
 ## Restoring a row
 
-Bind the component instance and call `scrollToIndex(index, offset)` to place a row at an offset in pixels from the top of its scroll box. The table uses measured row heights and estimates for rows it has yet to measure. Use it with `placeList` to restore a row outside the rendered window; see [ListEnd](list-end.md).
+Bind the component instance and call `scrollToIndex(index, offset)` to place a row at an offset in pixels from the top of its scroll box. The table uses measured row heights and estimates for rows it has yet to measure. `placeList` repeats this step while measurements settle. Use it with `placeList` to restore a row outside the rendered window; see [ListEnd](list-end.md).

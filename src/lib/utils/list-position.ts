@@ -25,6 +25,7 @@ export interface ListPosition {
 
 // Each list names its own slot, so two lists in one entry keep apart.
 const STATE = "listPositions";
+const MAX_RESTORE_ROWS = 1000;
 
 function positions(): Record<string, unknown> {
   // A page rendered on the server has no history.
@@ -59,7 +60,7 @@ function isPosition(value: unknown): value is ListPosition {
 /** The position `list` saved in the current history entry, or null. */
 export function savedListPosition(list: string): ListPosition | null {
   const saved = positions()[list];
-  return isPosition(saved) ? saved : null;
+  return isPosition(saved) ? { ...saved, rows: Math.min(saved.rows, MAX_RESTORE_ROWS) } : null;
 }
 
 /**
@@ -121,27 +122,39 @@ function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosit
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const scroller = scrollerOf(node, true);
-    const target: HTMLElement | Window = scroller === document.scrollingElement ? window : scroller;
     const save = (opened?: string) => {
-      const position = positionOf(node, rows(), opened);
+      const position = positionOf(node, rows(), opened ?? savedListPosition(list)?.opened);
       if (position) writeListPosition(list, position);
     };
     // Browsers limit how often a page may replace its history entry, so a
     // scroll writes once it pauses.
-    const onscroll = debounce(() => save(), 150);
+    const saveScroll = debounce(() => save(), 150);
+    const onscroll = (event: Event) => {
+      const scroller = scrollerOf(node, true);
+      const target = scroller === document.scrollingElement ? document : scroller;
+      if (event.target === target) saveScroll();
+    };
     const onclick = (event: MouseEvent) => {
-      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+        return;
+      const link =
+        event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (
+        !link ||
+        link.hasAttribute("download") ||
+        (link.target && link.target.toLowerCase() !== "_self")
+      )
+        return;
       const row = link?.closest<HTMLElement>("[data-list-row]");
       if (!row || !node.contains(row)) return;
-      onscroll.cancel();
+      saveScroll.cancel();
       save(row.dataset["listRow"]);
     };
-    target.addEventListener("scroll", onscroll, { passive: true });
+    document.addEventListener("scroll", onscroll, { capture: true, passive: true });
     node.addEventListener("click", onclick, { capture: true });
     return () => {
-      onscroll.cancel();
-      target.removeEventListener("scroll", onscroll);
+      saveScroll.cancel();
+      document.removeEventListener("scroll", onscroll, { capture: true });
       node.removeEventListener("click", onclick, { capture: true });
     };
   };
@@ -153,7 +166,7 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
  * row is gone. Focus goes to the link of the row the reader followed, unless
  * they have already moved focus elsewhere.
  */
-export function restoreListPosition(node: HTMLElement, position: ListPosition): void {
+function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const { scroller, boxTop } = boxOf(node);
   const rows = rowsOf(node);
   const top = rows.find((row) => row.dataset["listRow"] === position.top);
@@ -173,10 +186,7 @@ export function restoreListPosition(node: HTMLElement, position: ListPosition): 
 export async function placeList(
   node: HTMLElement,
   position: ListPosition,
-  options: {
-    indexOf: (key: string) => number;
-    scrollToIndex: (index: number, offset: number) => void;
-  },
+  reveal?: (key: string, offset: number) => boolean,
 ): Promise<void> {
   let stopped = false;
   const stop = () => {
@@ -191,14 +201,12 @@ export async function placeList(
       const row = rowsOf(node).find((r) => r.dataset["listRow"] === position.top);
       if (!row) {
         steady = 0;
-        const index = options.indexOf(position.top);
-        if (index < 0) {
+        if (!reveal?.(position.top, position.offset)) {
           // Let the virtual window render and settle after the offset changes.
           restoreListPosition(node, position);
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
           continue;
         }
-        options.scrollToIndex(index, position.offset);
       } else {
         const { boxTop } = boxOf(node);
         const drift = row.getBoundingClientRect().top - boxTop - position.offset;

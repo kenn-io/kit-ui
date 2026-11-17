@@ -375,7 +375,6 @@ export type { ListProblem, ListEndState, EndRow } from "./utils/more-rows.svelte
 export { scrollerOf, watchListEnd, showListTop } from "./components/virtual.js";
 export {
   keepListPosition,
-  restoreListPosition,
   savedListPosition,
   writeListPosition,
   placeList,

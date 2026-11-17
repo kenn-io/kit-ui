@@ -80,7 +80,9 @@ for (const kind of ["list", "table"]) {
   });
 }
 
-test("focuses the opened virtual row in the saved viewport when the top row is missing", async ({ page }) => {
+test("focuses the opened virtual row in the saved viewport when the top row is missing", async ({
+  page,
+}) => {
   await gotoPage(page, "load-on-scroll");
   const box = page.getByTestId("table-box");
   const link = box.getByRole("link", { name: "Row 55", exact: true });
@@ -161,7 +163,7 @@ test("position tracking uses the page scroller past a horizontal wrapper", async
   await gotoPage(page, "load-on-scroll");
   const result = await page.evaluate(async () => {
     const path = "/src/lib/utils/list-position.ts";
-    const { keepListPosition, savedListPosition, restoreListPosition } = await import(path);
+    const { keepListPosition, savedListPosition, placeList } = await import(path);
     const wrapper = document.createElement("div");
     wrapper.style.cssText = "overflow-x:auto; width:200px";
     wrapper.innerHTML =
@@ -177,7 +179,7 @@ test("position tracking uses the page scroller past a horizontal wrapper", async
       .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     const saved = savedListPosition("page-test")!;
     window.scrollTo(0, 0);
-    restoreListPosition(node, saved);
+    await placeList(node, saved);
     const restored = window.scrollY;
     detach?.();
     wrapper.remove();
@@ -214,4 +216,72 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
     return count;
   });
   expect(calls).toBe(0);
+});
+
+test("tracks a box that overflows after attachment", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const saved = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { keepListPosition, savedListPosition } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "height:100px;overflow:auto";
+    document.body.append(box);
+    const node = document.createElement("div");
+    box.append(node);
+    const detach = keepListPosition("late-box", () => 1)(node);
+    node.innerHTML =
+      '<div style="height:500px"><div data-list-row="a" style="height:500px">Row</div></div>';
+    box.scrollTop = 200;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const position = savedListPosition("late-box");
+    detach?.();
+    box.remove();
+    return position;
+  });
+  expect(saved?.scrollTop).toBe(200);
+});
+
+test("scroll saves retain the opened row across Forward and Back", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const box = page.getByTestId("list-box");
+  const link = box.getByRole("link", { name: "Row 30", exact: true });
+  await link.click();
+  await page.goBack();
+  await expect(link).toBeFocused();
+  await box.evaluate((el) => {
+    el.scrollTop += 20;
+  });
+  await page.waitForTimeout(300);
+  await page.goForward();
+  await page.goBack();
+  await expect(link).toBeFocused();
+});
+
+test("modified and new-context clicks keep the opened row", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const opened = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { keepListPosition, savedListPosition } = await import(path);
+    const box = document.createElement("div");
+    box.innerHTML =
+      '<div data-list-row="first"><a href="#first">First</a></div><div data-list-row="second"><a href="#second">Second</a></div>';
+    document.body.prepend(box);
+    const detach = keepListPosition("click-test", () => 2)(box);
+    const links = box.querySelectorAll("a");
+    box.addEventListener("click", (event) => event.preventDefault());
+    links[0]!.click();
+    links[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+    const modified = savedListPosition("click-test")?.opened;
+    links[1]!.target = "_blank";
+    links[1]!.click();
+    const target = savedListPosition("click-test")?.opened;
+    links[1]!.removeAttribute("target");
+    links[1]!.download = "file";
+    links[1]!.click();
+    const download = savedListPosition("click-test")?.opened;
+    detach?.();
+    box.remove();
+    return { modified, target, download };
+  });
+  expect(opened).toEqual({ modified: "first", target: "first", download: "first" });
 });

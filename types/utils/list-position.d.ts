@@ -37,15 +37,5 @@ export declare function writeListPosition(list: string, position: ListPosition |
  * names the next entry.
  */
 export declare function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement>;
-/**
- * Puts the list back where `position` says, once its rows are shown: the
- * saved top row at its saved offset, or the saved scroll position when that
- * row is gone. Focus goes to the link of the row the reader followed, unless
- * they have already moved focus elsewhere.
- */
-export declare function restoreListPosition(node: HTMLElement, position: ListPosition): void;
 /** Restore a saved position, revealing an unrendered virtual row if needed. */
-export declare function placeList(node: HTMLElement, position: ListPosition, options: {
-    indexOf: (key: string) => number;
-    scrollToIndex: (index: number, offset: number) => void;
-}): Promise<void>;
+export declare function placeList(node: HTMLElement, position: ListPosition, reveal?: (key: string, offset: number) => boolean): Promise<void>;

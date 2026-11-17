@@ -28,3 +28,13 @@ test("history keeps other state and positions and rejects malformed positions", 
   expect(savedListPosition("second")).toBeNull();
   delete (globalThis as any).window;
 });
+
+test("limits the number of rows restored", () => {
+  (globalThis as any).window = {
+    history: {
+      state: { listPositions: { list: { rows: 1400, top: "950", offset: 0, scrollTop: 1 } } },
+    },
+  };
+  expect(savedListPosition("list")?.rows).toBe(1000);
+  delete (globalThis as any).window;
+});

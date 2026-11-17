@@ -148,5 +148,5 @@ export { default as ListEnd } from "./components/ListEnd.svelte";
 export { MoreRows, appendBatch, isEndRow, withEndRow } from "./utils/more-rows.svelte.js";
 export type { ListProblem, ListEndState, EndRow } from "./utils/more-rows.svelte.js";
 export { scrollerOf, watchListEnd, showListTop } from "./components/virtual.js";
-export { keepListPosition, restoreListPosition, savedListPosition, writeListPosition, placeList, } from "./utils/list-position.js";
+export { keepListPosition, savedListPosition, writeListPosition, placeList, } from "./utils/list-position.js";
 export type { ListPosition } from "./utils/list-position.js";
