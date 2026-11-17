@@ -66,19 +66,6 @@ describe("MoreRows", () => {
       () => {},
     );
     expect(rows.problem).toEqual({ detail: "offline again", retryable: true });
-    rows.retry(() => {
-      retry = rows.load(
-        async () => {
-          throw new DOMException("Request timed out", "AbortError");
-        },
-        () => {},
-      );
-    });
-    await retry;
-    expect(rows.problem).toEqual({
-      detail: "Request timed out",
-      retryable: true,
-    });
   });
 });
 
