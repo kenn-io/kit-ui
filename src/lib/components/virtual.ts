@@ -193,19 +193,36 @@ export function scrollerOf(el: Element, onlyOverflowing = false): HTMLElement {
 
 /** Watch the end of a list half a scroll box ahead of view. */
 export function watchListEnd(node: HTMLElement, near: () => void): () => void {
-  const scroller = scrollerOf(node, true);
-  const root =
-    scroller === document.scrollingElement || scroller === document.documentElement
-      ? null
-      : scroller;
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) near();
-    },
-    { root, rootMargin: "0px 0px 50% 0px" },
-  );
-  observer.observe(node);
-  return () => observer.disconnect();
+  let root: HTMLElement | null | undefined;
+  let observer: IntersectionObserver;
+  function update() {
+    const scroller = scrollerOf(node, true);
+    const next =
+      scroller === document.scrollingElement || scroller === document.documentElement
+        ? null
+        : scroller;
+    if (next === root) return false;
+    root = next;
+    observer?.disconnect();
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (!update() && entries.some((entry) => entry.isIntersecting)) near();
+      },
+      { root, rootMargin: "0px 0px 50% 0px" },
+    );
+    observer.observe(node);
+    return true;
+  }
+  const resize = new ResizeObserver(update);
+  for (let parent = node.parentElement; parent; parent = parent.parentElement)
+    resize.observe(parent);
+  document.addEventListener("scroll", update, true);
+  update();
+  return () => {
+    document.removeEventListener("scroll", update, true);
+    resize.disconnect();
+    observer.disconnect();
+  };
 }
 
 /** Bring a restarted list's top into view. */

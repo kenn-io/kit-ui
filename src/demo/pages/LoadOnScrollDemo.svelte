@@ -3,7 +3,8 @@
   import DemoSection from "../DemoSection.svelte";
   import LoadOnScrollList from "./LoadOnScrollList.svelte";
 
-  let filter = $state(new URLSearchParams(location.search).get("filter") ?? "all");
+  const queryFilter = new URLSearchParams(location.search).get("filter")?.toLowerCase();
+  let filter = $state(queryFilter === "open" || queryFilter === "closed" ? queryFilter : "all");
   let fail = $state(false);
   let hash = $state(location.hash);
   const options = [

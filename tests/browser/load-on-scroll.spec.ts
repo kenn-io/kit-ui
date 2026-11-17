@@ -1,6 +1,48 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
+for (const change of ["growth", "resize"]) {
+  test(`ListEnd prefetches after ${change} makes its box overflow`, async ({ page }) => {
+    await gotoPage(page, "load-on-scroll");
+    const calls = await page.evaluate(async (change) => {
+      const path = "/src/lib/components/virtual.ts";
+      const { watchListEnd } = await import(path);
+      const box = document.createElement("div");
+      box.style.cssText = "position:fixed;top:0;left:0;width:300px;height:600px;overflow:auto";
+      box.innerHTML = '<div style="height:500px"></div><div style="height:1px"></div>';
+      document.body.append(box);
+      const content = box.firstElementChild as HTMLElement;
+      const end = box.lastElementChild as HTMLElement;
+      let count = 0;
+      const detach = watchListEnd(end, () => count++);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      count = 0;
+      if (change === "growth") content.style.height = "1000px";
+      else box.style.height = "200px";
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      count = 0;
+      box.scrollTop = change === "growth" ? 300 : 220;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      detach();
+      box.remove();
+      return count;
+    }, change);
+    expect(calls).toBeGreaterThan(0);
+  });
+}
+
+test("normalizes the filter in a shared URL", async ({ page }) => {
+  await page.goto("/?filter=Open#load-on-scroll");
+  await expect(page.getByRole("radio", { name: "Open" })).toBeChecked();
+  await expect(page.getByTestId("list-box").getByText("Closed", { exact: true })).toHaveCount(0);
+});
+
+test("defaults an unknown filter to All", async ({ page }) => {
+  await page.goto("/?filter=unknown#load-on-scroll");
+  await expect(page.getByRole("radio", { name: "All" })).toBeChecked();
+  await expect(page.getByTestId("list-count")).toContainText("100");
+});
+
 for (const kind of ["list", "table"]) {
   test(`${kind} loads, retries, and returns to an opened row`, async ({ page }) => {
     await gotoPage(page, "load-on-scroll");
