@@ -18,6 +18,8 @@ export interface ListPosition {
   offset: number;
   /** The scroll box's position, for when the top row is gone. */
   scrollTop: number;
+  /** The key of the opened row, for restoring focus to its first link. */
+  opened?: string;
 }
 
 // Each list names its own slot, so two lists in one entry keep apart.
@@ -48,7 +50,8 @@ function isPosition(value: unknown): value is ListPosition {
     typeof value.offset === "number" &&
     Number.isFinite(value.offset) &&
     typeof value.scrollTop === "number" &&
-    Number.isFinite(value.scrollTop)
+    Number.isFinite(value.scrollTop) &&
+    (!("opened" in value) || value.opened === undefined || typeof value.opened === "string")
   );
 }
 
@@ -116,9 +119,9 @@ function positionOf(node: HTMLElement, rows: number): ListPosition | null {
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const save = () => {
+    const save = (opened = savedListPosition(list)?.opened) => {
       const position = positionOf(node, rows());
-      if (position) writeListPosition(list, position);
+      if (position) writeListPosition(list, { ...position, ...(opened ? { opened } : {}) });
     };
     // Browsers limit how often a page may replace its history entry, so a
     // scroll writes once it pauses.
@@ -130,9 +133,11 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
       )
         saveScroll();
     };
-    const onclick = () => {
+    const onclick = (event: MouseEvent) => {
       saveScroll.cancel();
-      save();
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      const row = link?.closest<HTMLElement>("[data-list-row]");
+      save(row && node.contains(row) ? row.dataset["listRow"] : undefined);
     };
     document.addEventListener("scroll", onscroll, { capture: true, passive: true });
     node.addEventListener("click", onclick, { capture: true });
@@ -158,13 +163,20 @@ function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   } else {
     scroller.scrollTop = position.scrollTop;
   }
+  if (document.activeElement === document.body)
+    rows
+      .find((row) => row.dataset["listRow"] === position.opened)
+      ?.querySelector<HTMLElement>("a[href]")
+      ?.focus({ preventScroll: true });
 }
 
-/** Restore a saved position, revealing an unrendered virtual row if needed. */
+/** Restore a saved position after `ready` resolves, revealing an unrendered
+ * virtual row if needed. User input during the wait cancels placement. */
 export async function placeList(
   node: HTMLElement,
   position: ListPosition,
   reveal?: (key: string, offset: number) => boolean,
+  ready?: Promise<unknown>,
 ): Promise<void> {
   let stopped = false;
   const stop = () => {
@@ -173,6 +185,7 @@ export async function placeList(
   const inputs = ["wheel", "touchstart", "pointerdown", "keydown"];
   for (const input of inputs) window.addEventListener(input, stop, { capture: true });
   try {
+    await ready;
     await tick();
     let steady = 0;
     for (let pass = 0; pass < 12 && steady < 2 && !stopped && node.isConnected; pass++) {

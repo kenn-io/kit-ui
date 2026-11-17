@@ -78,3 +78,5 @@ export declare function scrollerOf(el: Element, onlyOverflowing?: boolean): HTML
  * `VirtualTable`, as soon as the end row is rendered, which is within
  * `overscan` rows of view. */
 export declare function watchListEnd(node: HTMLElement, near: () => void): () => void;
+/** Bring a restarted list's top into view. */
+export declare function showListTop(node: HTMLElement): void;

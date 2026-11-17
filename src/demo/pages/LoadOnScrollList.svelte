@@ -76,13 +76,17 @@
       detach = keepListPosition(`demo-${kind}`, () => rows.length)(node);
       try {
         if (position) {
-          rows = await read(0, position.rows, controller.signal);
-          await placeList(node, position, (key, offset) => {
-            const index = rows.findIndex((row) => String(row.id) === key);
-            if (index < 0) return false;
-            if (kind === "table") table?.scrollToIndex(index, offset);
-            return true;
-          });
+          await placeList(
+            node,
+            position,
+            (key, offset) => {
+              const index = rows.findIndex((row) => String(row.id) === key);
+              if (index < 0) return false;
+              if (kind === "table") table?.scrollToIndex(index, offset);
+              return true;
+            },
+            read(0, position.rows, controller.signal).then((batch) => (rows = batch)),
+          );
         }
       } catch (error) {
         if (!controller.signal.aborted) throw error;

@@ -39,11 +39,7 @@ export class MoreRows implements ListEndState {
       commit(value);
       this.batches += 1;
     } catch (error) {
-      if (
-        this.#controller !== controller ||
-        (error instanceof Error && error.name === "AbortError")
-      )
-        return;
+      if (this.#controller !== controller) return;
       if (
         typeof error === "object" &&
         error !== null &&

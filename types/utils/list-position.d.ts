@@ -14,6 +14,8 @@ export interface ListPosition {
     offset: number;
     /** The scroll box's position, for when the top row is gone. */
     scrollTop: number;
+    /** The key of the opened row, for restoring focus to its first link. */
+    opened?: string;
 }
 /** The position `list` saved in the current history entry, or null. */
 export declare function savedListPosition(list: string): ListPosition | null;
@@ -34,5 +36,6 @@ export declare function writeListPosition(list: string, position: ListPosition |
  * names the next entry.
  */
 export declare function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement>;
-/** Restore a saved position, revealing an unrendered virtual row if needed. */
-export declare function placeList(node: HTMLElement, position: ListPosition, reveal?: (key: string, offset: number) => boolean): Promise<void>;
+/** Restore a saved position after `ready` resolves, revealing an unrendered
+ * virtual row if needed. User input during the wait cancels placement. */
+export declare function placeList(node: HTMLElement, position: ListPosition, reveal?: (key: string, offset: number) => boolean, ready?: Promise<unknown>): Promise<void>;

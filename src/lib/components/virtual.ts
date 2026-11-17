@@ -231,3 +231,14 @@ export function watchListEnd(node: HTMLElement, near: () => void): () => void {
     observer.disconnect();
   };
 }
+
+/** Bring a restarted list's top into view. */
+export function showListTop(node: HTMLElement): void {
+  const scroller = scrollerOf(node, true);
+  const top =
+    scroller === document.scrollingElement || scroller === document.documentElement
+      ? 0
+      : scroller.getBoundingClientRect().top;
+  const above = node.getBoundingClientRect().top - top;
+  if (above < 0) scroller.scrollTop += above;
+}
