@@ -17,6 +17,8 @@ test("history keeps other state and positions and rejects malformed positions", 
   expect(savedListPosition("first")).toEqual(position);
   expect(savedListPosition("second")?.top).toBe("b");
   expect(history.state.other).toBe("kept");
+  (history.state.listPositions as Record<string, unknown>).first = { ...position, rows: 1400 };
+  expect(savedListPosition("first")?.rows).toBe(1000);
   (history.state.listPositions as Record<string, unknown>).first = { rows: -1 };
   expect(savedListPosition("first")).toBeNull();
   (history.state.listPositions as Record<string, unknown>).first = {
@@ -26,15 +28,5 @@ test("history keeps other state and positions and rejects malformed positions", 
   expect(savedListPosition("first")).toBeNull();
   writeListPosition("second", null);
   expect(savedListPosition("second")).toBeNull();
-  delete (globalThis as any).window;
-});
-
-test("limits the number of rows restored", () => {
-  (globalThis as any).window = {
-    history: {
-      state: { listPositions: { list: { rows: 1400, top: "950", offset: 0, scrollTop: 1 } } },
-    },
-  };
-  expect(savedListPosition("list")?.rows).toBe(1000);
   delete (globalThis as any).window;
 });

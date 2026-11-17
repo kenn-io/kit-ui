@@ -58,19 +58,27 @@ describe("MoreRows", () => {
     await retry;
     expect(rows.batches).toBe(2);
     expect(rows.problem).toBeNull();
-  });
-
-  test("a current request that rejects with AbortError can be retried", async () => {
-    const rows = new MoreRows();
     await rows.load(
       async () => {
-        throw new DOMException("Request timed out", "AbortError");
+        throw new Error("offline again");
       },
       () => {},
     );
-    expect(rows.problem).toEqual({ detail: "Request timed out", retryable: true });
+    expect(rows.problem).toEqual({ detail: "offline again", retryable: true });
+    rows.retry(() => {
+      retry = rows.load(
+        async () => {
+          throw new DOMException("Request timed out", "AbortError");
+        },
+        () => {},
+      );
+    });
+    await retry;
+    expect(rows.problem).toEqual({
+      detail: "Request timed out",
+      retryable: true,
+    });
     let value = "";
-    let retry: Promise<void> | undefined;
     rows.retry(() => {
       retry = rows.load(
         async () => "retried",
@@ -100,8 +108,5 @@ test("withEndRow includes a sentinel for more rows or a failure", () => {
   expect(isEndRow(withEndRow(items, true, rows)[1]!)).toBe(true);
   rows.problem = { detail: "offline", retryable: true };
   expect(isEndRow(withEndRow(items, false, rows)[1]!)).toBe(true);
-});
-
-test("a data row with a listEnd field is not the end row", () => {
   expect(isEndRow({ id: "a", listEnd: false })).toBe(false);
 });
