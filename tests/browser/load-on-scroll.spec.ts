@@ -175,30 +175,12 @@ for (const kind of ["list", "table"]) {
     }, kind);
     await page.goBack();
     await expect(page.getByTestId(`${kind}-count`)).toHaveText("1000 rows loaded");
+    await expect(link).toBeInViewport();
     expect(
       await page.evaluate(() => (window as Window & { restoredCounts: string[] }).restoredCounts),
     ).not.toContain("100 rows loaded");
   });
 }
-
-test("restores the saved offset when the top virtual row is missing", async ({ page }) => {
-  await gotoPage(page, "load-on-scroll");
-  await page.evaluate(() => {
-    history.replaceState(
-      {
-        listPositions: {
-          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 2000 },
-        },
-      },
-      "",
-    );
-  });
-  await page.reload();
-  const box = page.getByTestId("table-box");
-  await expect(box.locator(".kit-table-wrapper")).toHaveJSProperty("scrollTop", 2000);
-  await expect(page.getByTestId("table-count")).toHaveText("1000 rows loaded");
-  await expect(box.getByRole("link", { name: "Row 640", exact: true })).toHaveCount(0);
-});
 
 test("position tracking saves and restores the scroll box", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
@@ -252,9 +234,24 @@ test("position tracking saves and restores the scroll box", async ({ page }) => 
     });
     expect(result).toEqual({ saved: 180, restored: 180 });
   });
+  await test.step("missing top row", async () => {
+    const restored = await page.evaluate(async () => {
+      const path = "/src/lib/utils/list-position.ts";
+      const { placeList } = await import(path);
+      const box = document.createElement("div");
+      box.style.cssText = "position:fixed;top:0;height:100px;width:200px;overflow:auto";
+      box.innerHTML = '<div style="height:500px"></div>';
+      document.body.prepend(box);
+      await placeList(box, { rows: 1, top: "missing", offset: 0, scrollTop: 180 });
+      const restored = box.scrollTop;
+      box.remove();
+      return restored;
+    });
+    expect(restored).toBe(180);
+  });
 });
 
-test("ListEnd waits for the replacement read before requesting more", async ({ page }) => {
+test("ListEnd asks for the next batch only when idle and not loading", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   const calls = await page.evaluate(async () => {
     const componentPath = "/src/lib/components/ListEnd.svelte";
@@ -264,42 +261,6 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
     const internalPath = "/node_modules/.vite/deps/svelte_internal_client.js";
     const { state, get, set } = await import(internalPath);
     const idle = state(false);
-    const host = document.createElement("ul");
-    document.body.prepend(host);
-    let count = 0;
-    const props = {
-      rows: { loading: false, problem: null, retry: () => {} },
-      more: true,
-      get idle() {
-        return get(idle);
-      },
-      label: "rows",
-      onmore: () => count++,
-    };
-    const component = mount(ListEnd, { target: host, props });
-    flushSync();
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const before = count;
-    set(idle, true);
-    flushSync();
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    await unmount(component);
-    host.remove();
-    return { before, after: count };
-  });
-  expect(calls.before).toBe(0);
-  expect(calls.after).toBeGreaterThan(0);
-});
-
-test("ListEnd waits for a custom loader before requesting another batch", async ({ page }) => {
-  await gotoPage(page, "load-on-scroll");
-  const calls = await page.evaluate(async () => {
-    const componentPath = "/src/lib/components/ListEnd.svelte";
-    const sveltePath = "/node_modules/.vite/deps/svelte.js";
-    const { default: ListEnd } = await import(componentPath);
-    const { mount, unmount, flushSync } = await import(sveltePath);
-    const internalPath = "/node_modules/.vite/deps/svelte_internal_client.js";
-    const { state, get, set } = await import(internalPath);
     const loading = state(false);
     const host = document.createElement("ul");
     document.body.prepend(host);
@@ -314,7 +275,9 @@ test("ListEnd waits for a custom loader before requesting another batch", async 
           problem: null,
           retry: () => {},
         },
-        idle: true,
+        get idle() {
+          return get(idle);
+        },
         label: "rows",
         onmore: () => {
           count++;
@@ -324,6 +287,10 @@ test("ListEnd waits for a custom loader before requesting another batch", async 
     });
     flushSync();
     await new Promise((resolve) => setTimeout(resolve, 300));
+    const before = count;
+    set(idle, true);
+    flushSync();
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const during = count;
     set(loading, false);
     flushSync();
@@ -331,7 +298,7 @@ test("ListEnd waits for a custom loader before requesting another batch", async 
     const after = count;
     await unmount(component);
     host.remove();
-    return { during, after };
+    return { before, during, after };
   });
-  expect(calls).toEqual({ during: 1, after: 2 });
+  expect(calls).toEqual({ before: 0, during: 1, after: 2 });
 });
