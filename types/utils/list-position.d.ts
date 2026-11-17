@@ -17,6 +17,8 @@ export interface ListPosition {
     scrollTop: number;
     /** The key of the row whose link the reader followed, if they followed one. */
     opened?: string;
+    /** Index of the followed link within its row. */
+    link?: number;
 }
 /** The position `list` saved in the current history entry, or null. */
 export declare function savedListPosition(list: string): ListPosition | null;

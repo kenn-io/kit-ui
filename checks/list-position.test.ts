@@ -19,6 +19,10 @@ test("history keeps other state and positions and rejects malformed positions", 
   expect(history.state.other).toBe("kept");
   (history.state.listPositions as Record<string, unknown>).first = { rows: -1 };
   expect(savedListPosition("first")).toBeNull();
+  for (const link of [-1, 1.5, "1"]) {
+    (history.state.listPositions as Record<string, unknown>).first = { ...position, link };
+    expect(savedListPosition("first")).toBeNull();
+  }
   (history.state.listPositions as Record<string, unknown>).first = {
     ...position,
     offset: Infinity,

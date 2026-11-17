@@ -21,6 +21,8 @@ export interface ListPosition {
   scrollTop: number;
   /** The key of the row whose link the reader followed, if they followed one. */
   opened?: string;
+  /** Index of the followed link within its row. */
+  link?: number;
 }
 
 // Each list names its own slot, so two lists in one entry keep apart.
@@ -44,6 +46,7 @@ function isPosition(value: unknown): value is ListPosition {
     return false;
   }
   const opened = "opened" in value ? value.opened : undefined;
+  const link = "link" in value ? value.link : undefined;
   return (
     typeof value.rows === "number" &&
     Number.isInteger(value.rows) &&
@@ -53,7 +56,8 @@ function isPosition(value: unknown): value is ListPosition {
     Number.isFinite(value.offset) &&
     typeof value.scrollTop === "number" &&
     Number.isFinite(value.scrollTop) &&
-    (opened === undefined || typeof opened === "string")
+    (opened === undefined || typeof opened === "string") &&
+    (link === undefined || (typeof link === "number" && Number.isInteger(link) && link >= 0))
   );
 }
 
@@ -97,7 +101,12 @@ function rowsOf(node: HTMLElement): HTMLElement[] {
  * Where the list in `node` is scrolled now, for a list showing `rows` rows:
  * its first row in view and how far below the top of the scroll box it sits.
  */
-function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosition | null {
+function positionOf(
+  node: HTMLElement,
+  rows: number,
+  opened?: string,
+  link?: number,
+): ListPosition | null {
   if (rows === 0) return null;
   const { scroller, boxTop } = boxOf(node);
   const top = rowsOf(node).find((row) => row.getBoundingClientRect().bottom > boxTop);
@@ -108,6 +117,7 @@ function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosit
     offset: top.getBoundingClientRect().top - boxTop,
     scrollTop: scroller.scrollTop,
     ...(opened ? { opened } : {}),
+    ...(link !== undefined ? { link } : {}),
   };
 }
 
@@ -122,17 +132,25 @@ function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosit
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const save = (opened?: string) => {
-      const position = positionOf(node, rows(), opened ?? savedListPosition(list)?.opened);
+    const save = (opened?: string, link?: number) => {
+      const saved = savedListPosition(list);
+      const position = positionOf(
+        node,
+        rows(),
+        opened ?? saved?.opened,
+        opened ? link : saved?.link,
+      );
       if (position) writeListPosition(list, position);
     };
     // Browsers limit how often a page may replace its history entry, so a
     // scroll writes once it pauses.
     const saveScroll = debounce(() => save(), 150);
     const onscroll = (event: Event) => {
-      const scroller = scrollerOf(node, true);
-      const target = scroller === document.scrollingElement ? document : scroller;
-      if (event.target === target) saveScroll();
+      if (
+        event.target === document ||
+        (event.target instanceof Element && event.target.contains(node))
+      )
+        saveScroll();
     };
     const onclick = (event: MouseEvent) => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
@@ -148,7 +166,7 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
       const row = link?.closest<HTMLElement>("[data-list-row]");
       if (!row || !node.contains(row)) return;
       saveScroll.cancel();
-      save(row.dataset["listRow"]);
+      save(row.dataset["listRow"], [...row.querySelectorAll("a[href]")].indexOf(link));
     };
     document.addEventListener("scroll", onscroll, { capture: true, passive: true });
     node.addEventListener("click", onclick, { capture: true });
@@ -178,7 +196,9 @@ function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const opened = rows.find((row) => row.dataset["listRow"] === position.opened);
   const focused = document.activeElement;
   if (opened && (focused === null || focused === document.body)) {
-    opened.querySelector<HTMLElement>("a[href]")?.focus({ preventScroll: true });
+    opened
+      .querySelectorAll<HTMLElement>("a[href]")
+      [position.link ?? 0]?.focus({ preventScroll: true });
   }
 }
 

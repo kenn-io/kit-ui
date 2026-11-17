@@ -41,7 +41,6 @@ export class MoreRows implements ListEndState {
     } catch (error) {
       if (
         this.#controller !== controller ||
-        controller.signal.aborted ||
         (error instanceof Error && error.name === "AbortError")
       )
         return;

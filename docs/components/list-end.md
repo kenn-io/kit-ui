@@ -2,7 +2,7 @@
 
 `ListEnd` watches the end of a list and requests the next batch as it comes within half a scroll box of view. It shows a spinner while loading and a failure with Retry when the failure is retryable. It renders an `li` by default; set `columns` to render a table row with one cell spanning those columns.
 
-`rows` accepts any `ListEndState` with `loading`, `problem`, `batches`, and `retry(more)`. `idle` is false while the first batch loads. Set `more` to false when the server has no next batch. `label` names the rows; `loadingText`, `failureText`, and `retryLabel` override the English strings.
+`rows` accepts any `ListEndState` with `loading`, `problem`, `batches`, and `retry(more)`. `idle` is false while the first batch loads. Set `more` to false when the server has no next batch. `label` names the rows.
 
 ```svelte
 <script lang="ts">

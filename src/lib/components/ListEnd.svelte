@@ -13,9 +13,6 @@
     columns,
     label,
     onmore,
-    loadingText = `Loading more ${label}`,
-    failureText = `Could not load more ${label}.`,
-    retryLabel = "Retry",
   }: {
     rows: ListEndState;
     /** Whether the server has another batch. A `VirtualTable` end row leaves
@@ -30,9 +27,6 @@
     label: string;
     /** Starts the next batch; called when this row comes near the visible part of the table. */
     onmore: () => void;
-    loadingText?: string;
-    failureText?: string;
-    retryLabel?: string;
   } = $props();
 
   // A new batch or idle state remounts the row, so a row still in view asks
@@ -45,9 +39,9 @@
 
 {#snippet problem(failure: NonNullable<ListEndState["problem"]>)}
   <div class="kit-list-end-problem kit-list-end-content" role="alert">
-    <span>{failureText} {failure.detail}</span>
+    <span>Could not load more {label}. {failure.detail}</span>
     {#if failure.retryable}<Button
-        label={retryLabel}
+        label="Retry"
         size="sm"
         onclick={() => rows.retry(onmore)}
       />{/if}
@@ -55,7 +49,7 @@
 {/snippet}
 {#snippet loading()}
   {#if rows.loading}<span class="kit-list-end-loading kit-list-end-content"
-      ><Spinner size={14} label={loadingText} />{loadingText}</span
+      ><Spinner size={14} label={`Loading more ${label}`} />Loading more {label}</span
     >{/if}
 {/snippet}
 

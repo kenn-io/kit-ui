@@ -13,9 +13,6 @@ type $$ComponentProps = {
     label: string;
     /** Starts the next batch; called when this row comes near the visible part of the table. */
     onmore: () => void;
-    loadingText?: string;
-    failureText?: string;
-    retryLabel?: string;
 };
 declare const ListEnd: import("svelte").Component<$$ComponentProps, {}, "">;
 type ListEnd = ReturnType<typeof ListEnd>;

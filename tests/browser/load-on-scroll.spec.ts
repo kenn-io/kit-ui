@@ -1,6 +1,82 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
+test("custom watcher follows a box that starts overflowing", async ({ page }) => {
+  await page.setViewportSize({ width: 200, height: 200 });
+  await gotoPage(page, "load-on-scroll");
+  const calls = await page.evaluate(async () => {
+    const path = "/src/lib/components/virtual.ts";
+    const { watchListEnd } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;top:0;left:0;width:200px;height:400px;overflow:auto";
+    box.innerHTML = '<div style="height:300px"></div><div style="height:1px"></div>';
+    document.body.append(box);
+    let count = 0;
+    const detach = watchListEnd(box.lastElementChild as HTMLElement, () => count++);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    (box.firstElementChild as HTMLElement).style.height = "800px";
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    count = 0;
+    box.scrollTop = 300;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    detach();
+    box.remove();
+    return count;
+  });
+  expect(calls).toBeGreaterThan(0);
+});
+
+test("prefetch distance uses box height", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const calls = await page.evaluate(async () => {
+    const path = "/src/lib/components/virtual.ts";
+    const { watchListEnd } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;top:0;left:0;width:200px;height:800px;overflow:auto";
+    box.innerHTML = '<div style="height:1000px"></div><div style="height:1px"></div>';
+    document.body.append(box);
+    let count = 0;
+    const detach = watchListEnd(box.lastElementChild as HTMLElement, () => count++);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    detach();
+    box.remove();
+    return count;
+  });
+  expect(calls).toBeGreaterThan(0);
+});
+
+for (const kind of ["list", "table"]) {
+  test(`${kind} restores the second followed link across history`, async ({ page }) => {
+    await page.addInitScript(() => {
+      const addLink = () => {
+        for (const row of document.querySelectorAll('[data-list-row="5"]')) {
+          if (row.querySelector("[data-second-link]")) continue;
+          const first = row.querySelector("a[href]");
+          if (!first) continue;
+          const second = first.cloneNode(true) as HTMLAnchorElement;
+          second.dataset.secondLink = "";
+          second.textContent = "Second link";
+          first.after(second);
+        }
+      };
+      new MutationObserver(addLink).observe(document, { childList: true, subtree: true });
+    });
+    await gotoPage(page, "load-on-scroll");
+    const box = page.getByTestId(`${kind}-box`);
+    const link = box.getByRole("link", { name: "Second link" });
+    await link.click();
+    await page.goBack();
+    await expect(link).toBeFocused();
+    await (kind === "table" ? box.locator(".kit-table-wrapper") : box).evaluate((el) => {
+      el.scrollTop += 20;
+    });
+    await page.waitForTimeout(300);
+    await page.goForward();
+    await page.goBack();
+    await expect(link).toBeFocused();
+  });
+}
+
 for (const change of ["growth", "resize"]) {
   test(`ListEnd prefetches after ${change} makes its box overflow`, async ({ page }) => {
     await gotoPage(page, "load-on-scroll");
