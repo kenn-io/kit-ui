@@ -80,22 +80,38 @@ for (const kind of ["list", "table"]) {
   });
 }
 
-test("restores a missing top row by revealing the opened virtual row", async ({ page }) => {
+test("restores the saved offset when the top virtual row is missing", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   await page.evaluate(() => {
     history.replaceState(
       {
         listPositions: {
-          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 0, opened: "640" },
+          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 2000, opened: "640" },
         },
       },
       "",
     );
   });
   await page.reload();
-  const link = page.getByTestId("table-box").getByRole("link", { name: "Row 640", exact: true });
-  await expect(link).toBeVisible();
-  await expect(link).toBeFocused();
+  const box = page.getByTestId("table-box");
+  await expect(box.locator(".kit-table-wrapper")).toHaveJSProperty("scrollTop", 2000);
+  await expect(page.getByTestId("table-count")).toHaveText("1000 rows loaded");
+  await expect(box.getByRole("link", { name: "Row 640", exact: true })).toHaveCount(0);
+  await expect(page.locator("body")).toBeFocused();
+
+  const focusedOffscreen = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { restoreListPosition } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "height:100px; overflow-y:auto";
+    box.innerHTML = '<div style="height:1000px"></div><div data-list-row="opened"><a href="#row">Row</a></div>';
+    document.body.append(box);
+    restoreListPosition(box, { rows: 1, top: "missing", offset: 0, scrollTop: 200, opened: "opened" });
+    const focused = document.activeElement === box.querySelector("a");
+    box.remove();
+    return focused;
+  });
+  expect(focusedOffscreen).toBe(false);
 });
 
 test("restores the top row within the first 1000 when more rows were saved", async ({ page }) => {
