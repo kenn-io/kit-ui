@@ -3,6 +3,7 @@ import { gotoPage } from "./helpers";
 
 for (const change of ["distance", "growth", "resize"]) {
   test(`watchListEnd prefetches after ${change}`, async ({ page }) => {
+    if (change === "distance") await page.setViewportSize({ width: 200, height: 200 });
     await gotoPage(page, "load-on-scroll");
     const result = await page.evaluate(async (change) => {
       const path = "/src/lib/components/virtual.ts";
@@ -12,23 +13,13 @@ for (const change of ["distance", "growth", "resize"]) {
         change === "distance"
           ? "position:fixed;top:0;left:0;width:200px;height:800px;overflow:auto"
           : "position:fixed;top:0;left:0;width:300px;height:600px;overflow:auto";
-      box.innerHTML = `<div style="height:${change === "distance" ? 1000 : 500}px"></div><div style="height:1px"></div>`;
+      box.innerHTML = `<div style="height:${change === "distance" ? 1199 : 500}px"></div><div style="height:1px"></div>`;
       document.body.append(box);
-      const NativeObserver = window.IntersectionObserver;
-      let rootIsBox = false;
-      let rootMargin: string | undefined;
-      if (change === "distance") {
-        window.IntersectionObserver = class extends NativeObserver {
-          constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-            super(callback, options);
-            rootIsBox = options?.root === box;
-            rootMargin = options?.rootMargin;
-          }
-        };
-      }
+      const end = box.lastElementChild as HTMLElement;
+      const belowView =
+        end.getBoundingClientRect().top > Math.max(box.getBoundingClientRect().bottom, innerHeight);
       let count = 0;
-      const detach = watchListEnd(box.lastElementChild as HTMLElement, () => count++);
-      window.IntersectionObserver = NativeObserver;
+      const detach = watchListEnd(end, () => count++);
       if (change !== "distance") {
         await new Promise((resolve) => setTimeout(resolve, 150));
         count = 0;
@@ -41,12 +32,11 @@ for (const change of ["distance", "growth", "resize"]) {
       await new Promise((resolve) => setTimeout(resolve, 300));
       detach();
       box.remove();
-      return { count, rootIsBox, rootMargin };
+      return { count, belowView };
     }, change);
     expect(result.count).toBeGreaterThan(0);
     if (change === "distance") {
-      expect(result.rootIsBox).toBe(true);
-      expect(result.rootMargin).toBe("0px 0px 400px 0px");
+      expect(result.belowView).toBe(true);
     }
   });
 }
@@ -54,9 +44,14 @@ for (const change of ["distance", "growth", "resize"]) {
 test("normalizes a shared filter URL and defaults an unknown filter", async ({ page }) => {
   await page.goto("/?filter=Open#load-on-scroll");
   await expect(page.getByRole("radio", { name: "Open" })).toBeChecked();
+  const rows = page.getByTestId("list-box").locator("[data-list-row]");
+  await expect(rows.filter({ hasText: "Open" }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: "Closed" })).toHaveCount(0);
   await page.goto("/?filter=unknown#load-on-scroll");
   await expect(page.getByRole("radio", { name: "All" })).toBeChecked();
   await expect(page.getByTestId("list-count")).toContainText("100");
+  await expect(rows.filter({ hasText: "Open" }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: "Closed" }).first()).toBeVisible();
 });
 
 test("scrolling during a saved-row read cancels placement", async ({ page }) => {
