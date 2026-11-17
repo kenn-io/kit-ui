@@ -14,8 +14,6 @@ export interface ListPosition {
     offset: number;
     /** The scroll box's position, for when the top row is gone. */
     scrollTop: number;
-    /** The key of the opened row, for restoring focus to its first link. */
-    opened?: string;
 }
 /** The position `list` saved in the current history entry, or null. */
 export declare function savedListPosition(list: string): ListPosition | null;

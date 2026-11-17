@@ -178,9 +178,9 @@ export function visibleWindow(
 
 /** The element that scrolls `el` vertically: its nearest ancestor with
  * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
- * when none is. Used for tables whose rows the page scrolls. */
+ * when none is. When requiring overflow, check `el` itself first. */
 export function scrollerOf(el: Element, onlyOverflowing = false): HTMLElement {
-  for (let node = el.parentElement; node; node = node.parentElement) {
+  for (let node = onlyOverflowing && el instanceof HTMLElement ? el : el.parentElement; node; node = node.parentElement) {
     const overflow = getComputedStyle(node).overflowY;
     if (
       (overflow === "auto" || overflow === "scroll" || overflow === "overlay") &&
@@ -235,6 +235,10 @@ export function watchListEnd(node: HTMLElement, near: () => void): () => void {
 /** Bring a restarted list's top into view. */
 export function showListTop(node: HTMLElement): void {
   const scroller = scrollerOf(node, true);
+  if (scroller === node) {
+    scroller.scrollTop = 0;
+    return;
+  }
   const top =
     scroller === document.scrollingElement || scroller === document.documentElement
       ? 0

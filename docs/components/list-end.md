@@ -46,6 +46,6 @@ Attach `keepListPosition(name, rowCount)` to the element containing rows marked 
 
 Load the next batch as a reader approaches the end. Show a known total beside filters. Keep search, filters, and sort in the address without a page or offset. A new search, filter, or sort starts at the top.
 
-When a row opens a page, Back should reload the rows and restore the same position, up to the first 1,000 rows. Focus returns to the opened row's first link. Read fresh rows on return. If the top row has gone, restore the saved scroll offset. Step-through views, time-period views, and log tails keep their navigation buttons.
+When a row opens a page, Back should reload the rows and restore the same position, up to the first 1,000 rows. Read fresh rows on return. If the top row has gone, restore the saved scroll offset. Step-through views, time-period views, and log tails keep their navigation buttons.
 
 Lists that read moving rows by offset should keep their pager until the reads use a cursor. De-duplication cannot recover a skipped row.

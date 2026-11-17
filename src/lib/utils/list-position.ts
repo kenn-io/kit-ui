@@ -18,8 +18,6 @@ export interface ListPosition {
   offset: number;
   /** The scroll box's position, for when the top row is gone. */
   scrollTop: number;
-  /** The key of the opened row, for restoring focus to its first link. */
-  opened?: string;
 }
 
 // Each list names its own slot, so two lists in one entry keep apart.
@@ -50,8 +48,7 @@ function isPosition(value: unknown): value is ListPosition {
     typeof value.offset === "number" &&
     Number.isFinite(value.offset) &&
     typeof value.scrollTop === "number" &&
-    Number.isFinite(value.scrollTop) &&
-    (!("opened" in value) || value.opened === undefined || typeof value.opened === "string")
+    Number.isFinite(value.scrollTop)
   );
 }
 
@@ -112,12 +109,6 @@ function positionOf(node: HTMLElement, rows: number): ListPosition | null {
   };
 }
 
-function openedBy(node: HTMLElement, target: EventTarget | null): string | undefined {
-  const link = target instanceof Element ? target.closest("a[href]") : null;
-  const row = link?.closest<HTMLElement>("[data-list-row]");
-  return row && node.contains(row) ? row.dataset["listRow"] : undefined;
-}
-
 /**
  * Keeps `list`'s position in the current history entry while the reader
  * scrolls, and at once when they click the list. Attach it to the
@@ -129,9 +120,9 @@ function openedBy(node: HTMLElement, target: EventTarget | null): string | undef
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const save = (opened?: string) => {
+    const save = () => {
       const position = positionOf(node, rows());
-      if (position) writeListPosition(list, { ...position, ...(opened ? { opened } : {}) });
+      if (position) writeListPosition(list, position);
     };
     // Browsers limit how often a page may replace its history entry, so a
     // scroll writes once it pauses.
@@ -143,9 +134,9 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
       )
         saveScroll();
     };
-    const onclick = (event: MouseEvent) => {
+    const onclick = () => {
       saveScroll.cancel();
-      save(openedBy(node, event.target));
+      save();
     };
     document.addEventListener("scroll", onscroll, { capture: true, passive: true });
     node.addEventListener("click", onclick, { capture: true });
@@ -157,17 +148,10 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
   };
 }
 
-function focusOpened(node: HTMLElement, key: string | undefined): void {
-  const active = document.activeElement;
-  if (active === null || active === document.body)
-    rowFor(node, key)?.querySelector<HTMLElement>("a[href]")?.focus({ preventScroll: true });
-}
-
 /**
  * Puts the list back where `position` says, once its rows are shown: the
  * saved top row at its saved offset, or the saved scroll position when that
- * row is gone. Focus goes to the opened row's first link unless the reader
- * already moved it.
+ * row is gone.
  */
 function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const { scroller, boxTop } = boxOf(node);
@@ -177,7 +161,6 @@ function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   } else {
     scroller.scrollTop = position.scrollTop;
   }
-  focusOpened(node, position.opened);
 }
 
 function watchInput(): { stopped: () => boolean; release: () => void } {

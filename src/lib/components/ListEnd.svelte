@@ -48,8 +48,8 @@
   </div>
 {/snippet}
 {#snippet loading()}
-  {#if rows.loading}<span class="kit-list-end-loading kit-list-end-content"
-      ><Spinner size={14} label={`Loading more ${label}`} />Loading more {label}</span
+  {#if rows.loading}<span class="kit-list-end-loading kit-list-end-content" role="status"
+      ><span aria-hidden="true"><Spinner size={14} /></span>Loading more {label}</span
     >{/if}
 {/snippet}
 

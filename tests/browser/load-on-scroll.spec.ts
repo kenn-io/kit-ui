@@ -164,7 +164,6 @@ for (const kind of ["list", "table"]) {
       }).observe(document.body, { childList: true, subtree: true, characterData: true });
     }, kind);
     await page.goBack();
-    if (kind === "list") await expect(link).toBeFocused();
     await expect
       .poll(async () =>
         Math.abs(
@@ -231,6 +230,57 @@ test("position tracking uses the page scroller past a horizontal wrapper", async
   expect(result.restored).toBeGreaterThan(500);
 });
 
+test("a list attached to its own scroll box saves and restores its position", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const result = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { keepListPosition, savedListPosition, placeList } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;top:0;height:100px;width:200px;overflow:auto";
+    box.innerHTML =
+      '<div style="height:500px"><div data-list-row="a" style="margin-top:200px;height:40px">Row</div></div>';
+    document.body.prepend(box);
+    const detach = keepListPosition("direct-box", () => 1)(box);
+    box.scrollTop = 180;
+    box.click();
+    const saved = savedListPosition("direct-box")!;
+    box.scrollTop = 0;
+    await placeList(box, saved);
+    const restored = box.scrollTop;
+    detach?.();
+    box.remove();
+    return { saved: saved.scrollTop, restored };
+  });
+  expect(result).toEqual({ saved: 180, restored: 180 });
+});
+
+test("a restarted list that is its own scroll box returns to its top", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const top = await page.evaluate(async () => {
+    const path = "/src/lib/components/virtual.ts";
+    const { showListTop } = await import(path);
+    const box = document.createElement("div");
+    box.style.cssText = "height:100px;overflow:auto";
+    box.innerHTML = '<div style="height:500px"></div>';
+    document.body.prepend(box);
+    box.scrollTop = 200;
+    showListTop(box);
+    const top = box.scrollTop;
+    box.remove();
+    return top;
+  });
+  expect(top).toBe(0);
+});
+
+test("loading more rows has one accessible status", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const box = page.getByTestId("list-box");
+  await box.evaluate((el) => (el.scrollTop = el.scrollHeight));
+  const status = box.getByRole("status");
+  await expect(status).toHaveCount(1);
+  await expect(status).toHaveText("Loading more rows");
+});
+
 test("ListEnd waits for the replacement read before requesting more", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   const calls = await page.evaluate(async () => {
@@ -266,62 +316,4 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
   });
   expect(calls.before).toBe(0);
   expect(calls.after).toBeGreaterThan(0);
-});
-
-test("only a row link click saves an opened row and scrolling clears it", async ({ page }) => {
-  await gotoPage(page, "load-on-scroll");
-  const saved = await page.evaluate(async () => {
-    const path = "/src/lib/utils/list-position.ts";
-    const { keepListPosition, savedListPosition } = await import(path);
-    const box = document.createElement("div");
-    box.style.cssText = "height:100px;overflow:auto";
-    document.body.prepend(box);
-    const node = document.createElement("div");
-    box.append(node);
-    const detach = keepListPosition("opened-test", () => 1)(node);
-    node.innerHTML =
-      '<div data-list-row="a" style="height:500px"><a href="#row">Row</a><button>Action</button></div>';
-    node.addEventListener("click", (event) => event.preventDefault());
-    node.querySelector("a")!.click();
-    const afterLink = savedListPosition("opened-test")?.opened;
-    node.querySelector("button")!.click();
-    const afterButton = savedListPosition("opened-test")?.opened;
-    node.querySelector("a")!.click();
-    box.scrollTop = 200;
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const position = savedListPosition("opened-test");
-    detach?.();
-    box.remove();
-    return {
-      afterLink,
-      afterButton,
-      afterScroll: position?.opened,
-      scrollTop: position?.scrollTop,
-    };
-  });
-  expect(saved).toEqual({
-    afterLink: "a",
-    afterButton: undefined,
-    afterScroll: undefined,
-    scrollTop: 200,
-  });
-});
-
-test("restoring a row leaves focus the reader already moved", async ({ page }) => {
-  await gotoPage(page, "load-on-scroll");
-  const result = await page.evaluate(async () => {
-    const path = "/src/lib/utils/list-position.ts";
-    const { placeList } = await import(path);
-    const node = document.createElement("div");
-    node.innerHTML = '<div data-list-row="a"><a href="#row">Row</a></div>';
-    const button = document.createElement("button");
-    document.body.prepend(node, button);
-    button.focus();
-    await placeList(node, { rows: 1, top: "a", offset: 0, scrollTop: 0, opened: "a" });
-    const keptFocus = document.activeElement === button;
-    node.remove();
-    button.remove();
-    return keptFocus;
-  });
-  expect(result).toBe(true);
 });

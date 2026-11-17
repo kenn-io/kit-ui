@@ -72,7 +72,7 @@ export declare function visibleWindow(bodyTop: number, view: VerticalBounds): {
 };
 /** The element that scrolls `el` vertically: its nearest ancestor with
  * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
- * when none is. Used for tables whose rows the page scrolls. */
+ * when none is. When requiring overflow, check `el` itself first. */
 export declare function scrollerOf(el: Element, onlyOverflowing?: boolean): HTMLElement;
 /** Watch the end of a list half a scroll box ahead of view; inside a
  * `VirtualTable`, as soon as the end row is rendered, which is within
