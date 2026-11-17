@@ -16,7 +16,6 @@ export declare class MoreRows implements ListEndState {
     batches: number;
     reset(): void;
     load<T>(read: (signal: AbortSignal) => Promise<T>, commit: (value: T) => void): Promise<void>;
-    get reachedEnd(): boolean;
     retry(more: () => void): void;
 }
 export declare function appendBatch<Row, List extends {

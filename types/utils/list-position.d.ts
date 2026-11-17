@@ -28,11 +28,6 @@ export declare function savedListPosition(list: string): ListPosition | null;
  */
 export declare function writeListPosition(list: string, position: ListPosition | null, href?: string): void;
 /**
- * Where the list in `node` is scrolled now, for a list showing `rows` rows:
- * its first row in view and how far below the top of the scroll box it sits.
- */
-export declare function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosition | null;
-/**
  * Keeps `list`'s position in the current history entry while the reader
  * scrolls, and at once when they follow a link in a row. Attach it to the
  * element that holds the list's rows; each row carries its key in

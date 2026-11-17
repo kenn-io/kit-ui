@@ -68,10 +68,6 @@ export class MoreRows implements ListEndState {
     }
   }
 
-  get reachedEnd(): boolean {
-    return this.batches > 1 || this.loading || this.problem !== null;
-  }
-
   retry(more: () => void): void {
     this.problem = null;
     more();

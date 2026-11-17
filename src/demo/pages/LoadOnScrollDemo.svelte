@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick, untrack } from "svelte";
+  import { tick } from "svelte";
   import {
     ListEnd,
     MoreRows,
@@ -24,15 +24,14 @@
     id: i + 1,
     status: i % 2 ? "Closed" : "Open",
   }));
+  const matches = (value: string) =>
+    source.filter((row) => value === "all" || row.status.toLowerCase() === value);
   const loaders = { list: new MoreRows(), table: new MoreRows() };
-  let filter = $state(new URLSearchParams(location.search).get("filter") ?? "all");
+  const initial = new URLSearchParams(location.search).get("filter") ?? "all";
+  let filter = $state(initial);
   let lists = $state<Record<Kind, Row[]>>({
-    list: source
-      .filter((row) => filter === "all" || row.status.toLowerCase() === filter)
-      .slice(0, 100),
-    table: source
-      .filter((row) => filter === "all" || row.status.toLowerCase() === filter)
-      .slice(0, 100),
+    list: matches(initial).slice(0, 100),
+    table: matches(initial).slice(0, 100),
   });
   let fail = $state(false);
   let hash = $state(location.hash);
@@ -46,8 +45,6 @@
     { value: "open", label: "Open" },
     { value: "closed", label: "Closed" },
   ];
-  const matches = (value: string) =>
-    source.filter((row) => value === "all" || row.status.toLowerCase() === value);
   const detail = $derived(/^#load-on-scroll-row-(\d+)$/.exec(hash)?.[1]);
   const items = $derived(
     withEndRow(lists.table, lists.table.length < matches(filter).length, loaders.table),
@@ -117,7 +114,7 @@
         const node = kind === "table" ? container.querySelector("table")! : container;
         const position = savedListPosition(`demo-${kind}`);
         detach = keepListPosition(`demo-${kind}`, () => lists[kind].length)(node);
-        if (position && !untrack(() => detail)) {
+        if (position) {
           placing[kind] = true;
           try {
             lists[kind] = await read(0, Math.min(position.rows, 1000), filter, controller.signal);

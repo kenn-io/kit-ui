@@ -4,12 +4,8 @@
   import type { ListEndState } from "../utils/more-rows.svelte.js";
   import { watchListEnd } from "./virtual.js";
 
-  // The last row of a table, or the last item of a list, that loads its next
-  // batch as the reader nears its end. Place it after a plain table's body
-  // rows or a list's items, or render it for the `VirtualTable` item
-  // `withEndRow` adds. It shows a spinner while a batch loads and the failure
-  // with Retry when one fails. With nothing more to load and no failure it
-  // renders nothing, so the list stops asking.
+  // The last row of a table or item of a list; it loads the next batch as
+  // the reader nears it and renders nothing once there is no more.
   let {
     rows,
     more = true,
@@ -39,13 +35,8 @@
     retryLabel?: string;
   } = $props();
 
-  // Asks for the next batch once this row is within half a box's height of
-  // view in the box that scrolls the rows up and down. A new batch remounts
-  // the row, so a table taller than its rows asks again at once. So does the
-  // end of a refresh or new order: the list ignores a request while one
-  // reads, and a row that stayed in view would never be reported again. The
-  // VirtualTable's hidden measuring copy renders this row too; only the row
-  // people see asks for more.
+  // A new batch or idle state remounts the row, so a row still in view asks
+  // again. VirtualTable's inert measuring copy never asks.
   function watch(node: HTMLElement) {
     if (node.closest("[inert]")) return;
     return watchListEnd(node, () => onmore());
@@ -102,11 +93,8 @@
     color: var(--text-muted);
     list-style: none;
   }
-  /* A wide table, such as Collection status, scrolls sideways; the status
-     and Retry stay at the left edge of the part in view, inset by the
-     cell's 10px padding. The table's scroll box must be an inline-size
-     container, so 100cqi is the width in view and a long failure wraps
-     before Retry leaves it. */
+  /* In a wide table the status stays at the left of the part in view;
+     100cqi needs the scroll box to be an inline-size container. */
   .kit-list-end-content {
     position: sticky;
     left: 10px;

@@ -96,7 +96,7 @@ function rowsOf(node: HTMLElement): HTMLElement[] {
  * Where the list in `node` is scrolled now, for a list showing `rows` rows:
  * its first row in view and how far below the top of the scroll box it sits.
  */
-export function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosition | null {
+function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosition | null {
   if (rows === 0) return null;
   const { scroller, boxTop } = boxOf(node);
   const top = rowsOf(node).find((row) => row.getBoundingClientRect().bottom > boxTop);
