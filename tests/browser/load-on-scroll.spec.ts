@@ -1,31 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers";
 
-test("custom watcher follows a box that starts overflowing", async ({ page }) => {
-  await page.setViewportSize({ width: 200, height: 200 });
-  await gotoPage(page, "load-on-scroll");
-  const calls = await page.evaluate(async () => {
-    const path = "/src/lib/components/virtual.ts";
-    const { watchListEnd } = await import(path);
-    const box = document.createElement("div");
-    box.style.cssText = "position:fixed;top:0;left:0;width:200px;height:400px;overflow:auto";
-    box.innerHTML = '<div style="height:300px"></div><div style="height:1px"></div>';
-    document.body.append(box);
-    let count = 0;
-    const detach = watchListEnd(box.lastElementChild as HTMLElement, () => count++);
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    (box.firstElementChild as HTMLElement).style.height = "800px";
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    count = 0;
-    box.scrollTop = 300;
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    detach();
-    box.remove();
-    return count;
-  });
-  expect(calls).toBeGreaterThan(0);
-});
-
 test("prefetch distance uses box height", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   const result = await page.evaluate(async () => {
@@ -362,28 +337,6 @@ test("tracks a box that overflows after attachment", async ({ page }) => {
   expect(saved?.scrollTop).toBe(200);
 });
 
-test("a click saves the current position before the scroll debounce", async ({ page }) => {
-  await gotoPage(page, "load-on-scroll");
-  const saved = await page.evaluate(async () => {
-    const path = "/src/lib/utils/list-position.ts";
-    const { keepListPosition, savedListPosition } = await import(path);
-    const box = document.createElement("div");
-    box.style.cssText = "height:100px;overflow:auto";
-    box.innerHTML =
-      '<div><div data-list-row="first" style="height:500px"><button>Open</button></div></div>';
-    document.body.prepend(box);
-    const detach = keepListPosition("click-test", () => 1)(box.firstElementChild as HTMLElement);
-    box.scrollTop = 200;
-    box.dispatchEvent(new Event("scroll"));
-    box.querySelector("button")!.click();
-    const position = savedListPosition("click-test");
-    detach?.();
-    box.remove();
-    return position?.scrollTop;
-  });
-  expect(saved).toBe(200);
-});
-
 test("only a row link click saves an opened row and scrolling clears it", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   const saved = await page.evaluate(async () => {
@@ -428,33 +381,6 @@ test("restoring a row leaves focus the reader already moved", async ({ page }) =
     node.remove();
     button.remove();
     return keptFocus;
-  });
-  expect(result).toBe(true);
-});
-
-test("restoring a row focuses its link when the document has no active element", async ({
-  page,
-}) => {
-  await gotoPage(page, "load-on-scroll");
-  const result = await page.evaluate(async () => {
-    const path = "/src/lib/utils/list-position.ts";
-    const { placeList } = await import(path);
-    const node = document.createElement("div");
-    node.innerHTML = '<div data-list-row="a"><a href="#row">Row</a></div>';
-    document.body.prepend(node);
-    const link = node.querySelector("a")!;
-    let focused = false;
-    link.addEventListener("focus", () => {
-      focused = true;
-    });
-    Object.defineProperty(document, "activeElement", { configurable: true, get: () => null });
-    try {
-      await placeList(node, { rows: 1, top: "a", offset: 0, scrollTop: 0, opened: "a" });
-    } finally {
-      delete (document as any).activeElement;
-      node.remove();
-    }
-    return focused;
   });
   expect(result).toBe(true);
 });

@@ -112,7 +112,6 @@ function positionOf(node: HTMLElement, rows: number): ListPosition | null {
   };
 }
 
-// The key of the row whose link `target` is in, or undefined for any other click.
 function openedBy(node: HTMLElement, target: EventTarget | null): string | undefined {
   const link = target instanceof Element ? target.closest("a[href]") : null;
   const row = link?.closest<HTMLElement>("[data-list-row]");
@@ -158,7 +157,6 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
   };
 }
 
-// Focus goes to the opened row's first link unless the reader already moved it.
 function focusOpened(node: HTMLElement, key: string | undefined): void {
   const active = document.activeElement;
   if (active === null || active === document.body)
@@ -168,7 +166,8 @@ function focusOpened(node: HTMLElement, key: string | undefined): void {
 /**
  * Puts the list back where `position` says, once its rows are shown: the
  * saved top row at its saved offset, or the saved scroll position when that
- * row is gone.
+ * row is gone. Focus goes to the opened row's first link unless the reader
+ * already moved it.
  */
 function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const { scroller, boxTop } = boxOf(node);
@@ -181,7 +180,6 @@ function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   focusOpened(node, position.opened);
 }
 
-// Counts the reader's input from now until `release`.
 function watchInput(): { stopped: () => boolean; release: () => void } {
   let stopped = false;
   const stop = () => {
@@ -212,20 +210,12 @@ export async function placeList(
     let steady = 0;
     for (let pass = 0; pass < 12 && steady < 2 && !input.stopped() && node.isConnected; pass++) {
       const row = rowFor(node, position.top);
-      if (!row) {
-        steady = 0;
-        if (!reveal?.(position.top, position.offset)) {
-          // Let the virtual window render and settle after the offset changes.
-          restoreListPosition(node, position);
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          continue;
-        }
-      } else {
-        const { boxTop } = boxOf(node);
-        const drift = row.getBoundingClientRect().top - boxTop - position.offset;
+      if (row) {
+        const drift = row.getBoundingClientRect().top - boxOf(node).boxTop - position.offset;
         steady = Math.abs(drift) < 1 ? steady + 1 : 0;
-        restoreListPosition(node, position);
-      }
+      } else steady = 0;
+      // Without the row, a virtual list reveals it, else the saved scroll position stands in.
+      if (row || !reveal?.(position.top, position.offset)) restoreListPosition(node, position);
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     }
   } finally {
