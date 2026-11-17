@@ -28,21 +28,34 @@ test("custom watcher follows a box that starts overflowing", async ({ page }) =>
 
 test("prefetch distance uses box height", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
-  const calls = await page.evaluate(async () => {
+  const result = await page.evaluate(async () => {
     const path = "/src/lib/components/virtual.ts";
     const { watchListEnd } = await import(path);
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;top:0;left:0;width:200px;height:800px;overflow:auto";
     box.innerHTML = '<div style="height:1000px"></div><div style="height:1px"></div>';
     document.body.append(box);
+    const NativeObserver = window.IntersectionObserver;
+    let rootIsBox = false;
+    let rootMargin: string | undefined;
+    window.IntersectionObserver = class extends NativeObserver {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(callback, options);
+        rootIsBox = options?.root === box;
+        rootMargin = options?.rootMargin;
+      }
+    };
     let count = 0;
     const detach = watchListEnd(box.lastElementChild as HTMLElement, () => count++);
+    window.IntersectionObserver = NativeObserver;
     await new Promise((resolve) => setTimeout(resolve, 300));
     detach();
     box.remove();
-    return count;
+    return { count, rootIsBox, rootMargin };
   });
-  expect(calls).toBeGreaterThan(0);
+  expect(result.rootIsBox).toBe(true);
+  expect(result.rootMargin).toBe("0px 0px 400px 0px");
+  expect(result.count).toBeGreaterThan(0);
 });
 
 for (const kind of ["list", "table"]) {
