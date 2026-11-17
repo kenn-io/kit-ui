@@ -133,6 +133,7 @@
     >
       {#snippet header()}<TableHeaderCell label="Row" fill /><TableHeaderCell
           label="Status"
+          resizable={false}
         />{/snippet}
       {#snippet row(item: Row | EndRow)}
         {#if isEndRow(item)}
@@ -171,6 +172,10 @@
   .list-box a,
   .table-box a {
     color: var(--accent-blue);
+  }
+  .list-box a:focus-visible,
+  .table-box a:focus-visible {
+    outline-offset: 2px;
   }
   .list-box :global(.kit-list-end-content) {
     left: 10px;
