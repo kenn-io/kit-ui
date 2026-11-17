@@ -41,8 +41,7 @@ export declare function keepListPosition(list: string, rows: () => number): Atta
  * Puts the list back where `position` says, once its rows are shown: the
  * saved top row at its saved offset, or the saved scroll position when that
  * row is gone. Focus goes to the link of the row the reader followed, unless
- * they have already moved focus elsewhere or the top row is gone and the
- * opened row is off-screen.
+ * they have already moved focus elsewhere.
  */
 export declare function restoreListPosition(node: HTMLElement, position: ListPosition): void;
 /** Restore a saved position, revealing an unrendered virtual row if needed. */

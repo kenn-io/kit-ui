@@ -80,6 +80,32 @@ for (const kind of ["list", "table"]) {
   });
 }
 
+test("focuses the opened virtual row in the saved viewport when the top row is missing", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const box = page.getByTestId("table-box");
+  const link = box.getByRole("link", { name: "Row 55", exact: true });
+  await expect(link).toHaveCount(0);
+  await page.evaluate(() => {
+    history.replaceState(
+      {
+        listPositions: {
+          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 2000, opened: "55" },
+        },
+      },
+      "",
+    );
+  });
+  await page.reload();
+  await expect(link).toBeFocused();
+  await expect(box.locator(".kit-table-wrapper")).toHaveJSProperty("scrollTop", 2000);
+  const visible = await link.evaluate((el) => {
+    const row = el.getBoundingClientRect();
+    const viewport = el.closest(".kit-table-wrapper")!.getBoundingClientRect();
+    return row.top >= viewport.top && row.bottom <= viewport.bottom;
+  });
+  expect(visible).toBe(true);
+});
+
 test("restores the saved offset when the top virtual row is missing", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   await page.evaluate(() => {
@@ -98,20 +124,6 @@ test("restores the saved offset when the top virtual row is missing", async ({ p
   await expect(page.getByTestId("table-count")).toHaveText("1000 rows loaded");
   await expect(box.getByRole("link", { name: "Row 640", exact: true })).toHaveCount(0);
   await expect(page.locator("body")).toBeFocused();
-
-  const focusedOffscreen = await page.evaluate(async () => {
-    const path = "/src/lib/utils/list-position.ts";
-    const { restoreListPosition } = await import(path);
-    const box = document.createElement("div");
-    box.style.cssText = "height:100px; overflow-y:auto";
-    box.innerHTML = '<div style="height:1000px"></div><div data-list-row="opened"><a href="#row">Row</a></div>';
-    document.body.append(box);
-    restoreListPosition(box, { rows: 1, top: "missing", offset: 0, scrollTop: 200, opened: "opened" });
-    const focused = document.activeElement === box.querySelector("a");
-    box.remove();
-    return focused;
-  });
-  expect(focusedOffscreen).toBe(false);
 });
 
 test("restores the top row within the first 1000 when more rows were saved", async ({ page }) => {

@@ -151,8 +151,7 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
  * Puts the list back where `position` says, once its rows are shown: the
  * saved top row at its saved offset, or the saved scroll position when that
  * row is gone. Focus goes to the link of the row the reader followed, unless
- * they have already moved focus elsewhere or the top row is gone and the
- * opened row is off-screen.
+ * they have already moved focus elsewhere.
  */
 export function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const { scroller, boxTop } = boxOf(node);
@@ -165,10 +164,7 @@ export function restoreListPosition(node: HTMLElement, position: ListPosition): 
   }
   const opened = rows.find((row) => row.dataset["listRow"] === position.opened);
   const focused = document.activeElement;
-  const openedRect = opened?.getBoundingClientRect();
-  const boxBottom = boxTop + (scroller === document.documentElement ? window.innerHeight : scroller.clientHeight);
-  const inView = openedRect && openedRect.bottom > boxTop && openedRect.top < boxBottom;
-  if (opened && (top || inView) && (focused === null || focused === document.body)) {
+  if (opened && (focused === null || focused === document.body)) {
     opened.querySelector<HTMLElement>("a[href]")?.focus({ preventScroll: true });
   }
 }
@@ -197,8 +193,10 @@ export async function placeList(
         steady = 0;
         const index = options.indexOf(position.top);
         if (index < 0) {
+          // Let the virtual window render and settle after the offset changes.
           restoreListPosition(node, position);
-          break;
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          continue;
         }
         options.scrollToIndex(index, position.offset);
       } else {
