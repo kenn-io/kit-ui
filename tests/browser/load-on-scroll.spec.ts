@@ -58,38 +58,6 @@ test("prefetch distance uses box height", async ({ page }) => {
   expect(result.count).toBeGreaterThan(0);
 });
 
-for (const kind of ["list", "table"]) {
-  test(`${kind} restores the second followed link across history`, async ({ page }) => {
-    await page.addInitScript(() => {
-      const addLink = () => {
-        for (const row of document.querySelectorAll('[data-list-row="5"]')) {
-          if (row.querySelector("[data-second-link]")) continue;
-          const first = row.querySelector("a[href]");
-          if (!first) continue;
-          const second = first.cloneNode(true) as HTMLAnchorElement;
-          second.dataset.secondLink = "";
-          second.textContent = "Second link";
-          first.after(second);
-        }
-      };
-      new MutationObserver(addLink).observe(document, { childList: true, subtree: true });
-    });
-    await gotoPage(page, "load-on-scroll");
-    const box = page.getByTestId(`${kind}-box`);
-    const link = box.getByRole("link", { name: "Second link" });
-    await link.click();
-    await page.goBack();
-    await expect(link).toBeFocused();
-    await (kind === "table" ? box.locator(".kit-table-wrapper") : box).evaluate((el) => {
-      el.scrollTop += 20;
-    });
-    await page.waitForTimeout(300);
-    await page.goForward();
-    await page.goBack();
-    await expect(link).toBeFocused();
-  });
-}
-
 for (const change of ["growth", "resize"]) {
   test(`ListEnd prefetches after ${change} makes its box overflow`, async ({ page }) => {
     await gotoPage(page, "load-on-scroll");
@@ -179,7 +147,6 @@ for (const kind of ["list", "table"]) {
     await link.click();
     const before = Number(await page.evaluate(() => sessionStorage.getItem("opened-offset")));
     await page.goBack();
-    await expect(link).toBeFocused();
     await expect
       .poll(async () =>
         Math.abs(
@@ -211,41 +178,13 @@ for (const kind of ["list", "table"]) {
   });
 }
 
-test("focuses the opened virtual row in the saved viewport when the top row is missing", async ({
-  page,
-}) => {
-  await gotoPage(page, "load-on-scroll");
-  const box = page.getByTestId("table-box");
-  const link = box.getByRole("link", { name: "Row 55", exact: true });
-  await expect(link).toHaveCount(0);
-  await page.evaluate(() => {
-    history.replaceState(
-      {
-        listPositions: {
-          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 2000, opened: "55" },
-        },
-      },
-      "",
-    );
-  });
-  await page.reload();
-  await expect(link).toBeFocused();
-  await expect(box.locator(".kit-table-wrapper")).toHaveJSProperty("scrollTop", 2000);
-  const visible = await link.evaluate((el) => {
-    const row = el.getBoundingClientRect();
-    const viewport = el.closest(".kit-table-wrapper")!.getBoundingClientRect();
-    return row.top >= viewport.top && row.bottom <= viewport.bottom;
-  });
-  expect(visible).toBe(true);
-});
-
 test("restores the saved offset when the top virtual row is missing", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   await page.evaluate(() => {
     history.replaceState(
       {
         listPositions: {
-          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 2000, opened: "640" },
+          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 2000 },
         },
       },
       "",
@@ -256,7 +195,6 @@ test("restores the saved offset when the top virtual row is missing", async ({ p
   await expect(box.locator(".kit-table-wrapper")).toHaveJSProperty("scrollTop", 2000);
   await expect(page.getByTestId("table-count")).toHaveText("1000 rows loaded");
   await expect(box.getByRole("link", { name: "Row 640", exact: true })).toHaveCount(0);
-  await expect(page.locator("body")).toBeFocused();
 });
 
 test("restores the top row within the first 1000 when more rows were saved", async ({ page }) => {
@@ -265,7 +203,7 @@ test("restores the top row within the first 1000 when more rows were saved", asy
     history.replaceState(
       {
         listPositions: {
-          "demo-table": { rows: 1400, top: "950", offset: 50, scrollTop: 0, opened: "955" },
+          "demo-table": { rows: 1400, top: "950", offset: 50, scrollTop: 0 },
         },
       },
       "",
@@ -275,7 +213,6 @@ test("restores the top row within the first 1000 when more rows were saved", asy
   const box = page.getByTestId("table-box");
   const row = box.locator('[data-list-row="950"]');
   await expect(row).toBeVisible();
-  await expect(box.getByRole("link", { name: "Row 955", exact: true })).toBeFocused();
   await expect
     .poll(() =>
       row.evaluate((el) =>
@@ -372,47 +309,24 @@ test("tracks a box that overflows after attachment", async ({ page }) => {
   expect(saved?.scrollTop).toBe(200);
 });
 
-test("scroll saves retain the opened row across Forward and Back", async ({ page }) => {
+test("a click saves the current position before the scroll debounce", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
-  const box = page.getByTestId("list-box");
-  const link = box.getByRole("link", { name: "Row 30", exact: true });
-  await link.click();
-  await page.goBack();
-  await expect(link).toBeFocused();
-  await box.evaluate((el) => {
-    el.scrollTop += 20;
-  });
-  await page.waitForTimeout(300);
-  await page.goForward();
-  await page.goBack();
-  await expect(link).toBeFocused();
-});
-
-test("modified and new-context clicks keep the opened row", async ({ page }) => {
-  await gotoPage(page, "load-on-scroll");
-  const opened = await page.evaluate(async () => {
+  const saved = await page.evaluate(async () => {
     const path = "/src/lib/utils/list-position.ts";
     const { keepListPosition, savedListPosition } = await import(path);
     const box = document.createElement("div");
+    box.style.cssText = "height:100px;overflow:auto";
     box.innerHTML =
-      '<div data-list-row="first"><a href="#first">First</a></div><div data-list-row="second"><a href="#second">Second</a></div>';
+      '<div><div data-list-row="first" style="height:500px"><button>Open</button></div></div>';
     document.body.prepend(box);
-    const detach = keepListPosition("click-test", () => 2)(box);
-    const links = box.querySelectorAll("a");
-    box.addEventListener("click", (event) => event.preventDefault());
-    links[0]!.click();
-    links[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
-    const modified = savedListPosition("click-test")?.opened;
-    links[1]!.target = "_blank";
-    links[1]!.click();
-    const target = savedListPosition("click-test")?.opened;
-    links[1]!.removeAttribute("target");
-    links[1]!.download = "file";
-    links[1]!.click();
-    const download = savedListPosition("click-test")?.opened;
+    const detach = keepListPosition("click-test", () => 1)(box.firstElementChild as HTMLElement);
+    box.scrollTop = 200;
+    box.dispatchEvent(new Event("scroll"));
+    box.querySelector("button")!.click();
+    const position = savedListPosition("click-test");
     detach?.();
     box.remove();
-    return { modified, target, download };
+    return position?.scrollTop;
   });
-  expect(opened).toEqual({ modified: "first", target: "first", download: "first" });
+  expect(saved).toBe(200);
 });

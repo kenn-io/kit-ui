@@ -6,9 +6,8 @@ import { tick } from "svelte";
 /**
  * Where the reader was in a list that loads more rows as they scroll. The
  * list keeps it in its own history entry, so Back, Forward, or a reload of
- * that entry shows the same rows at the same place, with focus on the link
- * the reader followed. A new search, filter, or order starts the list at its
- * top and forgets it.
+ * that entry shows the same rows at the same place. A new search, filter, or
+ * order starts the list at its top and forgets it.
  */
 export interface ListPosition {
   /** How many rows the list showed. */
@@ -19,10 +18,6 @@ export interface ListPosition {
   offset: number;
   /** The scroll box's position, for when the top row is gone. */
   scrollTop: number;
-  /** The key of the row whose link the reader followed, if they followed one. */
-  opened?: string;
-  /** Index of the followed link within its row. */
-  link?: number;
 }
 
 // Each list names its own slot, so two lists in one entry keep apart.
@@ -45,8 +40,6 @@ function isPosition(value: unknown): value is ListPosition {
   if (!("rows" in value && "top" in value && "offset" in value && "scrollTop" in value)) {
     return false;
   }
-  const opened = "opened" in value ? value.opened : undefined;
-  const link = "link" in value ? value.link : undefined;
   return (
     typeof value.rows === "number" &&
     Number.isInteger(value.rows) &&
@@ -55,9 +48,7 @@ function isPosition(value: unknown): value is ListPosition {
     typeof value.offset === "number" &&
     Number.isFinite(value.offset) &&
     typeof value.scrollTop === "number" &&
-    Number.isFinite(value.scrollTop) &&
-    (opened === undefined || typeof opened === "string") &&
-    (link === undefined || (typeof link === "number" && Number.isInteger(link) && link >= 0))
+    Number.isFinite(value.scrollTop)
   );
 }
 
@@ -101,12 +92,7 @@ function rowsOf(node: HTMLElement): HTMLElement[] {
  * Where the list in `node` is scrolled now, for a list showing `rows` rows:
  * its first row in view and how far below the top of the scroll box it sits.
  */
-function positionOf(
-  node: HTMLElement,
-  rows: number,
-  opened?: string,
-  link?: number,
-): ListPosition | null {
+function positionOf(node: HTMLElement, rows: number): ListPosition | null {
   if (rows === 0) return null;
   const { scroller, boxTop } = boxOf(node);
   const top = rowsOf(node).find((row) => row.getBoundingClientRect().bottom > boxTop);
@@ -116,14 +102,12 @@ function positionOf(
     top: top.dataset["listRow"] ?? "",
     offset: top.getBoundingClientRect().top - boxTop,
     scrollTop: scroller.scrollTop,
-    ...(opened ? { opened } : {}),
-    ...(link !== undefined ? { link } : {}),
   };
 }
 
 /**
  * Keeps `list`'s position in the current history entry while the reader
- * scrolls, and at once when they follow a link in a row. Attach it to the
+ * scrolls, and at once when they click the list. Attach it to the
  * element that holds the list's rows; each row carries its key in
  * `data-list-row`. `rows` reports how many rows the list shows.
  *
@@ -132,14 +116,8 @@ function positionOf(
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const save = (opened?: string, link?: number) => {
-      const saved = savedListPosition(list);
-      const position = positionOf(
-        node,
-        rows(),
-        opened ?? saved?.opened,
-        opened ? link : saved?.link,
-      );
+    const save = () => {
+      const position = positionOf(node, rows());
       if (position) writeListPosition(list, position);
     };
     // Browsers limit how often a page may replace its history entry, so a
@@ -152,21 +130,9 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
       )
         saveScroll();
     };
-    const onclick = (event: MouseEvent) => {
-      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
-        return;
-      const link =
-        event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
-      if (
-        !link ||
-        link.hasAttribute("download") ||
-        (link.target && link.target.toLowerCase() !== "_self")
-      )
-        return;
-      const row = link?.closest<HTMLElement>("[data-list-row]");
-      if (!row || !node.contains(row)) return;
+    const onclick = () => {
       saveScroll.cancel();
-      save(row.dataset["listRow"], [...row.querySelectorAll("a[href]")].indexOf(link));
+      save();
     };
     document.addEventListener("scroll", onscroll, { capture: true, passive: true });
     node.addEventListener("click", onclick, { capture: true });
@@ -181,8 +147,7 @@ export function keepListPosition(list: string, rows: () => number): Attachment<H
 /**
  * Puts the list back where `position` says, once its rows are shown: the
  * saved top row at its saved offset, or the saved scroll position when that
- * row is gone. Focus goes to the link of the row the reader followed, unless
- * they have already moved focus elsewhere.
+ * row is gone.
  */
 function restoreListPosition(node: HTMLElement, position: ListPosition): void {
   const { scroller, boxTop } = boxOf(node);
@@ -192,13 +157,6 @@ function restoreListPosition(node: HTMLElement, position: ListPosition): void {
     scroller.scrollTop += top.getBoundingClientRect().top - boxTop - position.offset;
   } else {
     scroller.scrollTop = position.scrollTop;
-  }
-  const opened = rows.find((row) => row.dataset["listRow"] === position.opened);
-  const focused = document.activeElement;
-  if (opened && (focused === null || focused === document.body)) {
-    opened
-      .querySelectorAll<HTMLElement>("a[href]")
-      [position.link ?? 0]?.focus({ preventScroll: true });
   }
 }
 

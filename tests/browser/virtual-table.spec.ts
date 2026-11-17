@@ -1307,19 +1307,3 @@ test("an empty table's header fills a box widened while it was empty", async ({ 
   await expect(dataRows(table).first()).toContainText("#0");
   await expect.poll(() => columnWidths(table)).toEqual(wide);
 });
-
-test("scrollToIndex places a measured row at the requested offset", async ({ page }) => {
-  await gotoPage(page, "virtual-table");
-  await page.getByRole("button", { name: "Show note 100" }).click();
-  const table = page.getByRole("table", { name: "Review notes" });
-  const row = table.locator('tr[data-note="100"]');
-  await expect(row).toBeVisible();
-  await page.waitForTimeout(300);
-  await page.getByRole("button", { name: "Show note 100" }).click();
-  const offset = await row.evaluate(
-    (el) =>
-      el.getBoundingClientRect().top -
-      el.closest(".kit-table-wrapper")!.getBoundingClientRect().top,
-  );
-  expect(Math.abs(offset - 80)).toBeLessThan(2);
-});

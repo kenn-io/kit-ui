@@ -191,7 +191,9 @@ export function scrollerOf(el: Element, onlyOverflowing = false): HTMLElement {
   return (document.scrollingElement ?? document.documentElement) as HTMLElement;
 }
 
-/** Watch the end of a list half a scroll box ahead of view. */
+/** Watch the end of a list half a scroll box ahead of view; inside a
+ * `VirtualTable`, as soon as the end row is rendered, which is within
+ * `overscan` rows of view. */
 export function watchListEnd(node: HTMLElement, near: () => void): () => void {
   let root: HTMLElement | null | undefined;
   let margin = -1;
@@ -228,15 +230,4 @@ export function watchListEnd(node: HTMLElement, near: () => void): () => void {
     resize.disconnect();
     observer.disconnect();
   };
-}
-
-/** Bring a restarted list's top into view. */
-export function showListTop(node: HTMLElement): void {
-  const scroller = scrollerOf(node, true);
-  const top =
-    scroller === document.scrollingElement || scroller === document.documentElement
-      ? 0
-      : scroller.getBoundingClientRect().top;
-  const above = node.getBoundingClientRect().top - top;
-  if (above < 0) scroller.scrollTop += above;
 }

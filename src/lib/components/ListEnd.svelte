@@ -4,8 +4,8 @@
   import type { ListEndState } from "../utils/more-rows.svelte.js";
   import { watchListEnd } from "./virtual.js";
 
-  // The last row of a table or item of a list; it loads the next batch as
-  // the reader nears it and renders nothing once there is no more.
+  // Loads half a scroll box ahead of view; inside a VirtualTable, as soon as
+  // the end row is rendered, which is within overscan rows of view.
   let {
     rows,
     more = true,
