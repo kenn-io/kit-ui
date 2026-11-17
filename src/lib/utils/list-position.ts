@@ -83,7 +83,7 @@ export function writeListPosition(
 
 // The box that scrolls the list, and the top edge of its visible part.
 function boxOf(node: HTMLElement): { scroller: HTMLElement; boxTop: number } {
-  const scroller = scrollerOf(node);
+  const scroller = scrollerOf(node, true);
   const boxTop = scroller === document.documentElement ? 0 : scroller.getBoundingClientRect().top;
   return { scroller, boxTop };
 }
@@ -121,7 +121,7 @@ function positionOf(node: HTMLElement, rows: number, opened?: string): ListPosit
  */
 export function keepListPosition(list: string, rows: () => number): Attachment<HTMLElement> {
   return (node) => {
-    const scroller = scrollerOf(node);
+    const scroller = scrollerOf(node, true);
     const target: HTMLElement | Window = scroller === document.scrollingElement ? window : scroller;
     const save = (opened?: string) => {
       const position = positionOf(node, rows(), opened);
@@ -187,6 +187,13 @@ export async function placeList(
   try {
     await tick();
     let steady = 0;
+    if (
+      options.indexOf(position.top) < 0 &&
+      position.opened &&
+      options.indexOf(position.opened) >= 0
+    ) {
+      position = { ...position, top: position.opened, offset: 0 };
+    }
     for (let pass = 0; pass < 12 && steady < 2 && !stopped && node.isConnected; pass++) {
       const row = rowsOf(node).find((r) => r.dataset["listRow"] === position.top);
       if (!row) {

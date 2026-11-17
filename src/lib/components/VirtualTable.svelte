@@ -571,15 +571,40 @@
     updateWindow();
   }
 
+  let placementFrame = 0;
+  let stopPlacement = () => {};
+
   /** Place a row at an offset from the top of the scroll box. */
   export function scrollToIndex(index: number, offset = 0): void {
     if (!body || !scroller || items.length === 0) return;
+    stopPlacement();
     const i = Math.min(Math.max(0, index), items.length - 1);
-    const boxTop =
-      scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
-    scroller.scrollTop +=
-      body.getBoundingClientRect().top + offsetOfIndex(i, items.length, heightOf) - boxTop - offset;
-    updateWindow();
+    const inputs = ["wheel", "touchstart", "pointerdown", "keydown"];
+    let pass = 0;
+    let steady = 0;
+    const stop = () => {
+      cancelAnimationFrame(placementFrame);
+      for (const input of inputs) window.removeEventListener(input, stop, true);
+      stopPlacement = () => {};
+    };
+    stopPlacement = stop;
+    for (const input of inputs) window.addEventListener(input, stop, { capture: true });
+    const place = () => {
+      if (!body || !scroller || pass++ >= 12) return stop();
+      const boxTop =
+        scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+      const row = dataRows()[i - slice.start];
+      const top =
+        row?.getBoundingClientRect().top ??
+        body.getBoundingClientRect().top + offsetOfIndex(i, items.length, heightOf);
+      const drift = top - boxTop - offset;
+      steady = row && Math.abs(drift) < 1 ? steady + 1 : 0;
+      scroller.scrollTop += drift;
+      updateWindow();
+      if (steady >= 2) return stop();
+      placementFrame = requestAnimationFrame(place);
+    };
+    place();
   }
 
   function track(spacer: HTMLTableRowElement) {
@@ -651,6 +676,7 @@
     }
     return () => {
       cancelAnimationFrame(frame);
+      stopPlacement();
       cancelAnimationFrame(applyFrame);
       applyFrame = 0;
       target.removeEventListener("scroll", updateWindow);

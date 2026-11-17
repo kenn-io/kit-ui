@@ -38,7 +38,7 @@
   // A new batch or idle state remounts the row, so a row still in view asks
   // again. VirtualTable's inert measuring copy never asks.
   function watch(node: HTMLElement) {
-    if (node.closest("[inert]")) return;
+    if (!idle || node.closest("[inert]")) return;
     return watchListEnd(node, () => onmore());
   }
 </script>

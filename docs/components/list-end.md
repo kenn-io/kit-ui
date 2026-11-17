@@ -38,10 +38,10 @@
 
 `MoreRows.load(read, commit)` accepts a cancellable read and commits only its current result. It ignores overlapping reads and waits for `retry` after a failure. Call `reset()` when a search, filter, or sort starts over; it aborts the old read. `appendBatch` keeps the first copy of each row and takes the new cursor. For a virtual table, use `withEndRow` and `isEndRow` to include the end row among its items.
 
-Attach `keepListPosition(name, rowCount)` to the element containing rows marked with `data-list-row`. On return, read `savedListPosition(name)`, fetch the saved number of rows, then call `placeList` with `indexOf` and `scrollToIndex` callbacks. For a plain list whose rows are already rendered, the callbacks need only return the row index. Use `writeListPosition(name, null)` when the list starts over. `restoreListPosition` restores a rendered list once. `showListTop` brings a restarted list to the top. `scrollerOf` and `watchListEnd` are available for custom list ends.
+Attach `keepListPosition(name, rowCount)` to the element containing rows marked with `data-list-row`. On return, read `savedListPosition(name)`, fetch up to the first 1,000 rows (use `Math.min(position.rows, 1000)`), then call `placeList` with `indexOf` and `scrollToIndex` callbacks. For a plain list whose rows are already rendered, the callbacks need only return the row index. Use `writeListPosition(name, null)` when the list starts over. `restoreListPosition` restores a rendered list once. `showListTop` brings a restarted list to the top. `scrollerOf` and `watchListEnd` are available for custom list ends.
 
 ## Long lists
 
 Load the next batch as a reader approaches the end. Show a known total beside filters. Keep search, filters, and sort in the address without a page or offset. A new search, filter, or sort starts at the top.
 
-When a row opens a page, Back should reload the rows and restore the same position and focus, up to the first 1,000 rows. Read fresh rows on return, and fall back to the saved scroll offset if the top row has gone. Step-through views, time-period views, and log tails keep their navigation buttons.
+When a row opens a page, Back should reload the rows and restore the same position and focus, up to the first 1,000 rows. Read fresh rows on return, and reveal the opened row if the top row has gone, or fall back to the saved scroll offset if both are gone. Step-through views, time-period views, and log tails keep their navigation buttons.

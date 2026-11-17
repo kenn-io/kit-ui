@@ -91,8 +91,7 @@ export function appendBatch<Row, List extends { items: Row[]; next_cursor?: stri
 
 export type EndRow = { readonly listEnd: true };
 const endRow: EndRow = { listEnd: true };
-export const isEndRow = <Row extends object>(item: Row | EndRow): item is EndRow =>
-  "listEnd" in item;
+export const isEndRow = <Row extends object>(item: Row | EndRow): item is EndRow => item === endRow;
 export function withEndRow<Row extends object>(
   rows: Row[],
   more: boolean,

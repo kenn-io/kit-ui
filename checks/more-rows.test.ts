@@ -85,3 +85,7 @@ test("withEndRow includes a sentinel for more rows or a failure", () => {
   rows.problem = { detail: "offline", retryable: true };
   expect(isEndRow(withEndRow(items, false, rows)[1]!)).toBe(true);
 });
+
+test("a data row with a listEnd field is not the end row", () => {
+  expect(isEndRow({ id: "a", listEnd: false })).toBe(false);
+});

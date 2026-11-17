@@ -79,3 +79,111 @@ for (const kind of ["list", "table"]) {
     await expect(scroller).toHaveJSProperty("scrollTop", 0);
   });
 }
+
+test("restores a missing top row by revealing the opened virtual row", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  await page.evaluate(() => {
+    history.replaceState(
+      {
+        listPositions: {
+          "demo-table": { rows: 1000, top: "missing", offset: 0, scrollTop: 0, opened: "640" },
+        },
+      },
+      "",
+    );
+  });
+  await page.reload();
+  const link = page.getByTestId("table-box").getByRole("link", { name: "Row 640", exact: true });
+  await expect(link).toBeVisible();
+  await expect(link).toBeFocused();
+});
+
+test("restores the top row within the first 1000 when more rows were saved", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  await page.evaluate(() => {
+    history.replaceState(
+      {
+        listPositions: {
+          "demo-table": { rows: 1400, top: "950", offset: 50, scrollTop: 0, opened: "955" },
+        },
+      },
+      "",
+    );
+  });
+  await page.reload();
+  const box = page.getByTestId("table-box");
+  const row = box.locator('[data-list-row="950"]');
+  await expect(row).toBeVisible();
+  await expect(box.getByRole("link", { name: "Row 955", exact: true })).toBeFocused();
+  await expect
+    .poll(() =>
+      row.evaluate((el) =>
+        Math.abs(
+          el.getBoundingClientRect().top -
+            el.closest(".kit-table-wrapper")!.getBoundingClientRect().top -
+            50,
+        ),
+      ),
+    )
+    .toBeLessThan(3);
+  await expect(page.getByTestId("table-count")).toHaveText("1000 rows loaded");
+});
+
+test("position tracking uses the page scroller past a horizontal wrapper", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const result = await page.evaluate(async () => {
+    const path = "/src/lib/utils/list-position.ts";
+    const { keepListPosition, savedListPosition, restoreListPosition } = await import(path);
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = "overflow-x:auto; width:200px";
+    wrapper.innerHTML =
+      '<div style="height:1800px;width:500px"><div data-list-row="a" style="margin-top:1000px;height:40px"><a href="#x">Row</a></div></div>';
+    document.body.append(wrapper);
+    const row = wrapper.querySelector<HTMLElement>("[data-list-row]")!;
+    const node = wrapper.firstElementChild as HTMLElement;
+    const detach = keepListPosition("page-test", () => 1)(node);
+    window.scrollTo(0, row.getBoundingClientRect().top + window.scrollY - 100);
+    row.querySelector("a")!.addEventListener("click", (event) => event.preventDefault());
+    row
+      .querySelector("a")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    const saved = savedListPosition("page-test")!;
+    window.scrollTo(0, 0);
+    restoreListPosition(node, saved);
+    const restored = window.scrollY;
+    detach?.();
+    wrapper.remove();
+    return { saved: saved.scrollTop, restored };
+  });
+  expect(result.saved).toBeGreaterThan(500);
+  expect(result.restored).toBeGreaterThan(500);
+});
+
+test("ListEnd waits for the replacement read before requesting more", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const calls = await page.evaluate(async () => {
+    const componentPath = "/src/lib/components/ListEnd.svelte";
+    const sveltePath = "/node_modules/svelte/src/index-client.js";
+    const { default: ListEnd } = await import(componentPath);
+    const { mount, unmount, flushSync } = await import(sveltePath);
+    const host = document.createElement("ul");
+    document.body.prepend(host);
+    let count = 0;
+    const component = mount(ListEnd, {
+      target: host,
+      props: {
+        rows: { loading: false, problem: null, batches: 1, retry: () => {} },
+        more: true,
+        idle: false,
+        label: "rows",
+        onmore: () => count++,
+      },
+    });
+    flushSync();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await unmount(component);
+    host.remove();
+    return count;
+  });
+  expect(calls).toBe(0);
+});

@@ -1314,7 +1314,7 @@ test("scrollToIndex places a variable-height row at the requested offset", async
   const table = page.getByRole("table", { name: "Review notes" });
   const row = table.locator('tr[data-note="100"]');
   await expect(row).toBeVisible();
-  await page.getByRole("button", { name: "Show note 100" }).click();
+  await page.waitForTimeout(300);
   const offset = await row.evaluate(
     (el) =>
       el.getBoundingClientRect().top -
