@@ -290,3 +290,48 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
   expect(calls.before).toBe(0);
   expect(calls.after).toBeGreaterThan(0);
 });
+
+test("ListEnd waits for a custom loader before requesting another batch", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const calls = await page.evaluate(async () => {
+    const componentPath = "/src/lib/components/ListEnd.svelte";
+    const sveltePath = "/node_modules/.vite/deps/svelte.js";
+    const { default: ListEnd } = await import(componentPath);
+    const { mount, unmount, flushSync } = await import(sveltePath);
+    const internalPath = "/node_modules/.vite/deps/svelte_internal_client.js";
+    const { state, get, set } = await import(internalPath);
+    const loading = state(false);
+    const host = document.createElement("ul");
+    document.body.prepend(host);
+    let count = 0;
+    const component = mount(ListEnd, {
+      target: host,
+      props: {
+        rows: {
+          get loading() {
+            return get(loading);
+          },
+          problem: null,
+          retry: () => {},
+        },
+        idle: true,
+        label: "rows",
+        onmore: () => {
+          count++;
+          set(loading, true);
+        },
+      },
+    });
+    flushSync();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const during = count;
+    set(loading, false);
+    flushSync();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const after = count;
+    await unmount(component);
+    host.remove();
+    return { during, after };
+  });
+  expect(calls).toEqual({ during: 1, after: 2 });
+});

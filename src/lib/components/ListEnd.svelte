@@ -33,7 +33,9 @@
   // again. VirtualTable's inert measuring copy never asks.
   function watch(node: HTMLElement) {
     if (!idle || node.closest("[inert]")) return;
-    return watchListEnd(node, () => onmore());
+    return watchListEnd(node, () => {
+      if (!rows.loading) onmore();
+    });
   }
 </script>
 
