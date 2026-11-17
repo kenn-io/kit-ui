@@ -5,7 +5,6 @@ export interface ListProblem {
 export interface ListEndState {
     loading: boolean;
     problem: ListProblem | null;
-    batches: number;
     retry(more: () => void): void;
 }
 /** Loads one batch at a time and discards results from a reset list. */
@@ -13,7 +12,6 @@ export declare class MoreRows implements ListEndState {
     #private;
     loading: boolean;
     problem: ListProblem | null;
-    batches: number;
     reset(): void;
     load<T>(read: (signal: AbortSignal) => Promise<T>, commit: (value: T) => void): Promise<void>;
     retry(more: () => void): void;

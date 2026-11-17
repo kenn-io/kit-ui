@@ -144,6 +144,11 @@
     box-shadow: var(--shadow-panel, none);
   }
 
+  .kit-table-wrapper:not(.kit-table-wrapper--page),
+  .kit-table-wrapper--wide {
+    container-type: inline-size;
+  }
+
   /* A page-scrolled wrapper keeps the table's full height: in a bounded
    * flex column it would otherwise shrink and hide the rows below. An
    * explicit max-content holds even while a wide table makes it scroll

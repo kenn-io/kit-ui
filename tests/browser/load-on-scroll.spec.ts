@@ -92,6 +92,28 @@ test("a restarted page-scrolled list returns to its top", async ({ page }) => {
 });
 
 for (const kind of ["list", "table"]) {
+  test(`${kind} keeps a long failure inside a narrow scroll box`, async ({ page }) => {
+    await gotoPage(page, "load-on-scroll");
+    const box = page.getByTestId(`${kind}-box`);
+    await box.evaluate((el) => (el.style.width = "200px"));
+    const scroller = kind === "table" ? box.locator(".kit-table-wrapper") : box;
+    await page.getByLabel("Fail next batch").check();
+    await scroller.evaluate((el) => (el.scrollTop = el.scrollHeight));
+    const alert = box.getByRole("alert");
+    await expect(alert).toBeVisible();
+    await alert
+      .locator("span")
+      .first()
+      .evaluate((el) => (el.textContent = "Failure ".repeat(80)));
+    const bounds = await alert.evaluate((el) => {
+      const alert = el.getBoundingClientRect();
+      const box = el.closest('[data-testid$="-box"]')!.getBoundingClientRect();
+      return { left: alert.left - box.left, right: alert.right - box.right };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(1);
+  });
+
   test(`${kind} loads, retries, and returns to an opened row`, async ({ page }) => {
     await gotoPage(page, "load-on-scroll");
     const box = page.getByTestId(`${kind}-box`);
@@ -219,7 +241,7 @@ test("ListEnd waits for the replacement read before requesting more", async ({ p
     document.body.prepend(host);
     let count = 0;
     const props = {
-      rows: { loading: false, problem: null, batches: 1, retry: () => {} },
+      rows: { loading: false, problem: null, retry: () => {} },
       more: true,
       idle: false,
       label: "rows",

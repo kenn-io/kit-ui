@@ -28,7 +28,7 @@ describe("MoreRows", () => {
     finish("stale");
     await first;
     expect(values).toEqual([]);
-    expect([rows.loading, rows.problem, rows.batches]).toEqual([false, null, 1]);
+    expect([rows.loading, rows.problem]).toEqual([false, null]);
   });
 
   test("holds failures until retry", async () => {
@@ -49,14 +49,15 @@ describe("MoreRows", () => {
     );
     expect(read).toBe(false);
     let retry: Promise<void> | undefined;
+    let committed = "";
     rows.retry(() => {
       retry = rows.load(
         async () => "ok",
-        () => {},
+        (value) => (committed = value),
       );
     });
     await retry;
-    expect(rows.batches).toBe(2);
+    expect(committed).toBe("ok");
     expect(rows.problem).toBeNull();
     await rows.load(
       async () => {
@@ -94,11 +95,24 @@ describe("MoreRows", () => {
 
 test("appendBatch keeps the first copy of each row and the new cursor", () => {
   const result = appendBatch(
-    { items: [{ id: "a" }], next_cursor: "old" },
-    { items: [{ id: "a" }, { id: "b" }, { id: "b" }], next_cursor: "new" },
+    { items: [{ id: "a", text: "original" }], next_cursor: "old" },
+    {
+      items: [
+        { id: "a", text: "changed" },
+        { id: "b", text: "first" },
+        { id: "b", text: "later" },
+      ],
+      next_cursor: "new",
+    },
     (row) => row.id,
   );
-  expect(result).toEqual({ items: [{ id: "a" }, { id: "b" }], next_cursor: "new" });
+  expect(result).toEqual({
+    items: [
+      { id: "a", text: "original" },
+      { id: "b", text: "first" },
+    ],
+    next_cursor: "new",
+  });
 });
 
 test("withEndRow includes a sentinel for more rows or a failure", () => {

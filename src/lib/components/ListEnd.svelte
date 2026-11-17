@@ -29,7 +29,7 @@
     onmore: () => void;
   } = $props();
 
-  // A new batch or idle state remounts the row, so a row still in view asks
+  // A loading or idle state change remounts the row, so a row still in view asks
   // again. VirtualTable's inert measuring copy never asks.
   function watch(node: HTMLElement) {
     if (!idle || node.closest("[inert]")) return;
@@ -57,7 +57,7 @@
   {#if rows.problem}
     <li class="kit-list-end">{@render problem(rows.problem)}</li>
   {:else if more}
-    {#key `${rows.batches}:${idle}`}
+    {#key `${rows.loading}:${idle}`}
       <li class="kit-list-end" {@attach watch}>{@render loading()}</li>
     {/key}
   {/if}
@@ -66,7 +66,7 @@
     <td colspan={columns}>{@render problem(rows.problem)}</td>
   </tr>
 {:else if more}
-  {#key `${rows.batches}:${idle}`}
+  {#key `${rows.loading}:${idle}`}
     <tr class="kit-list-end" {@attach watch}>
       <td colspan={columns}>{@render loading()}</td>
     </tr>

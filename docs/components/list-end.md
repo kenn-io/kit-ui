@@ -2,7 +2,7 @@
 
 `ListEnd` watches the end of a list and requests the next batch half a scroll box ahead of view; inside a `VirtualTable`, as soon as the end row is rendered, which is within `overscan` rows of view. It shows a spinner while loading and a failure with Retry when the failure is retryable. It renders an `li` by default; set `columns` to render a table row with one cell spanning those columns.
 
-`rows` accepts any `ListEndState` with `loading`, `problem`, `batches`, and `retry(more)`. `idle` is false while the first batch loads. Set `more` to false when the server has no next batch. `label` names the rows.
+`rows` accepts any `ListEndState` with `loading`, `problem`, and `retry(more)`. `idle` is false while the first batch loads. Set `more` to false when the server has no next batch. `label` names the rows. For a plain list or a page-scrolled table inside a scroll box, set `container-type: inline-size` on that box so long failures fit its width.
 
 `problem` is null or a `ListProblem` with a `detail` string and a `retryable` boolean.
 

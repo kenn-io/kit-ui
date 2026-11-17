@@ -6,7 +6,6 @@ export interface ListProblem {
 export interface ListEndState {
   loading: boolean;
   problem: ListProblem | null;
-  batches: number;
   retry(more: () => void): void;
 }
 
@@ -14,7 +13,6 @@ export interface ListEndState {
 export class MoreRows implements ListEndState {
   loading = $state(false);
   problem = $state<ListProblem | null>(null);
-  batches = $state(1);
   #controller: AbortController | null = null;
 
   reset(): void {
@@ -22,7 +20,6 @@ export class MoreRows implements ListEndState {
     this.#controller = null;
     this.loading = false;
     this.problem = null;
-    this.batches = 1;
   }
 
   async load<T>(
@@ -37,7 +34,6 @@ export class MoreRows implements ListEndState {
       const value = await read(controller.signal);
       if (this.#controller !== controller) return;
       commit(value);
-      this.batches += 1;
     } catch (error) {
       if (this.#controller !== controller) return;
       if (

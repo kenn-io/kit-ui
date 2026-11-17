@@ -154,6 +154,7 @@
     padding-left: 10px;
   }
   .list-box {
+    container-type: inline-size;
     height: 360px;
     overflow: auto;
     width: 100%;
