@@ -26,8 +26,9 @@
   }));
   const matches = () =>
     source.filter((row) => filter === "all" || row.status.toLowerCase() === filter);
-  let rows = $state<Row[]>(matches().slice(0, 100));
-  let idle = $state(untrack(() => !savedListPosition(`demo-${kind}`)));
+  const saved = untrack(() => savedListPosition(`demo-${kind}`));
+  let rows = $state<Row[]>(matches().slice(0, saved?.rows ?? 100));
+  let idle = $state(!saved);
   const loader = new MoreRows();
   let table = $state<{ scrollToIndex: (index: number, offset?: number) => void }>();
   const items = $derived(withEndRow(rows, rows.length < matches().length, loader));
@@ -85,7 +86,6 @@
               if (kind === "table") table?.scrollToIndex(index, offset);
               return true;
             },
-            read(0, position.rows, controller.signal).then((batch) => (rows = batch)),
           );
         }
       } catch (error) {

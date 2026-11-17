@@ -54,7 +54,7 @@ test("normalizes a shared filter URL and defaults an unknown filter", async ({ p
   await expect(rows.filter({ hasText: "Closed" }).first()).toBeVisible();
 });
 
-test("scrolling during a saved-row read cancels placement", async ({ page }) => {
+test("scrolling before placement cancels it", async ({ page }) => {
   await gotoPage(page, "load-on-scroll");
   await page.evaluate(() => {
     history.replaceState(
@@ -165,6 +165,14 @@ for (const kind of ["list", "table"]) {
     }
     await expect(page.getByRole("heading", { name: "Row 640" })).toBeVisible();
     const before = Number(await page.evaluate(() => sessionStorage.getItem("opened-offset")));
+    await page.evaluate((kind) => {
+      const counts: string[] = [];
+      (window as Window & { restoredCounts: string[] }).restoredCounts = counts;
+      new MutationObserver(() => {
+        const count = document.querySelector(`[data-testid="${kind}-count"]`);
+        if (count) counts.push(count.textContent ?? "");
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    }, kind);
     await page.goBack();
     if (kind === "list") await expect(link).toBeFocused();
     await expect
@@ -178,6 +186,9 @@ for (const kind of ["list", "table"]) {
         ),
       )
       .toBeLessThan(3);
+    expect(
+      await page.evaluate(() => (window as Window & { restoredCounts: string[] }).restoredCounts),
+    ).not.toContain("100 rows loaded");
   });
 }
 
