@@ -180,7 +180,11 @@ export function visibleWindow(
  * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
  * when none is. When requiring overflow, check `el` itself first. */
 export function scrollerOf(el: Element, onlyOverflowing = false): HTMLElement {
-  for (let node = onlyOverflowing && el instanceof HTMLElement ? el : el.parentElement; node; node = node.parentElement) {
+  for (
+    let node = onlyOverflowing && el instanceof HTMLElement ? el : el.parentElement;
+    node;
+    node = node.parentElement
+  ) {
     const overflow = getComputedStyle(node).overflowY;
     if (
       (overflow === "auto" || overflow === "scroll" || overflow === "overlay") &&
