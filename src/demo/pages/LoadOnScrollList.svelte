@@ -159,8 +159,17 @@
     padding: 0;
   }
   .list-box li:not(:global(.kit-list-end)) {
+    border-bottom: var(--border-width) solid var(--border-muted);
+    color: var(--text-secondary);
     list-style: none;
     padding: var(--space-3);
+  }
+  .list-box a,
+  .table-box a {
+    color: var(--accent-blue);
+  }
+  .list-box :global(.kit-list-end-content) {
+    left: var(--space-3);
   }
   .table-box {
     width: 100%;
