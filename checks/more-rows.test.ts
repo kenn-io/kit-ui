@@ -31,7 +31,7 @@ describe("MoreRows", () => {
     expect([rows.loading, rows.problem, rows.batches]).toEqual([false, null, 1]);
   });
 
-  test("holds failures until retry and ignores aborts", async () => {
+  test("holds failures until retry", async () => {
     const rows = new MoreRows();
     await rows.load(
       async () => {
@@ -58,13 +58,29 @@ describe("MoreRows", () => {
     await retry;
     expect(rows.batches).toBe(2);
     expect(rows.problem).toBeNull();
+  });
+
+  test("a current request that rejects with AbortError can be retried", async () => {
+    const rows = new MoreRows();
     await rows.load(
       async () => {
-        throw new DOMException("aborted", "AbortError");
+        throw new DOMException("Request timed out", "AbortError");
       },
       () => {},
     );
-    expect(rows.problem).toBeNull();
+    expect(rows.problem).toEqual({ detail: "Request timed out", retryable: true });
+    let value = "";
+    let retry: Promise<void> | undefined;
+    rows.retry(() => {
+      retry = rows.load(
+        async () => "retried",
+        (result) => {
+          value = result;
+        },
+      );
+    });
+    await retry;
+    expect(value).toBe("retried");
   });
 });
 

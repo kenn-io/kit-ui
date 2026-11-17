@@ -100,6 +100,59 @@ test("defaults an unknown filter to All", async ({ page }) => {
   await expect(page.getByTestId("list-count")).toContainText("100");
 });
 
+test("keyboard navigation returns focus to the opened row", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const box = page.getByTestId("list-box");
+  await box.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect(page.getByTestId("list-count")).toHaveText("200 rows loaded");
+  const link = box.getByRole("link", { name: "Row 150", exact: true });
+  await link.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#load-on-scroll-row-150$/);
+  await expect(page.getByRole("heading", { name: "Row 150" })).toBeVisible();
+  await page.goBack();
+  await expect(link).toBeFocused();
+});
+
+test("scrolling during a saved-row read cancels placement", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  await page.evaluate(() => {
+    history.replaceState(
+      { listPositions: { "demo-list": { rows: 100, top: "60", offset: 0, scrollTop: 2500 } } },
+      "",
+    );
+  });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await page.reload();
+  const box = page.getByTestId("list-box");
+  await box.hover();
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => box.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  const position = await box.evaluate((el) => el.scrollTop);
+  await page.clock.runFor(700);
+  await expect(box).toHaveJSProperty("scrollTop", position);
+});
+
+test("a restarted page-scrolled list returns to its top", async ({ page }) => {
+  await gotoPage(page, "load-on-scroll");
+  const top = await page.evaluate(async () => {
+    const path = "/src/lib/index.ts";
+    const { showListTop } = await import(path);
+    const list = document.createElement("div");
+    list.style.cssText = "height:2000px";
+    document.body.append(list);
+    window.scrollTo(0, list.getBoundingClientRect().top + window.scrollY + 500);
+    showListTop?.(list);
+    const top = list.getBoundingClientRect().top;
+    list.remove();
+    return top;
+  });
+  expect(top).toBeGreaterThanOrEqual(0);
+});
+
 for (const kind of ["list", "table"]) {
   test(`${kind} loads, retries, and returns to an opened row`, async ({ page }) => {
     await gotoPage(page, "load-on-scroll");
