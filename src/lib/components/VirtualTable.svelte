@@ -9,7 +9,7 @@
     type ColumnResize,
     type ColumnSizing,
   } from "./table-columns.js";
-  import { RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
+  import { offsetOfIndex, RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
     /** Every row's data; only the rows on screen are rendered. */
@@ -568,6 +568,17 @@
   export function refresh(): void {
     syncRows();
     if (measureRows()) applyHeights();
+    updateWindow();
+  }
+
+  /** Place a row at an offset from the top of the scroll box. */
+  export function scrollToIndex(index: number, offset = 0): void {
+    if (!body || !scroller || items.length === 0) return;
+    const i = Math.min(Math.max(0, index), items.length - 1);
+    const boxTop =
+      scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+    scroller.scrollTop +=
+      body.getBoundingClientRect().top + offsetOfIndex(i, items.length, heightOf) - boxTop - offset;
     updateWindow();
   }
 

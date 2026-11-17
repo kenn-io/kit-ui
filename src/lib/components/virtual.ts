@@ -179,10 +179,42 @@ export function visibleWindow(
 /** The element that scrolls `el` vertically: its nearest ancestor with
  * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
  * when none is. Used for tables whose rows the page scrolls. */
-export function scrollerOf(el: Element): HTMLElement {
+export function scrollerOf(el: Element, onlyOverflowing = false): HTMLElement {
   for (let node = el.parentElement; node; node = node.parentElement) {
     const overflow = getComputedStyle(node).overflowY;
-    if (overflow === "auto" || overflow === "scroll" || overflow === "overlay") return node;
+    if (
+      (overflow === "auto" || overflow === "scroll" || overflow === "overlay") &&
+      (!onlyOverflowing || node.scrollHeight > node.clientHeight)
+    )
+      return node;
   }
   return (document.scrollingElement ?? document.documentElement) as HTMLElement;
+}
+
+/** Watch the end of a list half a scroll box ahead of view. */
+export function watchListEnd(node: HTMLElement, near: () => void): () => void {
+  const scroller = scrollerOf(node, true);
+  const root =
+    scroller === document.scrollingElement || scroller === document.documentElement
+      ? null
+      : scroller;
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) near();
+    },
+    { root, rootMargin: "0px 0px 50% 0px" },
+  );
+  observer.observe(node);
+  return () => observer.disconnect();
+}
+
+/** Bring a restarted list's top into view. */
+export function showListTop(node: HTMLElement): void {
+  const scroller = scrollerOf(node, true);
+  const top =
+    scroller === document.scrollingElement || scroller === document.documentElement
+      ? 0
+      : scroller.getBoundingClientRect().top;
+  const above = node.getBoundingClientRect().top - top;
+  if (above < 0) scroller.scrollTop += above;
 }

@@ -112,6 +112,7 @@
   // The app knows its IDs: at most "#1999", about 40px of digits.
   const fitNoteColumn = (column: number) => (column === 0 ? 40 : undefined);
   let showBranch = $state(true);
+  let notesTable = $state<ReturnType<typeof VirtualTable<Note>>>();
   let pageTable = $state<ReturnType<typeof VirtualTable<Review>>>();
   let boxed = $state(false);
   const pageSorter = new TableSort<Review>(
@@ -268,10 +269,12 @@
   {/snippet}
 </VirtualTable>`}
 >
+  <Button label="Show note 100" onclick={() => notesTable?.scrollToIndex(100, 80)} />
   <Checkbox bind:checked={showLines} label="Show the Lines column" />
   <Checkbox bind:checked={wideId} label="Start the ID column at 120px" />
   <div class="host">
     <VirtualTable
+      bind:this={notesTable}
       items={sortedNotes}
       rowKey={(n) => n.id}
       estimateRowHeight={60}
@@ -296,7 +299,7 @@
         <TableHeaderCell><span class="kit-sr-only">Details</span></TableHeaderCell>
       {/snippet}
       {#snippet row(note)}
-        <tr>
+        <tr data-note={note.id}>
           <td class="num">#{note.id}</td>
           <td>{note.project}</td>
           <td>
