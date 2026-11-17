@@ -33,19 +33,13 @@
   let table = $state<{ scrollToIndex: (index: number, offset?: number) => void }>();
   const items = $derived(withEndRow(rows, rows.length < matches().length, loader));
 
-  function read(
-    start: number,
-    count: number,
-    signal: AbortSignal,
-    mayFail = false,
-  ): Promise<Row[]> {
-    const current = matches();
+  function read(start: number, count: number, signal: AbortSignal): Promise<Row[]> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        if (mayFail && fail) {
+        if (fail) {
           fail = false;
           reject(new Error("Try again."));
-        } else resolve(current.slice(start, start + count));
+        } else resolve(matches().slice(start, start + count));
       }, 300);
       signal.addEventListener(
         "abort",
@@ -60,7 +54,7 @@
 
   function more() {
     void loader.load(
-      (signal) => read(rows.length, 100, signal, true),
+      (signal) => read(rows.length, 100, signal),
       (batch) => {
         rows = [...rows, ...batch];
       },
