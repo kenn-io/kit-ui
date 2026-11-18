@@ -79,3 +79,19 @@ test("striped rows tint toward the text and keep neutral chips visible", async (
     expect(contrastBetween(chip.background, striped.background)).toBeGreaterThan(1.05);
   }
 });
+
+test("a table keeps its width in a box that fits its content", async ({ page }) => {
+  const width = await jobs(page).evaluate((table) => {
+    const wrapper = table.closest(".kit-table-wrapper") as HTMLElement;
+    const box = document.createElement("div");
+    box.style.cssText = "position:absolute;top:0;left:0;display:inline-block";
+    document.body.append(box);
+    box.append(wrapper);
+    return {
+      wrapper: wrapper.getBoundingClientRect().width,
+      table: table.getBoundingClientRect().width,
+    };
+  });
+  expect(width.table).toBeGreaterThan(100);
+  expect(width.wrapper).toBeCloseTo(width.table, 0);
+});

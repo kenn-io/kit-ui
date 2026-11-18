@@ -368,3 +368,15 @@ export {
 } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
 export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";
+
+export { default as ListEnd } from "./components/ListEnd.svelte";
+export { showListTop } from "./components/virtual.js";
+export { MoreRows, appendBatch, isEndRow, withEndRow } from "./utils/more-rows.svelte.js";
+export type { ListProblem, ListEndState, EndRow } from "./utils/more-rows.svelte.js";
+export {
+  keepListPosition,
+  savedListPosition,
+  writeListPosition,
+  placeList,
+} from "./utils/list-position.js";
+export type { ListPosition } from "./utils/list-position.js";

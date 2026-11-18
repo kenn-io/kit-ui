@@ -49,6 +49,7 @@ declare function $$render<T>(): {
     };
     exports: {
         refresh: () => void;
+        scrollToIndex: (index: number, offset?: number) => void;
     };
     bindings: "";
     slots: {};
@@ -61,6 +62,7 @@ declare class __sveltets_Render<T> {
     bindings(): "";
     exports(): {
         refresh: () => void;
+        scrollToIndex: (index: number, offset?: number) => void;
     };
 }
 interface $$IsomorphicComponent {

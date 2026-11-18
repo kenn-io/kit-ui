@@ -42,6 +42,7 @@
   import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
+  import LoadOnScrollDemo from "./pages/LoadOnScrollDemo.svelte";
   import MarkdownDemo from "./pages/MarkdownDemo.svelte";
   import MediaViewerDemo from "./pages/MediaViewerDemo.svelte";
   import MenuDemo from "./pages/MenuDemo.svelte";
@@ -140,6 +141,7 @@
     { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
+    { id: "load-on-scroll", label: "Load on scroll", component: LoadOnScrollDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "media-viewer", label: "MediaViewer", component: MediaViewerDemo },
     { id: "menu", label: "Menu", component: MenuDemo },

@@ -9,7 +9,7 @@
     type ColumnResize,
     type ColumnSizing,
   } from "./table-columns.js";
-  import { RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
+  import { offsetOfIndex, RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
     /** Every row's data; only the rows on screen are rendered. */
@@ -568,6 +568,21 @@
   export function refresh(): void {
     syncRows();
     if (measureRows()) applyHeights();
+    updateWindow();
+  }
+
+  /** Place a row using measured heights and estimates for unmeasured rows.
+   * placeList repeats this step as measurements settle. */
+  export function scrollToIndex(index: number, offset = 0): void {
+    if (!body || !scroller || items.length === 0) return;
+    const i = Math.min(Math.max(0, index), items.length - 1);
+    const boxTop =
+      scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+    const row = dataRows()[i - slice.start];
+    const top =
+      row?.getBoundingClientRect().top ??
+      body.getBoundingClientRect().top + offsetOfIndex(i, items.length, heightOf);
+    scroller.scrollTop += top - boxTop - offset;
     updateWindow();
   }
 

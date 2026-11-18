@@ -144,6 +144,14 @@
     box-shadow: var(--shadow-panel, none);
   }
 
+  /* A list end sizes its status to the part in view. Only tables with one
+   * become inline-size containers, so other tables keep their own width
+   * in boxes that fit their content. */
+  .kit-table-wrapper:not(.kit-table-wrapper--page):has(:global(.kit-list-end)),
+  .kit-table-wrapper--wide:has(:global(.kit-list-end)) {
+    container-type: inline-size;
+  }
+
   /* A page-scrolled wrapper keeps the table's full height: in a bounded
    * flex column it would otherwise shrink and hide the rows below. An
    * explicit max-content holds even while a wide table makes it scroll
