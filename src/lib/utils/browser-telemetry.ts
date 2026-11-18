@@ -312,6 +312,7 @@ export function startBrowserTelemetry({
     gate: "unknown" | "enabled" | "disabled" = "unknown";
   let stopped = false,
     failures = 0,
+    counted = 0,
     ordinaryEligibleAt = 0;
   let currentScreen: string | undefined,
     retry: ReturnType<typeof setTimeout> | undefined,
@@ -401,6 +402,7 @@ export function startBrowserTelemetry({
   ) => {
     const sending = day;
     const owner = generation;
+    const sentAfter = counted;
     const record = { queued };
     if (checking || queued) pending.set(sending, record);
     const release = () => {
@@ -464,10 +466,16 @@ export function startBrowserTelemetry({
       release();
       return;
     }
-    if (failed) {
+    // Requests already in flight when a failure was counted hit the same outage.
+    // A page that unloads fails all of them at once; counting each would reach
+    // the cap and drop the visit the page is about to report.
+    if (failed && sentAfter === counted) {
+      counted++;
       const delay = 1000 * 2 ** failures++;
       if (retry === undefined) ordinaryEligibleAt = performance.now() + delay;
       if (failures >= 6) cancelRetry();
+    }
+    if (failed) {
       notify();
       release();
       pump();
