@@ -586,7 +586,9 @@ and dropped otherwise.
 While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
 UTC day. Visits reported then are dropped; visits already stored stay for a
-later reporter.
+later reporter. Requests that were already in flight when a failure was counted
+add nothing to the count when they fail, so a reloading page that rejects all
+of its open requests at once uses up one failure.
 
 A 2xx reply with an unreadable or unknown body claims the daily event but
 leaves permission unknown. Other non-401 4xx replies, such as HTTP 400 or 404,

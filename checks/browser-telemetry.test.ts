@@ -1258,7 +1258,7 @@ describe("startBrowserTelemetry", () => {
       } else release(503);
       await settle();
       expect(sent).toHaveLength(4);
-      await advance(reply === 503 ? 3999 : 1999);
+      await advance(1999);
       expect(sent).toHaveLength(4);
       await advance(1);
       expect(sent).toHaveLength(5);
@@ -1871,23 +1871,19 @@ describe("startBrowserTelemetry", () => {
   );
 
   test.each([503, 202])(
-    "a late visit reply %i honors shared exhaustion and cancels backoff",
+    "a late visit reply %i leaves shared exhaustion in place",
     async (reply) => {
       const reporter = start();
       await settle();
       const quiet: boolean[] = [];
       reporter.onQuietChange((value) => quiet.push(value));
-      statuses = ["held", ...Array(reply === 503 ? 5 : 6).fill(503)];
+      statuses = ["held", ...Array(6).fill(503)];
       reporter.reportVisit(VISIT);
       reporter.reportScreen("A");
       await settle();
-      for (const delay of reply === 503
-        ? [1000, 2000, 4000, 8000]
-        : [1000, 2000, 4000, 8000, 16000])
-        await advance(delay);
-      const count = reply === 503 ? 7 : 8;
-      expect(sent).toHaveLength(count);
-      expect(jest.getTimerCount()).toBe(reply === 503 ? 1 : 0);
+      for (const delay of [1000, 2000, 4000, 8000, 16000]) await advance(delay);
+      expect(sent).toHaveLength(8);
+      expect(jest.getTimerCount()).toBe(0);
       release(reply === 202 ? { status: 202, data: { status: "queued" } } : reply);
       await settle();
       expect(jest.getTimerCount()).toBe(0);
@@ -1895,9 +1891,33 @@ describe("startBrowserTelemetry", () => {
       reporter.reportVisit(VISIT);
       focus();
       await advance(60000);
-      expect(sent).toHaveLength(count);
+      expect(sent).toHaveLength(8);
     },
   );
+
+  test("requests that fail together count once, so the page's closing visit still posts", async () => {
+    const reporter = start();
+    await settle();
+    const reasons: string[] = [];
+    reporter.onQuietChange((_, reason) => reasons.push(reason));
+    // A reloading page rejects every request it still has in flight at once.
+    statuses = [...Array(7).fill("offline"), "held"];
+    for (let i = 0; i < 7; i++) reporter.reportVisit({ event: "action", properties: { count: i } });
+    await settle();
+    expect(sent).toHaveLength(8);
+    expect(reasons).toEqual(["enabled"]);
+    await advance(999);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(8);
+    await advance(1);
+    reporter.reportVisit(VISIT);
+    expect(sent).toHaveLength(9);
+    reporter.reportVisit(VISIT, { keepalive: true });
+    expect(sent.slice(8)).toEqual([
+      { route: ROUTE, event: VISIT },
+      { route: ROUTE, event: VISIT, options: { keepalive: true } },
+    ]);
+  });
 
   test("a failed screen receipt releases its reservation before retrying and later work", async () => {
     seed(`${PREFIX}open`, "2026-10-03");
