@@ -144,8 +144,11 @@
     box-shadow: var(--shadow-panel, none);
   }
 
-  .kit-table-wrapper:not(.kit-table-wrapper--page),
-  .kit-table-wrapper--wide {
+  /* A list end sizes its status to the part in view. Only tables with one
+   * become inline-size containers, so other tables keep their own width
+   * in boxes that fit their content. */
+  .kit-table-wrapper:not(.kit-table-wrapper--page):has(:global(.kit-list-end)),
+  .kit-table-wrapper--wide:has(:global(.kit-list-end)) {
     container-type: inline-size;
   }
 
