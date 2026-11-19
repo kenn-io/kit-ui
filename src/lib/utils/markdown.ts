@@ -449,8 +449,19 @@ const linkRelHardener = (node: Element): void => {
 // replaceAll: Symbol.replace resets lastIndex before matching.
 const SHIKI_GENERATED_ATTR_STRIPPER = new RegExp(`\\s${SHIKI_GENERATED_ATTR}="[^"]*"`, "g");
 
+const kennLinkSanitizer: UponSanitizeAttributeHook = (node, data) => {
+  if (
+    node.tagName === "A" &&
+    data.attrName === "href" &&
+    /^kenn:\/\/[a-z0-9]/i.test(data.attrValue)
+  ) {
+    data.forceKeepAttr = true;
+  }
+};
+
 function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string {
   DOMPurify.addHook("uponSanitizeAttribute", shikiStyleSanitizer);
+  DOMPurify.addHook("uponSanitizeAttribute", kennLinkSanitizer);
   DOMPurify.addHook("afterSanitizeAttributes", linkRelHardener);
   try {
     const sanitized = DOMPurify.sanitize(html, {
@@ -463,9 +474,37 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
     return sanitized.replaceAll(SHIKI_GENERATED_ATTR_STRIPPER, "");
   } finally {
     DOMPurify.removeHook("uponSanitizeAttribute", shikiStyleSanitizer);
+    DOMPurify.removeHook("uponSanitizeAttribute", kennLinkSanitizer);
     DOMPurify.removeHook("afterSanitizeAttributes", linkRelHardener);
   }
 }
+
+const KENN_TRAILING_PUNCTUATION = "].,!?;:'\"*~";
+
+const kennAddressLink: TokenizerAndRendererExtension = {
+  name: "kennAddressLink",
+  level: "inline",
+  start(src) {
+    return src.search(/kenn:\/\//i);
+  },
+  tokenizer(src, tokens) {
+    if (this.lexer.state.inLink || this.lexer.state.inRawBlock) return;
+    if (/[\p{L}\p{N}_.+-]$/u.test(tokens.at(-1)?.raw ?? "")) return;
+    const address = /^kenn:\/\/[a-z0-9][^\s<`[\\]*/i.exec(src)?.[0];
+    if (!address) return;
+    let unmatched = 0;
+    for (const c of address) unmatched += c === ")" ? 1 : c === "(" ? -1 : 0;
+    let end = address.length;
+    for (;;) {
+      const c = address[end - 1]!;
+      if (c === ")" && unmatched > 0) unmatched--;
+      else if (!KENN_TRAILING_PUNCTUATION.includes(c)) break;
+      end--;
+    }
+    const raw = address.slice(0, end);
+    return { type: "link", raw, href: raw, text: raw, tokens: [{ type: "text", raw, text: raw }] };
+  },
+};
 
 /** Build a renderer with app-specific options. Create one per app (or
  * per distinct option set) and reuse it — each instance owns a Marked
@@ -473,6 +512,7 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
  * characters, measured by string.length in UTF-16 code units. */
 export function createMarkdownRenderer(options: MarkdownRendererOptions = {}): MarkdownRenderer {
   const marked = new Marked({ gfm: true, breaks: options.breaks ?? true });
+  marked.use({ extensions: [kennAddressLink] });
   if (options.extensions?.length) {
     marked.use({ extensions: options.extensions });
   }

@@ -172,6 +172,9 @@ by DOMPurify regardless).
 - Output is always DOMPurify-sanitized — script/event-handler/URL attacks
   in the source markdown (or produced by an extension) are stripped.
   `codeFence` HTML goes through the same pass.
+- Bare `kenn://` addresses and Markdown links to them render as links. `kenn://`
+  image sources and form actions remain stripped, as do other schemes DOMPurify
+  rejects.
 - `<style>` elements are forbidden (`FORBID_TAGS`) — DOMPurify's defaults
   would let untrusted markdown inject document-wide CSS.
 - Inline `style` attributes are stripped everywhere **except** on
