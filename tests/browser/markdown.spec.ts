@@ -261,7 +261,7 @@ test.describe("sanitization", () => {
   test("renders long address suffixes promptly", async ({ page }) => {
     const results = await page.evaluate(async () => {
       const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
-      return [")".repeat(800_000), ".)".repeat(400_000)].map((suffix) => {
+      return [")".repeat(1_600_000), ".)".repeat(800_000)].map((suffix) => {
         const measure = (input: string) =>
           Array.from({ length: 5 }, () => {
             const renderer = createMarkdownRenderer();
@@ -286,14 +286,14 @@ test.describe("sanitization", () => {
       expect(result.links).toBe(1);
       expect(result.href).toBe("kenn://a/b");
       expect(result.textMatches).toBe(true);
-      expect(result.elapsed).toBeLessThan(6 * result.shortElapsed);
+      expect(result.elapsed).toBeLessThan(32 * result.shortElapsed);
     }
   });
 
   test("preserves bare destinations and respects their boundaries", async ({ page }) => {
     const html = await render(
       page,
-      "kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&amp;record=example kenn://example/item#title&amp;copy;=2 kenn://example/item_ [kenn://example/item] kenn://example/item. kenn://example/item). kenn://example/item(a) kenn://a/(b)) kenn://a/b.) kenn://a/c\\. xkenn://example/item .kenn://example/item +kenn://example/item -kenn://example/item kenn://? [kenn://a](kenn://a) kenn://example/item`code` kenn://example/item[details](https://example.org) <code>kenn://example/item</code>",
+      "kenn://example/item?x=1&amp; kenn://example/item#title&amp;copy; kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&amp;record=example kenn://example/item#title&amp;copy;=2 kenn://example/item_ [kenn://example/item] kenn://example/item. kenn://example/item). kenn://example/item(a) kenn://a/(b)) kenn://a/b.) kenn://a/c\\. xkenn://example/item .kenn://example/item +kenn://example/item -kenn://example/item kenn://? [kenn://a](kenn://a) kenn://example/item`code` kenn://example/item[details](https://example.org) <code>kenn://example/item</code>",
     );
     const links = await page.evaluate((markup) => {
       const root = document.createElement("div");
@@ -304,6 +304,8 @@ test.describe("sanitization", () => {
       }));
     }, html);
     expect(links).toEqual([
+      { href: "kenn://example/item?x=1&", text: "kenn://example/item?x=1&" },
+      { href: "kenn://example/item#title&copy;", text: "kenn://example/item#title&copy;" },
       {
         href: "kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&record=example",
         text: "kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&record=example",

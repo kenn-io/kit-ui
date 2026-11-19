@@ -480,6 +480,25 @@ function sanitizeMarkdownHtml(html: string, allowedAttributes: string[]): string
 }
 
 const KENN_TRAILING_PUNCTUATION = "].,!?;:'\"*~";
+const KENN_CHAR_REF = /&(?:amp;)*(?:#\d{1,7}|#x[\da-f]{1,6}|[a-z][a-z\d]{1,31});/gi;
+
+/** Length of the address once trailing punctuation is trimmed. A character
+ * reference's closing `;` is kept; only the last reference can end the address
+ * because it begins with `&`, which is never trimmed. */
+function kennTrimmedLength(address: string): number {
+  let refEnd = -1;
+  for (const m of address.matchAll(KENN_CHAR_REF)) refEnd = m.index + m[0].length;
+  let unmatched = 0;
+  for (const c of address) unmatched += c === ")" ? 1 : c === "(" ? -1 : 0;
+  let end = address.length;
+  for (;;) {
+    const c = address[end - 1]!;
+    if (c === ")" && unmatched > 0) unmatched--;
+    else if (!KENN_TRAILING_PUNCTUATION.includes(c) || end === refEnd) break;
+    end--;
+  }
+  return end;
+}
 
 const kennAddressLink: TokenizerAndRendererExtension = {
   name: "kennAddressLink",
@@ -492,16 +511,7 @@ const kennAddressLink: TokenizerAndRendererExtension = {
     if (/[\p{L}\p{N}_.+-]$/u.test(tokens.at(-1)?.raw ?? "")) return;
     const address = /^kenn:\/\/[a-z0-9][^\s<`[\\]*/i.exec(src)?.[0];
     if (!address) return;
-    let unmatched = 0;
-    for (const c of address) unmatched += c === ")" ? 1 : c === "(" ? -1 : 0;
-    let end = address.length;
-    for (;;) {
-      const c = address[end - 1]!;
-      if (c === ")" && unmatched > 0) unmatched--;
-      else if (!KENN_TRAILING_PUNCTUATION.includes(c)) break;
-      end--;
-    }
-    const raw = address.slice(0, end);
+    const raw = address.slice(0, kennTrimmedLength(address));
     return { type: "link", raw, href: raw, text: raw, tokens: [{ type: "text", raw, text: raw }] };
   },
 };
