@@ -57,7 +57,11 @@ jobs:
           dist: dist
 
   browser:
-    name: Browser tests
+    name: Browser tests (${{ matrix.shard }}/3)
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     runs-on: namespace-profile-linux-4cpu
     timeout-minutes: 28
     steps:
@@ -89,7 +93,9 @@ jobs:
 
       - name: Run browser suite
         timeout-minutes: 17
-        run: bun run test:browser
+        # Divide the full suite across runners so its growth does not consume
+        # one runner's 17-minute budget. Every test still runs.
+        run: bun run test:browser --shard=${{ matrix.shard }}/3
 
       # The JSON report marks a test that failed and then passed on a retry
       # as "flaky", so flaky tests can be found without parsing the log.
@@ -97,7 +103,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: playwright-browser-attempt-${{ github.run_attempt }}
+          name: playwright-browser-shard-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           path: test-results/playwright/browser.json
           retention-days: 14
           if-no-files-found: ignore
@@ -106,7 +112,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: playwright-report-attempt-${{ github.run_attempt }}
+          name: playwright-report-shard-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/

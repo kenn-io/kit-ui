@@ -19,9 +19,11 @@ server alive across runs while iterating. Chromium comes from
 `bunx playwright install chromium` (one-time locally; CI installs it in
 `.github/workflows/ci.yml` with the download cached on `bun.lock`).
 
-CI retains traces and page error context from failed attempts, including
-tests that pass on a retry. Download `playwright-report-attempt-<n>` from
-the workflow run and open a failed attempt's `trace.zip` with
+CI divides the suite across three runners, each with a 17-minute test
+budget. Each runner writes its own artifacts. CI retains traces and page
+error context from failed attempts, including tests that pass on a retry.
+Download `playwright-report-shard-<shard>-attempt-<n>` from the workflow
+run and open a failed attempt's `trace.zip` with
 `bunx playwright show-trace path/to/trace.zip` to inspect its page state,
 console, and network requests.
 
