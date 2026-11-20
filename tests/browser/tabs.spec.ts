@@ -162,8 +162,29 @@ test.describe("browser-style strip", () => {
   test("drag handlers from tabAttributes reorder the tabs", async ({ page }) => {
     const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
     await tab("Billing").dragTo(tab("Inbox"));
-    await expect(page.getByTestId("tabs-strip-order")).toHaveText(/^billing, inbox, calendar/);
+    await expect(page.getByTestId("tabs-strip-order")).toHaveText(/^Billing, Inbox, Calendar/);
     await expect(strip(page).getByRole("tab").first()).toHaveAccessibleName("Billing");
+  });
+
+  test("a key a tab's handler cancels does not also move focus", async ({ page }) => {
+    const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
+    await tab("Inbox").focus();
+    await page.keyboard.press("Alt+ArrowRight");
+    await expect(page.getByTestId("tabs-strip-order")).toHaveText(
+      /^Calendar, Inbox, Release notes/,
+    );
+    await expect(tab("Inbox")).toBeFocused();
+    await expect(page.getByTestId("tabs-strip-value")).toHaveText("inbox");
+  });
+
+  test("arrow keys skip an inert tab", async ({ page }) => {
+    const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
+    await tab("Team settings").focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(tab("Changelog")).toBeFocused();
+    await expect(page.getByTestId("tabs-strip-value")).toHaveText("changelog");
+    await page.keyboard.press("ArrowLeft");
+    await expect(tab("Team settings")).toBeFocused();
   });
 
   test("afterList controls sit outside the tablist and scroll the bound list", async ({ page }) => {

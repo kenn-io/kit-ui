@@ -30,7 +30,9 @@
     | "children";
 
   /** Extra attributes and handlers for one tab button. `class` is added to
-   * the tab's own classes, and `onclick` runs after Tabs selects the tab. */
+   * the tab's own classes, and `onclick` runs after Tabs selects the tab.
+   * `preventDefault` in `onkeydown` skips Tabs' arrow-key handling, and an
+   * `inert` tab is skipped like a disabled one. */
   export type TabAttributes = Omit<HTMLButtonAttributes, TabOwnedAttribute>;
 
   /** Extra attributes and handlers for the scrolling tab list. `class` is
@@ -107,13 +109,19 @@
   // to the selected tab.
   let rovingId = $state<string | undefined>(undefined);
 
-  const enabledId = (id: string | undefined) => tabs.find((t) => t.id === id && !t.disabled)?.id;
+  const extras = $derived(
+    new Map(tabs.map((t) => [t.id, tabAttributes?.(t, t.id === value) ?? {}])),
+  );
+
+  // A tab the app made inert cannot take focus, so arrow keys and the Tab
+  // order skip it like a disabled tab.
+  const reachable = (t: TabItem) => !t.disabled && !extras.get(t.id)?.inert;
+
+  const enabledId = (id: string | undefined) => tabs.find((t) => t.id === id && reachable(t))?.id;
 
   // The one tab in the Tab order: the roving one while focus is in the
-  // list, else the selected one, else the first enabled tab.
-  const focusId = $derived(
-    enabledId(rovingId) ?? enabledId(value) ?? tabs.find((t) => !t.disabled)?.id,
-  );
+  // list, else the selected one, else the first reachable tab.
+  const focusId = $derived(enabledId(rovingId) ?? enabledId(value) ?? tabs.find(reachable)?.id);
 
   // Coming back into the list should land on the selected tab.
   function handleFocusout(event: FocusEvent & { currentTarget: HTMLDivElement }): void {
@@ -128,12 +136,13 @@
   }
 
   function handleKeydown(event: KeyboardEvent & { currentTarget: HTMLDivElement }): void {
-    moveFocus(event);
+    // A tab's own handler may claim a key, such as Alt+Arrow to reorder.
+    if (!event.defaultPrevented) moveFocus(event);
     listAttributes.onkeydown?.(event);
   }
 
   function moveFocus(event: KeyboardEvent & { currentTarget: HTMLDivElement }): void {
-    const enabled = tabs.filter((t) => !t.disabled);
+    const enabled = tabs.filter(reachable);
     if (enabled.length === 0) return;
     const focused = (event.target as HTMLElement).dataset["tabId"];
     const current = enabled.findIndex((t) => t.id === focused);
@@ -178,7 +187,7 @@
   >
     {#each tabs as item (item.id)}
       {@const selected = item.id === value}
-      {@const extra = tabAttributes?.(item, selected) ?? {}}
+      {@const extra = extras.get(item.id) ?? {}}
       <button
         {...extra}
         type="button"

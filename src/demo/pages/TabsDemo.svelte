@@ -3,6 +3,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import FileIcon from "@lucide/svelte/icons/file";
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
+  import { tick } from "svelte";
   import { IconButton, Tabs, type TabAttributes, type TabItem } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
@@ -39,6 +40,8 @@
   let pageClicks = $state(0);
   let pageAtClick = $state<string | undefined>(undefined);
   let dragged = $state<string | undefined>(undefined);
+  // A page still loading: its tab is inert until the page is ready.
+  const loadingPages = new Set(["status-page"]);
   let strip = $state<HTMLDivElement | undefined>(undefined);
   let canScrollBack = $state(false);
   let canScrollForward = $state(false);
@@ -69,8 +72,30 @@
     pages = next;
   }
 
+  // Alt+Left and Alt+Right move the focused tab, the keyboard version of
+  // dragging it. preventDefault keeps Tabs from also moving focus.
+  function reorderByKey(event: KeyboardEvent, id: string): void {
+    if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+    event.preventDefault();
+    const from = pages.findIndex((p) => p.id === id);
+    const to = from + (event.key === "ArrowRight" ? 1 : -1);
+    if (from === -1 || to < 0 || to >= pages.length) return;
+    const next = [...pages];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    pages = next;
+    // Moving the tab's button can drop focus; put it back once it has moved.
+    void tick().then(() =>
+      strip?.querySelector<HTMLElement>(`[data-page="${CSS.escape(id)}"]`)?.focus(),
+    );
+  }
+
   const pageTabAttributes = (item: TabItem, selected: boolean): TabAttributes => ({
-    class: ["strip-tab", dragged === item.id && "strip-tab--dragged"],
+    class: [
+      "strip-tab",
+      dragged === item.id && "strip-tab--dragged",
+      loadingPages.has(item.id) && "strip-tab--loading",
+    ],
     title: item.label,
     "data-page": item.id,
     "data-selected": selected || undefined,
@@ -86,6 +111,8 @@
       dragged = undefined;
     },
     ondragend: () => (dragged = undefined),
+    onkeydown: (event) => reorderByKey(event, item.id),
+    inert: loadingPages.has(item.id),
     onclick: () => {
       pageClicks += 1;
       pageAtClick = page;
@@ -155,7 +182,7 @@
 
 <DemoSection
   title="Browser-style strip"
-  description="variant=&quot;bare&quot; drops the tab look so the consumer can style a compact strip. tabAttributes adds per-tab attributes and handlers, here drag and drop to reorder and a click counter that runs after selection. listAttributes and listElement reach the scrolling list, and afterList renders scroll buttons outside role=&quot;tablist&quot;."
+  description="variant=&quot;bare&quot; drops the tab look so the consumer can style a compact strip. tabAttributes adds per-tab attributes and handlers, here drag and drop or Alt+Arrow to reorder, a click counter that runs after selection, and inert on a loading tab, which arrow keys skip. listAttributes and listElement reach the scrolling list, and afterList renders scroll buttons outside role=&quot;tablist&quot;."
   code={`<Tabs
   {tabs}
   bind:value
@@ -170,6 +197,8 @@
     ondragstart: () => (dragged = item.id),
     ondragover: (event) => event.preventDefault(),
     ondrop: () => move(dragged, item.id),
+    onkeydown: (event) => reorderByKey(event, item.id),
+    inert: loading.has(item.id),
     onclick: () => clicks++,
   })}
 >
@@ -209,7 +238,7 @@
     </div>
     <p class="tabs-demo__readout">
       Tab clicks: <span data-testid="tabs-strip-clicks">{pageClicks}</span> · Order:
-      <span data-testid="tabs-strip-order">{pages.map((p) => p.id).join(", ")}</span>
+      <span data-testid="tabs-strip-order">{pages.map((p) => p.label).join(", ")}</span>
     </p>
     <span class="tabs-demo__hidden" data-testid="tabs-strip-value">{page}</span>
     <span class="tabs-demo__hidden" data-testid="tabs-strip-value-at-click">{pageAtClick}</span>
@@ -269,7 +298,8 @@
     color: var(--text-primary);
   }
 
-  .strip :global(.strip-tab--dragged) {
+  .strip :global(.strip-tab--dragged),
+  .strip :global(.strip-tab--loading) {
     opacity: 0.5;
   }
 

@@ -89,6 +89,9 @@ for a list of rows that expand inline, such as chart rows.
 added to the summary's own classes. Handlers run before the native toggle,
 and calling `preventDefault` in `onclick` keeps the disclosure from
 toggling.
+`tabindex` is allowed: setting `-1` on every row but one gives a list of
+rows a single Tab stop with arrow keys moving between them. A summary with
+`tabindex="-1"` leaves the Tab order, so keep one row reachable.
 
 ## Accordion props
 

@@ -3,7 +3,8 @@ export type DisclosureVariant = "card" | "plain" | "bare";
 /** Extra attributes and handlers for the summary, the element that
  * toggles the disclosure. `class` is added to the summary's own classes.
  * Handlers run before the native toggle; `preventDefault` in `onclick`
- * cancels it. */
+ * cancels it. `tabindex` is allowed, such as `-1` for roving focus across
+ * rows; a summary with `-1` leaves the Tab order. */
 export type DisclosureSummaryAttributes = Omit<HTMLAttributes<HTMLElement>, "children">;
 import { type Snippet } from "svelte";
 /** Other attributes, such as `inert` or `data-*`, go on the `<details>`
