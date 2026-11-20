@@ -37,6 +37,7 @@
   );
   let page = $state("inbox");
   let pageClicks = $state(0);
+  let pageAtClick = $state<string | undefined>(undefined);
   let dragged = $state<string | undefined>(undefined);
   let strip = $state<HTMLDivElement | undefined>(undefined);
   let canScrollBack = $state(false);
@@ -85,7 +86,10 @@
       dragged = undefined;
     },
     ondragend: () => (dragged = undefined),
-    onclick: () => (pageClicks += 1),
+    onclick: () => {
+      pageClicks += 1;
+      pageAtClick = page;
+    },
   });
 
   const panels: Record<string, string> = {
@@ -208,6 +212,7 @@
       <span data-testid="tabs-strip-order">{pages.map((p) => p.id).join(", ")}</span>
     </p>
     <span class="tabs-demo__hidden" data-testid="tabs-strip-value">{page}</span>
+    <span class="tabs-demo__hidden" data-testid="tabs-strip-value-at-click">{pageAtClick}</span>
   </div>
 </DemoSection>
 

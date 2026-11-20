@@ -139,6 +139,8 @@ test.describe("browser-style strip", () => {
     await expect(calendar).toHaveAttribute("tabindex", "0");
     await expect(page.getByTestId("tabs-strip-value")).toHaveText("calendar");
     await expect(page.getByTestId("tabs-strip-clicks")).toHaveText("1");
+    // The consumer's onclick already sees the new value when it runs.
+    await expect(page.getByTestId("tabs-strip-value-at-click")).toHaveText("calendar");
     // The consumer sees the new selection when its handler builds attributes.
     await expect(calendar).toHaveAttribute("data-selected", "true");
   });
