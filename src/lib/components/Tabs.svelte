@@ -32,7 +32,7 @@
   /** Extra attributes and handlers for one tab button. `class` is added to
    * the tab's own classes, and `onclick` runs after Tabs selects the tab.
    * `preventDefault` in `onkeydown` skips Tabs' arrow-key handling, and an
-   * `inert` tab is skipped like a disabled one. */
+   * `inert` or `hidden` tab is skipped like a disabled one. */
   export type TabAttributes = Omit<HTMLButtonAttributes, TabOwnedAttribute>;
 
   /** Extra attributes and handlers for the scrolling tab list. `class` is
@@ -113,9 +113,12 @@
     new Map(tabs.map((t) => [t.id, tabAttributes?.(t, t.id === value) ?? {}])),
   );
 
-  // A tab the app made inert cannot take focus, so arrow keys and the Tab
-  // order skip it like a disabled tab.
-  const reachable = (t: TabItem) => !t.disabled && !extras.get(t.id)?.inert;
+  // A tab the app made inert or hidden cannot take focus, so arrow keys and
+  // the Tab order skip it like a disabled tab.
+  const reachable = (t: TabItem) => {
+    const extra = extras.get(t.id);
+    return !t.disabled && !extra?.inert && !extra?.hidden;
+  };
 
   const enabledId = (id: string | undefined) => tabs.find((t) => t.id === id && reachable(t))?.id;
 

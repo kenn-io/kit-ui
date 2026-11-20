@@ -17,7 +17,7 @@ type TabOwnedAttribute = "type" | "role" | "id" | "tabindex" | "disabled" | "ari
 /** Extra attributes and handlers for one tab button. `class` is added to
  * the tab's own classes, and `onclick` runs after Tabs selects the tab.
  * `preventDefault` in `onkeydown` skips Tabs' arrow-key handling, and an
- * `inert` tab is skipped like a disabled one. */
+ * `inert` or `hidden` tab is skipped like a disabled one. */
 export type TabAttributes = Omit<HTMLButtonAttributes, TabOwnedAttribute>;
 /** Extra attributes and handlers for the scrolling tab list. `class` is
  * added to the list's own classes; `onkeydown` and `onfocusout` run after

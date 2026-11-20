@@ -34,6 +34,7 @@
       "Team settings",
       "Status page",
       "Changelog",
+      "Archived",
     ].map((label) => ({ id: label.toLowerCase().replaceAll(" ", "-"), label })),
   );
   let page = $state("inbox");
@@ -42,6 +43,8 @@
   let dragged = $state<string | undefined>(undefined);
   // A page still loading: its tab is inert until the page is ready.
   const loadingPages = new Set(["status-page"]);
+  // An archived page keeps its place in the list, but its tab is hidden.
+  const archivedPages = new Set(["archived"]);
   let strip = $state<HTMLDivElement | undefined>(undefined);
   let canScrollBack = $state(false);
   let canScrollForward = $state(false);
@@ -113,6 +116,7 @@
     ondragend: () => (dragged = undefined),
     onkeydown: (event) => reorderByKey(event, item.id),
     inert: loadingPages.has(item.id),
+    hidden: archivedPages.has(item.id),
     onclick: () => {
       pageClicks += 1;
       pageAtClick = page;
@@ -182,7 +186,7 @@
 
 <DemoSection
   title="Browser-style strip"
-  description="variant=&quot;bare&quot; drops the tab look so the consumer can style a compact strip. tabAttributes adds per-tab attributes and handlers, here drag and drop or Alt+Arrow to reorder, a click counter that runs after selection, and inert on a loading tab, which arrow keys skip. listAttributes and listElement reach the scrolling list, and afterList renders scroll buttons outside role=&quot;tablist&quot;."
+  description="variant=&quot;bare&quot; drops the tab look so the consumer can style a compact strip. tabAttributes adds per-tab attributes and handlers, here drag and drop or Alt+Arrow to reorder, a click counter that runs after selection, inert on a loading tab, and hidden on an archived one. Arrow keys skip both. listAttributes and listElement reach the scrolling list, and afterList renders scroll buttons outside role=&quot;tablist&quot;."
   code={`<Tabs
   {tabs}
   bind:value
@@ -199,6 +203,7 @@
     ondrop: () => move(dragged, item.id),
     onkeydown: (event) => reorderByKey(event, item.id),
     inert: loading.has(item.id),
+    hidden: archived.has(item.id),
     onclick: () => clicks++,
   })}
 >

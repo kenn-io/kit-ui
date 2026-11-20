@@ -109,7 +109,7 @@ tab button, `listAttributes` and `listElement` reach the scrolling list, and
   tab, so `value` is already updated. Keyboard handlers on a tab run before
   the list's arrow-key handling; calling `preventDefault` skips it, so a tab
   can claim keys such as Alt+Arrow to reorder. Arrow keys and the Tab order
-  skip a tab made `inert`, as they skip a disabled one.
+  skip a tab made `inert` or `hidden`, as they skip a disabled one.
 - **List attributes.** `TabListAttributes` is every `<div>` attribute
   except `role`, `aria-label`, `aria-orientation`, and `tabindex`. `class` is
   added to the list's own classes, and `style` can set custom properties.

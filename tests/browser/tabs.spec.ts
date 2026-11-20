@@ -187,6 +187,16 @@ test.describe("browser-style strip", () => {
     await expect(tab("Team settings")).toBeFocused();
   });
 
+  test("arrow keys skip a hidden tab", async ({ page }) => {
+    const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
+    await tab("Changelog").focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(tab("Inbox")).toBeFocused();
+    await expect(page.getByTestId("tabs-strip-value")).toHaveText("inbox");
+    await page.keyboard.press("End");
+    await expect(tab("Changelog")).toBeFocused();
+  });
+
   test("afterList controls sit outside the tablist and scroll the bound list", async ({ page }) => {
     const list = strip(page).getByRole("tablist", { name: "Open pages" });
     await expect(list).toHaveClass(/\bstrip-list\b/);
