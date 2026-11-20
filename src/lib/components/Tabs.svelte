@@ -255,8 +255,9 @@
   }
 
   /* Zero specificity, so a consumer's own tab class wins over this reset in
-     the bare variant. */
-  :where(.kit-tabs__tab) {
+     the bare variant. A tab with the hidden attribute keeps the browser's
+     display: none. */
+  :where(.kit-tabs__tab:not([hidden])) {
     position: relative;
     display: inline-flex;
     flex: none;

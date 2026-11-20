@@ -187,8 +187,9 @@ test.describe("browser-style strip", () => {
     await expect(tab("Team settings")).toBeFocused();
   });
 
-  test("arrow keys skip a hidden tab", async ({ page }) => {
+  test("a hidden tab is not shown and arrow keys skip it", async ({ page }) => {
     const tab = (name: string) => strip(page).getByRole("tab", { name, exact: true });
+    await expect(strip(page).locator('[data-page="archived"]')).toBeHidden();
     await tab("Changelog").focus();
     await page.keyboard.press("ArrowRight");
     await expect(tab("Inbox")).toBeFocused();
