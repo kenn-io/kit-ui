@@ -255,9 +255,8 @@
   }
 
   /* Zero specificity, so a consumer's own tab class wins over this reset in
-     the bare variant. A tab with the hidden attribute keeps the browser's
-     display: none. */
-  :where(.kit-tabs__tab:not([hidden])) {
+     the bare variant. */
+  :where(.kit-tabs__tab) {
     position: relative;
     display: inline-flex;
     flex: none;
@@ -283,6 +282,12 @@
   :where(.kit-tabs--underline > .kit-tabs__list) > .kit-tabs__tab:hover:not(:disabled) {
     color: var(--text-primary);
     background: var(--bg-surface-hover);
+  }
+
+  /* Arrow keys and the Tab order skip a hidden tab, so it must never show,
+     even when a consumer's tab class sets display. */
+  .kit-tabs__tab[hidden] {
+    display: none !important;
   }
 
   .kit-tabs__tab:focus-visible {

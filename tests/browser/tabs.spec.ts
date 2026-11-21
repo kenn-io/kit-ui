@@ -202,12 +202,24 @@ test.describe("browser-style strip", () => {
     const list = strip(page).getByRole("tablist", { name: "Open pages" });
     await expect(list).toHaveClass(/\bstrip-list\b/);
     await expect(list.getByRole("button")).toHaveCount(0);
-    await expect(strip(page).getByRole("button", { name: "Scroll tabs back" })).toHaveCount(0);
+    const back = strip(page).getByRole("button", { name: "Scroll tabs back" });
+    await expect(back).toHaveAttribute("aria-disabled", "true");
 
     await strip(page).getByRole("button", { name: "Scroll tabs forward" }).click();
     await expect.poll(() => list.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-    // The list's onscroll handler re-measures and shows the back button.
-    await expect(strip(page).getByRole("button", { name: "Scroll tabs back" })).toBeVisible();
+    // The list's onscroll handler re-measures and enables the back button.
+    await expect(back).not.toHaveAttribute("aria-disabled");
+  });
+
+  test("a scroll button keeps focus when the strip reaches its end", async ({ page }) => {
+    const forward = strip(page).getByRole("button", { name: "Scroll tabs forward" });
+    await forward.focus();
+    await expect(async () => {
+      if ((await forward.getAttribute("aria-disabled")) !== "true")
+        await page.keyboard.press("Enter");
+      await expect(forward).toHaveAttribute("aria-disabled", "true", { timeout: 500 });
+    }).toPass();
+    await expect(forward).toBeFocused();
   });
 
   test("the bare variant drops the tab look", async ({ page }) => {

@@ -92,11 +92,13 @@ tab button, `listAttributes` and `listElement` reach the scrolling list, and
     })}
   >
     {#snippet afterList()}
-      {#if canScrollForward}
-        <IconButton ariaLabel="Scroll tabs forward" onclick={() => list.scrollBy({ left: 200 })}>
-          <ChevronRightIcon size={14} />
-        </IconButton>
-      {/if}
+      <IconButton
+        ariaLabel="Scroll tabs forward"
+        ariaDisabled={!canScrollForward}
+        onclick={() => list.scrollBy({ left: 200 })}
+      >
+        <ChevronRightIcon size={14} />
+      </IconButton>
     {/snippet}
   </Tabs>
 </div>

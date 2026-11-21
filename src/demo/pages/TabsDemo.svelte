@@ -208,7 +208,7 @@
   })}
 >
   {#snippet afterList()}
-    <IconButton ariaLabel="Scroll back" onclick={() => scroll(-1)}>...</IconButton>
+    <IconButton ariaLabel="Scroll back" ariaDisabled={!canScrollBack} onclick={() => scroll(-1)}>...</IconButton>
   {/snippet}
 </Tabs>`}
 >
@@ -224,20 +224,27 @@
         tabAttributes={pageTabAttributes}
       >
         {#snippet afterList()}
-          {#if canScrollBack}
-            <span class="strip-scroll strip-scroll--back">
-              <IconButton size="sm" ariaLabel="Scroll tabs back" onclick={() => scrollStrip(-1)}>
-                <ChevronLeftIcon size={14} />
-              </IconButton>
-            </span>
-          {/if}
-          {#if canScrollForward}
-            <span class="strip-scroll strip-scroll--forward">
-              <IconButton size="sm" ariaLabel="Scroll tabs forward" onclick={() => scrollStrip(1)}>
-                <ChevronRightIcon size={14} />
-              </IconButton>
-            </span>
-          {/if}
+          <!-- Both buttons stay rendered, so a focused one never vanishes at an end. -->
+          <span class="strip-scroll strip-scroll--back">
+            <IconButton
+              size="sm"
+              ariaLabel="Scroll tabs back"
+              ariaDisabled={!canScrollBack}
+              onclick={() => scrollStrip(-1)}
+            >
+              <ChevronLeftIcon size={14} />
+            </IconButton>
+          </span>
+          <span class="strip-scroll strip-scroll--forward">
+            <IconButton
+              size="sm"
+              ariaLabel="Scroll tabs forward"
+              ariaDisabled={!canScrollForward}
+              onclick={() => scrollStrip(1)}
+            >
+              <ChevronRightIcon size={14} />
+            </IconButton>
+          </span>
         {/snippet}
       </Tabs>
     </div>
@@ -282,12 +289,16 @@
     background: var(--bg-inset);
   }
 
+  /* The side padding leaves room for the scroll buttons, which always show,
+     so they cover no tab at either end. */
   .strip :global(.strip-list) {
     gap: var(--space-1);
-    padding: var(--space-1);
+    padding: var(--space-1) calc(24px + var(--space-1));
   }
 
+  /* An app's tab class often sets display; Tabs still hides hidden tabs. */
   .strip :global(.strip-tab) {
+    display: inline-flex;
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
