@@ -133,6 +133,8 @@ The widths in the table are the width of the sidebar's parent element, so a pare
 
 The brand row at the top of the panel is `--header-height` tall and centers the brand, so the brand lines up with a `TopBar` at the top of the main column. A brand taller than the row makes the row taller.
 
+Section rows have a minimum height of `--nav-item-height` (34px), and view rows have a minimum height of `--nav-subitem-height` (26px). Wrapped content can make a row taller. On touch screens both are at least 44px tall.
+
 ## Stacking
 
 The sidebar and the narrow bar sit just below kit-ui's overlay layer (`--z-overlay`). `Modal`, `DetailDrawer`, `CommandPalette` and `FlashBanner` cover them, whatever their DOM order. See Stacking in the [theming guide](../theming.md#identity-tokens) for the z tokens.

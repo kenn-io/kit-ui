@@ -126,6 +126,8 @@
   },
   "layout": {
     "headerHeight": "44px",
+    "navItemHeight": "34px",
+    "navSubitemHeight": "26px",
     "statusBarHeight": "24px",
     "splitHandleSize": "4px",
     "zPopover": 1000,

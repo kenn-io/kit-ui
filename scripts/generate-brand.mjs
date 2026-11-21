@@ -310,10 +310,21 @@ export async function validateBrandContract(contract, { assetRoot }) {
 
   exactKeys(
     contract.layout,
-    ["headerHeight", "statusBarHeight", "splitHandleSize", "zPopover", "zOverlay", "zTooltip"],
+    [
+      "headerHeight",
+      "navItemHeight",
+      "navSubitemHeight",
+      "statusBarHeight",
+      "splitHandleSize",
+      "zPopover",
+      "zOverlay",
+      "zTooltip",
+    ],
     "layout",
   );
   cssLayoutLength(contract.layout.headerHeight, "layout.headerHeight");
+  cssLayoutLength(contract.layout.navItemHeight, "layout.navItemHeight");
+  cssLayoutLength(contract.layout.navSubitemHeight, "layout.navSubitemHeight");
   cssLayoutLength(contract.layout.statusBarHeight, "layout.statusBarHeight");
   cssLayoutLength(contract.layout.splitHandleSize, "layout.splitHandleSize");
   for (const key of ["zPopover", "zOverlay", "zTooltip"]) {
@@ -415,6 +426,8 @@ export function generateBrandCss(contract) {
   for (const key of Object.keys(spacing)) lightExtras.push([`--space-${key}`, spacing[key]]);
   lightExtras.push(
     ["--header-height", layout.headerHeight],
+    ["--nav-item-height", layout.navItemHeight],
+    ["--nav-subitem-height", layout.navSubitemHeight],
     ["--status-bar-height", layout.statusBarHeight],
     ["--split-handle-size", layout.splitHandleSize],
     ["--z-popover", layout.zPopover],

@@ -32,7 +32,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                            |
 | Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                             |
 | Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                                                         |
-| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                                                                                   |
+| Chrome      | `--header-height` (44px), `--nav-item-height` (34px), `--nav-subitem-height` (26px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                        |
 | Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                              |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
