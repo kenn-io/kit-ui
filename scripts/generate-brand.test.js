@@ -110,6 +110,8 @@ describe("portable brand generation", () => {
         (contract) => (contract.interaction.pressTransform = "paint(example)"),
       ],
       ["layout.headerHeight", (contract) => (contract.layout.headerHeight = "auto")],
+      ["layout.navItemHeight", (contract) => (contract.layout.navItemHeight = "auto")],
+      ["layout.navSubitemHeight", (contract) => (contract.layout.navSubitemHeight = "auto")],
     ];
 
     for (const [field, mutate] of cases) {

@@ -62,6 +62,8 @@
   --space-7: 24px;
   --space-8: 32px;
   --header-height: 44px;
+  --nav-item-height: 34px;
+  --nav-subitem-height: 26px;
   --status-bar-height: 24px;
   --split-handle-size: 4px;
   --z-popover: 1000;

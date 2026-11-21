@@ -904,7 +904,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    min-height: 2.25rem;
+    min-height: var(--nav-item-height);
     padding: var(--space-3) var(--space-5);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
@@ -932,7 +932,8 @@
   }
 
   .kit-app-sidebar__view {
-    min-height: 2rem;
+    min-height: var(--nav-subitem-height);
+    padding-block: var(--space-1);
     padding-left: calc(16px + var(--space-4));
   }
 
@@ -1012,10 +1013,13 @@
     padding-left: var(--space-3);
   }
 
+  /* The row stretches to its item's 44px first track, so the floor never
+   * meets the row token, which may be a unitless 0 that max() rejects. */
   @media (hover: none), (pointer: coarse) {
-    .kit-app-sidebar__section,
-    .kit-app-sidebar__view {
-      min-height: 44px;
+    .kit-app-sidebar__sections > li,
+    .kit-app-sidebar__views > li {
+      display: grid;
+      grid-template-rows: minmax(44px, auto);
     }
 
     .kit-app-sidebar__bar :global(.kit-app-sidebar__menu),
