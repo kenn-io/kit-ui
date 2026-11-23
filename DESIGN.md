@@ -181,11 +181,11 @@ its resting surfaces keep today's look.
 
 - **shadow-sm** (`0 1px 2px rgba(0,0,0,0.05)`): resting cards that genuinely need lift.
 - **shadow-md** (`0 2px 8px rgba(0,0,0,0.08)`): sticky chrome, drag states.
-- **shadow-lg** (`0 12px 32px` + `0 2px 6px`, cool-tinted at 14% / 8%): the popover card, modals — every transient floating surface. It is soft and wide so a popover lifts off white cards without a hard edge. In dark the shadow barely shows on the near-black page, so popovers also take a lighter edge (`--border-popover`) and keep the dark surface.
+- **shadow-lg** (`0 12px 32px` + `0 2px 6px`, cool-tinted at 14% / 8%): the popover card, modals — every transient floating surface. It is soft and wide so a popover lifts off white cards without a hard edge. In dark the shadow barely shows on the near-black page, so popovers also step up to a lighter surface (`--bg-popover`) and edge (`--border-popover`).
 
 ### Named Rules
 
-**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (`--bg-popover` fill, 1px `--border-popover` edge, md radius, lg shadow; the popover fill is the plain surface in both themes; the edge is the default border in light and steps lighter in dark). Hand-rolled copies are flagged by `kit-ui-check`. The Modal panel keeps its own larger radius but takes the same fill and edge. Inside either surface in dark, `--bg-surface-hover` steps up from `--bg-popover`, so hover still lightens.
+**The One-Card Rule.** Every floating surface uses `.kit-popover-card` (`--bg-popover` fill, 1px `--border-popover` edge, md radius, lg shadow; the popover tokens equal the surface and default border in light and step lighter in dark). Hand-rolled copies are flagged by `kit-ui-check`. The Modal panel keeps its own larger radius and the same edge, but fills with `--bg-modal`: the popover fill in light, the plain surface in dark, since the scrim already sets a dialog apart and the lighter fill glares against the dimmed page. Inside either surface in dark, `--bg-surface-hover` steps up from that surface's fill, so hover still lightens.
 
 **The Fade Rule.** A list that scrolls inside a popover fades out at each edge that hides rows. Overlay scrollbars stay hidden until used, so a list cut at a row boundary would otherwise look complete. Attach `scrollFade` to the element that scrolls; every kit-ui dropdown list does.
 
@@ -202,7 +202,7 @@ its resting surfaces keep today's look.
 
 ### Selected state
 
-- **Choice groups** (SegmentedControl, DateRangePicker's mode tabs, TopBar tabs): the chosen option is one raised pill from the `--selected-strong-*` tokens: the white surface lifted by a hairline and a soft shadow in light, and a lighter fill with a faint edge in dark. Selected text is primary ink at medium weight. Inside a dark popover the pill steps up again so it stands out against the popover's lit rows.
+- **Choice groups** (SegmentedControl, DateRangePicker's mode tabs, TopBar tabs): the chosen option is one raised pill from the `--selected-strong-*` tokens: the white surface lifted by a hairline and a soft shadow in light, and a lighter fill with a faint edge in dark. Selected text is primary ink at medium weight. Inside a dark popover the pill steps up again so it still stands out on the lighter popover surface.
 - **Sub-choices** (DateRangePicker's presets under its mode tabs): a lower tier tucked flush under the tabs, square on top and inset so the tabs overhang it, with a contact line and a quieter fill. Its options use the same selected pill, and hierarchy comes from a step down in height, type, and inset.
 - **Navigation rows** (SettingsLayout, AppSidebar) keep Action Blue ink for the current row; `--selected-list-bg` fills it.
 

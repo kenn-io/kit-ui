@@ -18,22 +18,23 @@ document.documentElement.classList.toggle("dark", prefersDark);
 
 ## Tokens
 
-| Group       | Variables                                                                                                                                                                                             |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                                                                    |
-| Borders     | `--border-default`, `--border-muted`                                                                                                                                                                  |
-| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                                                                  |
-| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`, `--accent-orange`                                                                            |
-| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                                                                     |
-| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                                           |
-| Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                                    |
-| Popovers    | `--bg-popover`, `--border-popover` (the `.kit-popover-card` and Modal surface and edge; the plain surface with a lighter edge in dark), `--text-muted-popover` (dark only: the muted ink inside them) |
-| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                               |
-| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                                         |
-| Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                                          |
-| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                                                                      |
-| Chrome      | `--header-height` (44px), `--nav-item-height` (34px), `--nav-subitem-height` (26px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                                     |
-| Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                                           |
+| Group       | Variables                                                                                                                                                                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                                                       |
+| Borders     | `--border-default`, `--border-muted`                                                                                                                                                     |
+| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                                                     |
+| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`, `--accent-orange`                                                               |
+| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                                                        |
+| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                              |
+| Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                       |
+| Popovers    | `--bg-popover`, `--border-popover` (popover fill, popover and Modal edge; lighter in dark), `--bg-modal` (Modal fill, plain in dark), `--text-muted-popover` (dark: their own muted ink) |
+| Controls    | `--border-control` (checkbox, radio, and text field edge; stronger inside dark popovers)                                                                                                 |
+| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                  |
+| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                            |
+| Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                             |
+| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                                                         |
+| Chrome      | `--header-height` (44px), `--nav-item-height` (34px), `--nav-subitem-height` (26px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                        |
+| Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                              |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, orange = a warning that is not a failure (StatusDot
@@ -274,22 +275,31 @@ var(--bg-popover)`. Reuse the class for custom popovers — `kit-ui-check`
 flags a hand-written copy of the recipe (`hand-rolled-popover-card`).
 
 In dark, the card also redefines `--bg-surface-hover` for everything inside
-it: 8% of `--text-primary` over `--bg-popover`, so hover still lightens in a
-theme whose popover surface sits above its page hover fill. `--selected-bg` and `--selected-list-bg` follow the same fill.
+it: 8% of `--text-primary` over `--bg-popover`. The page's hover fill is
+darker than the popover surface, so without this a hovered row would read as
+a dent. `--selected-bg` and `--selected-list-bg` follow the same fill.
 `--bg-inset` is unchanged, so a well inside a popover is still darker than
 the popover. Content in a custom popover gets this from the class; do not
 hard-code a hover color there.
 
 The dark card redefines `--text-muted` too, to `--text-muted-popover`: the
 theme's muted ink mixed 25% toward `--text-primary`. Muted ink is tuned for
-the page surface, and a popover's hover fill is lighter than the page's. With
-the mix, muted text keeps at least 4.5:1 on the hover fill. A theme that wants
+the page surface, and on a hovered row in the lighter popover it fell to
+3.7:1. With the mix, muted text has about the contrast it has on the page
+while a row rests, and at least 4.5:1 on the hover fill. A theme that wants
 a different muted ink in popovers sets `--text-muted-popover` in its
 `:root.dark` block.
 
+The dark card redefines `--border-control` as well, the edge of a checkbox,
+radio, or text field: `--text-primary` mixed 50% over `--bg-popover`. The
+default border sits at about 1.1:1 on the popover and its hover fill, under
+the 3:1 a control's edge needs; the mix clears 3:1 on both.
+
 The Modal panel is the same kind of surface. It keeps its own radius, takes
-`--bg-popover` and `--border-popover`, and gets the same dark hover fill and
-muted ink.
+`--border-popover`, and gets the same muted ink. It fills with `--bg-modal`:
+the popover fill in light, and the plain surface in dark, since the scrim
+already sets a dialog apart and the lighter fill glares against the dimmed
+page. Its dark hover fill steps up from `--bg-modal`.
 
 **Stacking**: three z tokens in theme.css order the layers —
 `--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`

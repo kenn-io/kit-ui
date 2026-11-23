@@ -182,7 +182,7 @@
     flex-shrink: 0;
     box-sizing: border-box;
     background: var(--bg-surface);
-    border: max(1.5px, var(--border-width)) solid var(--border-default);
+    border: max(1.5px, var(--border-width)) solid var(--border-control);
     border-radius: 50%;
     transition:
       background-color var(--transition-fast) var(--transition-ease, ease),

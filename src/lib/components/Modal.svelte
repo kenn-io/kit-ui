@@ -118,11 +118,11 @@
     z-index: var(--z-overlay);
   }
 
-  /* A modal is a transient floating surface, so it takes the popover
-   * surface and edge: the plain surface, with the lighter popover edge in
-   * dark so it reads above the scrim. */
+  /* A modal is a transient floating surface, so it takes the popover edge.
+   * Its fill is --bg-modal: the popover surface in light, and the plain
+   * surface in dark, where the scrim already sets it apart. */
   .kit-modal-panel {
-    background: var(--bg-popover);
+    background: var(--bg-modal);
     border: var(--border-width) solid var(--border-popover);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
@@ -192,10 +192,9 @@
    * render no header element, so no stray colored edge. */
   .kit-modal-panel[data-kit-tone] {
     /* The shared recipe mixes over the plain surface and default border.
-     * The panel is the popover surface, so the band mixes over that; a
-     * band mixed over the plain surface would sit darker than a dark
-     * panel. Same 9% and 30% ratios. */
-    --kit-tone-band-bg: color-mix(in srgb, var(--kit-tone) 9%, var(--bg-popover));
+     * The panel fills with --bg-modal, so the band mixes over that and
+     * stays matched to the panel in either theme. Same 9% and 30% ratios. */
+    --kit-tone-band-bg: color-mix(in srgb, var(--kit-tone) 9%, var(--bg-modal));
     --kit-tone-border: color-mix(in srgb, var(--kit-tone) 30%, var(--border-popover));
   }
 

@@ -164,24 +164,36 @@
   }
 }
 
-/* A popover is the plain surface in both themes. In dark a shadow barely
- * shows on the near-black page, so a popover takes a lighter edge, and the
- * edge with the shadow sets it off. A lighter fill would wash the surface
- * out to grey. The chosen option inside a popover (a date preset, a mode
- * tab) takes a stronger fill and edge. High contrast keeps its strong
- * default edge. A modal panel is the same kind of surface, so the rules
- * scoped to the popover card below cover it too. */
+/* In light a popover is the white surface; its shadow lifts it. In dark a
+ * shadow barely shows on the near-black page, so a popover takes a lighter
+ * raised surface and a lighter edge. That surface narrows the gap to the
+ * ordinary selected fill, so the chosen option inside a popover (a date
+ * preset, a mode tab) takes a stronger fill and edge. High contrast keeps
+ * its strong default edge. A modal panel is the same kind of surface, so
+ * the rules scoped to the popover card below cover it too. */
 :root {
   --bg-popover: var(--bg-surface);
   --border-popover: var(--border-default);
 }
 
 :root.dark {
+  --bg-popover: color-mix(in srgb, var(--text-primary) 9%, var(--bg-surface));
   --border-popover: color-mix(in srgb, var(--text-primary) 20%, var(--bg-surface));
 }
 
 :root.dark.high-contrast {
   --border-popover: var(--border-default);
+}
+
+/* A dialog dims the page behind it, so the scrim already sets it apart.
+ * Against that dimmed page the lighter popover fill turns glaring, so in
+ * dark a Modal panel keeps the plain surface and the popover edge. */
+:root {
+  --bg-modal: var(--bg-popover);
+}
+
+:root.dark {
+  --bg-modal: var(--bg-surface);
 }
 
 :root.dark :is(.kit-popover-card, .kit-modal-panel) {
@@ -191,23 +203,42 @@
     0 1px 2px color-mix(in srgb, #000 40%, transparent);
 }
 
-/* Hover lightens everywhere in dark. Inside a popover the hover fill, and
- * the quiet selected fills that follow it, step up from the popover surface
- * by a fixed share, so a theme whose popover surface sits above its hover
- * fill still lightens the row. --bg-inset stays as it is: it is darker than
- * the popover, so a well still reads as a well. */
+/* Hover lightens everywhere in dark. The page's hover fill is darker than
+ * the popover surface, so a row hovered inside a popover would read as a
+ * dent. Inside a popover the hover fill, and the quiet selected fills that
+ * follow it, step up from the popover surface instead. --bg-inset stays as
+ * it is: it is darker than the popover, so a well still reads as a well. */
 :root.dark :is(.kit-popover-card, .kit-modal-panel) {
   --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-popover));
   --selected-bg: var(--bg-surface-hover);
   --selected-list-bg: var(--bg-surface-hover);
 }
 
-/* Muted ink is tuned for the page surface. A hovered row in a dark popover
- * is lighter than the page's hover fill, which narrows the margin for muted
- * text on a hovered or highlighted row (an option's detail, a count). Inside
- * a dark popover muted ink steps toward the primary ink by a quarter, which
- * keeps it well above 4.5:1 on the hover fill. It stays quieter than
- * secondary ink. The mix is resolved
+/* Control edges: the outline of a checkbox, radio, or text field. On the
+ * page they use the default border. A dark popover is lighter than the page
+ * and its hovered row lighter again, which left that border at about 1.1:1
+ * there, under the 3:1 a control's edge needs. Inside a dark popover the
+ * edge mixes halfway to the primary ink: above 3:1 on the popover and on a
+ * hovered row. */
+:root {
+  --border-control: var(--border-default);
+}
+
+:root.dark .kit-popover-card {
+  --border-control: color-mix(in srgb, var(--text-primary) 50%, var(--bg-popover));
+}
+
+/* The modal panel takes its own fill, so its hover steps up from that. */
+:root.dark .kit-modal-panel {
+  --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-modal));
+}
+
+/* Muted ink is tuned for the page surface. A dark popover is lighter than
+ * that, and its hovered row lighter again, which took muted text on a
+ * hovered or highlighted row (an option's detail, a count) to 3.7:1. Inside
+ * a dark popover muted ink steps toward the primary ink by a quarter: about
+ * the contrast it has on the page while the row rests, and above 4.5:1 on
+ * the hover fill. It stays quieter than secondary ink. The mix is resolved
  * on the root, where --text-muted is still the theme's own value, because a
  * property cannot be defined from itself. */
 :root.dark {

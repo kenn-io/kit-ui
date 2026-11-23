@@ -600,19 +600,12 @@
       inset 0 0 0 1px var(--kit-date-range-picker-presets-edge);
   }
 
-  /* Dark: a recessed fill barely shows on the dark popover surface, so both
-   * tiers step up from the panel instead. The mode track rises one step
-   * (its SegmentedControl fills with --bg-inset), and the preset tier half
-   * as far, so it still reads as the lesser tier. The tier keeps a quiet
+  /* Dark: the tier sits a step above the near-black track with a quiet
    * outline, and a near-black contact line shows the track resting on it. */
-  :global(:root.dark) .kit-date-range-picker__tabs {
-    --bg-inset: color-mix(in srgb, var(--text-primary) 9%, var(--bg-popover, var(--bg-surface)));
-  }
-
   :global(:root.dark) .kit-date-range-picker__pills {
     --kit-date-range-picker-presets-fill: color-mix(
       in srgb,
-      var(--text-primary) 4.5%,
+      var(--bg-inset) 35%,
       var(--bg-popover, var(--bg-surface))
     );
     --kit-date-range-picker-presets-edge: color-mix(
