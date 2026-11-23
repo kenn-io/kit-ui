@@ -216,6 +216,7 @@
   }
 
   .kit-notice[data-variant="inline"] .kit-notice__mark {
+    margin-top: calc((var(--font-size-xs) * 1.4 - 8px) / 2);
     margin-inline: 3px;
   }
 

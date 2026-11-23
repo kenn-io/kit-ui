@@ -75,6 +75,7 @@ test("inline notices show their tone and remove the card border", async ({ page 
   const mark = (await info.locator(".kit-notice__mark").boundingBox())!;
   const label = (await tone.boundingBox())!;
   expect(label.x - (mark.x + mark.width + 3)).toBeGreaterThanOrEqual(4);
+  expect(Math.abs(mark.y + mark.height / 2 - label.y - label.height / 2)).toBeLessThan(0.5);
   await expect(page.locator(".kit-notice").first()).not.toHaveCSS("border-top-width", "0px");
 });
 
