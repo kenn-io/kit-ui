@@ -200,7 +200,6 @@
   .kit-notice[data-variant="inline"] {
     box-sizing: border-box;
     align-content: center;
-    align-items: start;
     gap: var(--space-2);
     min-height: var(--space-8);
     padding: var(--space-2) var(--space-4);

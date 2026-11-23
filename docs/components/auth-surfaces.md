@@ -86,7 +86,7 @@ either variant.
 | ------------- | --------------- | --------- | ----------------------------------------------------------------- |
 | `tone`        | `NoticeTone`    | `"info"`  | `info \| success \| warning \| error \| note \| tip \| important` |
 | `variant`     | `NoticeVariant` | `"card"`  | `card` or `inline`                                                |
-| `toneLabel`   | `string`        | tone name | Visible tone label, for localization                              |
+| `toneLabel`   | `string`        | tone name | Tone label; visually hidden inline with an icon                   |
 | `title`       | `string`        | —         |                                                                   |
 | `message`     | `string`        | —         | Plain-text body                                                   |
 | `children`    | `Snippet`       | —         | Rich body; wins over `message`                                    |
