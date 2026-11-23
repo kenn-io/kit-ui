@@ -457,7 +457,7 @@
               style:background={item.color
                 ? item.active
                   ? item.color
-                  : "var(--border-muted)"
+                  : "var(--mark-off)"
                 : undefined}
             ></span>
             <span class="kit-filter-dropdown__label">{item.label}</span>
