@@ -55,6 +55,7 @@ test("inline notices show their tone and remove the card border", async ({ page 
   await gotoPage(page, "notice");
   const inline = page.getByTestId("notice-inline");
   const error = inline.getByRole("alert").first();
+  await expect(error.locator(".kit-notice__icon")).toHaveAttribute("aria-hidden", "true");
   await expect(error.locator(".kit-notice__tone")).toHaveText("Error");
   await expect(error.locator(".kit-notice__tone")).toHaveCSS("clip-path", "inset(50%)");
   await expect(error.locator(".kit-notice__tone")).toHaveCSS("margin-bottom", "-1px");

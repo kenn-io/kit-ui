@@ -15,8 +15,8 @@
      * lists); when both are passed, `children` wins. */
     message?: string;
     children?: Snippet;
-    /** Replaces the tone dot, e.g. a Lucide icon. Decorative: the tone
-     * label carries the meaning. */
+    /** Replaces the tone dot. For inline notices, use an icon that conveys
+     * the tone visually. The tone label remains available to assistive tech. */
     icon?: Snippet;
     /** `true` (default) announces the notice as a live status (alert for
      * errors), for feedback that appears in response to something. Set
@@ -148,18 +148,21 @@
     min-width: 0;
   }
 
-  .kit-notice__tone,
+  .kit-notice__tone:not(:global(.kit-sr-only)),
   .kit-notice__title,
   .kit-notice__message {
     margin: 0;
   }
 
   .kit-notice__tone {
-    margin-bottom: var(--space-1);
     color: var(--text-secondary);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
     line-height: 1.4;
+  }
+
+  .kit-notice__tone:not(:global(.kit-sr-only)) {
+    margin-bottom: var(--space-1);
   }
 
   .kit-notice__title {
@@ -210,10 +213,6 @@
 
   .kit-notice[data-variant="inline"] .kit-notice__content {
     position: relative;
-  }
-
-  .kit-notice[data-variant="inline"] .kit-notice__tone:global(.kit-sr-only) {
-    margin: -1px;
   }
 
   .kit-notice[data-variant="inline"] .kit-notice__mark {
