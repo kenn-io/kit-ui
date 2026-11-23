@@ -197,9 +197,12 @@
   }
 
   .kit-notice[data-variant="inline"] {
+    box-sizing: border-box;
     align-items: center;
     gap: var(--space-2);
+    min-height: var(--space-8);
     padding: var(--space-2) var(--space-4);
+    background: color-mix(in srgb, var(--kit-notice-accent) 12%, var(--bg-surface));
     border: 0;
   }
 

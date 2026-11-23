@@ -59,6 +59,7 @@ test("inline notices keep their semantics and align the icon with the message", 
   await expect(error.locator(".kit-notice__tone")).toHaveText("Error");
   await expect(error.locator(".kit-notice__tone")).toHaveCSS("clip-path", "inset(50%)");
   await expect(error).toHaveCSS("border-top-width", "0px");
+  expect((await error.boundingBox())!.height).toBeGreaterThanOrEqual(32);
   const icon = (await error.locator(".kit-notice__icon").boundingBox())!;
   const message = (await error.locator(".kit-notice__message").boundingBox())!;
   expect(Math.abs(icon.y + icon.height / 2 - message.y - message.height / 2)).toBeLessThan(1);
@@ -66,6 +67,9 @@ test("inline notices keep their semantics and align the icon with the message", 
   const info = inline.getByRole("status");
   await info.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByTestId("inline-notice-callbacks")).toHaveText("1");
+  const note = inline.getByRole("note");
+  await expect(note).toHaveText(/Draft saved\./);
+  await expect(note).not.toHaveAttribute("aria-live");
   for (const dark of [false, true]) {
     await setTheme(page, { dark });
     for (const notice of await inline.locator(".kit-notice").all()) {
