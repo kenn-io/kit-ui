@@ -2,24 +2,23 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { contrastOf, gotoPage, luminanceOf, resolvedStyle, setTheme } from "./helpers.js";
 
 // Transient surfaces share one chrome: the --shadow-lg lift, and in dark a
-// lighter raised popover surface with a lighter edge, since a shadow alone
-// barely shows on the near-black page.
+// lighter edge on the plain surface, since a shadow alone barely shows on
+// the near-black page and a lighter fill washes the surface out.
 
-test("dark popovers sit on a lighter surface with a lighter edge", async ({ page }) => {
+test("dark popovers keep the dark surface with a lighter edge", async ({ page }) => {
   await gotoPage(page, "date-range-picker");
   await setTheme(page, { dark: true });
   await page.locator(".kit-date-range-picker__trigger").first().click();
   const panel = page.locator(".kit-popover-card").first();
   await expect(panel).toBeVisible();
 
-  const surface = await resolvedStyle(page, "background-color", "var(--bg-surface)");
-  const popover = await resolvedStyle(page, "background-color", "var(--bg-popover)");
-  expect(popover).not.toBe(surface);
-  await expect(panel).toHaveCSS("background-color", popover);
   await expect(panel).toHaveCSS(
-    "border-top-color",
-    await resolvedStyle(page, "border-top-color", "var(--border-popover)"),
+    "background-color",
+    await resolvedStyle(page, "background-color", "var(--bg-surface)"),
   );
+  const edge = await resolvedStyle(page, "border-top-color", "var(--border-popover)");
+  expect(edge).not.toBe(await resolvedStyle(page, "border-top-color", "var(--border-default)"));
+  await expect(panel).toHaveCSS("border-top-color", edge);
   await expect(panel).toHaveCSS(
     "box-shadow",
     await resolvedStyle(page, "box-shadow", "var(--shadow-lg)"),
@@ -51,8 +50,8 @@ test("a modal lifts like a popover and its panel shows no focus ring", async ({ 
   await expect(panel).toHaveCSS("outline-style", "none");
 });
 
-// The page's dark hover fill is darker than the popover surface, so a
-// popover takes its own hover fill. Hover lightens everywhere in dark.
+// A popover takes its own hover fill, stepped up from the popover surface.
+// Hover lightens everywhere in dark.
 for (const highContrast of [false, true]) {
   test(`a hovered row in a dark popover is lighter than the popover${
     highContrast ? " in high contrast" : ""
@@ -90,9 +89,10 @@ test("a dark modal sits on the popover surface with the popover edge", async ({ 
   const panel = page.locator(".kit-modal-panel");
   await expect(panel).toBeVisible();
 
-  const popover = await resolvedStyle(page, "background-color", "var(--bg-popover)");
-  expect(popover).not.toBe(await resolvedStyle(page, "background-color", "var(--bg-surface)"));
-  await expect(panel).toHaveCSS("background-color", popover);
+  await expect(panel).toHaveCSS(
+    "background-color",
+    await resolvedStyle(page, "background-color", "var(--bg-popover)"),
+  );
   const edge = await resolvedStyle(page, "border-top-color", "var(--border-popover)");
   await expect(panel).toHaveCSS("border-top-color", edge);
   // The header band draws over the panel's border, so it carries the same edge.
@@ -127,8 +127,7 @@ test("a hovered control in a dark modal is lighter than the modal", async ({ pag
   expect(hover).toBeGreaterThan((await luminanceOf(panel)).background);
 });
 
-// A dark popover is lighter than the page surface, and its hovered row
-// lighter again. Every ink a row shows has to stay readable (4.5:1) on that
+// A dark popover's hovered row is lighter than the page's hover fill. Every ink a row shows has to stay readable (4.5:1) on that
 // row while it is hovered or highlighted, not only on page-level fills.
 
 const ROWS =

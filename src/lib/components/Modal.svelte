@@ -119,8 +119,8 @@
   }
 
   /* A modal is a transient floating surface, so it takes the popover
-   * surface and edge: the plain surface in light, a lighter one in dark,
-   * where it would otherwise sit dimmer than a menu behind the scrim. */
+   * surface and edge: the plain surface, with the lighter popover edge in
+   * dark so it reads above the scrim. */
   .kit-modal-panel {
     background: var(--bg-popover);
     border: var(--border-width) solid var(--border-popover);
