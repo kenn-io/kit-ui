@@ -539,7 +539,7 @@ test.describe("month strip", () => {
     await expect(cal.locator(".kit-calendar__month--button")).toContainText("April 2026");
   });
 
-  test("at 400px the strip scrolls and keeps keyboard focus visible", async ({ page }) => {
+  test("at 400px the strip scrolls to the selection without moving ancestors", async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 800 });
     await page.reload();
     const cal = strip(page);
@@ -592,38 +592,47 @@ test.describe("month strip", () => {
       await expect.poll(visible).toBe(true);
       expect(await ancestorScroll()).toEqual(before);
     });
-
-    await test.step("keep focus rings visible while tabbing through days", async () => {
-      const days = cal.locator(".kit-calendar__day");
-      for (const highContrast of [false, true]) {
-        await setTheme(page, { highContrast });
-        await cal.locator(".kit-calendar__nav").last().focus();
-        for (const [key, indices] of [
-          ["Tab", Array.from({ length: 31 }, (_, i) => i)],
-          ["Shift+Tab", Array.from({ length: 30 }, (_, i) => 29 - i)],
-        ] as const) {
-          for (const index of indices) {
-            await page.keyboard.press(key);
-            const day = days.nth(index);
-            await expect(day).toBeFocused();
-            const fits = await day.evaluate((element) => {
-              const dayBox = element.getBoundingClientRect();
-              const trackBox = element.parentElement!.getBoundingClientRect();
-              const style = getComputedStyle(element);
-              const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
-              return (
-                style.outlineStyle !== "none" &&
-                ring > 0 &&
-                dayBox.left - ring >= trackBox.left &&
-                dayBox.right + ring <= trackBox.right &&
-                dayBox.top - ring >= trackBox.top &&
-                dayBox.bottom + ring <= trackBox.bottom
-              );
-            });
-            expect(fits, `day ${index + 1}, ${key}, high contrast ${highContrast}`).toBe(true);
-          }
-        }
-      }
-    });
   });
+
+  // Each traversal gets its own timeout budget. Combining both directions and
+  // contrast modes made 122 key presses and their assertions share 30 seconds.
+  for (const highContrast of [false, true]) {
+    for (const key of ["Tab", "Shift+Tab"] as const) {
+      test(`at 400px focus rings stay visible with ${key}, high contrast ${highContrast}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 400, height: 800 });
+        await page.reload();
+        await setTheme(page, { highContrast });
+        const cal = strip(page);
+        const days = cal.locator(".kit-calendar__day");
+        if (key === "Tab") await cal.locator(".kit-calendar__nav").last().focus();
+        else await days.last().focus();
+        const indices =
+          key === "Tab"
+            ? Array.from({ length: 31 }, (_, i) => i)
+            : Array.from({ length: 30 }, (_, i) => 29 - i);
+        for (const index of indices) {
+          await page.keyboard.press(key);
+          const day = days.nth(index);
+          await expect(day).toBeFocused();
+          const fits = await day.evaluate((element) => {
+            const dayBox = element.getBoundingClientRect();
+            const trackBox = element.parentElement!.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+            return (
+              style.outlineStyle !== "none" &&
+              ring > 0 &&
+              dayBox.left - ring >= trackBox.left &&
+              dayBox.right + ring <= trackBox.right &&
+              dayBox.top - ring >= trackBox.top &&
+              dayBox.bottom + ring <= trackBox.bottom
+            );
+          });
+          expect(fits, `day ${index + 1}, ${key}, high contrast ${highContrast}`).toBe(true);
+        }
+      });
+    }
+  }
 });
