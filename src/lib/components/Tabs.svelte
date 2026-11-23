@@ -1,4 +1,6 @@
 <script module lang="ts">
+  import type { HTMLAttributes, HTMLButtonAttributes } from "svelte/elements";
+
   export interface TabItem {
     id: string;
     label: string;
@@ -8,6 +10,38 @@
   }
 
   export type TabsActivation = "automatic" | "manual";
+
+  /** `underline` (default) draws padded tabs with an accent bar under the
+   * selected one. `bare` keeps the behavior and drops the look, for tabs the
+   * consumer styles itself, such as a compact browser-style strip. */
+  export type TabsVariant = "underline" | "bare";
+
+  /** Attributes Tabs sets on each tab button itself; consumers cannot
+   * override them. `data-tab-id` is owned too. */
+  type TabOwnedAttribute =
+    | "type"
+    | "role"
+    | "id"
+    | "tabindex"
+    | "disabled"
+    | "aria-selected"
+    | "aria-controls"
+    | "aria-label"
+    | "children";
+
+  /** Extra attributes and handlers for one tab button. `class` is added to
+   * the tab's own classes, and `onclick` runs after Tabs selects the tab.
+   * `preventDefault` in `onkeydown` skips Tabs' arrow-key handling, and an
+   * `inert` or `hidden` tab is skipped like a disabled one. */
+  export type TabAttributes = Omit<HTMLButtonAttributes, TabOwnedAttribute>;
+
+  /** Extra attributes and handlers for the scrolling tab list. `class` is
+   * added to the list's own classes; `onkeydown` and `onfocusout` run after
+   * Tabs' own keyboard and focus handling. */
+  export type TabListAttributes = Omit<
+    HTMLAttributes<HTMLDivElement>,
+    "role" | "aria-label" | "aria-orientation" | "tabindex" | "children"
+  >;
 </script>
 
 <script lang="ts">
@@ -28,6 +62,21 @@
     /** Custom tab content (icons, badges) rendered instead of the label.
      * `tab.label` stays the accessible name. */
     tab?: Snippet<[TabItem, boolean]>;
+    /** Extra attributes and handlers for each tab button, such as `title`,
+     * `data-*`, `draggable`, drag and drop handlers, `oncontextmenu`, or an
+     * `onclick` that runs after selection. Called with the tab and whether
+     * it is selected. */
+    tabAttributes?: (item: TabItem, selected: boolean) => TabAttributes;
+    /** Extra attributes and handlers for the tab list, such as `class`,
+     * `style`, `onscroll`, or `onwheel`. */
+    listAttributes?: TabListAttributes;
+    /** The tab list element (bindable), for measuring and scrolling it. */
+    listElement?: HTMLDivElement | undefined;
+    /** Content rendered after the tab list, outside it, inside the root:
+     * controls that must not sit in `role="tablist"`, such as scroll
+     * buttons laid over the list's ends. */
+    afterList?: Snippet;
+    variant?: TabsVariant;
     /** The selected tab's panel, rendered in a tabpanel labelled by the
      * selected tab. Omit it to render the tab list alone. */
     children?: Snippet<[string]>;
@@ -41,6 +90,11 @@
     ariaLabel = undefined,
     activation = "automatic",
     tab = undefined,
+    tabAttributes = undefined,
+    listAttributes = {},
+    listElement = $bindable(),
+    afterList = undefined,
+    variant = "underline",
     children = undefined,
     class: className = "",
   }: Props = $props();
@@ -55,18 +109,27 @@
   // to the selected tab.
   let rovingId = $state<string | undefined>(undefined);
 
-  const enabledId = (id: string | undefined) => tabs.find((t) => t.id === id && !t.disabled)?.id;
-
-  // The one tab in the Tab order: the roving one while focus is in the
-  // list, else the selected one, else the first enabled tab.
-  const focusId = $derived(
-    enabledId(rovingId) ?? enabledId(value) ?? tabs.find((t) => !t.disabled)?.id,
+  const extras = $derived(
+    new Map(tabs.map((t) => [t.id, tabAttributes?.(t, t.id === value) ?? {}])),
   );
 
+  // A tab the app made inert or hidden cannot take focus, so arrow keys and
+  // the Tab order skip it like a disabled tab.
+  const reachable = (t: TabItem) => {
+    const extra = extras.get(t.id);
+    return !t.disabled && !extra?.inert && !extra?.hidden;
+  };
+
+  const enabledId = (id: string | undefined) => tabs.find((t) => t.id === id && reachable(t))?.id;
+
+  // The one tab in the Tab order: the roving one while focus is in the
+  // list, else the selected one, else the first reachable tab.
+  const focusId = $derived(enabledId(rovingId) ?? enabledId(value) ?? tabs.find(reachable)?.id);
+
   // Coming back into the list should land on the selected tab.
-  function handleFocusout(event: FocusEvent): void {
-    const list = event.currentTarget as HTMLElement;
-    if (!list.contains(event.relatedTarget as Node | null)) rovingId = undefined;
+  function handleFocusout(event: FocusEvent & { currentTarget: HTMLDivElement }): void {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) rovingId = undefined;
+    listAttributes.onfocusout?.(event);
   }
 
   function select(item: TabItem): void {
@@ -75,8 +138,14 @@
     onchange?.(item.id);
   }
 
-  function handleKeydown(event: KeyboardEvent): void {
-    const enabled = tabs.filter((t) => !t.disabled);
+  function handleKeydown(event: KeyboardEvent & { currentTarget: HTMLDivElement }): void {
+    // A tab's own handler may claim a key, such as Alt+Arrow to reorder.
+    if (!event.defaultPrevented) moveFocus(event);
+    listAttributes.onkeydown?.(event);
+  }
+
+  function moveFocus(event: KeyboardEvent & { currentTarget: HTMLDivElement }): void {
+    const enabled = tabs.filter(reachable);
     if (enabled.length === 0) return;
     const focused = (event.target as HTMLElement).dataset["tabId"];
     const current = enabled.findIndex((t) => t.id === focused);
@@ -100,16 +169,18 @@
     if (!next) return;
     event.preventDefault();
     rovingId = next.id;
-    (event.currentTarget as HTMLElement)
+    event.currentTarget
       .querySelector<HTMLButtonElement>(`[data-tab-id="${CSS.escape(next.id)}"]`)
       ?.focus();
     if (activation === "automatic") select(next);
   }
 </script>
 
-<div class="kit-tabs {className}">
+<div class={["kit-tabs", `kit-tabs--${variant}`, className]}>
   <div
-    class="kit-tabs__list"
+    {...listAttributes}
+    class={["kit-tabs__list", listAttributes.class]}
+    bind:this={listElement}
     role="tablist"
     aria-label={ariaLabel}
     aria-orientation="horizontal"
@@ -119,10 +190,11 @@
   >
     {#each tabs as item (item.id)}
       {@const selected = item.id === value}
+      {@const extra = extras.get(item.id) ?? {}}
       <button
+        {...extra}
         type="button"
-        class="kit-tabs__tab"
-        class:kit-tabs__tab--selected={selected}
+        class={["kit-tabs__tab", selected && "kit-tabs__tab--selected", extra.class]}
         role="tab"
         id={tabId(item.id)}
         data-tab-id={item.id}
@@ -131,9 +203,10 @@
         aria-label={tab ? item.label : undefined}
         tabindex={item.id === focusId ? 0 : -1}
         disabled={item.disabled}
-        onclick={() => {
+        onclick={(event) => {
           rovingId = item.id;
           select(item);
+          extra.onclick?.(event);
         }}
       >
         {#if tab}
@@ -147,6 +220,7 @@
       </button>
     {/each}
   </div>
+  {@render afterList?.()}
   {#if children && value !== undefined}
     <div
       class="kit-tabs__panel"
@@ -167,37 +241,53 @@
 
   .kit-tabs__list {
     display: flex;
-    gap: var(--space-2);
     overflow-x: auto;
-    border-bottom: var(--border-width) solid var(--border-muted);
     scrollbar-width: none;
+  }
+
+  :where(.kit-tabs--underline) > .kit-tabs__list {
+    gap: var(--space-2);
+    border-bottom: var(--border-width) solid var(--border-muted);
   }
 
   .kit-tabs__list::-webkit-scrollbar {
     display: none;
   }
 
-  .kit-tabs__tab {
+  /* Zero specificity, so a consumer's own tab class wins over this reset in
+     the bare variant. */
+  :where(.kit-tabs__tab) {
     position: relative;
     display: inline-flex;
     flex: none;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
+    padding: 0;
     background: transparent;
     border: 0;
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    color: var(--text-secondary);
+    color: inherit;
     cursor: pointer;
     font: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
 
-  .kit-tabs__tab:hover:not(:disabled) {
+  :where(.kit-tabs--underline > .kit-tabs__list) > .kit-tabs__tab {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  :where(.kit-tabs--underline > .kit-tabs__list) > .kit-tabs__tab:hover:not(:disabled) {
     color: var(--text-primary);
     background: var(--bg-surface-hover);
+  }
+
+  /* Arrow keys and the Tab order skip a hidden tab, so it must never show,
+     even when a consumer's tab class sets display. */
+  .kit-tabs__tab[hidden] {
+    display: none !important;
   }
 
   .kit-tabs__tab:focus-visible {
@@ -210,12 +300,14 @@
     opacity: var(--opacity-disabled, 0.5);
   }
 
-  .kit-tabs__tab--selected {
+  :where(.kit-tabs--underline > .kit-tabs__list) > .kit-tabs__tab--selected {
     color: var(--text-primary);
   }
 
-  /* The selection bar sits on the list's bottom rule. */
-  .kit-tabs__tab--selected::after {
+  /* The underline look keeps the tabs' original specificity, so consumer
+     overrides written against it still apply. The selection bar sits on the
+     list's bottom rule. */
+  :where(.kit-tabs--underline > .kit-tabs__list) > .kit-tabs__tab--selected::after {
     content: "";
     position: absolute;
     right: var(--space-3);

@@ -1,7 +1,10 @@
 <script lang="ts">
+  import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import FileIcon from "@lucide/svelte/icons/file";
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
-  import { Tabs, type TabItem } from "../../lib/index.js";
+  import { tick } from "svelte";
+  import { IconButton, Tabs, type TabAttributes, type TabItem } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
   const detailTabs: TabItem[] = [
@@ -20,6 +23,105 @@
   let view = $state("chat");
 
   let manual = $state("conversation");
+
+  let pages = $state<TabItem[]>(
+    [
+      "Inbox",
+      "Calendar",
+      "Release notes",
+      "Design review",
+      "Billing",
+      "Team settings",
+      "Status page",
+      "Changelog",
+      "Archived",
+    ].map((label) => ({ id: label.toLowerCase().replaceAll(" ", "-"), label })),
+  );
+  let page = $state("inbox");
+  let pageClicks = $state(0);
+  let pageAtClick = $state<string | undefined>(undefined);
+  let dragged = $state<string | undefined>(undefined);
+  // A page still loading: its tab is inert until the page is ready.
+  const loadingPages = new Set(["status-page"]);
+  // An archived page keeps its place in the list, but its tab is hidden.
+  const archivedPages = new Set(["archived"]);
+  let strip = $state<HTMLDivElement | undefined>(undefined);
+  let canScrollBack = $state(false);
+  let canScrollForward = $state(false);
+
+  function measureStrip(): void {
+    if (!strip) return;
+    canScrollBack = strip.scrollLeft > 0;
+    canScrollForward = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1;
+  }
+
+  // The strip's overflow depends on layout, which only the DOM knows.
+  $effect(() => {
+    void pages.length;
+    measureStrip();
+  });
+
+  function scrollStrip(direction: 1 | -1): void {
+    strip?.scrollBy({ left: direction * strip.clientWidth * 0.6, behavior: "smooth" });
+  }
+
+  function movePage(id: string, before: string): void {
+    const from = pages.findIndex((p) => p.id === id);
+    const to = pages.findIndex((p) => p.id === before);
+    if (from === -1 || to === -1 || from === to) return;
+    const next = [...pages];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    pages = next;
+  }
+
+  // Alt+Left and Alt+Right move the focused tab, the keyboard version of
+  // dragging it. preventDefault keeps Tabs from also moving focus.
+  function reorderByKey(event: KeyboardEvent, id: string): void {
+    if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+    event.preventDefault();
+    const from = pages.findIndex((p) => p.id === id);
+    const to = from + (event.key === "ArrowRight" ? 1 : -1);
+    if (from === -1 || to < 0 || to >= pages.length) return;
+    const next = [...pages];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    pages = next;
+    // Moving the tab's button can drop focus; put it back once it has moved.
+    void tick().then(() =>
+      strip?.querySelector<HTMLElement>(`[data-page="${CSS.escape(id)}"]`)?.focus(),
+    );
+  }
+
+  const pageTabAttributes = (item: TabItem, selected: boolean): TabAttributes => ({
+    class: [
+      "strip-tab",
+      dragged === item.id && "strip-tab--dragged",
+      loadingPages.has(item.id) && "strip-tab--loading",
+    ],
+    title: item.label,
+    "data-page": item.id,
+    "data-selected": selected || undefined,
+    draggable: true,
+    ondragstart: (event) => {
+      dragged = item.id;
+      event.dataTransfer?.setData("text/plain", item.id);
+    },
+    ondragover: (event) => event.preventDefault(),
+    ondrop: (event) => {
+      event.preventDefault();
+      if (dragged) movePage(dragged, item.id);
+      dragged = undefined;
+    },
+    ondragend: () => (dragged = undefined),
+    onkeydown: (event) => reorderByKey(event, item.id),
+    inert: loadingPages.has(item.id),
+    hidden: archivedPages.has(item.id),
+    onclick: () => {
+      pageClicks += 1;
+      pageAtClick = page;
+    },
+  });
 
   const panels: Record<string, string> = {
     conversation: "Ana: The retry loop now backs off after the third failure.",
@@ -82,6 +184,79 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Browser-style strip"
+  description="variant=&quot;bare&quot; drops the tab look so the consumer can style a compact strip. tabAttributes adds per-tab attributes and handlers, here drag and drop or Alt+Arrow to reorder, a click counter that runs after selection, inert on a loading tab, and hidden on an archived one. Arrow keys skip both. listAttributes and listElement reach the scrolling list, and afterList renders scroll buttons outside role=&quot;tablist&quot;."
+  code={`<Tabs
+  {tabs}
+  bind:value
+  variant="bare"
+  ariaLabel="Open pages"
+  bind:listElement
+  listAttributes={{ class: "strip-list", onscroll: measure }}
+  tabAttributes={(item, selected) => ({
+    class: "strip-tab",
+    title: item.label,
+    draggable: true,
+    ondragstart: () => (dragged = item.id),
+    ondragover: (event) => event.preventDefault(),
+    ondrop: () => move(dragged, item.id),
+    onkeydown: (event) => reorderByKey(event, item.id),
+    inert: loading.has(item.id),
+    hidden: archived.has(item.id),
+    onclick: () => clicks++,
+  })}
+>
+  {#snippet afterList()}
+    <IconButton ariaLabel="Scroll back" ariaDisabled={!canScrollBack} onclick={() => scroll(-1)}>...</IconButton>
+  {/snippet}
+</Tabs>`}
+>
+  <div class="tabs-demo" data-testid="tabs-strip">
+    <div class="strip">
+      <Tabs
+        tabs={pages}
+        bind:value={page}
+        variant="bare"
+        ariaLabel="Open pages"
+        bind:listElement={strip}
+        listAttributes={{ class: "strip-list", onscroll: measureStrip }}
+        tabAttributes={pageTabAttributes}
+      >
+        {#snippet afterList()}
+          <!-- Both buttons stay rendered, so a focused one never vanishes at an end. -->
+          <span class="strip-scroll strip-scroll--back">
+            <IconButton
+              size="sm"
+              ariaLabel="Scroll tabs back"
+              ariaDisabled={!canScrollBack}
+              onclick={() => scrollStrip(-1)}
+            >
+              <ChevronLeftIcon size={14} />
+            </IconButton>
+          </span>
+          <span class="strip-scroll strip-scroll--forward">
+            <IconButton
+              size="sm"
+              ariaLabel="Scroll tabs forward"
+              ariaDisabled={!canScrollForward}
+              onclick={() => scrollStrip(1)}
+            >
+              <ChevronRightIcon size={14} />
+            </IconButton>
+          </span>
+        {/snippet}
+      </Tabs>
+    </div>
+    <p class="tabs-demo__readout">
+      Tab clicks: <span data-testid="tabs-strip-clicks">{pageClicks}</span> · Order:
+      <span data-testid="tabs-strip-order">{pages.map((p) => p.label).join(", ")}</span>
+    </p>
+    <span class="tabs-demo__hidden" data-testid="tabs-strip-value">{page}</span>
+    <span class="tabs-demo__hidden" data-testid="tabs-strip-value-at-click">{pageAtClick}</span>
+  </div>
+</DemoSection>
+
 <style>
   .tabs-demo {
     display: grid;
@@ -105,5 +280,58 @@
   .tabs-demo__readout {
     color: var(--text-muted);
     font-size: var(--font-size-xs);
+  }
+
+  .strip {
+    position: relative;
+    max-width: 420px;
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+  }
+
+  /* The side padding leaves room for the scroll buttons, which always show,
+     so they cover no tab at either end. */
+  .strip :global(.strip-list) {
+    gap: var(--space-1);
+    padding: var(--space-1) calc(24px + var(--space-1));
+  }
+
+  /* An app's tab class often sets display; Tabs still hides hidden tabs. */
+  .strip :global(.strip-tab) {
+    display: inline-flex;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .strip :global(.strip-tab:hover) {
+    color: var(--text-primary);
+  }
+
+  .strip :global(.strip-tab[data-selected]) {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+  }
+
+  .strip :global(.strip-tab--dragged),
+  .strip :global(.strip-tab--loading) {
+    opacity: 0.5;
+  }
+
+  .strip-scroll {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    background: var(--bg-inset);
+    transform: translateY(-50%);
+  }
+
+  .strip-scroll--back {
+    left: 0;
+  }
+
+  .strip-scroll--forward {
+    right: 0;
   }
 </style>
