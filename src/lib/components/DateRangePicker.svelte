@@ -606,13 +606,13 @@
    * as far, so it still reads as the lesser tier. The tier keeps a quiet
    * outline, and a near-black contact line shows the track resting on it. */
   :global(:root.dark) .kit-date-range-picker__tabs {
-    --bg-inset: color-mix(in srgb, var(--text-primary) 4.5%, var(--bg-popover, var(--bg-surface)));
+    --bg-inset: color-mix(in srgb, var(--text-primary) 9%, var(--bg-popover, var(--bg-surface)));
   }
 
   :global(:root.dark) .kit-date-range-picker__pills {
     --kit-date-range-picker-presets-fill: color-mix(
       in srgb,
-      var(--text-primary) 2.25%,
+      var(--text-primary) 4.5%,
       var(--bg-popover, var(--bg-surface))
     );
     --kit-date-range-picker-presets-edge: color-mix(
