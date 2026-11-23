@@ -108,13 +108,30 @@ test("a dark modal sits on the plain surface with the popover edge", async ({ pa
   await expect(panel.locator(".kit-modal-header")).toHaveCSS("border-top-color", edge);
 });
 
-// A control's edge (a checkbox, radio, or text field) needs 3:1 against
-// what surrounds it. Inside a dark popover that is the popover fill and the
-// lighter hovered-row fill, where the page's default border fades out.
+// A control's edge (a checkbox, radio, or text field, and the calendar's
+// today ring) needs 3:1 against what surrounds it. Inside a dark popover
+// that is the popover fill and the lighter hovered-row fill, where the
+// page's default border fades out.
+
+/** Asserts that an edge color clears 3:1 on a popover's fill and on the
+ * hover fill inside it. */
+async function expectEdgeClearsPopover(panel: Locator, edge: string): Promise<void> {
+  const fills = await panel.evaluate((el) => {
+    const probe = document.createElement("span");
+    probe.style.background = "var(--bg-surface-hover)";
+    el.append(probe);
+    const hover = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { popover: getComputedStyle(el).backgroundColor, hover };
+  });
+  expect(colorContrast(edge, fills.popover)).toBeGreaterThanOrEqual(3);
+  expect(colorContrast(edge, fills.hover)).toBeGreaterThanOrEqual(3);
+}
+
 for (const highContrast of [false, true]) {
-  test(`a text field's edge in a dark popover clears 3:1${
-    highContrast ? " in high contrast" : ""
-  }`, async ({ page }) => {
+  const suffix = highContrast ? " in high contrast" : "";
+
+  test(`a text field's edge in a dark popover clears 3:1${suffix}`, async ({ page }) => {
     await gotoPage(page, "filter-dropdown");
     await setTheme(page, { dark: true, highContrast });
     await page.locator(".kit-filter-dropdown__btn").nth(2).click();
@@ -126,22 +143,24 @@ for (const highContrast of [false, true]) {
       for (const animation of el.getAnimations()) animation.finish();
       return getComputedStyle(el).borderTopColor;
     });
-    const fills = await panel.evaluate((el) => {
-      const probe = document.createElement("span");
-      probe.style.background = "var(--bg-surface-hover)";
-      el.append(probe);
-      const hover = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return { popover: getComputedStyle(el).backgroundColor, hover };
-    });
-    expect(colorContrast(edge, fills.popover)).toBeGreaterThanOrEqual(3);
-    expect(colorContrast(edge, fills.hover)).toBeGreaterThanOrEqual(3);
+    await expectEdgeClearsPopover(panel, edge);
+  });
+
+  test(`the calendar's today ring in a dark popover clears 3:1${suffix}`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 5, 15, 12, 0, 0));
+    await gotoPage(page, "date-picker");
+    await setTheme(page, { dark: true, highContrast });
+    await page.getByRole("button", { name: "Date", exact: true }).click();
+    const panel = page.locator(".kit-popover-card").first();
+    const today = panel.locator(".kit-calendar__day.today");
+    await expect(today).toBeVisible();
+    await expect(today).not.toHaveClass(/\bselected\b/);
+    const ring = await today.evaluate((el) => getComputedStyle(el).boxShadow);
+    await expectEdgeClearsPopover(panel, ring.slice(0, ring.indexOf(")") + 1));
   });
 }
 
-test("a toned header band tints a dark modal's surface, not the darker page surface", async ({
-  page,
-}) => {
+test("a toned header band tints over a dark modal's own fill", async ({ page }) => {
   await gotoPage(page, "modal");
   await setTheme(page, { dark: true });
   await page.getByRole("button", { name: "Delete…", exact: true }).click();

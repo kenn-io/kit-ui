@@ -652,8 +652,10 @@
     opacity: 0.55;
   }
 
+  /* Today's ring is a position marker, so it takes the control edge: the
+   * default border on the page, stronger inside a dark popover. */
   .kit-calendar__day.today {
-    box-shadow: inset 0 0 0 1px var(--border-default);
+    box-shadow: inset 0 0 0 1px var(--border-control);
   }
 
   .kit-calendar__day.selected {
@@ -734,7 +736,7 @@
   /* The currently-anchored month/year gets the same inset ring as today
    * in the day grid — a position marker, not a selection. */
   .kit-calendar__unit.current {
-    box-shadow: inset 0 0 0 1px var(--border-default);
+    box-shadow: inset 0 0 0 1px var(--border-control);
     color: var(--text-primary);
   }
 

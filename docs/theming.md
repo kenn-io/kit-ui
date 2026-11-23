@@ -28,7 +28,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                              |
 | Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                       |
 | Popovers    | `--bg-popover`, `--border-popover` (popover fill, popover and Modal edge; lighter in dark), `--bg-modal` (Modal fill, plain in dark), `--text-muted-popover` (dark: their own muted ink) |
-| Controls    | `--border-control` (checkbox, radio, and text field edge; stronger inside dark popovers)                                                                                                 |
+| Controls    | `--border-control` (checkbox, radio, text field, and calendar today edge; stronger in dark popovers)                                                                                     |
 | Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                  |
 | Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                            |
 | Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                             |
@@ -291,15 +291,17 @@ a different muted ink in popovers sets `--text-muted-popover` in its
 `:root.dark` block.
 
 The dark card redefines `--border-control` as well, the edge of a checkbox,
-radio, or text field: `--text-primary` mixed 50% over `--bg-popover`. The
+radio, or text field and the calendar's today ring: `--text-primary` mixed
+50% over `--bg-popover`. The
 default border sits at about 1.1:1 on the popover and its hover fill, under
 the 3:1 a control's edge needs; the mix clears 3:1 on both.
 
-The Modal panel is the same kind of surface. It keeps its own radius, takes
-`--border-popover`, and gets the same muted ink. It fills with `--bg-modal`:
-the popover fill in light, and the plain surface in dark, since the scrim
-already sets a dialog apart and the lighter fill glares against the dimmed
-page. Its dark hover fill steps up from `--bg-modal`.
+The Modal panel keeps its own radius, takes `--border-popover`, and gets
+the same muted ink, but fills with `--bg-modal`: the popover fill in light,
+and the plain surface in dark. A dialog dims the page, so the scrim already
+sets it apart and the lighter fill glares against it. Popovers keep the
+lighter fill, since they sit over a page that is not dimmed. The panel's
+dark hover fill steps up from `--bg-modal`.
 
 **Stacking**: three z tokens in theme.css order the layers —
 `--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`

@@ -169,8 +169,8 @@
  * raised surface and a lighter edge. That surface narrows the gap to the
  * ordinary selected fill, so the chosen option inside a popover (a date
  * preset, a mode tab) takes a stronger fill and edge. High contrast keeps
- * its strong default edge. A modal panel is the same kind of surface, so
- * the rules scoped to the popover card below cover it too. */
+ * its strong default edge. A modal panel takes the popover edge and the
+ * rules scoped to the popover card below, but fills with --bg-modal. */
 :root {
   --bg-popover: var(--bg-surface);
   --border-popover: var(--border-default);
@@ -186,8 +186,9 @@
 }
 
 /* A dialog dims the page behind it, so the scrim already sets it apart.
- * Against that dimmed page the lighter popover fill turns glaring, so in
- * dark a Modal panel keeps the plain surface and the popover edge. */
+ * Against that dimmed page the lighter popover fill glares, so in dark a
+ * Modal panel keeps the plain surface. Popovers keep the lighter fill: they
+ * sit over a page that is not dimmed and would sink into a dense one. */
 :root {
   --bg-modal: var(--bg-popover);
 }
@@ -214,8 +215,8 @@
   --selected-list-bg: var(--bg-surface-hover);
 }
 
-/* Control edges: the outline of a checkbox, radio, or text field. On the
- * page they use the default border. A dark popover is lighter than the page
+/* Control edges: the outline of a checkbox, radio, or text field, and the
+ * calendar's today ring. On the page they use the default border. A dark popover is lighter than the page
  * and its hovered row lighter again, which left that border at about 1.1:1
  * there, under the 3:1 a control's edge needs. Inside a dark popover the
  * edge mixes halfway to the primary ink: above 3:1 on the popover and on a
