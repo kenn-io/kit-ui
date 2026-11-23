@@ -48,27 +48,25 @@ test("callout body text stays readable on every tone", async ({ page }) => {
   }
 });
 
-test("inline notices keep their semantics and align the icon with the message", async ({
-  page,
-}) => {
+test("inline notices retain their tone and live-region semantics", async ({ page }) => {
   await gotoPage(page, "notice");
-
   const inline = page.getByTestId("notice-inline");
-  const error = inline.getByRole("alert");
+  const error = inline.getByRole("alert").first();
   await expect(error).toHaveAttribute("aria-live", "assertive");
   await expect(error.locator(".kit-notice__tone")).toHaveText("Error");
   await expect(error.locator(".kit-notice__tone")).toHaveCSS("clip-path", "inset(50%)");
   await expect(error).toHaveCSS("border-top-width", "0px");
   expect((await error.boundingBox())!.height).toBeGreaterThanOrEqual(32);
-  const icon = (await error.locator(".kit-notice__icon").boundingBox())!;
-  const message = (await error.locator(".kit-notice__message").boundingBox())!;
-  expect(Math.abs(icon.y + icon.height / 2 - message.y - message.height / 2)).toBeLessThan(1);
 
   const info = inline.getByRole("status");
-  await expect(info.locator(".kit-notice__tone")).toBeVisible();
-  await expect(info.locator(".kit-notice__tone")).toHaveText("Info");
-  await info.getByRole("button", { name: "Apply" }).click();
-  await expect(page.getByTestId("inline-notice-callbacks")).toHaveText("1");
+  const tone = info.locator(".kit-notice__tone");
+  await expect(tone).toBeVisible();
+  await expect(tone).toHaveText("Info");
+  const toneBox = (await tone.boundingBox())!;
+  const messageBox = (await info.locator(".kit-notice__message").boundingBox())!;
+  expect(toneBox.x).toBe(messageBox.x);
+  expect(toneBox.y + toneBox.height).toBeLessThanOrEqual(messageBox.y);
+
   const note = inline.getByRole("note");
   await expect(note).toHaveText(/Draft saved\./);
   await expect(note).not.toHaveAttribute("aria-live");
@@ -76,43 +74,34 @@ test("inline notices keep their semantics and align the icon with the message", 
   const noteMessage = (await note.locator(".kit-notice__message").boundingBox())!;
   expect(title.y + title.height).toBeLessThanOrEqual(noteMessage.y);
   expect(title.x).toBe(noteMessage.x);
-  for (const dark of [false, true]) {
-    await setTheme(page, { dark });
-    for (const notice of await inline.locator(".kit-notice").all()) {
-      expect(await contrastOf(notice.locator(".kit-notice__message"))).toBeGreaterThanOrEqual(4.5);
-    }
-  }
+});
 
-  const card = page.locator(".kit-notice").first();
-  await expect(card.locator(".kit-notice__tone")).toBeVisible();
-  await expect(card).not.toHaveCSS("border-top-width", "0px");
-
-  await error.evaluate((element) => {
-    element.style.width = "240px";
-    element.querySelector(".kit-notice__message")!.textContent =
-      "Could not load credentials. Check the connection and try again. The server may be temporarily unavailable.";
-  });
+test("inline icons align with the first line of wrapped messages", async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 800 });
+  await gotoPage(page, "notice");
+  const error = page.getByTestId("notice-inline-wrapped").getByRole("alert");
   const firstLine = await error.locator(".kit-notice__message").evaluate((element) => {
     const range = document.createRange();
     range.selectNodeContents(element);
     const lines = range.getClientRects();
     return { y: lines[0]!.y, height: lines[0]!.height, count: lines.length };
   });
-  const wrappedIcon = (await error.locator(".kit-notice__icon").boundingBox())!;
+  const icon = (await error.locator(".kit-notice__icon").boundingBox())!;
   expect(firstLine.count).toBeGreaterThan(1);
-  expect(
-    Math.abs(wrappedIcon.y + wrappedIcon.height / 2 - firstLine.y - firstLine.height / 2),
-  ).toBeLessThan(2);
+  expect(Math.abs(icon.y + icon.height / 2 - firstLine.y - firstLine.height / 2)).toBeLessThan(2);
+});
 
-  await info.evaluate((element) => {
-    element.style.width = "240px";
-    element.querySelector(".kit-notice__message")!.textContent =
-      "Changes are ready. Review the details before applying them to the current settings.";
-  });
-  const infoBox = (await info.boundingBox())!;
-  const buttonBox = (await info.getByRole("button").boundingBox())!;
+test("inline actions work and align with their messages", async ({ page }) => {
+  await gotoPage(page, "notice");
+  const info = page.getByTestId("notice-inline").getByRole("status");
+  await info.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByTestId("inline-notice-callbacks")).toHaveText("1");
+
+  const error = page.getByTestId("notice-inline-wrapped").getByRole("alert");
+  const errorBox = (await error.boundingBox())!;
+  const buttonBox = (await error.getByRole("button").boundingBox())!;
   expect(
-    Math.abs(infoBox.y + infoBox.height / 2 - buttonBox.y - buttonBox.height / 2),
+    Math.abs(errorBox.y + errorBox.height / 2 - buttonBox.y - buttonBox.height / 2),
   ).toBeLessThan(1);
 
   await page.setViewportSize({ width: 640, height: 800 });
@@ -123,4 +112,22 @@ test("inline notices keep their semantics and align the icon with the message", 
     return { message: message.x, action: range.getBoundingClientRect().x };
   });
   expect(Math.abs(edges.message - edges.action)).toBeLessThan(1);
+});
+
+test("inline notice messages stay readable in light and dark themes", async ({ page }) => {
+  await gotoPage(page, "notice");
+  const inline = page.getByTestId("notice-inline");
+  for (const dark of [false, true]) {
+    await setTheme(page, { dark });
+    for (const notice of await inline.locator(".kit-notice").all()) {
+      expect(await contrastOf(notice.locator(".kit-notice__message"))).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});
+
+test("the default notice keeps its visible tone and border", async ({ page }) => {
+  await gotoPage(page, "notice");
+  const card = page.locator(".kit-notice").first();
+  await expect(card.locator(".kit-notice__tone")).toBeVisible();
+  await expect(card).not.toHaveCSS("border-top-width", "0px");
 });

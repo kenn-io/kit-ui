@@ -49,6 +49,17 @@
       onaction={() => (noticeCallbacks += 1)}
     />
     <Notice variant="inline" live={false} title="Draft" message="Draft saved." />
+    <div data-testid="notice-inline-wrapped">
+      <Notice
+        variant="inline"
+        tone="error"
+        message="Couldn't load credentials. Check your connection and try again. If the problem continues, check the server settings before retrying."
+        actionLabel="Retry"
+        onaction={() => (noticeCallbacks += 1)}
+      >
+        {#snippet icon()}<CircleAlertIcon />{/snippet}
+      </Notice>
+    </div>
     <span class="notice-demo__readout" data-testid="inline-notice-callbacks">{noticeCallbacks}</span
     >
   </div>

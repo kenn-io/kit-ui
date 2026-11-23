@@ -58,7 +58,8 @@ text.
 
 The body is `message` (plain text) or the `children` snippet for rich content
 such as links, code, and lists. `children` wins when both are passed. An `icon`
-snippet replaces the tone dot. The tone label remains available to screen readers.
+snippet replaces the tone dot and is decorative: assistive technology reads the
+tone label instead.
 
 By default a notice is live: error notices use an alert role and other tones a
 status role, so assistive tech announces them when they appear. A callout that
@@ -72,9 +73,9 @@ is part of the page content should pass `live={false}`, which renders it as a
 </Notice>
 ```
 
-A card shows the tone label. An inline notice shows it when no icon is supplied;
-with an icon, the label is visually hidden. A title appears above the message in
-either variant.
+A card shows the tone label. An inline notice without an icon shows the label
+above the message beside the dot. With an icon, the label is visually hidden but
+available to screen readers. A title appears above the message in either variant.
 
 ```svelte
 <Notice variant="inline" tone="error" message="Couldn't load credentials.">
