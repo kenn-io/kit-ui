@@ -117,3 +117,20 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  # The main ruleset requires a check named "Browser tests". This job reports
+  # it once every shard has passed, so the shard count can change without
+  # editing the ruleset.
+  browser-result:
+    name: Browser tests
+    needs: browser
+    if: always()
+    runs-on: namespace-profile-linux-4cpu
+    timeout-minutes: 2
+    steps:
+      - name: Require every shard to pass
+        env:
+          RESULT: ${{ needs.browser.result }}
+        run: |
+          echo "Browser shards: $RESULT"
+          test "$RESULT" = success
