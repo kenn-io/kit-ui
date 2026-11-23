@@ -10,8 +10,7 @@ interface Props {
      * lists); when both are passed, `children` wins. */
     message?: string;
     children?: Snippet;
-    /** Replaces the tone dot, e.g. a Lucide icon. Decorative: the tone
-     * label carries the meaning. */
+    /** Replaces the tone dot, e.g. a Lucide icon. */
     icon?: Snippet;
     /** `true` (default) announces the notice as a live status (alert for
      * errors), for feedback that appears in response to something. Set

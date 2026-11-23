@@ -65,11 +65,17 @@ test("inline notices keep their semantics and align the icon with the message", 
   expect(Math.abs(icon.y + icon.height / 2 - message.y - message.height / 2)).toBeLessThan(1);
 
   const info = inline.getByRole("status");
+  await expect(info.locator(".kit-notice__tone")).toBeVisible();
+  await expect(info.locator(".kit-notice__tone")).toHaveText("Info");
   await info.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByTestId("inline-notice-callbacks")).toHaveText("1");
   const note = inline.getByRole("note");
   await expect(note).toHaveText(/Draft saved\./);
   await expect(note).not.toHaveAttribute("aria-live");
+  const title = (await note.locator(".kit-notice__title").boundingBox())!;
+  const noteMessage = (await note.locator(".kit-notice__message").boundingBox())!;
+  expect(title.y + title.height).toBeLessThanOrEqual(noteMessage.y);
+  expect(title.x).toBe(noteMessage.x);
   for (const dark of [false, true]) {
     await setTheme(page, { dark });
     for (const notice of await inline.locator(".kit-notice").all()) {
@@ -80,4 +86,41 @@ test("inline notices keep their semantics and align the icon with the message", 
   const card = page.locator(".kit-notice").first();
   await expect(card.locator(".kit-notice__tone")).toBeVisible();
   await expect(card).not.toHaveCSS("border-top-width", "0px");
+
+  await error.evaluate((element) => {
+    element.style.width = "240px";
+    element.querySelector(".kit-notice__message")!.textContent =
+      "Could not load credentials. Check the connection and try again. The server may be temporarily unavailable.";
+  });
+  const firstLine = await error.locator(".kit-notice__message").evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lines = range.getClientRects();
+    return { y: lines[0]!.y, height: lines[0]!.height, count: lines.length };
+  });
+  const wrappedIcon = (await error.locator(".kit-notice__icon").boundingBox())!;
+  expect(firstLine.count).toBeGreaterThan(1);
+  expect(
+    Math.abs(wrappedIcon.y + wrappedIcon.height / 2 - firstLine.y - firstLine.height / 2),
+  ).toBeLessThan(2);
+
+  await info.evaluate((element) => {
+    element.style.width = "240px";
+    element.querySelector(".kit-notice__message")!.textContent =
+      "Changes are ready. Review the details before applying them to the current settings.";
+  });
+  const infoBox = (await info.boundingBox())!;
+  const buttonBox = (await info.getByRole("button").boundingBox())!;
+  expect(
+    Math.abs(infoBox.y + infoBox.height / 2 - buttonBox.y - buttonBox.height / 2),
+  ).toBeLessThan(1);
+
+  await page.setViewportSize({ width: 640, height: 800 });
+  const edges = await info.evaluate((element) => {
+    const message = element.querySelector(".kit-notice__message")!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element.querySelector("button")!);
+    return { message: message.x, action: range.getBoundingClientRect().x };
+  });
+  expect(Math.abs(edges.message - edges.action)).toBeLessThan(1);
 });

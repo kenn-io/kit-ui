@@ -48,7 +48,7 @@
       actionLabel="Apply"
       onaction={() => (noticeCallbacks += 1)}
     />
-    <Notice variant="inline" live={false} message="Draft saved." />
+    <Notice variant="inline" live={false} title="Draft" message="Draft saved." />
     <span class="notice-demo__readout" data-testid="inline-notice-callbacks">{noticeCallbacks}</span
     >
   </div>

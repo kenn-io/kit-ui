@@ -15,8 +15,7 @@
      * lists); when both are passed, `children` wins. */
     message?: string;
     children?: Snippet;
-    /** Replaces the tone dot, e.g. a Lucide icon. Decorative: the tone
-     * label carries the meaning. */
+    /** Replaces the tone dot, e.g. a Lucide icon. */
     icon?: Snippet;
     /** `true` (default) announces the notice as a live status (alert for
      * errors), for feedback that appears in response to something. Set
@@ -69,7 +68,9 @@
     <span class="kit-notice__mark" aria-hidden="true"></span>
   {/if}
   <div class="kit-notice__content">
-    <p class:kit-sr-only={variant === "inline"} class="kit-notice__tone">{resolvedToneLabel}</p>
+    <p class:kit-sr-only={variant === "inline" && !!icon} class="kit-notice__tone">
+      {resolvedToneLabel}
+    </p>
     {#if title}<p class="kit-notice__title">{title}</p>{/if}
     {#if children}
       <div class="kit-notice__message kit-notice__body">{@render children()}</div>
@@ -198,7 +199,8 @@
 
   .kit-notice[data-variant="inline"] {
     box-sizing: border-box;
-    align-items: center;
+    align-content: center;
+    align-items: start;
     gap: var(--space-2);
     min-height: var(--space-8);
     padding: var(--space-2) var(--space-4);
@@ -207,7 +209,11 @@
   }
 
   .kit-notice[data-variant="inline"] .kit-notice__mark {
-    margin-top: 0;
+    margin-top: 4px;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__icon {
+    margin-top: calc((var(--font-size-sm) * 1.5 - 14px) / 2);
   }
 
   .kit-notice[data-variant="inline"] .kit-notice__icon :global(svg) {
@@ -217,6 +223,10 @@
 
   .kit-notice[data-variant="inline"] .kit-notice__message {
     color: var(--text-primary);
+  }
+
+  .kit-notice[data-variant="inline"] button {
+    align-self: center;
   }
 
   .kit-notice button {
