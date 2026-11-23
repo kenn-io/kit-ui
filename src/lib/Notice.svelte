@@ -208,6 +208,18 @@
     border: 0;
   }
 
+  .kit-notice[data-variant="inline"] .kit-notice__content {
+    position: relative;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__tone:global(.kit-sr-only) {
+    margin: -1px;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__mark {
+    margin-inline: 3px;
+  }
+
   .kit-notice[data-variant="inline"] .kit-notice__icon {
     margin-top: calc((var(--font-size-sm) * 1.5 - 14px) / 2);
   }

@@ -75,7 +75,8 @@ is part of the page content should pass `live={false}`, which renders it as a
 
 A card shows the tone label. An inline notice without an icon shows the label
 above the message beside the dot. With an icon, the label is visually hidden but
-available to screen readers. A title appears above the message in either variant.
+available to screen readers. Choose an icon that conveys the notice's tone as a
+visual cue. A title appears above the message in either variant.
 
 ```svelte
 <Notice variant="inline" tone="error" message="Couldn't load credentials.">

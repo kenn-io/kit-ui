@@ -57,6 +57,13 @@ test("inline notices show their tone and remove the card border", async ({ page 
   const error = inline.getByRole("alert").first();
   await expect(error.locator(".kit-notice__tone")).toHaveText("Error");
   await expect(error.locator(".kit-notice__tone")).toHaveCSS("clip-path", "inset(50%)");
+  await expect(error.locator(".kit-notice__tone")).toHaveCSS("margin-bottom", "-1px");
+  const bounds = await error.evaluate((element) => {
+    const content = element.querySelector(".kit-notice__content")!;
+    const label = element.querySelector(".kit-notice__tone")!;
+    return { contained: (label as HTMLElement).offsetParent === content };
+  });
+  expect(bounds.contained).toBe(true);
   await expect(error).toHaveCSS("border-top-width", "0px");
   expect((await error.boundingBox())!.height).toBeGreaterThanOrEqual(32);
 
@@ -64,6 +71,9 @@ test("inline notices show their tone and remove the card border", async ({ page 
   const tone = info.locator(".kit-notice__tone");
   await expect(tone).toHaveText("Info");
   await expect(tone).not.toHaveCSS("clip-path", "inset(50%)");
+  const mark = (await info.locator(".kit-notice__mark").boundingBox())!;
+  const label = (await tone.boundingBox())!;
+  expect(label.x - (mark.x + mark.width + 3)).toBeGreaterThanOrEqual(4);
   await expect(page.locator(".kit-notice").first()).not.toHaveCSS("border-top-width", "0px");
 });
 
