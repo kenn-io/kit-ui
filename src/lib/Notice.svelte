@@ -1,5 +1,6 @@
 <script module lang="ts">
   export type NoticeTone = "info" | "success" | "warning" | "error" | "note" | "tip" | "important";
+  export type NoticeVariant = "card" | "inline";
 </script>
 
 <script lang="ts">
@@ -7,6 +8,7 @@
 
   interface Props {
     tone?: NoticeTone;
+    variant?: NoticeVariant;
     toneLabel?: string;
     title?: string;
     /** Plain-text body. Use `children` for rich content (links, code,
@@ -28,6 +30,7 @@
 
   let {
     tone = "info",
+    variant = "card",
     toneLabel = undefined,
     title = undefined,
     message = undefined,
@@ -53,14 +56,20 @@
   const ariaLive = $derived(live ? (tone === "error" ? "assertive" : "polite") : undefined);
 </script>
 
-<div class="kit-notice {className}" data-tone={tone} {role} aria-live={ariaLive}>
+<div
+  class="kit-notice {className}"
+  data-tone={tone}
+  data-variant={variant}
+  {role}
+  aria-live={ariaLive}
+>
   {#if icon}
     <span class="kit-notice__icon" aria-hidden="true">{@render icon()}</span>
   {:else}
     <span class="kit-notice__mark" aria-hidden="true"></span>
   {/if}
   <div class="kit-notice__content">
-    <p class="kit-notice__tone">{resolvedToneLabel}</p>
+    <p class:kit-sr-only={variant === "inline"} class="kit-notice__tone">{resolvedToneLabel}</p>
     {#if title}<p class="kit-notice__title">{title}</p>{/if}
     {#if children}
       <div class="kit-notice__message kit-notice__body">{@render children()}</div>
@@ -185,6 +194,26 @@
   .kit-notice__body :global(code) {
     font-family: var(--font-mono);
     font-size: 0.92em;
+  }
+
+  .kit-notice[data-variant="inline"] {
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__mark {
+    margin-top: 0;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__icon :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__message {
+    color: var(--text-primary);
   }
 
   .kit-notice button {

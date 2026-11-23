@@ -1,7 +1,9 @@
 export type NoticeTone = "info" | "success" | "warning" | "error" | "note" | "tip" | "important";
+export type NoticeVariant = "card" | "inline";
 import type { Snippet } from "svelte";
 interface Props {
     tone?: NoticeTone;
+    variant?: NoticeVariant;
     toneLabel?: string;
     title?: string;
     /** Plain-text body. Use `children` for rich content (links, code,

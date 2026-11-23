@@ -47,3 +47,33 @@ test("callout body text stays readable on every tone", async ({ page }) => {
     }
   }
 });
+
+test("inline notices keep their semantics and align the icon with the message", async ({
+  page,
+}) => {
+  await gotoPage(page, "notice");
+
+  const inline = page.getByTestId("notice-inline");
+  const error = inline.getByRole("alert");
+  await expect(error).toHaveAttribute("aria-live", "assertive");
+  await expect(error.locator(".kit-notice__tone")).toHaveText("Error");
+  await expect(error.locator(".kit-notice__tone")).toHaveCSS("clip-path", "inset(50%)");
+  await expect(error).toHaveCSS("border-top-width", "0px");
+  const icon = (await error.locator(".kit-notice__icon").boundingBox())!;
+  const message = (await error.locator(".kit-notice__message").boundingBox())!;
+  expect(Math.abs(icon.y + icon.height / 2 - message.y - message.height / 2)).toBeLessThan(1);
+
+  const info = inline.getByRole("status");
+  await info.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByTestId("inline-notice-callbacks")).toHaveText("1");
+  for (const dark of [false, true]) {
+    await setTheme(page, { dark });
+    for (const notice of await inline.locator(".kit-notice").all()) {
+      expect(await contrastOf(notice.locator(".kit-notice__message"))).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+
+  const card = page.locator(".kit-notice").first();
+  await expect(card.locator(".kit-notice__tone")).toBeVisible();
+  await expect(card).not.toHaveCSS("border-top-width", "0px");
+});

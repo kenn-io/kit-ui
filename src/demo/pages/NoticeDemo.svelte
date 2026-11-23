@@ -1,5 +1,6 @@
 <script lang="ts">
   import LightbulbIcon from "@lucide/svelte/icons/lightbulb";
+  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import { Notice } from "../../lib/index.js";
   import DemoSection from "../DemoSection.svelte";
 
@@ -27,6 +28,27 @@
     />
     <span class="notice-demo__readout" data-testid="auth-notice-callbacks" aria-live="polite"
       >{noticeCallbacks}</span
+    >
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Inline"
+  code={`<Notice variant="inline" tone="error" message="Couldn't load credentials.">
+  {#snippet icon()}<CircleAlertIcon />{/snippet}
+</Notice>`}
+>
+  <div class="notice-demo notice-demo--stack" data-testid="notice-inline">
+    <Notice variant="inline" tone="error" message="Couldn't load credentials.">
+      {#snippet icon()}<CircleAlertIcon />{/snippet}
+    </Notice>
+    <Notice
+      variant="inline"
+      message="Changes are ready."
+      actionLabel="Apply"
+      onaction={() => (noticeCallbacks += 1)}
+    />
+    <span class="notice-demo__readout" data-testid="inline-notice-callbacks">{noticeCallbacks}</span
     >
   </div>
 </DemoSection>
