@@ -63,12 +63,13 @@ virtual cursors rely on `aria-modal` support (all evergreen browsers).
 
 ## Surface
 
-The panel is a transient floating surface, like a popover: `--bg-popover`
+The panel is a transient floating surface, like a popover: `--bg-modal`
 fill, `--border-popover` edge, `--shadow-lg`. In light these equal the plain
-surface and default border. In dark the panel is a step lighter than the
-page surface, so it reads above the scrim, and `--bg-surface-hover` inside
-it steps up from the panel so hover still lightens. A toned header band
-mixes its tint over the panel's fill.
+surface and default border. In dark the panel keeps the plain surface,
+since the scrim already sets it apart, and takes the lighter popover edge.
+Popovers keep their lighter fill. `--bg-surface-hover` inside the panel
+steps up from it so hover still lightens. A toned header band mixes its tint
+over the panel's fill.
 
 ## Props
 
