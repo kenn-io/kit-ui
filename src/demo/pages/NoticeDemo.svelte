@@ -48,7 +48,6 @@
       actionLabel="Apply"
       onaction={() => (noticeCallbacks += 1)}
     />
-    <Notice variant="inline" live={false} title="Draft" message="Draft saved." />
     <Notice
       variant="inline"
       tone="error"
