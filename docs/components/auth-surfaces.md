@@ -58,8 +58,8 @@ text.
 
 The body is `message` (plain text) or the `children` snippet for rich content
 such as links, code, and lists. `children` wins when both are passed. An `icon`
-snippet replaces the tone dot and is decorative: assistive technology reads the
-tone label instead.
+snippet replaces the tone dot; it is decorative, because the tone label carries
+the meaning.
 
 By default a notice is live: error notices use an alert role and other tones a
 status role, so assistive tech announces them when they appear. A callout that

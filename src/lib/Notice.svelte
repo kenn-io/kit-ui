@@ -15,7 +15,8 @@
      * lists); when both are passed, `children` wins. */
     message?: string;
     children?: Snippet;
-    /** Replaces the tone dot, e.g. a Lucide icon. */
+    /** Replaces the tone dot, e.g. a Lucide icon. Decorative: the tone
+     * label carries the meaning. */
     icon?: Snippet;
     /** `true` (default) announces the notice as a live status (alert for
      * errors), for feedback that appears in response to something. Set
@@ -205,10 +206,6 @@
     padding: var(--space-2) var(--space-4);
     background: color-mix(in srgb, var(--kit-notice-accent) 12%, var(--bg-surface));
     border: 0;
-  }
-
-  .kit-notice[data-variant="inline"] .kit-notice__mark {
-    margin-top: 4px;
   }
 
   .kit-notice[data-variant="inline"] .kit-notice__icon {

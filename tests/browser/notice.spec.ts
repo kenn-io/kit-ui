@@ -79,7 +79,7 @@ test("inline notices retain their tone and live-region semantics", async ({ page
 test("inline icons align with the first line of wrapped messages", async ({ page }) => {
   await page.setViewportSize({ width: 640, height: 800 });
   await gotoPage(page, "notice");
-  const error = page.getByTestId("notice-inline-wrapped").getByRole("alert");
+  const error = page.getByTestId("notice-inline").getByRole("alert").last();
   const firstLine = await error.locator(".kit-notice__message").evaluate((element) => {
     const range = document.createRange();
     range.selectNodeContents(element);
@@ -95,9 +95,9 @@ test("inline actions work and align with their messages", async ({ page }) => {
   await gotoPage(page, "notice");
   const info = page.getByTestId("notice-inline").getByRole("status");
   await info.getByRole("button", { name: "Apply" }).click();
-  await expect(page.getByTestId("inline-notice-callbacks")).toHaveText("1");
+  await expect(page.getByTestId("auth-notice-callbacks")).toHaveText("1");
 
-  const error = page.getByTestId("notice-inline-wrapped").getByRole("alert");
+  const error = page.getByTestId("notice-inline").getByRole("alert").last();
   const errorBox = (await error.boundingBox())!;
   const buttonBox = (await error.getByRole("button").boundingBox())!;
   expect(
