@@ -28,6 +28,8 @@ Do not infer fork eligibility or network/cache isolation from this setting.
 
 Breaking API changes are 100% acceptable.
 
+Consumers pin a full commit SHA on `main`. Don't cut tags or releases.
+
 ## Git workflow
 
 - Finish implementation tasks by running the relevant checks, committing the
