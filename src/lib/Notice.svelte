@@ -1,5 +1,6 @@
 <script module lang="ts">
   export type NoticeTone = "info" | "success" | "warning" | "error" | "note" | "tip" | "important";
+  export type NoticeVariant = "card" | "inline";
 </script>
 
 <script lang="ts">
@@ -7,14 +8,15 @@
 
   interface Props {
     tone?: NoticeTone;
+    variant?: NoticeVariant;
     toneLabel?: string;
     title?: string;
     /** Plain-text body. Use `children` for rich content (links, code,
      * lists); when both are passed, `children` wins. */
     message?: string;
     children?: Snippet;
-    /** Replaces the tone dot, e.g. a Lucide icon. Decorative: the tone
-     * label carries the meaning. */
+    /** Replaces the tone dot. For inline notices, use an icon that conveys
+     * the tone visually. The tone label remains available to assistive tech. */
     icon?: Snippet;
     /** `true` (default) announces the notice as a live status (alert for
      * errors), for feedback that appears in response to something. Set
@@ -28,6 +30,7 @@
 
   let {
     tone = "info",
+    variant = "card",
     toneLabel = undefined,
     title = undefined,
     message = undefined,
@@ -53,14 +56,22 @@
   const ariaLive = $derived(live ? (tone === "error" ? "assertive" : "polite") : undefined);
 </script>
 
-<div class="kit-notice {className}" data-tone={tone} {role} aria-live={ariaLive}>
+<div
+  class="kit-notice {className}"
+  data-tone={tone}
+  data-variant={variant}
+  {role}
+  aria-live={ariaLive}
+>
   {#if icon}
     <span class="kit-notice__icon" aria-hidden="true">{@render icon()}</span>
   {:else}
     <span class="kit-notice__mark" aria-hidden="true"></span>
   {/if}
   <div class="kit-notice__content">
-    <p class="kit-notice__tone">{resolvedToneLabel}</p>
+    <p class:kit-sr-only={variant === "inline" && !!icon} class="kit-notice__tone">
+      {resolvedToneLabel}
+    </p>
     {#if title}<p class="kit-notice__title">{title}</p>{/if}
     {#if children}
       <div class="kit-notice__message kit-notice__body">{@render children()}</div>
@@ -137,18 +148,21 @@
     min-width: 0;
   }
 
-  .kit-notice__tone,
+  .kit-notice__tone:not(:global(.kit-sr-only)),
   .kit-notice__title,
   .kit-notice__message {
     margin: 0;
   }
 
   .kit-notice__tone {
-    margin-bottom: var(--space-1);
     color: var(--text-secondary);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
     line-height: 1.4;
+  }
+
+  .kit-notice__tone:not(:global(.kit-sr-only)) {
+    margin-bottom: var(--space-1);
   }
 
   .kit-notice__title {
@@ -185,6 +199,42 @@
   .kit-notice__body :global(code) {
     font-family: var(--font-mono);
     font-size: 0.92em;
+  }
+
+  .kit-notice[data-variant="inline"] {
+    box-sizing: border-box;
+    align-content: center;
+    gap: var(--space-2);
+    min-height: var(--space-8);
+    padding: var(--space-2) var(--space-4);
+    background: color-mix(in srgb, var(--kit-notice-accent) 12%, var(--bg-surface));
+    border: 0;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__content {
+    position: relative;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__mark {
+    margin-top: calc((var(--font-size-xs) * 1.4 - 8px) / 2);
+    margin-inline: 3px;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__icon {
+    margin-top: calc((var(--font-size-sm) * 1.5 - 14px) / 2);
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__icon :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .kit-notice[data-variant="inline"] .kit-notice__message {
+    color: var(--text-primary);
+  }
+
+  .kit-notice[data-variant="inline"] button {
+    align-self: center;
   }
 
   .kit-notice button {

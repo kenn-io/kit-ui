@@ -1,7 +1,7 @@
 export { default as FormField } from "./FormField.svelte";
 export type { FieldState, FormFieldType } from "./FormField.svelte";
 export { default as Notice } from "./Notice.svelte";
-export type { NoticeTone } from "./Notice.svelte";
+export type { NoticeTone, NoticeVariant } from "./Notice.svelte";
 export { default as PageFrame } from "./PageFrame.svelte";
 export { default as Accordion } from "./components/Accordion.svelte";
 export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.svelte";

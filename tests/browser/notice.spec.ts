@@ -36,14 +36,66 @@ test("callouts render rich children and a custom icon", async ({ page }) => {
   expect(item.x).toBeGreaterThan(label.x + 8);
 });
 
-test("callout body text stays readable on every tone", async ({ page }) => {
+test("notice body text stays readable on every tone", async ({ page }) => {
   await gotoPage(page, "notice");
 
-  const callouts = page.getByTestId("notice-callouts").locator(".kit-notice");
   for (const dark of [false, true]) {
     await setTheme(page, { dark });
-    for (const callout of await callouts.all()) {
-      expect(await contrastOf(callout.locator(".kit-notice__message"))).toBeGreaterThanOrEqual(4.5);
+    for (const id of ["notice-callouts", "notice-inline"]) {
+      for (const notice of await page.getByTestId(id).locator(".kit-notice").all()) {
+        expect(await contrastOf(notice.locator(".kit-notice__message"))).toBeGreaterThanOrEqual(
+          4.5,
+        );
+      }
     }
   }
+});
+
+test("inline notices show their tone and remove the card border", async ({ page }) => {
+  await gotoPage(page, "notice");
+  const inline = page.getByTestId("notice-inline");
+  const error = inline.getByRole("alert").first();
+  await expect(error.locator(".kit-notice__tone")).toHaveCSS("clip-path", "inset(50%)");
+  await expect(error.locator(".kit-notice__tone")).toHaveCSS("margin-bottom", "-1px");
+  const contained = await error.evaluate((element) => {
+    const content = element.querySelector(".kit-notice__content")!;
+    const label = element.querySelector(".kit-notice__tone")!;
+    return (label as HTMLElement).offsetParent === content;
+  });
+  expect(contained).toBe(true);
+  await expect(error).toHaveCSS("border-top-width", "0px");
+  expect((await error.boundingBox())!.height).toBeGreaterThanOrEqual(32);
+
+  const info = inline.getByRole("status");
+  const tone = info.locator(".kit-notice__tone");
+  await expect(tone).not.toHaveCSS("clip-path", "inset(50%)");
+  await expect(page.locator(".kit-notice").first()).not.toHaveCSS("border-top-width", "0px");
+});
+
+test("inline indicators and actions align with messages", async ({ page }) => {
+  await gotoPage(page, "notice");
+  const inline = page.getByTestId("notice-inline");
+  const info = inline.getByRole("status");
+  const mark = (await info.locator(".kit-notice__mark").boundingBox())!;
+  const label = (await info.locator(".kit-notice__tone").boundingBox())!;
+  expect(label.x - (mark.x + mark.width + 3)).toBeGreaterThanOrEqual(4);
+  expect(Math.abs(mark.y + mark.height / 2 - label.y - label.height / 2)).toBeLessThan(0.5);
+
+  const error = inline.getByRole("alert").last();
+  const firstLine = await error.locator(".kit-notice__message").evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lines = range.getClientRects();
+    return { y: lines[0]!.y, height: lines[0]!.height, count: lines.length };
+  });
+  const icon = (await error.locator(".kit-notice__icon").boundingBox())!;
+  expect(firstLine.count).toBeGreaterThan(1);
+  expect(icon.width).toBe(14);
+  expect(Math.abs(icon.y + icon.height / 2 - firstLine.y - firstLine.height / 2)).toBeLessThan(0.5);
+
+  const errorBox = (await error.boundingBox())!;
+  const buttonBox = (await error.getByRole("button").boundingBox())!;
+  expect(
+    Math.abs(errorBox.y + errorBox.height / 2 - buttonBox.y - buttonBox.height / 2),
+  ).toBeLessThan(1);
 });

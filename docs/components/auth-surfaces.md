@@ -73,18 +73,30 @@ is part of the page content should pass `live={false}`, which renders it as a
 </Notice>
 ```
 
-| Prop          | Type         | Default   | Notes                                                             |
-| ------------- | ------------ | --------- | ----------------------------------------------------------------- |
-| `tone`        | `NoticeTone` | `"info"`  | `info \| success \| warning \| error \| note \| tip \| important` |
-| `toneLabel`   | `string`     | tone name | Visible tone label, for localization                              |
-| `title`       | `string`     | —         |                                                                   |
-| `message`     | `string`     | —         | Plain-text body                                                   |
-| `children`    | `Snippet`    | —         | Rich body; wins over `message`                                    |
-| `icon`        | `Snippet`    | —         | Replaces the tone dot                                             |
-| `live`        | `boolean`    | `true`    | `false` renders a static `note` callout                           |
-| `actionLabel` | `string`     | —         | Shown with `onaction`                                             |
-| `onaction`    | `() => void` | —         |                                                                   |
-| `class`       | `string`     | `""`      |                                                                   |
+A card shows the tone label. An inline notice without an icon shows the label
+above the message beside the dot. With an icon, the label is visually hidden but
+available to screen readers. Choose an icon that conveys the notice's tone as a
+visual cue. A title appears above the message in either variant.
+
+```svelte
+<Notice variant="inline" tone="error" message="Couldn't load credentials.">
+  {#snippet icon()}<CircleAlertIcon />{/snippet}
+</Notice>
+```
+
+| Prop          | Type            | Default   | Notes                                                             |
+| ------------- | --------------- | --------- | ----------------------------------------------------------------- |
+| `tone`        | `NoticeTone`    | `"info"`  | `info \| success \| warning \| error \| note \| tip \| important` |
+| `variant`     | `NoticeVariant` | `"card"`  | `card` or `inline`                                                |
+| `toneLabel`   | `string`        | tone name | Tone label; visually hidden inline with an icon                   |
+| `title`       | `string`        | —         |                                                                   |
+| `message`     | `string`        | —         | Plain-text body                                                   |
+| `children`    | `Snippet`       | —         | Rich body; wins over `message`                                    |
+| `icon`        | `Snippet`       | —         | Replaces the tone dot                                             |
+| `live`        | `boolean`       | `true`    | `false` renders a static `note` callout                           |
+| `actionLabel` | `string`        | —         | Shown with `onaction`                                             |
+| `onaction`    | `() => void`    | —         |                                                                   |
+| `class`       | `string`        | `""`      |                                                                   |
 
 Markdown renders GitHub alert blockquotes (`> [!NOTE]`) with the same tone
 colors; see [CodeBlock + Markdown](code-block.md#alerts).
