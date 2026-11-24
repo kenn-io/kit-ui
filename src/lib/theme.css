@@ -246,18 +246,6 @@
   --border-default: var(--border-default-popover);
 }
 
-/* An "off" mark, such as a filter item's dot while the filter is not
- * applied. It uses the muted border, which left it about 1.0:1 in a dark
- * popover, so it read as missing rather than off. In a dark popover it
- * takes the control edge, above 3:1 on the popover and on a hovered row. */
-:root {
-  --mark-off: var(--border-muted);
-}
-
-:root.dark .kit-popover-card {
-  --mark-off: var(--border-control);
-}
-
 /* The modal panel takes its own fill, so its hover steps up from that. */
 :root.dark .kit-modal-panel {
   --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-modal));

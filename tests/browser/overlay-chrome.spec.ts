@@ -193,6 +193,35 @@ async function markColor(card: Locator, selector: string, side?: string): Promis
     );
 }
 
+/** An off row's dot and the row around it as the eye sees them: the row
+ * dims as a group, so both blend with the popover by the row's opacity. */
+async function seenDot(row: Locator): Promise<{ dot: string; row: string }> {
+  return row.evaluate((el) => {
+    for (const animation of el.getAnimations({ subtree: true })) animation.finish();
+    const card = el.closest(".kit-popover-card")!;
+    const dot = el.querySelector(".kit-filter-dropdown__dot")!;
+    let opacity = 1;
+    for (let node: Element | null = dot; node && node !== card; node = node.parentElement) {
+      opacity *= Number(getComputedStyle(node).opacity);
+    }
+    const popover = getComputedStyle(card).backgroundColor;
+    const fill = getComputedStyle(el).backgroundColor;
+    const seen = (color: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = `color-mix(in srgb, ${color} ${opacity * 100}%, ${popover})`;
+      card.append(probe);
+      const computed = getComputedStyle(probe).color;
+      probe.remove();
+      return computed;
+    };
+    const transparent = fill === "rgba(0, 0, 0, 0)";
+    return {
+      dot: seen(getComputedStyle(dot).backgroundColor),
+      row: transparent ? popover : seen(fill),
+    };
+  });
+}
+
 for (const highContrast of [false, true]) {
   const mode = highContrast ? "dark high contrast" : "dark";
 
@@ -208,17 +237,17 @@ for (const highContrast of [false, true]) {
       await expect(card).toBeVisible();
       const draft = card.locator(".kit-filter-dropdown__item", { hasText: "Draft" });
       await expect(draft).toHaveAttribute("aria-pressed", "false");
-      const dot = await draft
-        .locator(".kit-filter-dropdown__dot")
-        .evaluate((el) => getComputedStyle(el).backgroundColor);
       const popover = await card.evaluate((el) => getComputedStyle(el).backgroundColor);
-      const hover = await resolvedStyleIn(card, "background-color", "var(--bg-surface-hover)");
+      const atRest = await seenDot(draft);
       expect(
-        colorContrast(dot, popover),
-        `${where}: off dot on the popover`,
+        colorContrast(atRest.dot, atRest.row),
+        `${where}: off dot at rest`,
       ).toBeGreaterThanOrEqual(3);
+      await draft.hover();
+      const hovered = await seenDot(draft);
+      expect(hovered.row, `${where}: hovered row fill`).not.toBe(atRest.row);
       expect(
-        colorContrast(dot, hover),
+        colorContrast(hovered.dot, hovered.row),
         `${where}: off dot on a hovered row`,
       ).toBeGreaterThanOrEqual(3);
       const divider = await markColor(card, ".kit-filter-dropdown__divider");

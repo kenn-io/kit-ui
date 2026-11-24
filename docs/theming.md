@@ -28,7 +28,7 @@ document.documentElement.classList.toggle("dark", prefersDark);
 | Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                              |
 | Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                       |
 | Popovers    | `--bg-popover`, `--border-popover` (popover fill, popover and Modal edge; lighter in dark), `--bg-modal` (Modal fill, plain in dark), `--text-muted-popover` (dark: their own muted ink) |
-| Controls    | `--border-control` (checkbox, radio, text field, and calendar today edge; stronger in dark popovers), `--mark-off` (an inactive dot)                                                     |
+| Controls    | `--border-control` (checkbox, radio, text field, and calendar today edge; stronger in dark popovers)                                                                                     |
 | Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                  |
 | Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                            |
 | Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                             |
@@ -302,11 +302,6 @@ Outside high contrast, the dark card also redefines `--border-muted` and
 `--text-primary`. The page's borders sit at about 1.1:1 on the popover, so
 dividers and the edges of pills and keys vanished; the mixes give at least
 1.7:1 and 2.2:1. A theme sets either in its `:root.dark` block to change it.
-
-`--mark-off` colors a mark that shows something is off, such as an inactive
-FilterDropdown item's dot. It is `--border-muted`, and `--border-control`
-in a dark popover, so the dot clears 3:1 there and reads as off rather than
-missing.
 
 The Modal panel keeps its own radius, takes `--border-popover`, and gets
 the same muted ink, but fills with `--bg-modal`: the popover fill in light,
