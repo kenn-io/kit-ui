@@ -454,11 +454,7 @@
             <span
               class="kit-filter-dropdown__dot"
               data-filled={item.color ? "" : undefined}
-              style:background={item.color
-                ? item.active
-                  ? item.color
-                  : "var(--border-muted)"
-                : undefined}
+              style:background={item.color && item.active ? item.color : undefined}
             ></span>
             <span class="kit-filter-dropdown__label">{item.label}</span>
             {#if item.excluded}
@@ -684,6 +680,25 @@
     border-radius: var(--radius-dot, 50%);
     flex-shrink: 0;
     transition: background var(--transition-fast) var(--transition-ease, ease);
+  }
+
+  /* A colored item that is off shows a grey dot, so it reads as off rather
+     than missing. The muted border nearly matched a dark popover's fill, so
+     there the dot takes the control edge, above 3:1 on the popover and on a
+     hovered row. A row that is off also dims to half, dot included, so its
+     dot starts from the primary ink and lands near that same strength. */
+  .kit-filter-dropdown__dot[data-filled] {
+    background: var(--border-muted);
+  }
+
+  :global(:root.dark) .kit-filter-dropdown__dot[data-filled] {
+    background: var(--border-control);
+  }
+
+  :global(:root.dark)
+    .kit-filter-dropdown__item:not(.active, .excluded, .submenu)
+    .kit-filter-dropdown__dot[data-filled] {
+    background: var(--text-primary);
   }
 
   /* As in a menu's icon column: when any row has a dot, every row keeps the

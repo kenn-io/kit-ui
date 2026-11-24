@@ -229,6 +229,23 @@
   --border-control: color-mix(in srgb, var(--text-primary) 50%, var(--bg-popover));
 }
 
+/* Rules and outlines. The page's dark borders sit about 1.1:1 on a dark
+ * popover, so dividers and the edges of pills and keys vanished there.
+ * Inside a dark popover each border steps toward the primary ink, muted by
+ * a fifth and default by a quarter: at least 1.7:1 and 2.2:1 on the
+ * popover, with default still the stronger of the two. The mixes resolve on
+ * the root, where the borders are still the theme's own. High contrast
+ * keeps its borders, which are already strong. */
+:root.dark {
+  --border-muted-popover: color-mix(in srgb, var(--text-primary) 20%, var(--border-muted));
+  --border-default-popover: color-mix(in srgb, var(--text-primary) 25%, var(--border-default));
+}
+
+:root.dark:not(.high-contrast) .kit-popover-card {
+  --border-muted: var(--border-muted-popover);
+  --border-default: var(--border-default-popover);
+}
+
 /* The modal panel takes its own fill, so its hover steps up from that. */
 :root.dark .kit-modal-panel {
   --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-modal));

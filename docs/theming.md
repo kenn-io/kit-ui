@@ -296,6 +296,13 @@ radio, or text field and the calendar's today ring: `--text-primary` mixed
 default border sits at about 1.1:1 on the popover and its hover fill, under
 the 3:1 a control's edge needs; the mix clears 3:1 on both.
 
+Outside high contrast, the dark card also redefines `--border-muted` and
+`--border-default`, to `--border-muted-popover` and
+`--border-default-popover`: the theme's borders mixed 20% and 25% toward
+`--text-primary`. The page's borders sit at about 1.1:1 on the popover, so
+dividers and the edges of pills and keys vanished; the mixes give at least
+1.7:1 and 2.2:1. A theme sets either in its `:root.dark` block to change it.
+
 The Modal panel keeps its own radius, takes `--border-popover`, and gets
 the same muted ink, but fills with `--bg-modal`: the popover fill in light,
 and the plain surface in dark. A dialog dims the page, so the scrim already

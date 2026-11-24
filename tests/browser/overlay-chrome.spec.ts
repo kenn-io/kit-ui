@@ -6,6 +6,7 @@ import {
   luminanceOf,
   resolvedStyle,
   setTheme,
+  useTheme,
 } from "./helpers.js";
 
 // Transient surfaces share one chrome: the --shadow-lg lift, and in dark a
@@ -159,6 +160,157 @@ for (const highContrast of [false, true]) {
     await expectEdgeClearsPopover(panel, ring.slice(0, ring.indexOf(")") + 1));
   });
 }
+
+// A dark popover is lighter than the page, and the page's borders and the
+// muted fill of an "off" dot nearly matched it there. An off dot needs 3:1
+// to read as off rather than missing; a divider needs to show plainly,
+// taken here as 1.6:1 on the popover fill. Every built-in theme.
+
+const THEMES = [
+  null,
+  "control-room",
+  "terminal",
+  "zine",
+  "pebble",
+  "gallery",
+  "arctic",
+  "ember",
+  "graphite",
+  "quiet",
+] as const;
+
+const DIVIDER_CONTRAST = 1.6;
+
+/** The background color of the first `selector` inside the open card, or a
+ * border color with `side`. */
+async function markColor(card: Locator, selector: string, side?: string): Promise<string> {
+  return card
+    .locator(selector)
+    .first()
+    .evaluate(
+      (el, edge) => getComputedStyle(el).getPropertyValue(edge ?? "background-color"),
+      side ? `border-${side}-color` : undefined,
+    );
+}
+
+/** An off row's dot and the row around it as the eye sees them: the row
+ * dims as a group, so both blend with the popover by the row's opacity. */
+async function seenDot(row: Locator): Promise<{ dot: string; row: string }> {
+  return row.evaluate((el) => {
+    for (const animation of el.getAnimations({ subtree: true })) animation.finish();
+    const card = el.closest(".kit-popover-card")!;
+    const dot = el.querySelector(".kit-filter-dropdown__dot")!;
+    let opacity = 1;
+    for (let node: Element | null = dot; node && node !== card; node = node.parentElement) {
+      opacity *= Number(getComputedStyle(node).opacity);
+    }
+    const popover = getComputedStyle(card).backgroundColor;
+    const fill = getComputedStyle(el).backgroundColor;
+    const seen = (color: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = `color-mix(in srgb, ${color} ${opacity * 100}%, ${popover})`;
+      card.append(probe);
+      const computed = getComputedStyle(probe).color;
+      probe.remove();
+      return computed;
+    };
+    const transparent = fill === "rgba(0, 0, 0, 0)";
+    return {
+      dot: seen(getComputedStyle(dot).backgroundColor),
+      row: transparent ? popover : seen(fill),
+    };
+  });
+}
+
+for (const highContrast of [false, true]) {
+  const mode = highContrast ? "dark high contrast" : "dark";
+
+  test(`an off filter dot and the dividers show in a dark popover · ${mode}`, async ({ page }) => {
+    for (const theme of THEMES) {
+      await gotoPage(page, "filter-dropdown");
+      await useTheme(page, theme);
+      await setTheme(page, { dark: true, highContrast });
+      const where = `${theme ?? "default"} · ${mode}`;
+
+      await page.locator(".kit-filter-dropdown__btn", { hasText: "State" }).first().click();
+      let card = page.locator(".kit-filter-dropdown__panel.kit-popover-card").first();
+      await expect(card).toBeVisible();
+      const draft = card.locator(".kit-filter-dropdown__item", { hasText: "Draft" });
+      await expect(draft).toHaveAttribute("aria-pressed", "false");
+      const popover = await card.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const atRest = await seenDot(draft);
+      expect(
+        colorContrast(atRest.dot, atRest.row),
+        `${where}: off dot at rest`,
+      ).toBeGreaterThanOrEqual(3);
+      await draft.hover();
+      const hovered = await seenDot(draft);
+      expect(hovered.row, `${where}: hovered row fill`).not.toBe(atRest.row);
+      expect(
+        colorContrast(hovered.dot, hovered.row),
+        `${where}: off dot on a hovered row`,
+      ).toBeGreaterThanOrEqual(3);
+      const divider = await markColor(card, ".kit-filter-dropdown__divider");
+      expect(colorContrast(divider, popover), `${where}: section divider`).toBeGreaterThanOrEqual(
+        DIVIDER_CONTRAST,
+      );
+      await page.keyboard.press("Escape");
+
+      await page.getByRole("button", { name: "Models" }).click();
+      card = page.locator(".kit-filter-dropdown__panel.kit-popover-card").first();
+      await expect(card).toBeVisible();
+      const rule = await markColor(card, ".kit-filter-dropdown__bulk-actions", "bottom");
+      expect(colorContrast(rule, popover), `${where}: search rule`).toBeGreaterThanOrEqual(
+        DIVIDER_CONTRAST,
+      );
+      await page.keyboard.press("Escape");
+    }
+  });
+
+  test(`a menu separator shows in a dark popover · ${mode}`, async ({ page }) => {
+    await gotoPage(page, "menu");
+    await setTheme(page, { dark: true, highContrast });
+    await page.getByRole("button", { name: "Task actions" }).first().click();
+    const card = page.locator(".kit-menu__content.kit-popover-card").first();
+    await expect(card.locator(".kit-menu__separator").first()).toBeAttached();
+    const popover = await card.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const separator = await markColor(card, ".kit-menu__separator");
+    expect(colorContrast(separator, popover)).toBeGreaterThanOrEqual(DIVIDER_CONTRAST);
+  });
+}
+
+test("light popovers keep the page's borders and muted off dot", async ({ page }) => {
+  await gotoPage(page, "filter-dropdown");
+  await setTheme(page, { dark: false });
+  await page.locator(".kit-filter-dropdown__btn", { hasText: "State" }).first().click();
+  const card = page.locator(".kit-filter-dropdown__panel.kit-popover-card").first();
+  await expect(card).toBeVisible();
+  const muted = await resolvedStyle(page, "background-color", "var(--border-muted)");
+  expect(await markColor(card, ".kit-filter-dropdown__divider")).toBe(muted);
+  const dot = card
+    .locator(".kit-filter-dropdown__item", { hasText: "Draft" })
+    .locator(".kit-filter-dropdown__dot");
+  await expect(dot).toHaveCSS("background-color", muted);
+});
+
+test("a dark tooltip's arrow matches its bubble", async ({ page }) => {
+  await gotoPage(page, "tooltip");
+  await setTheme(page, { dark: true });
+  await page.getByRole("button", { name: "Update branch" }).hover();
+  const bubble = page.getByRole("tooltip").first();
+  await expect(bubble).toBeVisible();
+  const arrow = await bubble.evaluate((el) => {
+    const before = getComputedStyle(el, "::before");
+    // The arrow draws its two outer edges; the right one only above the bubble.
+    const edge = (el as HTMLElement).dataset.side === "top" ? "right" : "left";
+    return {
+      fill: before.backgroundColor,
+      edge: before.getPropertyValue(`border-${edge}-color`),
+    };
+  });
+  await expect(bubble).toHaveCSS("background-color", arrow.fill);
+  await expect(bubble).toHaveCSS("border-top-color", arrow.edge);
+});
 
 test("a toned header band tints over a dark modal's own fill", async ({ page }) => {
   await gotoPage(page, "modal");
