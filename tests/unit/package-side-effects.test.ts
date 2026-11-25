@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 // Bundlers match `sideEffects` entries by path and ignore an entry that matches nothing, so a
 // moved or renamed file turns its entry into a silent no-op and the build still succeeds.
-const root = new URL("../", import.meta.url);
+const root = new URL("../../", import.meta.url);
 const pkg = JSON.parse(readFileSync(new URL("package.json", root), "utf8")) as {
   sideEffects: string[];
 };

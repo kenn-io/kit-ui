@@ -13,7 +13,7 @@ import {
   monthGridDates,
   shiftMonths,
   weekdayLabels,
-} from "../src/lib/components/date-range.js";
+} from "../../src/lib/components/date-range.js";
 
 describe("formatWeekOfLabel", () => {
   test("substitutes a {date} placeholder", () => {

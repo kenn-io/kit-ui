@@ -67,7 +67,7 @@ const off = appShortcuts.register("mod+k", openPalette, {
 - Importable from the root export or the `@kenn-io/kit-ui/utils/shortcuts`
   subpath (same granular pattern as the other utils).
 - Parsing/matching/scoping are pure and unit-tested
-  (`checks/shortcuts.test.ts`); `tests/browser/shortcuts.spec.ts` checks
+  (`tests/unit/shortcuts.test.ts`); `tests/browser/shortcuts.spec.ts` checks
   the listener order against real component handlers and real key repeat.
 
 ## CommandPalette

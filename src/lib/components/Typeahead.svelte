@@ -1,20 +1,61 @@
+<script module lang="ts">
+  import type { Attachment } from "svelte/attachments";
+  import type { HTMLInputAttributes } from "svelte/elements";
+
+  type TypeaheadOwnedInputAttribute =
+    | "aria-activedescendant"
+    | "aria-autocomplete"
+    | "aria-controls"
+    | "aria-expanded"
+    | "aria-haspopup"
+    | "aria-label"
+    | "autocomplete"
+    | "class"
+    | "disabled"
+    | "oninput"
+    | "onkeydown"
+    | "placeholder"
+    | "role"
+    | "type"
+    | "value";
+
+  export type TypeaheadInputAttributes = Omit<HTMLInputAttributes, TypeaheadOwnedInputAttribute>;
+
+  export interface TypeaheadOption {
+    name: string;
+    label: string;
+    /** Shown on the closed trigger instead of `label` when provided. */
+    displayLabel?: string;
+    count?: number;
+    /** Secondary text: searched together with the label, rendered dim at the
+     * row's trailing edge. */
+    meta?: string;
+    /** Makes this option a group row: it expands/collapses its children
+     * instead of being selectable. `name` must still be unique across the
+     * whole tree (it keys rows and tracks expansion). */
+    children?: TypeaheadOption[];
+    /** Initial expansion for a group row (default true). */
+    expanded?: boolean;
+  }
+
+  /** Passed to a Typeahead `trigger` snippet. Attach it to the caller's button
+   * with `{@attach attachment}`. */
+  export interface TypeaheadTriggerProps {
+    attachment: Attachment<HTMLButtonElement>;
+  }
+</script>
+
 <script lang="ts">
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick, type Snippet } from "svelte";
-  import type { Attachment } from "svelte/attachments";
   import { SvelteMap } from "svelte/reactivity";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { highlightSegments } from "../utils/highlight.js";
   import { isComposingKey } from "../utils/ime.js";
   import { autoReposition } from "../utils/popover.js";
   import { scrollFade } from "../utils/scroll-fade.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type {
-    TypeaheadInputAttributes,
-    TypeaheadOption,
-    TypeaheadTriggerProps,
-  } from "./typeahead.js";
 
   interface Props {
     options: TypeaheadOption[];

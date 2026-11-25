@@ -3,8 +3,9 @@
 // a lookup is pending (mention-textarea.spec.ts). Served by the Vite dev
 // server, which resolves the bare imports.
 import { mount } from "svelte";
-import MentionTextarea from "../../../src/lib/components/MentionTextarea.svelte";
-import type { MentionOption } from "../../../src/lib/components/mention.js";
+import MentionTextarea, {
+  type MentionOption,
+} from "../../../src/lib/components/MentionTextarea.svelte";
 
 export interface PendingMention {
   /** Settles every pending lookup with these options. */

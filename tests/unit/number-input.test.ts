@@ -7,7 +7,7 @@ import {
   normalizeNumberDraft,
   parseNumberDraft,
   stepNumber,
-} from "../src/lib/components/number-input.js";
+} from "../../src/lib/components/number-input.js";
 
 describe("decimalSeparator", () => {
   test("follows the locale", () => {

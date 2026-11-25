@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MoreRows, appendBatch, isEndRow, withEndRow } from "../src/lib/utils/more-rows.svelte";
+import { MoreRows, appendBatch, isEndRow, withEndRow } from "../../src/lib/utils/more-rows.svelte";
 
 // Bun runs this module without Svelte's compiler; state values remain ordinary values here.
 (globalThis as any).$state = (value: unknown) => value;

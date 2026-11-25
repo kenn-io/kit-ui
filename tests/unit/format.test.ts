@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatCount, formatInitials } from "../src/lib/utils/format.ts";
+import { formatCount, formatInitials } from "../../src/lib/utils/format.ts";
 
 describe("formatCount", () => {
   test("plain below 1,000", () => {

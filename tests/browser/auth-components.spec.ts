@@ -57,7 +57,7 @@ test("PageFrame instances generate distinct heading relationships", async ({ pag
   await gotoPage(page, "page-frame");
   await page.evaluate(async () => {
     const sveltePath = "/node_modules/.vite/deps/svelte.js";
-    const componentPath = "/src/lib/PageFrame.svelte";
+    const componentPath = "/src/lib/components/PageFrame.svelte";
     const [{ mount }, { default: PageFrame }] = await Promise.all([
       import(sveltePath),
       import(componentPath),

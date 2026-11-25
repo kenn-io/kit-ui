@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { Page } from "@playwright/test";
-import { gotoPage } from "../tests/browser/helpers.js";
+import { gotoPage } from "../browser/helpers.js";
 
 // Model only the Playwright boundary used while loading the gallery.
 function galleryPage(

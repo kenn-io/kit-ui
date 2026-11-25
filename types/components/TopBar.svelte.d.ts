@@ -1,4 +1,4 @@
-import type { SelectDropdownIndicator, SelectDropdownIndicatorTone } from "./select-dropdown.js";
+import type { SelectDropdownIndicator, SelectDropdownIndicatorTone } from "./SelectDropdown.svelte";
 /** Same shape as the collapsed dropdown's option indicator — the tab's
  * indicator is handed to SelectDropdown verbatim when the tabs collapse. */
 export type TopBarTabIndicator = SelectDropdownIndicator;

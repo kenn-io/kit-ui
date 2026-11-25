@@ -4,7 +4,7 @@ import {
   mixHexColors,
   parseHexColor,
   readableInk,
-} from "../src/lib/utils/color-contrast.js";
+} from "../../src/lib/utils/color-contrast.js";
 
 describe("parseHexColor", () => {
   test("normalizes 3- and 6-digit hex with or without #", () => {

@@ -89,7 +89,8 @@ when a component's demo changes its hooks (labels, classes), the spec is
 part of the change. New components with browser-only behavior should add
 a spec alongside their demo page.
 
-Unit-testable logic stays in `checks/*.test.ts` (bun test): checker
-rules, windowing math, shortcut parsing/matching, markdown highlight
-planning. The split is deliberate — bun tests gate every commit cheaply;
-the browser suite verifies integrated behavior.
+Unit-testable logic stays in `tests/unit/*.test.ts` (alongside
+`checks/rules.test.ts` and `scripts/generate-brand.test.js`, all run by
+`bun test`): checker rules, windowing math, shortcut parsing/matching,
+markdown highlight planning. The split is deliberate — bun tests gate every
+commit cheaply; the browser suite verifies integrated behavior.

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { hashColor } from "../src/lib/utils/color-hash.js";
+import { hashColor } from "../../src/lib/utils/color-hash.js";
 import {
   createPalette,
   PALETTES,
   seriesDashArray,
   seriesPattern,
   seriesSwatchBackground,
-} from "../src/lib/utils/palette.js";
+} from "../../src/lib/utils/palette.js";
 
 const keys = (count: number) =>
   Array.from({ length: count }, (_, i) => `k${String(i).padStart(2, "0")}`);

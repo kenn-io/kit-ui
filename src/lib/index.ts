@@ -1,9 +1,9 @@
 // Components
-export { default as FormField } from "./FormField.svelte";
-export type { FieldState, FormFieldType } from "./FormField.svelte";
-export { default as Notice } from "./Notice.svelte";
-export type { NoticeTone, NoticeVariant } from "./Notice.svelte";
-export { default as PageFrame } from "./PageFrame.svelte";
+export { default as FormField } from "./components/FormField.svelte";
+export type { FieldState, FormFieldType } from "./components/FormField.svelte";
+export { default as Notice } from "./components/Notice.svelte";
+export type { NoticeTone, NoticeVariant } from "./components/Notice.svelte";
+export { default as PageFrame } from "./components/PageFrame.svelte";
 export { default as Accordion } from "./components/Accordion.svelte";
 export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.svelte";
 export type {
@@ -80,7 +80,7 @@ export { default as MenuSeparator } from "./components/MenuSeparator.svelte";
 export { default as MenuTrigger } from "./components/MenuTrigger.svelte";
 export type { MenuAlign, MenuAnchorPoint } from "./components/menu.js";
 export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
-export type { MentionOption, MentionTrigger } from "./components/mention.js";
+export type { MentionOption, MentionTrigger } from "./components/MentionTextarea.svelte";
 export { default as MetricCard } from "./components/MetricCard.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
@@ -88,7 +88,7 @@ export { default as NumberInput } from "./components/NumberInput.svelte";
 export { default as PageHeader } from "./components/PageHeader.svelte";
 export { default as ProviderBrandMark } from "./components/ProviderBrandMark.svelte";
 export { default as ProviderButton } from "./components/ProviderButton.svelte";
-export type { ProviderBrand } from "./components/provider-brand.js";
+export type { ProviderBrand } from "./components/ProviderBrandMark.svelte";
 export { default as DatePicker } from "./components/DatePicker.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export {
@@ -160,7 +160,7 @@ export type {
   SelectDropdownIndicator,
   SelectDropdownIndicatorTone,
   SelectDropdownOption,
-} from "./components/select-dropdown.js";
+} from "./components/SelectDropdown.svelte";
 export { default as SettingsLayout } from "./components/SettingsLayout.svelte";
 export type { SettingsCategory } from "./components/SettingsLayout.svelte";
 export { default as SettingsSection } from "./components/SettingsSection.svelte";
@@ -168,7 +168,10 @@ export { default as SidebarToggle } from "./components/SidebarToggle.svelte";
 export type { SidebarToggleState } from "./components/SidebarToggle.svelte";
 export { default as Spinner } from "./components/Spinner.svelte";
 export { default as SplitResizeHandle } from "./components/SplitResizeHandle.svelte";
-export type { SplitResizeEvent, SplitResizeOrientation } from "./components/split-resize.js";
+export type {
+  SplitResizeEvent,
+  SplitResizeOrientation,
+} from "./components/SplitResizeHandle.svelte";
 export { default as StatusBar } from "./components/StatusBar.svelte";
 export { default as StatusDot } from "./components/StatusDot.svelte";
 export type { StatusDotStatus } from "./components/StatusDot.svelte";
@@ -217,7 +220,7 @@ export type {
   TypeaheadInputAttributes,
   TypeaheadOption,
   TypeaheadTriggerProps,
-} from "./components/typeahead.js";
+} from "./components/Typeahead.svelte";
 export { default as VideoPlayer } from "./components/VideoPlayer.svelte";
 export { default as VirtualList } from "./components/VirtualList.svelte";
 export { default as VirtualTable } from "./components/VirtualTable.svelte";
@@ -376,7 +379,7 @@ export {
   type PanZoomView,
 } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
-export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";
+export { floatingPopoverStyle, type FloatingPopoverInput } from "./utils/floating-position.js";
 
 export { default as ListEnd } from "./components/ListEnd.svelte";
 export { showListTop } from "./components/virtual.js";

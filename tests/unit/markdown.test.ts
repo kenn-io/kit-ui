@@ -8,7 +8,7 @@ import {
   escapeHtml,
   SHIKI_MAX_DISTINCT_LANGUAGES,
   SHIKI_MAX_HIGHLIGHTED_FENCES,
-} from "../src/lib/utils/markdown.js";
+} from "../../src/lib/utils/markdown.js";
 
 // The DOM-dependent halves of the pipeline (DOMPurify sanitization, shiki
 // rendering, the CodeBlock/Markdown components) are covered by the browser

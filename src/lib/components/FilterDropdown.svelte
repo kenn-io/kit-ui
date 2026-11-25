@@ -41,7 +41,7 @@
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
   import { scrollFade } from "../utils/scroll-fade.js";
-  import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
+  import { floatingFlyoutStyle, floatingPopoverStyle } from "../utils/floating-position.js";
   import SearchInput from "./SearchInput.svelte";
 
   interface Props {

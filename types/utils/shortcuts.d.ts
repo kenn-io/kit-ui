@@ -1,6 +1,6 @@
 /**
  * Keyboard shortcut system: combo parsing/matching as pure functions
- * (unit-tested in checks/shortcuts.test.ts), a scope-stacked manager, and
+ * (unit-tested in tests/unit/shortcuts.test.ts), a scope-stacked manager, and
  * an app-level singleton wired up by `initShortcuts()`.
  *
  * Combo syntax: `"mod+k"`, `"shift+/"`, `"g"`, `"escape"`, `"mod+shift+p"`.

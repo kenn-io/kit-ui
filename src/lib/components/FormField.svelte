@@ -11,7 +11,7 @@
 </script>
 
 <script lang="ts">
-  import TextInput from "./components/TextInput.svelte";
+  import TextInput from "./TextInput.svelte";
 
   interface Props {
     field: FieldState;

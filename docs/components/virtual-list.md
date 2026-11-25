@@ -6,7 +6,7 @@ fast path; omit `itemHeight` for variable-height rows, which are measured as
 they render (`estimateHeight` until then) with offsets staying correct.
 
 The windowing math itself is exported as pure functions (`virtualSlice`,
-`offsetOfIndex`) — unit-tested in `checks/virtual.test.ts` and reusable for
+`offsetOfIndex`) — unit-tested in `tests/unit/virtual.test.ts` and reusable for
 custom virtualized surfaces (LogViewer-style scrollback). For table rows,
 use [VirtualTable](virtual-table.md).
 

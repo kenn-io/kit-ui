@@ -3,8 +3,7 @@
   import type { Snippet } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import IconButton from "./IconButton.svelte";
-  import SplitResizeHandle from "./SplitResizeHandle.svelte";
-  import type { SplitResizeEvent } from "./split-resize.js";
+  import SplitResizeHandle, { type SplitResizeEvent } from "./SplitResizeHandle.svelte";
 
   interface Props {
     open: boolean;
