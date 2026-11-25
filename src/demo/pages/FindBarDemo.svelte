@@ -165,8 +165,7 @@
 </DemoSection>
 
 <style>
-  /* Full-width flex item: puts the checkbox on its own row in the canvas's
-   * wrapping flex layout, spaced by the canvas gap. */
+  /* Own row in the canvas's wrapping flex layout, above the list. */
   .find-demo__controls {
     flex-basis: 100%;
   }

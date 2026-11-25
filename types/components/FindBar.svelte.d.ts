@@ -24,12 +24,10 @@ interface Props {
      * popover shadow treatment lives. */
     variant?: "pinned" | "floating";
     placeholder?: string;
-    /** Counter template; `{current}` and `{total}` are replaced. While
-     * results are incomplete, a template without `{total}` gets the
-     * floor appended, as in `Match 1 (3+)`. */
+    /** Counter template; `{current}` and `{total}` are replaced. Without
+     * `{total}`, an incomplete floor is appended: `Match 1 (3+)`. */
     matchCountLabel?: string;
-    /** Screen-reader counter while results are incomplete; `{count}` is
-     * replaced with the visible counter text. */
+    /** Spoken counter while results are incomplete; `{count}` is the visible text. */
     partialCountLabel?: string;
     noMatchesLabel?: string;
     ariaLabel?: string;
