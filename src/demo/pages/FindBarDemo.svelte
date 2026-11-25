@@ -90,7 +90,9 @@
   <!-- searched content -->
 </div>`}
 >
-  <Checkbox bind:checked={complete} label="Results complete" />
+  <div class="find-demo__controls">
+    <Checkbox bind:checked={complete} label="Results complete" />
+  </div>
   <div class="find-demo">
     {#if pinned.visible}
       <FindBar
@@ -163,6 +165,12 @@
 </DemoSection>
 
 <style>
+  /* Full-width flex item: puts the checkbox on its own row in the canvas's
+   * wrapping flex layout, spaced by the canvas gap. */
+  .find-demo__controls {
+    flex-basis: 100%;
+  }
+
   .find-demo {
     width: 100%;
     max-width: 560px;
