@@ -8,8 +8,10 @@
   interface Props {
     /** Current search text (bindable). */
     query?: string;
-    /** Total number of matches for `query`. */
+    /** Matches for `query`; only those found so far when `resultsComplete` is `false`. */
     matchCount: number;
+    /** Whether `matchCount` is final; when `false` the total shows a trailing `+`. */
+    resultsComplete?: boolean;
     /** 0-based index of the current match; displayed 1-based. */
     currentIndex: number;
     /** Advance to the next match (Enter, down button). */
@@ -42,6 +44,7 @@
   let {
     query = $bindable(""),
     matchCount,
+    resultsComplete = true,
     currentIndex,
     onnext = undefined,
     onprev = undefined,
@@ -61,14 +64,14 @@
 
   const hasQuery = $derived(query.trim().length > 0);
   const hasMatches = $derived(matchCount > 0);
-  const noResults = $derived(hasQuery && !hasMatches);
+  const noResults = $derived(hasQuery && resultsComplete && !hasMatches);
 
   const counterText = $derived.by(() => {
     if (!hasQuery) return "";
-    if (matchCount === 0) return noMatchesLabel;
+    if (resultsComplete && !hasMatches) return noMatchesLabel;
     return matchCountLabel
-      .replace("{current}", String(currentIndex + 1))
-      .replace("{total}", String(matchCount));
+      .replace("{current}", String(hasMatches ? currentIndex + 1 : 0))
+      .replace("{total}", String(matchCount) + (resultsComplete ? "" : "+"));
   });
 
   function handleKeydown(e: KeyboardEvent): void {

@@ -7,9 +7,15 @@ input and navigation chrome; you compute the matches and move the highlight.
 
 Keyboard: **Enter** → `onnext`, **Shift+Enter** → `onprev`, **Escape** →
 `onclose`. Enter and Escape pressed to confirm or cancel an input
-method's composition call neither. When the query has no matches the counter shows the
-"No matches" state and the focused card border turns red. Mount it
-conditionally; it autofocuses on mount by default.
+method's composition call neither. When the query has no matches and results are
+complete, the counter shows "No matches" and the focused card border turns red.
+
+For a nonempty query, when `resultsComplete` is `false`, the total shows a trailing `+` (`2 of 3+`,
+or `0 of 0+` before any match), the border stays neutral, and `onnext` /
+`onprev` move through the matches found so far. A custom `matchCountLabel`
+needs `{total}` to show the `+`.
+
+Mount it conditionally; it autofocuses on mount by default.
 
 ```svelte
 <script lang="ts">
@@ -38,7 +44,8 @@ conditionally; it autofocuses on mount by default.
 | Prop                          | Type                      | Default                             | Notes                                                                                                                                                                                |
 | ----------------------------- | ------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `query`                       | `string` (bindable)       | `""`                                | Current search text                                                                                                                                                                  |
-| `matchCount`                  | `number`                  | required                            | Total matches for `query`                                                                                                                                                            |
+| `matchCount`                  | `number`                  | required                            | Matches found so far when `resultsComplete` is `false`                                                                                                                               |
+| `resultsComplete`             | `boolean`                 | `true`                              | Whether `matchCount` is final                                                                                                                                                        |
 | `currentIndex`                | `number`                  | required                            | 0-based current match; displayed 1-based                                                                                                                                             |
 | `onnext`                      | `() => void`              | —                                   | Enter / down arrow button                                                                                                                                                            |
 | `onprev`                      | `() => void`              | —                                   | Shift+Enter / up arrow button                                                                                                                                                        |

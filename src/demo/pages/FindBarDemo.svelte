@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "../../lib/components/Button.svelte";
+  import Checkbox from "../../lib/components/Checkbox.svelte";
   import FindBar from "../../lib/components/FindBar.svelte";
   import DemoSection from "../DemoSection.svelte";
 
@@ -69,15 +70,17 @@
 
   const pinned = createFindState();
   const floating = createFindState();
+  let complete = $state(true);
 </script>
 
 <DemoSection
   title="Pinned (default)"
-  description="The bar spans the top edge of the find-target container as a flush strip — square corners, bottom border only, no shadow (browser find-bar style). The bar owns only the input and navigation; the consumer computes matches and moves a highlight. Enter advances, Shift+Enter goes back, Escape closes. Try searching 'read'."
+  description="The bar spans the top edge of the find-target container as a flush strip — square corners, bottom border only, no shadow (browser find-bar style). The bar owns only the input and navigation; the consumer computes matches and moves a highlight. Enter advances, Shift+Enter goes back, Escape closes. Try searching 'read'. While results are incomplete, the total is a floor, such as 3+."
   code={`<div class="content-card">
   <FindBar
     bind:query
     matchCount={matches.length}
+    resultsComplete={complete}
     currentIndex={safeIndex}
     onnext={next}
     onprev={prev}
@@ -87,11 +90,13 @@
   <!-- searched content -->
 </div>`}
 >
+  <Checkbox bind:checked={complete} label="Results complete" />
   <div class="find-demo">
     {#if pinned.visible}
       <FindBar
         bind:query={pinned.query}
         matchCount={pinned.matches.length}
+        resultsComplete={complete}
         currentIndex={pinned.safeIndex}
         onnext={() => pinned.next()}
         onprev={() => pinned.prev()}

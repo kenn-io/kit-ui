@@ -1,8 +1,10 @@
 interface Props {
     /** Current search text (bindable). */
     query?: string;
-    /** Total number of matches for `query`. */
+    /** Matches for `query`; only those found so far when `resultsComplete` is `false`. */
     matchCount: number;
+    /** Whether `matchCount` is final; when `false` the total shows a trailing `+`. */
+    resultsComplete?: boolean;
     /** 0-based index of the current match; displayed 1-based. */
     currentIndex: number;
     /** Advance to the next match (Enter, down button). */
