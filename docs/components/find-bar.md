@@ -10,9 +10,8 @@ Keyboard: **Enter** → `onnext`, **Shift+Enter** → `onprev`, **Escape** →
 method's composition call neither. When the query has no matches and results are
 complete, the counter shows "No matches" and the focused card border turns red.
 For a nonempty query with `resultsComplete={false}`, the total is a floor (`2 of 3+`,
-or `0 of 0+` before any match), the border stays neutral, and `onnext` / `onprev`
-move through the matches found so far. A `matchCountLabel` without `{total}` gets
-the floor appended (`Match 2 (3+)`). Mount it conditionally; it autofocuses on mount by default.
+or `0 of 0+` before any match) and the border stays neutral. A `matchCountLabel`
+without `{total}` gets the floor appended (`Match 2 (3+)`). Mount it conditionally; it autofocuses on mount by default.
 
 ```svelte
 <script lang="ts">
