@@ -1,6 +1,29 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
+test("incomplete counts remain visible when the label omits the total", async ({ page }) => {
+  await gotoPage(page, "find-bar");
+  await page.evaluate(async () => {
+    const [{ mount }, { default: FindBar }] = await Promise.all([
+      import("/node_modules/.vite/deps/svelte.js"),
+      import("/src/lib/components/FindBar.svelte"),
+    ]);
+    mount(FindBar, {
+      target: document.body,
+      props: {
+        ariaLabel: "Custom find",
+        query: "read",
+        matchCount: 3,
+        currentIndex: 0,
+        resultsComplete: false,
+        matchCountLabel: "Match {current}",
+      },
+    });
+  });
+  const counter = page.getByRole("search", { name: "Custom find" }).locator(".kit-find-bar__counter");
+  await expect(counter).toContainText("3+");
+});
+
 test("incomplete results remain navigable until the count is final", async ({ page }) => {
   await gotoPage(page, "find-bar");
   const section = page
