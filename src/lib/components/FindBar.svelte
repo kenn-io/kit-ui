@@ -31,8 +31,13 @@
      * popover shadow treatment lives. */
     variant?: "pinned" | "floating";
     placeholder?: string;
-    /** Counter template; `{current}` and `{total}` are replaced. */
+    /** Counter template; `{current}` and `{total}` are replaced. While
+     * results are incomplete, a template without `{total}` gets the
+     * floor appended, as in `Match 1 (3+)`. */
     matchCountLabel?: string;
+    /** Screen-reader counter while results are incomplete; `{count}` is
+     * replaced with the visible counter text. */
+    partialCountLabel?: string;
     noMatchesLabel?: string;
     ariaLabel?: string;
     inputAriaLabel?: string;
@@ -54,6 +59,7 @@
     variant = "pinned",
     placeholder = "Find…",
     matchCountLabel = "{current} of {total}",
+    partialCountLabel = "{count}, partial count; more matches may exist",
     noMatchesLabel = "No matches",
     ariaLabel = "Find",
     inputAriaLabel = "Search query",
@@ -69,10 +75,15 @@
   const counterText = $derived.by(() => {
     if (!hasQuery) return "";
     if (resultsComplete && !hasMatches) return noMatchesLabel;
-    return matchCountLabel
-      .replace("{current}", String(hasMatches ? currentIndex + 1 : 0))
-      .replace("{total}", String(matchCount) + (resultsComplete ? "" : "+"));
+    const total = String(matchCount) + (resultsComplete ? "" : "+");
+    const label = matchCountLabel.replace("{current}", String(hasMatches ? currentIndex + 1 : 0));
+    if (!resultsComplete && !label.includes("{total}")) return `${label} (${total})`;
+    return label.replace("{total}", total);
   });
+
+  const counterSpeech = $derived(
+    resultsComplete ? counterText : partialCountLabel.replace("{count}", counterText),
+  );
 
   function handleKeydown(e: KeyboardEvent): void {
     // Enter and Escape confirm or cancel an input method's composition.
@@ -121,9 +132,10 @@
   />
 
   {#if hasQuery}
-    <span class="kit-find-bar__counter" class:no-results={noResults} aria-live="polite">
+    <span class="kit-find-bar__counter" class:no-results={noResults} aria-hidden="true">
       {counterText}
     </span>
+    <span class="kit-sr-only" aria-live="polite">{counterSpeech}</span>
   {/if}
 
   <div class="kit-find-bar__nav">

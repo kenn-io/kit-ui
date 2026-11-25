@@ -20,8 +20,10 @@ test("incomplete counts remain visible when the label omits the total", async ({
       },
     });
   });
-  const counter = page.getByRole("search", { name: "Custom find" }).locator(".kit-find-bar__counter");
-  await expect(counter).toContainText("3+");
+  const counter = page
+    .getByRole("search", { name: "Custom find" })
+    .locator(".kit-find-bar__counter");
+  await expect(counter).toHaveText("Match 1 (3+)");
 });
 
 test("incomplete results remain navigable until the count is final", async ({ page }) => {
@@ -40,6 +42,9 @@ test("incomplete results remain navigable until the count is final", async ({ pa
   await expect(counter).toHaveText("1 of 3");
   await complete.uncheck();
   await expect(counter).toHaveText("1 of 3+");
+  await expect(bar.locator("[aria-live]")).toHaveText(
+    "1 of 3+, partial count; more matches may exist",
+  );
   await expect(bar).not.toHaveClass(/kit-find-bar--no-results/);
   await next.click();
   await expect(counter).toHaveText("2 of 3+");
