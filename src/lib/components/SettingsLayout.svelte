@@ -17,6 +17,7 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
 
   interface Props {
     categories: SettingsCategory[];
@@ -78,10 +79,12 @@
     }
     return result;
   });
+
+  let contentEl = $state<HTMLDivElement>();
 </script>
 
 <div class="kit-settings">
-  <aside class="kit-settings__sidebar">
+  <aside class="kit-settings__sidebar" {@attach overlayScrollbars({ axis: "both" })}>
     {#if title}
       <h2 class="kit-settings__title">{title}</h2>
     {/if}
@@ -122,8 +125,8 @@
     </nav>
   </aside>
 
-  <div class="kit-settings__content">
-    <div class="kit-settings__scroll">
+  <div class="kit-settings__content" bind:this={contentEl}>
+    <div class="kit-settings__scroll" {@attach overlayScrollbars({ axis: "y", host: contentEl })}>
       {#if resolvedActive}
         <div class="kit-settings__panel">
           {@render panel(resolvedActive)}
@@ -265,9 +268,6 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    /* Reserve the scrollbar's width up front so the centered panel does not
-       shift left when a taller category first makes the pane scroll. */
-    scrollbar-gutter: stable;
   }
 
   .kit-settings__panel {

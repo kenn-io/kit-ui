@@ -1,6 +1,7 @@
 <script lang="ts" generics="T">
   import type { Snippet } from "svelte";
   import { tick, untrack } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { offsetOfIndex, RowHeights, virtualSlice } from "./virtual.js";
 
   interface Props {
@@ -221,6 +222,7 @@
       : undefined}
     onscroll={handleScroll}
     onkeydown={handleKeydown}
+    {@attach overlayScrollbars({ axis: "y" })}
   >
     <div class="kit-virtual-list__spacer" style:height="{slice.totalHeight}px">
       <div class="kit-virtual-list__window" style:transform="translateY({slice.topPad}px)">

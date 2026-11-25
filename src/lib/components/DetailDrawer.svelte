@@ -3,6 +3,7 @@
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses, escapeLayer } from "../utils/overlay.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -47,6 +48,7 @@
   const headerId = `kit-detail-drawer-header-${uid}`;
 
   const close = () => onclose?.();
+  let drawerEl = $state<HTMLDivElement>();
 </script>
 
 <div
@@ -56,6 +58,7 @@
   {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div
+    bind:this={drawerEl}
     class="kit-detail-drawer"
     role="dialog"
     aria-modal="true"
@@ -87,7 +90,7 @@
         {/if}
       </div>
     {/if}
-    <div class="kit-detail-drawer__body">
+    <div class="kit-detail-drawer__body" {@attach overlayScrollbars({ axis: "y", host: drawerEl })}>
       {#if children}
         {@render children()}
       {/if}

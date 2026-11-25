@@ -6,6 +6,7 @@
     runFlashAction,
     type FlashTone,
   } from "../stores/flash.svelte.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -36,48 +37,54 @@
   }
 
   const flashes = $derived(getFlashes());
+  let stackEl = $state<HTMLDivElement>();
 </script>
 
 {#if flashes.length > 0}
   <!-- width: max-content on the stack + width: 100% on each banner makes
        the widest message set the width for all of them. -->
-  <div class="kit-flash-stack" style:top style:--kit-flash-top={top}>
-    {#each flashes as flash (flash.id)}
-      {@const tone = flash.tone ?? "neutral"}
-      <div
-        class="kit-flash-banner"
-        data-kit-tone={tone === "neutral" ? undefined : tone}
-        role="status"
-      >
-        <span class="kit-flash-banner__text">
-          <!-- Non-color tone signal for assistive tech (tone must never be
-               color-only); visually hidden, announced as a severity prefix. -->
-          {#if toneLabel(tone)}<span class="kit-sr-only"
-              >{toneLabel(tone)}:
-            </span>{/if}{flash.message}</span
-        >
-        {#if flash.action}
-          <button
-            type="button"
-            class="kit-flash-banner__action"
-            onclick={() => runFlashAction(flash.id)}>{flash.action.label}</button
-          >
-        {/if}
-        <IconButton
-          size="sm"
-          class="kit-flash-banner__dismiss"
-          ariaLabel="Dismiss"
-          onclick={() => dismissFlash(flash.id)}
-        >
-          <XIcon size="14" strokeWidth="2" aria-hidden="true" />
-        </IconButton>
+  <div class="kit-flash-stack" style:top style:--kit-flash-top={top} bind:this={stackEl}>
+    <div
+      class="kit-flash-stack__viewport"
+      {@attach overlayScrollbars({ axis: "y", host: stackEl })}
+    >
+      {#each flashes as flash (flash.id)}
+        {@const tone = flash.tone ?? "neutral"}
         <div
-          class="kit-flash-banner__progress"
-          style:animation-duration="{flash.durationMs}ms"
-          aria-hidden="true"
-        ></div>
-      </div>
-    {/each}
+          class="kit-flash-banner"
+          data-kit-tone={tone === "neutral" ? undefined : tone}
+          role="status"
+        >
+          <span class="kit-flash-banner__text">
+            <!-- Non-color tone signal for assistive tech (tone must never be
+                 color-only); visually hidden, announced as a severity prefix. -->
+            {#if toneLabel(tone)}<span class="kit-sr-only"
+                >{toneLabel(tone)}:
+              </span>{/if}{flash.message}</span
+          >
+          {#if flash.action}
+            <button
+              type="button"
+              class="kit-flash-banner__action"
+              onclick={() => runFlashAction(flash.id)}>{flash.action.label}</button
+            >
+          {/if}
+          <IconButton
+            size="sm"
+            class="kit-flash-banner__dismiss"
+            ariaLabel="Dismiss"
+            onclick={() => dismissFlash(flash.id)}
+          >
+            <XIcon size="14" strokeWidth="2" aria-hidden="true" />
+          </IconButton>
+          <div
+            class="kit-flash-banner__progress"
+            style:animation-duration="{flash.durationMs}ms"
+            aria-hidden="true"
+          ></div>
+        </div>
+      {/each}
+    </div>
   </div>
 {/if}
 
@@ -101,10 +108,18 @@
      * actual `top` offset (mirrored into the custom property) plus a
      * matching bottom margin. */
     max-height: calc(100vh - var(--kit-flash-top, 44px) - 52px);
-    overflow-y: auto;
+    overflow: hidden;
     background: var(--bg-surface);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
+  }
+
+  .kit-flash-stack__viewport {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    overflow-y: auto;
     overflow-x: hidden;
   }
 

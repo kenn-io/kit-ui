@@ -224,6 +224,47 @@ on window resize, any ancestor scroll (capture phase), and panel size
 changes (ResizeObserver), coalesced to one call per animation frame. Both
 return their cleanup function.
 
+## Overlay scrollbars
+
+```svelte
+<script lang="ts">
+  import { overlayScrollbars } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay-scrollbars"
+
+  let frameEl = $state<HTMLDivElement>();
+</script>
+
+<!-- Single-element scroller -->
+<div class="my-panel" {@attach overlayScrollbars({ axis: "y" })}>…</div>
+
+<!-- Non-scrolling outer frame + inner viewport (zero scroll jitter, keeps border-radius/shadow on frame) -->
+<div class="my-frame" bind:this={frameEl}>
+  <div class="my-viewport" {@attach overlayScrollbars({ axis: "both", host: frameEl })}>…</div>
+</div>
+```
+
+Svelte 5 attachment that suppresses native scrollbars (`0px` layout gutter) and
+renders floating vertical and/or horizontal overlay thumbs while preserving
+native wheel, trackpad, touch, keyboard, scroll-anchoring, and programmatic
+scrolling.
+
+Options (`OverlayScrollbarsOptions`):
+
+- `axis`: `"x" | "y" | "both"` (default `"both"`).
+- `visibility`: `"auto"` (show on hover, scroll, or drag), `"always"` (show
+  while overflowing), or `"never"` (suppress native scrollbars without thumbs).
+- `host`: non-scrolling outer frame (`HTMLElement` or getter) to host the
+  tracks outside the scrolling element; prevents scroll jitter and avoids
+  injecting children into the viewport (`:empty`, ARIA `listbox`/`menu`).
+- `insetTop`, `insetBottom`, `insetLeft`, `insetRight`: extra clearance in px,
+  or an `HTMLElement` / getter (such as a sticky header or `<thead>`) whose
+  height is tracked automatically via `ResizeObserver`.
+- `cornerRadius`: clearance in px, or `"auto"` (default) to clear computed
+  border radii on the viewport, host frame, or clipping parent.
+- `hideDelay`: ms before thumbs fade after scrolling stops (default `900`).
+
+Pure geometry helpers `computeThumbMetrics`, `computeTrackBounds`,
+`scrollPosForThumbDelta`, and `scrollPosForTrackClick` are also exported.
+
 ## Scroll fades
 
 ```svelte

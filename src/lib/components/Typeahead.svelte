@@ -54,6 +54,7 @@
   import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { highlightSegments } from "../utils/highlight.js";
   import { isComposingKey } from "../utils/ime.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { autoReposition } from "../utils/popover.js";
   import { scrollFade } from "../utils/scroll-fade.js";
 
@@ -759,7 +760,11 @@
       {/if}
       <!-- Messages sit outside the listbox but scroll with it, so a long error
            can't push the panel past its height cap and hide the options. -->
-      <div class="kit-typeahead__body" {@attach scrollFade}>
+      <div
+        class="kit-typeahead__body"
+        {@attach scrollFade}
+        {@attach overlayScrollbars({ axis: "y", host: panelEl })}
+      >
         {#if loading}
           <div class="kit-typeahead__status">{loadingLabel}</div>
         {:else if error}

@@ -92,14 +92,22 @@ yourself:
 
 Say what scrolls the rows with `scroll`; the table never guesses:
 
-- **`scroll="self"` (default).** The wrapper scrolls. Give it a bounded
-  height (a flex parent with a fixed height, or a `class` with
-  `max-height`). The header sticks to the wrapper's top edge.
+- **`scroll="self"` (default).** The outer `.kit-table-wrapper` frame owns
+  `border-radius`, `box-shadow`, and clipping, while the inner
+  `.kit-table-viewport` scrolls with zero scrollbar gutter and floating overlay
+  scrollbars. Give the wrapper a bounded height (a flex parent with a fixed
+  height, or a `class` with `max-height`). Because scrolling consumes no layout
+  width, the `<table>` fills 100% of the wrapper width edge to edge: `<th>`
+  covers the full top edge, draws the sole header divider, and `<td>` row
+  dividers reach the right border. The vertical overlay thumb starts below the
+  sticky `<thead>` and both thumbs stay clear of rounded corners.
 - **`scroll="page"`.** The table grows to its full height and the page or
-  panel around it scrolls. The wrapper clips without scrolling, so the
-  header sticks to the top of that scroll container. When the table is
-  wider than the wrapper (a narrow screen), the wrapper scrolls sideways
-  instead, and the header no longer sticks to the page.
+  panel around it scrolls. Both the outer frame and inner viewport clip without
+  scrolling, so the header sticks to the top of that scroll container. When the
+  table is wider than the wrapper (a narrow screen), the inner viewport scrolls
+  sideways with a horizontal overlay scrollbar while `border-radius` and
+  `box-shadow` remain on the outer `.kit-table-wrapper--wide` frame, and the
+  header no longer sticks to the page.
 
 A header stuck to a page scroller stops below the scroller's top padding,
 so rows show in the padding above it. Cover the padding by setting

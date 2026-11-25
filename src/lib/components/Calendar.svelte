@@ -2,6 +2,7 @@
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import {
     dayGridKeyTarget,
     formatDayCellLabel,
@@ -417,6 +418,7 @@
       onfocusin={(event) => {
         if (event.target instanceof HTMLElement) reveal(event.target);
       }}
+      {@attach overlayScrollbars({ axis: "x" })}
     >
       {@render dayCells()}
     </div>
@@ -805,7 +807,6 @@
     padding: 6px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    scrollbar-width: thin;
   }
 
   .kit-calendar__day.strip {

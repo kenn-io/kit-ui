@@ -26,6 +26,7 @@
   import { tick } from "svelte";
   import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { scrollFade } from "../utils/scroll-fade.js";
 
   interface Props {
@@ -258,6 +259,7 @@
       style={listStyle}
       bind:this={listEl}
       {@attach scrollFade}
+      {@attach overlayScrollbars({ axis: "y" })}
     >
       {#each options as option, index (option.value)}
         <button

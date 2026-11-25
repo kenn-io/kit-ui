@@ -120,7 +120,7 @@ for (const kind of ["list", "table"]) {
     await gotoPage(page, "load-on-scroll");
     const box = page.getByTestId(`${kind}-box`);
     await box.evaluate((el) => (el.style.width = "200px"));
-    const scroller = kind === "table" ? box.locator(".kit-table-wrapper") : box;
+    const scroller = kind === "table" ? box.locator(".kit-table-viewport") : box;
     await page.getByLabel("Fail next batch").check();
     await scroller.evaluate((el) => {
       el.scrollTop = el.scrollHeight;

@@ -442,14 +442,14 @@ for (const theme of [null, "quiet"] as const) {
       .evaluate((host) => {
         (host as HTMLElement).style.maxHeight = "90px";
       });
-    const wrapper = page.locator(body(".kit-table-wrapper")).first();
+    const viewport = page.locator(body(".kit-table-viewport")).first();
     const head = body(".kit-table-wrapper thead");
 
-    await wrapper.evaluate((element) => element.scrollTo(0, 40));
-    expect(await wrapper.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await viewport.evaluate((element) => element.scrollTo(0, 40));
+    expect(await viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
     await expectShadow(page, head, theme ? RAISED : "none");
 
-    await wrapper.evaluate((element) => element.scrollTo(0, 0));
+    await viewport.evaluate((element) => element.scrollTo(0, 0));
     await expectShadow(page, head, "none");
   });
 }
@@ -465,10 +465,10 @@ test("quiet: a table without a sticky header casts no header shadow", async ({ p
     .evaluate((host) => {
       (host as HTMLElement).style.maxHeight = "90px";
     });
-  const wrapper = page.locator(body(".kit-table-wrapper")).first();
+  const viewport = page.locator(body(".kit-table-viewport")).first();
   const head = body(".kit-table-wrapper thead");
 
-  await wrapper.evaluate((element) => element.scrollTo(0, 40));
+  await viewport.evaluate((element) => element.scrollTo(0, 40));
   await expectShadow(page, head, RAISED);
 
   await page

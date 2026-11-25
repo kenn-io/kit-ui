@@ -1266,9 +1266,10 @@ export function checkHandRolledVirtualization(source) {
   return findings;
 }
 
-/** A vertical scroller with its native scrollbar hidden should use ScrollBox,
- * which preserves the native control and adds the accessible region contract.
- * Horizontal strips (overflow-x) are exempt — ScrollBox is vertical-only. */
+/** A scroller with its native scrollbar hidden by hand should use ScrollBox or
+ * overlayScrollbars, which provide floating overlay scrollbars and zero layout
+ * gutter without dropping scroll affordances. Horizontal strips (overflow-x)
+ * such as tab bars stay exempt. */
 export function checkHandRolledScrollBox(source, filename) {
   const findings = [];
   for (const { css, offset } of styleBlocks(source, filename)) {
@@ -1282,7 +1283,7 @@ export function checkHandRolledScrollBox(source, filename) {
         rule: "hand-rolled-scroll-box",
         line: lineOfIndex(source, offset + block.index + hidden.index),
         message:
-          "vertical scroller with hidden native scrollbar — use ScrollBox from @kenn-io/kit-ui (native scrollbar, labelled keyboard-accessible region)",
+          "scroller with hidden native scrollbar — use ScrollBox or overlayScrollbars from @kenn-io/kit-ui (zero-gutter overlay scrollbars)",
       });
     }
   }

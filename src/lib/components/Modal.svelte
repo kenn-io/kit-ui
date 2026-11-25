@@ -7,6 +7,7 @@
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses, escapeLayer } from "../utils/overlay.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -54,6 +55,7 @@
 
   const close = () => onclose?.();
   const showClose = $derived(closable ?? !footer);
+  let panelEl = $state<HTMLDivElement>();
 </script>
 
 <div
@@ -63,6 +65,7 @@
   {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div
+    bind:this={panelEl}
     class="kit-modal-panel"
     role="dialog"
     aria-modal="true"
@@ -93,7 +96,7 @@
       </div>
     {/if}
     {#if children}
-      <div class="kit-modal-body">
+      <div class="kit-modal-body" {@attach overlayScrollbars({ axis: "y", host: panelEl })}>
         {@render children()}
       </div>
     {/if}

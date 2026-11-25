@@ -31,6 +31,7 @@
   import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { isComposingKey } from "../utils/ime.js";
   import { autoReposition } from "../utils/popover.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { scrollFade } from "../utils/scroll-fade.js";
 
   // Exactly one lookup form: a single `search` (with `trigger`), or `triggers`.
@@ -350,6 +351,7 @@
       tabindex="-1"
       onmousedown={preventBlur}
       {@attach scrollFade}
+      {@attach overlayScrollbars({ axis: "y" })}
     >
       {#if searching && results.length === 0}
         <div class="kit-mention__status">{active?.searchingLabel ?? searchingLabel}</div>
