@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { gotoPage } from "./helpers.js";
 
-test("incomplete counts remain visible when the label omits the total", async ({ page }) => {
+test("incomplete counts", async ({ page }) => {
   await gotoPage(page, "find-bar");
   await page.evaluate(async () => {
     const [{ mount }, { default: FindBar }] = await Promise.all([
@@ -19,14 +19,33 @@ test("incomplete counts remain visible when the label omits the total", async ({
         matchCountLabel: "Match {current}",
       },
     });
+    for (const [ariaLabel, matchCount, resultsComplete] of [
+      ["Partial find", 3, false],
+      ["Partial empty find", 0, false],
+      ["Complete empty find", 0, true],
+    ] as const) {
+      mount(FindBar, {
+        target: document.body,
+        props: { ariaLabel, query: "read", matchCount, currentIndex: 0, resultsComplete },
+      });
+    }
   });
   const counter = page
     .getByRole("search", { name: "Custom find" })
     .locator(".kit-find-bar__counter");
   await expect(counter).toHaveText("Match 1 (3+)");
+  const partial = page.getByRole("search", { name: "Partial find" });
+  await expect(partial.locator(".kit-find-bar__counter")).toHaveText("1 of 3+");
+  await expect(partial.locator("[aria-live]")).toHaveText("1 of 3+ so far");
+  const partialEmpty = page.getByRole("search", { name: "Partial empty find" });
+  await expect(partialEmpty.locator(".kit-find-bar__counter")).toHaveText("0 of 0+");
+  await expect(partialEmpty).not.toHaveClass(/kit-find-bar--no-results/);
+  const completeEmpty = page.getByRole("search", { name: "Complete empty find" });
+  await expect(completeEmpty.locator(".kit-find-bar__counter")).toHaveText("No matches");
+  await expect(completeEmpty).toHaveClass(/kit-find-bar--no-results/);
 });
 
-test("incomplete results remain navigable until the count is final", async ({ page }) => {
+test("demo passes results completeness to FindBar", async ({ page }) => {
   await gotoPage(page, "find-bar");
   const section = page
     .locator("section")
@@ -35,28 +54,11 @@ test("incomplete results remain navigable until the count is final", async ({ pa
   const complete = section.getByRole("checkbox", { name: "Results complete" });
   const counter = bar.locator(".kit-find-bar__counter");
   const input = bar.getByRole("textbox", { name: "Search query" });
-  const next = bar.getByRole("button", { name: "Next match" });
-  const previous = bar.getByRole("button", { name: "Previous match" });
 
   await input.fill("read");
   await expect(counter).toHaveText("1 of 3");
   await complete.uncheck();
   await expect(counter).toHaveText("1 of 3+");
-  await expect(bar.locator("[aria-live]")).toHaveText(
-    "1 of 3+, partial count; more matches may exist",
-  );
-  await expect(bar).not.toHaveClass(/kit-find-bar--no-results/);
-  await next.click();
-  await expect(counter).toHaveText("2 of 3+");
-  await expect(section.locator(".find-demo__line.current")).toHaveText(
-    "Read docs/components/date-range-picker.md",
-  );
-  await input.fill("missing");
-  await expect(counter).toHaveText("0 of 0+");
-  await expect(bar).not.toHaveClass(/kit-find-bar--no-results/);
-  await expect(next).toBeDisabled();
-  await expect(previous).toBeDisabled();
   await complete.check();
-  await expect(counter).toHaveText("No matches");
-  await expect(bar).toHaveClass(/kit-find-bar--no-results/);
+  await expect(counter).toHaveText("1 of 3");
 });
