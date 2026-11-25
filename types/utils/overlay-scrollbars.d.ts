@@ -82,6 +82,19 @@ export declare function computeTrackBounds(params: {
     endCornerRadius: number;
     reserveEndForOtherAxis: number;
 }): TrackBounds;
+/** Convert wheel event deltas in pixel (0), line (1), or page (2) units into
+ * CSS pixels for forwarding wheel input over host-mounted scrollbar tracks. */
+export declare function wheelDeltaToPixels(params: {
+    deltaX: number;
+    deltaY: number;
+    deltaMode: number;
+    lineHeight: number;
+    pageWidth: number;
+    pageHeight: number;
+}): {
+    dx: number;
+    dy: number;
+};
 /**
  * Svelte 5 attachment that replaces native scrollbars with zero-gutter floating
  * overlay scrollbars while keeping native wheel, trackpad, touch, keyboard,

@@ -145,6 +145,34 @@ export function computeTrackBounds(params: {
   return { start, length };
 }
 
+/** Convert wheel event deltas in pixel (0), line (1), or page (2) units into
+ * CSS pixels for forwarding wheel input over host-mounted scrollbar tracks. */
+export function wheelDeltaToPixels(params: {
+  deltaX: number;
+  deltaY: number;
+  deltaMode: number;
+  lineHeight: number;
+  pageWidth: number;
+  pageHeight: number;
+}): { dx: number; dy: number } {
+  const { deltaX, deltaY, deltaMode, lineHeight, pageWidth, pageHeight } = params;
+  if (deltaMode === 1) {
+    return { dx: deltaX * lineHeight, dy: deltaY * lineHeight };
+  }
+  if (deltaMode === 2) {
+    return { dx: deltaX * pageWidth, dy: deltaY * pageHeight };
+  }
+  return { dx: deltaX, dy: deltaY };
+}
+
+function isScrollableOverflow(value: string): boolean {
+  return value === "auto" || value === "scroll" || value === "overlay";
+}
+
+function isContainedOverscroll(value: string): boolean {
+  return value === "contain" || value === "none";
+}
+
 const hostRefCounts = new WeakMap<HTMLElement, number>();
 
 function acquireHostAttr(host: HTMLElement): void {
@@ -424,8 +452,19 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
       if (el.style[prop] !== value) el.style[prop] = value;
     }
 
+    function collapseSelfTrack(pair: { track: HTMLDivElement } | null): void {
+      if (!pair || pair.track.parentElement !== viewport) return;
+      pair.track.style.top = "0px";
+      pair.track.style.left = "0px";
+      pair.track.style.width = "0px";
+      pair.track.style.height = "0px";
+    }
+
     function update(): void {
-      frame = 0;
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
       const vpW = viewport.clientWidth;
       const vpH = viewport.clientHeight;
       if (vpW <= 0 || vpH <= 0) {
@@ -435,11 +474,26 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
         return;
       }
 
+      // In self-mode, tracks are absolutely positioned inside `viewport`.
+      // Collapse mounted tracks to (0, 0) before measuring so an old track
+      // position never inflates `scrollWidth` / `scrollHeight` after content
+      // shrinks, then clamp any scroll offset that now lies past the true end.
+      if (selfMode) {
+        collapseSelfTrack(yTrack);
+        collapseSelfTrack(xTrack);
+      }
+
       const zoom = zoomOf(viewport);
       const scrollW = viewport.scrollWidth;
       const scrollH = viewport.scrollHeight;
       const maxScrollX = Math.max(0, scrollW - vpW);
       const maxScrollY = Math.max(0, scrollH - vpH);
+
+      if (selfMode) {
+        if (viewport.scrollTop > maxScrollY) viewport.scrollTop = maxScrollY;
+        if (viewport.scrollLeft > maxScrollX) viewport.scrollLeft = maxScrollX;
+      }
+
       const hasY = allowY && maxScrollY > OVERFLOW_EPSILON;
       const hasX = allowX && maxScrollX > OVERFLOW_EPSILON;
 
@@ -513,6 +567,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
           : { visible: false, size: 0, offset: 0 };
 
         if (metricsY.visible) {
+          if (selfMode) setStyleIfChanged(yTrack.track, "width", "");
           setStyleIfChanged(yTrack.track, "top", `${originTop + boundsY.start}px`);
           setStyleIfChanged(yTrack.track, "left", `${originLeft + vpW - trackSize}px`);
           setStyleIfChanged(yTrack.track, "height", `${boundsY.length}px`);
@@ -543,6 +598,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
           : { visible: false, size: 0, offset: 0 };
 
         if (metricsX.visible) {
+          if (selfMode) setStyleIfChanged(xTrack.track, "height", "");
           setStyleIfChanged(xTrack.track, "top", `${originTop + vpH - trackSize}px`);
           setStyleIfChanged(xTrack.track, "left", `${originLeft + boundsX.start}px`);
           setStyleIfChanged(xTrack.track, "width", `${boundsX.length}px`);
@@ -687,10 +743,61 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
         delete track.dataset["hover"];
       }
 
+      function onTrackWheel(event: WheelEvent): void {
+        if (event.defaultPrevented || event.ctrlKey || draggingAxis !== null) return;
+        const style = getComputedStyle(viewport);
+        const canScrollX = isScrollableOverflow(style.overflowX);
+        const canScrollY = isScrollableOverflow(style.overflowY);
+        const fontSize = parsePx(style.fontSize, 16);
+        const lineHeight = parsePx(style.lineHeight, fontSize * 1.2);
+
+        let { dx, dy } = wheelDeltaToPixels({
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          deltaMode: event.deltaMode,
+          lineHeight,
+          pageWidth: viewport.clientWidth,
+          pageHeight: viewport.clientHeight,
+        });
+
+        const maxScrollX = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        const maxScrollY = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+        if (event.shiftKey && dx === 0 && dy !== 0 && canScrollX && maxScrollX > OVERFLOW_EPSILON) {
+          dx = dy;
+          dy = 0;
+        }
+
+        const applyX = canScrollX ? dx : 0;
+        const applyY = canScrollY ? dy : 0;
+        if (applyX === 0 && applyY === 0) return;
+
+        const prevLeft = viewport.scrollLeft;
+        const prevTop = viewport.scrollTop;
+        if (typeof viewport.scrollBy === "function") {
+          viewport.scrollBy({ left: applyX, top: applyY, behavior: "instant" });
+        } else {
+          viewport.scrollLeft = prevLeft + applyX;
+          viewport.scrollTop = prevTop + applyY;
+        }
+
+        const moved = viewport.scrollLeft !== prevLeft || viewport.scrollTop !== prevTop;
+        const contained =
+          (applyY !== 0 &&
+            maxScrollY > OVERFLOW_EPSILON &&
+            isContainedOverscroll(style.overscrollBehaviorY)) ||
+          (applyX !== 0 &&
+            maxScrollX > OVERFLOW_EPSILON &&
+            isContainedOverscroll(style.overscrollBehaviorX));
+
+        if (moved || contained) event.preventDefault();
+        if (moved) onScroll();
+      }
+
       track.addEventListener("pointerdown", onTrackPointerDown);
       track.addEventListener("mousedown", onMouseDown);
       track.addEventListener("pointerenter", onTrackEnter);
       track.addEventListener("pointerleave", onTrackLeave);
+      if (host) track.addEventListener("wheel", onTrackWheel, { passive: false });
       thumb.addEventListener("pointerdown", onThumbPointerDown);
       thumb.addEventListener("pointermove", onPointerMove);
       thumb.addEventListener("pointerup", endDrag);
@@ -705,6 +812,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
         track.removeEventListener("mousedown", onMouseDown);
         track.removeEventListener("pointerenter", onTrackEnter);
         track.removeEventListener("pointerleave", onTrackLeave);
+        if (host) track.removeEventListener("wheel", onTrackWheel);
         thumb.removeEventListener("pointerdown", onThumbPointerDown);
         thumb.removeEventListener("pointermove", onPointerMove);
         thumb.removeEventListener("pointerup", endDrag);
@@ -726,7 +834,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
         (xTrack !== null && (node === xTrack.track || xTrack.track.contains(node))));
 
     const resizeObserver =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(schedule) : null;
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
 
     function syncObservedChildren(): void {
       if (!resizeObserver) return;

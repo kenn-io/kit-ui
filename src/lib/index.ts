@@ -315,6 +315,7 @@ export {
   overlayScrollbars,
   scrollPosForThumbDelta,
   scrollPosForTrackClick,
+  wheelDeltaToPixels,
   type OverlayScrollbarAxis,
   type OverlayScrollbarInset,
   type OverlayScrollbarsOptions,

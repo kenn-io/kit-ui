@@ -4,6 +4,7 @@ import {
   computeTrackBounds,
   scrollPosForThumbDelta,
   scrollPosForTrackClick,
+  wheelDeltaToPixels,
 } from "../src/lib/utils/overlay-scrollbars.js";
 
 describe("computeThumbMetrics", () => {
@@ -173,5 +174,46 @@ describe("pointer mapping", () => {
         thumbSize: 40,
       }),
     ).toBe(800);
+  });
+});
+
+describe("wheelDeltaToPixels", () => {
+  test("passes pixel deltas through unchanged", () => {
+    expect(
+      wheelDeltaToPixels({
+        deltaX: -12,
+        deltaY: 48,
+        deltaMode: 0,
+        lineHeight: 20,
+        pageWidth: 400,
+        pageHeight: 300,
+      }),
+    ).toEqual({ dx: -12, dy: 48 });
+  });
+
+  test("scales line deltas by line height", () => {
+    expect(
+      wheelDeltaToPixels({
+        deltaX: 2,
+        deltaY: 3,
+        deltaMode: 1,
+        lineHeight: 18,
+        pageWidth: 400,
+        pageHeight: 300,
+      }),
+    ).toEqual({ dx: 36, dy: 54 });
+  });
+
+  test("scales page deltas by viewport dimensions", () => {
+    expect(
+      wheelDeltaToPixels({
+        deltaX: -1,
+        deltaY: 1,
+        deltaMode: 2,
+        lineHeight: 18,
+        pageWidth: 400,
+        pageHeight: 300,
+      }),
+    ).toEqual({ dx: -400, dy: 300 });
   });
 });

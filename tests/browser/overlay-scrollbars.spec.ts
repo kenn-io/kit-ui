@@ -320,3 +320,255 @@ test("DetailDrawer, Typeahead, SelectDropdown, FilterDropdown, Menu, and Command
   await checkZeroGutter(".kit-command-palette__list");
   await page.keyboard.press("Escape");
 });
+
+test("wheeling over host-mounted scrollbar tracks scrolls the inner viewport, respects deltaMode, and chains at boundaries", async ({
+  page,
+}) => {
+  await gotoPage(page, "scroll-box");
+
+  await page.evaluate(async () => {
+    const { mount, createRawSnippet } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: ScrollBox } = await import("/src/lib/components/ScrollBox.svelte");
+
+    const outer = document.createElement("div");
+    outer.id = "wheel-outer-host";
+    outer.style.cssText =
+      "position:fixed;top:16px;left:16px;width:320px;height:260px;overflow-y:auto;z-index:2000;background:var(--bg-surface);border:1px solid var(--border-default)";
+
+    const innerMount = document.createElement("div");
+    innerMount.style.cssText = "display:flex;flex-direction:column;height:180px;margin:12px";
+    outer.append(innerMount);
+
+    const outerTail = document.createElement("div");
+    outerTail.style.cssText = "height:600px";
+    outer.append(outerTail);
+
+    document.body.append(outer);
+
+    const rows = Array.from(
+      { length: 24 },
+      (_, i) => `<div style="height:24px;line-height:24px">Row ${i + 1}</div>`,
+    ).join("");
+
+    mount(ScrollBox, {
+      target: innerMount,
+      props: {
+        label: "Wheel inner box",
+        axis: "y",
+        visibility: "always",
+        children: createRawSnippet(() => ({
+          render: () => `<div>${rows}</div>`,
+        })),
+      },
+    });
+  });
+
+  const outer = page.locator("#wheel-outer-host");
+  const innerViewport = outer.locator('.kit-scrollbox__viewport[aria-label="Wheel inner box"]');
+  const track = outer.locator('[data-kit-scrollbar="y"]');
+  const thumb = track.locator(".kit-scrollbar__thumb");
+
+  await expect(track).toHaveAttribute("data-visible", "true");
+
+  // 1. Native mouse wheel over the visible thumb scrolls the inner viewport, not the outer container.
+  const thumbBox = (await thumb.boundingBox())!;
+  await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
+  await page.mouse.wheel(0, 120);
+
+  await expect.poll(() => innerViewport.evaluate((el) => el.scrollTop)).toBeGreaterThan(80);
+  expect(await outer.evaluate((el) => el.scrollTop)).toBe(0);
+
+  // 2. DOM_DELTA_LINE and DOM_DELTA_PAGE units scale proportionally when dispatched over the track.
+  const beforeLine = await innerViewport.evaluate((el) => el.scrollTop);
+  await track.evaluate((el) => {
+    el.dispatchEvent(
+      new WheelEvent("wheel", { deltaY: 3, deltaMode: 1, bubbles: true, cancelable: true }),
+    );
+  });
+  const afterLine = await innerViewport.evaluate((el) => el.scrollTop);
+  expect(afterLine - beforeLine).toBeGreaterThanOrEqual(30);
+
+  await innerViewport.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  await track.evaluate((el) => {
+    el.dispatchEvent(
+      new WheelEvent("wheel", { deltaY: 1, deltaMode: 2, bubbles: true, cancelable: true }),
+    );
+  });
+  const afterPage = await innerViewport.evaluate((el) => el.scrollTop);
+  expect(afterPage).toBeGreaterThanOrEqual(140);
+
+  // 3. At the bottom boundary, wheeling over the track chains to the outer scroll container.
+  await innerViewport.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  const trackBox = (await track.boundingBox())!;
+  await page.mouse.move(trackBox.x + trackBox.width / 2, trackBox.y + trackBox.height / 2);
+  await page.mouse.wheel(0, 140);
+
+  await expect.poll(() => outer.evaluate((el) => el.scrollTop)).toBeGreaterThan(50);
+
+  // 4. Track clicks and thumb dragging remain functional.
+  await outer.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  const freshTrackBox = (await track.boundingBox())!;
+  await page.mouse.click(freshTrackBox.x + freshTrackBox.width / 2, freshTrackBox.y + 4);
+  const afterClick = await innerViewport.evaluate((el) => el.scrollTop);
+  expect(afterClick).toBeLessThan(100);
+
+  const freshThumbBox = (await thumb.boundingBox())!;
+  await page.mouse.move(
+    freshThumbBox.x + freshThumbBox.width / 2,
+    freshThumbBox.y + freshThumbBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    freshThumbBox.x + freshThumbBox.width / 2,
+    freshThumbBox.y + freshThumbBox.height / 2 + 60,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  expect(await innerViewport.evaluate((el) => el.scrollTop)).toBeGreaterThan(afterClick + 80);
+});
+
+test("shrinking a deeply scrolled self-mode VirtualList clamps invalid scroll positions without spurious scrollbars and preserves valid positions", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await gotoPage(page, "virtual-list");
+
+  await page.evaluate(async () => {
+    const { mount, createRawSnippet } = await import("/node_modules/.vite/deps/svelte.js");
+    const { SvelteMap } = await import("/node_modules/.vite/deps/svelte_reactivity.js");
+    const { default: VirtualList } = await import("/src/lib/components/VirtualList.svelte");
+
+    const host = document.createElement("div");
+    host.id = "shrink-virtual-list-host";
+    host.style.cssText =
+      "position:fixed;top:16px;left:16px;width:300px;height:200px;z-index:2000;background:var(--bg-surface)";
+    document.body.append(host);
+
+    const makeItems = (count: number) => Array.from({ length: count }, (_, i) => `Item ${i}`);
+    const store = new SvelteMap<string, string[]>([["items", makeItems(2000)]]);
+    const row = createRawSnippet((item: () => string) => ({
+      render: () => `<div style="height:32px;line-height:32px">${item()}</div>`,
+    }));
+
+    const props = {
+      get items() {
+        return store.get("items") ?? [];
+      },
+      itemHeight: 32,
+      height: "200px",
+      ariaLabel: "Shrinkable virtual list",
+      row,
+    };
+
+    const { unmount } = mount(VirtualList, { target: host, props });
+    (window as unknown as Record<string, unknown>).__setVirtualListCount = (count: number) => {
+      store.set("items", makeItems(count));
+    };
+    (window as unknown as Record<string, unknown>).__unmountShrinkTest = unmount;
+  });
+
+  const vlist = page.locator('.kit-virtual-list[aria-label="Shrinkable virtual list"]');
+  const vtrack = vlist.locator('[data-kit-scrollbar="y"]');
+  const vthumb = vtrack.locator(".kit-scrollbar__thumb");
+
+  // Scroll deeply into the 2,000-item list so the self-mode track sits far down.
+  await vlist.evaluate((el) => {
+    el.scrollTop = 20000;
+  });
+  await vlist.hover();
+  await expect(vtrack).toHaveAttribute("data-visible", "true");
+  await expect
+    .poll(() => vtrack.evaluate((el) => Number.parseFloat((el as HTMLElement).style.top || "0")))
+    .toBeGreaterThan(19000);
+
+  // 1. Shrink from 2,000 items (64,000px) to 30 items (960px, maxScrollY = 760):
+  // scrollTop clamps immediately to 760, scrollHeight drops to 960, and bottom rows render.
+  await page.evaluate(() => {
+    (window as unknown as { __setVirtualListCount: (n: number) => void }).__setVirtualListCount(30);
+  });
+  await expect.poll(() => vlist.evaluate((el) => el.scrollHeight)).toBe(960);
+  await expect.poll(() => vlist.evaluate((el) => el.scrollTop)).toBe(760);
+  await expect(vlist).toContainText("Item 29");
+
+  // 2. Scroll to a valid offset (200) and shrink from 30 items (960px) to 20 items (640px, maxScrollY = 440):
+  // valid scroll position is preserved.
+  await vlist.evaluate((el) => {
+    el.scrollTop = 200;
+  });
+  await expect.poll(() => vlist.evaluate((el) => el.scrollTop)).toBe(200);
+  await page.evaluate(() => {
+    (window as unknown as { __setVirtualListCount: (n: number) => void }).__setVirtualListCount(20);
+  });
+  await expect.poll(() => vlist.evaluate((el) => el.scrollHeight)).toBe(640);
+  expect(await vlist.evaluate((el) => el.scrollTop)).toBe(200);
+
+  // Verify self-mode thumb dragging still works after shrinking.
+  await vlist.hover();
+  await expect(vtrack).toHaveAttribute("data-visible", "true");
+  const thumbBox = (await vthumb.boundingBox())!;
+  await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2 + 50, {
+    steps: 4,
+  });
+  await page.mouse.up();
+  expect(await vlist.evaluate((el) => el.scrollTop)).toBeGreaterThan(250);
+
+  // 3. Shrink to 3 items (96px < 200px viewport): scrollTop clamps immediately to 0,
+  // scrollHeight drops to <= 200, the spurious scrollbar disappears, and Item 0 is visible.
+  await page.evaluate(() => {
+    (window as unknown as { __setVirtualListCount: (n: number) => void }).__setVirtualListCount(3);
+  });
+  await expect.poll(() => vlist.evaluate((el) => el.scrollTop)).toBe(0);
+  await expect.poll(() => vlist.evaluate((el) => el.scrollHeight)).toBeLessThanOrEqual(200);
+  await expect(vtrack).toHaveCount(0);
+  await expect(vlist).toContainText("Item 0");
+
+  expect(errors).toEqual([]);
+});
+
+test("keeps scrollbar thumbs visible with contrasting system colors in forced-colors mode", async ({
+  page,
+}) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await gotoPage(page, "scroll-box");
+
+  const box = page.locator('.kit-scrollbox:has(.kit-scrollbox__viewport[aria-label="Demo log"])');
+  const track = box.locator('[data-kit-scrollbar="y"]');
+  const thumb = track.locator(".kit-scrollbar__thumb");
+
+  await box.hover();
+  await expect(track).toHaveAttribute("data-visible", "true");
+
+  const resting = await thumb.evaluate((el) => {
+    const thumbStyle = getComputedStyle(el);
+    const canvasBg = getComputedStyle(document.body).backgroundColor;
+    return {
+      bg: thumbStyle.backgroundColor,
+      canvasBg,
+      borderStyle: thumbStyle.borderTopStyle,
+      borderWidth: Number.parseFloat(thumbStyle.borderTopWidth),
+      forcedColorAdjust: thumbStyle.forcedColorAdjust,
+    };
+  });
+
+  expect(resting.forcedColorAdjust).toBe("none");
+  expect(resting.bg).not.toBe(resting.canvasBg);
+  expect(resting.borderStyle).toBe("solid");
+  expect(resting.borderWidth).toBeGreaterThanOrEqual(1);
+
+  // Hovering the track switches the thumb to the system selection color.
+  const trackBox = (await track.boundingBox())!;
+  await page.mouse.move(trackBox.x + trackBox.width / 2, trackBox.y + trackBox.height / 2);
+  await expect(track).toHaveAttribute("data-hover", "true");
+  const hoveredBg = await thumb.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(hoveredBg).not.toBe(resting.canvasBg);
+});

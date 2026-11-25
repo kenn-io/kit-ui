@@ -217,6 +217,7 @@
 .kit-scrollbar {
   position: absolute;
   z-index: 3;
+  overflow: hidden;
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -277,6 +278,25 @@
   .kit-scrollbar,
   .kit-scrollbar__thumb {
     transition: none;
+  }
+}
+
+/* Forced colors replace element backgrounds with Canvas while native
+ * scrollbars stay hidden, so thumbs opt out and paint with system colors
+ * that stay visible against Canvas. */
+@media (forced-colors: active) {
+  .kit-scrollbar__thumb {
+    forced-color-adjust: none;
+    box-sizing: border-box;
+    background: ButtonText;
+    border: 1px solid ButtonText;
+  }
+
+  .kit-scrollbar:hover .kit-scrollbar__thumb,
+  .kit-scrollbar[data-hover="true"] .kit-scrollbar__thumb,
+  .kit-scrollbar[data-dragging="true"] .kit-scrollbar__thumb {
+    background: SelectedItem;
+    border-color: SelectedItem;
   }
 }
 
