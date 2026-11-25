@@ -165,7 +165,6 @@
 </DemoSection>
 
 <style>
-  /* Own row in the canvas's wrapping flex layout, above the list. */
   .find-demo__controls {
     flex-basis: 100%;
   }
