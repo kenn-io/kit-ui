@@ -123,7 +123,9 @@
  * sticky pseudo-element with a negative margin, so it pins to the edge of
  * the visible area without taking space, and lets clicks through to the
  * rows under it. The fade paints in --kit-scroll-fade-color, the surface
- * the list sits on. */
+ * the list sits on. The top fade starts above the list, where overflow
+ * can't be scrolled to, so it adds no scrollable height to a short list.
+ * It becomes visible once scrollTop exceeds 1px. */
 [data-kit-scroll-fade]::before,
 [data-kit-scroll-fade]::after {
   content: "";
@@ -138,7 +140,7 @@
 
 [data-kit-scroll-fade]::before {
   top: 0;
-  margin-bottom: calc(-1 * var(--kit-scroll-fade-size, 32px));
+  margin-top: calc(-1 * var(--kit-scroll-fade-size, 32px));
   background: linear-gradient(
     to bottom,
     var(--kit-scroll-fade-color, var(--bg-popover)),

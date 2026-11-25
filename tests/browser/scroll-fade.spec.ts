@@ -91,6 +91,11 @@ test("a list that fits shows no fade", async ({ page }) => {
   await expect(list).toHaveAttribute("data-kit-scroll-fade", "");
   await expect(list).not.toHaveAttribute("data-kit-scroll-fade-top", "");
   await expect(list).not.toHaveAttribute("data-kit-scroll-fade-bottom", "");
+
+  const body = await openTypeahead(page, 1);
+  await expect(page.getByRole("option", { name: "Coach 0" })).toBeVisible();
+  await expect(body).not.toHaveAttribute("data-kit-scroll-fade-bottom", "");
+  expect(await body.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
 });
 
 test("a list that grows past its height gains the bottom fade", async ({ page }) => {
@@ -112,4 +117,41 @@ test("a list that grows past its height gains the bottom fade", async ({ page })
       el.insertAdjacentHTML("beforeend", "<div style='height:40px'>row</div>");
   });
   await expect(list).toHaveAttribute("data-kit-scroll-fade-bottom", "");
+});
+
+// Mounts a Typeahead with `count` options and opens it.
+async function openTypeahead(page: Page, count: number): Promise<Locator> {
+  await page.evaluate(async (count) => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: Typeahead } = await import("/src/lib/components/Typeahead.svelte");
+    document.body.replaceChildren();
+    const target = document.createElement("div");
+    document.body.append(target);
+    mount(Typeahead, {
+      target,
+      props: {
+        options: Array.from({ length: count }, (_, i) => ({ name: `c${i}`, label: `Coach ${i}` })),
+        fallbackLabel: "Coach",
+        placeholder: "Filter coaches…",
+        onselect: () => {},
+      },
+    });
+  }, count);
+  await page.getByRole("button", { name: "Coach" }).click();
+  const body = page.locator(".kit-typeahead__body");
+  await expect(body).toHaveAttribute("data-kit-scroll-fade", "");
+  return body;
+}
+
+test("a scrolled picker filtered to one row drops its fades", async ({ page }) => {
+  await gotoPage(page, "typeahead");
+  const body = await openTypeahead(page, 30);
+  await body.evaluate((el) => (el.scrollTop = el.scrollHeight));
+  await expect(body).toHaveAttribute("data-kit-scroll-fade-top", "");
+
+  await page.getByRole("combobox", { name: "Filter coaches…" }).fill("Coach 29");
+  await expect(page.getByRole("option")).toHaveCount(1);
+  await expect(body).not.toHaveAttribute("data-kit-scroll-fade-top", "");
+  await expect(body).not.toHaveAttribute("data-kit-scroll-fade-bottom", "");
+  expect(await body.evaluate((el) => el.scrollTop)).toBe(0);
 });
