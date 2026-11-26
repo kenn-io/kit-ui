@@ -165,6 +165,23 @@ export function wheelDeltaToPixels(params: {
   return { dx: deltaX, dy: deltaY };
 }
 
+/** Convert a DOM `scrollLeft` value into a visual left-to-right offset in
+ * `[0, maxScroll]`. In RTL containers (`direction: rtl`), browsers report
+ * `scrollLeft` in `[-maxScroll, 0]` with `0` at the right edge. */
+export function normalizeScrollLeft(scrollLeft: number, maxScroll: number, rtl: boolean): number {
+  if (maxScroll <= 0) return 0;
+  const visual = rtl ? maxScroll + scrollLeft : scrollLeft;
+  return Math.min(maxScroll, Math.max(0, visual));
+}
+
+/** Convert a visual left-to-right offset in `[0, maxScroll]` back into a DOM
+ * `scrollLeft` value (`[-maxScroll, 0]` when `rtl` is true). */
+export function denormalizeScrollLeft(visualLeft: number, maxScroll: number, rtl: boolean): number {
+  if (maxScroll <= 0) return 0;
+  const clamped = Math.min(maxScroll, Math.max(0, visualLeft));
+  return rtl ? clamped - maxScroll : clamped;
+}
+
 function isScrollableOverflow(value: string): boolean {
   return value === "auto" || value === "scroll" || value === "overlay";
 }
@@ -489,13 +506,22 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
       const maxScrollX = Math.max(0, scrollW - vpW);
       const maxScrollY = Math.max(0, scrollH - vpH);
 
+      const style = getComputedStyle(viewport);
+      const rtl = style.direction === "rtl";
+
       if (selfMode) {
         if (viewport.scrollTop > maxScrollY) viewport.scrollTop = maxScrollY;
-        if (viewport.scrollLeft > maxScrollX) viewport.scrollLeft = maxScrollX;
+        if (rtl) {
+          if (viewport.scrollLeft < -maxScrollX) viewport.scrollLeft = -maxScrollX;
+          else if (viewport.scrollLeft > 0) viewport.scrollLeft = 0;
+        } else {
+          if (viewport.scrollLeft > maxScrollX) viewport.scrollLeft = maxScrollX;
+          else if (viewport.scrollLeft < 0) viewport.scrollLeft = 0;
+        }
       }
 
-      const hasY = allowY && maxScrollY > OVERFLOW_EPSILON;
-      const hasX = allowX && maxScrollX > OVERFLOW_EPSILON;
+      const hasY = allowY && isScrollableOverflow(style.overflowY) && maxScrollY > OVERFLOW_EPSILON;
+      const hasX = allowX && isScrollableOverflow(style.overflowX) && maxScrollX > OVERFLOW_EPSILON;
 
       if (!hasY && !hasX) {
         metricsY = { visible: false, size: 0, offset: 0 };
@@ -504,7 +530,6 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
         return;
       }
 
-      const style = getComputedStyle(viewport);
       const trackSize = parsePx(
         style.getPropertyValue("--scrollbar-track-size"),
         DEFAULT_TRACK_SIZE,
@@ -541,7 +566,9 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
         originLeft = (vpRect.left - hostRect.left) / zoom - host.clientLeft + viewport.clientLeft;
         originTop = (vpRect.top - hostRect.top) / zoom - host.clientTop + viewport.clientTop;
       } else {
-        originLeft = Math.min(maxScrollX, Math.max(0, viewport.scrollLeft));
+        originLeft = rtl
+          ? Math.min(0, Math.max(-maxScrollX, viewport.scrollLeft))
+          : Math.min(maxScrollX, Math.max(0, viewport.scrollLeft));
         originTop = Math.min(maxScrollY, Math.max(0, viewport.scrollTop));
       }
 
@@ -591,7 +618,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
           ? computeThumbMetrics({
               scrollSize: scrollW,
               clientSize: vpW,
-              scrollPos: viewport.scrollLeft,
+              scrollPos: normalizeScrollLeft(viewport.scrollLeft, maxScrollX, rtl),
               trackLength: boundsX.length,
               minThumbSize: minThumb,
             })
@@ -649,12 +676,29 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
       let startScroll = 0;
       let activePointerId: number | null = null;
 
+      const isRtl = (): boolean => getComputedStyle(viewport).direction === "rtl";
+
+      function readScrollPos(): number {
+        if (kind === "y") return viewport.scrollTop;
+        const maxX = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        return normalizeScrollLeft(viewport.scrollLeft, maxX, isRtl());
+      }
+
+      function writeScrollPos(visualPos: number): void {
+        if (kind === "y") {
+          viewport.scrollTop = visualPos;
+          return;
+        }
+        const maxX = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        viewport.scrollLeft = denormalizeScrollLeft(visualPos, maxX, isRtl());
+      }
+
       function startDrag(pointerId: number, clientCoord: number): void {
         const zoom = zoomOf(viewport);
         draggingAxis = kind;
         activePointerId = pointerId;
         startPointer = clientCoord / zoom;
-        startScroll = kind === "y" ? viewport.scrollTop : viewport.scrollLeft;
+        startScroll = readScrollPos();
         try {
           thumb.setPointerCapture(pointerId);
         } catch {
@@ -688,8 +732,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
           trackLength,
           thumbSize: metrics.size,
         });
-        if (kind === "y") viewport.scrollTop = nextPos;
-        else viewport.scrollLeft = nextPos;
+        writeScrollPos(nextPos);
         update();
         startDrag(event.pointerId, kind === "y" ? event.clientY : event.clientX);
       }
@@ -714,8 +757,7 @@ export function overlayScrollbars(options: OverlayScrollbarsOptions = {}): Attac
           trackLength,
           thumbSize: metrics.size,
         });
-        if (kind === "y") viewport.scrollTop = nextPos;
-        else viewport.scrollLeft = nextPos;
+        writeScrollPos(nextPos);
         update();
       }
 

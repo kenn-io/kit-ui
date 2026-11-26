@@ -96,7 +96,7 @@
       </div>
     {/if}
     {#if children}
-      <div class="kit-modal-body" {@attach overlayScrollbars({ axis: "y", host: panelEl })}>
+      <div class="kit-modal-body" {@attach overlayScrollbars({ axis: "both", host: panelEl })}>
         {@render children()}
       </div>
     {/if}

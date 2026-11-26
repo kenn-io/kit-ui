@@ -126,7 +126,10 @@
   </aside>
 
   <div class="kit-settings__content" bind:this={contentEl}>
-    <div class="kit-settings__scroll" {@attach overlayScrollbars({ axis: "y", host: contentEl })}>
+    <div
+      class="kit-settings__scroll"
+      {@attach overlayScrollbars({ axis: "both", host: contentEl })}
+    >
       {#if resolvedActive}
         <div class="kit-settings__panel">
           {@render panel(resolvedActive)}

@@ -312,6 +312,8 @@ export { autoReposition, dismissable, type DismissableOptions } from "./utils/po
 export {
   computeThumbMetrics,
   computeTrackBounds,
+  denormalizeScrollLeft,
+  normalizeScrollLeft,
   overlayScrollbars,
   scrollPosForThumbDelta,
   scrollPosForTrackClick,

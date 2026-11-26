@@ -572,3 +572,267 @@ test("keeps scrollbar thumbs visible with contrasting system colors in forced-co
   const hoveredBg = await thumb.evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(hoveredBg).not.toBe(resting.canvasBg);
 });
+
+test("CollapsibleSidebar, Modal, DetailDrawer, and BottomDock show draggable horizontal overlay scrollbars when content overflows horizontally", async ({
+  page,
+}) => {
+  await gotoPage(page, "scroll-box");
+
+  await page.evaluate(async () => {
+    const { mount, unmount, createRawSnippet } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: CollapsibleSidebar } =
+      await import("/src/lib/components/CollapsibleSidebar.svelte");
+    const { default: BottomDock } = await import("/src/lib/components/BottomDock.svelte");
+    const { default: Modal } = await import("/src/lib/components/Modal.svelte");
+    const { default: DetailDrawer } = await import("/src/lib/components/DetailDrawer.svelte");
+
+    const wide = () =>
+      createRawSnippet(() => ({
+        render: () => `<div style="width:900px;height:40px;white-space:nowrap">Wide content</div>`,
+      }));
+    const side = () =>
+      createRawSnippet(() => ({
+        render: () => `<div>Nav</div>`,
+      }));
+
+    // 1. CollapsibleSidebar with mainOverflow="auto"
+    const csHost = document.createElement("div");
+    csHost.id = "wide-collapsible-sidebar";
+    csHost.style.cssText =
+      "position:fixed;top:12px;left:12px;width:460px;height:140px;display:flex;z-index:2000;background:var(--bg-surface)";
+    document.body.append(csHost);
+    mount(CollapsibleSidebar, {
+      target: csHost,
+      props: {
+        sidebarWidth: 120,
+        minSidebarWidth: 100,
+        mainOverflow: "auto",
+        sidebar: side(),
+        children: wide(),
+      },
+    });
+
+    // 2. BottomDock
+    const dockHost = document.createElement("div");
+    dockHost.id = "wide-bottom-dock";
+    dockHost.style.cssText =
+      "position:fixed;top:164px;left:12px;width:320px;height:180px;z-index:2000";
+    document.body.append(dockHost);
+    mount(BottomDock, {
+      target: dockHost,
+      props: {
+        open: true,
+        onclose: () => {},
+        ariaLabel: "Wide dock",
+        initialHeight: "160px",
+        minHeight: "120px",
+        children: wide(),
+      },
+    });
+
+    // Mount helpers for Modal and DetailDrawer so they don't overlap each other.
+    const w = window as unknown as Record<string, unknown>;
+    w.__openWideModal = () => {
+      const mHost = document.createElement("div");
+      mHost.id = "wide-modal-host";
+      document.body.append(mHost);
+      const instance = mount(Modal, {
+        target: mHost,
+        props: { title: "Wide modal", width: "300px", children: wide() },
+      });
+      w.__closeWideModal = () => {
+        void unmount(instance);
+        mHost.remove();
+      };
+    };
+    w.__openWideDrawer = () => {
+      const dHost = document.createElement("div");
+      dHost.id = "wide-drawer-host";
+      document.body.append(dHost);
+      const instance = mount(DetailDrawer, {
+        target: dHost,
+        props: { title: "Wide drawer", width: "300px", children: wide() },
+      });
+      w.__closeWideDrawer = () => {
+        void unmount(instance);
+        dHost.remove();
+      };
+    };
+  });
+
+  const verifyHorizontalDrag = async (frameSelector: string, viewportSelector: string) => {
+    const frame = page.locator(frameSelector);
+    const vp = frame.locator(viewportSelector);
+    const xTrack = frame.locator('[data-kit-scrollbar="x"]');
+    const xThumb = xTrack.locator(".kit-scrollbar__thumb");
+
+    await frame.hover();
+    await expect(xTrack).toHaveAttribute("data-visible", "true");
+    expect(await vp.evaluate((el) => (el as HTMLElement).offsetHeight - el.clientHeight)).toBe(0);
+
+    const box = (await xThumb.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect(await vp.evaluate((el) => el.scrollLeft)).toBeGreaterThan(40);
+  };
+
+  await verifyHorizontalDrag("#wide-collapsible-sidebar", ".kit-sidebar-layout__main");
+  await verifyHorizontalDrag("#wide-bottom-dock", ".kit-bottom-dock__body");
+
+  await page.evaluate(() =>
+    (window as unknown as { __openWideModal: () => void }).__openWideModal(),
+  );
+  await verifyHorizontalDrag("#wide-modal-host .kit-modal-panel", ".kit-modal-body");
+  await page.evaluate(() =>
+    (window as unknown as { __closeWideModal: () => void }).__closeWideModal(),
+  );
+
+  await page.evaluate(() =>
+    (window as unknown as { __openWideDrawer: () => void }).__openWideDrawer(),
+  );
+  await verifyHorizontalDrag("#wide-drawer-host .kit-detail-drawer", ".kit-detail-drawer__body");
+  await page.evaluate(() =>
+    (window as unknown as { __closeWideDrawer: () => void }).__closeWideDrawer(),
+  );
+});
+
+test("RTL horizontal ScrollBox and self-mode containers place thumbs at the right start, drag/click into negative scrollLeft, and keep self-mode tracks aligned", async ({
+  page,
+}) => {
+  await gotoPage(page, "scroll-box");
+
+  await page.evaluate(async () => {
+    const { mount, createRawSnippet } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: ScrollBox } = await import("/src/lib/components/ScrollBox.svelte");
+    const { overlayScrollbars } = await import("/src/lib/utils/overlay-scrollbars.js");
+
+    // 1. Host-mode RTL ScrollBox
+    const rtlHost = document.createElement("div");
+    rtlHost.id = "rtl-scrollbox-host";
+    rtlHost.dir = "rtl";
+    rtlHost.style.cssText =
+      "position:fixed;top:16px;left:16px;width:300px;height:140px;display:flex;flex-direction:column;z-index:2000;background:var(--bg-surface);border:1px solid var(--border-default)";
+    document.body.append(rtlHost);
+    mount(ScrollBox, {
+      target: rtlHost,
+      props: {
+        label: "RTL box",
+        axis: "both",
+        visibility: "always",
+        children: createRawSnippet(() => ({
+          render: () => `<div style="width:1200px;height:400px">RTL wide content</div>`,
+        })),
+      },
+    });
+
+    // 2. Self-mode RTL container
+    const selfRtl = document.createElement("div");
+    selfRtl.id = "rtl-self-scroller";
+    selfRtl.dir = "rtl";
+    selfRtl.style.cssText =
+      "position:fixed;top:180px;left:16px;width:300px;height:140px;overflow:auto;z-index:2000;background:var(--bg-surface);border:1px solid var(--border-default)";
+    const inner = document.createElement("div");
+    inner.id = "rtl-self-inner";
+    inner.style.cssText = "width:1200px;height:400px";
+    inner.textContent = "RTL self-mode content";
+    selfRtl.append(inner);
+    document.body.append(selfRtl);
+    overlayScrollbars({ axis: "both", visibility: "always" })(selfRtl);
+  });
+
+  // Verify host-mode RTL ScrollBox: thumb starts at the right end of the track.
+  const rtlHost = page.locator("#rtl-scrollbox-host");
+  const rtlViewport = rtlHost.locator(".kit-scrollbox__viewport");
+  const rtlTrack = rtlHost.locator('[data-kit-scrollbar="x"]');
+  const rtlThumb = rtlTrack.locator(".kit-scrollbar__thumb");
+
+  await expect(rtlTrack).toHaveAttribute("data-visible", "true");
+  const initialPos = await rtlHost.evaluate((el) => {
+    const t = el.querySelector('[data-kit-scrollbar="x"]')!.getBoundingClientRect();
+    const th = el
+      .querySelector('[data-kit-scrollbar="x"] .kit-scrollbar__thumb')!
+      .getBoundingClientRect();
+    return {
+      trackLeft: t.left,
+      trackRight: t.right,
+      thumbLeft: th.left,
+      thumbRight: th.right,
+    };
+  });
+  expect(Math.abs(initialPos.trackRight - initialPos.thumbRight)).toBeLessThanOrEqual(2);
+  expect(initialPos.thumbLeft - initialPos.trackLeft).toBeGreaterThan(50);
+
+  // Dragging the RTL thumb to the left scrolls scrollLeft negative and moves the thumb left.
+  const thumbBox = (await rtlThumb.boundingBox())!;
+  await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(thumbBox.x + thumbBox.width / 2 - 80, thumbBox.y + thumbBox.height / 2, {
+    steps: 6,
+  });
+  await page.mouse.up();
+
+  const afterDragLeft = await rtlViewport.evaluate((el) => el.scrollLeft);
+  expect(afterDragLeft).toBeLessThan(-100);
+  const movedThumbBox = (await rtlThumb.boundingBox())!;
+  expect(movedThumbBox.x).toBeLessThan(thumbBox.x - 40);
+
+  // Clicking near the left end of the RTL track jumps close to -maxScrollX.
+  const trackBox = (await rtlTrack.boundingBox())!;
+  await page.mouse.click(trackBox.x + 4, trackBox.y + trackBox.height / 2);
+  const afterLeftClick = await rtlViewport.evaluate((el) => el.scrollLeft);
+  expect(afterLeftClick).toBeLessThan(afterDragLeft);
+
+  // Clicking near the right end of the RTL track jumps back toward 0.
+  await page.mouse.click(trackBox.x + trackBox.width - 4, trackBox.y + trackBox.height / 2);
+  const afterRightClick = await rtlViewport.evaluate((el) => el.scrollLeft);
+  expect(afterRightClick).toBeGreaterThan(-50);
+
+  // Verify self-mode RTL container keeps tracks aligned inside the visible viewport
+  // at negative scrollLeft, supports dragging, and clamps cleanly when shrunk.
+  const selfRtl = page.locator("#rtl-self-scroller");
+  const selfInner = page.locator("#rtl-self-inner");
+  const selfXTrack = selfRtl.locator('[data-kit-scrollbar="x"]');
+  const selfXThumb = selfXTrack.locator(".kit-scrollbar__thumb");
+
+  await selfRtl.evaluate((el) => {
+    el.scrollLeft = -350;
+  });
+  await expect(selfXTrack).toHaveAttribute("data-visible", "true");
+
+  const alignment = await selfRtl.evaluate((vp) => {
+    const vpRect = vp.getBoundingClientRect();
+    const xRect = vp.querySelector('[data-kit-scrollbar="x"]')!.getBoundingClientRect();
+    const yRect = vp.querySelector('[data-kit-scrollbar="y"]')!.getBoundingClientRect();
+    return {
+      xInsideLeft: xRect.left >= vpRect.left - 1,
+      xInsideRight: xRect.right <= vpRect.right + 1,
+      yAlignedRight: Math.abs(vpRect.right - yRect.right) <= 3,
+    };
+  });
+  expect(alignment.xInsideLeft).toBe(true);
+  expect(alignment.xInsideRight).toBe(true);
+  expect(alignment.yAlignedRight).toBe(true);
+
+  const selfThumbBox = (await selfXThumb.boundingBox())!;
+  await page.mouse.move(
+    selfThumbBox.x + selfThumbBox.width / 2,
+    selfThumbBox.y + selfThumbBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    selfThumbBox.x + selfThumbBox.width / 2 - 40,
+    selfThumbBox.y + selfThumbBox.height / 2,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  expect(await selfRtl.evaluate((el) => el.scrollLeft)).toBeLessThan(-400);
+
+  // Shrinking the wide RTL content removes the horizontal scrollbar and clamps scrollLeft to 0.
+  await selfInner.evaluate((el) => {
+    (el as HTMLElement).style.width = "200px";
+  });
+  await expect.poll(() => selfRtl.evaluate((el) => el.scrollLeft)).toBe(0);
+  await expect(selfXTrack).toHaveCount(0);
+});

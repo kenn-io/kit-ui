@@ -90,7 +90,10 @@
         {/if}
       </div>
     {/if}
-    <div class="kit-detail-drawer__body" {@attach overlayScrollbars({ axis: "y", host: drawerEl })}>
+    <div
+      class="kit-detail-drawer__body"
+      {@attach overlayScrollbars({ axis: "both", host: drawerEl })}
+    >
       {#if children}
         {@render children()}
       {/if}

@@ -140,7 +140,7 @@
       class:kit-sidebar-layout__main--empty={mainEmpty}
       class:kit-sidebar-layout__main--hidden={mainOverflow === "hidden"}
       {@attach mainOverflow === "auto"
-        ? overlayScrollbars({ axis: "y", host: layoutEl })
+        ? overlayScrollbars({ axis: "both", host: layoutEl })
         : undefined}
     >
       {#if children}

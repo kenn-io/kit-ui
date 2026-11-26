@@ -302,7 +302,7 @@
     <div class="kit-bottom-dock__body-frame" bind:this={bodyFrame}>
       <div
         class="kit-bottom-dock__body"
-        {@attach overlayScrollbars({ axis: "y", host: bodyFrame })}
+        {@attach overlayScrollbars({ axis: "both", host: bodyFrame })}
       >
         {#if children}
           {@render children()}

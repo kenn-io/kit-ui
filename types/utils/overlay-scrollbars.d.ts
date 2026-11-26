@@ -95,6 +95,13 @@ export declare function wheelDeltaToPixels(params: {
     dx: number;
     dy: number;
 };
+/** Convert a DOM `scrollLeft` value into a visual left-to-right offset in
+ * `[0, maxScroll]`. In RTL containers (`direction: rtl`), browsers report
+ * `scrollLeft` in `[-maxScroll, 0]` with `0` at the right edge. */
+export declare function normalizeScrollLeft(scrollLeft: number, maxScroll: number, rtl: boolean): number;
+/** Convert a visual left-to-right offset in `[0, maxScroll]` back into a DOM
+ * `scrollLeft` value (`[-maxScroll, 0]` when `rtl` is true). */
+export declare function denormalizeScrollLeft(visualLeft: number, maxScroll: number, rtl: boolean): number;
 /**
  * Svelte 5 attachment that replaces native scrollbars with zero-gutter floating
  * overlay scrollbars while keeping native wheel, trackpad, touch, keyboard,

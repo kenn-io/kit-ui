@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   computeThumbMetrics,
   computeTrackBounds,
+  denormalizeScrollLeft,
+  normalizeScrollLeft,
   scrollPosForThumbDelta,
   scrollPosForTrackClick,
   wheelDeltaToPixels,
@@ -215,5 +217,37 @@ describe("wheelDeltaToPixels", () => {
         pageHeight: 300,
       }),
     ).toEqual({ dx: -400, dy: 300 });
+  });
+});
+
+describe("RTL scrollLeft normalization", () => {
+  test("passes LTR offsets through clamped to [0, maxScroll]", () => {
+    expect(normalizeScrollLeft(0, 400, false)).toBe(0);
+    expect(normalizeScrollLeft(150, 400, false)).toBe(150);
+    expect(normalizeScrollLeft(600, 400, false)).toBe(400);
+    expect(normalizeScrollLeft(-20, 400, false)).toBe(0);
+
+    expect(denormalizeScrollLeft(0, 400, false)).toBe(0);
+    expect(denormalizeScrollLeft(150, 400, false)).toBe(150);
+    expect(denormalizeScrollLeft(600, 400, false)).toBe(400);
+  });
+
+  test("maps negative RTL scrollLeft to visual left-to-right coordinates and back", () => {
+    // At RTL start (right edge), scrollLeft is 0 -> visual right end (maxScroll).
+    expect(normalizeScrollLeft(0, 400, true)).toBe(400);
+    // Scrolled 100px left from right edge -> 300px from left end.
+    expect(normalizeScrollLeft(-100, 400, true)).toBe(300);
+    // Scrolled fully left -> visual left edge (0).
+    expect(normalizeScrollLeft(-400, 400, true)).toBe(0);
+    // Clamps out-of-range values cleanly.
+    expect(normalizeScrollLeft(-500, 400, true)).toBe(0);
+    expect(normalizeScrollLeft(50, 400, true)).toBe(400);
+
+    // Round-trip back to negative DOM scrollLeft.
+    expect(denormalizeScrollLeft(400, 400, true)).toBe(0);
+    expect(denormalizeScrollLeft(300, 400, true)).toBe(-100);
+    expect(denormalizeScrollLeft(0, 400, true)).toBe(-400);
+    expect(denormalizeScrollLeft(-50, 400, true)).toBe(-400);
+    expect(denormalizeScrollLeft(500, 400, true)).toBe(0);
   });
 });
