@@ -5,7 +5,7 @@ import {
   scrollPosForThumbDelta,
   scrollPosForTrackClick,
   wheelDeltaToPixels,
-} from "../src/lib/utils/overlay-scrollbars.js";
+} from "../../src/lib/utils/overlay-scrollbars.js";
 
 describe("computeThumbMetrics", () => {
   test("hides thumb when content fits within the 1px subpixel slack", () => {
