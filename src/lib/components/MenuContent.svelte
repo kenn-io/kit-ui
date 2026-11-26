@@ -176,7 +176,7 @@
     onkeydown={handleKeydown}
     oncontextmenu={menu.anchor ? (event) => event.preventDefault() : undefined}
     {@attach scrollFade}
-    {@attach overlayScrollbars({ axis: "y" })}
+    {@attach overlayScrollbars({ axis: "both" })}
   >
     {@render children()}
   </div>

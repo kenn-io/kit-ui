@@ -648,7 +648,7 @@
                     style:top="{flyoutY}px"
                     style:left="{flyoutLeft}px"
                     bind:offsetHeight={flyoutHeight}
-                    {@attach overlayScrollbars({ axis: "y" })}
+                    {@attach overlayScrollbars({ axis: "both" })}
                   >
                     <span class="kit-app-sidebar__flyout-title" aria-hidden="true"
                       >{section.label}</span
@@ -725,7 +725,10 @@
         : `${fullWidth}px`}
     bind:this={inline}
   >
-    <div class="kit-app-sidebar__scroll" {@attach overlayScrollbars({ axis: "y", host: inline })}>
+    <div
+      class="kit-app-sidebar__scroll"
+      {@attach overlayScrollbars({ axis: "both", host: inline })}
+    >
       {@render panelContent(false)}
     </div>
     <div class="kit-app-sidebar__rem" aria-hidden="true" {@attach remResized}></div>

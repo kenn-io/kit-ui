@@ -836,3 +836,103 @@ test("RTL horizontal ScrollBox and self-mode containers place thumbs at the righ
   await expect.poll(() => selfRtl.evaluate((el) => el.scrollLeft)).toBe(0);
   await expect(selfXTrack).toHaveCount(0);
 });
+
+test("SelectDropdown, MenuContent, and VirtualList render draggable horizontal overlay scrollbars when rows exceed container width", async ({
+  page,
+}) => {
+  const longLabel =
+    "very-long-non-wrapping-label-that-exceeds-the-popover-max-width-to-trigger-horizontal-overflow-0123456789";
+
+  const verifySelfHorizontalDrag = async (viewportSelector: string) => {
+    const vp = page.locator(viewportSelector);
+    const xTrack = vp.locator('[data-kit-scrollbar="x"]');
+    const xThumb = xTrack.locator(".kit-scrollbar__thumb");
+
+    await vp.hover();
+    await expect(xTrack).toHaveAttribute("data-visible", "true");
+    const gutter = await vp.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return (
+        (el as HTMLElement).offsetHeight -
+        el.clientHeight -
+        Number.parseFloat(s.borderTopWidth) -
+        Number.parseFloat(s.borderBottomWidth)
+      );
+    });
+    expect(gutter).toBe(0);
+
+    const box = (await xThumb.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 50, box.y + box.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect(await vp.evaluate((el) => el.scrollLeft)).toBeGreaterThan(30);
+  };
+
+  await gotoPage(page, "scroll-box");
+
+  // 1. Wide VirtualList
+  await page.evaluate(async (label) => {
+    const { mount, createRawSnippet } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: VirtualList } = await import("/src/lib/components/VirtualList.svelte");
+    const host = document.createElement("div");
+    host.id = "wide-vlist-host";
+    host.style.cssText =
+      "position:fixed;top:16px;left:16px;width:240px;height:140px;z-index:2000;background:var(--bg-surface)";
+    document.body.append(host);
+    mount(VirtualList, {
+      target: host,
+      props: {
+        items: [label, "Row 2", "Row 3"],
+        itemHeight: 28,
+        height: "140px",
+        ariaLabel: "Wide virtual list",
+        row: createRawSnippet((item: () => string) => ({
+          render: () => `<div style="white-space:nowrap;width:max-content">${item()}</div>`,
+        })),
+      },
+    });
+  }, longLabel);
+  await verifySelfHorizontalDrag('.kit-virtual-list[aria-label="Wide virtual list"]');
+  await page.evaluate(() => document.querySelector("#wide-vlist-host")?.remove());
+
+  // 2. Wide SelectDropdown
+  await page.evaluate(async (label) => {
+    const { mount } = await import("/node_modules/.vite/deps/svelte.js");
+    const { default: SelectDropdown } = await import("/src/lib/components/SelectDropdown.svelte");
+    const host = document.createElement("div");
+    host.id = "wide-select-host";
+    host.style.cssText = "position:fixed;top:16px;left:16px;z-index:2000";
+    document.body.append(host);
+    mount(SelectDropdown, {
+      target: host,
+      props: {
+        value: "a",
+        options: [
+          { value: "a", label },
+          { value: "b", label: "Short option" },
+        ],
+        onchange: () => {},
+      },
+    });
+  }, longLabel);
+  await page.locator("#wide-select-host .kit-select-dropdown__trigger").click();
+  await verifySelfHorizontalDrag(".kit-select-dropdown__list");
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => document.querySelector("#wide-select-host")?.remove());
+
+  // 3. Wide MenuContent on the Menu demo page
+  await gotoPage(page, "menu");
+  await page.getByRole("button", { name: "Task actions" }).click();
+  const menuContent = page.getByRole("menu", { name: "Task actions" });
+  await expect(menuContent).toBeVisible();
+  await menuContent
+    .locator('[role="menuitem"]')
+    .first()
+    .evaluate((el, label) => {
+      (el as HTMLElement).style.whiteSpace = "nowrap";
+      el.textContent = label;
+    }, longLabel);
+  await verifySelfHorizontalDrag('.kit-menu__content[aria-label="Task actions"]');
+  await page.keyboard.press("Escape");
+});

@@ -259,7 +259,7 @@
       style={listStyle}
       bind:this={listEl}
       {@attach scrollFade}
-      {@attach overlayScrollbars({ axis: "y" })}
+      {@attach overlayScrollbars({ axis: "both" })}
     >
       {#each options as option, index (option.value)}
         <button

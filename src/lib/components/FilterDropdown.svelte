@@ -393,7 +393,7 @@
       bind:this={dropdownRef}
       style={dropdownStyle}
       {@attach scrollFade}
-      {@attach overlayScrollbars({ axis: "y" })}
+      {@attach overlayScrollbars({ axis: "both" })}
       style:min-width={`min(${minWidth}, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)))`}
     >
       {#if searchable}
@@ -513,7 +513,7 @@
         style={submenuStyle}
         onkeydown={handleSubmenuKeydown}
         {@attach scrollFade}
-        {@attach overlayScrollbars({ axis: "y" })}
+        {@attach overlayScrollbars({ axis: "both" })}
       >
         {@render submenuItem.submenu()}
       </div>

@@ -418,7 +418,7 @@
       onfocusin={(event) => {
         if (event.target instanceof HTMLElement) reveal(event.target);
       }}
-      {@attach overlayScrollbars({ axis: "x" })}
+      {@attach overlayScrollbars({ axis: "both" })}
     >
       {@render dayCells()}
     </div>

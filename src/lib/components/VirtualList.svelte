@@ -222,7 +222,7 @@
       : undefined}
     onscroll={handleScroll}
     onkeydown={handleKeydown}
-    {@attach overlayScrollbars({ axis: "y" })}
+    {@attach overlayScrollbars({ axis: "both" })}
   >
     <div class="kit-virtual-list__spacer" style:height="{slice.totalHeight}px">
       <div class="kit-virtual-list__window" style:transform="translateY({slice.topPad}px)">

@@ -763,7 +763,7 @@
       <div
         class="kit-typeahead__body"
         {@attach scrollFade}
-        {@attach overlayScrollbars({ axis: "y", host: panelEl })}
+        {@attach overlayScrollbars({ axis: "both", host: panelEl })}
       >
         {#if loading}
           <div class="kit-typeahead__status">{loadingLabel}</div>

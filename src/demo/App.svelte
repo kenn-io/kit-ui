@@ -262,7 +262,7 @@
         />
       </div>
       <div class="sidebar__nav-frame" bind:this={navFrameEl}>
-        <nav class="sidebar__nav" {@attach overlayScrollbars({ axis: "y", host: navFrameEl })}>
+        <nav class="sidebar__nav" {@attach overlayScrollbars({ axis: "both", host: navFrameEl })}>
           {#each visibleMeta as page (page.id)}
             {@render navLink(page)}
           {/each}
@@ -296,7 +296,7 @@
           <Toggle checked={getHighContrast()} onchange={setHighContrast} label="High contrast" />
         </div>
       </header>
-      <div class="content__body" {@attach overlayScrollbars({ axis: "y", host: contentEl })}>
+      <div class="content__body" {@attach overlayScrollbars({ axis: "both", host: contentEl })}>
         <ActiveComponent />
       </div>
     </main>

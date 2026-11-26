@@ -322,7 +322,7 @@
         id="{uid}-listbox"
         aria-label={parent?.label ?? ariaLabel}
         {@attach scrollFade}
-        {@attach overlayScrollbars({ axis: "y", host: paletteEl })}
+        {@attach overlayScrollbars({ axis: "both", host: paletteEl })}
       >
         {#if flat.length === 0}
           <div class="kit-command-palette__empty">{emptyLabel}</div>

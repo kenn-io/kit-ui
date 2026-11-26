@@ -351,7 +351,7 @@
       tabindex="-1"
       onmousedown={preventBlur}
       {@attach scrollFade}
-      {@attach overlayScrollbars({ axis: "y" })}
+      {@attach overlayScrollbars({ axis: "both" })}
     >
       {#if searching && results.length === 0}
         <div class="kit-mention__status">{active?.searchingLabel ?? searchingLabel}</div>
