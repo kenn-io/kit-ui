@@ -10,7 +10,7 @@ interface Props extends CalendarNavLabels {
     earliestDate?: string | null;
     /** Popover edge alignment. Defaults to left. */
     align?: "left" | "right";
-    /** Disable Next stepping past this date (YYYY-MM-DD). */
+    /** Disable picking dates after this date and clip highlights to it (YYYY-MM-DD). */
     maxDate?: string | null;
     /** Stretch the trigger to fill its container (for vertical sidebars). */
     block?: boolean;

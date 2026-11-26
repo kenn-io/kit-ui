@@ -324,6 +324,31 @@ test.describe("keyboard grid", () => {
     await page.keyboard.press("Enter");
     await expect(readout).toHaveText("2025-12-30");
   });
+
+  test("selected ranges clip their highlight and end pill at maxDate", async ({ page }) => {
+    await mountCalendarLayout(page);
+    const cal = page.locator(".kit-calendar");
+
+    await page.getByRole("button", { name: "Select March 8–14" }).click();
+    await page.getByRole("button", { name: "Limit to March 10" }).click();
+
+    const selected = cal.locator(".kit-calendar__day.selected");
+    await expect(selected).toHaveCount(3);
+    expect(
+      await selected.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-date"))),
+    ).toEqual(["2026-03-08", "2026-03-09", "2026-03-10"]);
+    await expect(cal.locator('[data-date="2026-03-08"]')).toHaveClass(/range-start/);
+    await expect(cal.locator('[data-date="2026-03-10"]')).toHaveClass(/range-end/);
+    await expect(cal.locator('[data-date="2026-03-11"]')).toHaveAttribute("aria-selected", "false");
+    await expect(cal.locator('[data-date="2026-03-11"]')).toHaveAttribute("aria-disabled", "true");
+
+    // A selection wholly after maxDate highlights nothing and leaves the tab
+    // stop on an enabled day.
+    await page.getByRole("button", { name: "Select March 20" }).click();
+    await expect(cal.locator(".kit-calendar__day.selected")).toHaveCount(0);
+    await page.getByRole("button", { name: "Focus calendar" }).click();
+    await expectFocusedDay(cal, "2026-03-01");
+  });
 });
 
 test.describe("activity", () => {

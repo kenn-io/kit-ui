@@ -75,7 +75,8 @@
     if (disabled) return;
     open = !open;
     if (open) {
-      month = value ?? todayStr();
+      const initial = value ?? todayStr();
+      month = maxDate != null && initial > maxDate ? maxDate : initial;
       await tick();
       positionPanel();
       // The dialog opens with focus on the calendar's day grid, as the APG
