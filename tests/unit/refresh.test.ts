@@ -1,5 +1,5 @@
 import { describe, expect, jest, test } from "bun:test";
-import { createRefreshScheduler, formatRefreshAge } from "../src/lib/utils/refresh.js";
+import { createRefreshScheduler, formatRefreshAge } from "../../src/lib/utils/refresh.js";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

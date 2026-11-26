@@ -1,5 +1,5 @@
 /*
- * Shared popover open-state wiring. floatingPosition.ts owns the geometry;
+ * Shared popover open-state wiring. floating-position.ts owns the geometry;
  * these own the event plumbing every floating component used to hand-roll
  * (and let drift: outside-dismiss listened on `mousedown` in some copies
  * and `click` in others, and only some restored focus after Escape).

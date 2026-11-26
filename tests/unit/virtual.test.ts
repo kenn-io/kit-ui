@@ -4,7 +4,7 @@ import {
   RowHeights,
   virtualSlice,
   visibleWindow,
-} from "../src/lib/components/virtual.js";
+} from "../../src/lib/components/virtual.js";
 
 const fixed = (h: number) => () => h;
 

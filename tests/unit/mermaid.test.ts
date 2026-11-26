@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mermaidCodeFence, mermaidSourceByteLength } from "../src/lib/utils/markdown-mermaid.js";
+import { mermaidCodeFence, mermaidSourceByteLength } from "../../src/lib/utils/markdown-mermaid.js";
 
 // The DOM/rendering half of the module (viewer controls, lightbox, theme
 // re-render, secure-config lock, load-failure retry, per-root budget

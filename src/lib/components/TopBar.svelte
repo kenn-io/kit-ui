@@ -1,5 +1,9 @@
 <script module lang="ts">
-  import type { SelectDropdownIndicator, SelectDropdownIndicatorTone } from "./select-dropdown.js";
+  import type {
+    SelectDropdownIndicator,
+    SelectDropdownIndicatorTone,
+    SelectDropdownOption,
+  } from "./SelectDropdown.svelte";
 
   /** Same shape as the collapsed dropdown's option indicator — the tab's
    * indicator is handed to SelectDropdown verbatim when the tabs collapse. */
@@ -19,7 +23,6 @@
 
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
-  import type { SelectDropdownOption } from "./select-dropdown.js";
   import SelectDropdown from "./SelectDropdown.svelte";
 
   interface Props {

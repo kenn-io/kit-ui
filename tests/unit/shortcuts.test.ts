@@ -4,7 +4,7 @@ import {
   formatShortcutKeys,
   parseShortcut,
   shortcutMatches,
-} from "../src/lib/utils/shortcuts.js";
+} from "../../src/lib/utils/shortcuts.js";
 
 const ev = (
   key: string,

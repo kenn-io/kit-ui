@@ -11,7 +11,7 @@ import {
   placeColumns,
   placeTicks,
   renderedEndMinute,
-} from "../src/lib/components/day-lane.js";
+} from "../../src/lib/components/day-lane.js";
 
 const at = (h: number, m = 0) => h * 60 + m;
 const point = (id: string, h: number, m = 0): DayLaneItem => ({ id, startMinute: at(h, m) });

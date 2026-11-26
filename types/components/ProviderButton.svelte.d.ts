@@ -1,4 +1,4 @@
-import type { ProviderBrand } from "./provider-brand.js";
+import { type ProviderBrand } from "./ProviderBrandMark.svelte";
 interface Props {
     provider: ProviderBrand;
     label: string;

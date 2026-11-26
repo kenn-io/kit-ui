@@ -45,7 +45,7 @@ hooks = [
   { id = "svelte-check", name = "check Svelte and TypeScript", language = "system", entry = "bun run check", always_run = true, pass_filenames = false, stages = [
     "pre-push",
   ], priority = 10 },
-  { id = "unit-tests", name = "run unit tests", language = "system", entry = "bun test ./checks ./scripts", always_run = true, pass_filenames = false, stages = [
+  { id = "unit-tests", name = "run unit tests", language = "system", entry = "bun test ./tests/unit ./checks ./scripts", always_run = true, pass_filenames = false, stages = [
     "pre-push",
   ], priority = 10 },
   { id = "usage-check", name = "check demo component usage", language = "system", entry = "bun run check:usage", always_run = true, pass_filenames = false, stages = [

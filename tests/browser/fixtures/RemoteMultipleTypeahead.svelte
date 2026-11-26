@@ -1,6 +1,5 @@
 <script lang="ts">
-  import Typeahead from "../../../src/lib/components/Typeahead.svelte";
-  import type { TypeaheadOption } from "../../../src/lib/components/typeahead.js";
+  import Typeahead, { type TypeaheadOption } from "../../../src/lib/components/Typeahead.svelte";
 
   // A remote source like a server search: it clears its rows whenever the
   // query resets, then loads suggestions only while the search is open.

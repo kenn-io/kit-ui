@@ -2,10 +2,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { getContext } from "svelte";
   import type { Snippet } from "svelte";
-  import {
-    structuredListLabelsContext,
-    type StructuredListLabels,
-  } from "./structured-list-context.js";
+  import { structuredListLabelsContext, type StructuredListLabels } from "./StructuredList.svelte";
 
   interface Props {
     primary: Snippet;

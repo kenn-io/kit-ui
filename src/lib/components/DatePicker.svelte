@@ -3,7 +3,7 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
   import { autoReposition, dismissable } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
   import Calendar from "./Calendar.svelte";
   import { formatDayLabel, todayStr, type CalendarNavLabels } from "./date-range.js";
 

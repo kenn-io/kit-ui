@@ -10,7 +10,7 @@
   import { tick } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition } from "../utils/popover.js";
-  import { floatingPopoverPosition } from "./floatingPosition.js";
+  import { floatingPopoverPosition } from "../utils/floating-position.js";
 
   interface Props {
     /** Simple text tooltip; for rich content use the `content` snippet. */

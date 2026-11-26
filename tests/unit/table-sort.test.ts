@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { nextSort, sortRows, type SortColumns } from "../src/lib/components/table-sort.js";
+import { nextSort, sortRows, type SortColumns } from "../../src/lib/components/table-sort.js";
 
 interface Job {
   name: string;

@@ -232,7 +232,7 @@ Per document: 20 fences, 8 distinct languages, 100 KB of code — beyond
 these, remaining fences render as escaped plain text (main-thread and
 grammar-fetch protection). Constants are exported
 (`SHIKI_MAX_HIGHLIGHTED_FENCES`, …); the planner is pure and unit-tested
-(`checks/markdown.test.ts`).
+(`tests/unit/markdown.test.ts`).
 
 ## Migrating the apps
 

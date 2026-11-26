@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { savedListPosition, writeListPosition } from "../src/lib/utils/list-position";
+import { savedListPosition, writeListPosition } from "../../src/lib/utils/list-position";
 
 test("history keeps other state and positions and rejects malformed positions", () => {
   const history = {

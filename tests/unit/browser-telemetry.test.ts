@@ -4,7 +4,7 @@ import {
   type BrowserTelemetryEvent,
   type BrowserTelemetryOptions,
   type TelemetryReceipt,
-} from "../src/lib/utils/browser-telemetry.js";
+} from "../../src/lib/utils/browser-telemetry.js";
 
 const ROUTE = "/api/v1/telemetry/events";
 const STORAGE_KEY = "kit-ui.app-opened.example.web";

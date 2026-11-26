@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { highlightSegments } from "../src/lib/utils/highlight.js";
+import { highlightSegments } from "../../src/lib/utils/highlight.js";
 
 test("lowercase expansion keeps matches aligned with original characters", () => {
   expect(highlightSegments("İstanbul theme", "theme")).toEqual([

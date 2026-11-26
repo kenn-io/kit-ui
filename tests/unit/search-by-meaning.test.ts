@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_SEARCH_BY_MEANING_LABELS,
   describeSearchByMeaning,
-} from "../src/lib/components/search-by-meaning.js";
+} from "../../src/lib/components/search-by-meaning.js";
 
 describe("search by meaning descriptions", () => {
   test("uses the selected French locale for counts, sizes, and durations", () => {
