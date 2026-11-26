@@ -35,7 +35,7 @@
     earliestDate?: string | null;
     /** Popover edge alignment. Defaults to left. */
     align?: "left" | "right";
-    /** Disable Next stepping past this date (YYYY-MM-DD). */
+    /** Disable picking dates after this date and clip highlights to it (YYYY-MM-DD). */
     maxDate?: string | null;
     /** Stretch the trigger to fill its container (for vertical sidebars). */
     block?: boolean;
@@ -165,9 +165,25 @@
     return `${selection.from} - ${selection.to}`;
   });
 
+  function clampDate(date: string, max: string | null): string {
+    return max != null && date > max ? max : date;
+  }
+
+  function clampRange(range: DateRange, max: string | null): DateRange {
+    if (max == null || range.to <= max) return range;
+    if (range.from > max) return { from: max, to: max };
+    return { from: range.from, to: max };
+  }
+
   // The period the calendar highlights: the day/week/month around the
-  // current anchor.
-  const calSelected = $derived(periodBounds(calUnit, calAnchor, weekStart));
+  // current anchor, clipped at maxDate so periods containing maxDate do
+  // not highlight disabled future dates.
+  const calSelected = $derived.by((): DateRange | null => {
+    const bounds = periodBounds(calUnit, calAnchor, weekStart);
+    if (maxDate == null || bounds.to <= maxDate) return bounds;
+    if (bounds.from > maxDate) return null;
+    return { from: bounds.from, to: maxDate };
+  });
 
   // While an end pick is pending only the start day highlights.
   const calCustomSelected = $derived<DateRange | null>(
@@ -192,14 +208,18 @@
   // is deliberately left alone — an open panel shouldn't switch tabs under
   // the user just because the parent swapped the selection.
   function reseedFromSelection(): void {
+    const defaultDate = clampDate(todayStr(), maxDate);
     if (selection.mode === "calendar") {
       calUnit = selection.unit;
       calAnchor = selection.anchor;
     } else {
       calUnit = "week";
-      calAnchor = selection.mode === "custom" && selection.to ? selection.to : todayStr();
+      calAnchor = clampDate(
+        selection.mode === "custom" && selection.to ? selection.to : defaultDate,
+        maxDate,
+      );
     }
-    const resolved = resolveRange(selection, earliestDate, weekStart);
+    const resolved = clampRange(resolveRange(selection, earliestDate, weekStart), maxDate);
     customFrom = selection.mode === "custom" ? selection.from : resolved.from;
     customTo = selection.mode === "custom" ? selection.to : resolved.to;
     // A controlled selection with only `from` is a range mid-pick: stay
@@ -209,8 +229,8 @@
     // adopt this draft as its own.
     customPending = customFrom !== "" && customTo === "";
     pendingFor = customPending ? selectionKey(selection) : null;
-    calMonth = calAnchor;
-    customMonth = customTo || customFrom || todayStr();
+    calMonth = clampDate(calAnchor, maxDate);
+    customMonth = clampDate(customTo || customFrom || defaultDate, maxDate);
   }
 
   let panelEl = $state<HTMLDivElement>();
@@ -259,26 +279,27 @@
   // so switching tabs after picking a preset edits that range, not a stale
   // seed.
   function syncCustomFields(sel: RangeSelection): void {
-    const resolved = resolveRange(sel, earliestDate, weekStart);
+    const resolved = clampRange(resolveRange(sel, earliestDate, weekStart), maxDate);
     customFrom = resolved.from;
     customTo = resolved.to;
     customPending = false;
     pendingFor = null;
-    customMonth = resolved.to;
+    customMonth = clampDate(resolved.to, maxDate);
   }
 
   function applyRelative(days: number): void {
     const sel: RangeSelection = { mode: "relative", days };
-    calAnchor = resolveRange(sel, earliestDate, weekStart).to;
+    calAnchor = clampDate(resolveRange(sel, earliestDate, weekStart).to, maxDate);
     syncCustomFields(sel);
     onSelect(sel);
   }
 
   function applyCalendar(unit: CalendarUnit, anchor: string): void {
+    const clampedAnchor = clampDate(anchor, maxDate);
     calUnit = unit;
-    calAnchor = anchor;
-    calMonth = anchor;
-    const sel: RangeSelection = { mode: "calendar", unit, anchor };
+    calAnchor = clampedAnchor;
+    calMonth = clampedAnchor;
+    const sel: RangeSelection = { mode: "calendar", unit, anchor: clampedAnchor };
     syncCustomFields(sel);
     onSelect(sel);
   }

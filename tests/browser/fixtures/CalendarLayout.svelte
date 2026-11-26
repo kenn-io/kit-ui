@@ -13,6 +13,9 @@
 <button onclick={() => (selected = { from: "2026-03-20", to: "2026-03-20" })}
   >Select March 20</button
 >
+<button onclick={() => (selected = { from: "2026-03-08", to: "2026-03-14" })}
+  >Select March 8–14</button
+>
 <button onclick={() => (selected = null)}>Clear selection</button>
 <button onclick={() => (maxDate = "2026-03-10")}>Limit to March 10</button>
 <button onclick={() => (maxDate = null)}>Clear limit</button>

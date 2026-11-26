@@ -259,8 +259,17 @@
     else if (rect.right + 6 > box.right) track.scrollLeft += rect.right - box.right + 6;
   }
 
+  // Highlight only dates within maxDate so a range spanning past maxDate
+  // ends its band and end pill on maxDate rather than across disabled days.
+  const clampedSelected = $derived.by((): DateRange | null => {
+    if (selected == null) return null;
+    if (maxDate == null || selected.to <= maxDate) return selected;
+    if (selected.from > maxDate) return null;
+    return { from: selected.from, to: maxDate };
+  });
+
   $effect(() => {
-    void [monthPrefix, selected?.from, selected?.to];
+    void [monthPrefix, clampedSelected?.from, clampedSelected?.to];
     if (track == null) return;
     // A focused day keeps its place, such as day 28 after it ends a range.
     const active = document.activeElement;
@@ -278,7 +287,7 @@
   });
 
   function inRange(date: string): boolean {
-    return selected != null && date >= selected.from && date <= selected.to;
+    return clampedSelected != null && date >= clampedSelected.from && date <= clampedSelected.to;
   }
 
   // Day grid keyboard model (WAI-ARIA APG date picker grid): the grid is one
@@ -301,7 +310,7 @@
     const monthDays = cells.filter((date) => date.startsWith(monthPrefix));
     return (
       monthDays.find(inRange) ??
-      (today.startsWith(monthPrefix) ? today : undefined) ??
+      (today.startsWith(monthPrefix) && !isDisabled(today) ? today : undefined) ??
       monthDays.find((date) => !isDisabled(date)) ??
       monthDays[0]!
     );
@@ -436,8 +445,8 @@
               class:outside={!date.startsWith(monthPrefix)}
               class:today={date === today}
               class:selected={selectedDay}
-              class:range-start={selectedDay && date === selected?.from}
-              class:range-end={selectedDay && date === selected?.to}
+              class:range-start={selectedDay && date === clampedSelected?.from}
+              class:range-end={selectedDay && date === clampedSelected?.to}
               class:fill-above={selectedDay && i >= 7 && inRange(cells[i - 7]!)}
               type="button"
               role="gridcell"

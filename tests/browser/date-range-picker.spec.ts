@@ -407,3 +407,60 @@ test("opening on the relative tab leaves focus on the trigger", async ({ page })
   await expect(panel(page)).toBeVisible();
   await expect(trigger).toBeFocused();
 });
+
+test("maxDate clips week and month highlights and custom seeds without affecting past weeks", async ({
+  page,
+}) => {
+  // Thursday 2026-06-18 sits mid-week (Mon 15 – Sun 21) and mid-month.
+  await page.clock.setFixedTime(new Date(2026, 5, 18, 12, 0, 0));
+  await page.reload();
+  await page.locator(".content__heading").waitFor();
+
+  // The second demo picker is seeded to the current week with maxDate = today.
+  await page.locator(".kit-date-range-picker__trigger").nth(1).click();
+  const selectedDates = () =>
+    panel(page)
+      .locator(".kit-calendar__day.selected")
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-date")));
+
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(4);
+  expect(await selectedDates()).toEqual(["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18"]);
+  await expect(panel(page).locator('[data-date="2026-06-15"]')).toHaveClass(/range-start/);
+  await expect(panel(page).locator('[data-date="2026-06-18"]')).toHaveClass(/range-end/);
+  for (const future of ["2026-06-19", "2026-06-20", "2026-06-21"]) {
+    const cell = panel(page).locator(`[data-date="${future}"]`);
+    await expect(cell).toHaveAttribute("aria-selected", "false");
+    await expect(cell).toHaveAttribute("aria-disabled", "true");
+  }
+
+  // Month highlights only June 1 through June 18.
+  await panel(page).getByRole("button", { name: "Month", exact: true }).click();
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(18);
+  await expect(panel(page).locator('[data-date="2026-06-01"]')).toHaveClass(/range-start/);
+  await expect(panel(page).locator('[data-date="2026-06-18"]')).toHaveClass(/range-end/);
+  await expect(panel(page).locator('[data-date="2026-06-19"]')).toHaveAttribute(
+    "aria-selected",
+    "false",
+  );
+
+  // Switching to Custom seeds the clipped end date and still rejects future clicks.
+  await panel(page).getByRole("radio", { name: "Custom" }).click();
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint-value")).toHaveText([
+    "2026-06-01",
+    "2026-06-18",
+  ]);
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(18);
+  await panel(page).locator('[data-date="2026-06-19"]').click({ force: true });
+  await expect(panel(page).locator(".kit-date-range-picker__endpoint-value")).toHaveText([
+    "2026-06-01",
+    "2026-06-18",
+  ]);
+
+  // A completed past week still highlights all seven days.
+  await panel(page).getByRole("radio", { name: "Calendar" }).click();
+  await panel(page).getByRole("button", { name: "Week", exact: true }).click();
+  await panel(page).locator('[data-date="2026-06-10"]').click();
+  await expect(panel(page).locator(".kit-calendar__day.selected")).toHaveCount(7);
+  await expect(panel(page).locator('[data-date="2026-06-08"]')).toHaveClass(/range-start/);
+  await expect(panel(page).locator('[data-date="2026-06-14"]')).toHaveClass(/range-end/);
+});
