@@ -40,6 +40,7 @@
   import { flushSync, onDestroy, tick, untrack } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { scrollFade } from "../utils/scroll-fade.js";
   import { floatingFlyoutStyle, floatingPopoverStyle } from "../utils/floating-position.js";
   import SearchInput from "./SearchInput.svelte";
@@ -392,6 +393,7 @@
       bind:this={dropdownRef}
       style={dropdownStyle}
       {@attach scrollFade}
+      {@attach overlayScrollbars({ axis: "both" })}
       style:min-width={`min(${minWidth}, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)))`}
     >
       {#if searchable}
@@ -511,6 +513,7 @@
         style={submenuStyle}
         onkeydown={handleSubmenuKeydown}
         {@attach scrollFade}
+        {@attach overlayScrollbars({ axis: "both" })}
       >
         {@render submenuItem.submenu()}
       </div>

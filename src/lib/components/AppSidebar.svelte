@@ -49,6 +49,7 @@
   import { BREAKPOINTS, MEDIA } from "../breakpoints.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import {
     formatShortcutKeys,
     isMacPlatform,
@@ -282,21 +283,16 @@
   }
 
   // Labels wrap between words, so the panel's min-content width is the
-  // width its longest word needs; the sidebar adds the edge and a scrollbar
-  // around the panel. A classic scrollbar can appear at any time, when the
-  // sidebar narrows and its labels wrap or when the window gets shorter, so
-  // the measurement leaves room for one whether or not it shows now.
+  // width its longest word needs; the sidebar adds the edge around the panel.
+  // With overlay scrollbars, scrolling takes 0px of layout width.
   function measureFit(): number | null {
     const scroller = panel?.parentElement;
     if (!panel || !scroller || !inline) return null;
-    const { overflowY } = scroller.style;
     const { width } = panel.style;
-    scroller.style.overflowY = "scroll";
     const around = inline.getBoundingClientRect().width - panel.getBoundingClientRect().width;
     panel.style.width = "min-content";
     const content = panel.getBoundingClientRect().width;
     panel.style.width = width;
-    scroller.style.overflowY = overflowY;
     return Math.min(maxWidth, Math.ceil(content + around));
   }
 
@@ -652,6 +648,7 @@
                     style:top="{flyoutY}px"
                     style:left="{flyoutLeft}px"
                     bind:offsetHeight={flyoutHeight}
+                    {@attach overlayScrollbars({ axis: "both" })}
                   >
                     <span class="kit-app-sidebar__flyout-title" aria-hidden="true"
                       >{section.label}</span
@@ -728,7 +725,12 @@
         : `${fullWidth}px`}
     bind:this={inline}
   >
-    <div class="kit-app-sidebar__scroll">{@render panelContent(false)}</div>
+    <div
+      class="kit-app-sidebar__scroll"
+      {@attach overlayScrollbars({ axis: "both", host: inline })}
+    >
+      {@render panelContent(false)}
+    </div>
     <div class="kit-app-sidebar__rem" aria-hidden="true" {@attach remResized}></div>
     <SplitResizeHandle
       ariaLabel={resizeLabel}
@@ -777,19 +779,10 @@
     flex-direction: column;
     min-width: 0;
     overflow-y: auto;
-    /* Reserve the scrollbar's width up front so the collapse button does not
-       shift left when a section's views first make the sidebar scroll. */
-    scrollbar-gutter: stable;
   }
 
   .kit-app-sidebar--rail {
     width: 3.5rem;
-  }
-
-  /* The rail's icons are centered, and a reserved gutter would pull them off
-     center for good. */
-  .kit-app-sidebar--rail .kit-app-sidebar__scroll {
-    scrollbar-gutter: auto;
   }
 
   .kit-app-sidebar__bar {

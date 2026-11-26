@@ -321,9 +321,10 @@ export function checkHandRolledVirtualization(source: any): {
     line: number;
     message: string;
 }[];
-/** A vertical scroller with its native scrollbar hidden should use ScrollBox,
- * which preserves the native control and adds the accessible region contract.
- * Horizontal strips (overflow-x) are exempt — ScrollBox is vertical-only. */
+/** A scroller with its native scrollbar hidden by hand should use ScrollBox or
+ * overlayScrollbars, which provide floating overlay scrollbars and zero layout
+ * gutter without dropping scroll affordances. Horizontal strips (overflow-x)
+ * such as tab bars stay exempt. */
 export function checkHandRolledScrollBox(source: any, filename: any): {
     rule: string;
     line: number;

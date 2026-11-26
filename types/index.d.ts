@@ -133,6 +133,7 @@ export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
 export { isComposingKey } from "./utils/ime.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
+export { computeThumbMetrics, computeTrackBounds, denormalizeScrollLeft, normalizeScrollLeft, overlayScrollbars, scrollPosForThumbDelta, scrollPosForTrackClick, wheelDeltaToPixels, type OverlayScrollbarAxis, type OverlayScrollbarInset, type OverlayScrollbarsOptions, type OverlayScrollbarVisibility, type ThumbMetrics, type TrackBounds, } from "./utils/overlay-scrollbars.js";
 export { scrollFade } from "./utils/scroll-fade.js";
 export { backdropCloses, escapeLayer } from "./utils/overlay.js";
 export { formatCost, formatCount, formatDuration, formatInitials, formatNumber, formatTokenCount, } from "./utils/format.js";

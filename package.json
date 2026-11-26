@@ -94,6 +94,10 @@
       "types": "./types/utils/overlay.d.ts",
       "default": "./src/lib/utils/overlay.ts"
     },
+    "./utils/overlay-scrollbars": {
+      "types": "./types/utils/overlay-scrollbars.d.ts",
+      "default": "./src/lib/utils/overlay-scrollbars.ts"
+    },
     "./utils/popover": {
       "types": "./types/utils/popover.d.ts",
       "default": "./src/lib/utils/popover.ts"

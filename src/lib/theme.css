@@ -164,6 +164,142 @@
   }
 }
 
+/* Overlay scrollbars (utils/overlay-scrollbars.ts). Zero layout gutter: the
+ * scrolling viewport suppresses its native scrollbar and floating tracks render
+ * over its edges. Every token can be overridden per theme or container. */
+:root {
+  --scrollbar-size: 6px;
+  --scrollbar-track-size: 10px;
+  --scrollbar-inset: 2px;
+  --scrollbar-min-thumb: 28px;
+  --scrollbar-radius: 9999px;
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 42%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 68%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--text-secondary) 82%, transparent);
+  --scrollbar-track: transparent;
+}
+
+:root.dark {
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 46%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 72%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--text-secondary) 86%, transparent);
+}
+
+:root.high-contrast {
+  --scrollbar-thumb: color-mix(in srgb, var(--text-secondary) 68%, transparent);
+  --scrollbar-thumb-hover: var(--text-primary);
+  --scrollbar-thumb-active: var(--text-primary);
+}
+
+:root.dark.high-contrast {
+  --scrollbar-thumb: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+  --scrollbar-thumb-hover: var(--text-primary);
+  --scrollbar-thumb-active: var(--text-primary);
+}
+
+/* Resetting scrollbar-color prevents inherited theme scrollbar-color rules from
+ * interfering with ::-webkit-scrollbar suppression in Chromium. */
+[data-kit-overlay-scroll-viewport] {
+  scrollbar-width: none;
+  scrollbar-color: auto;
+}
+
+[data-kit-overlay-scroll-viewport]::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+:where([data-kit-overlay-scroll-host], [data-kit-overlay-scroll-self]) {
+  position: relative;
+}
+
+.kit-scrollbar {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  background: var(--scrollbar-track);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: opacity 150ms ease;
+}
+
+.kit-scrollbar[data-visible="true"],
+.kit-scrollbar[data-dragging="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kit-scrollbar--y {
+  width: var(--scrollbar-track-size);
+}
+
+.kit-scrollbar--x {
+  height: var(--scrollbar-track-size);
+}
+
+.kit-scrollbar__thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--scrollbar-radius);
+  background: var(--scrollbar-thumb);
+  transition: background-color var(--transition-fast, 0.12s) var(--transition-ease, ease);
+}
+
+.kit-scrollbar--y .kit-scrollbar__thumb {
+  left: auto;
+  right: var(--scrollbar-inset);
+  width: var(--scrollbar-size);
+}
+
+.kit-scrollbar--x .kit-scrollbar__thumb {
+  top: auto;
+  bottom: var(--scrollbar-inset);
+  height: var(--scrollbar-size);
+}
+
+.kit-scrollbar:hover .kit-scrollbar__thumb,
+.kit-scrollbar[data-hover="true"] .kit-scrollbar__thumb {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.kit-scrollbar[data-dragging="true"] .kit-scrollbar__thumb {
+  background: var(--scrollbar-thumb-active);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-scrollbar,
+  .kit-scrollbar__thumb {
+    transition: none;
+  }
+}
+
+/* Forced colors replace element backgrounds with Canvas while native
+ * scrollbars stay hidden, so thumbs opt out and paint with system colors
+ * that stay visible against Canvas. */
+@media (forced-colors: active) {
+  .kit-scrollbar__thumb {
+    forced-color-adjust: none;
+    box-sizing: border-box;
+    background: ButtonText;
+    border: 1px solid ButtonText;
+  }
+
+  .kit-scrollbar:hover .kit-scrollbar__thumb,
+  .kit-scrollbar[data-hover="true"] .kit-scrollbar__thumb,
+  .kit-scrollbar[data-dragging="true"] .kit-scrollbar__thumb {
+    background: SelectedItem;
+    border-color: SelectedItem;
+  }
+}
+
 /* In light a popover is the white surface; its shadow lifts it. In dark a
  * shadow barely shows on the near-black page, so a popover takes a lighter
  * raised surface and a lighter edge. That surface narrows the gap to the

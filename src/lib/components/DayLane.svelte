@@ -2,6 +2,7 @@
   import ChevronsDownUpIcon from "@lucide/svelte/icons/chevrons-down-up";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import { tick, type Snippet } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import {
     DAY_LANE_DEFAULTS,
     hourTicks,
@@ -308,6 +309,7 @@
   onfocusout={(event) => {
     if (!scroller?.contains(event.relatedTarget as Node | null)) activeKey = null;
   }}
+  {@attach overlayScrollbars({ axis: "both" })}
 >
   {#if layout.dateOnly.length}
     <div class="kit-day-lane__date-only">

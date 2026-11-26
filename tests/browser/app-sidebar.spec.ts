@@ -886,9 +886,10 @@ test("a drag cut short by the narrow layout leaves no width behind", async ({ pa
   expect(await storedWidth(page)).toBeNull();
 });
 
-test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL }) => {
+test("the narrowest width keeps words fitting with zero scrollbar gutter", async ({ baseURL }) => {
   // Playwright hides Chromium's scrollbars; without that flag Chromium draws
-  // a classic scrollbar that takes room, as Windows and Linux desktops do.
+  // classic scrollbars unless suppressed. Overlay scrollbars must keep a 0px
+  // gutter so words stay fitted when the panel starts to scroll.
   const browser = await chromium.launch({ ignoreDefaultArgs: ["--hide-scrollbars"] });
   try {
     const page = await browser.newPage({ baseURL });
@@ -902,11 +903,10 @@ test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL
     await edge(page).focus();
     for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
 
-    // A shorter window makes the panel scroll, and its scrollbar takes room
-    // from the words.
+    // A shorter window makes the panel scroll with a 0px overlay gutter.
     await page.setViewportSize({ width: 1440, height: 300 });
     await expect.poll(overflows).toBe(true);
-    expect(await gutter()).toBeGreaterThan(0);
+    expect(await gutter()).toBe(0);
     expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
   } finally {
     await browser.close();

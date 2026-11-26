@@ -25,6 +25,7 @@
   import { isComposingKey } from "../utils/ime.js";
   import { trapFocus } from "../utils/focus-trap.js";
   import { backdropCloses } from "../utils/overlay.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { scrollFade } from "../utils/scroll-fade.js";
   import { appShortcuts } from "../utils/shortcuts.js";
   import { formatShortcutKeys } from "../utils/shortcuts.js";
@@ -269,11 +270,14 @@
       else close();
     }
   }
+
+  let paletteEl = $state<HTMLDivElement>();
 </script>
 
 {#if open}
   <div class="kit-command-palette-overlay" role="presentation" {@attach backdropCloses(close)}>
     <div
+      bind:this={paletteEl}
       class={["kit-command-palette", "kit-popover-card", className]}
       role="dialog"
       aria-modal="true"
@@ -318,6 +322,7 @@
         id="{uid}-listbox"
         aria-label={parent?.label ?? ariaLabel}
         {@attach scrollFade}
+        {@attach overlayScrollbars({ axis: "both", host: paletteEl })}
       >
         {#if flat.length === 0}
           <div class="kit-command-palette__empty">{emptyLabel}</div>
