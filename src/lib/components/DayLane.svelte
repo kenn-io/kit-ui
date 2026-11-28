@@ -700,7 +700,7 @@
     box-sizing: border-box;
     position: sticky;
     top: 0;
-    z-index: 4;
+    z-index: 5;
     display: grid;
     grid-template-columns: repeat(var(--kit-day-lane-count), minmax(0, 1fr));
     padding: 0 var(--space-4) 0 var(--kit-day-lane-gutter);

@@ -162,8 +162,6 @@ export interface DayLaneLanesLayout extends Omit<DayLaneLayout, "entries"> {
     /** Ids of timed items in the day whose lanes are all missing from `laneKeys`. */
     unassigned: string[];
 }
-/** The lane keys an item belongs to. */
-export declare function lanesOf(item: DayLaneItem): readonly string[];
 /**
  * Several lanes on one axis ("By person"). Rows are shared, so the hours
  * line up across lanes; a fold needs every lane to be empty. Each lane then

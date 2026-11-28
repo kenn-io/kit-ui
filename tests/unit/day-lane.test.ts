@@ -8,7 +8,6 @@ import {
   hourTicks,
   layoutDayLane,
   layoutDayLanes,
-  lanesOf,
   minuteToY,
   placeColumns,
   placeTicks,
@@ -383,7 +382,6 @@ describe("lanes", () => {
     const item = withLane(point("thread", 10), ["mara", "dev"]);
     const layout = layoutDayLanes([item], ["mara", "dev", "ines"], base);
     expect(layout.lanes.map((l) => l.entries.length)).toEqual([1, 1, 0]);
-    expect(lanesOf(item)).toEqual(["mara", "dev"]);
   });
 
   test("a repeated lane key places the card once in that lane", () => {

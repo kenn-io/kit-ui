@@ -428,7 +428,7 @@ export interface DayLaneLanesLayout extends Omit<DayLaneLayout, "entries"> {
 }
 
 /** The lane keys an item belongs to. */
-export function lanesOf(item: DayLaneItem): readonly string[] {
+function lanesOf(item: DayLaneItem): readonly string[] {
   if (item.lane === undefined) return [];
   return typeof item.lane === "string" ? [item.lane] : item.lane;
 }

@@ -383,6 +383,34 @@ test("by person: lanes are named groups and focus clears the pinned headers", as
   expect(box!.y).toBeGreaterThanOrEqual(heads!.y + heads!.height);
 });
 
+test("pinned lane headers paint above overlapping fold labels", async ({ page }) => {
+  const lanes = page.getByTestId("day-lane-lanes");
+  const scroller = lanes.locator(".kit-day-lane");
+  const label = lanes.locator(".kit-day-lane__fold-label").first();
+  await scroller.scrollIntoViewIfNeeded();
+  await scroller.evaluate((el) => {
+    const header = el.querySelector(".kit-day-lane__lane-heads")!.getBoundingClientRect();
+    const fold = el.querySelector(".kit-day-lane__fold-label")!.getBoundingClientRect();
+    el.scrollTop +=
+      fold.top + fold.height / 2 - (el.getBoundingClientRect().top + header.height / 2);
+  });
+  const overlap = await label.evaluate((el) => {
+    const fold = el.getBoundingClientRect();
+    const header = el
+      .closest(".kit-day-lane")!
+      .querySelector(".kit-day-lane__lane-heads")!
+      .getBoundingClientRect();
+    const x = fold.left + fold.width / 2;
+    const y = fold.top + fold.height / 2;
+    return {
+      withinHeader: x >= header.left && x <= header.right && y >= header.top && y <= header.bottom,
+      topIsHeader: !!document.elementFromPoint(x, y)?.closest(".kit-day-lane__lane-heads"),
+    };
+  });
+  expect(overlap.withinHeader).toBe(true);
+  expect(overlap.topIsHeader).toBe(true);
+});
+
 test("lane keys and item IDs cannot collide in keyboard navigation", async ({ page }) => {
   await mountDayLane(page, {
     items: [

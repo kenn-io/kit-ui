@@ -85,6 +85,8 @@ a point card's top edge.
 
 ## By person: several lanes
 
+Use unique item IDs and lane keys. Date-only items share one global strip above all lanes.
+
 Pass `lanes` (`{ key, label }[]`) and give each item `lane`: one key, or
 several when the item belongs to several people. The lanes share one axis,
 so 9 AM lines up across them, and a quiet stretch folds only when every

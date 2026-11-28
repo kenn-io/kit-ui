@@ -121,7 +121,6 @@ export {
   buildDayLaneSegments,
   DAY_LANE_DEFAULTS,
   hourTicks,
-  lanesOf,
   layoutDayLane,
   layoutDayLanes,
   minuteToY,
