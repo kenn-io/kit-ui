@@ -66,6 +66,28 @@ test("ignores non-primary pointer buttons", async ({ page }) => {
   }
 });
 
+test("resizes again after cleanup when pointer capture is unavailable", async ({ page }) => {
+  await gotoPage(page, "split-resize");
+  const handle = page.getByRole("separator", { name: "Resize left pane" });
+  await handle.evaluate((element) => {
+    Object.defineProperties(element, {
+      setPointerCapture: { value: undefined },
+      hasPointerCapture: { value: undefined },
+      releasePointerCapture: { value: undefined },
+    });
+  });
+
+  for (const [pointerId, start, end, value] of [
+    [1, 10, 30, "220"],
+    [2, 50, 80, "250"],
+  ] as const) {
+    await handle.dispatchEvent("pointerdown", { pointerId, button: 0, clientX: start });
+    await handle.dispatchEvent("pointermove", { pointerId, clientX: end });
+    await handle.dispatchEvent("pointerup", { pointerId, clientX: end });
+    await expect(handle).toHaveAttribute("aria-valuenow", value);
+  }
+});
+
 test("keeps one active pointer and commits the last valid delta on cancellation", async ({
   page,
 }) => {

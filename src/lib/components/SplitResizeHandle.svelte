@@ -92,7 +92,7 @@
     const start = position(event, resizeOrientation);
     const pointerId = event.pointerId;
     let lastResizeEvent = resizeEventFromPointer(event, start, resizeOrientation);
-    handle.setPointerCapture(pointerId);
+    handle.setPointerCapture?.(pointerId);
     dragging = true;
 
     onResizeStart?.(event);
@@ -133,8 +133,8 @@
       handle.removeEventListener("pointerup", onUp);
       handle.removeEventListener("pointercancel", onCancel);
       handle.removeEventListener("lostpointercapture", onLostPointerCapture);
-      if (handle.hasPointerCapture(pointerId)) {
-        handle.releasePointerCapture(pointerId);
+      if (handle.hasPointerCapture?.(pointerId)) {
+        handle.releasePointerCapture?.(pointerId);
       }
     };
   }
