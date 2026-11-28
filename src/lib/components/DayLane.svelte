@@ -192,9 +192,11 @@
     if (activeKey && order.includes(activeKey)) return activeKey;
     const selectedDateOnly = layout.dateOnly.find((i) => i.selected);
     if (selectedDateOnly) return dateOnlyKey(selectedDateOnly);
-    const selected = axisCards.find(({ entry }) =>
-      entry.kind === "item" ? entry.item.selected : entry.items.some((i) => i.selected),
-    );
+    const selected =
+      axisCards.find(({ entry }) => entry.kind === "item" && entry.item.selected) ??
+      axisCards.find(
+        ({ entry }) => entry.kind === "overflow" && entry.items.some((i) => i.selected),
+      );
     return selected?.key ?? order.find((key) => !key.startsWith("fold:")) ?? order[0] ?? null;
   });
 

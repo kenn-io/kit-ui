@@ -261,6 +261,37 @@ test("Tab returns to the selected card after focus leaves the lane", async ({ pa
   await expect(call).toHaveAttribute("tabindex", "-1");
 });
 
+test("Tab returns to a visible selected shared card before its overflow copy", async ({ page }) => {
+  await mountDayLane(page, {
+    items: [
+      ...[1, 2, 3].map((n) => ({ id: `busy-${n}`, lane: "a", startMinute: 540, endMinute: 600 })),
+      { id: "shared", lane: ["a", "b"], startMinute: 550, endMinute: 590, selected: true },
+    ],
+    lanes: [
+      { key: "a", label: "A" },
+      { key: "b", label: "B" },
+    ],
+    foldQuietMinutes: 0,
+    label: "Item",
+  });
+  const firstLane = page.getByRole("group", { name: "A" });
+  const secondLane = page.getByRole("group", { name: "B" });
+  const overflow = firstLane.locator(".kit-day-lane__more");
+  const selected = secondLane.locator(".kit-day-lane__item");
+  await expect(overflow).toHaveAttribute("aria-pressed", "true");
+  await expect(selected).toHaveAttribute("aria-pressed", "true");
+  await page.locator(".kit-day-lane").evaluate((frame) => {
+    const after = document.createElement("button");
+    after.textContent = "After lane";
+    frame.after(after);
+  });
+  await selected.focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "After lane" })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(selected).toBeFocused();
+});
+
 test("keyboard navigation selects a card and reaches both ends", async ({ page }) => {
   await lane(page)
     .getByRole("button", { name: /Shipment status standup/ })
