@@ -96,7 +96,9 @@ sideways when they do not fit; the lane headers stay pinned while the
 hours scroll, and the hour labels stay in a frozen gutter while the lanes
 scroll sideways under it. Keyboard focus scrolls a card clear of both. `laneHeader` renders a header from the lane and its timed
 item count, for an avatar or a link; without it the header shows the label
-and count. Timed items whose lanes are all missing are not drawn. A card
+and count. Timed items whose lanes are all missing are not drawn, and
+`lanes={[]}` draws no timed cards at all (date-only items still show);
+`layoutDayLanes` lists those items in `unassigned`. A card
 that sits in several lanes keeps one id, so `onselect` and `selected` work
 the same as in a single lane.
 
@@ -127,7 +129,10 @@ the same as in a single lane.
   hours, and a "Fold" button on the first opened hour closes them again. The
   now line sits within the band when its time falls inside a fold.
 - Date-only items sit in a strip above the hours, in input order.
-- Selected and dimmed come from the items; DayLane never hides an item.
+- Selected and dimmed come from the items; neither hides an item, and
+  overflow collects extra items into "+N more" rather than dropping them. With
+  `lanes`, a timed item with no matching lane is the one exception: it is not
+  drawn (see By person).
 
 ## Keyboard and screen readers
 
