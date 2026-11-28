@@ -93,7 +93,8 @@ so 9 AM lines up across them. A quiet stretch folds only when no timed
 item touches it, including items without a displayed lane. Each lane applies
 `maxColumns` on its own (the Docbank design uses 2). Lanes keep `laneMinWidth` (190px) and the view scrolls
 sideways when they do not fit; the lane headers stay pinned while the
-hours scroll. `laneHeader` renders a header from the lane and its timed
+hours scroll, and the hour labels stay in a frozen gutter while the lanes
+scroll sideways under it. Keyboard focus scrolls a card clear of both. `laneHeader` renders a header from the lane and its timed
 item count, for an avatar or a link; without it the header shows the label
 and count. Timed items whose lanes are all missing are not drawn. A card
 that sits in several lanes keeps one id, so `onselect` and `selected` work

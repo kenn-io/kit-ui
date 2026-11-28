@@ -445,6 +445,7 @@
 
   {#if lanes}
     <div class="kit-day-lane__lane-heads" bind:clientHeight={headsHeight}>
+      <div class="kit-day-lane__corner" aria-hidden="true"></div>
       {#each lanes as lane, index (lane.key)}
         {@const count =
           layout.lanes[index]?.entries.reduce(
@@ -464,10 +465,17 @@
   {/if}
 
   <div class="kit-day-lane__axis" style:height="{layout.height}px">
-    <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
+    <!-- The gutter stays put while lanes scroll sideways, so the hours stay in view. -->
+    <div class="kit-day-lane__gutter">
+      <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
+      {#each placedTicks as tick}
+        {#if !tick.atFold}
+          <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
+        {/if}
+      {/each}
+    </div>
     {#each placedTicks as tick}
       {#if !tick.atFold}
-        <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
         <i class="kit-day-lane__hour-line" style:top="{tick.top}px" aria-hidden="true"></i>
       {/if}
     {/each}
@@ -579,6 +587,13 @@
   .kit-day-lane__axis {
     position: relative;
     margin-block: var(--space-4);
+  }
+
+  .kit-day-lane__gutter {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--kit-day-lane-gutter);
+    pointer-events: none;
   }
 
   .kit-day-lane__hour-label {
@@ -698,18 +713,42 @@
 
   .kit-day-lane--lanes .kit-day-lane__fold-label {
     position: sticky;
-    left: var(--space-5);
+    left: calc(var(--kit-day-lane-gutter) + var(--space-5));
     right: var(--space-5);
     flex-shrink: 0;
   }
 
   .kit-day-lane--lanes .kit-day-lane__refold {
     position: sticky;
-    left: var(--space-5);
+    left: calc(var(--kit-day-lane-gutter) + var(--space-5));
     right: var(--space-5);
   }
 
-  /* Keyboard focus scrolls a card clear of the pinned headers. */
+  /* Lanes scroll sideways under the hours: the gutter is in flow and full height,
+     so sticky keeps it pinned along the whole axis, and opaque, catching clicks
+     meant for nothing hidden beneath it. Only the pinned headers paint above it. */
+  .kit-day-lane--lanes .kit-day-lane__gutter {
+    position: sticky;
+    z-index: 5;
+    height: 100%;
+    background: var(--bg-primary);
+    pointer-events: auto;
+  }
+
+  /* The now line starts at the gutter's edge and slides under it. */
+  .kit-day-lane--lanes .kit-day-lane__now {
+    left: var(--kit-day-lane-gutter);
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__now::before {
+    transform: none;
+  }
+
+  /* Keyboard focus scrolls a card clear of the frozen gutter and pinned headers. */
+  .kit-day-lane--lanes {
+    scroll-padding-left: var(--kit-day-lane-gutter);
+  }
+
   .kit-day-lane--lanes .kit-day-lane__item {
     scroll-margin-top: calc(var(--kit-day-lane-heads) + var(--space-4));
   }
@@ -719,15 +758,25 @@
   }
 
   .kit-day-lane__lane-heads {
-    /* Its padding is part of the min-width it shares with the axis. */
+    /* Its padding and corner are part of the min-width it shares with the axis. */
     box-sizing: border-box;
     position: sticky;
     top: 0;
-    z-index: 5;
+    z-index: 6;
     display: grid;
-    grid-template-columns: repeat(var(--kit-day-lane-count), minmax(0, 1fr));
-    padding: 0 var(--space-4) 0 var(--kit-day-lane-gutter);
+    grid-template-columns:
+      var(--kit-day-lane-gutter)
+      repeat(var(--kit-day-lane-count), minmax(0, 1fr));
+    padding: 0 var(--space-4) 0 0;
     border-bottom: 1px solid var(--border-muted);
+    background: var(--bg-primary);
+  }
+
+  /* The gutter's top end, pinned both ways so headers slide under it. */
+  .kit-day-lane__corner {
+    position: sticky;
+    left: 0;
+    z-index: 1;
     background: var(--bg-primary);
   }
 

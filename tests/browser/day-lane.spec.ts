@@ -444,20 +444,24 @@ for (const edge of ["left", "right"] as const) {
     const fold = lanes.getByRole("button", { name: /1:00 AM – 7:00 AM/ });
     const before = await scroller.evaluate((el) => el.scrollLeft);
     const [frame, band] = await Promise.all([scroller.boundingBox(), fold.boundingBox()]);
-    const x = Math.max(frame!.x, band!.x) + 20;
+    // The frozen hour gutter covers the band's scrolled-past start.
+    const gutter = await scroller.evaluate((el) =>
+      parseFloat(getComputedStyle(el).getPropertyValue("--kit-day-lane-gutter")),
+    );
+    const x = Math.max(frame!.x + gutter, band!.x) + 20;
     const y = band!.y + band!.height / 2;
     await page.mouse.click(x, y);
     const refold = lanes.getByRole("button", { name: "Fold 6 quiet hours" });
     await expect(refold).toBeFocused();
     await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBe(before);
     const button = await refold.boundingBox();
-    expect(button!.x).toBeGreaterThanOrEqual(frame!.x);
+    expect(button!.x).toBeGreaterThanOrEqual(frame!.x + gutter);
     expect(button!.x + button!.width).toBeLessThanOrEqual(frame!.x + frame!.width);
     await refold.click();
     await expect(fold).toBeFocused();
     await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBe(before);
     const label = await fold.locator(".kit-day-lane__fold-label").boundingBox();
-    expect(label!.x).toBeGreaterThanOrEqual(frame!.x);
+    expect(label!.x).toBeGreaterThanOrEqual(frame!.x + gutter);
     expect(label!.x + label!.width).toBeLessThanOrEqual(frame!.x + frame!.width);
   });
 }
@@ -482,4 +486,63 @@ test("switching to a single lane clears pinned-header scroll clearance", async (
       return Math.round(box!.y - frame!.y);
     })
     .toBe(24);
+});
+
+test("by person: hour labels stay in the frozen gutter at the far edge", async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 800 });
+  const lanes = page.getByTestId("day-lane-lanes");
+  const scroller = lanes.locator(".kit-day-lane");
+  await scroller.scrollIntoViewIfNeeded();
+  await scroller.evaluate((el) => (el.scrollLeft = el.scrollWidth));
+  expect(await scroller.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+  const frame = (await scroller.boundingBox())!;
+  const gutter = await scroller.evaluate((el) =>
+    parseFloat(getComputedStyle(el).getPropertyValue("--kit-day-lane-gutter")),
+  );
+  // A label in view sits in the frozen gutter, unhidden by the lanes scrolled past it.
+  const label = lanes.locator(".kit-day-lane__hour-label", { hasText: /^\s*9 AM\s*$/ });
+  await scroller.evaluate(
+    (el, top) => (el.scrollTop += top),
+    (await label.boundingBox())!.y - frame.y - 120,
+  );
+  const scrollLeft = await scroller.evaluate((el) => el.scrollLeft);
+  expect(scrollLeft).toBe(await scroller.evaluate((el) => el.scrollWidth - el.clientWidth));
+  const box = (await label.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(frame.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(frame.x + gutter);
+  expect(
+    await label.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return !!document
+        .elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        ?.closest(".kit-day-lane__gutter");
+    }),
+  ).toBe(true);
+  // The pinned headers' corner caps the gutter, above the lane headers scrolled under it.
+  const corner = await lanes.locator(".kit-day-lane__lane-heads").evaluate((el, x) => {
+    const r = el.getBoundingClientRect();
+    return !!document
+      .elementFromPoint(x + 4, r.top + r.height / 2)
+      ?.closest(".kit-day-lane__corner");
+  }, frame.x);
+  expect(corner).toBe(true);
+  // The last lane is whole and clickable beside the gutter.
+  const last = lanes.locator(".kit-day-lane__lane").last();
+  const lastBox = (await last.boundingBox())!;
+  expect(lastBox.x).toBeGreaterThanOrEqual(frame.x + gutter - 1);
+  expect(lastBox.x + lastBox.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+  // Focusing a card in the first lane scrolls it fully clear of the gutter.
+  const first = lanes
+    .locator(".kit-day-lane__lane")
+    .first()
+    .getByRole("button", { name: /Shipment status standup/ });
+  await first.focus();
+  await expect
+    .poll(async () => (await first.boundingBox())!.x)
+    .toBeGreaterThanOrEqual(frame.x + gutter);
+  const hit = await first.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.left + 6, r.top + r.height / 2));
+  });
+  expect(hit).toBe(true);
 });
