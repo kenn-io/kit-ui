@@ -261,10 +261,10 @@
     reveal(scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`));
   }
 
-  /** Focus alone leaves a card half under the frozen gutter, so nearest alignment finishes it. */
+  /** By person, focus leaves a card half under the gutter; nearest alignment finishes it. */
   function reveal(el?: HTMLElement | null) {
     el?.focus();
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (lanes) el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
   function onkeydown(event: KeyboardEvent) {
