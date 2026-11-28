@@ -116,13 +116,199 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Scroll fades, set up by the scrollFade attachment (utils/scroll-fade.ts):
+ * a gradient over the top or bottom edge of a scrolling list while rows lie
+ * past it, so a list cut at a row boundary still reads as scrollable when
+ * the scrollbar is an overlay that stays hidden until used. Each fade is a
+ * sticky pseudo-element with a negative margin, so it pins to the edge of
+ * the visible area without taking space, and lets clicks through to the
+ * rows under it. The fade paints in --kit-scroll-fade-color, the surface
+ * the list sits on. The top fade starts above the list, where overflow
+ * can't be scrolled to, so it adds no scrollable height to a short list.
+ * It becomes visible once scrollTop exceeds 1px. */
+[data-kit-scroll-fade]::before,
+[data-kit-scroll-fade]::after {
+  content: "";
+  position: sticky;
+  z-index: 2;
+  display: block;
+  height: var(--kit-scroll-fade-size, 32px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+[data-kit-scroll-fade]::before {
+  top: 0;
+  margin-top: calc(-1 * var(--kit-scroll-fade-size, 32px));
+  background: linear-gradient(
+    to bottom,
+    var(--kit-scroll-fade-color, var(--bg-popover)),
+    transparent
+  );
+}
+
+[data-kit-scroll-fade]::after {
+  bottom: 0;
+  margin-top: calc(-1 * var(--kit-scroll-fade-size, 32px));
+  background: linear-gradient(to top, var(--kit-scroll-fade-color, var(--bg-popover)), transparent);
+}
+
+[data-kit-scroll-fade-top]::before,
+[data-kit-scroll-fade-bottom]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-kit-scroll-fade]::before,
+  [data-kit-scroll-fade]::after {
+    transition: none;
+  }
+}
+
+/* Overlay scrollbars (utils/overlay-scrollbars.ts). Zero layout gutter: the
+ * scrolling viewport suppresses its native scrollbar and floating tracks render
+ * over its edges. Every token can be overridden per theme or container. */
+:root {
+  --scrollbar-size: 6px;
+  --scrollbar-track-size: 10px;
+  --scrollbar-inset: 2px;
+  --scrollbar-min-thumb: 28px;
+  --scrollbar-radius: 9999px;
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 42%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 68%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--text-secondary) 82%, transparent);
+  --scrollbar-track: transparent;
+}
+
+:root.dark {
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 46%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 72%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--text-secondary) 86%, transparent);
+}
+
+:root.high-contrast {
+  --scrollbar-thumb: color-mix(in srgb, var(--text-secondary) 68%, transparent);
+  --scrollbar-thumb-hover: var(--text-primary);
+  --scrollbar-thumb-active: var(--text-primary);
+}
+
+:root.dark.high-contrast {
+  --scrollbar-thumb: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+  --scrollbar-thumb-hover: var(--text-primary);
+  --scrollbar-thumb-active: var(--text-primary);
+}
+
+/* Resetting scrollbar-color prevents inherited theme scrollbar-color rules from
+ * interfering with ::-webkit-scrollbar suppression in Chromium. */
+[data-kit-overlay-scroll-viewport] {
+  scrollbar-width: none;
+  scrollbar-color: auto;
+}
+
+[data-kit-overlay-scroll-viewport]::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+:where([data-kit-overlay-scroll-host], [data-kit-overlay-scroll-self]) {
+  position: relative;
+}
+
+.kit-scrollbar {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  background: var(--scrollbar-track);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: opacity 150ms ease;
+}
+
+.kit-scrollbar[data-visible="true"],
+.kit-scrollbar[data-dragging="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kit-scrollbar--y {
+  width: var(--scrollbar-track-size);
+}
+
+.kit-scrollbar--x {
+  height: var(--scrollbar-track-size);
+}
+
+.kit-scrollbar__thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--scrollbar-radius);
+  background: var(--scrollbar-thumb);
+  transition: background-color var(--transition-fast, 0.12s) var(--transition-ease, ease);
+}
+
+.kit-scrollbar--y .kit-scrollbar__thumb {
+  left: auto;
+  right: var(--scrollbar-inset);
+  width: var(--scrollbar-size);
+}
+
+.kit-scrollbar--x .kit-scrollbar__thumb {
+  top: auto;
+  bottom: var(--scrollbar-inset);
+  height: var(--scrollbar-size);
+}
+
+.kit-scrollbar:hover .kit-scrollbar__thumb,
+.kit-scrollbar[data-hover="true"] .kit-scrollbar__thumb {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.kit-scrollbar[data-dragging="true"] .kit-scrollbar__thumb {
+  background: var(--scrollbar-thumb-active);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-scrollbar,
+  .kit-scrollbar__thumb {
+    transition: none;
+  }
+}
+
+/* Forced colors replace element backgrounds with Canvas while native
+ * scrollbars stay hidden, so thumbs opt out and paint with system colors
+ * that stay visible against Canvas. */
+@media (forced-colors: active) {
+  .kit-scrollbar__thumb {
+    forced-color-adjust: none;
+    box-sizing: border-box;
+    background: ButtonText;
+    border: 1px solid ButtonText;
+  }
+
+  .kit-scrollbar:hover .kit-scrollbar__thumb,
+  .kit-scrollbar[data-hover="true"] .kit-scrollbar__thumb,
+  .kit-scrollbar[data-dragging="true"] .kit-scrollbar__thumb {
+    background: SelectedItem;
+    border-color: SelectedItem;
+  }
+}
+
 /* In light a popover is the white surface; its shadow lifts it. In dark a
  * shadow barely shows on the near-black page, so a popover takes a lighter
  * raised surface and a lighter edge. That surface narrows the gap to the
  * ordinary selected fill, so the chosen option inside a popover (a date
  * preset, a mode tab) takes a stronger fill and edge. High contrast keeps
- * its strong default edge. A modal panel is the same kind of surface, so
- * the rules scoped to the popover card below cover it too. */
+ * its strong default edge. A modal panel takes the popover edge and the
+ * rules scoped to the popover card below, but fills with --bg-modal. */
 :root {
   --bg-popover: var(--bg-surface);
   --border-popover: var(--border-default);
@@ -135,6 +321,18 @@
 
 :root.dark.high-contrast {
   --border-popover: var(--border-default);
+}
+
+/* A dialog dims the page behind it, so the scrim already sets it apart.
+ * Against that dimmed page the lighter popover fill glares, so in dark a
+ * Modal panel keeps the plain surface. Popovers keep the lighter fill: they
+ * sit over a page that is not dimmed and would sink into a dense one. */
+:root {
+  --bg-modal: var(--bg-popover);
+}
+
+:root.dark {
+  --bg-modal: var(--bg-surface);
 }
 
 :root.dark :is(.kit-popover-card, .kit-modal-panel) {
@@ -153,6 +351,42 @@
   --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-popover));
   --selected-bg: var(--bg-surface-hover);
   --selected-list-bg: var(--bg-surface-hover);
+}
+
+/* Control edges: the outline of a checkbox, radio, or text field, and the
+ * calendar's today ring. On the page they use the default border. A dark popover is lighter than the page
+ * and its hovered row lighter again, which left that border at about 1.1:1
+ * there, under the 3:1 a control's edge needs. Inside a dark popover the
+ * edge mixes halfway to the primary ink: above 3:1 on the popover and on a
+ * hovered row. */
+:root {
+  --border-control: var(--border-default);
+}
+
+:root.dark .kit-popover-card {
+  --border-control: color-mix(in srgb, var(--text-primary) 50%, var(--bg-popover));
+}
+
+/* Rules and outlines. The page's dark borders sit about 1.1:1 on a dark
+ * popover, so dividers and the edges of pills and keys vanished there.
+ * Inside a dark popover each border steps toward the primary ink, muted by
+ * a fifth and default by a quarter: at least 1.7:1 and 2.2:1 on the
+ * popover, with default still the stronger of the two. The mixes resolve on
+ * the root, where the borders are still the theme's own. High contrast
+ * keeps its borders, which are already strong. */
+:root.dark {
+  --border-muted-popover: color-mix(in srgb, var(--text-primary) 20%, var(--border-muted));
+  --border-default-popover: color-mix(in srgb, var(--text-primary) 25%, var(--border-default));
+}
+
+:root.dark:not(.high-contrast) .kit-popover-card {
+  --border-muted: var(--border-muted-popover);
+  --border-default: var(--border-default-popover);
+}
+
+/* The modal panel takes its own fill, so its hover steps up from that. */
+:root.dark .kit-modal-panel {
+  --bg-surface-hover: color-mix(in srgb, var(--text-primary) 8%, var(--bg-modal));
 }
 
 /* Muted ink is tuned for the page surface. A dark popover is lighter than

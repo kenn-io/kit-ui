@@ -1,7 +1,6 @@
 <script lang="ts">
   import Button from "./Button.svelte";
-  import ProviderBrandMark from "./ProviderBrandMark.svelte";
-  import type { ProviderBrand } from "./provider-brand.js";
+  import ProviderBrandMark, { type ProviderBrand } from "./ProviderBrandMark.svelte";
 
   interface Props {
     provider: ProviderBrand;

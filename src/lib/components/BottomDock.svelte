@@ -2,9 +2,9 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import type { Attachment } from "svelte/attachments";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import IconButton from "./IconButton.svelte";
-  import SplitResizeHandle from "./SplitResizeHandle.svelte";
-  import type { SplitResizeEvent } from "./split-resize.js";
+  import SplitResizeHandle, { type SplitResizeEvent } from "./SplitResizeHandle.svelte";
 
   interface Props {
     open: boolean;
@@ -50,7 +50,8 @@
   let measuredMinHeight = $state(0);
   let measuredMaxHeight = $state(100);
   let startHeight = 0;
-  let dockElement: HTMLElement | null = null;
+  let dockElement = $state<HTMLElement | null>(null);
+  let bodyFrame = $state<HTMLDivElement>();
   let ownResizePending = false;
   let ownResizeResetFrame: number | null = null;
   let suppressedContextResize = false;
@@ -298,10 +299,15 @@
       </div>
     {/if}
 
-    <div class="kit-bottom-dock__body">
-      {#if children}
-        {@render children()}
-      {/if}
+    <div class="kit-bottom-dock__body-frame" bind:this={bodyFrame}>
+      <div
+        class="kit-bottom-dock__body"
+        {@attach overlayScrollbars({ axis: "both", host: bodyFrame })}
+      >
+        {#if children}
+          {@render children()}
+        {/if}
+      </div>
     </div>
 
     {#if footer}
@@ -336,6 +342,15 @@
   .kit-bottom-dock__header-content {
     flex: 1;
     min-width: 0;
+  }
+
+  .kit-bottom-dock__body-frame {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .kit-bottom-dock__body {

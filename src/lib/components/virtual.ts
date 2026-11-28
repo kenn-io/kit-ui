@@ -178,11 +178,75 @@ export function visibleWindow(
 
 /** The element that scrolls `el` vertically: its nearest ancestor with
  * `overflow-y` auto, scroll, or overlay, or the document's scrolling element
- * when none is. Used for tables whose rows the page scrolls. */
-export function scrollerOf(el: Element): HTMLElement {
-  for (let node = el.parentElement; node; node = node.parentElement) {
+ * when none is. When requiring overflow, check `el` itself first. */
+export function scrollerOf(el: Element, onlyOverflowing = false): HTMLElement {
+  for (
+    let node = onlyOverflowing && el instanceof HTMLElement ? el : el.parentElement;
+    node;
+    node = node.parentElement
+  ) {
     const overflow = getComputedStyle(node).overflowY;
-    if (overflow === "auto" || overflow === "scroll" || overflow === "overlay") return node;
+    if (
+      (overflow === "auto" || overflow === "scroll" || overflow === "overlay") &&
+      (!onlyOverflowing || node.scrollHeight > node.clientHeight)
+    )
+      return node;
   }
   return (document.scrollingElement ?? document.documentElement) as HTMLElement;
+}
+
+/** Watch the end of a list half a scroll box ahead of view; inside a
+ * `VirtualTable`, as soon as the end row is rendered, which is within
+ * `overscan` rows of view. */
+export function watchListEnd(node: HTMLElement, near: () => void): () => void {
+  let root: HTMLElement | null | undefined;
+  let margin = -1;
+  let observer: IntersectionObserver;
+  function update() {
+    const scroller = scrollerOf(node, true);
+    const next =
+      scroller === document.scrollingElement || scroller === document.documentElement
+        ? null
+        : scroller;
+    const nextMargin = (next ? next.clientHeight : window.innerHeight) / 2;
+    if (next === root && nextMargin === margin) return false;
+    root = next;
+    margin = nextMargin;
+    observer?.disconnect();
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (!update() && entries.some((entry) => entry.isIntersecting)) near();
+      },
+      { root, rootMargin: `0px 0px ${margin}px 0px` },
+    );
+    observer.observe(node);
+    return true;
+  }
+  const resize = new ResizeObserver(update);
+  for (let parent = node.parentElement; parent; parent = parent.parentElement)
+    resize.observe(parent);
+  document.addEventListener("scroll", update, true);
+  window.addEventListener("resize", update);
+  update();
+  return () => {
+    document.removeEventListener("scroll", update, true);
+    window.removeEventListener("resize", update);
+    resize.disconnect();
+    observer.disconnect();
+  };
+}
+
+/** Bring a restarted list's top into view. */
+export function showListTop(node: HTMLElement): void {
+  const scroller = scrollerOf(node, true);
+  if (scroller === node) {
+    scroller.scrollTop = 0;
+    return;
+  }
+  const top =
+    scroller === document.scrollingElement || scroller === document.documentElement
+      ? 0
+      : scroller.getBoundingClientRect().top;
+  const above = node.getBoundingClientRect().top - top;
+  if (above < 0) scroller.scrollTop += above;
 }

@@ -4,6 +4,29 @@
 
   let toolOpen = $state(false);
   let toggles = $state(0);
+
+  const series = [
+    { id: "requests", label: "Requests", value: "48.2k", share: 0.82 },
+    { id: "errors", label: "Errors", value: "312", share: 0.12 },
+    { id: "latency", label: "p95 latency", value: "184 ms", share: 0.46 },
+    { id: "storage", label: "Storage", value: "Loading", share: 0, loading: true },
+  ];
+  let rowClicks = $state(0);
+
+  // Up and Down move between row summaries; the native toggle keeps Enter
+  // and Space.
+  function moveBetweenRows(event: KeyboardEvent & { currentTarget: HTMLElement }): void {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const rows = [
+      ...(event.currentTarget
+        .closest(".chart-rows")
+        ?.querySelectorAll<HTMLElement>("details:not([inert]) > summary") ?? []),
+    ];
+    const next = rows[rows.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1)];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+  }
 </script>
 
 <DemoSection
@@ -69,6 +92,53 @@
   </div>
 </DemoSection>
 
+<DemoSection
+  title="Bare"
+  description="variant=&quot;bare&quot; drops the chevron, padding, and type styles and renders the header and body without wrappers, so the summary can be a data row. Other attributes, such as inert or data-*, go on the details element; summaryAttributes adds attributes and handlers to the summary, here an aria-label, arrow-key movement between rows, and a click counter alongside the native toggle."
+  code={`<Disclosure
+  variant="bare"
+  class="chart-row"
+  data-series={row.id}
+  inert={row.loading}
+  summaryAttributes={{
+    class: "chart-row__summary",
+    "aria-label": \`\${row.label}: \${row.value}\`,
+    onkeydown: moveBetweenRows,
+    onclick: () => clicks++,
+  }}
+>
+  {#snippet summary()}<span>{row.label}</span><Bar share={row.share} />{/snippet}
+  <Chart series={row.id} />
+</Disclosure>`}
+>
+  <div class="disclosure-demo chart-rows" data-testid="disclosure-bare">
+    {#each series as row (row.id)}
+      <Disclosure
+        variant="bare"
+        class="chart-row"
+        data-series={row.id}
+        inert={row.loading}
+        summaryAttributes={{
+          class: "chart-row__summary",
+          "aria-label": `${row.label}: ${row.value}`,
+          onkeydown: moveBetweenRows,
+          onclick: () => (rowClicks += 1),
+        }}
+      >
+        {#snippet summary()}
+          <span>{row.label}</span>
+          <span class="chart-row__bar"><span style:width="{row.share * 100}%"></span></span>
+          <span class="chart-row__value">{row.value}</span>
+        {/snippet}
+        <p class="chart-row__detail">Daily {row.label.toLowerCase()} for the last 30 days.</p>
+      </Disclosure>
+    {/each}
+    <p class="disclosure-demo__readout">
+      Row clicks: <span data-testid="disclosure-row-clicks">{rowClicks}</span>
+    </p>
+  </div>
+</DemoSection>
+
 <style>
   .disclosure-demo {
     display: grid;
@@ -89,6 +159,57 @@
   .disclosure-demo__readout {
     margin: 0;
     color: var(--text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  .chart-rows {
+    gap: 0;
+  }
+
+  .chart-rows :global(.chart-row + .chart-row) {
+    border-top: var(--border-width) solid var(--border-muted);
+  }
+
+  .chart-rows :global(.chart-row[inert]) {
+    opacity: var(--opacity-disabled, 0.5);
+  }
+
+  .chart-rows :global(.chart-row__summary) {
+    display: grid;
+    grid-template-columns: 8rem 1fr 5rem;
+    gap: var(--space-4);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .chart-rows :global(.chart-row__summary:hover) {
+    background: var(--bg-surface-hover);
+  }
+
+  .chart-row__bar {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--bg-inset);
+  }
+
+  .chart-row__bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent-blue);
+  }
+
+  .chart-row__value {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .chart-row__detail {
+    margin: 0;
+    padding: 0 var(--space-3) var(--space-3);
+    color: var(--text-secondary);
     font-size: var(--font-size-xs);
   }
 </style>

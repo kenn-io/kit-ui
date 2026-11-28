@@ -1,4 +1,4 @@
-import type { ProviderBrand } from "./provider-brand.js";
+export type ProviderBrand = "google" | "sso";
 interface Props {
     provider: ProviderBrand;
     iconUrl?: string;

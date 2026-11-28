@@ -1,9 +1,9 @@
 // Components
-export { default as FormField } from "./FormField.svelte";
-export type { FieldState, FormFieldType } from "./FormField.svelte";
-export { default as Notice } from "./Notice.svelte";
-export type { NoticeTone } from "./Notice.svelte";
-export { default as PageFrame } from "./PageFrame.svelte";
+export { default as FormField } from "./components/FormField.svelte";
+export type { FieldState, FormFieldType } from "./components/FormField.svelte";
+export { default as Notice } from "./components/Notice.svelte";
+export type { NoticeTone, NoticeVariant } from "./components/Notice.svelte";
+export { default as PageFrame } from "./components/PageFrame.svelte";
 export { default as Accordion } from "./components/Accordion.svelte";
 export { default as AdaptiveActionGrid } from "./components/AdaptiveActionGrid.svelte";
 export type {
@@ -22,6 +22,8 @@ export type {
   SidebarView,
   SidebarViewRun,
 } from "./components/AppSidebar.svelte";
+export { default as Avatar } from "./components/Avatar.svelte";
+export type { AvatarShape, AvatarTone } from "./components/Avatar.svelte";
 export { default as BottomDock } from "./components/BottomDock.svelte";
 export { default as Button } from "./components/Button.svelte";
 export type { ButtonSize, ButtonSurface, ButtonTone } from "./components/Button.svelte";
@@ -44,7 +46,10 @@ export type { PaletteCommand, PaletteLeaf } from "./components/CommandPalette.sv
 export { default as CopyButton } from "./components/CopyButton.svelte";
 export { default as DetailDrawer } from "./components/DetailDrawer.svelte";
 export { default as Disclosure } from "./components/Disclosure.svelte";
-export type { DisclosureVariant } from "./components/Disclosure.svelte";
+export type {
+  DisclosureSummaryAttributes,
+  DisclosureVariant,
+} from "./components/Disclosure.svelte";
 export { default as DiffStats, formatDiffStat } from "./components/DiffStats.svelte";
 export { default as EmptyState } from "./components/EmptyState.svelte";
 export { default as FilterDropdown } from "./components/FilterDropdown.svelte";
@@ -75,7 +80,7 @@ export { default as MenuSeparator } from "./components/MenuSeparator.svelte";
 export { default as MenuTrigger } from "./components/MenuTrigger.svelte";
 export type { MenuAlign, MenuAnchorPoint } from "./components/menu.js";
 export { default as MentionTextarea } from "./components/MentionTextarea.svelte";
-export type { MentionOption, MentionTrigger } from "./components/mention.js";
+export type { MentionOption, MentionTrigger } from "./components/MentionTextarea.svelte";
 export { default as MetricCard } from "./components/MetricCard.svelte";
 export { default as Modal } from "./components/Modal.svelte";
 export type { ModalTone } from "./components/Modal.svelte";
@@ -83,10 +88,11 @@ export { default as NumberInput } from "./components/NumberInput.svelte";
 export { default as PageHeader } from "./components/PageHeader.svelte";
 export { default as ProviderBrandMark } from "./components/ProviderBrandMark.svelte";
 export { default as ProviderButton } from "./components/ProviderButton.svelte";
-export type { ProviderBrand } from "./components/provider-brand.js";
+export type { ProviderBrand } from "./components/ProviderBrandMark.svelte";
 export { default as DatePicker } from "./components/DatePicker.svelte";
 export { default as DateRangePicker } from "./components/DateRangePicker.svelte";
 export {
+  activityStep,
   allFromDate,
   daysAgo,
   DEFAULT_RANGE_PRESETS,
@@ -158,7 +164,7 @@ export type {
   SelectDropdownIndicator,
   SelectDropdownIndicatorTone,
   SelectDropdownOption,
-} from "./components/select-dropdown.js";
+} from "./components/SelectDropdown.svelte";
 export { default as SettingsLayout } from "./components/SettingsLayout.svelte";
 export type { SettingsCategory } from "./components/SettingsLayout.svelte";
 export { default as SettingsSection } from "./components/SettingsSection.svelte";
@@ -166,7 +172,10 @@ export { default as SidebarToggle } from "./components/SidebarToggle.svelte";
 export type { SidebarToggleState } from "./components/SidebarToggle.svelte";
 export { default as Spinner } from "./components/Spinner.svelte";
 export { default as SplitResizeHandle } from "./components/SplitResizeHandle.svelte";
-export type { SplitResizeEvent, SplitResizeOrientation } from "./components/split-resize.js";
+export type {
+  SplitResizeEvent,
+  SplitResizeOrientation,
+} from "./components/SplitResizeHandle.svelte";
 export { default as StatusBar } from "./components/StatusBar.svelte";
 export { default as StatusDot } from "./components/StatusDot.svelte";
 export type { StatusDotStatus } from "./components/StatusDot.svelte";
@@ -175,7 +184,13 @@ export type { StructuredListLevel } from "./components/StructuredList.svelte";
 export { default as StructuredListRow } from "./components/StructuredListRow.svelte";
 export { default as Table } from "./components/Table.svelte";
 export { default as Tabs } from "./components/Tabs.svelte";
-export type { TabItem, TabsActivation } from "./components/Tabs.svelte";
+export type {
+  TabAttributes,
+  TabItem,
+  TabListAttributes,
+  TabsActivation,
+  TabsVariant,
+} from "./components/Tabs.svelte";
 export { default as TableHeaderCell } from "./components/TableHeaderCell.svelte";
 export type { ColumnResize } from "./components/table-columns.js";
 export { TableSort } from "./components/table-sort.svelte.js";
@@ -209,7 +224,7 @@ export type {
   TypeaheadInputAttributes,
   TypeaheadOption,
   TypeaheadTriggerProps,
-} from "./components/typeahead.js";
+} from "./components/Typeahead.svelte";
 export { default as VideoPlayer } from "./components/VideoPlayer.svelte";
 export { default as VirtualList } from "./components/VirtualList.svelte";
 export { default as VirtualTable } from "./components/VirtualTable.svelte";
@@ -296,12 +311,31 @@ export {
 } from "./utils/palette.js";
 export { debounce, type DebouncedFn } from "./utils/debounce.js";
 export { trapFocus } from "./utils/focus-trap.js";
+export { isComposingKey } from "./utils/ime.js";
 export { autoReposition, dismissable, type DismissableOptions } from "./utils/popover.js";
-export { backdropCloses, escapeCloses } from "./utils/overlay.js";
+export {
+  computeThumbMetrics,
+  computeTrackBounds,
+  denormalizeScrollLeft,
+  normalizeScrollLeft,
+  overlayScrollbars,
+  scrollPosForThumbDelta,
+  scrollPosForTrackClick,
+  wheelDeltaToPixels,
+  type OverlayScrollbarAxis,
+  type OverlayScrollbarInset,
+  type OverlayScrollbarsOptions,
+  type OverlayScrollbarVisibility,
+  type ThumbMetrics,
+  type TrackBounds,
+} from "./utils/overlay-scrollbars.js";
+export { scrollFade } from "./utils/scroll-fade.js";
+export { backdropCloses, escapeLayer } from "./utils/overlay.js";
 export {
   formatCost,
   formatCount,
   formatDuration,
+  formatInitials,
   formatNumber,
   formatTokenCount,
 } from "./utils/format.js";
@@ -365,4 +399,16 @@ export {
   type PanZoomView,
 } from "./utils/pan-zoom.js";
 export { formatRelativeTime, formatTimestamp, truncate } from "./utils/time.js";
-export { floatingPopoverStyle, type FloatingPopoverInput } from "./components/floatingPosition.js";
+export { floatingPopoverStyle, type FloatingPopoverInput } from "./utils/floating-position.js";
+
+export { default as ListEnd } from "./components/ListEnd.svelte";
+export { showListTop } from "./components/virtual.js";
+export { MoreRows, appendBatch, isEndRow, withEndRow } from "./utils/more-rows.svelte.js";
+export type { ListProblem, ListEndState, EndRow } from "./utils/more-rows.svelte.js";
+export {
+  keepListPosition,
+  savedListPosition,
+  writeListPosition,
+  placeList,
+} from "./utils/list-position.js";
+export type { ListPosition } from "./utils/list-position.js";

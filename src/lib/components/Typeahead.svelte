@@ -1,18 +1,62 @@
+<script module lang="ts">
+  import type { Attachment } from "svelte/attachments";
+  import type { HTMLInputAttributes } from "svelte/elements";
+
+  type TypeaheadOwnedInputAttribute =
+    | "aria-activedescendant"
+    | "aria-autocomplete"
+    | "aria-controls"
+    | "aria-expanded"
+    | "aria-haspopup"
+    | "aria-label"
+    | "autocomplete"
+    | "class"
+    | "disabled"
+    | "oninput"
+    | "onkeydown"
+    | "placeholder"
+    | "role"
+    | "type"
+    | "value";
+
+  export type TypeaheadInputAttributes = Omit<HTMLInputAttributes, TypeaheadOwnedInputAttribute>;
+
+  export interface TypeaheadOption {
+    name: string;
+    label: string;
+    /** Shown on the closed trigger instead of `label` when provided. */
+    displayLabel?: string;
+    count?: number;
+    /** Secondary text: searched together with the label, rendered dim at the
+     * row's trailing edge. */
+    meta?: string;
+    /** Makes this option a group row: it expands/collapses its children
+     * instead of being selectable. `name` must still be unique across the
+     * whole tree (it keys rows and tracks expansion). */
+    children?: TypeaheadOption[];
+    /** Initial expansion for a group row (default true). */
+    expanded?: boolean;
+  }
+
+  /** Passed to a Typeahead `trigger` snippet. Attach it to the caller's button
+   * with `{@attach attachment}`. */
+  export interface TypeaheadTriggerProps {
+    attachment: Attachment<HTMLButtonElement>;
+  }
+</script>
+
 <script lang="ts">
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { tick, type Snippet } from "svelte";
-  import type { Attachment } from "svelte/attachments";
   import { SvelteMap } from "svelte/reactivity";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { highlightSegments } from "../utils/highlight.js";
+  import { isComposingKey } from "../utils/ime.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { autoReposition } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type {
-    TypeaheadInputAttributes,
-    TypeaheadOption,
-    TypeaheadTriggerProps,
-  } from "./typeahead.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
 
   interface Props {
     options: TypeaheadOption[];
@@ -400,6 +444,7 @@
   }
 
   function handleTriggerKeydown(event: KeyboardEvent): void {
+    if (isComposingKey(event)) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       void openDropdown();
@@ -410,8 +455,7 @@
       event.key === " " ||
       event.ctrlKey ||
       event.metaKey ||
-      event.altKey ||
-      event.isComposing
+      event.altKey
     )
       return;
     event.preventDefault();
@@ -532,17 +576,22 @@
   // or a header snippet control — without also closing a parent overlay.
   // Attached to both the input and the panel (the header lives in the panel,
   // which is a DOM sibling of the input). Skips events a descendant already
-  // consumed, e.g. a header SearchInput clearing its own text.
+  // consumed, e.g. a header SearchInput clearing its own text. An Escape
+  // that cancels an input method's composition keeps the list open, and
+  // still stops here so it cannot close a parent overlay instead.
   function handleEscape(e: KeyboardEvent): boolean {
     if (e.key !== "Escape" || e.defaultPrevented) return false;
-    e.preventDefault();
     e.stopPropagation();
+    if (isComposingKey(e)) return true;
+    e.preventDefault();
     void closeDropdown(true);
     return true;
   }
 
   function handleKeydown(e: KeyboardEvent) {
     if (handleEscape(e)) return;
+    // Enter and the arrows belong to an input method while it composes.
+    if (isComposingKey(e)) return;
     // A loading status row stands in for the options, so there is nothing to
     // navigate to or select — keep selection/navigation keys inert (Enter
     // would otherwise submit an enclosing form) but let editing keys reach
@@ -711,7 +760,11 @@
       {/if}
       <!-- Messages sit outside the listbox but scroll with it, so a long error
            can't push the panel past its height cap and hide the options. -->
-      <div class="kit-typeahead__body">
+      <div
+        class="kit-typeahead__body"
+        {@attach scrollFade}
+        {@attach overlayScrollbars({ axis: "both", host: panelEl })}
+      >
         {#if loading}
           <div class="kit-typeahead__status">{loadingLabel}</div>
         {:else if error}

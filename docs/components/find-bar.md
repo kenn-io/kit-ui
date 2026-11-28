@@ -6,9 +6,12 @@ previous/next arrows, and a close button. Ported from agentsview's
 input and navigation chrome; you compute the matches and move the highlight.
 
 Keyboard: **Enter** → `onnext`, **Shift+Enter** → `onprev`, **Escape** →
-`onclose`. When the query has no matches the counter shows the
-"No matches" state and the focused card border turns red. Mount it
-conditionally; it autofocuses on mount by default.
+`onclose`. Enter and Escape pressed to confirm or cancel an input
+method's composition call neither. When the query has no matches and results are
+complete, the counter shows "No matches" and the focused card border turns red.
+For a nonempty query with `resultsComplete={false}`, the total is a floor (`2 of 3+`,
+or `0 of 0+` before any match) and the border stays neutral. A `matchCountLabel`
+without `{total}` gets the floor appended (`Match 2 (3+)`). Mount it conditionally; it autofocuses on mount by default.
 
 ```svelte
 <script lang="ts">
@@ -37,7 +40,8 @@ conditionally; it autofocuses on mount by default.
 | Prop                          | Type                      | Default                             | Notes                                                                                                                                                                                |
 | ----------------------------- | ------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `query`                       | `string` (bindable)       | `""`                                | Current search text                                                                                                                                                                  |
-| `matchCount`                  | `number`                  | required                            | Total matches for `query`                                                                                                                                                            |
+| `matchCount`                  | `number`                  | required                            | Matches found so far when `resultsComplete` is `false`                                                                                                                               |
+| `resultsComplete`             | `boolean`                 | `true`                              | Whether `matchCount` is final                                                                                                                                                        |
 | `currentIndex`                | `number`                  | required                            | 0-based current match; displayed 1-based                                                                                                                                             |
 | `onnext`                      | `() => void`              | —                                   | Enter / down arrow button                                                                                                                                                            |
 | `onprev`                      | `() => void`              | —                                   | Shift+Enter / up arrow button                                                                                                                                                        |
@@ -47,6 +51,7 @@ conditionally; it autofocuses on mount by default.
 | `variant`                     | `"pinned" \| "floating"`  | `"pinned"`                          | pinned = full-width strip flush with the container's top edge (square corners, bottom border only, no shadow). floating = IDE-style shadowed card inset at the container's top-right |
 | `placeholder`                 | `string`                  | `"Find…"`                           |                                                                                                                                                                                      |
 | `matchCountLabel`             | `string`                  | `"{current} of {total}"`            | Counter template                                                                                                                                                                     |
+| `partialCountLabel`           | `string`                  | `"{count} so far"`                  | Screen-reader counter while results are incomplete; `{count}` is the visible counter                                                                                                 |
 | `noMatchesLabel`              | `string`                  | `"No matches"`                      |                                                                                                                                                                                      |
 | `ariaLabel`                   | `string`                  | `"Find"`                            | `role="search"` label                                                                                                                                                                |
 | `inputAriaLabel`              | `string`                  | `"Search query"`                    |                                                                                                                                                                                      |

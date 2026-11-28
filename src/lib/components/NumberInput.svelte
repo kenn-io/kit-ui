@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { isComposingKey } from "../utils/ime.js";
   import TextInput, { type TextInputSize } from "./TextInput.svelte";
   import {
     allowsDecimals,
@@ -220,7 +221,8 @@
 
   function handleKeydown(event: KeyboardEvent): void {
     onkeydown?.(event);
-    if (event.defaultPrevented) return;
+    // Enter and the arrows belong to an input method while it composes.
+    if (event.defaultPrevented || isComposingKey(event)) return;
     if (event.key === "Enter") {
       commit();
       return;

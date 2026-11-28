@@ -224,15 +224,79 @@ on window resize, any ancestor scroll (capture phase), and panel size
 changes (ResizeObserver), coalesced to one call per animation frame. Both
 return their cleanup function.
 
+## Overlay scrollbars
+
+```svelte
+<script lang="ts">
+  import { overlayScrollbars } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay-scrollbars"
+
+  let frameEl = $state<HTMLDivElement>();
+</script>
+
+<!-- Single-element scroller -->
+<div class="my-panel" {@attach overlayScrollbars({ axis: "y" })}>…</div>
+
+<!-- Non-scrolling outer frame + inner viewport (zero scroll jitter, keeps border-radius/shadow on frame) -->
+<div class="my-frame" bind:this={frameEl}>
+  <div class="my-viewport" {@attach overlayScrollbars({ axis: "both", host: frameEl })}>…</div>
+</div>
+```
+
+Svelte 5 attachment that suppresses native scrollbars (`0px` layout gutter) and
+renders floating vertical and/or horizontal overlay thumbs while preserving
+native wheel, trackpad, touch, keyboard, scroll-anchoring, and programmatic
+scrolling.
+
+Options (`OverlayScrollbarsOptions`):
+
+- `axis`: `"x" | "y" | "both"` (default `"both"`).
+- `visibility`: `"auto"` (show on hover, scroll, or drag), `"always"` (show
+  while overflowing), or `"never"` (suppress native scrollbars without thumbs).
+- `host`: non-scrolling outer frame (`HTMLElement` or getter) to host the
+  tracks outside the scrolling element; prevents scroll jitter and avoids
+  injecting children into the viewport (`:empty`, ARIA `listbox`/`menu`).
+- `insetTop`, `insetBottom`, `insetLeft`, `insetRight`: extra clearance in px,
+  or an `HTMLElement` / getter (such as a sticky header or `<thead>`) whose
+  height is tracked automatically via `ResizeObserver`.
+- `cornerRadius`: clearance in px, or `"auto"` (default) to clear computed
+  border radii on the viewport, host frame, or clipping parent.
+- `hideDelay`: ms before thumbs fade after scrolling stops (default `900`).
+
+Pure geometry helpers `computeThumbMetrics`, `computeTrackBounds`,
+`scrollPosForThumbDelta`, and `scrollPosForTrackClick` are also exported.
+
+## Scroll fades
+
+```svelte
+<script>
+  import { scrollFade } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/scroll-fade"
+</script>
+
+<div class="my-list kit-popover-card" {@attach scrollFade}>…</div>
+```
+
+Fades the top or bottom edge of a scroll container while rows lie past it.
+Overlay scrollbars stay hidden until the user scrolls, so without a fade a
+list cut at a row boundary looks complete. Every kit-ui dropdown list uses
+it (SelectDropdown, FilterDropdown and its flyouts, Menu, Typeahead,
+MentionTextarea, CommandPalette). Attach it to the element that scrolls. The
+fades are drawn by `theme.css` and paint in `--kit-scroll-fade-color`, which
+defaults to `--bg-popover`; set it when the list sits on another surface.
+`--kit-scroll-fade-size` (default `32px`) sets how tall each fade is.
+
 ## Overlay wiring
 
 ```svelte
 <script lang="ts">
-  import { backdropCloses, escapeCloses } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
+  import { backdropCloses, escapeLayer } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/overlay"
 </script>
 
-<svelte:window onkeydown={escapeCloses(close)} />
-<div class="my-overlay" role="presentation" {@attach backdropCloses(close)}>
+<div
+  class="my-overlay"
+  role="presentation"
+  {@attach (overlay) => escapeLayer(close, overlay)}
+  {@attach backdropCloses(close)}
+>
 ```
 
 The dialog-shell plumbing Modal, DetailDrawer, and CommandPalette share.
@@ -241,10 +305,16 @@ and ends on the backdrop itself, so a drag between the panel and the
 backdrop, in either direction, doesn't dismiss. It closes on the click rather than the press: on touch, a tap's
 click arrives after the finger lifts, and closing earlier would let that
 click activate the page control under the backdrop.
-`escapeCloses` closes one layer at a time: inner surfaces that already
-handled Escape (a popover's `dismissable`, a clearing search field) call
-`preventDefault`, and it respects that. Pair with `trapFocus` below for a
-complete custom overlay.
+`escapeLayer` puts the overlay on the Escape stack it shares with every
+popover's `dismissable`, and returns the function that takes it off. Escape
+goes only to the layer opened last, one per press, so a dialog opened over a
+drawer or an open dropdown closes before them. Pass the overlay's outermost
+element: Svelte mounts a child before its parent, and the element lets a
+dialog that opens already holding another dialog stay beneath it. A handler
+nearer the focus that already used Escape (a clearing search field) calls
+`preventDefault`, and the stack leaves that press alone, as it does an
+Escape that cancels an input method's candidate list. Pair with `trapFocus`
+below for a complete custom overlay.
 
 ## Focus trap
 
@@ -261,10 +331,47 @@ custom overlays: moves focus in (first `[autofocus]` descendant, else the
 surface — hence `tabindex="-1"`), traps Tab/Shift+Tab, locks body scroll
 (re-entrant), and restores focus on teardown.
 
+On teardown, focus goes back to the element that had it before the surface
+opened. In Safari and Firefox on macOS, which do not focus a pressed button,
+that is the control last pressed. When that element has left the page, or is
+now disabled, hidden or inert, focus goes to the nearest tab stop where it
+was. The trap records the trigger's ancestors and all their siblings when it
+opens, and on close it picks the first tab stop after that spot, else the
+last one before it, starting at the closest ancestor still on the page.
+Siblings removed along with the trigger are skipped, so deleting a row and
+its neighbours still focuses the next row left.
+If focus is already on something real when the surface closes, because the
+app focused an element in its close handler, the trap leaves it there.
+The check runs once more after the current update, since that update can
+remove the focused element after the surface's own teardown. This includes
+a trigger the app focused itself just before its row was removed.
+
 Tab moves in the browser's own order, iframe content included. Two
 invisible guard elements (`[data-kit-focus-guard]`) sit just before and
 after the surface while it is mounted; Tab past either end lands on one
 and wraps focus to the other end, as Headless UI and Floating UI do.
+
+## Input method composition
+
+```ts
+import { isComposingKey } from "@kenn-io/kit-ui"; // or "@kenn-io/kit-ui/utils/ime"
+
+function handleKeydown(event: KeyboardEvent): void {
+  if (isComposingKey(event)) return;
+  if (event.key === "Enter") send();
+}
+```
+
+Japanese, Chinese and Korean users type through an input method. While it
+composes, Enter confirms a candidate, Escape cancels it, and the arrows move
+between candidates. `isComposingKey` is true for those keydowns: it checks
+`isComposing`, and key code 229 for the keydown Safari sends as a
+composition ends. Typeahead, MentionTextarea, CommandPalette, FindBar,
+SearchInput, and NumberInput ignore composing keys. An Escape one of them
+would have claimed still stops at the field, so a Modal around it stays
+open. MentionTextarea, SearchInput, and NumberInput pass composing keys to
+your `onkeydown`, so check it there before acting on Enter, such as to send a
+message.
 
 ## Formatters
 
@@ -275,6 +382,7 @@ import {
   formatNumber,
   formatTokenCount,
   formatCost,
+  formatInitials,
   formatSize,
 } from "@kenn-io/kit-ui";
 
@@ -301,6 +409,10 @@ formatCost(12.339); // "$12.34"
 formatCost(123.4); // "$123"
 
 formatSize(290_000_000, "fr"); // "290 Mo"
+
+formatInitials("Ada Lovelace"); // "AL"
+formatInitials("jane.doe@example.com"); // "JD"
+formatInitials(""); // "?"
 ```
 
 `formatSize(bytes, locale?)` always displays decimal megabytes, rounded to a whole number: one megabyte is 1,000,000 bytes. `Intl.NumberFormat` supplies the unit and spacing for the locale; omitting it uses the runtime locale.
@@ -515,7 +627,9 @@ and dropped otherwise.
 While enabled, `{ keepalive: true }` visits skip the delay so a closing page
 can still send. Six failures in a row stop reporting until reload or the next
 UTC day. Visits reported then are dropped; visits already stored stay for a
-later reporter.
+later reporter. Requests that were already in flight when a failure was counted
+add nothing to the count when they fail, so a reloading page that rejects all
+of its open requests at once uses up one failure.
 
 A 2xx reply with an unreadable or unknown body claims the daily event but
 leaves permission unknown. Other non-401 4xx replies, such as HTTP 400 or 404,

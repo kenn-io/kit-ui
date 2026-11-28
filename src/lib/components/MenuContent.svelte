@@ -1,7 +1,9 @@
 <script lang="ts">
   import { flushSync, getContext, tick, type Snippet } from "svelte";
   import { autoReposition, dismissable } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { menuContextKey, type MenuContext } from "./menu.js";
 
   interface Props {
@@ -173,6 +175,8 @@
     aria-label={ariaLabel}
     onkeydown={handleKeydown}
     oncontextmenu={menu.anchor ? (event) => event.preventDefault() : undefined}
+    {@attach scrollFade}
+    {@attach overlayScrollbars({ axis: "both" })}
   >
     {@render children()}
   </div>

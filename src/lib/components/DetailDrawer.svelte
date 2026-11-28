@@ -2,7 +2,8 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
-  import { backdropCloses, escapeCloses } from "../utils/overlay.js";
+  import { backdropCloses, escapeLayer } from "../utils/overlay.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -47,16 +48,17 @@
   const headerId = `kit-detail-drawer-header-${uid}`;
 
   const close = () => onclose?.();
+  let drawerEl = $state<HTMLDivElement>();
 </script>
-
-<svelte:window onkeydown={escapeCloses(close)} />
 
 <div
   class="kit-detail-drawer-overlay"
   role="presentation"
+  {@attach (overlay) => escapeLayer(close, overlay)}
   {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div
+    bind:this={drawerEl}
     class="kit-detail-drawer"
     role="dialog"
     aria-modal="true"
@@ -88,7 +90,10 @@
         {/if}
       </div>
     {/if}
-    <div class="kit-detail-drawer__body">
+    <div
+      class="kit-detail-drawer__body"
+      {@attach overlayScrollbars({ axis: "both", host: drawerEl })}
+    >
       {#if children}
         {@render children()}
       {/if}

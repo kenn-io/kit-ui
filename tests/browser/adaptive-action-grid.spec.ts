@@ -20,7 +20,8 @@ test("moves between row, grid, and compact without replacing nested state", asyn
 
   await expect(grid).toHaveClass(/kit-adaptive-action-grid--row/);
   await openRadio.evaluate((element) => element.setAttribute("data-node-identity", "original"));
-  await openRadio.focus();
+  // Arrows step from the focused segment, so start on the chosen one (All).
+  await grid.getByRole("radio", { name: "All" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute("aria-checked", "true");
   await expect(grid.getByRole("radio", { name: "Open" })).toHaveAttribute(

@@ -28,6 +28,8 @@ Do not infer fork eligibility or network/cache isolation from this setting.
 
 Breaking API changes are 100% acceptable.
 
+Consumers pin a full commit SHA on `main`. Don't cut tags or releases.
+
 ## Git workflow
 
 - Finish implementation tasks by running the relevant checks, committing the
@@ -62,7 +64,7 @@ bun run check:types        # CI/hook guard: declarations present, fresh, exporte
 bun run fmt      # vp fmt (oxfmt, .oxfmtrc.json) — same Vite+ setup as Forge
 bun run fmt:check && bun run lint   # CI-enforced format + lint (vite-plus)
 bun run build:demo   # builds the demo gallery
-bun test         # unit tests (checks/*.test.ts — rules, windowing, shortcuts, markdown)
+bun test         # unit tests (tests/unit/*.test.ts, checks/rules.test.ts, scripts/*.test.js)
 bun run test:browser       # Playwright suite against the demo gallery (docs/testing.md)
 bun run check:usage        # dogfood kit-ui-check against src/demo, and rounded-side-stripe against src/lib (must be clean)
 bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
@@ -75,9 +77,11 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
   `components/`, `stores/`, `utils/`
 - `bin/kit-ui-check.mjs` + `checks/` — usage checker external projects run to
   detect hand-rolled component equivalents (docs/checking.md). Rules are pure
-  functions in `checks/rules.mjs` with tests alongside
+  functions in `checks/rules.mjs` with tests alongside (`checks/rules.test.ts`)
 - `src/demo/` — gallery app (`App.svelte` shell + `pages/*Demo.svelte`, one per
   component)
+- `tests/unit/` — Bun unit tests for library helpers, component logic, and
+  package metadata (`bun test`)
 - `tests/browser/` — Playwright specs driving the demo gallery
   (docs/testing.md); specs depend on demo hooks, so a demo change may need
   its spec updated in the same commit
@@ -132,7 +136,7 @@ bun run svelte-mcp <cmd>   # Svelte 5 docs lookup / autofixer (see skills/)
   `src/lib/index.ts`, and each module that does work when it loads (such as
   `src/lib/utils/focus-trap.ts`, which adds document listeners). Add any new
   such module there, or bundlers drop it from apps. When you move a listed
-  file, update its entry; `checks/package-side-effects.test.ts` fails on an
+  file, update its entry; `tests/unit/package-side-effects.test.ts` fails on an
   entry that names no file.
 
 ## Provenance

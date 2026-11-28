@@ -6,7 +6,8 @@
   import XIcon from "@lucide/svelte/icons/x";
   import type { Snippet } from "svelte";
   import { trapFocus } from "../utils/focus-trap.js";
-  import { backdropCloses, escapeCloses } from "../utils/overlay.js";
+  import { backdropCloses, escapeLayer } from "../utils/overlay.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import IconButton from "./IconButton.svelte";
 
   interface Props {
@@ -54,16 +55,17 @@
 
   const close = () => onclose?.();
   const showClose = $derived(closable ?? !footer);
+  let panelEl = $state<HTMLDivElement>();
 </script>
-
-<svelte:window onkeydown={escapeCloses(close)} />
 
 <div
   class="kit-modal-overlay"
   role="presentation"
+  {@attach (overlay) => escapeLayer(close, overlay)}
   {@attach closeOnOverlayClick && backdropCloses(close)}
 >
   <div
+    bind:this={panelEl}
     class="kit-modal-panel"
     role="dialog"
     aria-modal="true"
@@ -94,7 +96,7 @@
       </div>
     {/if}
     {#if children}
-      <div class="kit-modal-body">
+      <div class="kit-modal-body" {@attach overlayScrollbars({ axis: "both", host: panelEl })}>
         {@render children()}
       </div>
     {/if}
@@ -119,11 +121,11 @@
     z-index: var(--z-overlay);
   }
 
-  /* A modal is a transient floating surface, so it takes the popover
-   * surface and edge: the plain surface in light, a lighter one in dark,
-   * where it would otherwise sit dimmer than a menu behind the scrim. */
+  /* A modal is a transient floating surface, so it takes the popover edge.
+   * Its fill is --bg-modal: the popover surface in light, and the plain
+   * surface in dark, where the scrim already sets it apart. */
   .kit-modal-panel {
-    background: var(--bg-popover);
+    background: var(--bg-modal);
     border: var(--border-width) solid var(--border-popover);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
@@ -193,10 +195,9 @@
    * render no header element, so no stray colored edge. */
   .kit-modal-panel[data-kit-tone] {
     /* The shared recipe mixes over the plain surface and default border.
-     * The panel is the popover surface, so the band mixes over that; a
-     * band mixed over the plain surface would sit darker than a dark
-     * panel. Same 9% and 30% ratios. */
-    --kit-tone-band-bg: color-mix(in srgb, var(--kit-tone) 9%, var(--bg-popover));
+     * The panel fills with --bg-modal, so the band mixes over that and
+     * stays matched to the panel in either theme. Same 9% and 30% ratios. */
+    --kit-tone-band-bg: color-mix(in srgb, var(--kit-tone) 9%, var(--bg-modal));
     --kit-tone-border: color-mix(in srgb, var(--kit-tone) 30%, var(--border-popover));
   }
 

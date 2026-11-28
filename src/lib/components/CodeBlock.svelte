@@ -1,6 +1,7 @@
 <script lang="ts">
   import WrapTextIcon from "@lucide/svelte/icons/wrap-text";
   import { applyShikiStyles, escapeHtml, highlightCode } from "../utils/markdown.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import CopyButton from "./CopyButton.svelte";
   import IconButton from "./IconButton.svelte";
 
@@ -43,6 +44,7 @@
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
+  let rootEl = $state<HTMLDivElement>();
   let body = $state<HTMLDivElement>();
 
   $effect(() => {
@@ -81,6 +83,7 @@
 </script>
 
 <div
+  bind:this={rootEl}
   class={["kit-code-block", className]}
   class:kit-code-block--wrap={wrap}
   class:kit-code-block--line-numbers={lineNumbers}
@@ -111,7 +114,12 @@
       </div>
     </div>
   {/if}
-  <div bind:this={body} class="kit-code-block__body" style:max-height={maxHeight}>
+  <div
+    bind:this={body}
+    class="kit-code-block__body"
+    style:max-height={maxHeight}
+    {@attach overlayScrollbars({ axis: "both", host: rootEl })}
+  >
     {@html highlighted ?? plainHtml}
   </div>
 </div>

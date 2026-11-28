@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import SidebarToggle from "./SidebarToggle.svelte";
-  import SplitResizeHandle from "./SplitResizeHandle.svelte";
-  import type { SplitResizeEvent } from "./split-resize.js";
+  import SplitResizeHandle, { type SplitResizeEvent } from "./SplitResizeHandle.svelte";
 
   interface Props {
     /** Main-area content. */
@@ -89,9 +89,12 @@
     committedWidth = finalWidth;
     dragWidth = null;
   }
+
+  let layoutEl = $state<HTMLDivElement>();
 </script>
 
 <div
+  bind:this={layoutEl}
   class="kit-sidebar-layout"
   class:kit-sidebar-layout--overlay={overlayForced}
   class:kit-sidebar-layout--overlay-narrow={overlayNarrow}
@@ -136,6 +139,9 @@
       class="kit-sidebar-layout__main"
       class:kit-sidebar-layout__main--empty={mainEmpty}
       class:kit-sidebar-layout__main--hidden={mainOverflow === "hidden"}
+      {@attach mainOverflow === "auto"
+        ? overlayScrollbars({ axis: "both", host: layoutEl })
+        : undefined}
     >
       {#if children}
         {@render children()}

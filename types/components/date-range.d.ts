@@ -86,15 +86,30 @@ export declare function periodBounds(unit: CalendarUnit, anchor: string, weekSta
  * overflowing into March).
  */
 export declare function stepAnchor(unit: CalendarUnit, anchor: string, dir: -1 | 1): string;
+/** Move `anchor` by `months` calendar months, clamping the day to the
+ * target month's length (Jan 31 + 1 → Feb 28; Feb 29 + 12 → Feb 28). */
+export declare function shiftMonths(anchor: string, months: number): string;
+/**
+ * The date a day-grid key moves focus to from `from`, following the
+ * WAI-ARIA APG date picker grid: arrows move a day or a week, Home/End go
+ * to the ends of the week (by `weekStart`), PageUp/PageDown move a month
+ * and with Shift a year. Returns null for any other key. `rtl` swaps the
+ * horizontal arrows.
+ */
+export declare function dayGridKeyTarget(key: string, from: string, options?: {
+    shiftKey?: boolean;
+    weekStart?: WeekStart;
+    rtl?: boolean;
+}): string | null;
 /**
  * The 42 dates (six weeks, Monday-first by default) covering `anchor`'s month — the
  * cells of a fixed-height month grid. Leading/trailing dates belong to the
  * adjacent months.
  */
 export declare function monthGridDates(anchor: string, weekStart?: WeekStart): string[];
-/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …). `locale` is a BCP 47 tag;
- * omitted = the browser locale. */
-export declare function weekdayLabels(locale?: string, weekStart?: WeekStart): string[];
+/** Configurable first weekday, Monday by default. Weekday column labels ("Mon", …, or
+ * "M", … with `style` "narrow"). `locale` is a BCP 47 tag; omitted = the browser locale. */
+export declare function weekdayLabels(locale?: string, weekStart?: WeekStart, style?: "short" | "narrow"): string[];
 /** January-first month labels ("Jan"/"January", …). `locale` omitted = the
  * browser locale. */
 export declare function monthLabels(style: "short" | "long", locale?: string): string[];
@@ -112,6 +127,14 @@ export declare function formatWeekOfLabel(template: string, dateLabel: string): 
 /** "Jun 29, 2026" style label for a day anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatDayLabel(anchor: string, locale?: string): string;
+/** "Monday, June 29, 2026" style label for a calendar day cell: the full
+ * date with its weekday, since the grid's weekday headers are visual
+ * only. `locale` omitted = the browser locale. */
+export declare function formatDayCellLabel(anchor: string, locale?: string): string;
 /** "June 2026" style label for a month anchor. `locale` omitted = the
  * browser locale. */
 export declare function formatMonthLabel(anchor: string, locale?: string): string;
+/** Shade step for a day's activity count, from 0 (none) to 4 (busiest),
+ * relative to `max`, the busiest count in view: each step covers a quarter
+ * of `max`, and any count above zero gets at least step 1. */
+export declare function activityStep(count: number, max: number): 0 | 1 | 2 | 3 | 4;

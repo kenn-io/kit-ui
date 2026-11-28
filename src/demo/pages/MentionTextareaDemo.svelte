@@ -59,7 +59,7 @@
     "src/lib/index.ts",
     "src/lib/components/Button.svelte",
     "src/lib/components/MentionTextarea.svelte",
-    "src/lib/components/mention.ts",
+    "src/lib/utils/floating-position.ts",
     "docs/components/mention-textarea.md",
     "tests/browser/mention-textarea.spec.ts",
   ];

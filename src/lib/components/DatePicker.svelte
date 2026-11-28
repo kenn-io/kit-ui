@@ -3,7 +3,7 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
   import { autoReposition, dismissable } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
   import Calendar from "./Calendar.svelte";
   import { formatDayLabel, todayStr, type CalendarNavLabels } from "./date-range.js";
 
@@ -49,6 +49,7 @@
   let triggerEl: HTMLButtonElement | undefined = $state();
   let panelEl = $state<HTMLDivElement>();
   let panelStyle = $state("");
+  let calendar = $state<ReturnType<typeof Calendar>>();
   // The month the calendar shows; reset to the chosen date on every open so
   // the selection is always in view.
   let month = $state<string>(todayStr());
@@ -74,9 +75,13 @@
     if (disabled) return;
     open = !open;
     if (open) {
-      month = value ?? todayStr();
+      const initial = value ?? todayStr();
+      month = maxDate != null && initial > maxDate ? maxDate : initial;
       await tick();
       positionPanel();
+      // The dialog opens with focus on the calendar's day grid, as the APG
+      // date picker dialog does.
+      calendar?.focus({ preventScroll: true });
     }
   }
 
@@ -133,6 +138,7 @@
       aria-label={dialogLabel}
     >
       <Calendar
+        bind:this={calendar}
         bind:month
         selected={value ? { from: value, to: value } : null}
         {maxDate}

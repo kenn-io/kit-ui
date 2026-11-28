@@ -2,6 +2,7 @@
   import ChevronsDownUpIcon from "@lucide/svelte/icons/chevrons-down-up";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import { tick, type Snippet } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import {
     DAY_LANE_DEFAULTS,
     hourTicks,
@@ -96,11 +97,21 @@
     class: className = "",
   }: Props = $props();
 
-  let expanded = $state<{ day: string | number; keys: string[] }>({ day: "", keys: [] });
+  let expandedFolds = $derived.by(() => {
+    void dayKey;
+    return [] as string[];
+  });
   let activeKey = $state<string | null>(null);
   let scroller = $state<HTMLDivElement>();
-  let scrolledFor: string | number | null = null;
-  /** Height of the pinned lane headers, so scrolling never hides a card under them. */
+  const foldInset = 3;
+  const nowLineHeight = 2;
+  let scrolledFor = $derived.by(() => {
+    void dayKey;
+    return false;
+  });
+  let previousDay: string | number | undefined;
+  let hadTimedItems = false;
+  let savedScroll: number | undefined;
   let headsHeight = $state(0);
 
   // A fixed UTC date turns a minute into a clock time without reading any zone.
@@ -116,7 +127,6 @@
     ticks ?? hourTicks(dayMinutes, (h) => hourFormat.format(clock(h * 60))),
   );
 
-  const expandedFolds = $derived(expanded.day === dayKey ? expanded.keys : []);
   const layout = $derived.by(() => {
     const options = {
       dayMinutes,
@@ -138,10 +148,20 @@
   });
   const placedTicks = $derived(placeTicks(tickList, layout.segments, hourHeight));
 
+  $effect(() => {
+    const keys = new Set(layout.segments.map((segment) => segment.key));
+    const valid = expandedFolds.filter((key) => keys.has(key));
+    if (valid.length !== expandedFolds.length) expandedFolds = valid;
+  });
+
   // Keys carry the lane, since one item can sit in several lanes.
-  const keyOf = (entry: DayLaneEntry, lane: string) =>
-    entry.kind === "item" ? `${lane}|item:${entry.item.id}` : `${lane}|more:${entry.key}`;
-  const dateOnlyKey = (i: DayLaneItem) => `|date:${i.id}`;
+  const keyOf = (entry: DayLaneEntry, lane: string) => {
+    const id = entry.kind === "item" ? entry.item.id : entry.key;
+    return lanes
+      ? JSON.stringify([lane, entry.kind, id])
+      : `${entry.kind === "item" ? "item" : "more"}:${id}`;
+  };
+  const dateOnlyKey = (i: DayLaneItem) => `item:${i.id}`;
 
   /** Every card on the axis, in reading order: top, then lane, then column. */
   const axisCards = $derived(
@@ -156,7 +176,17 @@
   );
 
   /** Focus order: the date-only strip, then the axis in time order. */
-  const order = $derived([...layout.dateOnly.map(dateOnlyKey), ...axisCards.map((c) => c.key)]);
+  const order = $derived([
+    ...layout.dateOnly.map(dateOnlyKey),
+    ...[
+      ...axisCards.map((c) => ({ top: c.entry.top, key: c.key })),
+      ...layout.segments
+        .filter((segment) => segment.key)
+        .map((segment) => ({ top: segment.top, key: `fold:${segment.key}` })),
+    ]
+      .sort((a, b) => a.top - b.top)
+      .map((entry) => entry.key),
+  ]);
   const tabKey = $derived.by(() => {
     if (activeKey && order.includes(activeKey)) return activeKey;
     const selectedDateOnly = layout.dateOnly.find((i) => i.selected);
@@ -164,14 +194,27 @@
     const selected = axisCards.find(({ entry }) =>
       entry.kind === "item" ? entry.item.selected : entry.items.some((i) => i.selected),
     );
-    return selected?.key ?? order[0] ?? null;
+    return selected?.key ?? order.find((key) => !key.startsWith("fold:")) ?? order[0] ?? null;
   });
 
-  const nowY = $derived(
-    nowMinute !== undefined && nowMinute >= 0 && nowMinute < dayMinutes
-      ? minuteToY(layout.segments, nowMinute, hourHeight)
-      : null,
+  const nowFold = $derived(
+    nowMinute === undefined
+      ? undefined
+      : layout.segments.find(
+          (s) => s.kind === "fold" && nowMinute >= s.startMinute && nowMinute < s.endMinute,
+        ),
   );
+  const nowY = $derived.by(() => {
+    if (nowMinute === undefined || !(nowMinute >= 0 && nowMinute < dayMinutes)) return null;
+    if (nowFold)
+      return (
+        nowFold.top +
+        foldInset +
+        ((nowMinute - nowFold.startMinute) / (nowFold.endMinute - nowFold.startMinute)) *
+          (nowFold.height - 2 * foldInset - nowLineHeight)
+      );
+    return minuteToY(layout.segments, nowMinute, hourHeight);
+  });
 
   function timeLabel(i: DayLaneItem): string {
     if (i.dateOnly || i.startMinute === undefined) return dateOnlyLabel;
@@ -199,7 +242,7 @@
     const key = segment.key;
     if (!key) return;
     const keys = open ? [...expandedFolds, key] : expandedFolds.filter((k) => k !== key);
-    expanded = { day: dayKey, keys };
+    expandedFolds = keys;
     const [startMinute, endMinute] = key.split("-").map(Number) as [number, number];
     onfoldchange?.({ startMinute, endMinute, expanded: open });
     // The band and its "Fold" button swap places; keep focus on the one that replaced it.
@@ -246,12 +289,35 @@
     if (target) focusKey(target);
   }
 
+  $effect.pre(() => {
+    const hasTimedItems = axisCards.length > 0;
+    if (!scroller) return;
+    if (previousDay !== undefined && dayKey !== previousDay) {
+      savedScroll = undefined;
+      scroller.scrollTop = 0;
+    } else if (hadTimedItems && !hasTimedItems) {
+      savedScroll = scroller.scrollTop;
+    } else if (!hadTimedItems && hasTimedItems && savedScroll !== undefined) {
+      const element = scroller;
+      const restore =
+        element.scrollHeight - element.clientHeight >= savedScroll
+          ? element.scrollTop
+          : savedScroll;
+      const day = dayKey;
+      savedScroll = undefined;
+      void tick().then(() => {
+        if (dayKey === day && scroller === element) element.scrollTop = restore;
+      });
+    }
+    previousDay = dayKey;
+    hadTimedItems = hasTimedItems;
+  });
+
   // Bring the first timed item into view once per day, as soon as there is one.
   $effect(() => {
     const first = axisCards[0];
-    const day = dayKey;
-    if (!scrollToFirst || !scroller || !first || scrolledFor === day) return;
-    scrolledFor = day;
+    if (!scrollToFirst || !scroller || !first || scrolledFor) return;
+    scrolledFor = true;
     const el = scroller.querySelector<HTMLElement>(
       `[data-day-lane-key="${CSS.escape(first.key)}"]`,
     );
@@ -261,24 +327,41 @@
     // Near the top already: keep the date-only strip whole rather than half scrolled away.
     const axis = scroller.querySelector<HTMLElement>(".kit-day-lane__axis");
     const axisTop = axis ? axis.getBoundingClientRect().top - top : 0;
-    scroller.scrollTop = offset <= axisTop - headsHeight ? 0 : offset;
+    scroller.scrollTop =
+      offset <= axisTop - headsHeight &&
+      el.getBoundingClientRect().bottom - top <= scroller.clientHeight
+        ? 0
+        : offset;
   });
 </script>
 
 {#snippet card(entry: DayLaneEntry, key: string)}
+  {@const inset =
+    entry.kind === "item" &&
+    (entry.clippedStart || entry.clippedEnd || entry.height > minItemHeight + 0.001)
+      ? Math.min(
+          1,
+          Math.max(
+            0,
+            (entry.height - (entry.clippedStart || entry.clippedEnd ? 2 : minItemHeight)) / 2,
+          ),
+        )
+      : 0}
   {#if entry.kind === "item"}
     <button
       type="button"
       class={[
         "kit-day-lane__item",
         entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
+        entry.point && "kit-day-lane__item--point",
         entry.item.dimmed && "kit-day-lane__item--dimmed",
         entry.height < 40 && "kit-day-lane__item--compact",
         entry.clippedStart && "kit-day-lane__item--clipped-start",
         entry.clippedEnd && "kit-day-lane__item--clipped-end",
       ]}
-      style:top="{entry.top + 1}px"
-      style:height="{entry.height - 2}px"
+      style:top="{entry.top + inset}px"
+      style:height="{entry.height - 2 * inset}px"
+      style:border-block-width={entry.height < 2 ? "0" : undefined}
       style:left="calc({entry.column} * 100% / {entry.columns})"
       style:width="calc(100% / {entry.columns} - 4px)"
       aria-pressed={!!entry.item.selected}
@@ -287,7 +370,7 @@
       onfocus={() => (activeKey = key)}
       onclick={() => onselect?.(entry.item.id)}
     >
-      {@render item(context(entry.item, entry.height - 2, entry.columns, entry.point))}
+      {@render item(context(entry.item, entry.height - 2 * inset, entry.columns, entry.point))}
       <span class="kit-sr-only">, {timeLabel(entry.item)}</span>
     </button>
   {:else}
@@ -298,8 +381,8 @@
         "kit-day-lane__more",
         entry.items.every((i) => i.dimmed) && "kit-day-lane__item--dimmed",
       ]}
-      style:top="{entry.top + 1}px"
-      style:height="{entry.height - 2}px"
+      style:top="{entry.top + inset}px"
+      style:height="{entry.height - 2 * inset}px"
       style:left="calc({entry.column} * 100% / {entry.columns})"
       style:width="calc(100% / {entry.columns} - 4px)"
       aria-pressed={entry.items.some((i) => i.selected)}
@@ -321,9 +404,14 @@
   style:--kit-day-lane-count={layout.lanes.length}
   style:--kit-day-lane-min="{laneMinWidth}px"
   style:--kit-day-lane-heads="{headsHeight}px"
+  style:--kit-day-lane-now-line-height="{nowLineHeight}px"
   role="group"
   aria-label={ariaLabel}
   {onkeydown}
+  onfocusout={(event) => {
+    if (!scroller?.contains(event.relatedTarget as Node | null)) activeKey = null;
+  }}
+  {@attach overlayScrollbars({ axis: "both" })}
 >
   {#if layout.dateOnly.length}
     <div class="kit-day-lane__date-only">
@@ -376,7 +464,7 @@
 
   <div class="kit-day-lane__axis" style:height="{layout.height}px">
     <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
-    {#each placedTicks as tick, index (index)}
+    {#each placedTicks as tick}
       {#if !tick.atFold}
         <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
         <i class="kit-day-lane__hour-line" style:top="{tick.top}px" aria-hidden="true"></i>
@@ -384,22 +472,28 @@
     {/each}
 
     {#each layout.segments as segment (segment.startMinute)}
+      {@const key = `fold:${segment.key}`}
       {#if segment.kind === "fold"}
         <button
           type="button"
           class="kit-day-lane__fold"
-          style:top="{segment.top + 3}px"
-          style:height="{segment.height - 6}px"
+          style:top="{segment.top + foldInset}px"
+          style:height="{segment.height - 2 * foldInset}px"
           aria-expanded="false"
           data-fold-key={segment.key}
+          data-day-lane-key={key}
+          tabindex={tabKey === key ? 0 : -1}
+          onfocus={() => (activeKey = key)}
           onclick={() => toggleFold(segment, true)}
         >
-          <ChevronsUpDownIcon size={13} aria-hidden="true" />
-          {foldLabel(
-            timeText(segment.startMinute),
-            timeText(segment.endMinute),
-            segment.foldHours ?? 0,
-          )}
+          <span class="kit-day-lane__fold-label">
+            <ChevronsUpDownIcon size={13} aria-hidden="true" />
+            {foldLabel(
+              timeText(segment.startMinute),
+              timeText(segment.endMinute),
+              segment.foldHours ?? 0,
+            )}
+          </span>
         </button>
       {:else if segment.key}
         <button
@@ -408,6 +502,9 @@
           style:top="{segment.top + 4}px"
           aria-expanded="true"
           data-fold-key={segment.key}
+          data-day-lane-key={key}
+          tabindex={tabKey === key ? 0 : -1}
+          onfocus={() => (activeKey = key)}
           onclick={() => toggleFold(segment, false)}
         >
           <ChevronsDownUpIcon size={12} aria-hidden="true" />
@@ -415,21 +512,6 @@
         </button>
       {/if}
     {/each}
-
-    {#if !lanes}
-      {#each layout.lanes[0]?.entries ?? [] as entry, index (index)}
-        {#if entry.kind === "item" && entry.point}
-          <i
-            class={[
-              "kit-day-lane__tick",
-              entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
-            ]}
-            style:top="{entry.top}px"
-            aria-hidden="true"
-          ></i>
-        {/if}
-      {/each}
-    {/if}
 
     <div class="kit-day-lane__lanes">
       {#each layout.lanes as lane, index (lane.key)}
@@ -447,7 +529,11 @@
     </div>
 
     {#if nowY !== null}
-      <div class="kit-day-lane__now" style:top="{nowY}px" aria-hidden="true"></div>
+      <div
+        class={["kit-day-lane__now", nowFold && "kit-day-lane__now--fold"]}
+        style:top="{nowY}px"
+        aria-hidden="true"
+      ></div>
     {/if}
   </div>
 </div>
@@ -536,6 +622,20 @@
     color: var(--text-primary);
   }
 
+  .kit-day-lane__fold-label {
+    position: relative;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-inline: var(--space-3);
+    background: var(--bg-inset);
+  }
+
+  .kit-day-lane__fold:hover .kit-day-lane__fold-label {
+    background: var(--bg-surface-hover);
+  }
+
   .kit-day-lane__refold {
     position: absolute;
     right: var(--space-4);
@@ -555,17 +655,6 @@
 
   .kit-day-lane__refold:hover {
     color: var(--text-primary);
-  }
-
-  .kit-day-lane__tick {
-    position: absolute;
-    left: calc(var(--kit-day-lane-gutter) - var(--space-3));
-    width: var(--space-3);
-    height: 2px;
-    margin-top: -1px;
-    border-radius: 1px;
-    background: var(--kit-day-lane-accent);
-    pointer-events: none;
   }
 
   .kit-day-lane__lanes {
@@ -680,6 +769,10 @@
       box-shadow 150ms ease-out;
   }
 
+  .kit-day-lane__item--point {
+    border-top: 2px solid var(--kit-day-lane-accent);
+  }
+
   .kit-day-lane__lane .kit-day-lane__item {
     /* Two pixels of air on each side of every column. */
     margin-inline: 2px;
@@ -745,7 +838,7 @@
     left: calc(var(--kit-day-lane-gutter) - var(--space-2));
     right: 0;
     z-index: 3;
-    border-top: 2px solid var(--accent-red);
+    border-top: var(--kit-day-lane-now-line-height) solid var(--accent-red);
     pointer-events: none;
   }
 
@@ -758,6 +851,14 @@
     height: 8px;
     border-radius: 50%;
     background: var(--accent-red);
+  }
+
+  .kit-day-lane__now--fold {
+    right: var(--space-4);
+  }
+
+  .kit-day-lane__now--fold::before {
+    transform: translateX(-50%);
   }
 
   .kit-day-lane__item--tone-info {

@@ -168,7 +168,7 @@
     max-width: 100%;
     padding: 0 var(--space-3);
     background: var(--bg-surface);
-    border: var(--border-width) solid var(--border-default);
+    border: var(--border-width) solid var(--border-control);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sunken, none);
     color: var(--text-primary);

@@ -119,6 +119,52 @@ test("views sit indented under their section with labels still aligned", async (
   expect(await textLeft(overview)).toBeCloseTo(await textLeft(reports), 0);
 });
 
+test("navigation rows use the shared heights", async ({ page }) => {
+  await open(page, "reports/overview", 1440);
+  expect((await sectionLink(page, "Reports").boundingBox())!.height).toBe(34);
+  expect((await sectionLink(page, "Overview").boundingBox())!.height).toBe(26);
+
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await expect.poll(() => sidebarWidth(page)).toBe(56);
+  await sectionLink(page, "Reports").hover();
+  const flyoutView = flyout(page).getByRole("link", { name: "Overview", exact: true });
+  await expect(flyoutView).toBeVisible();
+  expect((await flyoutView.boundingBox())!.height).toBe(26);
+
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty("--nav-item-height", "60px");
+  });
+  const wideRailSection = await sectionLink(page, "Reports").boundingBox();
+  const railScroll = await scroller(page).boundingBox();
+  expect(wideRailSection!.height).toBe(60);
+  expect(wideRailSection!.x).toBeGreaterThanOrEqual(railScroll!.x);
+  expect(wideRailSection!.x + wideRailSection!.width).toBeLessThanOrEqual(
+    railScroll!.x + railScroll!.width,
+  );
+});
+
+test("a wrapped view label keeps space above and below its text", async ({ page }) => {
+  await open(page, "reports/overview", 1440);
+  const view = await sectionLink(page, "Overview").elementHandle();
+  await view!.evaluate((element) => {
+    element.textContent = "Shared workspace membership and access";
+  });
+  const { lines, top, bottom } = await view!.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const rects = [...range.getClientRects()];
+    const row = element.getBoundingClientRect();
+    return {
+      lines: rects.length,
+      top: rects[0].top - row.top,
+      bottom: row.bottom - rects.at(-1)!.bottom,
+    };
+  });
+  expect(lines).toBe(2);
+  expect(top).toBeGreaterThanOrEqual(4);
+  expect(bottom).toBeGreaterThanOrEqual(4);
+});
+
 test("each width band shows its own sidebar", async ({ page }) => {
   await open(page, "home", 1440);
   expect(await sidebarWidth(page)).toBe(240);
@@ -840,9 +886,10 @@ test("a drag cut short by the narrow layout leaves no width behind", async ({ pa
   expect(await storedWidth(page)).toBeNull();
 });
 
-test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL }) => {
+test("the narrowest width keeps words fitting with zero scrollbar gutter", async ({ baseURL }) => {
   // Playwright hides Chromium's scrollbars; without that flag Chromium draws
-  // a classic scrollbar that takes room, as Windows and Linux desktops do.
+  // classic scrollbars unless suppressed. Overlay scrollbars must keep a 0px
+  // gutter so words stay fitted when the panel starts to scroll.
   const browser = await chromium.launch({ ignoreDefaultArgs: ["--hide-scrollbars"] });
   try {
     const page = await browser.newPage({ baseURL });
@@ -856,11 +903,10 @@ test("the narrowest width leaves room for a classic scrollbar", async ({ baseURL
     await edge(page).focus();
     for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
 
-    // A shorter window makes the panel scroll, and its scrollbar takes room
-    // from the words.
+    // A shorter window makes the panel scroll with a 0px overlay gutter.
     await page.setViewportSize({ width: 1440, height: 300 });
     await expect.poll(overflows).toBe(true);
-    expect(await gutter()).toBeGreaterThan(0);
+    expect(await gutter()).toBe(0);
     expect(await wordsFit(page, await sidebarWidth(page))).toBe(true);
   } finally {
     await browser.close();
@@ -1086,6 +1132,24 @@ test("touch screens get 44px rows, menu button and pin", async ({ browser }) => 
 
     await page.setViewportSize({ width: 1024, height: 800 });
     expect(await size("Collapse sidebar")).toEqual([44, 44]);
+    for (const row of ["Reports", "Overview"]) {
+      const height = await sectionLink(page, row).evaluate((element) => element.offsetHeight);
+      expect(height, row).toBeGreaterThanOrEqual(44);
+    }
+
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--nav-item-height", "60px");
+      document.documentElement.style.setProperty("--nav-subitem-height", "48px");
+    });
+    expect(await sectionLink(page, "Reports").evaluate((element) => element.offsetHeight)).toBe(60);
+    expect(await sectionLink(page, "Overview").evaluate((element) => element.offsetHeight)).toBe(
+      48,
+    );
+
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--nav-item-height", "0");
+      document.documentElement.style.setProperty("--nav-subitem-height", "0");
+    });
     for (const row of ["Reports", "Overview"]) {
       const height = await sectionLink(page, row).evaluate((element) => element.offsetHeight);
       expect(height, row).toBeGreaterThanOrEqual(44);

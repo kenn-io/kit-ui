@@ -62,6 +62,10 @@
       "types": "./types/utils/focus-trap.d.ts",
       "default": "./src/lib/utils/focus-trap.ts"
     },
+    "./utils/ime": {
+      "types": "./types/utils/ime.d.ts",
+      "default": "./src/lib/utils/ime.ts"
+    },
     "./utils/format": {
       "types": "./types/utils/format.d.ts",
       "default": "./src/lib/utils/format.ts"
@@ -90,9 +94,17 @@
       "types": "./types/utils/overlay.d.ts",
       "default": "./src/lib/utils/overlay.ts"
     },
+    "./utils/overlay-scrollbars": {
+      "types": "./types/utils/overlay-scrollbars.d.ts",
+      "default": "./src/lib/utils/overlay-scrollbars.ts"
+    },
     "./utils/popover": {
       "types": "./types/utils/popover.d.ts",
       "default": "./src/lib/utils/popover.ts"
+    },
+    "./utils/scroll-fade": {
+      "types": "./types/utils/scroll-fade.d.ts",
+      "default": "./src/lib/utils/scroll-fade.ts"
     },
     "./utils/refresh": {
       "types": "./types/utils/refresh.d.ts",
@@ -130,7 +142,7 @@
     "fmt": "vp fmt -c .oxfmtrc.json . '!dist/**' '!types/**' '!test-results/**' --no-error-on-unmatched-pattern",
     "fmt:check": "vp fmt --check -c .oxfmtrc.json . '!dist/**' '!types/**' '!test-results/**' --no-error-on-unmatched-pattern",
     "lint": "vp lint . --no-error-on-unmatched-pattern",
-    "test": "bun test ./checks ./scripts",
+    "test": "bun test ./tests/unit ./checks ./scripts",
     "test:browser": "playwright test",
     "svelte-mcp": "svelte-mcp"
   },

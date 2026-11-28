@@ -1,0 +1,198 @@
+import { describe, expect, test } from "bun:test";
+import {
+  dayGridKeyTarget,
+  formatDayCellLabel,
+  activityStep,
+  formatDayLabel,
+  formatMonthLabel,
+  formatShortDate,
+  formatWeekOfLabel,
+  monthLabels,
+  periodBounds,
+  resolveRange,
+  monthGridDates,
+  shiftMonths,
+  weekdayLabels,
+} from "../../src/lib/components/date-range.js";
+
+describe("formatWeekOfLabel", () => {
+  test("substitutes a {date} placeholder", () => {
+    expect(formatWeekOfLabel("Week of {date}", "Jun 29")).toBe("Week of Jun 29");
+  });
+
+  test("date-first locales place the date anywhere", () => {
+    expect(formatWeekOfLabel("{date}所在周", "6月29日")).toBe("6月29日所在周");
+  });
+
+  test("a template without {date} stays a prefix (legacy behavior)", () => {
+    expect(formatWeekOfLabel("Week of", "Jun 29")).toBe("Week of Jun 29");
+  });
+});
+
+// The Calendar/RangePicker `locale` prop threads a BCP 47 tag into these so
+// date labels can follow an app language setting instead of the browser
+// locale.
+describe("date label locale", () => {
+  test("formatShortDate", () => {
+    expect(formatShortDate("2026-06-29", "en-US")).toBe("Jun 29");
+    expect(formatShortDate("2026-06-29", "zh-CN")).toBe("6月29日");
+  });
+
+  test("formatDayLabel", () => {
+    expect(formatDayLabel("2026-06-29", "en-US")).toBe("Jun 29, 2026");
+    expect(formatDayLabel("2026-06-29", "zh-CN")).toBe("2026年6月29日");
+  });
+
+  test("formatMonthLabel", () => {
+    expect(formatMonthLabel("2026-06-29", "en-US")).toBe("June 2026");
+    expect(formatMonthLabel("2026-06-29", "zh-CN")).toBe("2026年6月");
+  });
+
+  test("weekday labels follow the locale, week start, and width", () => {
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    expect(weekdayLabels("zh-CN")[0]).toBe("周一");
+    expect(weekdayLabels("en-US")).toHaveLength(7);
+    expect(weekdayLabels("en-US", "sunday")).toEqual([
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+    ]);
+    expect(weekdayLabels("en-US", "monday", "narrow")).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
+  });
+
+  test("caches are size-capped — many distinct locales still format correctly", () => {
+    // Flood the caches past the FIFO cap with valid private-use variants
+    // (what an SSR server sees with request-derived locales), then confirm
+    // evicted entries rebuild correctly instead of erroring or going stale.
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    for (let i = 0; i < 100; i++) {
+      weekdayLabels(`en-x-v${i}`);
+      monthLabels("short", `en-x-v${i}`);
+    }
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    expect(monthLabels("short", "en-US")[0]).toBe("Jan");
+    expect(formatShortDate("2026-06-29", "zh-CN")).toBe("6月29日");
+  });
+
+  test("label helpers return copies — mutation can't corrupt the cache", () => {
+    const a = weekdayLabels("en-US");
+    a[0] = "corrupted";
+    expect(weekdayLabels("en-US")[0]).toBe("Mon");
+    const m = monthLabels("short", "en-US");
+    m[0] = "corrupted";
+    expect(monthLabels("short", "en-US")[0]).toBe("Jan");
+  });
+});
+
+// Week boundaries and grid must agree, including across a year boundary.
+test("Sunday-start calendar weeks and grid", () => {
+  expect(periodBounds("week", "2027-01-01", "sunday")).toEqual({
+    from: "2026-12-27",
+    to: "2027-01-02",
+  });
+  expect(periodBounds("week", "2027-01-03", "sunday")).toEqual({
+    from: "2027-01-03",
+    to: "2027-01-09",
+  });
+  expect(
+    resolveRange({ mode: "calendar", unit: "week", anchor: "2027-01-03" }, undefined, "sunday"),
+  ).toEqual({ from: "2027-01-03", to: "2027-01-09" });
+  expect(monthGridDates("2027-01-01", "sunday")[0]).toBe("2026-12-27");
+});
+
+describe("shiftMonths", () => {
+  test("clamps the day to a shorter target month", () => {
+    expect(shiftMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(shiftMonths("2028-01-31", 1)).toBe("2028-02-29");
+    expect(shiftMonths("2026-03-31", -1)).toBe("2026-02-28");
+  });
+
+  test("moves across years, clamping Feb 29 in a non-leap year", () => {
+    expect(shiftMonths("2026-01-15", -1)).toBe("2025-12-15");
+    expect(shiftMonths("2028-02-29", 12)).toBe("2029-02-28");
+    expect(shiftMonths("2028-02-29", -12)).toBe("2027-02-28");
+  });
+});
+
+describe("dayGridKeyTarget", () => {
+  test("arrows move a day or a week", () => {
+    expect(dayGridKeyTarget("ArrowLeft", "2026-03-01")).toBe("2026-02-28");
+    expect(dayGridKeyTarget("ArrowRight", "2026-12-31")).toBe("2027-01-01");
+    expect(dayGridKeyTarget("ArrowUp", "2026-03-03")).toBe("2026-02-24");
+    expect(dayGridKeyTarget("ArrowDown", "2026-02-24")).toBe("2026-03-03");
+  });
+
+  test("Home and End follow weekStart", () => {
+    // Wednesday 2026-07-01.
+    expect(dayGridKeyTarget("Home", "2026-07-01")).toBe("2026-06-29");
+    expect(dayGridKeyTarget("End", "2026-07-01")).toBe("2026-07-05");
+    expect(dayGridKeyTarget("Home", "2026-07-01", { weekStart: "sunday" })).toBe("2026-06-28");
+    expect(dayGridKeyTarget("End", "2026-07-01", { weekStart: "sunday" })).toBe("2026-07-04");
+  });
+
+  test("PageUp/PageDown move a month, and a year with Shift", () => {
+    expect(dayGridKeyTarget("PageDown", "2026-01-31")).toBe("2026-02-28");
+    expect(dayGridKeyTarget("PageUp", "2026-01-15")).toBe("2025-12-15");
+    expect(dayGridKeyTarget("PageDown", "2028-02-29", { shiftKey: true })).toBe("2029-02-28");
+    expect(dayGridKeyTarget("PageUp", "2026-01-15", { shiftKey: true })).toBe("2025-01-15");
+  });
+
+  test("rtl swaps the horizontal arrows only", () => {
+    expect(dayGridKeyTarget("ArrowLeft", "2026-01-15", { rtl: true })).toBe("2026-01-16");
+    expect(dayGridKeyTarget("ArrowRight", "2026-01-15", { rtl: true })).toBe("2026-01-14");
+    expect(dayGridKeyTarget("ArrowDown", "2026-01-15", { rtl: true })).toBe("2026-01-22");
+  });
+
+  test("other keys move nowhere", () => {
+    expect(dayGridKeyTarget("Enter", "2026-01-15")).toBeNull();
+    expect(dayGridKeyTarget("a", "2026-01-15")).toBeNull();
+  });
+});
+
+describe("formatDayCellLabel", () => {
+  test("names the weekday and the full date", () => {
+    expect(formatDayCellLabel("2026-06-29", "en-US")).toBe("Monday, June 29, 2026");
+  });
+});
+
+test("civil-date helpers preserve the skipped date in Apia", () => {
+  const result = Bun.spawnSync({
+    cmd: [
+      process.execPath,
+      "-e",
+      'import { monthGridDates, formatDayLabel, formatDayCellLabel, formatShortDate, stepAnchor, dayGridKeyTarget, periodBounds } from "./src/lib/components/date-range.ts"; console.log(JSON.stringify([monthGridDates("2011-12-01").slice(30, 34), formatDayLabel("2011-12-30", "en-US"), formatDayCellLabel("2011-12-30", "en-US"), formatShortDate("2011-12-30", "en-US"), stepAnchor("month", "2011-12-30", 1), stepAnchor("day", "2011-12-31", -1), dayGridKeyTarget("ArrowLeft", "2011-12-31"), dayGridKeyTarget("PageDown", "2011-12-30"), stepAnchor("month", "2012-01-31", 1), periodBounds("week", "2011-12-30"), periodBounds("week", "2011-12-30", "sunday"), periodBounds("month", "2011-12-30")]))',
+    ],
+    env: { ...process.env, TZ: "Pacific/Apia" },
+  });
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout.toString())).toEqual([
+    ["2011-12-28", "2011-12-29", "2011-12-30", "2011-12-31"],
+    "Dec 30, 2011",
+    "Friday, December 30, 2011",
+    "Dec 30",
+    "2012-01-30",
+    "2011-12-30",
+    "2011-12-30",
+    "2012-01-30",
+    "2012-02-29",
+    { from: "2011-12-26", to: "2012-01-01" },
+    { from: "2011-12-25", to: "2011-12-31" },
+    { from: "2011-12-01", to: "2011-12-31" },
+  ]);
+});
+
+test("activityStep uses quarters of the busiest day, with any activity at least step 1", () => {
+  expect([0, 1, 3, 5, 6, 8, 12].map((count) => activityStep(count, 12))).toEqual([
+    0, 1, 1, 2, 2, 3, 4,
+  ]);
+  // No activity or no maximum gives step 0.
+  expect(activityStep(3, 0)).toBe(0);
+  expect(activityStep(-2, 10)).toBe(0);
+  expect(activityStep(Number.NaN, 10)).toBe(0);
+  // A count above the maximum stays at step 4.
+  expect(activityStep(20, 10)).toBe(4);
+});

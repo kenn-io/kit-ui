@@ -87,6 +87,9 @@ is a `number`, or `null` while the field is empty; it is never a string.
   Very small and very large values are written out in full (`0.0000001`,
   never `1e-7`), so they stay editable. A value the app sets while the
   field has focus replaces in-progress text the same way.
+- **Composing keys do nothing.** Enter and the arrows pressed while an
+  input method composes text neither commit nor step. They still reach
+  `onkeydown`.
 - **The wheel does nothing**, unlike a native number input that changes
   under a scrolling pointer.
 

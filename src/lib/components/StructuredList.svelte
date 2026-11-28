@@ -1,15 +1,20 @@
 <script module lang="ts">
   export type StructuredListLevel = "inset" | "default" | "raised";
+
+  export interface StructuredListLabels {
+    readonly primary: string;
+    readonly secondary: string;
+    readonly description: string;
+    readonly status: string;
+  }
+
+  export const structuredListLabelsContext = Symbol("structured-list-labels");
 </script>
 
 <script lang="ts">
   import { setContext } from "svelte";
   import type { Snippet } from "svelte";
   import Card from "./Card.svelte";
-  import {
-    structuredListLabelsContext,
-    type StructuredListLabels,
-  } from "./structured-list-context.js";
 
   interface Props {
     ariaLabel: string;

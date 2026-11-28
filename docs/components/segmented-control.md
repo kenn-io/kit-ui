@@ -5,6 +5,17 @@ Inline value selector (the "All / PRs / Issues" pattern Forge repeated as
 repo browser). Radio-group semantics: arrow keys move the selection with roving
 focus.
 
+## Keyboard
+
+The control follows the WAI-ARIA radio group pattern. It is one tab stop:
+Tab lands on the chosen segment. When no enabled segment is chosen, because
+`value` is unset, stale, or names a disabled option, Tab lands on the first
+enabled segment instead.
+
+All four arrow keys move the selection and focus together, stepping from the
+focused segment. Up and Left go to the previous enabled segment, Down and
+Right to the next. Disabled segments are skipped and the ends wrap.
+
 ```svelte
 <script lang="ts">
   import { SegmentedControl } from "@kenn-io/kit-ui";

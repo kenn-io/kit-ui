@@ -10,7 +10,7 @@
   import { tick } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition } from "../utils/popover.js";
-  import { floatingPopoverPosition } from "./floatingPosition.js";
+  import { floatingPopoverPosition } from "../utils/floating-position.js";
 
   interface Props {
     /** Simple text tooltip; for rich content use the `content` snippet. */
@@ -344,26 +344,26 @@
     width: 8px;
     height: 8px;
     transform: rotate(45deg);
-    background: var(--bg-surface);
+    background: var(--bg-popover);
   }
 
   .kit-tooltip[data-side="bottom"]::before {
     top: -5px;
-    border-left: 1px solid var(--border-default);
-    border-top: 1px solid var(--border-default);
+    border-left: 1px solid var(--border-popover);
+    border-top: 1px solid var(--border-popover);
   }
 
   .kit-tooltip[data-side="top"]::before {
     bottom: -5px;
-    border-right: 1px solid var(--border-default);
-    border-bottom: 1px solid var(--border-default);
+    border-right: 1px solid var(--border-popover);
+    border-bottom: 1px solid var(--border-popover);
   }
 
   .kit-tooltip[data-side="right"]::before {
     top: calc(var(--kit-tooltip-arrow-y, 50%) - 4px);
     left: -5px;
-    border-left: 1px solid var(--border-default);
-    border-bottom: 1px solid var(--border-default);
+    border-left: 1px solid var(--border-popover);
+    border-bottom: 1px solid var(--border-popover);
   }
 
   /* Touch devices have no hover; tooltips still appear on focus. */

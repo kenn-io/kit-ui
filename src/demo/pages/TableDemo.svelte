@@ -50,6 +50,15 @@
     },
     { name: "Americas", hosts: [{ name: "Ohio", load: 63 }] },
   ];
+
+  const longJobs: Job[] = Array.from({ length: 30 }, (_, i) => {
+    const base = jobs[i % jobs.length]!;
+    return {
+      ...base,
+      id: 500 + i,
+      repo: `${base.repo}/branch-feature-overlay-scrollbars-${i + 1}`,
+    };
+  });
 </script>
 
 <DemoSection
@@ -125,6 +134,34 @@
 </DemoSection>
 
 <DemoSection
+  title="Scrollable table with overlay scrollbars"
+  description="Table keeps border-radius and box-shadow on the outer non-scrolling frame and puts the scrollable viewport inside with zero scrollbar gutter. Headers and row dividers run edge to edge, and the vertical overlay thumb starts below the sticky header."
+  code={`<Table ariaLabel="Long jobs" class="bounded-table" unsorted>
+  {#snippet header()}…{/snippet}
+  {#each rows as row}<tr>…</tr>{/each}
+</Table>`}
+>
+  <Table ariaLabel="Scrollable jobs" class="table-card" unsorted>
+    {#snippet header()}
+      <TableHeaderCell label="ID" />
+      <TableHeaderCell label="Repo" />
+      <TableHeaderCell label="Status" />
+      <TableHeaderCell label="Elapsed" numeric />
+      <TableHeaderCell label="Cost" numeric />
+    {/snippet}
+    {#each longJobs as job (job.id)}
+      <tr>
+        <td>#{job.id}</td>
+        <td class="nowrap">{job.repo}</td>
+        <td><Chip tone={statusTone[job.status]} size="sm">{job.status}</Chip></td>
+        <td class="num">{job.elapsed}s</td>
+        <td class="num">{job.cost === null ? "—" : `$${job.cost.toFixed(2)}`}</td>
+      </tr>
+    {/each}
+  </Table>
+</DemoSection>
+
+<DemoSection
   title="Bare table"
   description="With bare, Table renders only the table element, carrying class and ariaLabel, so its content can hold row groups, a colgroup or spanning header rows. kit-ui's table styles do not apply: style the table from an element the page owns. unsorted works as on any Table."
   code={`<Table unsorted bare ariaLabel="Hosts by region">
@@ -183,6 +220,19 @@
   .num {
     text-align: right;
     font-variant-numeric: tabular-nums;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  :global(.table-card) {
+    width: 100%;
+    max-width: 520px;
+    max-height: 220px;
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
   }
 
   .bare-host {

@@ -125,6 +125,7 @@
    * including the toggle track. */
   --radius-dot: 0;
   --radius-toggle: 0;
+  --scrollbar-radius: 0px;
   --transition-ease: steps(1, start);
   --transition-medium: 0.06s;
   --press-transform: none;
@@ -205,6 +206,7 @@
    * and a square toggle track. */
   --radius-dot: 0;
   --radius-toggle: 0;
+  --scrollbar-radius: 0px;
   --border-width: 2px;
   --press-transform: translate(2px, 2px);
   --transition-ease: linear;
@@ -760,6 +762,9 @@
   background: color-mix(in srgb, var(--accent-blue) 30%, transparent);
 }
 
+/* Native scrollbar tint for elements that do not use overlayScrollbars (such as
+ * the document root). Overlay-scrolled viewports reset scrollbar-color: auto and
+ * scrollbar-width: none in theme.css so there is no conflict. */
 :root[data-kit-theme] {
   scrollbar-color: color-mix(in srgb, var(--text-muted) 50%, transparent) transparent;
 }

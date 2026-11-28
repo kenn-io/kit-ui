@@ -1,6 +1,7 @@
 <script lang="ts">
   import SearchIcon from "@lucide/svelte/icons/search";
   import XIcon from "@lucide/svelte/icons/x";
+  import { isComposingKey } from "../utils/ime.js";
   import KbdBadge from "./KbdBadge.svelte";
   import TextInput, { type TextInputSize } from "./TextInput.svelte";
 
@@ -82,7 +83,8 @@
     // disabled field passes Escape through to its owner (modal, popover).
     if (event.key === "Escape" && value !== "" && !disabled && !readonly) {
       event.stopPropagation();
-      clear();
+      // This Escape cancels an input method's composition, not the text.
+      if (!isComposingKey(event)) clear();
       return;
     }
     onkeydown?.(event);

@@ -9,7 +9,7 @@
     type ColumnResize,
     type ColumnSizing,
   } from "./table-columns.js";
-  import { RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
+  import { offsetOfIndex, RowHeights, scrollerOf, virtualSlice, visibleWindow } from "./virtual.js";
 
   interface Props {
     /** Every row's data; only the rows on screen are rendered. */
@@ -178,9 +178,9 @@
   // Returns whether the columns will be measured: an empty list has no rows
   // to measure.
   function requestSizing(): boolean {
-    const wrapper = body?.parentElement?.parentElement;
-    if (items.length === 0 || !wrapper) return false;
-    measureWidth = wrapper.offsetWidth;
+    const frame = body?.parentElement?.parentElement?.parentElement;
+    if (items.length === 0 || !frame) return false;
+    measureWidth = frame.offsetWidth;
     sampling = true;
     return true;
   }
@@ -336,7 +336,7 @@
   // (`syncRows`). A wrapper back at the width the columns were sized for
   // needs no refit any more.
   function followWidth(): void {
-    const width = body?.parentElement?.parentElement?.offsetWidth ?? 0;
+    const width = body?.parentElement?.parentElement?.parentElement?.offsetWidth ?? 0;
     const cells = headerCells();
     const filler = fillerOf(cells);
     if (width > 0) {
@@ -571,11 +571,27 @@
     updateWindow();
   }
 
+  /** Place a row using measured heights and estimates for unmeasured rows.
+   * placeList repeats this step as measurements settle. */
+  export function scrollToIndex(index: number, offset = 0): void {
+    if (!body || !scroller || items.length === 0) return;
+    const i = Math.min(Math.max(0, index), items.length - 1);
+    const boxTop =
+      scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+    const row = dataRows()[i - slice.start];
+    const top =
+      row?.getBoundingClientRect().top ??
+      body.getBoundingClientRect().top + offsetOfIndex(i, items.length, heightOf);
+    scroller.scrollTop += top - boxTop - offset;
+    updateWindow();
+  }
+
   function track(spacer: HTMLTableRowElement) {
     body = spacer.parentElement as HTMLTableSectionElement;
-    const wrapper = body.parentElement!.parentElement as HTMLElement;
+    const viewportEl = body.parentElement!.parentElement as HTMLElement;
+    const frame = viewportEl.parentElement;
     const element =
-      scroll === "self" ? wrapper : (scrollElement?.() ?? untrack(() => scrollerOf(wrapper)));
+      scroll === "self" ? viewportEl : (scrollElement?.() ?? untrack(() => scrollerOf(viewportEl)));
     scroller = element;
     const target: HTMLElement | Window = element === document.scrollingElement ? window : element;
     const resized = () => {
@@ -590,19 +606,20 @@
     // Re-laying out inside an observer's callback would resize what it
     // observes in the same frame (a "ResizeObserver loop" error), so the work
     // waits for the next frame.
-    let frame = 0;
+    let frameId = 0;
     const schedule = () => {
-      if (frame === 0)
-        frame = requestAnimationFrame(() => {
-          frame = 0;
+      if (frameId === 0)
+        frameId = requestAnimationFrame(() => {
+          frameId = 0;
           resized();
         });
     };
-    // The scroller's size decides how many rows show; the wrapper's width
+    // The scroller's size decides how many rows show; the viewport/frame width
     // decides the pinned columns, and it appearing lays out a hidden table.
     const sizes = new ResizeObserver(schedule);
     if (element !== document.scrollingElement) sizes.observe(element);
-    sizes.observe(wrapper);
+    sizes.observe(viewportEl);
+    if (frame) sizes.observe(frame);
     rowObserver = new ResizeObserver(() => {
       if (!measureRows() || applyFrame !== 0) return;
       const next = windowOf();
@@ -639,7 +656,7 @@
       });
     }
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(frameId);
       cancelAnimationFrame(applyFrame);
       applyFrame = 0;
       target.removeEventListener("scroll", updateWindow);

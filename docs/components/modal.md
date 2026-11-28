@@ -24,6 +24,10 @@ Render it conditionally — the parent owns the open state:
 ```
 
 `onclose` fires on Escape, overlay click (unless disabled), and the X button.
+Escape reaches only the layer that opened last, so a modal opened over a
+drawer or an open menu closes first, even when it is rendered inside the
+drawer. An Escape that cancels an input method's candidate list closes
+nothing.
 The X shows only when there is no `footer`: a footer carries its own way out,
 such as Cancel, and a dialog should not offer two controls that do the same
 thing. Pass `closable` to override.
@@ -44,7 +48,13 @@ The panel is `role="dialog"` + `aria-modal="true"`, named by `ariaLabel`
   itself — add `autofocus` to the primary control when it helps.
 - **Focus trap**: Tab / Shift+Tab cycle inside the panel.
 - **Focus restoration**: the previously focused element regains focus on
-  close.
+  close. If that element is gone or can no longer take focus, focus goes to
+  the nearest control left where it was: when confirming a delete removes
+  the row whose button opened the dialog, focus lands on the next remaining
+  row's button, or the previous one's when no row follows. This holds when
+  the delete also removes the rows beside it. If the app moved
+  focus somewhere else while closing, the dialog leaves it there, unless the
+  same update removes that element too.
 - **Scroll lock**: body scrolling is locked while any modal surface is open
   (re-entrant across stacked surfaces).
 
@@ -53,12 +63,13 @@ virtual cursors rely on `aria-modal` support (all evergreen browsers).
 
 ## Surface
 
-The panel is a transient floating surface, like a popover: `--bg-popover`
+The panel is a transient floating surface, like a popover: `--bg-modal`
 fill, `--border-popover` edge, `--shadow-lg`. In light these equal the plain
-surface and default border. In dark the panel is a step lighter than the
-page surface, so it reads above the scrim, and `--bg-surface-hover` inside
-it steps up from the panel so hover still lightens. A toned header band
-mixes its tint over the panel's fill.
+surface and default border. In dark the panel keeps the plain surface,
+since the scrim already sets it apart, and takes the lighter popover edge.
+Popovers keep their lighter fill. `--bg-surface-hover` inside the panel
+steps up from it so hover still lightens. A toned header band mixes its tint
+over the panel's fill.
 
 ## Props
 

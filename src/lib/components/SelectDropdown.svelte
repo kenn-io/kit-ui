@@ -1,10 +1,33 @@
+<script module lang="ts">
+  /** Tone of an option's status dot. `neutral` renders muted (`--text-muted`);
+   * the semantic tones resolve through the shared `data-kit-tone` accent map. */
+  export type SelectDropdownIndicatorTone = "neutral" | "info" | "success" | "warning" | "danger";
+
+  /** Small status dot after an option's label. Color alone shouldn't carry
+   * the meaning — give it a `title` describing what the dot signals. */
+  export interface SelectDropdownIndicator {
+    tone?: SelectDropdownIndicatorTone;
+    /** Tooltip / accessible description ("roborev daemon unreachable"). */
+    title?: string;
+  }
+
+  export interface SelectDropdownOption {
+    value: string;
+    label: string;
+    triggerLabel?: string;
+    disabled?: boolean;
+    indicator?: SelectDropdownIndicator;
+  }
+</script>
+
 <script lang="ts">
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { tick } from "svelte";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { SelectDropdownIndicator, SelectDropdownOption } from "./select-dropdown.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
 
   interface Props {
     value: string;
@@ -235,6 +258,8 @@
       role="listbox"
       style={listStyle}
       bind:this={listEl}
+      {@attach scrollFade}
+      {@attach overlayScrollbars({ axis: "both" })}
     >
       {#each options as option, index (option.value)}
         <button

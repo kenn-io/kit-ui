@@ -10,6 +10,8 @@
   let mode = $state("normal");
   let status = $state("passing");
   let view = $state("list");
+  let sort = $state("");
+  let plan = $state("legacy");
 
   const viewIcons: Record<string, typeof ListIcon> = {
     list: ListIcon,
@@ -188,6 +190,40 @@
       onchange={() => {}}
       ariaLabel="Mode (read-only)"
     />
+  </div>
+</DemoSection>
+
+<DemoSection
+  title="Keyboard without a valid selection"
+  description="Tab always reaches the control. When no enabled segment is chosen, because the value is unset or names a disabled option, the first enabled segment takes the tab stop. All four arrow keys move the selection: Up and Left go back, Down and Right go forward, skipping disabled segments and wrapping at the ends."
+  code={`<SegmentedControl options={sorts} value="" onchange={(v) => (sort = v)} ariaLabel="Sort order" />`}
+>
+  <div class="snippet-row">
+    <SegmentedControl
+      options={[
+        { value: "newest", label: "Newest" },
+        { value: "oldest", label: "Oldest" },
+        { value: "popular", label: "Popular" },
+      ]}
+      value={sort}
+      onchange={(v) => (sort = v)}
+      ariaLabel="Sort order"
+    />
+    <span data-testid="segmented-sort-value">sort: <code>{sort || "none"}</code></span>
+  </div>
+  <div class="snippet-row">
+    <SegmentedControl
+      options={[
+        { value: "free", label: "Free" },
+        { value: "team", label: "Team" },
+        { value: "business", label: "Business" },
+        { value: "legacy", label: "Legacy", disabled: true },
+      ]}
+      value={plan}
+      onchange={(v) => (plan = v)}
+      ariaLabel="Plan"
+    />
+    <span data-testid="segmented-plan-value">plan: <code>{plan}</code></span>
   </div>
 </DemoSection>
 

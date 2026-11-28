@@ -291,7 +291,9 @@
    * edge as a second line. */
   .kit-card--pad-none
     > .kit-card__body
-    > :global(.kit-table-wrapper:last-child > .kit-table > tbody > tr:last-child > td) {
+    > :global(
+      .kit-table-wrapper:last-child > .kit-table-viewport > .kit-table > tbody > tr:last-child > td
+    ) {
     border-bottom: 0;
   }
 

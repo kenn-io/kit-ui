@@ -18,22 +18,24 @@ document.documentElement.classList.toggle("dark", prefersDark);
 
 ## Tokens
 
-| Group       | Variables                                                                                                                                                                                |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                                                       |
-| Borders     | `--border-default`, `--border-muted`                                                                                                                                                     |
-| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                                                     |
-| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`, `--accent-orange`                                                               |
-| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                                                        |
-| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                              |
-| Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                       |
-| Popovers    | `--bg-popover`, `--border-popover` (the `.kit-popover-card` and Modal surface and edge; lighter than the surface in dark), `--text-muted-popover` (dark only: the muted ink inside them) |
-| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                  |
-| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                            |
-| Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                             |
-| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                                                         |
-| Chrome      | `--header-height` (44px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                                                                                   |
-| Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                              |
+| Group       | Variables                                                                                                                                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Backgrounds | `--bg-primary`, `--bg-surface`, `--bg-surface-hover`, `--bg-inset`                                                                                                                                                                         |
+| Borders     | `--border-default`, `--border-muted`                                                                                                                                                                                                       |
+| Text        | `--text-primary`, `--text-secondary`, `--text-muted`                                                                                                                                                                                       |
+| Accents     | `--accent-blue`, `--accent-amber`, `--accent-purple`, `--accent-green`, `--accent-red`, `--accent-teal`, `--accent-orange`                                                                                                                 |
+| Status      | `--status-waiting` (StatusDot "your turn" bubble)                                                                                                                                                                                          |
+| Shadows     | `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--overlay-bg`                                                                                                                                                                                |
+| Cards       | `--card-border` (the default Card edge: midway between `--border-muted` and `--border-default` in light, `--border-muted` in dark)                                                                                                         |
+| Popovers    | `--bg-popover`, `--border-popover` (popover fill, popover and Modal edge; lighter in dark), `--bg-modal` (Modal fill, plain in dark), `--text-muted-popover` (dark: their own muted ink)                                                   |
+| Controls    | `--border-control` (checkbox, radio, text field, and calendar today edge; stronger in dark popovers)                                                                                                                                       |
+| Spacing     | `--space-1` … `--space-8` (see Spacing)                                                                                                                                                                                                    |
+| Radii       | `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px)                                                                                                                                                                              |
+| Fonts       | `--font-sans`, `--font-mono`                                                                                                                                                                                                               |
+| Font sizes  | `--font-size-2xs` … `--font-size-2xl` (rem — see Typography), `--font-size-root`                                                                                                                                                           |
+| Chrome      | `--header-height` (44px), `--nav-item-height` (34px), `--nav-subitem-height` (26px), `--status-bar-height` (24px), `--split-handle-size` (4px, read-only in apps)                                                                          |
+| Selection   | `--selected-strong-bg`, `--selected-strong-edge`, `--selected-strong-weight`, `--selected-bg`, `--selected-edge`, `--selected-list-bg` (see Selected state)                                                                                |
+| Scrollbars  | `--scrollbar-size`, `--scrollbar-track-size`, `--scrollbar-inset`, `--scrollbar-min-thumb`, `--scrollbar-radius`, `--scrollbar-thumb`, `--scrollbar-thumb-hover`, `--scrollbar-thumb-active`, `--scrollbar-track` (see Overlay scrollbars) |
 
 Semantic accent usage: blue = info/primary, green = success, red = danger,
 amber = warning, orange = a warning that is not a failure (StatusDot
@@ -65,6 +67,30 @@ Selected text is primary ink at `--selected-strong-weight`. Themes that set
 The quieter `--selected-bg` / `--selected-edge` pair marks a chosen control
 without lifting it, and `--selected-list-bg` fills the current row of a list
 that already sits on the surface (the SettingsLayout nav).
+
+## Overlay scrollbars
+
+`theme.css` defines the shared overlay scrollbar tokens used by `ScrollBox`,
+`Table`, `VirtualTable`, scrollable dialogs, drawers, sidebars, dropdowns, and
+any custom container using `overlayScrollbars`:
+
+| Token                      | Default (light)                                              | Purpose                                             |
+| -------------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `--scrollbar-size`         | `6px`                                                        | Visible thumb thickness                             |
+| `--scrollbar-track-size`   | `10px`                                                       | Hit-target thickness of the floating track          |
+| `--scrollbar-inset`        | `2px`                                                        | Gap between the thumb and the container's edge      |
+| `--scrollbar-min-thumb`    | `28px`                                                       | Minimum thumb length for very long scrollable areas |
+| `--scrollbar-radius`       | `9999px` (`0px` in `terminal` and `zine`)                    | Thumb corner radius                                 |
+| `--scrollbar-thumb`        | `color-mix(in srgb, var(--text-muted) 42%, transparent)`     | Resting thumb fill                                  |
+| `--scrollbar-thumb-hover`  | `color-mix(in srgb, var(--text-muted) 68%, transparent)`     | Hovered thumb fill                                  |
+| `--scrollbar-thumb-active` | `color-mix(in srgb, var(--text-secondary) 82%, transparent)` | Active/dragged thumb fill                           |
+| `--scrollbar-track`        | `transparent`                                                | Track background                                    |
+
+Overlay-scrolled viewports suppress native scrollbars (`scrollbar-width: none`,
+`scrollbar-color: auto`, and `::-webkit-scrollbar { display: none }`) so
+scrolling consumes 0px of layout width and never conflicts with theme
+`scrollbar-color` rules. High-contrast mode raises thumb contrast automatically,
+and `prefers-reduced-motion: reduce` disables fade transitions.
 
 ## Icons
 
@@ -289,9 +315,25 @@ while a row rests, and at least 4.5:1 on the hover fill. A theme that wants
 a different muted ink in popovers sets `--text-muted-popover` in its
 `:root.dark` block.
 
-The Modal panel is the same kind of surface. It keeps its own radius, takes
-`--bg-popover` and `--border-popover`, and gets the same dark hover fill and
-muted ink.
+The dark card redefines `--border-control` as well, the edge of a checkbox,
+radio, or text field and the calendar's today ring: `--text-primary` mixed
+50% over `--bg-popover`. The
+default border sits at about 1.1:1 on the popover and its hover fill, under
+the 3:1 a control's edge needs; the mix clears 3:1 on both.
+
+Outside high contrast, the dark card also redefines `--border-muted` and
+`--border-default`, to `--border-muted-popover` and
+`--border-default-popover`: the theme's borders mixed 20% and 25% toward
+`--text-primary`. The page's borders sit at about 1.1:1 on the popover, so
+dividers and the edges of pills and keys vanished; the mixes give at least
+1.7:1 and 2.2:1. A theme sets either in its `:root.dark` block to change it.
+
+The Modal panel keeps its own radius, takes `--border-popover`, and gets
+the same muted ink, but fills with `--bg-modal`: the popover fill in light,
+and the plain surface in dark. A dialog dims the page, so the scrim already
+sets it apart and the lighter fill glares against it. Popovers keep the
+lighter fill, since they sit over a page that is not dimmed. The panel's
+dark hover fill steps up from `--bg-modal`.
 
 **Stacking**: three z tokens in theme.css order the layers —
 `--z-popover` (1000, trigger-anchored fixed popovers), `--z-overlay`
@@ -302,11 +344,12 @@ than raw numbers so an app that must slot its own chrome between layers
 can retune them in one place; `AppSidebar` and its narrow bar sit one below
 `--z-overlay`, so overlays stay above them after a retune.
 
-**Escape layering**: Escape closes one layer per press. Popover dismissal
-(`dismissable`) and search-field clearing claim the key with
-`preventDefault`; overlay Escape handlers (`escapeCloses`) respect
-`defaultPrevented` — so Escape in an open dropdown inside a modal closes
-the dropdown first and the modal on the next press.
+**Escape layering**: Escape closes one layer per press. Popovers
+(`dismissable`) and overlays (`escapeLayer`) share one stack, and Escape goes
+only to the layer opened last: a dropdown inside a modal closes before the
+modal, and a modal opened over a drawer or a dropdown closes before them. A
+search field that clears itself claims the key with `preventDefault` first,
+and the stack leaves that press alone.
 
 Chrome and positioning are separate contracts. _Trigger-anchored_ popovers
 (SelectDropdown, Typeahead, FilterDropdown, DateRangePicker, Tooltip)

@@ -6,6 +6,7 @@
     getThemeName,
     initTheme,
     KIT_THEMES,
+    overlayScrollbars,
     SearchInput,
     SelectDropdown,
     setHighContrast,
@@ -15,6 +16,7 @@
   } from "../lib/index.js";
   import AdaptiveActionGridDemo from "./pages/AdaptiveActionGridDemo.svelte";
   import AppSidebarDemo from "./pages/AppSidebarDemo.svelte";
+  import AvatarDemo from "./pages/AvatarDemo.svelte";
   import BottomDockDemo from "./pages/BottomDockDemo.svelte";
   import ButtonDemo from "./pages/ButtonDemo.svelte";
   import CalendarDemo from "./pages/CalendarDemo.svelte";
@@ -41,6 +43,7 @@
   import IconButtonDemo from "./pages/IconButtonDemo.svelte";
   import ImagePreviewDemo from "./pages/ImagePreviewDemo.svelte";
   import KbdBadgeDemo from "./pages/KbdBadgeDemo.svelte";
+  import LoadOnScrollDemo from "./pages/LoadOnScrollDemo.svelte";
   import MarkdownDemo from "./pages/MarkdownDemo.svelte";
   import MediaViewerDemo from "./pages/MediaViewerDemo.svelte";
   import MenuDemo from "./pages/MenuDemo.svelte";
@@ -113,6 +116,7 @@
       component: AdaptiveActionGridDemo,
     },
     { id: "app-sidebar", label: "AppSidebar", component: AppSidebarDemo },
+    { id: "avatar", label: "Avatar", component: AvatarDemo },
     { id: "bottom-dock", label: "BottomDock", component: BottomDockDemo },
     { id: "button", label: "Button", component: ButtonDemo },
     { id: "calendar", label: "Calendar", component: CalendarDemo },
@@ -138,6 +142,7 @@
     { id: "icon-button", label: "IconButton", component: IconButtonDemo },
     { id: "image-preview", label: "ImagePreview", component: ImagePreviewDemo },
     { id: "kbd-badge", label: "KbdBadge", component: KbdBadgeDemo },
+    { id: "load-on-scroll", label: "Load on scroll", component: LoadOnScrollDemo },
     { id: "markdown", label: "Markdown", component: MarkdownDemo },
     { id: "media-viewer", label: "MediaViewer", component: MediaViewerDemo },
     { id: "menu", label: "Menu", component: MenuDemo },
@@ -213,6 +218,8 @@
     activeId = id;
     location.hash = id;
   }
+  let navFrameEl = $state<HTMLDivElement>();
+  let contentEl = $state<HTMLElement>();
 </script>
 
 <svelte:window onhashchange={() => (activeId = pageForHash(location.hash.slice(1)))} />
@@ -254,23 +261,25 @@
           block
         />
       </div>
-      <nav class="sidebar__nav">
-        {#each visibleMeta as page (page.id)}
-          {@render navLink(page)}
-        {/each}
-        {#if visibleMeta.length > 0 && visibleComponents.length > 0}
-          <div class="sidebar__divider" aria-hidden="true"></div>
-        {/if}
-        {#each visibleComponents as page (page.id)}
-          {@render navLink(page)}
-        {/each}
-        {#if visibleMeta.length === 0 && visibleComponents.length === 0}
-          <span class="sidebar__empty">No matches</span>
-        {/if}
-      </nav>
+      <div class="sidebar__nav-frame" bind:this={navFrameEl}>
+        <nav class="sidebar__nav" {@attach overlayScrollbars({ axis: "both", host: navFrameEl })}>
+          {#each visibleMeta as page (page.id)}
+            {@render navLink(page)}
+          {/each}
+          {#if visibleMeta.length > 0 && visibleComponents.length > 0}
+            <div class="sidebar__divider" aria-hidden="true"></div>
+          {/if}
+          {#each visibleComponents as page (page.id)}
+            {@render navLink(page)}
+          {/each}
+          {#if visibleMeta.length === 0 && visibleComponents.length === 0}
+            <span class="sidebar__empty">No matches</span>
+          {/if}
+        </nav>
+      </div>
     </aside>
 
-    <main class="content">
+    <main class="content" bind:this={contentEl}>
       <header class="content__topbar">
         <h2 class="content__heading">{activePage.label}</h2>
         <div class="content__theme-controls">
@@ -287,7 +296,7 @@
           <Toggle checked={getHighContrast()} onchange={setHighContrast} label="High contrast" />
         </div>
       </header>
-      <div class="content__body">
+      <div class="content__body" {@attach overlayScrollbars({ axis: "both", host: contentEl })}>
         <ActiveComponent />
       </div>
     </main>
@@ -307,8 +316,17 @@
     flex-shrink: 0;
     border-right: 1px solid var(--border-default);
     background: var(--bg-surface);
-    padding: 16px 10px;
-    overflow-y: auto;
+    padding: 16px 10px 0;
+    overflow: hidden;
+  }
+
+  .sidebar__nav-frame {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .sidebar__brand {
@@ -336,6 +354,9 @@
     flex-direction: column;
     gap: 1px;
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 16px;
   }
 
   .sidebar__divider {
@@ -407,9 +428,6 @@
   .content__body {
     flex: 1;
     overflow-y: auto;
-    /* Reserve the scrollbar's width up front so page content does not shift
-       when opening example code first makes the page scroll. */
-    scrollbar-gutter: stable;
     padding: 20px 32px 64px;
     /* Table headers that stick to this scroller cover its top padding. */
     --kit-table-sticky-top: -20px;

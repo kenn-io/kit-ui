@@ -1,8 +1,38 @@
+<script module lang="ts">
+  export interface MentionOption {
+    /** Stable identity for row keying. */
+    id: string;
+    /** Inserted after the trigger character on select (e.g. an issue id). */
+    insert: string;
+    /** Primary row text. */
+    label: string;
+    /** Secondary text, rendered dim at the row's trailing edge. */
+    meta?: string;
+  }
+
+  /** One character that opens the menu, with its own lookup. A composer can
+   * offer several, e.g. "/" for commands and "@" for files. */
+  export interface MentionTrigger {
+    /** Single character that opens the menu when it starts a word. */
+    char: string;
+    /** Called with the text between the trigger and the caret (may be ""). */
+    search: (query: string) => MentionOption[] | Promise<MentionOption[]>;
+    /** Keep the menu closed while nothing matches (see MentionTextarea). */
+    hideEmpty?: boolean;
+    searchingLabel?: string;
+    emptyLabel?: string;
+    /** Accessible name of the menu (default "Insert reference"). */
+    menuLabel?: string;
+  }
+</script>
+
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
+  import { floatingPopoverStyle } from "../utils/floating-position.js";
+  import { isComposingKey } from "../utils/ime.js";
   import { autoReposition } from "../utils/popover.js";
-  import { floatingPopoverStyle } from "./floatingPosition.js";
-  import type { MentionOption, MentionTrigger } from "./mention.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
 
   // Exactly one lookup form: a single `search` (with `trigger`), or `triggers`.
   type Props = BaseProps &
@@ -243,6 +273,14 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
+    // Enter, Tab, Escape and the arrows belong to an input method while it
+    // composes, so the menu stays as it is. An Escape the shown menu would
+    // have claimed stops here, so a parent overlay stays open too.
+    if (isComposingKey(event)) {
+      if (event.key === "Escape" && visible) event.stopPropagation();
+      onkeydown?.(event);
+      return;
+    }
     if (open && results.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -312,6 +350,8 @@
       aria-label={active?.menuLabel ?? "Insert reference"}
       tabindex="-1"
       onmousedown={preventBlur}
+      {@attach scrollFade}
+      {@attach overlayScrollbars({ axis: "both" })}
     >
       {#if searching && results.length === 0}
         <div class="kit-mention__status">{active?.searchingLabel ?? searchingLabel}</div>
@@ -411,8 +451,6 @@
   .kit-mention__menu {
     position: fixed;
     box-sizing: border-box;
-    display: grid;
-    gap: 1px;
     max-height: 240px;
     overflow-y: auto;
     z-index: var(--z-popover);
@@ -440,6 +478,10 @@
     color: var(--text-secondary);
     cursor: pointer;
     text-align: left;
+  }
+
+  .kit-mention__option + .kit-mention__option {
+    margin-top: 1px;
   }
 
   .kit-mention__option.active {

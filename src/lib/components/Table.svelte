@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
   import { scrollerOf } from "./virtual.js";
 
   interface BaseProps {
@@ -50,15 +51,17 @@
     class: className = "",
   }: Props = $props();
 
+  let wrapperEl = $state<HTMLDivElement>();
+  let tableEl = $state<HTMLTableElement>();
   let scrolled = $state(false);
   let wide = $state(false);
 
   // Rows pass under the header once it leaves the table's top edge,
   // whichever container scrolled it there.
-  function watchHeader(wrapper: HTMLDivElement) {
-    const table = wrapper.firstElementChild as HTMLTableElement;
+  function watchHeader(viewport: HTMLDivElement) {
+    const table = viewport.firstElementChild as HTMLTableElement;
     const head = table.tHead;
-    const scroller = scroll === "self" ? wrapper : scrollerOf(wrapper);
+    const scroller = scroll === "self" ? viewport : scrollerOf(viewport);
     const target: HTMLElement | Window = scroller === document.scrollingElement ? window : scroller;
     const stuck = () => {
       if (head)
@@ -71,16 +74,17 @@
 
   // A page-scrolled wrapper clips without scrolling, so it does not capture
   // the sticky header. Only a table wider than the wrapper (a narrow screen)
-  // makes it scroll sideways, which gives up sticking to the page.
-  function fitWidth(wrapper: HTMLDivElement) {
+  // makes the inner viewport scroll sideways, which gives up sticking to the
+  // page while keeping border-radius and box-shadow on the outer frame.
+  function fitWidth(viewport: HTMLDivElement) {
     // Environments without layout (jsdom) have no ResizeObserver.
     if (scroll === "self" || typeof ResizeObserver === "undefined") return;
-    const table = wrapper.firstElementChild as HTMLTableElement;
+    const table = viewport.firstElementChild as HTMLTableElement;
     // The clip edge is the padding box, and the table starts after the left
     // padding, so it is clipped once it reaches past the right edge.
     const check = () => {
-      const left = parseFloat(getComputedStyle(wrapper).paddingLeft) || 0;
-      wide = left + table.offsetWidth > wrapper.clientWidth + 1;
+      const left = parseFloat(getComputedStyle(viewport).paddingLeft) || 0;
+      wide = left + table.offsetWidth > viewport.clientWidth + 1;
     };
     check();
     // Switching overflow resizes what is observed, so the check waits a
@@ -93,7 +97,7 @@
           check();
         });
     });
-    observer.observe(wrapper);
+    observer.observe(viewport);
     observer.observe(table);
     return () => {
       cancelAnimationFrame(frame);
@@ -108,52 +112,95 @@
   </table>
 {:else}
   <div
+    bind:this={wrapperEl}
     class={["kit-table-wrapper", className]}
     class:kit-table-wrapper--page={scroll === "page"}
     class:kit-table-wrapper--wide={scroll === "page" && wide}
-    {@attach watchHeader}
-    {@attach fitWidth}
   >
-    <table
-      class="kit-table"
-      class:kit-table--zebra={zebra}
-      class:kit-table--sticky={stickyHeader}
-      class:kit-table--scrolled={scrolled}
-      aria-label={ariaLabel}
+    <div
+      class="kit-table-viewport"
+      {@attach watchHeader}
+      {@attach fitWidth}
+      {@attach scroll === "self"
+        ? overlayScrollbars({
+            axis: "both",
+            host: wrapperEl,
+            insetTop: stickyHeader ? (tableEl?.tHead ?? null) : 0,
+          })
+        : wide
+          ? overlayScrollbars({
+              axis: "x",
+              host: wrapperEl,
+            })
+          : undefined}
     >
-      <thead>
-        <tr>
-          {@render header?.()}
-        </tr>
-      </thead>
-      <tbody>
-        {@render children()}
-      </tbody>
-    </table>
+      <table
+        bind:this={tableEl}
+        class="kit-table"
+        class:kit-table--zebra={zebra}
+        class:kit-table--sticky={stickyHeader}
+        class:kit-table--scrolled={scrolled}
+        aria-label={ariaLabel}
+      >
+        <thead>
+          <tr>
+            {@render header?.()}
+          </tr>
+        </thead>
+        <tbody>
+          {@render children()}
+        </tbody>
+      </table>
+    </div>
   </div>
 {/if}
 
 <style>
-  /* min-width: 0 lets the wrapper shrink in a flex row, so a wide table
-   * overflows it and scrolls instead of widening it. */
+  /* Outer non-scrolling frame owns border-radius, box-shadow, and clipping;
+   * the inner viewport scrolls with zero scrollbar gutter so the table spans
+   * 100% of the frame width edge to edge. min-width: 0 lets the frame shrink
+   * in a flex row so a wide table overflows and scrolls inside it. */
   .kit-table-wrapper {
-    overflow: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-width: 0;
     min-height: 0;
+    overflow: clip;
     box-shadow: var(--shadow-panel, none);
+  }
+
+  .kit-table-viewport {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  /* A list end sizes its status to the part in view. Only tables with one
+   * become inline-size containers, so other tables keep their own width
+   * in boxes that fit their content. */
+  .kit-table-wrapper:not(.kit-table-wrapper--page)
+    > .kit-table-viewport:has(:global(.kit-list-end)),
+  .kit-table-wrapper--wide > .kit-table-viewport:has(:global(.kit-list-end)) {
+    container-type: inline-size;
   }
 
   /* A page-scrolled wrapper keeps the table's full height: in a bounded
    * flex column it would otherwise shrink and hide the rows below. An
-   * explicit max-content holds even while a wide table makes it scroll
-   * sideways, where an automatic minimum would drop to zero. */
+   * explicit max-content holds even while a wide table makes the inner
+   * viewport scroll sideways, where an automatic minimum would drop to zero. */
   .kit-table-wrapper--page {
-    overflow: clip;
     min-height: max-content;
   }
 
-  .kit-table-wrapper--wide {
+  .kit-table-wrapper--page > .kit-table-viewport {
+    overflow: clip;
+  }
+
+  .kit-table-wrapper--wide > .kit-table-viewport {
     overflow: auto;
   }
 
@@ -171,7 +218,7 @@
 
   /* A header stuck to a padded page scroller would stop below the padding,
    * with rows showing above it; the app offsets that padding. */
-  .kit-table-wrapper--page > .kit-table--sticky thead {
+  .kit-table-wrapper--page > .kit-table-viewport > .kit-table--sticky thead {
     top: var(--kit-table-sticky-top, 0);
   }
 

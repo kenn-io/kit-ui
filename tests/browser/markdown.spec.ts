@@ -258,6 +258,95 @@ for (const method of ["render", "renderSync"] as const) {
 test.describe("sanitization", () => {
   test.beforeEach(async ({ page }) => gotoPage(page, "markdown"));
 
+  test("renders long address suffixes promptly", async ({ page }) => {
+    const results = await page.evaluate(async () => {
+      const { createMarkdownRenderer } = await import("/src/lib/utils/markdown.ts");
+      return [")".repeat(1_600_000), ".)".repeat(800_000)].map((suffix) => {
+        const measure = (input: string) =>
+          Array.from({ length: 5 }, () => {
+            const renderer = createMarkdownRenderer();
+            const start = performance.now();
+            const html = renderer.renderSync(input);
+            return { elapsed: performance.now() - start, html };
+          }).sort((a, b) => a.elapsed - b.elapsed)[2]!;
+        const short = measure(`kenn://a/b${suffix.slice(0, 200_000)}`);
+        const long = measure(`kenn://a/b${suffix}`);
+        const root = document.createElement("div");
+        root.innerHTML = long.html;
+        return {
+          elapsed: long.elapsed,
+          shortElapsed: short.elapsed,
+          links: root.querySelectorAll("a").length,
+          href: root.querySelector("a")?.getAttribute("href"),
+          textMatches: root.querySelector("p")?.textContent === `kenn://a/b${suffix}`,
+        };
+      });
+    });
+    for (const result of results) {
+      expect(result.links).toBe(1);
+      expect(result.href).toBe("kenn://a/b");
+      expect(result.textMatches).toBe(true);
+      expect(result.elapsed).toBeLessThan(32 * result.shortElapsed);
+    }
+  });
+
+  test("preserves bare destinations and respects their boundaries", async ({ page }) => {
+    const html = await render(
+      page,
+      "kenn://example/item?x=1&amp; kenn://example/item#title&amp;copy; kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&amp;record=example kenn://example/item#title&amp;copy;=2 kenn://example/item_ [kenn://example/item] kenn://example/item. kenn://example/item). kenn://example/item(a) kenn://a/(b)) kenn://a/b.) kenn://a/c\\. xkenn://example/item .kenn://example/item +kenn://example/item -kenn://example/item kenn://? [kenn://a](kenn://a) kenn://example/item`code` kenn://example/item[details](https://example.org) <code>kenn://example/item</code>",
+    );
+    const links = await page.evaluate((markup) => {
+      const root = document.createElement("div");
+      root.innerHTML = markup;
+      return [...root.querySelectorAll("a")].map((link) => ({
+        href: link.getAttribute("href"),
+        text: link.textContent,
+      }));
+    }, html);
+    expect(links).toEqual([
+      { href: "kenn://example/item?x=1&", text: "kenn://example/item?x=1&" },
+      { href: "kenn://example/item#title&copy;", text: "kenn://example/item#title&copy;" },
+      {
+        href: "kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&record=example",
+        text: "kenn://notes/aaaaaaaa/aaaaaaaaaaaaaaaaaaaaaaaaaa?project=example&record=example",
+      },
+      {
+        href: "kenn://example/item#title&copy;=2",
+        text: "kenn://example/item#title&copy;=2",
+      },
+      { href: "kenn://example/item_", text: "kenn://example/item_" },
+      { href: "kenn://example/item", text: "kenn://example/item" },
+      { href: "kenn://example/item", text: "kenn://example/item" },
+      { href: "kenn://example/item", text: "kenn://example/item" },
+      { href: "kenn://example/item(a)", text: "kenn://example/item(a)" },
+      { href: "kenn://a/(b)", text: "kenn://a/(b)" },
+      { href: "kenn://a/b", text: "kenn://a/b" },
+      { href: "kenn://a/c", text: "kenn://a/c" },
+      { href: "kenn://a", text: "kenn://a" },
+      { href: "kenn://example/item", text: "kenn://example/item" },
+      { href: "kenn://example/item", text: "kenn://example/item" },
+      { href: "https://example.org", text: "details" },
+    ]);
+    expect(html).toContain(
+      '<a href="kenn://example/item">kenn://example/item</a><code>code</code>',
+    );
+    expect(html).toContain("<code>kenn://example/item</code>");
+  });
+
+  test("allows app addresses only in link destinations", async ({ page }) => {
+    const html = await render(
+      page,
+      '[x](foo://bar) [note](kenn://example/note) <kenn://example/note> <img src="kenn://example/item"><form action="kenn://example/item"><button>go</button></form> [bad](kenn:example) [empty](kenn://?)',
+    );
+    expect(html).toContain("<a>x</a>");
+    expect(html).toContain('<a href="kenn://example/note">note</a>');
+    expect(html).toContain('<a href="kenn://example/note">kenn://example/note</a>');
+    expect(html).toContain("<img>");
+    expect(html).toContain("<form>");
+    expect(html).toContain("<a>bad</a>");
+    expect(html).toContain("<a>empty</a>");
+  });
+
   test("strips script vectors, style tags, and non-shiki inline styles", async ({ page }) => {
     const html = await render(
       page,

@@ -3,12 +3,15 @@
   import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
   import SearchIcon from "@lucide/svelte/icons/search";
   import XIcon from "@lucide/svelte/icons/x";
+  import { isComposingKey } from "../utils/ime.js";
 
   interface Props {
     /** Current search text (bindable). */
     query?: string;
-    /** Total number of matches for `query`. */
+    /** Matches for `query`; only those found so far when `resultsComplete` is `false`. */
     matchCount: number;
+    /** Whether `matchCount` is final; when `false` the total shows a trailing `+`. */
+    resultsComplete?: boolean;
     /** 0-based index of the current match; displayed 1-based. */
     currentIndex: number;
     /** Advance to the next match (Enter, down button). */
@@ -28,8 +31,11 @@
      * popover shadow treatment lives. */
     variant?: "pinned" | "floating";
     placeholder?: string;
-    /** Counter template; `{current}` and `{total}` are replaced. */
+    /** Counter template; `{current}` and `{total}` are replaced. Without
+     * `{total}`, an incomplete floor is appended: `Match 1 (3+)`. */
     matchCountLabel?: string;
+    /** Spoken counter while results are incomplete; `{count}` is the visible text. */
+    partialCountLabel?: string;
     noMatchesLabel?: string;
     ariaLabel?: string;
     inputAriaLabel?: string;
@@ -41,6 +47,7 @@
   let {
     query = $bindable(""),
     matchCount,
+    resultsComplete = true,
     currentIndex,
     onnext = undefined,
     onprev = undefined,
@@ -50,6 +57,7 @@
     variant = "pinned",
     placeholder = "Find…",
     matchCountLabel = "{current} of {total}",
+    partialCountLabel = "{count} so far",
     noMatchesLabel = "No matches",
     ariaLabel = "Find",
     inputAriaLabel = "Search query",
@@ -60,17 +68,24 @@
 
   const hasQuery = $derived(query.trim().length > 0);
   const hasMatches = $derived(matchCount > 0);
-  const noResults = $derived(hasQuery && !hasMatches);
+  const noResults = $derived(hasQuery && resultsComplete && !hasMatches);
 
   const counterText = $derived.by(() => {
     if (!hasQuery) return "";
-    if (matchCount === 0) return noMatchesLabel;
-    return matchCountLabel
-      .replace("{current}", String(currentIndex + 1))
-      .replace("{total}", String(matchCount));
+    if (resultsComplete && !hasMatches) return noMatchesLabel;
+    const total = String(matchCount) + (resultsComplete ? "" : "+");
+    const label = matchCountLabel.replace("{current}", String(hasMatches ? currentIndex + 1 : 0));
+    if (!resultsComplete && !label.includes("{total}")) return `${label} (${total})`;
+    return label.replace("{total}", total);
   });
 
   function handleKeydown(e: KeyboardEvent): void {
+    // Enter and Escape confirm or cancel an input method's composition.
+    // Escape still stops here so it cannot reach the page behind.
+    if (isComposingKey(e)) {
+      if (e.key === "Escape") e.stopPropagation();
+      return;
+    }
     if (e.key === "Escape") {
       e.stopPropagation();
       onclose?.();
@@ -111,8 +126,11 @@
   />
 
   {#if hasQuery}
-    <span class="kit-find-bar__counter" class:no-results={noResults} aria-live="polite">
+    <span class="kit-find-bar__counter" class:no-results={noResults} aria-hidden="true">
       {counterText}
+    </span>
+    <span class="kit-sr-only" aria-live="polite">
+      {resultsComplete ? counterText : partialCountLabel.replace("{count}", counterText)}
     </span>
   {/if}
 

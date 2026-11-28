@@ -40,7 +40,9 @@
   import { flushSync, onDestroy, tick, untrack } from "svelte";
   import { TABBABLE_SELECTOR } from "../utils/focus-trap.js";
   import { autoReposition, dismissable } from "../utils/popover.js";
-  import { floatingFlyoutStyle, floatingPopoverStyle } from "./floatingPosition.js";
+  import { overlayScrollbars } from "../utils/overlay-scrollbars.js";
+  import { scrollFade } from "../utils/scroll-fade.js";
+  import { floatingFlyoutStyle, floatingPopoverStyle } from "../utils/floating-position.js";
   import SearchInput from "./SearchInput.svelte";
 
   interface Props {
@@ -99,6 +101,7 @@
   }: Props = $props();
 
   let isOpen = $state(false);
+  let searchInput = $state<HTMLInputElement>();
   let search = $state("");
   let buttonRef = $state<HTMLButtonElement>();
   let dropdownRef = $state<HTMLDivElement>();
@@ -310,6 +313,8 @@
     isOpen = true;
     await tick();
     positionDropdown();
+    // A searchable panel takes typing at once.
+    if (searchable) searchInput?.focus({ preventScroll: true });
   }
 
   async function toggleOpen(): Promise<void> {
@@ -387,11 +392,19 @@
       class="kit-filter-dropdown__panel kit-popover-card"
       bind:this={dropdownRef}
       style={dropdownStyle}
+      {@attach scrollFade}
+      {@attach overlayScrollbars({ axis: "both" })}
       style:min-width={`min(${minWidth}, var(--kit-filter-dropdown-max-width, calc(100vw - 16px)))`}
     >
       {#if searchable}
         <div class="kit-filter-dropdown__search">
-          <SearchInput bind:value={search} size="sm" block placeholder={searchPlaceholder} />
+          <SearchInput
+            bind:value={search}
+            bind:inputEl={searchInput}
+            size="sm"
+            block
+            placeholder={searchPlaceholder}
+          />
         </div>
       {/if}
       {#if hasBulkActions}
@@ -443,11 +456,7 @@
             <span
               class="kit-filter-dropdown__dot"
               data-filled={item.color ? "" : undefined}
-              style:background={item.color
-                ? item.active
-                  ? item.color
-                  : "var(--border-muted)"
-                : undefined}
+              style:background={item.color && item.active ? item.color : undefined}
             ></span>
             <span class="kit-filter-dropdown__label">{item.label}</span>
             {#if item.excluded}
@@ -503,6 +512,8 @@
         tabindex="-1"
         style={submenuStyle}
         onkeydown={handleSubmenuKeydown}
+        {@attach scrollFade}
+        {@attach overlayScrollbars({ axis: "both" })}
       >
         {@render submenuItem.submenu()}
       </div>
@@ -672,6 +683,25 @@
     border-radius: var(--radius-dot, 50%);
     flex-shrink: 0;
     transition: background var(--transition-fast) var(--transition-ease, ease);
+  }
+
+  /* A colored item that is off shows a grey dot, so it reads as off rather
+     than missing. The muted border nearly matched a dark popover's fill, so
+     there the dot takes the control edge, above 3:1 on the popover and on a
+     hovered row. A row that is off also dims to half, dot included, so its
+     dot starts from the primary ink and lands near that same strength. */
+  .kit-filter-dropdown__dot[data-filled] {
+    background: var(--border-muted);
+  }
+
+  :global(:root.dark) .kit-filter-dropdown__dot[data-filled] {
+    background: var(--border-control);
+  }
+
+  :global(:root.dark)
+    .kit-filter-dropdown__item:not(.active, .excluded, .submenu)
+    .kit-filter-dropdown__dot[data-filled] {
+    background: var(--text-primary);
   }
 
   /* As in a menu's icon column: when any row has a dot, every row keeps the

@@ -74,11 +74,14 @@ a `startMinute`, are not drawn.
 | `dayKey`           | `string \| number`                                                        | `""`         | Identifies the day shown; a new key scrolls again and closes opened folds          |
 | `onselect`         | `(id) => void`                                                            | —            | Click, Enter or Space on a card                                                    |
 | `onoverflow`       | `({ ids, startMinute }) => void`                                          | —            | A "+N more" item was chosen; the app shows the list                                |
-| `onfoldchange`     | `({ startMinute, endMinute, expanded })`                                  | —            | A fold was opened or closed                                                        |
+| `onfoldchange`     | `({ startMinute, endMinute, expanded })`                                  | —            | A user opened or closed a fold; automatic resets do not emit this callback         |
 | labels             | `ariaLabel`, `dateOnlyLabel`, `overflowLabel`, `foldLabel`, `refoldLabel` | English      | Strings and small functions for translation                                        |
 
+When changing `dayKey`, pass the items for that day with the new key. Pass an
+empty list while the new day's items load.
+
 `tone` takes the Chip tone vocabulary and colors the card's accent bar and
-the tick of a point item.
+a point card's top edge.
 
 ## By person: several lanes
 
@@ -105,9 +108,11 @@ the same as in a single lane.
 
 ## Layout rules
 
-- An item's top is its start; its height is its length, never less than
-  `minItemHeight`. A point item (no `endMinute`) is a compact card with a
-  tick on the hour gutter at its exact minute.
+- An item's top is its start; its height is its length, at least
+  `minItemHeight` unless it crosses the day boundary. A point item (no `endMinute`) is a minimum-height
+  card (44px by default) whose accent top edge marks its exact start minute. A late card keeps its minimum
+  height, extending the axis below the last hour; intervals crossing the day
+  boundary are clipped at the end of the day.
 - Overlap uses the rendered span, so two point items ten minutes apart sit
   side by side instead of covering each other.
 - Overlapping items share a cluster and take the first free column. Past
@@ -116,18 +121,20 @@ the same as in a single lane.
   Nothing is trimmed or dropped.
 - An hour is busy when any rendered span touches it. A run of empty hours at
   least `foldQuietMinutes` long folds to a 32px band; activating it opens the
-  hours, and a "Fold" button on the first opened hour closes them again.
+  hours, and a "Fold" button on the first opened hour closes them again. The
+  now line sits within the band when its time falls inside a fold.
 - Date-only items sit in a strip above the hours, in input order.
 - Selected and dimmed come from the items; DayLane never hides an item.
 
 ## Keyboard and screen readers
 
-The lane is a `group` with one tab stop: the selected card, else the first.
-Arrow keys move through cards in time order (the date-only strip first, then
-the axis by top and column), Home and End jump to the ends, Enter and Space
-select. Escape is left to the app, which owns the selection. Each card is a
-`button` with `aria-pressed`, and its accessible name ends with the time or
-time range, so the snippet can mark its own visible time `aria-hidden`.
+The lane is a `group` with one tab stop: the selected card, else the first card
+or fold. Arrow keys move through cards and fold buttons in time order (the
+date-only strip first, then the axis by top and column), Home and End jump to
+the ends, and Enter and Space activate. Escape is left to the app, which owns
+the selection. Each card is a `button` with `aria-pressed`, and its accessible
+name ends with the time or time range, so the snippet can mark its own visible
+time `aria-hidden`.
 Hover transitions stop under `prefers-reduced-motion`.
 
 ## Layout functions
