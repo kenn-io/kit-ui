@@ -590,4 +590,15 @@ test("focus scrolls a card clear of the frozen gutter", async ({ page }) => {
     return el.contains(document.elementFromPoint(r.left + 6, r.top + r.height / 2));
   });
   expect(hit).toBe(true);
+
+  // Arrow navigation must reveal a target that is only partly behind the gutter.
+  const next = lanes.getByRole("button", { name: /Shipment status standup/ }).nth(1);
+  const nextBox = (await next.boundingBox())!;
+  await scroller.evaluate(
+    (el, delta) => (el.scrollLeft += delta),
+    nextBox.x - (frame.x + gutter - nextBox.width / 2),
+  );
+  await page.keyboard.press("ArrowRight");
+  await expect(next).toBeFocused();
+  expect((await next.boundingBox())!.x).toBeGreaterThanOrEqual(frame.x + gutter);
 });
