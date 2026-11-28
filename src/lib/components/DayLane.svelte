@@ -258,13 +258,16 @@
 
   function focusKey(key: string) {
     activeKey = key;
-    reveal(scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`));
+    const el = scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`);
+    el?.focus();
+    if (lanes && !el?.matches(".kit-day-lane__item:not(.kit-day-lane__item--date-only)"))
+      el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
-  /** By person, focus leaves a card half under the gutter; nearest alignment finishes it. */
-  function reveal(el?: HTMLElement | null) {
-    el?.focus();
-    if (lanes) el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  function focusCard(key: string, el: HTMLElement) {
+    activeKey = key;
+    if (lanes && el.matches(":focus-visible"))
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
   function onkeydown(event: KeyboardEvent) {
@@ -339,6 +342,15 @@
       el.getBoundingClientRect().bottom - top <= scroller.clientHeight
         ? 0
         : offset;
+    if (lanes) {
+      const frame = scroller.getBoundingClientRect();
+      const card = el.getBoundingClientRect();
+      const left =
+        frame.left + scroller.clientLeft + parseFloat(getComputedStyle(scroller).scrollPaddingLeft);
+      const right = frame.left + scroller.clientLeft + scroller.clientWidth;
+      if (card.left < left) scroller.scrollLeft += card.left - left;
+      else if (card.right > right) scroller.scrollLeft += card.right - right;
+    }
   });
 </script>
 
@@ -374,7 +386,7 @@
       aria-pressed={!!entry.item.selected}
       tabindex={tabKey === key ? 0 : -1}
       data-day-lane-key={key}
-      onfocus={() => (activeKey = key)}
+      onfocus={(event) => focusCard(key, event.currentTarget)}
       onclick={() => onselect?.(entry.item.id)}
     >
       {@render item(context(entry.item, entry.height - 2 * inset, entry.columns, entry.point))}
@@ -395,7 +407,7 @@
       aria-pressed={entry.items.some((i) => i.selected)}
       tabindex={tabKey === key ? 0 : -1}
       data-day-lane-key={key}
-      onfocus={() => (activeKey = key)}
+      onfocus={(event) => focusCard(key, event.currentTarget)}
       onclick={() => chooseOverflow(entry)}
     >
       {overflowLabel(entry.items.length, timeText(entry.startMinute))}
@@ -759,10 +771,7 @@
   /* Keyboard focus scrolls a card clear of the frozen gutter and pinned headers. */
   .kit-day-lane--lanes {
     scroll-padding-left: calc(var(--kit-day-lane-gutter) + var(--space-1));
-  }
-
-  .kit-day-lane--lanes .kit-day-lane__item {
-    scroll-margin-top: calc(var(--kit-day-lane-heads) + var(--space-4));
+    scroll-padding-top: calc(var(--kit-day-lane-heads) + var(--space-4));
   }
 
   .kit-day-lane--lanes .kit-day-lane__lane + .kit-day-lane__lane {

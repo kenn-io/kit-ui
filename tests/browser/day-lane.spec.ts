@@ -17,6 +17,7 @@ async function mountDayLane(
     dayKey?: string;
     foldQuietMinutes: number;
     nowMinute?: number;
+    hourHeight?: number;
     label: string;
   },
 ) {
@@ -601,4 +602,140 @@ test("focus scrolls a card clear of the frozen gutter", async ({ page }) => {
   await page.keyboard.press("ArrowRight");
   await expect(next).toBeFocused();
   expect((await next.boundingBox())!.x).toBeGreaterThanOrEqual(frame.x + gutter);
+});
+
+test("arrow focus reveals covered fold and refold below lane headers", async ({ page }) => {
+  await mountDayLane(page, {
+    items: [{ id: "first", lane: "a", startMinute: 540 }],
+    lanes: [{ key: "a", label: "A" }],
+    foldQuietMinutes: 120,
+    label: "Item",
+  });
+  const scroller = page.locator(".kit-day-lane");
+  const card = page.getByRole("button", { name: /Item/ });
+  const heads = page.locator(".kit-day-lane__lane-heads");
+  const fold = page.locator(".kit-day-lane__fold").first();
+  await card.focus();
+  await scroller.evaluate((el) => {
+    const button = el.querySelector<HTMLElement>(".kit-day-lane__fold")!;
+    el.scrollTop += button.getBoundingClientRect().top - el.getBoundingClientRect().top;
+  });
+  await page.keyboard.press("ArrowUp");
+  await expect(fold).toBeFocused();
+  expect((await fold.boundingBox())!.y).toBeGreaterThanOrEqual(
+    (await heads.boundingBox())!.y + (await heads.boundingBox())!.height,
+  );
+  await page.keyboard.press("Enter");
+  const refold = page.locator(".kit-day-lane__refold").first();
+  await expect(refold).toBeFocused();
+  await card.focus();
+  await scroller.evaluate((el) => {
+    const button = el.querySelector<HTMLElement>(".kit-day-lane__refold")!;
+    el.scrollTop += button.getBoundingClientRect().top - el.getBoundingClientRect().top;
+  });
+  await page.keyboard.press("ArrowUp");
+  await expect(refold).toBeFocused();
+  expect((await refold.boundingBox())!.y).toBeGreaterThanOrEqual(
+    (await heads.boundingBox())!.y + (await heads.boundingBox())!.height,
+  );
+});
+
+test("initial first card in an offscreen lane is revealed", async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 800 });
+  await mountDayLane(page, {
+    items: [{ id: "first", lane: "7", startMinute: 540 }],
+    lanes: Array.from({ length: 8 }, (_, i) => ({ key: String(i), label: `Person ${i}` })),
+    foldQuietMinutes: 120,
+    label: "Item",
+  });
+  const scroller = page.locator(".kit-day-lane");
+  const card = page.getByRole("button", { name: /Item/ });
+  await expect
+    .poll(async () => {
+      const [frame, box] = await Promise.all([scroller.boundingBox(), card.boundingBox()]);
+      const gutter = await scroller.evaluate((el) =>
+        parseFloat(getComputedStyle(el).getPropertyValue("--kit-day-lane-gutter")),
+      );
+      return box!.x >= frame!.x + gutter && box!.x + box!.width <= frame!.x + frame!.width;
+    })
+    .toBe(true);
+  const before = await scroller.evaluate((el) => el.scrollLeft);
+  expect(before).toBeGreaterThan(0);
+  const fold = page.locator(".kit-day-lane__fold").first();
+  await fold.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".kit-day-lane__refold").first()).toBeFocused();
+  expect(await scroller.evaluate((el) => el.scrollLeft)).toBe(before);
+  await page.keyboard.press("Enter");
+  await expect(fold).toBeFocused();
+  expect(await scroller.evaluate((el) => el.scrollLeft)).toBe(before);
+});
+
+test("Tab reveals a selected card partly behind the gutter", async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 800 });
+  await mountDayLane(page, {
+    items: [{ id: "selected", lane: "2", startMinute: 540, selected: true }],
+    lanes: Array.from({ length: 8 }, (_, i) => ({ key: String(i), label: `Person ${i}` })),
+    foldQuietMinutes: 0,
+    label: "Item",
+  });
+  const scroller = page.locator(".kit-day-lane");
+  const card = page.getByRole("button", { name: /Item/ });
+  await scroller.evaluate((el) => {
+    const before = document.createElement("button");
+    before.textContent = "Before lane";
+    el.parentElement!.before(before);
+    const card = el.querySelector<HTMLElement>(".kit-day-lane__item")!;
+    const gutter = parseFloat(getComputedStyle(el).getPropertyValue("--kit-day-lane-gutter"));
+    el.scrollLeft +=
+      card.getBoundingClientRect().left -
+      (el.getBoundingClientRect().left + gutter - card.offsetWidth / 2);
+  });
+  const before = await scroller.evaluate((el) => el.scrollLeft);
+  const box = (await card.boundingBox())!;
+  const frame = (await scroller.boundingBox())!;
+  const gutter = await scroller.evaluate((el) =>
+    parseFloat(getComputedStyle(el).getPropertyValue("--kit-day-lane-gutter")),
+  );
+  expect(box.x).toBeLessThan(frame.x + gutter);
+  await page.mouse.click(frame.x + gutter + 10, box.y + box.height / 2);
+  expect(await scroller.evaluate((el) => el.scrollLeft)).toBe(before);
+  await page.getByRole("button", { name: "Before lane" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(card).toBeFocused();
+  expect((await card.boundingBox())!.x).toBeGreaterThanOrEqual(frame.x + gutter);
+});
+
+test("initial horizontal reveal preserves vertical placement and page scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 800 });
+  const fixture = await mountDayLane(page, {
+    items: [],
+    lanes: Array.from({ length: 8 }, (_, i) => ({ key: String(i), label: `Person ${i}` })),
+    dayKey: "a",
+    foldQuietMinutes: 0,
+    hourHeight: 32,
+    label: "Item",
+  });
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "1200px";
+    document.body.prepend(spacer);
+    window.scrollTo(0, 0);
+  });
+  await fixture.evaluate((component) =>
+    component.update({
+      dayKey: "b",
+      items: [{ id: "first", lane: "7", startMinute: 540 }],
+    }),
+  );
+  const scroller = page.locator(".kit-day-lane");
+  const card = page.getByRole("button", { name: /Item/ });
+  await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const placement = await card.evaluate((el) => {
+    const frame = el.closest<HTMLElement>(".kit-day-lane")!;
+    const heads = frame.querySelector<HTMLElement>(".kit-day-lane__lane-heads")!;
+    return el.getBoundingClientRect().top - frame.getBoundingClientRect().top - heads.offsetHeight;
+  });
+  expect(placement).toBe(7); // 8px inset, less the frame border.
 });
