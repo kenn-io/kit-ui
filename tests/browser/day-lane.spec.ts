@@ -518,6 +518,12 @@ test("by person: hour labels stay in the frozen gutter at the far edge", async (
         ?.closest(".kit-day-lane__gutter");
     }),
   ).toBe(true);
+  // The date-only strip and its first card stay in view.
+  const strip = (await lanes.locator(".kit-day-lane__date-only").boundingBox())!;
+  expect(Math.round(strip.x)).toBe(Math.round(frame.x));
+  const dateCard = (await lanes.locator(".kit-day-lane__item--date-only").first().boundingBox())!;
+  expect(dateCard.x).toBeGreaterThanOrEqual(frame.x);
+  expect(dateCard.x + dateCard.width).toBeLessThanOrEqual(frame.x + frame.width);
   // The pinned headers' corner caps the gutter, above the lane headers scrolled under it.
   const corner = await lanes.locator(".kit-day-lane__lane-heads").evaluate((el, x) => {
     const r = el.getBoundingClientRect();

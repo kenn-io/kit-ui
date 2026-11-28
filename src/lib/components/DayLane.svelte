@@ -735,6 +735,12 @@
     pointer-events: auto;
   }
 
+  /* The date-only strip stays in view too, as wide as the view. */
+  .kit-day-lane--lanes .kit-day-lane__date-only {
+    position: sticky;
+    left: 0;
+  }
+
   /* The now line starts at the gutter's edge and slides under it. */
   .kit-day-lane--lanes .kit-day-lane__now {
     left: var(--kit-day-lane-gutter);
