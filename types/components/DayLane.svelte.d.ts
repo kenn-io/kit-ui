@@ -1,5 +1,5 @@
 import { type Snippet } from "svelte";
-import { type DayLaneItem, type DayLaneItemContext, type DayLaneTick } from "./day-lane.js";
+import { type DayLaneItem, type DayLaneItemContext, type DayLaneLane, type DayLaneTick } from "./day-lane.js";
 interface Props {
     /** The day's items, placed in minutes from the start of the day. */
     items: DayLaneItem[];
@@ -9,6 +9,12 @@ interface Props {
     ticks?: DayLaneTick[] | undefined;
     /** Renders the inside of one card: title, icons, avatars, badges. */
     item: Snippet<[DayLaneItemContext]>;
+    /** Lanes side by side on one axis ("By person"); items pick theirs with `lane`. */
+    lanes?: DayLaneLane[] | undefined;
+    /** Lane header content; gets the lane and its timed item count. Defaults to the label. */
+    laneHeader?: Snippet<[DayLaneLane, number]> | undefined;
+    /** Narrowest a lane gets before the view scrolls sideways, in pixels. */
+    laneMinWidth?: number;
     /** Pixels per hour. */
     hourHeight?: number;
     /** Smallest card height in pixels; point items get exactly this. */

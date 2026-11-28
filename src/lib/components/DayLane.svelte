@@ -7,11 +7,13 @@
     DAY_LANE_DEFAULTS,
     hourTicks,
     layoutDayLane,
+    layoutDayLanes,
     minuteToY,
     placeTicks,
     type DayLaneEntry,
     type DayLaneItem,
     type DayLaneItemContext,
+    type DayLaneLane,
     type DayLaneOverflow,
     type DayLaneSegment,
     type DayLaneTick,
@@ -26,6 +28,12 @@
     ticks?: DayLaneTick[] | undefined;
     /** Renders the inside of one card: title, icons, avatars, badges. */
     item: Snippet<[DayLaneItemContext]>;
+    /** Lanes side by side on one axis ("By person"); items pick theirs with `lane`. */
+    lanes?: DayLaneLane[] | undefined;
+    /** Lane header content; gets the lane and its timed item count. Defaults to the label. */
+    laneHeader?: Snippet<[DayLaneLane, number]> | undefined;
+    /** Narrowest a lane gets before the view scrolls sideways, in pixels. */
+    laneMinWidth?: number;
     /** Pixels per hour. */
     hourHeight?: number;
     /** Smallest card height in pixels; point items get exactly this. */
@@ -66,6 +74,9 @@
     dayMinutes = 1440,
     ticks = undefined,
     item,
+    lanes = undefined,
+    laneHeader = undefined,
+    laneMinWidth = 190,
     hourHeight = DAY_LANE_DEFAULTS.hourHeight,
     minItemHeight = DAY_LANE_DEFAULTS.minItemHeight,
     maxColumns = DAY_LANE_DEFAULTS.maxColumns,
@@ -101,6 +112,8 @@
   let previousDay: string | number | undefined;
   let hadTimedItems = false;
   let savedScroll: number | undefined;
+  let headsHeight = $state(0);
+  const effectiveHeadsHeight = $derived(lanes ? headsHeight : 0);
 
   // A fixed UTC date turns a minute into a clock time without reading any zone.
   const clock = (minute: number) => new Date(Date.UTC(2000, 0, 1, 0, minute));
@@ -115,16 +128,25 @@
     ticks ?? hourTicks(dayMinutes, (h) => hourFormat.format(clock(h * 60))),
   );
 
-  const layout = $derived(
-    layoutDayLane(items, {
+  const layout = $derived.by(() => {
+    const options = {
       dayMinutes,
       hourHeight,
       minItemHeight,
       maxColumns,
       foldQuietMinutes,
       expandedFolds,
-    }),
-  );
+    };
+    if (lanes) {
+      return layoutDayLanes(
+        items,
+        lanes.map((l) => l.key),
+        options,
+      );
+    }
+    const single = layoutDayLane(items, options);
+    return { ...single, lanes: [{ key: "", entries: single.entries }], unassigned: [] };
+  });
   const placedTicks = $derived(placeTicks(tickList, layout.segments, hourHeight));
 
   $effect(() => {
@@ -133,14 +155,32 @@
     if (valid.length !== expandedFolds.length) expandedFolds = valid;
   });
 
-  const keyOf = (entry: DayLaneEntry) =>
-    entry.kind === "item" ? `item:${entry.item.id}` : `more:${entry.key}`;
+  // Keys carry the lane, since one item can sit in several lanes.
+  const keyOf = (entry: DayLaneEntry, lane: string) => {
+    const id = entry.kind === "item" ? entry.item.id : entry.key;
+    return lanes
+      ? JSON.stringify([lane, entry.kind, id])
+      : `${entry.kind === "item" ? "item" : "more"}:${id}`;
+  };
+  const dateOnlyKey = (i: DayLaneItem) => `item:${i.id}`;
+
+  /** Every card on the axis, in reading order: top, then lane, then column. */
+  const axisCards = $derived(
+    layout.lanes
+      .flatMap((lane, laneIndex) =>
+        lane.entries.map((entry) => ({ entry, laneIndex, key: keyOf(entry, lane.key) })),
+      )
+      .sort(
+        (a, b) =>
+          a.entry.top - b.entry.top || a.laneIndex - b.laneIndex || a.entry.column - b.entry.column,
+      ),
+  );
 
   /** Focus order: the date-only strip, then the axis in time order. */
   const order = $derived([
-    ...layout.dateOnly.map((i) => `item:${i.id}`),
+    ...layout.dateOnly.map(dateOnlyKey),
     ...[
-      ...layout.entries.map((entry) => ({ top: entry.top, key: keyOf(entry) })),
+      ...axisCards.map((c) => ({ top: c.entry.top, key: c.key })),
       ...layout.segments
         .filter((segment) => segment.key)
         .map((segment) => ({ top: segment.top, key: `fold:${segment.key}` })),
@@ -150,14 +190,14 @@
   ]);
   const tabKey = $derived.by(() => {
     if (activeKey && order.includes(activeKey)) return activeKey;
-    const selected = items.find((i) => i.selected);
-    const selectedKey = selected ? `item:${selected.id}` : null;
-    if (selectedKey && order.includes(selectedKey)) return selectedKey;
-    const hidden = layout.entries.find(
-      (e) => e.kind === "overflow" && e.items.some((i) => i.selected),
-    );
-    if (hidden) return keyOf(hidden);
-    return order.find((key) => !key.startsWith("fold:")) ?? order[0] ?? null;
+    const selectedDateOnly = layout.dateOnly.find((i) => i.selected);
+    if (selectedDateOnly) return dateOnlyKey(selectedDateOnly);
+    const selected =
+      axisCards.find(({ entry }) => entry.kind === "item" && entry.item.selected) ??
+      axisCards.find(
+        ({ entry }) => entry.kind === "overflow" && entry.items.some((i) => i.selected),
+      );
+    return selected?.key ?? order.find((key) => !key.startsWith("fold:")) ?? order[0] ?? null;
   });
 
   const nowFold = $derived(
@@ -220,7 +260,16 @@
 
   function focusKey(key: string) {
     activeKey = key;
-    scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`)?.focus();
+    const el = scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`);
+    el?.focus();
+    if (lanes && !el?.matches(".kit-day-lane__item:not(.kit-day-lane__item--date-only)"))
+      el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  function focusCard(key: string, el: HTMLElement) {
+    activeKey = key;
+    if (lanes && el.matches(":focus-visible"))
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
   function onkeydown(event: KeyboardEvent) {
@@ -253,7 +302,7 @@
   }
 
   $effect.pre(() => {
-    const hasTimedItems = layout.entries.length > 0;
+    const hasTimedItems = axisCards.length > 0;
     if (!scroller) return;
     if (previousDay !== undefined && dayKey !== previousDay) {
       savedScroll = undefined;
@@ -278,30 +327,104 @@
 
   // Bring the first timed item into view once per day, as soon as there is one.
   $effect(() => {
-    const first = layout.entries[0];
+    const first = axisCards[0];
     if (!scrollToFirst || !scroller || !first || scrolledFor) return;
     scrolledFor = true;
     const el = scroller.querySelector<HTMLElement>(
-      `[data-day-lane-key="${CSS.escape(keyOf(first))}"]`,
+      `[data-day-lane-key="${CSS.escape(first.key)}"]`,
     );
     if (!el) return;
     const top = scroller.getBoundingClientRect().top - scroller.scrollTop;
-    const offset = el.getBoundingClientRect().top - top - hourHeight / 4;
+    const offset = el.getBoundingClientRect().top - top - effectiveHeadsHeight - hourHeight / 4;
     // Near the top already: keep the date-only strip whole rather than half scrolled away.
     const axis = scroller.querySelector<HTMLElement>(".kit-day-lane__axis");
     const axisTop = axis ? axis.getBoundingClientRect().top - top : 0;
     scroller.scrollTop =
-      offset <= axisTop && el.getBoundingClientRect().bottom - top <= scroller.clientHeight
+      offset <= axisTop - effectiveHeadsHeight &&
+      el.getBoundingClientRect().bottom - top <= scroller.clientHeight
         ? 0
         : offset;
+    if (lanes) {
+      const frame = scroller.getBoundingClientRect();
+      const card = el.getBoundingClientRect();
+      const left =
+        frame.left + scroller.clientLeft + parseFloat(getComputedStyle(scroller).scrollPaddingLeft);
+      const right = frame.left + scroller.clientLeft + scroller.clientWidth;
+      if (card.left < left) scroller.scrollLeft += card.left - left;
+      else if (card.right > right) scroller.scrollLeft += card.right - right;
+    }
   });
 </script>
 
-<!-- The group routes arrow keys between its buttons (roving focus). -->
+{#snippet card(entry: DayLaneEntry, key: string)}
+  {@const inset =
+    entry.kind === "item" &&
+    (entry.clippedStart || entry.clippedEnd || entry.height > minItemHeight + 0.001)
+      ? Math.min(
+          1,
+          Math.max(
+            0,
+            (entry.height - (entry.clippedStart || entry.clippedEnd ? 2 : minItemHeight)) / 2,
+          ),
+        )
+      : 0}
+  {#if entry.kind === "item"}
+    <button
+      type="button"
+      class={[
+        "kit-day-lane__item",
+        entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
+        entry.point && "kit-day-lane__item--point",
+        entry.item.dimmed && "kit-day-lane__item--dimmed",
+        entry.height < 40 && "kit-day-lane__item--compact",
+        entry.clippedStart && "kit-day-lane__item--clipped-start",
+        entry.clippedEnd && "kit-day-lane__item--clipped-end",
+      ]}
+      style:top="{entry.top + inset}px"
+      style:height="{entry.height - 2 * inset}px"
+      style:border-block-width={entry.height < 2 ? "0" : undefined}
+      style:left="calc({entry.column} * 100% / {entry.columns})"
+      style:width="calc(100% / {entry.columns} - 4px)"
+      aria-pressed={!!entry.item.selected}
+      tabindex={tabKey === key ? 0 : -1}
+      data-day-lane-key={key}
+      onfocus={(event) => focusCard(key, event.currentTarget)}
+      onclick={() => onselect?.(entry.item.id)}
+    >
+      {@render item(context(entry.item, entry.height - 2 * inset, entry.columns, entry.point))}
+      <span class="kit-sr-only">, {timeLabel(entry.item)}</span>
+    </button>
+  {:else}
+    <button
+      type="button"
+      class={[
+        "kit-day-lane__item",
+        "kit-day-lane__more",
+        entry.items.every((i) => i.dimmed) && "kit-day-lane__item--dimmed",
+      ]}
+      style:top="{entry.top + inset}px"
+      style:height="{entry.height - 2 * inset}px"
+      style:left="calc({entry.column} * 100% / {entry.columns})"
+      style:width="calc(100% / {entry.columns} - 4px)"
+      aria-pressed={entry.items.some((i) => i.selected)}
+      tabindex={tabKey === key ? 0 : -1}
+      data-day-lane-key={key}
+      onfocus={(event) => focusCard(key, event.currentTarget)}
+      onclick={() => chooseOverflow(entry)}
+    >
+      {overflowLabel(entry.items.length, timeText(entry.startMinute))}
+    </button>
+  {/if}
+{/snippet}
+
+<!-- The group only routes arrow keys between its card buttons (roving focus). -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   bind:this={scroller}
-  class={["kit-day-lane", className]}
+  class={["kit-day-lane", lanes && "kit-day-lane--lanes", className]}
+  style:--kit-day-lane-count={layout.lanes.length}
+  style:--kit-day-lane-min="{laneMinWidth}px"
+  style:--kit-day-lane-heads="{effectiveHeadsHeight}px"
   style:--kit-day-lane-now-line-height="{nowLineHeight}px"
   role="group"
   aria-label={ariaLabel}
@@ -316,7 +439,7 @@
       <span class="kit-day-lane__gutter-label">{dateOnlyLabel}</span>
       <div class="kit-day-lane__strip">
         {#each layout.dateOnly as i (i.id)}
-          {@const key = `item:${i.id}`}
+          {@const key = dateOnlyKey(i)}
           <button
             type="button"
             class={[
@@ -340,11 +463,39 @@
     </div>
   {/if}
 
+  {#if lanes}
+    <div class="kit-day-lane__lane-heads" bind:clientHeight={headsHeight}>
+      <div class="kit-day-lane__corner" aria-hidden="true"></div>
+      {#each lanes as lane, index (lane.key)}
+        {@const count =
+          layout.lanes[index]?.entries.reduce(
+            (n, e) => n + (e.kind === "item" ? 1 : e.items.length),
+            0,
+          ) ?? 0}
+        <div class="kit-day-lane__lane-head">
+          {#if laneHeader}
+            {@render laneHeader(lane, count)}
+          {:else}
+            <span class="kit-day-lane__lane-label">{lane.label}</span>
+            <span class="kit-day-lane__lane-count">{count}</span>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   <div class="kit-day-lane__axis" style:height="{layout.height}px">
-    <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
+    <!-- The gutter stays put while lanes scroll sideways, so the hours stay in view. -->
+    <div class="kit-day-lane__gutter">
+      <!-- A folded band already names its first hour, so its tick stays unlabelled. -->
+      {#each placedTicks as tick}
+        {#if !tick.atFold}
+          <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
+        {/if}
+      {/each}
+    </div>
     {#each placedTicks as tick}
       {#if !tick.atFold}
-        <span class="kit-day-lane__hour-label" style:top="{tick.top}px">{tick.label}</span>
         <i class="kit-day-lane__hour-line" style:top="{tick.top}px" aria-hidden="true"></i>
       {/if}
     {/each}
@@ -374,86 +525,36 @@
           </span>
         </button>
       {:else if segment.key}
-        <button
-          type="button"
-          class="kit-day-lane__refold"
-          style:top="{segment.top + 4}px"
-          aria-expanded="true"
-          data-fold-key={segment.key}
-          data-day-lane-key={key}
-          tabindex={tabKey === key ? 0 : -1}
-          onfocus={() => (activeKey = key)}
-          onclick={() => toggleFold(segment, false)}
-        >
-          <ChevronsDownUpIcon size={12} aria-hidden="true" />
-          {refoldLabel(segment.foldHours ?? 0)}
-        </button>
+        <div class="kit-day-lane__refold-row" style:top="{segment.top + 4}px">
+          <button
+            type="button"
+            class="kit-day-lane__refold"
+            aria-expanded="true"
+            data-fold-key={segment.key}
+            data-day-lane-key={key}
+            tabindex={tabKey === key ? 0 : -1}
+            onfocus={() => (activeKey = key)}
+            onclick={() => toggleFold(segment, false)}
+          >
+            <ChevronsDownUpIcon size={12} aria-hidden="true" />
+            {refoldLabel(segment.foldHours ?? 0)}
+          </button>
+        </div>
       {/if}
     {/each}
 
-    <div class="kit-day-lane__lane">
-      {#each layout.entries as entry (keyOf(entry))}
-        {@const key = keyOf(entry)}
-        {@const inset =
-          entry.kind === "item" &&
-          (entry.clippedStart || entry.clippedEnd || entry.height > minItemHeight + 0.001)
-            ? Math.min(
-                1,
-                Math.max(
-                  0,
-                  (entry.height - (entry.clippedStart || entry.clippedEnd ? 2 : minItemHeight)) / 2,
-                ),
-              )
-            : 0}
-        {#if entry.kind === "item"}
-          <button
-            type="button"
-            class={[
-              "kit-day-lane__item",
-              entry.item.tone && `kit-day-lane__item--tone-${entry.item.tone}`,
-              entry.point && "kit-day-lane__item--point",
-              entry.item.dimmed && "kit-day-lane__item--dimmed",
-              entry.height < 40 && "kit-day-lane__item--compact",
-              entry.clippedStart && "kit-day-lane__item--clipped-start",
-              entry.clippedEnd && "kit-day-lane__item--clipped-end",
-            ]}
-            style:top="{entry.top + inset}px"
-            style:height="{entry.height - 2 * inset}px"
-            style:border-block-width={entry.height < 2 ? "0" : undefined}
-            style:left="calc({entry.column} * 100% / {entry.columns})"
-            style:width="calc(100% / {entry.columns} - 4px)"
-            aria-pressed={!!entry.item.selected}
-            tabindex={tabKey === key ? 0 : -1}
-            data-day-lane-key={key}
-            onfocus={() => (activeKey = key)}
-            onclick={() => onselect?.(entry.item.id)}
-          >
-            {@render item(
-              context(entry.item, entry.height - 2 * inset, entry.columns, entry.point),
-            )}
-            <span class="kit-sr-only">, {timeLabel(entry.item)}</span>
-          </button>
-        {:else}
-          <button
-            type="button"
-            class={[
-              "kit-day-lane__item",
-              "kit-day-lane__more",
-              entry.items.every((i) => i.dimmed) && "kit-day-lane__item--dimmed",
-            ]}
-            style:top="{entry.top + inset}px"
-            style:height="{entry.height - 2 * inset}px"
-            style:left="calc({entry.column} * 100% / {entry.columns})"
-            style:width="calc(100% / {entry.columns} - 4px)"
-            aria-pressed={entry.items.some((i) => i.selected)}
-            tabindex={tabKey === key ? 0 : -1}
-            data-day-lane-key={key}
-            onfocus={() => (activeKey = key)}
-            onclick={() => chooseOverflow(entry)}
-          >
-            {overflowLabel(entry.items.length, timeText(entry.startMinute))}
-          </button>
-        {/if}
+    <div class="kit-day-lane__lanes">
+      {#each layout.lanes as lane, index (lane.key)}
+        <!-- Each lane is a named group, so a screen reader says whose lane a card is in. -->
+        <div
+          class="kit-day-lane__lane"
+          role={lanes ? "group" : undefined}
+          aria-label={lanes?.[index]?.label}
+        >
+          {#each lane.entries as entry (keyOf(entry, lane.key))}
+            {@render card(entry, keyOf(entry, lane.key))}
+          {/each}
+        </div>
       {/each}
     </div>
 
@@ -506,6 +607,13 @@
   .kit-day-lane__axis {
     position: relative;
     margin-block: var(--space-4);
+  }
+
+  .kit-day-lane__gutter {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--kit-day-lane-gutter);
+    pointer-events: none;
   }
 
   .kit-day-lane__hour-label {
@@ -565,10 +673,18 @@
     background: var(--bg-surface-hover);
   }
 
-  .kit-day-lane__refold {
+  .kit-day-lane__refold-row {
     position: absolute;
+    left: var(--kit-day-lane-gutter);
     right: var(--space-4);
     z-index: 2;
+    pointer-events: none;
+  }
+
+  .kit-day-lane__refold {
+    position: absolute;
+    right: 0;
+    pointer-events: auto;
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
@@ -586,11 +702,133 @@
     color: var(--text-primary);
   }
 
-  .kit-day-lane__lane {
+  .kit-day-lane__lanes {
     position: absolute;
     inset: 0 var(--space-4) 0 var(--kit-day-lane-gutter);
+    display: grid;
+    grid-template-columns: repeat(var(--kit-day-lane-count), minmax(0, 1fr));
     /* Empty lane space lets clicks through to the fold bands underneath. */
     pointer-events: none;
+  }
+
+  .kit-day-lane__lane {
+    position: relative;
+    min-width: 0;
+  }
+
+  /* Several lanes: each keeps a minimum width and the view scrolls sideways. */
+  .kit-day-lane--lanes .kit-day-lane__axis,
+  .kit-day-lane--lanes .kit-day-lane__lane-heads {
+    min-width: calc(
+      var(--kit-day-lane-gutter) + var(--kit-day-lane-count) * var(--kit-day-lane-min) +
+        var(--space-4)
+    );
+  }
+
+  /* The band can be wider than the view; keep its text where it can be read. */
+  .kit-day-lane--lanes .kit-day-lane__fold {
+    justify-content: flex-start;
+    padding-inline: var(--space-5);
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__fold-label {
+    position: sticky;
+    left: calc(var(--kit-day-lane-gutter) + var(--space-5));
+    right: var(--space-5);
+    flex-shrink: 0;
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__refold {
+    position: sticky;
+    left: calc(var(--kit-day-lane-gutter) + var(--space-5));
+    right: var(--space-5);
+  }
+
+  /* Lanes scroll sideways under the hours: the gutter is in flow and full height,
+     so sticky keeps it pinned along the whole axis, and opaque, catching clicks
+     meant for nothing hidden beneath it. Only the pinned headers paint above it. */
+  .kit-day-lane--lanes .kit-day-lane__gutter {
+    position: sticky;
+    z-index: 5;
+    height: 100%;
+    background: var(--bg-primary);
+    pointer-events: auto;
+  }
+
+  /* The date-only strip stays in view too, as wide as the view. */
+  .kit-day-lane--lanes .kit-day-lane__date-only {
+    position: sticky;
+    left: 0;
+  }
+
+  /* The now line starts at the gutter's edge and slides under it. */
+  .kit-day-lane--lanes .kit-day-lane__now {
+    left: var(--kit-day-lane-gutter);
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__now::before {
+    transform: none;
+  }
+
+  /* Keyboard focus scrolls a card clear of the frozen gutter and pinned headers. */
+  .kit-day-lane--lanes {
+    scroll-padding-left: calc(var(--kit-day-lane-gutter) + var(--space-1));
+    scroll-padding-top: calc(var(--kit-day-lane-heads) + var(--space-4));
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__lane + .kit-day-lane__lane {
+    border-left: 1px solid var(--border-muted);
+  }
+
+  .kit-day-lane__lane-heads {
+    /* Its padding and corner are part of the min-width it shares with the axis. */
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    display: grid;
+    grid-template-columns:
+      var(--kit-day-lane-gutter)
+      repeat(var(--kit-day-lane-count), minmax(0, 1fr));
+    padding: 0 var(--space-4) 0 0;
+    border-bottom: 1px solid var(--border-muted);
+    background: var(--bg-primary);
+  }
+
+  /* The gutter's top end, pinned both ways so headers slide under it. */
+  .kit-day-lane__corner {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-primary);
+  }
+
+  .kit-day-lane__lane-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-4) var(--space-4);
+    font-size: var(--font-size-sm);
+  }
+
+  .kit-day-lane__lane-head + .kit-day-lane__lane-head {
+    border-left: 1px solid var(--border-muted);
+  }
+
+  .kit-day-lane__lane-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .kit-day-lane__lane-count {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
   }
 
   .kit-day-lane__lane > .kit-day-lane__item {

@@ -7,6 +7,7 @@ import {
   type DayLanePlacedItem,
   hourTicks,
   layoutDayLane,
+  layoutDayLanes,
   minuteToY,
   placeColumns,
   placeTicks,
@@ -334,6 +335,94 @@ describe("placing items", () => {
       "b",
       "late",
     ]);
+  });
+});
+
+describe("lanes", () => {
+  const withLane = (item: DayLaneItem, lane: DayLaneItem["lane"]): DayLaneItem => ({
+    ...item,
+    lane,
+  });
+
+  test("each lane gets its own columns", () => {
+    const items = [
+      withLane(span("a", 9, 0, 10, 0), "mara"),
+      withLane(span("b", 9, 0, 10, 0), "dev"),
+      withLane(span("c", 9, 15, 10, 0), "mara"),
+    ];
+    const layout = layoutDayLanes(items, ["mara", "dev"], base);
+    const [mara, dev] = layout.lanes;
+    expect(mara!.key).toBe("mara");
+    expect(placed(mara!.entries).map((e) => [e.item.id, e.column, e.columns])).toEqual([
+      ["a", 0, 2],
+      ["c", 1, 2],
+    ]);
+    expect(placed(dev!.entries).map((e) => [e.item.id, e.column, e.columns])).toEqual([
+      ["b", 0, 1],
+    ]);
+  });
+
+  test("late point and overflow cards extend the shared axis", () => {
+    const items = ["a", "b", "c"].map((id) => withLane({ id, startMinute: 1439 }, "dev"));
+    const layout = layoutDayLanes(items, ["mara", "dev"], {
+      ...base,
+      foldQuietMinutes: 0,
+      maxColumns: 2,
+    });
+    const entries = layout.lanes[1]!.entries;
+    expect(placed(entries)).toHaveLength(1);
+    expect(overflows(entries)).toHaveLength(1);
+    expect(overflows(entries)[0]!.items.map((item) => item.id)).toEqual(["b", "c"]);
+    for (const entry of entries)
+      expect(layout.height).toBeGreaterThanOrEqual(entry.top + entry.height);
+    expect(layout.height).toBeGreaterThan(24 * base.hourHeight);
+  });
+
+  test("an item with several lanes appears once in each", () => {
+    for (const [membership, keys, counts] of [
+      [
+        ["mara", "dev"],
+        ["mara", "dev", "ines"],
+        [1, 1, 0],
+      ],
+      [
+        ["mara", "mara", "dev"],
+        ["mara", "dev"],
+        [1, 1],
+      ],
+    ] as const) {
+      const layout = layoutDayLanes([withLane(point("thread", 10), membership)], keys, base);
+      expect(layout.lanes.map((lane) => lane.entries.length)).toEqual(counts);
+    }
+  });
+
+  test("shared hours include all lanes and unassigned items, with a global date-only strip", () => {
+    const items = [
+      withLane(point("a", 9), "mara"),
+      withLane(point("b", 15), "gone"),
+      point("c", 18),
+      { id: "d", dateOnly: true, lane: "mara" },
+    ];
+    const layout = layoutDayLanes(items, ["mara"], base);
+    expect(layout.unassigned).toEqual(["b", "c"]);
+    expect(layout.dateOnly.map((i) => i.id)).toEqual(["d"]);
+    expect(placed(layout.lanes[0]!.entries).map((entry) => entry.item.id)).toEqual(["a"]);
+    expect(rows(layout.segments)).toEqual([
+      "fold:0",
+      "hour:9",
+      "fold:10",
+      "hour:15",
+      "fold:16",
+      "hour:18",
+      "fold:19",
+    ]);
+    // An assigned item in a second lane must also open the shared axis.
+    const twoLanes = layoutDayLanes(
+      [withLane(point("a", 9), "mara"), withLane(point("b", 12), "dev")],
+      ["mara", "dev"],
+      base,
+    );
+    expect(rows(twoLanes.segments)).toEqual(["fold:0", "hour:9", "fold:10", "hour:12", "fold:13"]);
   });
 });
 

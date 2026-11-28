@@ -83,6 +83,34 @@ empty list while the new day's items load.
 `tone` takes the Chip tone vocabulary and colors the card's accent bar and
 a point card's top edge.
 
+## By person: several lanes
+
+Use unique item IDs and lane keys. Date-only items share one global strip above all lanes.
+
+Pass `lanes` (`{ key, label }[]`) and give each item `lane`: one key, or
+several when the item belongs to several people. The lanes share one axis,
+so 9 AM lines up across them. A quiet stretch folds only when no timed
+item touches it, including items without a displayed lane. Each lane applies
+`maxColumns` on its own (the Docbank design uses 2). Lanes keep `laneMinWidth` (190px) and the view scrolls
+sideways when they do not fit; the lane headers stay pinned while the
+hours scroll, and the hour labels stay in a frozen gutter while the lanes
+scroll sideways under it. Keyboard focus scrolls a card clear of both. `laneHeader` renders a header from the lane and its timed
+item count, for an avatar or a link; without it the header shows the label
+and count. Timed items whose lanes are all missing are not drawn, and
+`lanes={[]}` draws no timed cards at all (date-only items still show);
+`layoutDayLanes` lists those items in `unassigned`. A card
+that sits in several lanes keeps one id, so `onselect` and `selected` work
+the same as in a single lane.
+
+```svelte
+<DayLane {items} lanes={people} maxColumns={2} onselect={select}>
+  {#snippet laneHeader(lane, count)}<PersonChip id={lane.key} /> {count}{/snippet}
+  {#snippet item({ item })}…{/snippet}
+</DayLane>
+```
+
+`layoutDayLanes(items, laneKeys, options)` is the pure layout behind it.
+
 ## Layout rules
 
 - An item's top is its start; its height is its length, at least
@@ -101,7 +129,10 @@ a point card's top edge.
   hours, and a "Fold" button on the first opened hour closes them again. The
   now line sits within the band when its time falls inside a fold.
 - Date-only items sit in a strip above the hours, in input order.
-- Selected and dimmed come from the items; DayLane never hides an item.
+- Selected and dimmed come from the items; neither hides an item, and
+  overflow collects extra items into "+N more" rather than dropping them. With
+  `lanes`, a timed item with no matching lane is the one exception: it is not
+  drawn (see By person).
 
 ## Keyboard and screen readers
 
