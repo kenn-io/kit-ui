@@ -164,7 +164,7 @@ export interface DayLaneLanesLayout extends Omit<DayLaneLayout, "entries"> {
 }
 /**
  * Several lanes on one axis ("By person"). Rows are shared, so the hours
- * line up across lanes; a fold needs every lane to be empty. Each lane then
+ * line up across lanes; a fold needs no timed item to touch it. Each lane
  * gets the same column and overflow rules as a single lane. An item with
  * several lane keys appears in each of those lanes.
  */

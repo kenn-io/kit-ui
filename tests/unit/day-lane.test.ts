@@ -399,7 +399,7 @@ describe("lanes", () => {
     expect(rows(layout.segments)).toEqual(["fold:0", "hour:9", "fold:10", "hour:12", "fold:13"]);
   });
 
-  test("items in no listed lane are reported and do not open hours", () => {
+  test("unassigned timed items open shared hours without producing cards", () => {
     const items = [
       withLane(point("a", 9), "mara"),
       withLane(point("b", 15), "gone"),
@@ -409,7 +409,16 @@ describe("lanes", () => {
     const layout = layoutDayLanes(items, ["mara"], base);
     expect(layout.unassigned).toEqual(["b", "c"]);
     expect(layout.dateOnly.map((i) => i.id)).toEqual(["d"]);
-    expect(rows(layout.segments)).toEqual(["fold:0", "hour:9", "fold:10"]);
+    expect(placed(layout.lanes[0]!.entries).map((entry) => entry.item.id)).toEqual(["a"]);
+    expect(rows(layout.segments)).toEqual([
+      "fold:0",
+      "hour:9",
+      "fold:10",
+      "hour:15",
+      "fold:16",
+      "hour:18",
+      "fold:19",
+    ]);
   });
 
   test("the column limit applies per lane", () => {

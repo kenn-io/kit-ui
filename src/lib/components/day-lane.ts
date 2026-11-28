@@ -435,7 +435,7 @@ function lanesOf(item: DayLaneItem): readonly string[] {
 
 /**
  * Several lanes on one axis ("By person"). Rows are shared, so the hours
- * line up across lanes; a fold needs every lane to be empty. Each lane then
+ * line up across lanes; a fold needs no timed item to touch it. Each lane
  * gets the same column and overflow rules as a single lane. An item with
  * several lane keys appears in each of those lanes.
  */
@@ -445,7 +445,6 @@ export function layoutDayLanes(
   options: DayLaneLayoutOptions,
 ): DayLaneLanesLayout {
   const buckets = new Map<string, DayLaneItem[]>(laneKeys.map((key) => [key, []]));
-  const assigned: DayLaneItem[] = [];
   const unassigned: string[] = [];
   for (const item of items) {
     if (!isInDay(item, options.dayMinutes)) continue;
@@ -457,10 +456,9 @@ export function layoutDayLanes(
       bucket.push(item);
       placed = true;
     }
-    if (placed) assigned.push(item);
-    else unassigned.push(item.id);
+    if (!placed) unassigned.push(item.id);
   }
-  const segments = buildDayLaneSegments(assigned, options);
+  const segments = buildDayLaneSegments(items, options);
   const lanes = laneKeys.map((key) => ({
     key,
     entries: placeDayLaneItems(buckets.get(key) ?? [], segments, options),

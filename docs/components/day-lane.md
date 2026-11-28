@@ -89,9 +89,9 @@ Use unique item IDs and lane keys. Date-only items share one global strip above 
 
 Pass `lanes` (`{ key, label }[]`) and give each item `lane`: one key, or
 several when the item belongs to several people. The lanes share one axis,
-so 9 AM lines up across them, and a quiet stretch folds only when every
-lane is quiet. Each lane applies `maxColumns` on its own (the Docbank
-design uses 2). Lanes keep `laneMinWidth` (190px) and the view scrolls
+so 9 AM lines up across them. A quiet stretch folds only when no timed
+item touches it, including items without a displayed lane. Each lane applies
+`maxColumns` on its own (the Docbank design uses 2). Lanes keep `laneMinWidth` (190px) and the view scrolls
 sideways when they do not fit; the lane headers stay pinned while the
 hours scroll. `laneHeader` renders a header from the lane and its timed
 item count, for an avatar or a link; without it the header shows the label
