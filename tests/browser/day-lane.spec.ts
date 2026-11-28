@@ -430,3 +430,56 @@ test("lane keys and item IDs cannot collide in keyboard navigation", async ({ pa
   await page.keyboard.press("ArrowDown");
   await expect(second).toBeFocused();
 });
+
+for (const edge of ["left", "right"] as const) {
+  test(`fold controls keep the ${edge} lane visible at 640px`, async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 800 });
+    const lanes = page.getByTestId("day-lane-lanes");
+    const scroller = lanes.locator(".kit-day-lane");
+    await scroller.scrollIntoViewIfNeeded();
+    await scroller.evaluate((el, edge) => {
+      el.scrollTop = 0;
+      el.scrollLeft = edge === "left" ? 0 : el.scrollWidth;
+    }, edge);
+    const fold = lanes.getByRole("button", { name: /1:00 AM – 7:00 AM/ });
+    const before = await scroller.evaluate((el) => el.scrollLeft);
+    const [frame, band] = await Promise.all([scroller.boundingBox(), fold.boundingBox()]);
+    const x = Math.max(frame!.x, band!.x) + 20;
+    const y = band!.y + band!.height / 2;
+    await page.mouse.click(x, y);
+    const refold = lanes.getByRole("button", { name: "Fold 6 quiet hours" });
+    await expect(refold).toBeFocused();
+    await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBe(before);
+    const button = await refold.boundingBox();
+    expect(button!.x).toBeGreaterThanOrEqual(frame!.x);
+    expect(button!.x + button!.width).toBeLessThanOrEqual(frame!.x + frame!.width);
+    await refold.click();
+    await expect(fold).toBeFocused();
+    await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBe(before);
+    const label = await fold.locator(".kit-day-lane__fold-label").boundingBox();
+    expect(label!.x).toBeGreaterThanOrEqual(frame!.x);
+    expect(label!.x + label!.width).toBeLessThanOrEqual(frame!.x + frame!.width);
+  });
+}
+
+test("switching to a single lane clears pinned-header scroll clearance", async ({ page }) => {
+  const fixture = await mountDayLane(page, {
+    items: [{ id: "first", lane: "a", startMinute: 540 }],
+    lanes: [{ key: "a", label: "A" }],
+    dayKey: "a",
+    foldQuietMinutes: 0,
+    label: "Item",
+  });
+  const scroller = page.locator(".kit-day-lane");
+  await expect(page.locator(".kit-day-lane__lane-heads")).toBeVisible();
+  await fixture.evaluate((component) =>
+    component.update({ lanes: undefined, dayKey: "b", items: [{ id: "first", startMinute: 540 }] }),
+  );
+  const card = page.getByRole("button", { name: /Item/ });
+  await expect
+    .poll(async () => {
+      const [frame, box] = await Promise.all([scroller.boundingBox(), card.boundingBox()]);
+      return Math.round(box!.y - frame!.y);
+    })
+    .toBe(24);
+});

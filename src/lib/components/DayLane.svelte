@@ -113,6 +113,7 @@
   let hadTimedItems = false;
   let savedScroll: number | undefined;
   let headsHeight = $state(0);
+  const effectiveHeadsHeight = $derived(lanes ? headsHeight : 0);
 
   // A fixed UTC date turns a minute into a clock time without reading any zone.
   const clock = (minute: number) => new Date(Date.UTC(2000, 0, 1, 0, minute));
@@ -323,12 +324,12 @@
     );
     if (!el) return;
     const top = scroller.getBoundingClientRect().top - scroller.scrollTop;
-    const offset = el.getBoundingClientRect().top - top - headsHeight - hourHeight / 4;
+    const offset = el.getBoundingClientRect().top - top - effectiveHeadsHeight - hourHeight / 4;
     // Near the top already: keep the date-only strip whole rather than half scrolled away.
     const axis = scroller.querySelector<HTMLElement>(".kit-day-lane__axis");
     const axisTop = axis ? axis.getBoundingClientRect().top - top : 0;
     scroller.scrollTop =
-      offset <= axisTop - headsHeight &&
+      offset <= axisTop - effectiveHeadsHeight &&
       el.getBoundingClientRect().bottom - top <= scroller.clientHeight
         ? 0
         : offset;
@@ -403,7 +404,7 @@
   class={["kit-day-lane", lanes && "kit-day-lane--lanes", className]}
   style:--kit-day-lane-count={layout.lanes.length}
   style:--kit-day-lane-min="{laneMinWidth}px"
-  style:--kit-day-lane-heads="{headsHeight}px"
+  style:--kit-day-lane-heads="{effectiveHeadsHeight}px"
   style:--kit-day-lane-now-line-height="{nowLineHeight}px"
   role="group"
   aria-label={ariaLabel}
@@ -496,20 +497,21 @@
           </span>
         </button>
       {:else if segment.key}
-        <button
-          type="button"
-          class="kit-day-lane__refold"
-          style:top="{segment.top + 4}px"
-          aria-expanded="true"
-          data-fold-key={segment.key}
-          data-day-lane-key={key}
-          tabindex={tabKey === key ? 0 : -1}
-          onfocus={() => (activeKey = key)}
-          onclick={() => toggleFold(segment, false)}
-        >
-          <ChevronsDownUpIcon size={12} aria-hidden="true" />
-          {refoldLabel(segment.foldHours ?? 0)}
-        </button>
+        <div class="kit-day-lane__refold-row" style:top="{segment.top + 4}px">
+          <button
+            type="button"
+            class="kit-day-lane__refold"
+            aria-expanded="true"
+            data-fold-key={segment.key}
+            data-day-lane-key={key}
+            tabindex={tabKey === key ? 0 : -1}
+            onfocus={() => (activeKey = key)}
+            onclick={() => toggleFold(segment, false)}
+          >
+            <ChevronsDownUpIcon size={12} aria-hidden="true" />
+            {refoldLabel(segment.foldHours ?? 0)}
+          </button>
+        </div>
       {/if}
     {/each}
 
@@ -636,10 +638,18 @@
     background: var(--bg-surface-hover);
   }
 
-  .kit-day-lane__refold {
+  .kit-day-lane__refold-row {
     position: absolute;
+    left: var(--kit-day-lane-gutter);
     right: var(--space-4);
     z-index: 2;
+    pointer-events: none;
+  }
+
+  .kit-day-lane__refold {
+    position: absolute;
+    right: 0;
+    pointer-events: auto;
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
@@ -684,6 +694,19 @@
   .kit-day-lane--lanes .kit-day-lane__fold {
     justify-content: flex-start;
     padding-inline: var(--space-5);
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__fold-label {
+    position: sticky;
+    left: var(--space-5);
+    right: var(--space-5);
+    flex-shrink: 0;
+  }
+
+  .kit-day-lane--lanes .kit-day-lane__refold {
+    position: sticky;
+    left: var(--space-5);
+    right: var(--space-5);
   }
 
   /* Keyboard focus scrolls a card clear of the pinned headers. */
