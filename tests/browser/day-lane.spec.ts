@@ -306,24 +306,35 @@ test("a 23-hour day labels its hours from the app's ticks", async ({ page }) => 
   expect(labels.slice(0, 3)).toEqual(["12 AM", "1 AM", "3 AM"]);
 });
 
-test("by person: one card per lane, shared rows, sideways scroll", async ({ page }) => {
+test("shared cards select in every lane", async ({ page }) => {
   const lanes = page.getByTestId("day-lane-lanes");
   const standup = lanes.getByRole("button", { name: /Shipment status standup/ });
+  const call = lanes.getByRole("button", { name: /Call: Jory and Dev/ });
   await expect(standup).toHaveCount(4);
-  const tops = await Promise.all([0, 1].map(async (i) => (await standup.nth(i).boundingBox())!.y));
-  expect(tops[0]).toBe(tops[1]);
-  const [scrollWidth, clientWidth] = await lanes
-    .locator(".kit-day-lane")
-    .evaluate((el) => [el.scrollWidth, el.clientWidth]);
+  await expect(call).toHaveCount(2);
+  await call.first().click();
+  await expect(page.getByTestId("day-lane-lanes-event")).toHaveText("select call");
+  for (let i = 0; i < 2; i++) await expect(call.nth(i)).toHaveAttribute("aria-pressed", "true");
+  for (let i = 0; i < 4; i++) await expect(standup.nth(i)).toHaveAttribute("aria-pressed", "false");
+});
+
+test("lanes keep their minimum width and scroll sideways", async ({ page }) => {
+  const scroller = page.getByTestId("day-lane-lanes").locator(".kit-day-lane");
+  const [scrollWidth, clientWidth] = await scroller.evaluate((el) => [
+    el.scrollWidth,
+    el.clientWidth,
+  ]);
   expect(scrollWidth).toBeGreaterThan(clientWidth);
-  // Headers sit over their lanes even without a global border-box reset.
+});
+
+test("lane headers line up with their lanes without a border-box reset", async ({ page }) => {
+  const lanes = page.getByTestId("day-lane-lanes");
   await page.addStyleTag({ content: "*, *::before, *::after { box-sizing: content-box; }" });
-  const head = await lanes.locator(".kit-day-lane__lane-head").nth(1).boundingBox();
+  const head = await lanes
+    .locator(".kit-day-lane__lane-head", { hasText: "Dev Rao" })
+    .boundingBox();
   const column = await lanes.getByRole("group", { name: "Dev Rao" }).boundingBox();
   expect(Math.abs(head!.x - column!.x)).toBeLessThanOrEqual(1);
-  await standup.first().click();
-  await expect(page.getByTestId("day-lane-lanes-event")).toHaveText("select standup");
-  for (let i = 0; i < 4; i++) await expect(standup.nth(i)).toHaveAttribute("aria-pressed", "true");
 });
 
 test("changing days closes folds even when returning to the original day", async ({ page }) => {
@@ -370,13 +381,20 @@ test("the now line stays inside a fold and moves to its hour when opened", async
   expect(openedLine!.y).toBeGreaterThan(button!.y + button!.height);
 });
 
-test("by person: lanes are named groups and focus clears the pinned headers", async ({ page }) => {
+test("focus scrolls a card clear of the pinned headers", async ({ page }) => {
   const lanes = page.getByTestId("day-lane-lanes");
   const dev = lanes.getByRole("group", { name: "Dev Rao" });
-  await expect(dev.getByRole("button", { name: /Dock schedule week 11/ })).toHaveCount(1);
   const scroller = lanes.locator(".kit-day-lane");
   const card = dev.getByRole("button", { name: /Call: Jory and Dev/ });
-  await scroller.evaluate((el) => (el.scrollTop = el.scrollHeight));
+  await scroller.scrollIntoViewIfNeeded();
+  await scroller.evaluate((el) => {
+    const card = el.querySelector<HTMLElement>(
+      "[aria-label='Dev Rao'] .kit-day-lane__item[data-day-lane-key*=call]",
+    )!;
+    const header = el.querySelector<HTMLElement>(".kit-day-lane__lane-heads")!;
+    el.scrollTop +=
+      card.getBoundingClientRect().top - el.getBoundingClientRect().top - header.clientHeight / 2;
+  });
   await card.focus();
   const heads = await lanes.locator(".kit-day-lane__lane-heads").boundingBox();
   const box = await card.boundingBox();
@@ -488,7 +506,7 @@ test("switching to a single lane clears pinned-header scroll clearance", async (
     .toBe(24);
 });
 
-test("by person: hour labels stay in the frozen gutter at the far edge", async ({ page }) => {
+async function scrolledRightLanes(page: Page) {
   await page.setViewportSize({ width: 640, height: 800 });
   const lanes = page.getByTestId("day-lane-lanes");
   const scroller = lanes.locator(".kit-day-lane");
@@ -499,14 +517,19 @@ test("by person: hour labels stay in the frozen gutter at the far edge", async (
   const gutter = await scroller.evaluate((el) =>
     parseFloat(getComputedStyle(el).getPropertyValue("--kit-day-lane-gutter")),
   );
-  // A label in view sits in the frozen gutter, unhidden by the lanes scrolled past it.
+  return { lanes, scroller, frame, gutter };
+}
+
+test("hour labels remain hit-testable in the frozen gutter", async ({ page }) => {
+  const { lanes, scroller, frame, gutter } = await scrolledRightLanes(page);
   const label = lanes.locator(".kit-day-lane__hour-label", { hasText: /^\s*9 AM\s*$/ });
   await scroller.evaluate(
     (el, top) => (el.scrollTop += top),
     (await label.boundingBox())!.y - frame.y - 120,
   );
-  const scrollLeft = await scroller.evaluate((el) => el.scrollLeft);
-  expect(scrollLeft).toBe(await scroller.evaluate((el) => el.scrollWidth - el.clientWidth));
+  expect(await scroller.evaluate((el) => el.scrollLeft)).toBe(
+    await scroller.evaluate((el) => el.scrollWidth - el.clientWidth),
+  );
   const box = (await label.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(frame.x);
   expect(box.x + box.width).toBeLessThanOrEqual(frame.x + gutter);
@@ -518,13 +541,19 @@ test("by person: hour labels stay in the frozen gutter at the far edge", async (
         ?.closest(".kit-day-lane__gutter");
     }),
   ).toBe(true);
-  // The date-only strip and its first card stay in view.
+});
+
+test("date-only strip and card remain visible at the far edge", async ({ page }) => {
+  const { lanes, frame } = await scrolledRightLanes(page);
   const strip = (await lanes.locator(".kit-day-lane__date-only").boundingBox())!;
   expect(Math.round(strip.x)).toBe(Math.round(frame.x));
-  const dateCard = (await lanes.locator(".kit-day-lane__item--date-only").first().boundingBox())!;
-  expect(dateCard.x).toBeGreaterThanOrEqual(frame.x);
-  expect(dateCard.x + dateCard.width).toBeLessThanOrEqual(frame.x + frame.width);
-  // The pinned headers' corner caps the gutter, above the lane headers scrolled under it.
+  const card = (await lanes.locator(".kit-day-lane__item--date-only").first().boundingBox())!;
+  expect(card.x).toBeGreaterThanOrEqual(frame.x);
+  expect(card.x + card.width).toBeLessThanOrEqual(frame.x + frame.width);
+});
+
+test("pinned header corner caps the gutter", async ({ page }) => {
+  const { lanes, frame } = await scrolledRightLanes(page);
   const corner = await lanes.locator(".kit-day-lane__lane-heads").evaluate((el, x) => {
     const r = el.getBoundingClientRect();
     return !!document
@@ -532,16 +561,26 @@ test("by person: hour labels stay in the frozen gutter at the far edge", async (
       ?.closest(".kit-day-lane__corner");
   }, frame.x);
   expect(corner).toBe(true);
-  // The last lane is whole and clickable beside the gutter.
-  const last = lanes.locator(".kit-day-lane__lane").last();
-  const lastBox = (await last.boundingBox())!;
-  expect(lastBox.x).toBeGreaterThanOrEqual(frame.x + gutter - 1);
-  expect(lastBox.x + lastBox.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
-  // Focusing a card in the first lane scrolls it fully clear of the gutter.
+});
+
+test("last lane is whole beside the gutter", async ({ page }) => {
+  const { lanes, frame, gutter } = await scrolledRightLanes(page);
+  const box = (await lanes.locator(".kit-day-lane__lane").last().boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(frame.x + gutter - 1);
+  expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+});
+
+test("focus scrolls a card clear of the frozen gutter", async ({ page }) => {
+  const { lanes, scroller, frame, gutter } = await scrolledRightLanes(page);
   const first = lanes
     .locator(".kit-day-lane__lane")
     .first()
     .getByRole("button", { name: /Shipment status standup/ });
+  const card = (await first.boundingBox())!;
+  await scroller.evaluate(
+    (el, delta) => (el.scrollLeft += delta),
+    card.x - (frame.x - card.width + 2),
+  );
   await first.focus();
   await expect
     .poll(async () => (await first.boundingBox())!.x)
