@@ -258,7 +258,13 @@
 
   function focusKey(key: string) {
     activeKey = key;
-    scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`)?.focus();
+    reveal(scroller?.querySelector<HTMLElement>(`[data-day-lane-key="${CSS.escape(key)}"]`));
+  }
+
+  /** Focus alone leaves a card half under the frozen gutter, so nearest alignment finishes it. */
+  function reveal(el?: HTMLElement | null) {
+    el?.focus();
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
   function onkeydown(event: KeyboardEvent) {
@@ -752,7 +758,7 @@
 
   /* Keyboard focus scrolls a card clear of the frozen gutter and pinned headers. */
   .kit-day-lane--lanes {
-    scroll-padding-left: var(--kit-day-lane-gutter);
+    scroll-padding-left: calc(var(--kit-day-lane-gutter) + var(--space-1));
   }
 
   .kit-day-lane--lanes .kit-day-lane__item {
